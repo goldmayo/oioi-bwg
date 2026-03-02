@@ -42,4 +42,5 @@ next-env.d.ts
 
 /app/generated/prisma
 /docs/.pdca-snapshots
-/docs/projects/lyrics
+/docs/.bkit-memory.json
+/docs/.pdca-status.json
