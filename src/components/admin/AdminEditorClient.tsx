@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { useAdWatcher } from "@/hooks/useAdWatcher";
 import { useLyricsEditor } from "@/hooks/useLyricsEditor";
 import { LyricLine } from "@/types/lyrics";
 import { formatTime, parseLrc, parseTime } from "@/utils/lrc-parser";
@@ -79,6 +80,12 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
 
   const [youtubeId, setYoutubeId] = useState(song.youtubeId);
 
+  // 광고 감지를 위한 플레이어 객체 상태
+  const [player, setPlayer] = useState<any>(null);
+  
+  // 광고 감시 훅 (디자인 변경 없이 로직만 수행)
+  const isAdPlaying = useAdWatcher(player, youtubeId);
+
   const [toolbar, setToolbar] = useState<{
     show: boolean;
     x: number;
@@ -90,6 +97,15 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
   } | null>(null);
 
   const lastAddedTimeRef = useRef<number | null>(null);
+
+  /**
+   * 광고 중에는 시간을 업데이트하지 않아 싱크가 어긋나는 것을 방지합니다.
+   */
+  const handleTimeUpdate = (time: number) => {
+    if (!isAdPlaying) {
+      onTimeUpdate(time);
+    }
+  };
 
   const handleYoutubeIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -344,11 +360,16 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
             </div>
           </div>
           <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
-            <YoutubePlayer key={youtubeId} videoId={youtubeId} onTimeUpdate={onTimeUpdate} />
+            <YoutubePlayer 
+              key={youtubeId} 
+              videoId={youtubeId} 
+              onTimeUpdate={handleTimeUpdate} 
+              onPlayerReady={setPlayer}
+            />
           </div>
         </div>
 
-        {/* Top-Right: Table */}
+        {/* Top-Right: Table Area */}
         <div className="border-border bg-card flex h-full w-1/2 flex-col overflow-hidden rounded-lg border shadow-sm">
           <div className="border-border bg-muted/50 text-muted-foreground grid shrink-0 grid-cols-[100px_1fr_60px_220px] gap-2 border-b p-3 text-xs font-bold tracking-wider uppercase">
             <div className="text-center">Time</div>
@@ -472,7 +493,7 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
         </div>
       </div>
 
-      {/* Bottom: Preview Rail */}
+      {/* Bottom Area: Preview Rail */}
       <div className="border-border bg-card flex min-h-[200px] flex-1 flex-col rounded-lg border p-4 shadow-sm">
         <h2 className="text-muted-foreground mb-2 text-sm text-[10px] font-semibold tracking-widest uppercase">
           실시간 프리뷰 레일

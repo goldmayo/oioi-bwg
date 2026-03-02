@@ -6,6 +6,8 @@ interface YoutubePlayerProps {
   videoId: string;
   onTimeUpdate: (time: number) => void;
   onStateChange?: (state: number) => void;
+  // 광고 감지 로직 연동을 위해 플레이어 인스턴스를 부모에게 전달하는 콜백 추가
+  onPlayerReady?: (player: any) => void;
 }
 
 // YouTube IFrame API 전역 객체 타입 선언
@@ -17,7 +19,7 @@ declare global {
   }
 }
 
-export function YoutubePlayer({ videoId, onTimeUpdate, onStateChange }: YoutubePlayerProps) {
+export function YoutubePlayer({ videoId, onTimeUpdate, onStateChange, onPlayerReady }: YoutubePlayerProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const playerRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,8 +76,10 @@ export function YoutubePlayer({ videoId, onTimeUpdate, onStateChange }: YoutubeP
           modestbranding: 1,
         },
         events: {
-          onReady: () => {
+          onReady: (event: any) => {
             setIsReady(true);
+            // 플레이어 준비 완료 시 부모 컴포넌트에게 인스턴스 전달 (광고 감시용)
+            if (onPlayerReady) onPlayerReady(event.target);
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onStateChange: (event: any) => {
@@ -103,7 +107,7 @@ export function YoutubePlayer({ videoId, onTimeUpdate, onStateChange }: YoutubeP
         playerRef.current.destroy();
       }
     };
-  }, [videoId]); // videoId가 바뀌면 플레이어 다시 로드
+  }, [videoId, onPlayerReady]); // onPlayerReady를 의존성에 포함
 
   return (
     <div className="w-full bg-zinc-950 aspect-video rounded-lg overflow-hidden relative border border-zinc-800">
