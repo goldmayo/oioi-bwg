@@ -16,6 +16,7 @@ interface SongPageProps {
  */
 export default async function SongDetailPage({ params }: SongPageProps) {
   const { slug } = await params;
+  console.log("Received slug:", slug);
 
   if (!slug) {
     return notFound();
@@ -27,7 +28,7 @@ export default async function SongDetailPage({ params }: SongPageProps) {
   });
 
   return (
-    <main className="flex min-h-screen flex-col bg-background">
+    <main className="bg-background flex min-h-screen flex-col">
       <Suspense fallback={<SongPageLoader />}>
         <LyricsViewerLoader promise={songPromise} />
       </Suspense>
@@ -59,15 +60,15 @@ async function LyricsViewerLoader({ promise }: { promise: Promise<Song | null> }
  */
 function SongPageLoader() {
   return (
-    <div className="flex h-screen flex-col animate-pulse lg:flex-row">
+    <div className="flex h-screen animate-pulse flex-col lg:flex-row">
       {/* 플레이어 영역 스켈레톤 */}
-      <div className="h-[40vh] w-full bg-muted border-b border-border lg:h-full lg:w-[40%] lg:border-b-0 lg:border-r" />
+      <div className="bg-muted border-border h-[40vh] w-full border-b lg:h-full lg:w-[40%] lg:border-r lg:border-b-0" />
       {/* 가사 영역 스켈레톤 */}
-      <div className="flex-1 space-y-12 p-12 mx-auto max-w-3xl w-full">
-        <div className="h-10 bg-muted rounded w-3/4" />
-        <div className="h-10 bg-muted rounded w-1/2" />
-        <div className="h-10 bg-muted rounded w-2/3" />
-        <div className="h-10 bg-muted rounded w-3/4" />
+      <div className="mx-auto w-full max-w-3xl flex-1 space-y-12 p-12">
+        <div className="bg-muted h-10 w-3/4 rounded" />
+        <div className="bg-muted h-10 w-1/2 rounded" />
+        <div className="bg-muted h-10 w-2/3 rounded" />
+        <div className="bg-muted h-10 w-3/4 rounded" />
       </div>
     </div>
   );

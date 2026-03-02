@@ -21,7 +21,7 @@ const ALBUM_COLORS: Record<string, string> = {
   "2nd Mini Album: Algorithm's Blossom": "var(--album-ep2-primary)",
   "3rd Mini Album: In a million noises, I'll be your harmony": "var(--album-ep3-primary)",
   "Digital Single: Youth Promise": "var(--qwer-r)",
-  "Singles": "var(--qwer-e)",
+  Singles: "var(--qwer-e)",
 };
 
 /**
@@ -58,13 +58,13 @@ export default async function UserMainPage() {
     <div className="container mx-auto min-h-screen px-4 py-12 lg:py-20">
       {/* 서비스 헤더 */}
       <header className="mb-16 text-center lg:mb-24">
-        <h1 className="text-4xl font-black tracking-tighter text-foreground lg:text-6xl">
-          OiOi<span className="text-qwer-w">Bawige</span>
+        <h1 className="text-foreground text-4xl font-black tracking-tighter lg:text-6xl">
+          어이어이<span className="text-qwer-w">바위게</span>
         </h1>
-        <p className="mt-4 text-sm font-medium tracking-widest text-muted-foreground uppercase lg:text-base">
-          &quot;바위게야 응원법을 알아보자&quot;
+        <p className="text-muted-foreground mt-4 text-sm font-medium tracking-widest uppercase lg:text-base">
+          &quot;바위게야 오늘은 응원법을 알아보자&quot;
         </p>
-        <div className="mx-auto mt-6 h-1 w-12 rounded-full bg-qwer-r" />
+        <div className="bg-qwer-r mx-auto mt-6 h-1 w-12 rounded-full" />
       </header>
 
       {/* 앨범 섹션 리스트 */}
@@ -72,14 +72,17 @@ export default async function UserMainPage() {
         {sortedAlbumNames.map((albumName) => (
           <section key={albumName}>
             <div className="mb-8 flex items-center gap-4">
-              <div 
-                className="h-8 w-1.5 rounded-full" 
+              <div
+                className="h-8 w-1.5 rounded-full"
                 style={{ backgroundColor: ALBUM_COLORS[albumName] || "var(--primary)" }}
               />
-              <h2 className="text-xl font-black tracking-tight text-foreground lg:text-2xl">
+              <h2 className="text-foreground text-xl font-black tracking-tight lg:text-2xl">
                 {albumName}
               </h2>
-              <Badge variant="outline" className="ml-2 border-border/50 text-[10px] font-bold text-muted-foreground">
+              <Badge
+                variant="outline"
+                className="border-border/50 text-muted-foreground ml-2 text-[10px] font-bold"
+              >
                 {albums[albumName].length} SONGS
               </Badge>
             </div>
@@ -88,21 +91,21 @@ export default async function UserMainPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {albums[albumName].map((song) => (
                 <Link key={song.id} href={`/songs/${song.slug}`} className="group">
-                  <Card className="h-full border-border/50 bg-card transition-all duration-300 hover:-translate-y-1 hover:border-border hover:shadow-xl group-hover:ring-1 group-hover:ring-qwer-w/20">
+                  <Card className="border-border/50 bg-card hover:border-border group-hover:ring-qwer-w/20 h-full transition-all duration-300 group-hover:ring-1 hover:-translate-y-1 hover:shadow-xl">
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
-                        <CardTitle className="line-clamp-1 text-lg font-bold tracking-tight text-foreground group-hover:text-qwer-w transition-colors">
+                        <CardTitle className="text-foreground group-hover:text-qwer-w line-clamp-1 text-lg font-bold tracking-tight transition-colors">
                           {song.title}
                         </CardTitle>
                         {song.hasOfficialCheer && (
-                          <Badge className="bg-qwer-r/10 text-[10px] font-black text-qwer-r hover:bg-qwer-r/20">
+                          <Badge className="bg-qwer-r/10 text-qwer-r hover:bg-qwer-r/20 text-[10px] font-black">
                             OFFICIAL
                           </Badge>
                         )}
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+                      <p className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
                         Click to learn cheers
                       </p>
                     </CardContent>
@@ -114,8 +117,8 @@ export default async function UserMainPage() {
         ))}
       </div>
 
-      <footer className="mt-32 border-t border-border/50 py-12 text-center">
-        <p className="text-[10px] font-bold tracking-[0.3em] text-muted-foreground uppercase">
+      <footer className="border-border/50 mt-32 border-t py-12 text-center">
+        <p className="text-muted-foreground text-[10px] font-bold tracking-[0.3em] uppercase">
           OiOiBawige / Cheer Rock Crab - 2026
         </p>
       </footer>

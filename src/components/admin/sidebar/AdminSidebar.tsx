@@ -50,17 +50,17 @@ export async function AdminSidebar() {
   const accordionContent = (
     <Accordion type="multiple" className="w-full">
       {sortedAlbumNames.map((albumName) => (
-        <AccordionItem key={albumName} value={albumName} className="border-zinc-800">
-          <AccordionTrigger className="text-left text-sm font-semibold text-zinc-300 hover:text-zinc-100 hover:no-underline">
+        <AccordionItem key={albumName} value={albumName} className="border-border/50">
+          <AccordionTrigger className="py-3 text-left text-xs font-bold tracking-tight text-muted-foreground hover:text-foreground hover:no-underline">
             {albumName}
           </AccordionTrigger>
           <AccordionContent>
-            <div className="mt-2 flex flex-col gap-1">
+            <div className="flex flex-col gap-1 pb-2">
               {albums[albumName].map((song) => (
                 <Link
                   key={song.id}
-                  href={`/admin/edit/${song.id}`}
-                  className="rounded-md px-2 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
+                  href={`/admin/edit/${song.slug}`}
+                  className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground"
                 >
                   {song.title}
                 </Link>

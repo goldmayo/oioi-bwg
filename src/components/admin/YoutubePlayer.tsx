@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { YouTubeEvent, YouTubePlayerInstance } from "@/types/youtube";
+
 interface YoutubePlayerProps {
   videoId: string;
   onTimeUpdate: (time: number) => void;
   onStateChange?: (state: number) => void;
   // 광고 감지 로직 연동을 위해 플레이어 인스턴스를 부모에게 전달하는 콜백 추가
-  onPlayerReady?: (player: any) => void;
+  onPlayerReady?: (player: YouTubePlayerInstance) => void;
 }
 
 // YouTube IFrame API 전역 객체 타입 선언
@@ -19,9 +21,13 @@ declare global {
   }
 }
 
-export function YoutubePlayer({ videoId, onTimeUpdate, onStateChange, onPlayerReady }: YoutubePlayerProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const playerRef = useRef<any>(null);
+export function YoutubePlayer({
+  videoId,
+  onTimeUpdate,
+  onStateChange,
+  onPlayerReady,
+}: YoutubePlayerProps) {
+  const playerRef = useRef<YouTubePlayerInstance | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number>(0);
   const [isReady, setIsReady] = useState(false);
@@ -67,7 +73,9 @@ export function YoutubePlayer({ videoId, onTimeUpdate, onStateChange, onPlayerRe
     function initPlayer() {
       if (!containerRef.current) return;
 
-      playerRef.current = new window.YT.Player(containerRef.current, {
+      // 전역 YT 객체 타입 안전성 확보
+      const YT = window.YT;
+      playerRef.current = new YT.Player(containerRef.current, {
         videoId,
         playerVars: {
           autoplay: 0,
@@ -76,17 +84,16 @@ export function YoutubePlayer({ videoId, onTimeUpdate, onStateChange, onPlayerRe
           modestbranding: 1,
         },
         events: {
-          onReady: (event: any) => {
+          onReady: (event: YouTubeEvent) => {
             setIsReady(true);
             // 플레이어 준비 완료 시 부모 컴포넌트에게 인스턴스 전달 (광고 감시용)
             if (onPlayerReady) onPlayerReady(event.target);
           },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onStateChange: (event: any) => {
+          onStateChange: (event: YouTubeEvent) => {
             if (onStateChangeRef.current) onStateChangeRef.current(event.data);
-            
+
             // 재생 중(1)일 때만 루프 시작, 멈추면(2) 루프 취소
-            if (event.data === window.YT.PlayerState.PLAYING) {
+            if (event.data === YT.PlayerState.PLAYING) {
               if (!isPlaying) {
                 isPlaying = true;
                 requestRef.current = requestAnimationFrame(updateTime);
@@ -110,13 +117,13 @@ export function YoutubePlayer({ videoId, onTimeUpdate, onStateChange, onPlayerRe
   }, [videoId, onPlayerReady]); // onPlayerReady를 의존성에 포함
 
   return (
-    <div className="w-full bg-zinc-950 aspect-video rounded-lg overflow-hidden relative border border-zinc-800">
+    <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-black">
       {!isReady && (
-        <div className="absolute inset-0 flex items-center justify-center text-zinc-500">
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-background/50 backdrop-blur-sm z-10 font-bold tracking-widest uppercase text-xs">
           Loading Player...
         </div>
       )}
-      <div ref={containerRef} className="w-full h-full" />
+      <div ref={containerRef} className="h-full w-full" />
     </div>
   );
 }

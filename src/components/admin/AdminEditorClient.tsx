@@ -51,6 +51,8 @@ function TimeDisplay({
   );
 }
 
+import { YouTubePlayerInstance } from "@/types/youtube";
+
 export function AdminEditorClient({ song }: AdminEditorClientProps) {
   const initialLyrics = (song.lyrics as LyricLine[]) || [];
 
@@ -80,10 +82,10 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
 
   const [youtubeId, setYoutubeId] = useState(song.youtubeId);
 
-  // 광고 감지를 위한 플레이어 객체 상태
-  const [player, setPlayer] = useState<any>(null);
+  // 광고 감지를 위한 플레이어 객체 상태 (타입 명시)
+  const [player, setPlayer] = useState<YouTubePlayerInstance | null>(null);
   
-  // 광고 감시 훅 (디자인 변경 없이 로직만 수행)
+  // 광고 감시 훅
   const isAdPlaying = useAdWatcher(player, youtubeId);
 
   const [toolbar, setToolbar] = useState<{
