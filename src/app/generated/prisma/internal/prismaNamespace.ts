@@ -519,6 +519,7 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 
 export const SongScalarFieldEnum = {
   id: 'id',
+  slug: 'slug',
   title: 'title',
   albumName: 'albumName',
   youtubeId: 'youtubeId',

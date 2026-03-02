@@ -38,6 +38,7 @@ export type SongSumAggregateOutputType = {
 
 export type SongMinAggregateOutputType = {
   id: number | null
+  slug: string | null
   title: string | null
   albumName: string | null
   youtubeId: string | null
@@ -49,6 +50,7 @@ export type SongMinAggregateOutputType = {
 
 export type SongMaxAggregateOutputType = {
   id: number | null
+  slug: string | null
   title: string | null
   albumName: string | null
   youtubeId: string | null
@@ -60,6 +62,7 @@ export type SongMaxAggregateOutputType = {
 
 export type SongCountAggregateOutputType = {
   id: number
+  slug: number
   title: number
   albumName: number
   youtubeId: number
@@ -84,6 +87,7 @@ export type SongSumAggregateInputType = {
 
 export type SongMinAggregateInputType = {
   id?: true
+  slug?: true
   title?: true
   albumName?: true
   youtubeId?: true
@@ -95,6 +99,7 @@ export type SongMinAggregateInputType = {
 
 export type SongMaxAggregateInputType = {
   id?: true
+  slug?: true
   title?: true
   albumName?: true
   youtubeId?: true
@@ -106,6 +111,7 @@ export type SongMaxAggregateInputType = {
 
 export type SongCountAggregateInputType = {
   id?: true
+  slug?: true
   title?: true
   albumName?: true
   youtubeId?: true
@@ -205,6 +211,7 @@ export type SongGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
 
 export type SongGroupByOutputType = {
   id: number
+  slug: string
   title: string
   albumName: string
   youtubeId: string
@@ -240,6 +247,7 @@ export type SongWhereInput = {
   OR?: Prisma.SongWhereInput[]
   NOT?: Prisma.SongWhereInput | Prisma.SongWhereInput[]
   id?: Prisma.IntFilter<"Song"> | number
+  slug?: Prisma.StringFilter<"Song"> | string
   title?: Prisma.StringFilter<"Song"> | string
   albumName?: Prisma.StringFilter<"Song"> | string
   youtubeId?: Prisma.StringFilter<"Song"> | string
@@ -252,6 +260,7 @@ export type SongWhereInput = {
 
 export type SongOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  slug?: Prisma.SortOrder
   title?: Prisma.SortOrder
   albumName?: Prisma.SortOrder
   youtubeId?: Prisma.SortOrder
@@ -264,6 +273,7 @@ export type SongOrderByWithRelationInput = {
 
 export type SongWhereUniqueInput = Prisma.AtLeast<{
   id?: number
+  slug?: string
   AND?: Prisma.SongWhereInput | Prisma.SongWhereInput[]
   OR?: Prisma.SongWhereInput[]
   NOT?: Prisma.SongWhereInput | Prisma.SongWhereInput[]
@@ -275,10 +285,11 @@ export type SongWhereUniqueInput = Prisma.AtLeast<{
   order?: Prisma.IntFilter<"Song"> | number
   createdAt?: Prisma.DateTimeFilter<"Song"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Song"> | Date | string
-}, "id">
+}, "id" | "slug">
 
 export type SongOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  slug?: Prisma.SortOrder
   title?: Prisma.SortOrder
   albumName?: Prisma.SortOrder
   youtubeId?: Prisma.SortOrder
@@ -299,6 +310,7 @@ export type SongScalarWhereWithAggregatesInput = {
   OR?: Prisma.SongScalarWhereWithAggregatesInput[]
   NOT?: Prisma.SongScalarWhereWithAggregatesInput | Prisma.SongScalarWhereWithAggregatesInput[]
   id?: Prisma.IntWithAggregatesFilter<"Song"> | number
+  slug?: Prisma.StringWithAggregatesFilter<"Song"> | string
   title?: Prisma.StringWithAggregatesFilter<"Song"> | string
   albumName?: Prisma.StringWithAggregatesFilter<"Song"> | string
   youtubeId?: Prisma.StringWithAggregatesFilter<"Song"> | string
@@ -310,6 +322,7 @@ export type SongScalarWhereWithAggregatesInput = {
 }
 
 export type SongCreateInput = {
+  slug: string
   title: string
   albumName: string
   youtubeId: string
@@ -322,6 +335,7 @@ export type SongCreateInput = {
 
 export type SongUncheckedCreateInput = {
   id?: number
+  slug: string
   title: string
   albumName: string
   youtubeId: string
@@ -333,6 +347,7 @@ export type SongUncheckedCreateInput = {
 }
 
 export type SongUpdateInput = {
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   albumName?: Prisma.StringFieldUpdateOperationsInput | string
   youtubeId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -345,6 +360,7 @@ export type SongUpdateInput = {
 
 export type SongUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   albumName?: Prisma.StringFieldUpdateOperationsInput | string
   youtubeId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -357,6 +373,7 @@ export type SongUncheckedUpdateInput = {
 
 export type SongCreateManyInput = {
   id?: number
+  slug: string
   title: string
   albumName: string
   youtubeId: string
@@ -368,6 +385,7 @@ export type SongCreateManyInput = {
 }
 
 export type SongUpdateManyMutationInput = {
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   albumName?: Prisma.StringFieldUpdateOperationsInput | string
   youtubeId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -380,6 +398,7 @@ export type SongUpdateManyMutationInput = {
 
 export type SongUncheckedUpdateManyInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   albumName?: Prisma.StringFieldUpdateOperationsInput | string
   youtubeId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -392,6 +411,7 @@ export type SongUncheckedUpdateManyInput = {
 
 export type SongCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  slug?: Prisma.SortOrder
   title?: Prisma.SortOrder
   albumName?: Prisma.SortOrder
   youtubeId?: Prisma.SortOrder
@@ -409,6 +429,7 @@ export type SongAvgOrderByAggregateInput = {
 
 export type SongMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  slug?: Prisma.SortOrder
   title?: Prisma.SortOrder
   albumName?: Prisma.SortOrder
   youtubeId?: Prisma.SortOrder
@@ -420,6 +441,7 @@ export type SongMaxOrderByAggregateInput = {
 
 export type SongMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  slug?: Prisma.SortOrder
   title?: Prisma.SortOrder
   albumName?: Prisma.SortOrder
   youtubeId?: Prisma.SortOrder
@@ -458,6 +480,7 @@ export type DateTimeFieldUpdateOperationsInput = {
 
 export type SongSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  slug?: boolean
   title?: boolean
   albumName?: boolean
   youtubeId?: boolean
@@ -470,6 +493,7 @@ export type SongSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
 
 export type SongSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  slug?: boolean
   title?: boolean
   albumName?: boolean
   youtubeId?: boolean
@@ -482,6 +506,7 @@ export type SongSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
 
 export type SongSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  slug?: boolean
   title?: boolean
   albumName?: boolean
   youtubeId?: boolean
@@ -494,6 +519,7 @@ export type SongSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
 
 export type SongSelectScalar = {
   id?: boolean
+  slug?: boolean
   title?: boolean
   albumName?: boolean
   youtubeId?: boolean
@@ -504,13 +530,14 @@ export type SongSelectScalar = {
   updatedAt?: boolean
 }
 
-export type SongOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "albumName" | "youtubeId" | "lyrics" | "hasOfficialCheer" | "order" | "createdAt" | "updatedAt", ExtArgs["result"]["song"]>
+export type SongOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "title" | "albumName" | "youtubeId" | "lyrics" | "hasOfficialCheer" | "order" | "createdAt" | "updatedAt", ExtArgs["result"]["song"]>
 
 export type $SongPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Song"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
+    slug: string
     title: string
     albumName: string
     youtubeId: string
@@ -943,6 +970,7 @@ export interface Prisma__SongClient<T, Null = never, ExtArgs extends runtime.Typ
  */
 export interface SongFieldRefs {
   readonly id: Prisma.FieldRef<"Song", 'Int'>
+  readonly slug: Prisma.FieldRef<"Song", 'String'>
   readonly title: Prisma.FieldRef<"Song", 'String'>
   readonly albumName: Prisma.FieldRef<"Song", 'String'>
   readonly youtubeId: Prisma.FieldRef<"Song", 'String'>

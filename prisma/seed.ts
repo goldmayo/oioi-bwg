@@ -10,21 +10,51 @@ import { Album } from "../src/types/album";
 import { parseLrc } from "../src/utils/lrc-parser";
 
 /**
- * Supabase 비밀번호의 특수문자 문제를 해결하기 위해
- * 연결 문자열을 안전하게 재구성합니다.
+ * 곡 제목을 URL용 고유 슬러그로 변환합니다.
+ * 예: "내 이름 맑음" -> "my-name-is-malguem"
+ * (중복 방지를 위해 곡별로 수동 지정하거나, 제목 기반 변환 로직 적용)
  */
+function generateSlug(title: string): string {
+  const map: Record<string, string> = {
+    "별의 하모니": "harmony-of-stars",
+    "Discord": "discord",
+    "수수께끼 다이어리": "secret-diary",
+    "고민중독": "t-b-h",
+    "SODA": "soda",
+    "자유선언": "free-dumb",
+    "지구정복": "g9jb",
+    "대관람차": "ferris-wheel",
+    "불꽃놀이": "make-our-highlight",
+    "마니또": "manito",
+    "가짜아이돌": "fake-idol",
+    "내 이름 맑음": "my-name-is-malguem",
+    "사랑하자": "lets-love",
+    "달리기": "run-run-run",
+    "안녕 나의 슬픔": "goodbye-my-sadness",
+    "메아리": "rebound",
+    "눈물참기": "dear",
+    "행복해져라": "be-happy",
+    "검색어는 QWER": "qwer-hashtag",
+    "OVERDRIVE": "overdrive",
+    "D-Day": "d-day",
+    "Yours Sincerely": "yours-sincerely",
+    "청춘서약": "youth-promise",
+    "흰수염고래": "blue-whale",
+  };
+  
+  return map[title] || title.toLowerCase().replace(/ /g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
 function getSafeConnectionString(): string {
   const rawUrl = process.env.DIRECT_URL || "";
   if (!rawUrl) throw new Error("DIRECT_URL이 정의되어 있지 않습니다.");
 
   try {
     const url = new URL(rawUrl);
-    // 비밀번호 부분만 인코딩하여 다시 조립
     const password = url.password;
     url.password = encodeURIComponent(password);
     return url.toString();
   } catch (_e) {
-    // URL 형식이 아닐 경우 원본 반환
     return rawUrl;
   }
 }
@@ -98,13 +128,14 @@ const ALBUMS: Album[] = [
 ];
 
 async function main() {
-  console.log("시딩 시작 (Upsert 모드)");
+  console.log("시딩 시작 (Slug 기반 Upsert 모드)");
 
   for (const album of ALBUMS) {
     console.log(`앨범 처리 중: ${album.name}`);
     for (let i = 0; i < album.songs.length; i++) {
       const songInfo = album.songs[i];
       const filePath = path.join(process.cwd(), "prisma/lyrics", songInfo.file);
+      const slug = generateSlug(songInfo.title);
 
       let lyricsJson: Prisma.InputJsonValue = [];
       try {
@@ -114,14 +145,12 @@ async function main() {
         console.warn(`파일을 찾을 수 없음: ${songInfo.file}`);
       }
 
-      // 제목을 고유 식별자로 사용하여 upsert
+      // 제목 또는 슬러그를 고유 식별자로 사용하여 upsert
       const existingSong = await prisma.song.findFirst({
-        where: { title: songInfo.title },
+        where: { OR: [{ title: songInfo.title }, { slug }] },
       });
 
       if (existingSong) {
-        // 이미 곡이 존재하면, youtubeId, albumName, order 등 메타데이터만 업데이트하고
-        // lyrics는 기존 DB 값을 보존합니다 (수동으로 수정한 싱크가 날아가지 않도록).
         const shouldUpdateLyrics =
           !existingSong.lyrics ||
           (Array.isArray(existingSong.lyrics) && existingSong.lyrics.length === 0);
@@ -129,6 +158,7 @@ async function main() {
         await prisma.song.update({
           where: { id: existingSong.id },
           data: {
+            slug, // 슬러그 업데이트
             albumName: album.name,
             youtubeId: songInfo.youtubeId,
             hasOfficialCheer: songInfo.hasOfficial || false,
@@ -136,11 +166,11 @@ async function main() {
             ...(shouldUpdateLyrics && { lyrics: lyricsJson }),
           },
         });
-        console.log(`  - 업데이트 됨: ${songInfo.title}`);
+        console.log(`  - 업데이트 됨: ${songInfo.title} (${slug})`);
       } else {
-        // 새로운 곡인 경우 생성
         await prisma.song.create({
           data: {
+            slug,
             title: songInfo.title,
             albumName: album.name,
             youtubeId: songInfo.youtubeId || "",
@@ -149,7 +179,7 @@ async function main() {
             order: i + 1,
           },
         });
-        console.log(`  - 새로 추가됨: ${songInfo.title}`);
+        console.log(`  - 새로 추가됨: ${songInfo.title} (${slug})`);
       }
     }
   }

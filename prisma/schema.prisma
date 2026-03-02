@@ -6,7 +6,7 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  output   = "../src/app/generated/prisma"
 }
 
 datasource db {
@@ -15,12 +15,13 @@ datasource db {
 
 model Song {
   id               Int      @id @default(autoincrement())
+  slug             String   @unique // URL용 고유 식별자 (예: discord, tb-h)
   title            String
   albumName        String   // 앨범별 그룹화
-  youtubeId        String   // 기준 유튜브 영상 ID (예: 9_C8D3Cid7Q)
-  lyrics           Json     // LyricLine[]: {startTime, text, isCheer, isEcho}
-  hasOfficialCheer Boolean  @default(false) // 공식 응원 가이드 여부
-  order            Int      @default(0)     // 앨범 내 트랙 순서
+  youtubeId        String   // 기준 유튜브 영상 ID
+  lyrics           Json     // LyricLine[]
+  hasOfficialCheer Boolean  @default(false)
+  order            Int      @default(0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
