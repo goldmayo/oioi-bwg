@@ -7,17 +7,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { prisma } from "@/libs/prisma";
+import { ALBUMS } from "@/types/album"; // 통합 상수 사용
 
 import { SidebarWrapper } from "./SidebarWrapper";
-
-const ALBUM_ORDER = [
-  "1st Single Album: Harmony from Discord",
-  "1st Mini Album: MANITO",
-  "2nd Mini Album: Algorithm's Blossom",
-  "3rd Mini Album: In a million noises, I'll be your harmony",
-  "Digital Single: Youth Promise",
-  "Singles",
-];
 
 // 순수 서버 컴포넌트: 데이터 페칭만 담당
 export async function AdminSidebar() {
@@ -36,16 +28,8 @@ export async function AdminSidebar() {
     {} as Record<string, typeof songs>,
   );
 
-  const sortedAlbumNames = Object.keys(albums).sort((a, b) => {
-    const indexA = ALBUM_ORDER.indexOf(a);
-    const indexB = ALBUM_ORDER.indexOf(b);
-
-    if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-    if (indexA === -1) return 1;
-    if (indexB === -1) return -1;
-
-    return indexA - indexB;
-  });
+  // ALBUMS 상수에 정의된 순서 그대로 정렬
+  const sortedAlbumNames = ALBUMS.map((a) => a.name).filter((name) => !!albums[name]);
 
   const accordionContent = (
     <Accordion type="multiple" className="w-full">
