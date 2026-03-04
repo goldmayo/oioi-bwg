@@ -6,7 +6,9 @@ import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { useRef, useState } from "react";
 
 import { YoutubePlayer } from "@/components/admin/YoutubePlayer";
+import { OfficialBadge } from "@/components/common/OfficialBadge";
 import { useAdWatcher } from "@/hooks/useAdWatcher";
+import { cn } from "@/libs/utils";
 import { LyricLine } from "@/types/lyrics";
 import { YouTubePlayerInstance } from "@/types/youtube";
 
@@ -18,6 +20,7 @@ interface LyricsViewerClientProps {
     title: string;
     youtubeId: string;
     lyrics: LyricLine[];
+    hasOfficialCheer?: boolean;
   };
 }
 
@@ -36,7 +39,6 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
   const handleTimeUpdate = (time: number) => {
     if (isAdPlaying) return;
 
-    // 현재 시간에 맞는 가사 인덱스 찾기
     const index = song.lyrics.findLastIndex((line) => line.startTime <= time);
     if (index !== currentIndex) {
       setCurrentIndex(index);
@@ -44,19 +46,20 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
   };
 
   /**
-   * 가사가 바뀔 때마다 해당 행으로 스마트 스냅 스크롤 (GSAP)
+   * 가사 스냅 스크롤 (자연스러운 센터링)
+   * 상단 스페이서 없이 시작하며, 중앙 지점을 넘었을 때만 스크롤이 작동합니다.
    */
   useGSAP(() => {
     if (currentIndex >= 0 && lineRefs.current[currentIndex] && scrollContainerRef.current) {
       const target = lineRefs.current[currentIndex];
       const container = scrollContainerRef.current;
 
-      // [보정] 활성 가사가 화면 상단 1/3 지점(약 33%)에 오도록 스냅
-      // 단, 컨테이너의 스크롤 한계를 고려하여 자연스럽게 이동
-      const offset = target!.offsetTop - container.offsetHeight * 0.33;
-
       gsap.to(container, {
-        scrollTo: { y: offset, autoKill: false },
+        scrollTo: {
+          y: target!,
+          offsetY: container.offsetHeight / 2 - 100, // 가시 영역의 수직 중앙 지점
+          autoKill: false,
+        },
         duration: 0.6,
         ease: "power2.out",
       });
@@ -64,15 +67,10 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
   }, [currentIndex]);
 
   return (
-    <div className="bg-background flex h-screen flex-col overflow-hidden lg:flex-row">
-      {/* 
-        [Layout] 
-        Desktop (lg): 좌측 동영상 (40%), 우측 가사 (60%) 가로 배치
-        Mobile: 상단 동영상 (고정), 하단 가사 수직 배치
-      */}
-
-      {/* 동영상 영역 */}
-      <div className="border-border relative z-20 w-full shrink-0 border-b bg-black shadow-2xl lg:h-full lg:w-[40%] lg:border-r lg:border-b-0">
+    <div className="bg-background flex h-[calc(100vh-64px)] flex-col overflow-hidden lg:flex-row">
+      {/* 동영상 영역 (모바일 28vh) */}
+      <div className="border-border relative z-20 h-[28vh] w-full shrink-0 border-b bg-black shadow-2xl lg:h-full lg:w-[40%] lg:border-r lg:border-b-0">
+        {/* <div className="border-border relative z-20 w-full shrink-0 border-b bg-black shadow-2xl lg:h-full lg:w-[40%] lg:border-r lg:border-b-0"> */}
         <div className="flex h-full flex-col justify-center">
           <div className="aspect-video w-full">
             <YoutubePlayer
@@ -82,89 +80,98 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
             />
           </div>
 
-          {/* 곡 제목 및 정보 (Desktop 전용 하단 표시) */}
-          <div className="hidden p-6 lg:block">
-            <h1 className="text-2xl font-black tracking-tight text-white">{song.title}</h1>
-            <p className="mt-2 text-sm font-medium tracking-widest text-zinc-500 uppercase">
-              OiOiBawige Sync System
-            </p>
+          {/* 곡 제목 및 정보 (Desktop) */}
+          <div className="hidden p-8 lg:block">
+            <div className="mb-3 flex items-center gap-3">
+              <h1 className="text-2xl font-black tracking-tight text-white">{song.title}</h1>
+              {song.hasOfficialCheer && <OfficialBadge className="bg-white/10 text-white" />}
+            </div>
           </div>
         </div>
 
         {/* 광고 오버레이 */}
         {isAdPlaying && (
           <div className="bg-background/80 absolute inset-0 z-30 flex items-center justify-center backdrop-blur-md">
-            <div className="animate-pulse text-center">
+            <div className="animate-pulse p-6 text-center">
               <p className="text-destructive text-xl font-bold tracking-widest uppercase">
                 Ad Playing...
               </p>
-              <p className="text-muted-foreground mt-2 text-xs">광고 종료 후 싱크가 재개됩니다.</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* 가사 스크롤 영역 (비중 확대) */}
+      {/* 가사 스크롤 영역 */}
       <div
         ref={scrollContainerRef}
-        className="scrollbar-hide flex-1 overflow-y-auto px-6 py-[20vh] lg:px-12 lg:py-[33vh]"
+        className="custom-scrollbar ios-touch flex-1 overflow-x-hidden overflow-y-auto px-6 lg:px-12"
       >
-        <div className="mx-auto max-w-3xl space-y-12 lg:space-y-16">
-          {song.lyrics.map((line, index) => {
-            const isActive = index === currentIndex;
+        <div className="mx-auto max-w-3xl py-12 lg:py-20">
+          {/* 모바일 제목 표시 */}
+          <div className="mb-10 lg:hidden">
+            <div className="mb-2 flex items-center gap-2">
+              <h2 className="text-foreground text-xl font-black">{song.title}</h2>
+              {song.hasOfficialCheer && <OfficialBadge />}
+            </div>
+            <div className="bg-qwer-w h-0.5 w-8 rounded-full" />
+          </div>
 
-            return (
-              <div
-                key={index}
-                ref={(el) => {
-                  lineRefs.current[index] = el;
-                }}
-                onClick={() => player?.seekTo(line.startTime, true)}
-                className={`group cursor-pointer transition-all duration-700 ease-out ${
-                  isActive
-                    ? "scale-105 opacity-100"
-                    : "hover:blur-0 scale-100 opacity-20 blur-[1px] hover:opacity-50"
-                }`}
-              >
-                {line.isExtra ? (
-                  /* 추임새 (Extra) 스타일: 가로 스택에서도 명확히 구분되도록 배경 박스 유지 */
-                  <div
-                    className={`inline-block rounded-xl px-6 py-3 text-xl font-black italic shadow-xl transition-colors ${
-                      isActive ? "bg-qwer-e text-black" : "bg-qwer-e/10 text-qwer-e/50"
-                    }`}
-                  >
-                    {line.segments[0]?.text}
-                  </div>
-                ) : (
-                  /* 일반 가사 스타일: 비중 있는 폰트 사이즈 적용 */
-                  <div
-                    className={`text-3xl leading-tight font-bold tracking-tighter lg:text-4xl ${
-                      isActive
-                        ? "text-foreground drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    {line.segments.map((seg, sIdx) => (
-                      <span
-                        key={sIdx}
-                        className={`whitespace-pre ${
-                          seg.isEcho
-                            ? "text-qwer-w decoration-qwer-w/40 underline underline-offset-[12px]"
-                            : seg.isCheer
-                              ? "text-qwer-r"
-                              : ""
-                        }`}
-                      >
-                        {seg.text}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {/* 가사 목록 */}
+          <div className="space-y-8 lg:space-y-10">
+            {song.lyrics.map((line, index) => {
+              const isActive = index === currentIndex;
 
-          {/* 마지막 가사가 중앙에 올 수 있도록 하단 패딩 확보 */}
+              return (
+                <div
+                  key={index}
+                  ref={(el) => {
+                    lineRefs.current[index] = el;
+                  }}
+                  onClick={() => player?.seekTo(line.startTime, true)}
+                  className={cn(
+                    "group origin-left cursor-pointer transition-all duration-700 ease-out",
+                    isActive
+                      ? "translate-x-2 scale-105 opacity-100"
+                      : "hover:blur-0 scale-100 opacity-15 blur-[0.5px] hover:opacity-50",
+                  )}
+                >
+                  {line.isExtra ? (
+                    <div
+                      className={cn(
+                        "inline-block rounded-xl px-5 py-2 text-lg font-black italic shadow-lg transition-colors lg:px-6 lg:py-3 lg:text-xl",
+                        isActive ? "bg-qwer-e text-black" : "bg-qwer-e/10 text-qwer-e/50",
+                      )}
+                    >
+                      {line.segments[0]?.text}
+                    </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        "text-xl leading-tight font-bold tracking-tighter transition-colors lg:text-3xl",
+                        isActive ? "text-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      {line.segments.map((seg, sIdx) => (
+                        <span
+                          key={sIdx}
+                          className={cn(
+                            "break-words whitespace-pre-wrap",
+                            seg.isEcho &&
+                              "text-qwer-w decoration-qwer-w/40 underline underline-offset-[8px] lg:underline-offset-[12px]",
+                            seg.isCheer && !seg.isEcho && "text-qwer-r",
+                          )}
+                        >
+                          {seg.text}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* [Bottom Spacer] 마지막 가사가 중앙에 올 수 있도록 공간 확보 */}
           <div className="h-[50vh]" />
         </div>
       </div>
