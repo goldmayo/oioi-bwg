@@ -158,7 +158,7 @@
 /* 커스텀 스크롤바 스타일 (iOS 및 최신 브라우저 대응) */
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
-    width: 5px;
+    width: 4px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;

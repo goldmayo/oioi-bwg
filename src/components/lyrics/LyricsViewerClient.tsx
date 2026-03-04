@@ -54,10 +54,16 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
       const target = lineRefs.current[currentIndex];
       const container = scrollContainerRef.current;
 
+      // 1. 화면 너비에 따른 동적 조정값 계산 (400px~1200px 사이를 150~50으로 매핑)
+      const width = window.innerWidth;
+      const adjustment = gsap.utils.mapRange(400, 1200, 150, 100, width);
+      // 2. 너무 극단적인 값이 나오지 않도록 제한(선택사항)
+      const clampedAdjustment = gsap.utils.clamp(50, 150, adjustment);
+
       gsap.to(container, {
         scrollTo: {
           y: target!,
-          offsetY: container.offsetHeight / 2 - 100, // 가시 영역의 수직 중앙 지점
+          offsetY: container.offsetHeight / 2 - clampedAdjustment, // 사용자 정의 가시 영역 수직 중앙 지점 보존
           autoKill: false,
         },
         duration: 0.6,
@@ -67,11 +73,10 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
   }, [currentIndex]);
 
   return (
-    <div className="bg-background flex h-[calc(100vh-64px)] flex-col overflow-hidden lg:flex-row">
-      {/* 동영상 영역 (모바일 28vh) */}
-      <div className="border-border relative z-20 h-[28vh] w-full shrink-0 border-b bg-black shadow-2xl lg:h-full lg:w-[40%] lg:border-r lg:border-b-0">
-        {/* <div className="border-border relative z-20 w-full shrink-0 border-b bg-black shadow-2xl lg:h-full lg:w-[40%] lg:border-r lg:border-b-0"> */}
-        <div className="flex h-full flex-col justify-center">
+    <div className="bg-background flex h-[calc(100vh-64px)] flex-col overflow-hidden md:flex-row">
+      {/* 동영상 영역 (고정 높이 h-[28vh] 제거하여 겹침 버그 수정) */}
+      <div className="border-border relative z-20 w-full shrink-0 border-b bg-black shadow-2xl md:h-full md:w-[40%] md:border-r md:border-b-0">
+        <div className="flex h-full flex-col justify-center md:justify-start">
           <div className="aspect-video w-full">
             <YoutubePlayer
               videoId={song.youtubeId}
@@ -81,7 +86,7 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
           </div>
 
           {/* 곡 제목 및 정보 (Desktop) */}
-          <div className="hidden p-8 lg:block">
+          <div className="hidden p-8 md:block">
             <div className="mb-3 flex items-center gap-3">
               <h1 className="text-2xl font-black tracking-tight text-white">{song.title}</h1>
               {song.hasOfficialCheer && <OfficialBadge className="bg-white/10 text-white" />}
@@ -104,11 +109,11 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
       {/* 가사 스크롤 영역 */}
       <div
         ref={scrollContainerRef}
-        className="custom-scrollbar ios-touch flex-1 overflow-x-hidden overflow-y-auto px-6 lg:px-12"
+        className="custom-scrollbar ios-touch flex-1 overflow-x-hidden overflow-y-auto px-6 md:px-10"
       >
-        <div className="mx-auto max-w-3xl py-12 lg:py-20">
+        <div className="mx-auto max-w-3xl py-12 md:py-20">
           {/* 모바일 제목 표시 */}
-          <div className="mb-10 lg:hidden">
+          <div className="mb-10 md:hidden">
             <div className="mb-2 flex items-center gap-2">
               <h2 className="text-foreground text-xl font-black">{song.title}</h2>
               {song.hasOfficialCheer && <OfficialBadge />}
@@ -117,7 +122,7 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
           </div>
 
           {/* 가사 목록 */}
-          <div className="space-y-8 lg:space-y-10">
+          <div className="space-y-8 md:space-y-10">
             {song.lyrics.map((line, index) => {
               const isActive = index === currentIndex;
 
@@ -138,7 +143,7 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
                   {line.isExtra ? (
                     <div
                       className={cn(
-                        "inline-block rounded-xl px-5 py-2 text-lg font-black italic shadow-lg transition-colors lg:px-6 lg:py-3 lg:text-xl",
+                        "inline-block rounded-xl px-5 py-2 text-lg font-black italic shadow-lg transition-colors md:px-6 md:py-3 md:text-xl",
                         isActive ? "bg-qwer-e text-black" : "bg-qwer-e/10 text-qwer-e/50",
                       )}
                     >
@@ -147,7 +152,7 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
                   ) : (
                     <div
                       className={cn(
-                        "text-xl leading-tight font-bold tracking-tighter transition-colors lg:text-3xl",
+                        "text-xl leading-tight font-bold tracking-tighter transition-colors md:text-2xl",
                         isActive ? "text-foreground" : "text-muted-foreground",
                       )}
                     >
@@ -157,7 +162,7 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
                           className={cn(
                             "break-words whitespace-pre-wrap",
                             seg.isEcho &&
-                              "text-qwer-w decoration-qwer-w/40 underline underline-offset-[8px] lg:underline-offset-[12px]",
+                              "text-qwer-w decoration-qwer-w/40 underline underline-offset-[8px] md:underline-offset-[12px]",
                             seg.isCheer && !seg.isEcho && "text-qwer-r",
                           )}
                         >

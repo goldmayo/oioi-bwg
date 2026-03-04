@@ -11,7 +11,7 @@ interface BentoGridContainerProps {
   albums: Album[];
 }
 
-export function BentoGridContainer({ albums }: BentoGridContainerProps) {
+export function GridContainer({ albums }: BentoGridContainerProps) {
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -28,7 +28,7 @@ export function BentoGridContainer({ albums }: BentoGridContainerProps) {
       gsap.to(gridRef.current, {
         opacity: 0.3,
         scale: 0.98,
-        duration: 0.6,
+        duration: 0.3,
         ease: "power2.out",
       });
     }
@@ -44,10 +44,9 @@ export function BentoGridContainer({ albums }: BentoGridContainerProps) {
     // 배경 그리드 원복
     if (gridRef.current) {
       gsap.to(gridRef.current, {
-        filter: "blur(0px)",
         opacity: 1,
         scale: 1,
-        duration: 0.5,
+        duration: 0.3,
         ease: "power2.inOut",
       });
     }

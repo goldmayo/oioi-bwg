@@ -1,4 +1,4 @@
-import { BentoGridContainer } from "@/components/home/BentoGridContainer";
+import { GridContainer } from "@/components/home/GridContainer";
 import { prisma } from "@/libs/prisma";
 import { Album, ALBUMS } from "@/types/album";
 
@@ -43,7 +43,7 @@ export default async function UserMainPage() {
       </header>
 
       {/* 인터랙티브 벤토 그리드 (통합 데이터 사용) */}
-      <BentoGridContainer albums={albumsData as unknown as Album[]} />
+      <GridContainer albums={albumsData as unknown as Album[]} />
 
       <footer className="border-border/50 mt-20 border-t py-12 text-center">
         <p className="text-muted-foreground text-[10px] font-bold tracking-[0.3em] uppercase">
