@@ -1,70 +1,52 @@
 "use client";
 
 import gsap from "gsap";
-import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 import { Album } from "@/types/album";
 
-import { AlbumDetailModal } from "./AlbumDetailModal";
-
-interface BentoGridContainerProps {
+interface GridContainerProps {
   albums: Album[];
 }
 
-export function GridContainer({ albums }: BentoGridContainerProps) {
-  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
+/**
+ * 앨범 정사각 그리드 컨테이너
+ * URL 변화(Intercepting Routes)를 감지하여 배경 애니메이션을 자동으로 처리합니다.
+ */
+export function GridContainer({ albums }: GridContainerProps) {
+  const pathname = usePathname();
   const gridRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * 앨범 상세 열기
-   */
-  const onAlbumClick = (album: Album) => {
-    setSelectedAlbum(album);
-    setIsOpen(true);
+  // 현재 앨범 모달이 열려있는지 여부
+  const isModalOpen = pathname.includes("/albums/");
 
-    // 배경 그리드 블러/페이드 처리
-    if (gridRef.current) {
+  /**
+   * 주소창의 변화에 따라 배경 그리드의 블러 및 스케일을 제어합니다.
+   */
+  useEffect(() => {
+    if (!gridRef.current) return;
+
+    if (isModalOpen) {
+      // 모달 오픈 시: 배경 블러 및 살짝 축소
       gsap.to(gridRef.current, {
         opacity: 0.3,
         scale: 0.98,
-        duration: 0.3,
+        duration: 0.6,
         ease: "power2.out",
       });
-    }
-  };
-
-  /**
-   * 앨범 상세 닫기 (모달 컴포넌트의 onClose에서 호출)
-   */
-  const handleClose = () => {
-    setIsOpen(false);
-    setSelectedAlbum(null);
-
-    // 배경 그리드 원복
-    if (gridRef.current) {
+    } else {
+      // 메인 복귀 시: 원래 상태로 복구
       gsap.to(gridRef.current, {
         opacity: 1,
         scale: 1,
-        duration: 0.3,
+        duration: 0.5,
         ease: "power2.inOut",
       });
     }
-  };
-
-  /**
-   * 스크롤 잠금 관리
-   */
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen]);
+  }, [isModalOpen]);
 
   return (
     <div className="relative w-full py-10">
@@ -74,9 +56,10 @@ export function GridContainer({ albums }: BentoGridContainerProps) {
         className="mx-auto grid max-w-6xl origin-center grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
       >
         {albums.map((album) => (
-          <div
+          <Link
             key={album.name}
-            onClick={() => onAlbumClick(album)}
+            href={`/albums/${album.imageSlug}`}
+            scroll={false}
             className="group bg-card border-border/50 hover:border-border relative aspect-square cursor-pointer overflow-hidden rounded-[2.5rem] border transition-all duration-500 hover:-translate-y-3 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
           >
             <div className="relative h-full w-full">
@@ -84,10 +67,11 @@ export function GridContainer({ albums }: BentoGridContainerProps) {
                 src={`/images/albums/${album.imageSlug}.webp`}
                 alt={album.name}
                 fill
+                loading="eager"
                 className="object-cover transition-transform duration-1000 group-hover:scale-110"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60 transition-opacity group-hover:opacity-80" />
-              <div className="absolute right-8 bottom-10 left-8 text-white">
+              <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/20 to-transparent opacity-60 transition-opacity group-hover:opacity-80" />
+              <div className="absolute right-8 bottom-10 left-8 text-left text-white">
                 <h3 className="text-2xl leading-none font-black tracking-tighter drop-shadow-2xl">
                   {album.name.split(":")[0]}
                 </h3>
@@ -99,15 +83,9 @@ export function GridContainer({ albums }: BentoGridContainerProps) {
                 </div>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
-
-      {/* 분리된 앨범 상세 모달 */}
-      {isOpen && selectedAlbum && <AlbumDetailModal album={selectedAlbum} onClose={handleClose} />}
     </div>
   );
 }
-
-// Next.js Image 컴포넌트 사용을 위해 import 추가
-import Image from "next/image";

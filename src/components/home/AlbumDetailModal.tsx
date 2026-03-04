@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useRef } from "react";
 
 import { OfficialBadge } from "@/components/common/OfficialBadge";
@@ -18,30 +19,34 @@ interface AlbumDetailModalProps {
 }
 
 export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
+  const pathname = usePathname();
   const modalRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
+  // 현재 경로가 앨범 경로인지 확인 (훅 규칙 준수를 위해 상단에서 정의)
+  const isAlbumPath = pathname.includes("/albums/");
+
   /**
-   * 모달 진입 애니메이션 (Zoom & Fade)
+   * 모달 진입 애니메이션
    */
   useGSAP(() => {
-    if (modalRef.current && backdropRef.current) {
-      gsap.fromTo(backdropRef.current, 
-        { opacity: 0 }, 
-        { opacity: 1, duration: 0.3, ease: "none" }
+    // 앨범 경로일 때만 애니메이션 실행
+    if (isAlbumPath && modalRef.current && backdropRef.current) {
+      gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "none" });
+
+      gsap.fromTo(
+        modalRef.current,
+        { scale: 0.95, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.2)" },
       );
 
-      gsap.fromTo(modalRef.current, 
-        { scale: 0.95, opacity: 0 }, 
-        { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.2)" }
-      );
-
-      gsap.fromTo(".song-item", 
-        { y: 10, opacity: 0 }, 
-        { y: 0, opacity: 1, stagger: 0.03, duration: 0.4, delay: 0.2, ease: "power2.out" }
+      gsap.fromTo(
+        ".song-item",
+        { y: 10, opacity: 0 },
+        { y: 0, opacity: 1, stagger: 0.03, duration: 0.4, delay: 0.2, ease: "power2.out" },
       );
     }
-  }, []);
+  }, [isAlbumPath]);
 
   /**
    * 닫기 애니메이션 수행 후 부모의 onClose 호출
@@ -50,53 +55,61 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
     if (!modalRef.current || !backdropRef.current) return;
 
     const tl = gsap.timeline({
-      onComplete: onClose
+      onComplete: onClose,
     });
 
     tl.to(modalRef.current, {
       scale: 0.98,
       opacity: 0,
       duration: 0.4,
-      ease: "power2.out"
-    }).to(backdropRef.current, {
-      opacity: 0,
-      duration: 0.4,
-      ease: "power2.out"
-    }, "<");
+      ease: "power2.out",
+    }).to(
+      backdropRef.current,
+      {
+        opacity: 0,
+        duration: 0.4,
+        ease: "power2.out",
+      },
+      "<",
+    );
   };
 
+  // 앨범 경로가 아니면 렌더링하지 않음 (훅 호출 이후에 조건부 리턴)
+  if (!isAlbumPath) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden p-4 md:p-10">
       {/* Backdrop */}
-      <div 
+      <div
         ref={backdropRef}
-        className="absolute inset-0 bg-background/80 backdrop-blur-xl"
+        className="bg-background/80 absolute inset-0 backdrop-blur-xl"
         onClick={handleClose}
       />
-      
+
       {/* Modal Content Container */}
-      <div className="relative w-full max-w-5xl h-full max-h-[85vh] pointer-events-none flex items-center justify-center">
-        <div 
+      <div className="pointer-events-none relative flex h-full max-h-[85vh] w-full max-w-5xl items-center justify-center">
+        <div
           ref={modalRef}
-          className="relative w-full h-full bg-card border border-border shadow-2xl rounded-[3rem] overflow-hidden flex flex-col md:flex-row pointer-events-auto"
+          className="bg-card border-border pointer-events-auto relative flex h-full w-full flex-col overflow-hidden rounded-[3rem] border shadow-2xl md:flex-row"
         >
           {/* 좌측: 앨범 커버 */}
-          <div className="relative w-full h-[35vh] md:h-full md:w-[45%] overflow-hidden shrink-0 border-b md:border-b-0 md:border-r border-border/50">
+          <div className="border-border/50 relative h-[35vh] w-full shrink-0 overflow-hidden border-b md:h-full md:w-[45%] md:border-r md:border-b-0">
             <Image
               src={`/images/albums/${album.imageSlug}.webp`}
               alt={album.name}
               fill
               className="object-cover"
             />
-            {/* [고도화] 모바일 전용 제목 오버레이 레이어 */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent md:bg-gradient-to-r md:from-transparent md:to-black/20" />
-            
-            {/* 모바일에서만 보이는 제목 정보 (Header Overlay) */}
-            <div className="absolute bottom-8 left-8 right-8 z-10 md:hidden">
-              <Badge style={{ backgroundColor: album.color }} className="text-white font-black px-3 py-0.5 mb-3 border-none rounded-full">
+            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent md:bg-linear-to-r md:from-transparent md:to-black/20" />
+
+            <div className="border-border/10 absolute right-8 bottom-8 left-8 z-10 mb-4 border-b pb-4 text-left md:hidden">
+              <Badge
+                style={{ backgroundColor: album.color }}
+                className="mb-3 rounded-full border-none px-3 py-0.5 font-black text-white"
+              >
                 {album.name.split(":")[0]}
               </Badge>
-              <h2 className="text-3xl font-black tracking-tighter text-white leading-tight">
+              <h2 className="text-3xl leading-tight font-black tracking-tighter text-white">
                 {album.name.includes(":") ? album.name.split(":")[1].trim() : album.name}
               </h2>
             </div>
@@ -104,7 +117,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-8 left-8 text-white bg-black/20 backdrop-blur-xl hover:bg-black/40 rounded-full h-12 w-12 border border-white/10 z-20"
+              className="absolute top-8 left-8 z-20 h-12 w-12 rounded-full border border-white/10 bg-black/20 text-white backdrop-blur-xl hover:bg-black/40"
               onClick={handleClose}
             >
               <X size={24} />
@@ -112,30 +125,33 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
           </div>
 
           {/* 우측: 수록곡 리스트 */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* [고도화] 데스크탑 전용 스티키 헤더 */}
-            <header className="sticky top-0 z-10 hidden md:block px-16 pt-16 pb-8 bg-card/90 backdrop-blur-md">
-              <Badge style={{ backgroundColor: album.color }} className="text-white font-black px-4 py-1 mb-6 rounded-full border-none shadow-sm">
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <header className="bg-card/90 sticky top-0 z-10 hidden px-16 pt-16 pb-8 text-left backdrop-blur-md md:block">
+              <Badge
+                style={{ backgroundColor: album.color }}
+                className="mb-6 rounded-full border-none px-4 py-1 font-black text-white shadow-sm"
+              >
                 {album.name.split(":")[0]}
               </Badge>
-              <h2 className="text-4xl lg:text-6xl font-black tracking-tighter text-foreground mb-4 leading-tight">
+              <h2 className="text-foreground mb-4 text-4xl leading-tight font-black tracking-tighter lg:text-6xl">
                 {album.name.includes(":") ? album.name.split(":")[1].trim() : album.name}
               </h2>
               <div className="h-1.5 w-24 rounded-full" style={{ backgroundColor: album.color }} />
             </header>
 
-            {/* 수록곡 목록 */}
-            <div className="flex-1 overflow-y-auto px-8 md:px-16 pb-16 pt-8 md:pt-0 custom-scrollbar ios-touch">
-              <div className="grid gap-3 max-w-xl mx-auto md:mx-0">
+            <div className="custom-scrollbar ios-touch flex-1 overflow-y-auto px-8 pt-8 pb-16 md:px-16 md:pt-0">
+              <div className="mx-auto grid max-w-xl gap-3 md:mx-0">
                 {album.songs.map((song, idx) => (
-                  <Link 
-                    key={song.title} 
+                  <Link
+                    key={song.title}
                     href={`/songs/${song.slug}`}
-                    className="song-item flex items-center justify-between p-5 rounded-2xl border border-border/30 bg-background/50 hover:bg-accent transition-all duration-300"
+                    className="song-item border-border/30 bg-background/50 hover:bg-accent flex items-center justify-between rounded-2xl border p-5 transition-all duration-300"
                   >
                     <div className="flex items-center gap-6">
-                      <span className="font-mono text-muted-foreground text-sm font-bold opacity-40">{(idx + 1).toString().padStart(2, '0')}</span>
-                      <h4 className="text-xl font-bold tracking-tight group-hover:text-qwer-w transition-colors">
+                      <span className="text-muted-foreground font-mono text-sm font-bold opacity-40">
+                        {(idx + 1).toString().padStart(2, "0")}
+                      </span>
+                      <h4 className="group-hover:text-qwer-w text-left text-xl font-bold tracking-tight transition-colors">
                         {song.title}
                       </h4>
                     </div>
