@@ -26,12 +26,6 @@ export default function UserLayout({ children }: { children: ReactNode }) {
             >
               Albums
             </Link>
-            <Link
-              href="/admin"
-              className="bg-accent text-accent-foreground hover:bg-primary hover:text-primary-foreground rounded-full px-4 py-1.5 text-[10px] font-black tracking-widest uppercase transition-all"
-            >
-              Admin
-            </Link>
           </nav>
         </div>
       </header>
