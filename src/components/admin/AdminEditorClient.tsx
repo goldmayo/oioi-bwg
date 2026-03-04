@@ -84,7 +84,7 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
 
   // 광고 감지를 위한 플레이어 객체 상태 (타입 명시)
   const [player, setPlayer] = useState<YouTubePlayerInstance | null>(null);
-  
+
   // 광고 감시 훅
   const isAdPlaying = useAdWatcher(player, youtubeId);
 
@@ -286,7 +286,7 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
       {/* Top Controls */}
       <div className="border-border bg-card flex shrink-0 items-center justify-between rounded-lg border p-3 shadow-sm">
         <div className="flex items-center gap-4">
-          <h1 className="text-foreground min-w-[120px] text-xl font-bold">{song.title}</h1>
+          <h1 className="text-foreground min-w-30 text-xl font-bold">{song.title}</h1>
 
           <div className="border-border flex items-center gap-2 border-l pl-4">
             <span className="text-muted-foreground text-xs font-bold">YouTube</span>
@@ -325,7 +325,7 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
                 <DialogTitle>LRC 가사 붙여넣기</DialogTitle>
               </DialogHeader>
               <Textarea
-                className="border-input bg-background min-h-[400px] font-mono text-sm"
+                className="border-input bg-background min-h-100 font-mono text-sm"
                 placeholder="[00:12.34] 가사 내용..."
                 value={lrcInput}
                 onChange={(e) => setLrcInput(e.target.value)}
@@ -346,7 +346,7 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
         </div>
       </div>
 
-      <div className="flex h-[50vh] min-h-[400px] shrink-0 gap-4">
+      <div className="flex h-[50vh] min-h-100 shrink-0 gap-4">
         {/* Top-Left: Youtube Player */}
         <div className="flex h-full w-1/2 flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -362,10 +362,10 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
             </div>
           </div>
           <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
-            <YoutubePlayer 
-              key={youtubeId} 
-              videoId={youtubeId} 
-              onTimeUpdate={handleTimeUpdate} 
+            <YoutubePlayer
+              key={youtubeId}
+              videoId={youtubeId}
+              onTimeUpdate={handleTimeUpdate}
               onPlayerReady={setPlayer}
             />
           </div>
@@ -496,7 +496,7 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
       </div>
 
       {/* Bottom Area: Preview Rail */}
-      <div className="border-border bg-card flex min-h-[200px] flex-1 flex-col rounded-lg border p-4 shadow-sm">
+      <div className="border-border bg-card flex min-h-50 flex-1 flex-col rounded-lg border p-4 shadow-sm">
         <h2 className="text-muted-foreground mb-2 text-sm text-[10px] font-semibold tracking-widest uppercase">
           실시간 프리뷰 레일
         </h2>

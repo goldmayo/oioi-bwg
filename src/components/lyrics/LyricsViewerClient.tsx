@@ -160,9 +160,9 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
                         <span
                           key={sIdx}
                           className={cn(
-                            "break-words whitespace-pre-wrap",
+                            "wrap-break-word whitespace-pre-wrap",
                             seg.isEcho &&
-                              "text-qwer-w decoration-qwer-w/40 underline underline-offset-[8px] md:underline-offset-[12px]",
+                              "text-qwer-w decoration-qwer-w/40 underline underline-offset-8 md:underline-offset-12",
                             seg.isCheer && !seg.isEcho && "text-qwer-r",
                           )}
                         >
