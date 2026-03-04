@@ -10,7 +10,7 @@ export default function UserLayout({ children }: { children: ReactNode }) {
   return (
     <div className="bg-background flex h-dvh flex-col overflow-hidden">
       {/* 글로벌 헤더 (고정 높이) */}
-      <header className="border-border/50 bg-background/80 w-full shrink-0 border-b backdrop-blur-md">
+      <header className="bg-background/80 w-full shrink-0 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="group flex items-center gap-2">
             <div className="bg-qwer-w h-2 w-2 rounded-full transition-transform group-hover:scale-150" />

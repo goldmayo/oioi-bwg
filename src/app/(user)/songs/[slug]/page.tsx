@@ -28,7 +28,7 @@ export default async function SongDetailPage({ params }: SongPageProps) {
   });
 
   return (
-    <main className="bg-background flex min-h-screen flex-col">
+    <main className="bg-background flex flex-col">
       <Suspense fallback={<SongPageLoader />}>
         <LyricsViewerLoader promise={songPromise} />
       </Suspense>
