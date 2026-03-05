@@ -33,12 +33,12 @@ export default async function UserMainPage() {
 
   return (
     <div className="container mx-auto min-h-screen px-4 py-12 lg:py-20">
-      <header className="mb-12 text-center">
+      <header className="mb-8 text-center md:mb-12">
         <h1 className="text-foreground text-4xl font-black tracking-tighter lg:text-6xl">
           어이어이<span className="text-qwer-w">바위게</span>
         </h1>
-        <p className="text-muted-foreground mt-4 text-xs font-bold tracking-[0.3em] uppercase">
-          바위게야 오늘은 응원을 배우자
+        <p className="text-muted-foreground mt-4 text-xs font-bold tracking-[0.3em] uppercase md:text-base">
+          바위게야 오늘은 응원을 하자
         </p>
       </header>
 

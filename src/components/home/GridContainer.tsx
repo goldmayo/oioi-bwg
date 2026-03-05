@@ -49,7 +49,7 @@ export function GridContainer({ albums }: GridContainerProps) {
   }, [isModalOpen]);
 
   return (
-    <div className="relative w-full py-10">
+    <div className="relative w-full px-4 py-10">
       {/* 앨범 그리드 영역 */}
       <div
         ref={gridRef}
