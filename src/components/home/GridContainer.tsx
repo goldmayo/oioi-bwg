@@ -67,6 +67,7 @@ export function GridContainer({ albums }: GridContainerProps) {
                 src={`/images/albums/${album.imageSlug}.webp`}
                 alt={album.name}
                 fill
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 loading="eager"
                 className="object-cover transition-transform duration-1000 group-hover:scale-110"
               />

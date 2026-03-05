@@ -98,6 +98,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
               src={`/images/albums/${album.imageSlug}.webp`}
               alt={album.name}
               fill
+              sizes="(max-width: 768px) 100vw, 45vw"
               className="object-cover"
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent md:bg-linear-to-r md:from-transparent md:to-black/20" />
