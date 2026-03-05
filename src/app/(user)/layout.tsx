@@ -17,11 +17,15 @@ export default function UserLayout({
     <div className="bg-background flex h-dvh flex-col overflow-hidden">
       {/* 글로벌 헤더 */}
       <header className="bg-background/80 w-full shrink-0 backdrop-blur-md">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
+        <div className="container mx-auto flex h-16 items-center justify-between px-8">
           <Link href="/" className="group flex items-center gap-2">
-            <div className="bg-qwer-w h-2 w-2 rounded-full transition-transform group-hover:scale-150" />
+            <div className="bg-qwer-rockation h-2 w-2 rounded-full transition-transform group-hover:scale-150" />
             <span className="text-foreground text-lg font-black tracking-tighter uppercase">
-              OiOi<span className="text-qwer-w">Bawige</span>
+              <span className="text-qwer-q">O</span>
+              <span className="text-qwer-w">I</span>
+              <span className="text-qwer-e">O</span>
+              <span className="text-qwer-r">I</span>
+              <span className="text-white">BWG</span>
             </span>
           </Link>
 

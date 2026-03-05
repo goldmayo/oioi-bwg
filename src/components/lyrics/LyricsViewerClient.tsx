@@ -8,6 +8,12 @@ import { useRef, useState } from "react";
 
 import { YoutubePlayer } from "@/components/admin/YoutubePlayer";
 import { OfficialBadge } from "@/components/common/OfficialBadge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useAdWatcher } from "@/hooks/useAdWatcher";
 import { cn } from "@/libs/utils";
 import { Album } from "@/types/album";
@@ -77,9 +83,9 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
 
   return (
     <div className="bg-background flex h-[calc(100vh-64px)] flex-col overflow-hidden md:flex-row">
-      {/* 동영상 영역 (고정 높이 h-[28vh] 제거하여 겹침 버그 수정) */}
+      {/* 고정 영역: 동영상 + 정보 헤더 */}
       <div className="border-border relative z-20 w-full shrink-0 border-b bg-black shadow-2xl md:h-full md:w-[40%] md:border-r md:border-b-0">
-        <div className="flex h-full flex-col justify-center md:justify-start">
+        <div className="flex h-full flex-col">
           <div className="aspect-video w-full">
             <YoutubePlayer
               videoId={song.youtubeId}
@@ -88,20 +94,53 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
             />
           </div>
 
-          {/* 곡 제목 및 정보 (Desktop) */}
-          <div className="hidden p-8 md:block">
-            <div className="mb-3 flex items-center gap-3">
-              <h1 className="text-2xl font-black tracking-tight text-white">{song.title}</h1>
-              {song.hasOfficialCheer && <OfficialBadge className="bg-white/10 text-white" />}
-            </div>
-            {album && (
-              <Link
-                href={`/albums/${album.imageSlug}`}
-                className="text-sm font-medium text-white/50 transition-colors hover:text-white"
-              >
-                {album.name}
-              </Link>
-            )}
+          {/* 곡 정보 아코디언 (Desktop & Mobile 통합) */}
+          <div className="bg-black px-6 py-2 md:p-8">
+            <Accordion type="single" collapsible className="border-none">
+              <AccordionItem value="song-info" className="border-none">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex flex-1 items-center gap-3 overflow-hidden">
+                      <h1 className="truncate text-xl font-black tracking-tight text-white md:text-2xl">
+                        {song.title}
+                      </h1>
+                      {song.hasOfficialCheer && <OfficialBadge type="e" className="shrink-0" />}
+                    </div>
+                    {album && (
+                      <div className="flex flex-col gap-1">
+                        <Link
+                          href={`/albums/${album.imageSlug}`}
+                          className="text-qwer-w inline-block text-sm font-bold transition-colors hover:underline"
+                        >
+                          {album.name}
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+
+                  <AccordionTrigger className="py-2 text-white/50 hover:no-underline">
+                    <span className="sr-only">Toggle Info</span>
+                  </AccordionTrigger>
+                </div>
+
+                <AccordionContent className="pt-2 pb-4">
+                  <div className="space-y-4">
+                    {album?.name}
+                    {album?.officialLink && (
+                      <Link
+                        href={album.officialLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-qwer-w hover:underline"
+                      >
+                        {album.name}
+                      </Link>
+                    )}
+                    {/* 향후 여기에 작곡/작사 등 추가 정보 삽입 가능 */}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         </div>
 
@@ -123,23 +162,6 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
         className="custom-scrollbar ios-touch flex-1 overflow-x-hidden overflow-y-auto px-6 md:px-10"
       >
         <div className="mx-auto max-w-3xl py-12 md:py-20">
-          {/* 모바일 제목 표시 */}
-          <div className="mb-10 md:hidden">
-            <div className="mb-2 flex items-center gap-2">
-              <h2 className="text-foreground text-xl font-black">{song.title}</h2>
-              {song.hasOfficialCheer && <OfficialBadge />}
-            </div>
-            {album && (
-              <Link
-                href={`/albums/${album.imageSlug}`}
-                className="text-muted-foreground hover:text-foreground mb-4 block text-sm font-medium transition-colors"
-              >
-                {album.name}
-              </Link>
-            )}
-            <div className="bg-qwer-w h-0.5 w-8 rounded-full" />
-          </div>
-
           {/* 가사 목록 */}
           <div className="space-y-8 md:space-y-10">
             {song.lyrics.map((line, index) => {
@@ -181,8 +203,10 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
                           className={cn(
                             "wrap-break-word whitespace-pre-wrap",
                             seg.isEcho &&
-                              "text-qwer-w decoration-qwer-w/40 underline underline-offset-8 md:underline-offset-12",
-                            seg.isCheer && !seg.isEcho && "text-qwer-r",
+                              "text-qwer-r decoration-qwer-r/40 underline underline-offset-8 md:underline-offset-12",
+                            seg.isCheer &&
+                              !seg.isEcho &&
+                              "text-qwer-bwg decoration-qwer-bwg/40 underline underline-offset-8 md:underline-offset-12",
                           )}
                         >
                           {seg.text}

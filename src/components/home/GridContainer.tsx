@@ -60,7 +60,7 @@ export function GridContainer({ albums }: GridContainerProps) {
             key={album.name}
             href={`/albums/${album.imageSlug}`}
             scroll={false}
-            className="group bg-card border-border/50 hover:border-border relative aspect-square cursor-pointer overflow-hidden rounded-[2.5rem] border transition-all duration-500 hover:-translate-y-3 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
+            className="group bg-card border-border/50 hover:border-border relative aspect-square cursor-pointer overflow-hidden rounded-2xl border transition-all duration-500 hover:-translate-y-3 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
           >
             <div className="relative h-full w-full">
               <Image

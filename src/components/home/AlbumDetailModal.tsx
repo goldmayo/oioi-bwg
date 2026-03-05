@@ -90,7 +90,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
       <div className="pointer-events-none relative flex h-full max-h-[85vh] w-full max-w-5xl items-center justify-center">
         <div
           ref={modalRef}
-          className="bg-card border-border pointer-events-auto relative flex h-full w-full flex-col overflow-hidden rounded-[3rem] border shadow-2xl md:flex-row"
+          className="bg-card border-border pointer-events-auto relative flex h-full w-full flex-col overflow-hidden rounded-2xl border shadow-2xl md:flex-row"
         >
           {/* 좌측: 앨범 커버 */}
           <div className="border-border/50 relative h-[35vh] w-full shrink-0 overflow-hidden border-b md:h-full md:w-[45%] md:border-r md:border-b-0">
@@ -156,7 +156,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                         {song.title}
                       </h4>
                     </div>
-                    {song.hasOfficial && <OfficialBadge />}
+                    {song.hasOfficial && <OfficialBadge type={"e"} />}
                   </Link>
                 ))}
               </div>

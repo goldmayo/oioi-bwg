@@ -35,7 +35,11 @@ export default async function UserMainPage() {
     <div className="container mx-auto min-h-screen px-4 py-12 lg:py-20">
       <header className="mb-8 text-center md:mb-12">
         <h1 className="text-foreground text-4xl font-black tracking-tighter lg:text-6xl">
-          어이어이<span className="text-qwer-w">바위게</span>
+          <span className="text-qwer-q">어</span>
+          <span className="text-qwer-w">이</span>
+          <span className="text-qwer-e">어</span>
+          <span className="text-qwer-r">이</span>
+          <span className="text-white">바위게</span>
         </h1>
         <p className="text-muted-foreground mt-4 text-xs font-bold tracking-[0.3em] uppercase md:text-base">
           바위게야 오늘은 응원을 하자
@@ -47,7 +51,7 @@ export default async function UserMainPage() {
 
       <footer className="border-border/50 mt-20 border-t py-12 text-center">
         <p className="text-muted-foreground text-[10px] font-bold tracking-[0.3em] uppercase">
-          OiOiBawige / Cheer Rock Crab - 2026
+          OiOiBWG / Cheer RockCrab - 2026
         </p>
       </footer>
     </div>
