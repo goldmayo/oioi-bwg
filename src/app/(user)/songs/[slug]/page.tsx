@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Song } from "@/app/generated/prisma/client";
 import { LyricsViewerClient } from "@/components/lyrics/LyricsViewerClient";
 import { prisma } from "@/libs/prisma";
+import { ALBUMS } from "@/types/album";
 import { LyricLine } from "@/types/lyrics";
 
 interface SongPageProps {
@@ -46,13 +47,16 @@ async function LyricsViewerLoader({ promise }: { promise: Promise<Song | null> }
     return notFound();
   }
 
+  // 앨범 정보 찾기 (song.albumName과 일치하는 앨범 검색)
+  const album = ALBUMS.find((a) => a.name === song.albumName);
+
   // JsonValue 타입을 LyricLine[] 타입으로 안전하게 캐스팅하여 포맷팅
   const formattedSong = {
     ...song,
     lyrics: (song.lyrics as unknown as LyricLine[]) || [],
   };
 
-  return <LyricsViewerClient song={formattedSong} />;
+  return <LyricsViewerClient song={formattedSong} album={album} />;
 }
 
 /**

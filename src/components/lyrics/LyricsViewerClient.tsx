@@ -3,12 +3,14 @@
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
+import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { YoutubePlayer } from "@/components/admin/YoutubePlayer";
 import { OfficialBadge } from "@/components/common/OfficialBadge";
 import { useAdWatcher } from "@/hooks/useAdWatcher";
 import { cn } from "@/libs/utils";
+import { Album } from "@/types/album";
 import { LyricLine } from "@/types/lyrics";
 import { YouTubePlayerInstance } from "@/types/youtube";
 
@@ -22,9 +24,10 @@ interface LyricsViewerClientProps {
     lyrics: LyricLine[];
     hasOfficialCheer?: boolean;
   };
+  album?: Album;
 }
 
-export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
+export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
   const [player, setPlayer] = useState<YouTubePlayerInstance | null>(null);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -91,6 +94,14 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
               <h1 className="text-2xl font-black tracking-tight text-white">{song.title}</h1>
               {song.hasOfficialCheer && <OfficialBadge className="bg-white/10 text-white" />}
             </div>
+            {album && (
+              <Link
+                href={`/albums/${album.imageSlug}`}
+                className="text-sm font-medium text-white/50 transition-colors hover:text-white"
+              >
+                {album.name}
+              </Link>
+            )}
           </div>
         </div>
 
@@ -118,6 +129,14 @@ export function LyricsViewerClient({ song }: LyricsViewerClientProps) {
               <h2 className="text-foreground text-xl font-black">{song.title}</h2>
               {song.hasOfficialCheer && <OfficialBadge />}
             </div>
+            {album && (
+              <Link
+                href={`/albums/${album.imageSlug}`}
+                className="text-muted-foreground hover:text-foreground mb-4 block text-sm font-medium transition-colors"
+              >
+                {album.name}
+              </Link>
+            )}
             <div className="bg-qwer-w h-0.5 w-8 rounded-full" />
           </div>
 
