@@ -6,8 +6,8 @@ import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-import { YoutubePlayer } from "@/components/admin/YoutubePlayer";
 import { OfficialBadge } from "@/components/common/OfficialBadge";
+import { YoutubePlayer } from "@/components/common/YoutubePlayer";
 import {
   Accordion,
   AccordionContent,

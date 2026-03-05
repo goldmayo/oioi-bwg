@@ -117,9 +117,9 @@ export function YoutubePlayer({
   }, [videoId, onPlayerReady]); // onPlayerReady를 의존성에 포함
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-black">
+    <div className="border-border relative aspect-video w-full overflow-hidden rounded-lg border bg-black">
       {!isReady && (
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-background/50 backdrop-blur-sm z-10 font-bold tracking-widest uppercase text-xs">
+        <div className="text-muted-foreground bg-background/50 absolute inset-0 z-10 flex items-center justify-center text-xs font-bold tracking-widest uppercase backdrop-blur-sm">
           Loading Player...
         </div>
       )}

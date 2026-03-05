@@ -4,6 +4,8 @@ import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { saveSongData } from "@/app/admin/actions";
+import { PreviewRail } from "@/components/admin/PreviewRail";
+import { YoutubePlayer } from "@/components/common/YoutubePlayer";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -20,9 +22,6 @@ import { useAdWatcher } from "@/hooks/useAdWatcher";
 import { useLyricsEditor } from "@/hooks/useLyricsEditor";
 import { LyricLine } from "@/types/lyrics";
 import { formatTime, parseLrc, parseTime } from "@/utils/lrc-parser";
-
-import { PreviewRail } from "./PreviewRail";
-import { YoutubePlayer } from "./YoutubePlayer";
 
 interface AdminEditorClientProps {
   song: {
