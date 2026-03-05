@@ -16,11 +16,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { useAdWatcher } from "@/hooks/useAdWatcher";
 import { useLyricsEditor } from "@/hooks/useLyricsEditor";
 import { LyricLine } from "@/types/lyrics";
+import { YouTubePlayerInstance } from "@/types/youtube";
 import { formatTime, parseLrc, parseTime } from "@/utils/lrc-parser";
 
 interface AdminEditorClientProps {
@@ -49,8 +51,6 @@ function TimeDisplay({
     </div>
   );
 }
-
-import { YouTubePlayerInstance } from "@/types/youtube";
 
 export function AdminEditorClient({ song }: AdminEditorClientProps) {
   const initialLyrics = (song.lyrics as LyricLine[]) || [];
@@ -345,153 +345,163 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
         </div>
       </div>
 
-      <div className="flex h-[50vh] min-h-100 shrink-0 gap-4">
-        {/* Top-Left: Youtube Player */}
-        <div className="flex h-full w-1/2 flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <TimeDisplay subscribeToTime={subscribeToTime} />
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setIsRecording(!isRecording)}
-                variant={isRecording ? "destructive" : "secondary"}
-                className="font-bold"
-              >
-                {isRecording ? "[REC] 녹화 중 (Space로 캡처)" : "녹화 모드 켜기"}
-              </Button>
-            </div>
-          </div>
-          <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
-            <YoutubePlayer
-              key={youtubeId}
-              videoId={youtubeId}
-              onTimeUpdate={handleTimeUpdate}
-              onPlayerReady={setPlayer}
-            />
-          </div>
-        </div>
-
-        {/* Top-Right: Table Area */}
-        <div className="border-border bg-card flex h-full w-1/2 flex-col overflow-hidden rounded-lg border shadow-sm">
-          <div className="border-border bg-muted/50 text-muted-foreground grid shrink-0 grid-cols-[100px_1fr_60px_220px] gap-2 border-b p-3 text-xs font-bold tracking-wider uppercase">
-            <div className="text-center">Time</div>
-            <div className="text-center">Lyrics (드래그하여 분리)</div>
-            <div className="text-center">Extra</div>
-            <div className="text-center">Action</div>
-          </div>
-          <ScrollArea className="h-full flex-1">
-            <div className="flex flex-col gap-1 p-2 pb-10" onMouseDown={() => setToolbar(null)}>
-              {lyrics.map((line, index) => {
-                const isCurrent = index === currentIndex;
-                const isError = index > 0 && line.startTime < lyrics[index - 1].startTime;
-
-                return (
-                  <div
-                    key={index}
-                    className={`grid grid-cols-[100px_1fr_60px_220px] items-center gap-2 rounded-md border p-2 transition-all ${isCurrent ? "border-primary/50 bg-accent/50 ring-primary/20 ring-1" : "border-border/50 bg-background"} ${isError ? "border-destructive/50 bg-destructive/5" : ""} `}
-                    onClick={() => setCurrentIndex(index)}
+      <div className="flex h-[50vh] min-h-100 shrink-0">
+        <ResizablePanelGroup orientation="horizontal" className="flex gap-4">
+          {/* Top-Left: Youtube Player */}
+          <ResizablePanel defaultSize={50} minSize={20}>
+            <div className="flex h-full flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <TimeDisplay subscribeToTime={subscribeToTime} />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setIsRecording(!isRecording)}
+                    variant={isRecording ? "destructive" : "secondary"}
+                    className="font-bold"
                   >
-                    <Input
-                      type="text"
-                      value={formatTime(line.startTime)}
-                      onChange={(e) => updateLine(index, { startTime: parseTime(e.target.value) })}
-                      className="border-input bg-muted/30 focus-visible:ring-primary/30 h-8 font-mono text-xs"
-                    />
-
-                    {/* Lyrics Segments */}
-                    {line.isExtra ? (
-                      <Input
-                        id={`extra-input-${line.startTime}`}
-                        value={line.segments[0]?.text || ""}
-                        onChange={(e) =>
-                          updateLine(index, {
-                            segments: [{ text: e.target.value, isCheer: true, isEcho: false }],
-                          })
-                        }
-                        className="border-qwer-e/30 bg-qwer-e/5 text-qwer-e focus-visible:ring-qwer-e/50 placeholder:text-qwer-e/30 h-8 text-sm font-bold"
-                        placeholder="(추임새 입력)"
-                      />
-                    ) : (
-                      <div
-                        className={`border-input bg-muted/20 flex h-8 items-center overflow-x-auto rounded border px-2 text-sm`}
-                        onMouseUp={(e) => handleMouseUpText(e, index)}
-                      >
-                        {line.segments?.map((seg, sIdx) => (
-                          <span
-                            key={sIdx}
-                            data-line={index}
-                            data-seg={sIdx}
-                            className={`selection:bg-primary/20 cursor-text whitespace-pre ${seg.isCheer ? "text-qwer-r font-bold" : ""} ${seg.isEcho ? "text-qwer-w decoration-qwer-w/50 underline underline-offset-4" : ""}`}
-                          >
-                            {seg.text}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex justify-center">
-                      <Checkbox
-                        checked={line.isExtra}
-                        onCheckedChange={(c) => updateLine(index, { isExtra: !!c })}
-                        className="data-[state=checked]:bg-qwer-e data-[state=checked]:border-qwer-e"
-                      />
-                    </div>
-                    <div className="flex justify-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-muted-foreground hover:text-foreground hover:bg-accent h-8 w-8"
-                        title="텍스트 수정"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditRawText(index);
-                        }}
-                      >
-                        <Pencil size={14} />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="hover:bg-primary/10 hover:text-primary h-8 w-8"
-                        title="타임스탬프 동기화 (SYNC)"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          captureTime(index);
-                        }}
-                      >
-                        <RefreshCw size={14} />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-qwer-e/70 hover:text-qwer-e hover:bg-qwer-e/10 h-8 w-8"
-                        title="아래에 추임새 행 추가"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const addedTime = addExtraLine(index);
-                          lastAddedTimeRef.current = addedTime;
-                        }}
-                      >
-                        <Plus size={14} />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-destructive/70 hover:text-destructive hover:bg-destructive/10 h-8 w-8"
-                        title="현재 행 삭제"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteLine(index);
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
+                    {isRecording ? "[REC] 녹화 중 (Space로 캡처)" : "녹화 모드 켜기"}
+                  </Button>
+                </div>
+              </div>
+              <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
+                <YoutubePlayer
+                  key={youtubeId}
+                  videoId={youtubeId}
+                  onTimeUpdate={handleTimeUpdate}
+                  onPlayerReady={setPlayer}
+                />
+              </div>
             </div>
-          </ScrollArea>
-        </div>
+          </ResizablePanel>
+
+          <ResizableHandle withHandle className="w-2 border-none bg-transparent" />
+
+          {/* Top-Right: Table Area */}
+          <ResizablePanel defaultSize={50} minSize={30}>
+            <div className="border-border bg-card flex h-full flex-col overflow-hidden rounded-lg border shadow-sm">
+              <div className="border-border bg-muted/50 text-muted-foreground grid shrink-0 grid-cols-[100px_1fr_60px_220px] gap-2 border-b p-3 text-xs font-bold tracking-wider uppercase">
+                <div className="text-center">Time</div>
+                <div className="text-center">Lyrics (드래그하여 분리)</div>
+                <div className="text-center">Extra</div>
+                <div className="text-center">Action</div>
+              </div>
+              <ScrollArea className="h-full flex-1">
+                <div className="flex flex-col gap-1 p-2 pb-10" onMouseDown={() => setToolbar(null)}>
+                  {lyrics.map((line, index) => {
+                    const isCurrent = index === currentIndex;
+                    const isError = index > 0 && line.startTime < lyrics[index - 1].startTime;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`grid grid-cols-[100px_1fr_60px_220px] items-center gap-2 rounded-md border p-2 transition-all ${isCurrent ? "border-primary/50 bg-accent/50 ring-primary/20 ring-1" : "border-border/50 bg-background"} ${isError ? "border-destructive/50 bg-destructive/5" : ""} `}
+                        onClick={() => setCurrentIndex(index)}
+                      >
+                        <Input
+                          type="text"
+                          value={formatTime(line.startTime)}
+                          onChange={(e) =>
+                            updateLine(index, { startTime: parseTime(e.target.value) })
+                          }
+                          className="border-input bg-muted/30 focus-visible:ring-primary/30 h-8 font-mono text-xs"
+                        />
+
+                        {/* Lyrics Segments */}
+                        {line.isExtra ? (
+                          <Input
+                            id={`extra-input-${line.startTime}`}
+                            value={line.segments[0]?.text || ""}
+                            onChange={(e) =>
+                              updateLine(index, {
+                                segments: [{ text: e.target.value, isCheer: true, isEcho: false }],
+                              })
+                            }
+                            className="border-qwer-e/30 bg-qwer-e/5 text-qwer-e focus-visible:ring-qwer-e/50 placeholder:text-qwer-e/30 h-8 text-sm font-bold"
+                            placeholder="(추임새 입력)"
+                          />
+                        ) : (
+                          <div
+                            className={`border-input bg-muted/20 flex h-8 items-center overflow-x-auto rounded border px-2 text-sm`}
+                            onMouseUp={(e) => handleMouseUpText(e, index)}
+                          >
+                            {line.segments?.map((seg, sIdx) => (
+                              <span
+                                key={sIdx}
+                                data-line={index}
+                                data-seg={sIdx}
+                                className={`selection:bg-primary/20 cursor-text whitespace-pre ${seg.isCheer ? "text-qwer-r font-bold" : ""} ${seg.isEcho ? "text-qwer-r decoration-qwer-r/50 underline underline-offset-4" : ""}`}
+                              >
+                                {seg.text}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex justify-center">
+                          <Checkbox
+                            checked={line.isExtra}
+                            onCheckedChange={(c) => updateLine(index, { isExtra: !!c })}
+                            className="data-[state=checked]:bg-qwer-e data-[state=checked]:border-qwer-e"
+                          />
+                        </div>
+                        <div className="flex justify-center gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-muted-foreground hover:text-foreground hover:bg-accent h-8 w-8"
+                            title="텍스트 수정"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditRawText(index);
+                            }}
+                          >
+                            <Pencil size={14} />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="hover:bg-primary/10 hover:text-primary h-8 w-8"
+                            title="타임스탬프 동기화 (SYNC)"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              captureTime(index);
+                            }}
+                          >
+                            <RefreshCw size={14} />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-qwer-e/70 hover:text-qwer-e hover:bg-qwer-e/10 h-8 w-8"
+                            title="아래에 추임새 행 추가"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const addedTime = addExtraLine(index);
+                              lastAddedTimeRef.current = addedTime;
+                            }}
+                          >
+                            <Plus size={14} />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-destructive/70 hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                            title="현재 행 삭제"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteLine(index);
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
 
       {/* Bottom Area: Preview Rail */}
