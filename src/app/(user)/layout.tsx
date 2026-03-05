@@ -1,3 +1,4 @@
+import { House } from "lucide-react";
 import Link from "next/link";
 import { ReactNode } from "react";
 
@@ -29,7 +30,7 @@ export default function UserLayout({
               href="/"
               className="text-muted-foreground hover:text-foreground text-xs font-bold tracking-widest uppercase transition-colors"
             >
-              Albums
+              <House size={24} />
             </Link>
           </nav>
         </div>
