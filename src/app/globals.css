@@ -51,6 +51,8 @@
   --color-qwer-w: var(--qwer-w);
   --color-qwer-e: var(--qwer-e);
   --color-qwer-r: var(--qwer-r);
+  --color-qwer-bwg: var(--qwer-bwg);
+  --color-qwer-rockation: var(--qwer-rockation);
 
   /* 앨범별 컬러 */
   --color-album-single1: var(--album-single1);
@@ -99,8 +101,13 @@
   /* QWER 로고 멤버 컬러 */
   --qwer-q: #ffffff;
   --qwer-w: #ef87b5;
-  --qwer-e: #c3d773;
-  --qwer-r: #06bded;
+  --qwer-e: #06bded;
+  --qwer-r: #c3d773;
+
+  /* 바위게 팬클럼 컬러 */
+  --qwer-bwg: #427f97;
+  /* Rockation 컬러 */
+  --qwer-rockation: #e67d8c;
 
   /* 앨범별 컬러 (스포이트로 보정 예정) */
   --album-single1: #e8a0b5;
