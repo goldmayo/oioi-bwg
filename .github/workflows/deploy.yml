@@ -1,0 +1,42 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches:
+      - main # 메인 브랜치 푸시 시 배포 실행
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Build & Deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      # 1. pnpm 설치
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      # 2. Node.js 설정 및 pnpm 캐싱
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+      # 3. 의존성 설치
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      # 4. Cloudflare Workers 배포
+      - name: Build & Deploy
+        # vinext deploy는 내부적으로 vinext build를 포함하여 수행합니다.
+        run: pnpm run deploy
+        env:
+          # Cloudflare API 토큰과 계정 ID (Secrets)
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # 빌드 시 필요한 환경 변수 (공개 가능한 값들)
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # DB 기밀 정보 (Secrets)
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}

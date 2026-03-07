@@ -39,6 +39,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Cloudflare & Vinext artifacts
+    ".wrangler/**",
+    ".vinext/**",
+    "dist/**",
+    "worker-configuration.d.ts",
   ]),
   prettierConfig,
 ]);
