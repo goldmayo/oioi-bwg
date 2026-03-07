@@ -5,9 +5,9 @@ dotenv.config();
 
 export default defineConfig({
   dialect: "postgresql",
-  schema: "./src/libs/db/schema.ts",
+  schema: "./src/libs/db/drizzle/schema.ts",
   out: "./drizzle",
   dbCredentials: {
-    url: process.env.DIRECT_URL!,
+    url: process.env.DATABASE_DIRECT_URL!,
   },
 });
