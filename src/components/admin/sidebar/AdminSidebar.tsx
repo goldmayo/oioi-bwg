@@ -6,16 +6,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { prisma } from "@/libs/prisma";
-import { ALBUMS } from "@/types/album"; // 통합 상수 사용
+import { getAllSongs } from "@/libs/db/drizzle/queries"; // 쿼리 헬퍼 사용
+import { ALBUMS } from "@/types/album";
 
 import { SidebarWrapper } from "./SidebarWrapper";
 
 // 순수 서버 컴포넌트: 데이터 페칭만 담당
 export async function AdminSidebar() {
-  const songs = await prisma.song.findMany({
-    orderBy: { order: "asc" },
-  });
+  // 직접 db 호출 대신 캡슐화된 쿼리 함수 사용
+  const songs = await getAllSongs();
 
   const albums = songs.reduce(
     (acc, song) => {
@@ -28,14 +27,13 @@ export async function AdminSidebar() {
     {} as Record<string, typeof songs>,
   );
 
-  // ALBUMS 상수에 정의된 순서 그대로 정렬
   const sortedAlbumNames = ALBUMS.map((a) => a.name).filter((name) => !!albums[name]);
 
   const accordionContent = (
     <Accordion type="multiple" className="w-full">
       {sortedAlbumNames.map((albumName) => (
         <AccordionItem key={albumName} value={albumName} className="border-border/50">
-          <AccordionTrigger className="py-3 text-left text-xs font-bold tracking-tight text-muted-foreground hover:text-foreground hover:no-underline">
+          <AccordionTrigger className="text-muted-foreground hover:text-foreground py-3 text-left text-xs font-bold tracking-tight hover:no-underline">
             {albumName}
           </AccordionTrigger>
           <AccordionContent>
@@ -44,7 +42,7 @@ export async function AdminSidebar() {
                 <Link
                   key={song.id}
                   href={`/admin/edit/${song.slug}`}
-                  className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground"
+                  className="text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md px-3 py-2 text-sm font-medium transition-all"
                 >
                   {song.title}
                 </Link>
@@ -56,10 +54,5 @@ export async function AdminSidebar() {
     </Accordion>
   );
 
-  return (
-    // 클라이언트 컴포넌트 래퍼에게 서버 컴포넌트 결과를 children으로 넘김 (Server Components Composition)
-    <SidebarWrapper>
-      {accordionContent}
-    </SidebarWrapper>
-  );
+  return <SidebarWrapper>{accordionContent}</SidebarWrapper>;
 }

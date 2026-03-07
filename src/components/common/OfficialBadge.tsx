@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/libs/utils";
+import { cn } from "@/utils/utils";
 
 const officialBadgeVariants = cva("flex items-center gap-1 border-none font-black text-white", {
   variants: {

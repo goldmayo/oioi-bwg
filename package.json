@@ -11,13 +11,12 @@
     "start:next": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:seed": "tsx src/libs/db/seed.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^5.2.2",
-    "@prisma/adapter-pg": "^7.4.1",
-    "@prisma/client": "^7.4.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
     "class-variance-authority": "^0.7.1",
@@ -56,7 +55,6 @@
     "lint-staged": "^16.3.1",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "prisma": "^7.4.1",
     "react-server-dom-webpack": "^19.2.4",
     "shadcn": "^3.8.5",
     "tailwindcss": "^4",
@@ -65,9 +63,6 @@
     "typescript": "^5",
     "vinext": "^0.0.24",
     "vite": "^7.3.1"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

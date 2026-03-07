@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 
-import { updateSession } from "@/utils/supabase/middleware";
+import { updateSession } from "@/libs/db/supabase/middleware";
 
 /**
  * Next.js 16 Proxy Function

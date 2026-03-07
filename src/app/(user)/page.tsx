@@ -1,19 +1,17 @@
 import { GridContainer } from "@/components/home/GridContainer";
-import { prisma } from "@/libs/prisma";
+import { getAllSongs } from "@/libs/db/drizzle/queries"; // 쿼리 헬퍼 사용
 import { Album, ALBUMS } from "@/types/album";
 
 /**
  * 사용자 메인 페이지: "Harmony Mosaic" 리뉴얼
- * 통합된 ALBUMS 상수를 사용하여 앨범 정보를 렌더링합니다.
+ * 데이터 접근 계층(Queries)을 활용하여 앨범 정보를 렌더링합니다.
  */
 export default async function UserMainPage() {
-  const songs = await prisma.song.findMany({
-    orderBy: { order: "asc" },
-  });
+  // 직접 db 호출 대신 캡슐화된 쿼리 함수 사용
+  const songs = await getAllSongs();
 
-  // 앨범별 곡 그룹화 (통합 ALBUMS 상수 기반)
+  // 앨범별 곡 그룹화 로직
   const albumsData = ALBUMS.map((album) => {
-    // DB에서 해당 앨범에 속한 곡들만 필터링
     const albumSongs = songs
       .filter((s) => s.albumName === album.name)
       .map((s) => ({
@@ -46,7 +44,6 @@ export default async function UserMainPage() {
         </p>
       </header>
 
-      {/* 인터랙티브 벤토 그리드 (통합 데이터 사용) */}
       <GridContainer albums={albumsData as unknown as Album[]} />
 
       <footer className="border-border/50 mt-20 border-t py-12 text-center">

@@ -15,10 +15,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useAdWatcher } from "@/hooks/useAdWatcher";
-import { cn } from "@/libs/utils";
 import { Album } from "@/types/album";
 import { LyricLine } from "@/types/lyrics";
 import { YouTubePlayerInstance } from "@/types/youtube";
+import { cn } from "@/utils/utils";
 
 gsap.registerPlugin(ScrollToPlugin);
 

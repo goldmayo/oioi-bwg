@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { prisma } from "@/libs/prisma";
+import { updateSong } from "@/libs/db/drizzle/commands"; // 명령 헬퍼 사용
+import { createClient } from "@/libs/db/supabase/server";
 import { LyricsDataSchema } from "@/types/lyrics";
-import { createClient } from "@/utils/supabase/server";
 
 /**
  * 관리자 로그인 액션
@@ -52,17 +52,15 @@ export async function saveSongData(songId: number, data: { lyrics: unknown; yout
   try {
     const validatedLyrics = LyricsDataSchema.parse(data.lyrics);
 
-    await prisma.song.update({
-      where: { id: songId },
-      data: {
-        lyrics: validatedLyrics,
-        youtubeId: data.youtubeId,
-      },
+    // 캡슐화된 명령 함수 호출 (updatedAt 갱신 로직 등이 내부적으로 처리됨)
+    await updateSong(songId, {
+      lyrics: validatedLyrics,
+      youtubeId: data.youtubeId,
     });
 
     revalidatePath("/");
-    revalidatePath(`/songs/${songId}`);
-    revalidatePath(`/admin/edit/${songId}`);
+    revalidatePath(`/songs`, "layout");
+    revalidatePath(`/admin/edit`, "layout");
 
     return { success: true };
   } catch (error) {

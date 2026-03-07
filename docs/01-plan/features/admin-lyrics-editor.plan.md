@@ -10,22 +10,22 @@
 - **실시간 싱크 캡처:** 관리자는 영상을 재생하며 스페이스바를 눌러 각 가사 행의 `startTime`을 즉시 기록할 수 있다.
 - **속성 편집:** 관리자는 각 가사 줄에 대해 `isCheer`, `isEcho`, `isExtra` 속성을 클릭 한 번으로 지정할 수 있다.
 - **실시간 프리뷰:** 관리자는 수정한 내용이 사용자 화면에서 어떻게 보일지 하단 레일 프리뷰를 통해 즉시 확인할 수 있다.
-- **DB 저장:** 관리자는 저장 버튼을 클릭하여 `Prisma 7` Server Actions을 통해 곡 데이터를 즉시 업데이트할 수 있다.
+- **DB 저장:** 관리자는 저장 버튼을 클릭하여 **Drizzle Commands** 레이어를 거쳐 데이터를 즉시 업데이트할 수 있다.
 
 ## 3. 핵심 기능 (Key Features)
-- [ ] **LRC Parser:** `.lrc` 텍스트 ↔ `LyricLine[]` JSON 변환 유틸리티.
-- [ ] **YouTube Sync Hook:** 플레이어 시간과 가사 행을 매칭하고 캡처하는 커스텀 훅 (`useLyricsEditor`).
-- [ ] **Admin Sidebar:** 앨범별 곡 선택 내비게이션 (Shadcn Accordion).
-- [ ] **Lyrics Editor UI:** 가사 수정 테이블 및 속성 토글 컨트롤.
-- [ ] **GSAP Preview Rail:** 실시간 동기화된 애니메이션 프리뷰.
-- [ ] **Server Actions:** Prisma 7 기반 데이터 저장 및 캐시 무효화.
+- [x] **LRC Parser:** `.lrc` 텍스트 ↔ `LyricLine[]` JSON 변환 유틸리티.
+- [x] **YouTube Sync Hook:** 플레이어 시간과 가사 행을 매칭하고 캡처하는 커스텀 훅 (`useLyricsEditor`).
+- [x] **Admin Sidebar:** 앨범별 곡 선택 내비게이션 (Shadcn Accordion).
+- [x] **Lyrics Editor UI:** 가사 수정 테이블 및 속성 토글 컨트롤.
+- [x] **GSAP Preview Rail:** 실시간 동기화된 애니메이션 프리뷰.
+- [x] **Mutation Layer:** Drizzle ORM 기반 데이터 저장 및 `revalidatePath` 처리.
 
 ## 4. 기술 스택 및 라이브러리 (Tech Stack)
-- **Framework:** Next.js 16 (App Router)
+- **Framework:** Vinext (Vite-based App Router)
 - **Styling:** Tailwind CSS 4, Shadcn UI (Accordion, Table, Dialog, Button)
 - **Animation:** GSAP (`@gsap/react`)
 - **State/Validation:** React `useState`, `zod`
-- **Database:** Prisma 7 (Supabase)
+- **Database:** Drizzle ORM (Supabase)
 
 ## 5. 단계별 구현 계획 (Phases)
 ### Phase 1: 기반 마련 (Foundation)
@@ -42,13 +42,13 @@
 - GSAP 기반 실시간 프리뷰 레일 구현.
 
 ### Phase 4: 저장 및 검증 (Persistence & QA)
-- Server Actions 구현 및 DB 연동.
+- Drizzle Commands 구현 및 DB 연동.
 - Zod 스키마 검증 및 에러 처리.
 - 핵심 시나리오 테스트.
 
 ## 6. 검증 전략 (Verification Strategy)
 - **유닛 테스트:** `lrc-parser.ts`가 다양한 LRC 포맷을 정확히 파싱하는지 확인.
-- **통합 테스트:** Server Actions를 통한 데이터 저장이 Prisma 7 캐시를 올바르게 무효화하는지 확인.
+- **통합 테스트:** `saveSongData` 액션을 통한 데이터 저장이 Drizzle을 통해 정상적으로 반영되는지 확인.
 - **품질 지표:** 
   - 스페이스바 캡처 반응성 (Latency < 50ms).
   - 저장 실패 시 데이터 복구 기능 작동 여부.

@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 
 import { LoginForm } from "@/components/admin/LoginForm";
 import { AdminSidebar } from "@/components/admin/sidebar/AdminSidebar";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/libs/db/supabase/server";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient();

@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
-import { Song } from "@/app/generated/prisma/client";
 import { LyricsViewerClient } from "@/components/lyrics/LyricsViewerClient";
-import { prisma } from "@/libs/prisma";
+import { getSongBySlug } from "@/libs/db/drizzle/queries";
+import { Song } from "@/libs/db/drizzle/schema";
 import { ALBUMS } from "@/types/album";
 import { LyricLine } from "@/types/lyrics";
 
@@ -22,10 +22,7 @@ export default async function SongDetailPage({ params }: SongPageProps) {
     return notFound();
   }
 
-  // 1. 프로미스를 미리 생성합니다. (ID 대신 slug로 조회)
-  const songPromise = prisma.song.findUnique({
-    where: { slug },
-  });
+  const songPromise = getSongBySlug(slug);
 
   return (
     <main className="bg-background flex flex-col">
@@ -39,7 +36,7 @@ export default async function SongDetailPage({ params }: SongPageProps) {
 /**
  * 데이터를 실제로 해소하여 클라이언트 뷰어에게 넘겨주는 중간 컴포넌트
  */
-async function LyricsViewerLoader({ promise }: { promise: Promise<Song | null> }) {
+async function LyricsViewerLoader({ promise }: { promise: Promise<Song | undefined> }) {
   const song = await promise;
 
   if (!song) {

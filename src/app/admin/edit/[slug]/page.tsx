@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { AdminEditorClient } from "@/components/admin/AdminEditorClient";
-import { prisma } from "@/libs/prisma";
+import { getSongBySlug } from "@/libs/db/drizzle/queries";
 
 interface AdminEditPageProps {
   params: Promise<{ slug: string }>;
@@ -9,7 +9,7 @@ interface AdminEditPageProps {
 
 /**
  * 관리자 가사 에디터 페이지 (Server Component)
- * 이제 ID가 아닌 고유 Slug를 기반으로 곡 데이터를 로드합니다.
+ * 데이터 접근 계층(Queries)을 활용하여 곡 데이터를 로드합니다.
  */
 export default async function AdminEditPage({ params }: AdminEditPageProps) {
   const { slug } = await params;
@@ -18,10 +18,8 @@ export default async function AdminEditPage({ params }: AdminEditPageProps) {
     return notFound();
   }
 
-  // DB에서 곡 데이터 조회 (Slug 기준)
-  const song = await prisma.song.findUnique({
-    where: { slug },
-  });
+  // 캡슐화된 쿼리 함수 사용
+  const song = await getSongBySlug(slug);
 
   if (!song) {
     return notFound();
