@@ -5,7 +5,6 @@ import gsap from "gsap";
 import { X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useRef } from "react";
 
 import { OfficialBadge } from "@/components/common/OfficialBadge";
@@ -19,19 +18,14 @@ interface AlbumDetailModalProps {
 }
 
 export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
-  const pathname = usePathname();
   const modalRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
-
-  // 현재 경로가 앨범 경로인지 확인 (훅 규칙 준수를 위해 상단에서 정의)
-  const isAlbumPath = pathname.includes("/albums/");
 
   /**
    * 모달 진입 애니메이션
    */
   useGSAP(() => {
-    // 앨범 경로일 때만 애니메이션 실행
-    if (isAlbumPath && modalRef.current && backdropRef.current) {
+    if (modalRef.current && backdropRef.current) {
       gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "none" });
 
       gsap.fromTo(
@@ -46,7 +40,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
         { y: 0, opacity: 1, stagger: 0.03, duration: 0.4, delay: 0.2, ease: "power2.out" },
       );
     }
-  }, [isAlbumPath]);
+  }, []);
 
   /**
    * 닫기 애니메이션 수행 후 부모의 onClose 호출
@@ -73,9 +67,6 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
       "<",
     );
   };
-
-  // 앨범 경로가 아니면 렌더링하지 않음 (훅 호출 이후에 조건부 리턴)
-  if (!isAlbumPath) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden p-4 md:p-10">
