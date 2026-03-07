@@ -17,7 +17,6 @@ interface SongPageProps {
  */
 export default async function SongDetailPage({ params }: SongPageProps) {
   const { slug } = await params;
-  console.log("Received slug:", slug);
 
   if (!slug) {
     return notFound();

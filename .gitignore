@@ -44,3 +44,4 @@ next-env.d.ts
 /docs/.pdca-snapshots
 /docs/.bkit-memory.json
 /docs/.pdca-status.json
+/dist/
