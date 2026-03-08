@@ -8,7 +8,7 @@ import { ALBUMS } from "@/types/album";
 import { LyricLine } from "@/types/lyrics"; // 타입 추가
 import { parseLrc } from "@/utils/lrc-parser";
 
-import { db } from "./index";
+import { getDb } from "./index";
 import { song as songTable } from "./schema";
 
 /**
@@ -52,6 +52,7 @@ function generateSlug(title: string): string {
 }
 
 async function main() {
+  const db = getDb();
   console.log("Drizzle 시딩 시작 (통합 ALBUMS 상수 기반)");
 
   for (const album of ALBUMS) {
