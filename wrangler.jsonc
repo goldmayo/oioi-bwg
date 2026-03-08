@@ -1,26 +1,25 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "oioibawige",
-  "compatibility_date": "2026-03-07",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2026-03-01",
+  "compatibility_flags": ["nodejs_compat", "no_handle_cross_request_promise_resolution"],
   "main": "./worker/index.ts",
-  "preview_urls": true,
   "assets": {
     "directory": ".vinext/client",
     "not_found_handling": "none",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
   "images": {
-    "binding": "IMAGES"
+    "binding": "IMAGES",
   },
   "routes": [
     {
       "pattern": "oioibawige.com",
-      "custom_domain": true
+      "custom_domain": true,
     },
     {
       "pattern": "www.oioibawige.com",
-      "custom_domain": true
-    }
-  ]
+      "custom_domain": true,
+    },
+  ],
 }

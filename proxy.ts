@@ -6,7 +6,7 @@ import { updateSession } from "./src/libs/db/supabase/middleware";
  * Next.js 16 Proxy Function
  * 기존의 middleware 역할을 수행하며, 세션 갱신 로직을 호출합니다.
  */
-export async function proxy(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   return await updateSession(request);
 }
 
