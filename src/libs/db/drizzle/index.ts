@@ -46,8 +46,8 @@ export function getDb() {
 
   // wrangler.jsonc의 binding "DB"는 process.env.DB_CONNECTION_STRING으로 자동 주입됩니다.
   const connectionString =
-    process.env.DB_CONNECTION_STRING || // 하이퍼드라이브가 주는 고속도로 주소
-    process.env.DATABASE_URL!; // 로컬 개발용 직접 주소
+    process.env.DB || // 하이퍼드라이브가 주는 고속도로 주소
+    process.env.DATABASE_DIRECT_URL!; // 로컬 개발용 직접 주소
 
   const queryClient = postgres(connectionString, {
     prepare: false,
