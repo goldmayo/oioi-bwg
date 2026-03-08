@@ -24,13 +24,14 @@ export async function signIn(formData: FormData) {
     return { error: error.message };
   }
 
-  // 관리자 권한 체크 (user_metadata 또는 app_metadata 사용 가능)
+  // 관리자 권한 체크
   const userRole = data.user.user_metadata?.role;
   if (userRole !== "admin") {
     await supabase.auth.signOut();
     return { error: "관리자 권한이 없습니다." };
   }
 
+  // 로그인 시 전체 레이아웃 재검증하여 헤더/사이드바 등 최신화
   revalidatePath("/", "layout");
   redirect("/admin");
 }
@@ -41,6 +42,8 @@ export async function signIn(formData: FormData) {
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+
+  // 로그아웃 시 전체 레이아웃 재검증
   revalidatePath("/", "layout");
   redirect("/login");
 }
@@ -52,15 +55,20 @@ export async function saveSongData(songId: number, data: { lyrics: unknown; yout
   try {
     const validatedLyrics = LyricsDataSchema.parse(data.lyrics);
 
-    // 캡슐화된 명령 함수 호출 (updatedAt 갱신 로직 등이 내부적으로 처리됨)
+    /**
+     * [Drizzle/Commands] updateSong 내부에서 이미 updateTag를 수행합니다.
+     * 따라서 데이터베이스 레벨의 캐시는 즉시 갱신됩니다.
+     */
     await updateSong(songId, {
       lyrics: validatedLyrics,
       youtubeId: data.youtubeId,
     });
 
-    revalidatePath("/");
-    revalidatePath(`/songs`, "layout");
-    revalidatePath(`/admin/edit`, "layout");
+    /**
+     * 클라이언트 라우터 캐시 및 페이지 레이아웃 재검증
+     * 루트 경로의 레이아웃을 무효화하여 모든 하위 경로(메인, 상세, 어드민)의 일관성을 맞춥니다.
+     */
+    revalidatePath("/", "layout");
 
     return { success: true };
   } catch (error) {
