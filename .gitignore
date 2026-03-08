@@ -40,8 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# build & dev artifacts
+/.vinext/
+/.wrangler/
+/dist/
+
 /app/generated/prisma
 /docs/.pdca-snapshots
 /docs/.bkit-memory.json
 /docs/.pdca-status.json
-/dist/

@@ -1,0 +1,24 @@
+{
+  "npm": {
+    "publish": false
+  },
+  "github": {
+    "release": true,
+    "releaseName": "v${version}"
+  },
+  "git": {
+    "tagName": "v${version}",
+    "commitMessage": "chore(release): v${version}",
+    "requireCleanWorkingDir": true
+  },
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": "angular",
+      "infile": "CHANGELOG.md"
+    }
+  },
+  "hooks": {
+    "before:init": "pnpm run type-check",
+    "after:bump": "npx wrangler types && pnpm run build"
+  }
+}
