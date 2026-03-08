@@ -1,14 +1,16 @@
 import "dotenv/config";
 
 import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
 import fs from "fs";
 import path from "path";
+import postgres from "postgres";
 
 import { ALBUMS } from "@/types/album";
-import { LyricLine } from "@/types/lyrics"; // 타입 추가
+import { LyricLine } from "@/types/lyrics";
 import { parseLrc } from "@/utils/lrc-parser";
 
-import { getDb } from "./index";
+import * as schema from "./schema";
 import { song as songTable } from "./schema";
 
 /**
@@ -52,7 +54,9 @@ function generateSlug(title: string): string {
 }
 
 async function main() {
-  const db = getDb();
+  // seed.ts는 Workers 런타임 밖에서 Node.js로 직접 실행되므로 Hyperdrive 없이 직접 연결합니다.
+  const client = postgres(process.env.DATABASE_DIRECT_URL!, { prepare: false });
+  const db = drizzle(client, { schema });
   console.log("Drizzle 시딩 시작 (통합 ALBUMS 상수 기반)");
 
   for (const album of ALBUMS) {
