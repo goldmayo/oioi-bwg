@@ -23,6 +23,11 @@ export const DEFAULT_METADATA: Metadata = {
   keywords: [...SITE_CONFIG.keywords],
   authors: [{ name: SITE_CONFIG.author }],
   creator: SITE_CONFIG.author,
+  /**
+   * Next.js App Router는 src/app 폴더 내의 favicon.ico, apple-icon.png 등을 
+   * 자동으로 인식하므로 icons 속성을 명시적으로 설정하지 않는 것이 권장됩니다.
+   */
+  manifest: "/manifest.json",
   openGraph: {
     type: "website",
     locale: "ko_KR",
