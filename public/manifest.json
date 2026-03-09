@@ -1,0 +1,23 @@
+{
+  "name": "어이어이바위게",
+  "short_name": "OIOIBWG",
+  "description": "QWER 전곡 응원법 싱크 가이드",
+  "icons": [
+    {
+      "src": "/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "start_url": "/",
+  "display": "standalone"
+}

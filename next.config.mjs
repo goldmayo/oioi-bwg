@@ -13,6 +13,8 @@ const nextConfig = {
   experimental: {
     // 3. Next.js 16 핵심: 명시적 캐싱(use cache) 엔진 활성화
     cacheComponents: true,
+    // 4. instrumentation.ts 활성화
+    instrumentationHook: true,
   },
 
   // 5. 서버리스 환경에서 외부 바이너리 의존성 최적화

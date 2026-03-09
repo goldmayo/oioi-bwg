@@ -43,7 +43,13 @@ export const ALBUMS: Album[] = [
     imageSlug: "manito",
     color: "#E85A9A",
     songs: [
-      { title: "고민중독", slug: "t-b-h", file: "QWER - T.B.H.lrc", youtubeId: "pbELDkeLdho" },
+      {
+        title: "고민중독",
+        slug: "t-b-h",
+        file: "QWER - T.B.H.lrc",
+        youtubeId: "pbELDkeLdho",
+        hasOfficial: true,
+      },
       { title: "SODA", slug: "soda", file: "QWER - SODA.lrc", youtubeId: "SKztjYndS_s" },
       {
         title: "자유선언",

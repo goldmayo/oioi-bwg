@@ -2,6 +2,8 @@ import { House } from "lucide-react";
 import Link from "next/link";
 import { ReactNode } from "react";
 
+import { Footer } from "@/components/common/Footer";
+
 /**
  * 사용자 페이지 공통 레이아웃 (Parallel Routes 지원)
  * @modal 슬롯을 추가하여 Intercepting Routes가 이 영역에 렌더링되도록 합니다.
@@ -42,8 +44,13 @@ export default function UserLayout({
 
       {/* 페이지 콘텐츠 */}
       <main className="custom-scrollbar ios-touch relative min-h-0 flex-1 overflow-y-auto">
-        {children}
-        {modal} {/* 가로채기 모달이 이곳에 렌더링됩니다 */}
+        <div className="flex min-h-full flex-col">
+          <div className="flex-1">
+            {children}
+            {modal} {/* 가로채기 모달이 이곳에 렌더링됩니다 */}
+          </div>
+          <Footer />
+        </div>
       </main>
     </div>
   );
