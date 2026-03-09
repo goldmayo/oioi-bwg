@@ -6,9 +6,28 @@ import { getSongBySlug } from "@/libs/db/drizzle/queries";
 import { Song } from "@/libs/db/drizzle/schema";
 import { ALBUMS } from "@/types/album";
 import { LyricLine } from "@/types/lyrics";
+import { constructMetadata } from "@/utils/metadata";
 
 interface SongPageProps {
   params: Promise<{ slug: string }>;
+}
+
+/**
+ * 동적 메타데이터 생성
+ */
+export async function generateMetadata({ params }: SongPageProps) {
+  const { slug } = await params;
+  const song = await getSongBySlug(slug);
+
+  if (!song) return {};
+
+  const album = ALBUMS.find((a) => a.name === song.albumName);
+
+  return constructMetadata({
+    title: song.title,
+    description: `${song.albumName} 수록곡 '${song.title}'의 응원법 가이드입니다.`,
+    image: album ? `/images/albums/${album.imageSlug}.webp` : undefined,
+  });
 }
 
 /**
