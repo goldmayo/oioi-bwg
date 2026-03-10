@@ -33,8 +33,8 @@ export function GridContainer({ albums }: GridContainerProps) {
       // 모달 오픈 시: 배경 블러 및 살짝 축소
       gsap.to(gridRef.current, {
         opacity: 0.3,
-        scale: 0.98,
-        duration: 0.6,
+        scale: 0.99,
+        duration: 0.5,
         ease: "power2.out",
       });
     } else {

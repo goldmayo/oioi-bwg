@@ -30,7 +30,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
 
       gsap.fromTo(
         modalRef.current,
-        { scale: 0.95, opacity: 0 },
+        { scale: 0.99, opacity: 0 },
         { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.2)" },
       );
 
@@ -53,7 +53,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
     });
 
     tl.to(modalRef.current, {
-      scale: 0.98,
+      scale: 0.99,
       opacity: 0,
       duration: 0.4,
       ease: "power2.out",
