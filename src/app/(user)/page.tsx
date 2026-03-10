@@ -42,15 +42,12 @@ export default async function UserMainPage() {
         <p className="text-muted-foreground mt-4 text-xs font-bold tracking-[0.3em] uppercase md:text-base">
           바위게야 오늘은 응원을 하자
         </p>
-        {/* 프로젝트 취지 안내 (Philosophy 반영) */}
         <div className="mt-8 flex justify-center">
           <div className="max-w-xl">
             <p className="text-muted-foreground/80 text-center text-sm leading-relaxed break-keep md:text-base">
-              정해진 정답은 없습니다. 각자의 목소리로 QWER을 응원하는 즐거운 순간을 위해, 현장에서
-              함께 호흡했던 응원 리듬을 공유합니다.
-            </p>
-            <p className="text-muted-foreground/80 mt-4 text-center text-sm leading-relaxed break-keep md:text-base">
-              처음 응원하는 바위게분들에게 작은 힌트가 되길 바랍니다.
+              함께 응원하며 즐거웠던 순간의 포인트들을 모았습니다. 공식 응원법과는 조금 다를 수
+              있지만, 현장에서 다 같이 호흡했던 기억을 바탕으로 공유합니다. 각자의 방식대로 자유롭게
+              참고해 주세요.
             </p>
           </div>
         </div>

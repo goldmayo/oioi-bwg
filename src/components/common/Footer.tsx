@@ -1,4 +1,6 @@
-import React from "react";
+import Link from "next/link";
+
+import { GithubIcon } from "@/components/icons/index";
 
 /**
  * 전역 푸터 컴포넌트
@@ -6,22 +8,42 @@ import React from "react";
  */
 export function Footer() {
   return (
-    <footer className="border-border/50 mt-auto border-t py-12 text-center">
-      <div className="container mx-auto px-4">
-        <div className="mb-6 space-y-2">
-          <p className="text-muted-foreground text-base font-bold tracking-[0.3em] uppercase">
-            OiOiBWG / Cheer RockCrab — 2026
-          </p>
-          <p className="text-muted-foreground/60 mx-auto max-w-2xl text-sm leading-relaxed break-keep">
-            본 서비스는 팬이 만든 비영리 프로젝트이며, 3Y CORPORATION 과 어떠한 공식적 관계도
-            없습니다.
-            <br />
-            공식 응원법 외의 내용은 작성자의 개인적인 제안일 뿐이므로 자유롭게 참고해 주세요.
-          </p>
+    <footer className="border-t border-white/5 px-4 py-12">
+      <div className="mx-auto max-w-3xl space-y-6 text-center">
+        {/* 브랜드 & 링크 섹션 */}
+        <div className="space-y-4">
+          <h2 className="text-muted-foreground text-xs font-bold tracking-[0.4em] uppercase md:text-sm">
+            OIOIBAWIGE / Cheer RockCrab <span className="ml-2 font-medium">© 2026</span>
+          </h2>
+
+          {/* 깃허브 & 오픈카톡 (아이콘 스타일 추천) */}
+          <div className="text-muted-foreground flex justify-center gap-6">
+            <Link
+              href="https://github.com/goldmayo/oioi-bwg"
+              className="hover:text-primary flex items-center gap-1.5 text-xs transition-colors"
+            >
+              <GithubIcon className="h-4 w-4" />
+              GitHub
+            </Link>
+            {/* <Link
+              href="#"
+              className="hover:text-primary flex items-center gap-1.5 text-xs transition-colors"
+            >
+              <KaKaoTalkIcon className="h-4 w-4" />
+              제보하기
+            </Link> */}
+          </div>
         </div>
 
-        <div className="flex justify-center gap-4 opacity-30 grayscale transition-all duration-500 hover:opacity-100 hover:grayscale-0">
-          {/* 향후 소셜 링크나 관련 링크 추가 공간 */}
+        {/* 설명 섹션 */}
+        <div className="text-muted-foreground/60 space-y-2 text-[11px] leading-relaxed md:text-xs">
+          <p className="text-muted-foreground/40 font-medium tracking-wide uppercase">
+            Fan-made Non-profit Project
+          </p>
+          <p className="mx-auto max-w-sm break-keep">
+            개인적인 응원 경험을 바탕으로 정리하여 공식 응원법과 차이가 있을 수 있습니다. 더 나은
+            응원을 위한 제보와 피드백은 언제나 환영합니다!
+          </p>
         </div>
       </div>
     </footer>
