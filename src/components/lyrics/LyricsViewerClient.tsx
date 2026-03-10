@@ -58,21 +58,81 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
    * 가사 스냅 스크롤 (자연스러운 센터링)
    * 상단 스페이서 없이 시작하며, 중앙 지점을 넘었을 때만 스크롤이 작동합니다.
    */
+  // useGSAP(() => {
+  //   if (currentIndex >= 0 && lineRefs.current[currentIndex] && scrollContainerRef.current) {
+  //     const target = lineRefs.current[currentIndex];
+  //     const container = scrollContainerRef.current;
+
+  //     // 1. 화면 너비에 따른 동적 조정값 계산 (400px~1200px 사이를 150~50으로 매핑)
+  //     const width = window.innerWidth;
+  //     const adjustment = gsap.utils.mapRange(400, 1200, 150, 100, width);
+  //     // 2. 너무 극단적인 값이 나오지 않도록 제한(선택사항)
+  //     const clampedAdjustment = gsap.utils.clamp(50, 150, adjustment);
+
+  //     gsap.to(container, {
+  //       scrollTo: {
+  //         y: target!,
+  //         offsetY: container.offsetHeight / 2 - clampedAdjustment, // 사용자 정의 가시 영역 수직 중앙 지점 보존
+  //         autoKill: false,
+  //       },
+  //       duration: 0.6,
+  //       ease: "power2.out",
+  //     });
+  //   }
+  // }, [currentIndex]);
+
+  /**
+   * 가사 스냅 스크롤 (기기 독립적 정중앙 정렬)
+   */
+  // useGSAP(() => {
+  //   if (currentIndex >= 0 && lineRefs.current[currentIndex] && scrollContainerRef.current) {
+  //     const target = lineRefs.current[currentIndex];
+  //     const container = scrollContainerRef.current;
+
+  //     if (!target || !container) return;
+
+  //     // 1. 컨테이너의 가시적 높이와 현재 타겟(가사 한 줄)의 높이를 가져옵니다.
+  //     const containerHeight = container.offsetHeight;
+  //     const targetHeight = target.offsetHeight;
+
+  //     // 2. [핵심 로직] 타겟의 중앙을 컨테이너의 중앙에 맞추는 오프셋 계산
+  //     // (컨테이너 절반 높이) - (가사 한 줄의 절반 높이)를 오프셋으로 주면
+  //     // 가사 라인의 '중앙'이 컨테이너의 '중앙'에 정확히 위치합니다.
+  //     const centerOffset = containerHeight / 2 - targetHeight / 2;
+
+  //     gsap.to(container, {
+  //       scrollTo: {
+  //         y: target,
+  //         offsetY: centerOffset,
+  //         autoKill: false,
+  //       },
+  //       duration: 0.6,
+  //       ease: "power2.out",
+  //     });
+  //   }
+  // }, [currentIndex]);
+  /**
+   * 가사 스냅 스크롤 (상단에서 35% 지점에 정렬)
+   */
   useGSAP(() => {
     if (currentIndex >= 0 && lineRefs.current[currentIndex] && scrollContainerRef.current) {
       const target = lineRefs.current[currentIndex];
       const container = scrollContainerRef.current;
 
-      // 1. 화면 너비에 따른 동적 조정값 계산 (400px~1200px 사이를 150~50으로 매핑)
-      const width = window.innerWidth;
-      const adjustment = gsap.utils.mapRange(400, 1200, 150, 100, width);
-      // 2. 너무 극단적인 값이 나오지 않도록 제한(선택사항)
-      const clampedAdjustment = gsap.utils.clamp(50, 150, adjustment);
+      if (!target || !container) return;
+
+      // 1. 컨테이너의 실제 가시적 높이를 가져옵니다.
+      const containerHeight = container.offsetHeight;
+
+      // 2. [수정된 핵심 로직]
+      // containerHeight * 0.35 : 컨테이너 상단에서 35% 지점을 기준으로 잡습니다.
+      // 중앙(50%)보다 위쪽이며, 다음에 올 가사들을 더 많이 보여줄 수 있어 시각적으로 편안합니다.
+      const topOffset = containerHeight * 0.15;
 
       gsap.to(container, {
         scrollTo: {
-          y: target!,
-          offsetY: container.offsetHeight / 2 - clampedAdjustment, // 사용자 정의 가시 영역 수직 중앙 지점 보존
+          y: target,
+          offsetY: topOffset, // 가사 라인의 상단이 컨테이너 상단으로부터 35% 위치에 오도록 스크롤
           autoKill: false,
         },
         duration: 0.6,
@@ -178,7 +238,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
                     "group origin-left cursor-pointer transition-all duration-700 ease-out",
                     isActive
                       ? "translate-x-2 scale-105 opacity-100"
-                      : "hover:blur-0 scale-100 opacity-15 blur-[0.5px] hover:opacity-50",
+                      : "blur-0 scale-100 opacity-50 hover:opacity-70",
                   )}
                 >
                   {line.isExtra ? (
