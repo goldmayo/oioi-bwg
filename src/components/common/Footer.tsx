@@ -13,7 +13,7 @@ export function Footer() {
         {/* 브랜드 & 링크 섹션 */}
         <div className="space-y-4">
           <h2 className="text-muted-foreground text-xs font-bold tracking-[0.4em] uppercase md:text-sm">
-            OIOIBAWIGE / Cheer RockCrab <span className="ml-2 font-medium">© 2026</span>
+            OIOIBAWIGE <span className="ml-2 font-medium">©2026</span>
           </h2>
 
           {/* 깃허브 & 오픈카톡 (아이콘 스타일 추천) */}
