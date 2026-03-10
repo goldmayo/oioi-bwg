@@ -23,7 +23,7 @@ export default function InterceptedAlbumPage({ params }: { params: Promise<{ slu
    * 이렇게 하면 URL이 다시 메인(/)으로 돌아가며 모달이 닫힙니다.
    */
   const handleClose = () => {
-    router.back();
+    router.replace("/", { scroll: false });
   };
 
   return <AlbumDetailModal album={album} onClose={handleClose} />;

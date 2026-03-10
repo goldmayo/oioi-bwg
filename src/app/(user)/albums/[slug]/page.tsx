@@ -26,7 +26,7 @@ export default function AlbumFullPage({ params }: { params: Promise<{ slug: stri
    * 직접 접속한 페이지에서 닫기를 누르면 메인으로 이동
    */
   const handleClose = () => {
-    router.push("/");
+    router.replace("/", { scroll: false });
   };
 
   return (
