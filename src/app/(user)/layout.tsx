@@ -16,9 +16,11 @@ export default function UserLayout({
   modal: ReactNode; // 모달 슬롯 추가
 }) {
   return (
-    <div className="bg-background flex h-dvh flex-col overflow-hidden">
+    <div className="bg-background flex flex-col">
+      {/* <div className="bg-background flex h-dvh flex-col overflow-hidden"> */}
       {/* 글로벌 헤더 */}
-      <header className="bg-background/80 w-full shrink-0 backdrop-blur-md">
+      <header className="bg-background/80 sticky top-0 z-40 w-full border-b backdrop-blur-md">
+        {/* <header className="bg-background/80 w-full shrink-0 backdrop-blur-md "> */}
         <div className="container mx-auto flex h-16 items-center justify-between px-8">
           <Link href="/" className="group flex items-center gap-2">
             <div className="bg-qwer-rockation h-2 w-2 rounded-full transition-transform group-hover:scale-150" />
@@ -43,14 +45,16 @@ export default function UserLayout({
       </header>
 
       {/* 페이지 콘텐츠 */}
-      <main className="custom-scrollbar ios-touch relative min-h-0 flex-1 overflow-y-auto">
-        <div className="flex min-h-full flex-col">
-          <div className="flex-1">
-            {children}
-            {modal} {/* 가로채기 모달이 이곳에 렌더링됩니다 */}
-          </div>
+      <main className="flex-1">
+        {/* <main className="custom-scrollbar ios-touch relative min-h-0 flex-1 overflow-y-auto"> */}
+        {/* <div className="flex min-h-full flex-col">
+          <div className="flex-1"> */}
+        {children}
+        {modal} {/* 가로채기 모달이 이곳에 렌더링됩니다 */}
+        {/* </div>
           <Footer />
-        </div>
+        </div> */}
+        <Footer />
       </main>
     </div>
   );

@@ -159,7 +159,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
       {/* 가사 스크롤 영역 */}
       <div
         ref={scrollContainerRef}
-        className="custom-scrollbar ios-touch flex-1 overflow-x-hidden overflow-y-auto px-6 md:px-10"
+        className="flex-1 overflow-x-hidden overflow-y-auto px-6 md:px-10"
       >
         <div className="mx-auto max-w-3xl py-12 md:py-20">
           {/* 가사 목록 */}

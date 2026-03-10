@@ -157,6 +157,25 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* 1. 전역 스크롤바 스타일 적용 (custom-scrollbar 내용 이동) */
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full transition-colors;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+
+  /* 2. html 태그에 전역 설정 적용 (ios-touch 내용 포함) */
+  html {
+    @apply scroll-smooth; /* 페이지 내 이동 시 부드러운 스크롤 */
+    -webkit-overflow-scrolling: touch; /* iOS 관성 스크롤 전역 적용 */
+  }
   body {
     @apply bg-background text-foreground;
   }

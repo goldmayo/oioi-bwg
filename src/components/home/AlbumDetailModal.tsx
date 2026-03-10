@@ -131,7 +131,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
               <div className="h-1.5 w-24 rounded-full" style={{ backgroundColor: album.color }} />
             </header>
 
-            <div className="custom-scrollbar ios-touch flex-1 overflow-y-auto px-8 pt-8 pb-16 md:px-16 md:pt-0">
+            <div className="flex-1 overflow-y-auto px-8 pt-8 pb-16 md:px-16 md:pt-0">
               <div className="mx-auto grid max-w-xl gap-3 md:mx-0">
                 {album.songs.map((song, idx) => (
                   <Link
