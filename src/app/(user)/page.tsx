@@ -46,8 +46,8 @@ export default async function UserMainPage() {
           <div className="max-w-xl">
             <p className="text-muted-foreground/80 text-center text-sm leading-relaxed break-keep md:text-base">
               함께 응원하며 즐거웠던 순간의 포인트들을 모았습니다. 공식 응원법과는 조금 다를 수
-              있지만, 현장에서 다 같이 호흡했던 기억을 바탕으로 공유합니다. 각자의 방식대로 자유롭게
-              참고해 주세요.
+              있지만, 현장에서 다 같이 호흡했던 기억을 바탕으로 공유합니다. 공연을 더 신나게 즐기기
+              위한 작은 보탬이 되길 바랍니다.
             </p>
           </div>
         </div>
