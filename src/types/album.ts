@@ -174,7 +174,7 @@ export const ALBUMS: Album[] = [
         title: "흰수염고래",
         slug: "blue-whale",
         file: "QWER - Blue Whale.lrc",
-        youtubeId: "h_S_Un3YoFo",
+        youtubeId: "6tXCKF33IzM",
       },
     ],
   },
