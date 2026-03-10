@@ -22,7 +22,7 @@ export default defineConfig({
 
       // 보안: 업로드 완료 후 빌드 결과물에서 소스맵 파일(.map) 자동 삭제
       sourcemaps: {
-        // filesToDeleteAfterUpload: ["./dist/**/*.map", "./.vinext/**/*.map"],
+        filesToDeleteAfterUpload: ["./dist/**/*.map", "./.vinext/**/*.map"],
       },
 
       // 서버리스(Cloudflare) 환경을 위한 번들 사이즈 최적화
