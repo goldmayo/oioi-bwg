@@ -6,7 +6,8 @@ import { z } from "zod";
 export const LyricSegmentSchema = z.object({
   text: z.string().min(1, "가사 내용을 입력해주세요."),
   isCheer: z.boolean().default(false), // 하이라이트 여부
-  isEcho: z.boolean().default(false),  // 가사를 따라 하는 부분
+  isEcho: z.boolean().default(false), // 가사를 따라 하는 부분
+  startTimeOffset: z.number().optional(), // 시작 시간으로부터의 오프셋 (초)
 });
 
 /**

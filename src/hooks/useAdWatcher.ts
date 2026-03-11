@@ -44,16 +44,17 @@ export const useAdWatcher = (player: YouTubePlayerInstance | null, targetId: str
         const currentDuration = typeof player.getDuration === "function" ? player.getDuration() : 0;
 
         // Heuristic: ID가 다르거나 길이가 원곡과 다를 때 (2초 이상 차이) 광고로 간주
-        const adDetected = (currentId && currentId !== targetId) || 
-                           (targetDuration > 0 && Math.abs(currentDuration - targetDuration) > 2);
+        const adDetected =
+          (currentId && currentId !== targetId) ||
+          (targetDuration > 0 && Math.abs(currentDuration - targetDuration) > 2);
 
         if (adDetected !== isAdPlaying) {
           setIsAdPlaying(adDetected);
-          
+
           if (adDetected) {
-            console.log("🚫 [useAdWatcher] 광고 감지됨: 동기화 일시정지");
+            console.log("[useAdWatcher] 광고 감지됨: 동기화 일시정지");
           } else {
-            console.log("✅ [useAdWatcher] 광고 종료됨: 동기화 재개");
+            console.log("[useAdWatcher] 광고 종료됨: 동기화 재개");
           }
         }
       } catch (_e) {

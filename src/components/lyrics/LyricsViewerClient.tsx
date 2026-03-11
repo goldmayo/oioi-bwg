@@ -36,6 +36,7 @@ interface LyricsViewerClientProps {
 export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
   const [player, setPlayer] = useState<YouTubePlayerInstance | null>(null);
   const [currentIndex, setCurrentIndex] = useState(-1);
+  const [activeSegmentIndex, setActiveSegmentIndex] = useState(-1);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -44,13 +45,28 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
 
   /**
    * 유튜브 재생 시간 업데이트 콜백
+   * 라인 레벨 + isExtra 라인은 세그먼트 레벨까지 추적
    */
   const handleTimeUpdate = (time: number) => {
     if (isAdPlaying) return;
 
-    const index = song.lyrics.findLastIndex((line) => line.startTime <= time);
-    if (index !== currentIndex) {
-      setCurrentIndex(index);
+    const lineIndex = song.lyrics.findLastIndex((line) => line.startTime <= time);
+    if (lineIndex !== currentIndex) {
+      setCurrentIndex(lineIndex);
+      setActiveSegmentIndex(-1); // 라인 변경 시 세그먼트 초기화
+    }
+
+    if (lineIndex !== -1) {
+      const line = song.lyrics[lineIndex];
+      // isExtra 라인에서만 세그먼트 레벨 추적
+      if (line.isExtra) {
+        const segIndex = line.segments.findLastIndex(
+          (seg) => line.startTime + (seg.startTimeOffset ?? 0) <= time,
+        );
+        if (segIndex !== activeSegmentIndex) {
+          setActiveSegmentIndex(segIndex);
+        }
+      }
     }
   };
 
@@ -112,7 +128,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
   //   }
   // }, [currentIndex]);
   /**
-   * 가사 스냅 스크롤 (상단에서 35% 지점에 정렬)
+   * 가사 스냅 스크롤 (상단에서 15% 지점에 정렬)
    */
   useGSAP(() => {
     if (currentIndex >= 0 && lineRefs.current[currentIndex] && scrollContainerRef.current) {
@@ -121,18 +137,13 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
 
       if (!target || !container) return;
 
-      // 1. 컨테이너의 실제 가시적 높이를 가져옵니다.
       const containerHeight = container.offsetHeight;
-
-      // 2. [수정된 핵심 로직]
-      // containerHeight * 0.35 : 컨테이너 상단에서 35% 지점을 기준으로 잡습니다.
-      // 중앙(50%)보다 위쪽이며, 다음에 올 가사들을 더 많이 보여줄 수 있어 시각적으로 편안합니다.
       const topOffset = containerHeight * 0.15;
 
       gsap.to(container, {
         scrollTo: {
           y: target,
-          offsetY: topOffset, // 가사 라인의 상단이 컨테이너 상단으로부터 35% 위치에 오도록 스크롤
+          offsetY: topOffset,
           autoKill: false,
         },
         duration: 0.6,
@@ -140,6 +151,28 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
       });
     }
   }, [currentIndex]);
+
+  /**
+   * isExtra 세그먼트 활성화 시 Pop & Glow 애니메이션
+   * className 셀렉터 방식으로 특정 세그먼트 span을 타겟황니다.
+   */
+  useGSAP(() => {
+    if (activeSegmentIndex < 0 || currentIndex < 0) return;
+    const selector = `.seg-${currentIndex}-${activeSegmentIndex}`;
+    gsap.fromTo(
+      selector,
+      { scale: 1, y: 0, filter: "brightness(1)" },
+      {
+        scale: 1.2,
+        y: -8,
+        filter: "brightness(1.5) drop-shadow(0 0 8px rgba(255,255,255,0.8))",
+        duration: 0.15,
+        yoyo: true,
+        repeat: 1,
+        ease: "power2.out",
+      },
+    );
+  }, [currentIndex, activeSegmentIndex]);
 
   return (
     <div className="bg-background flex h-[calc(100vh-64px)] flex-col overflow-hidden md:flex-row">
@@ -244,11 +277,26 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
                   {line.isExtra ? (
                     <div
                       className={cn(
-                        "inline-block rounded-xl px-5 py-2 text-lg font-black italic shadow-lg transition-colors md:px-6 md:py-3 md:text-xl",
-                        isActive ? "bg-qwer-e text-black" : "bg-qwer-e/10 text-qwer-e/50",
+                        "inline-flex flex-wrap gap-2 rounded-xl px-5 py-2 text-lg shadow-lg transition-colors md:px-6 md:py-3",
+                        isActive ? "bg-qwer-e" : "bg-qwer-e/10",
                       )}
                     >
-                      {line.segments[0]?.text}
+                      {line.segments.map((seg, sIdx) => (
+                        <span
+                          key={sIdx}
+                          className={cn(
+                            `seg-${index}-${sIdx}`,
+                            "inline-block font-black italic transition-colors duration-150 md:text-xl",
+                            isActive
+                              ? sIdx === activeSegmentIndex
+                                ? "text-white"
+                                : "text-black/70"
+                              : "text-qwer-e/50",
+                          )}
+                        >
+                          {seg.text}
+                        </span>
+                      ))}
                     </div>
                   ) : (
                     <div

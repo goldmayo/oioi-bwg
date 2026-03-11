@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Target, Trash2, X as CloseIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { saveSongData } from "@/app/admin/actions";
@@ -21,9 +21,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { useAdWatcher } from "@/hooks/useAdWatcher";
 import { useLyricsEditor } from "@/hooks/useLyricsEditor";
-import { LyricLine } from "@/types/lyrics";
+import { LyricLine, LyricSegment } from "@/types/lyrics";
 import { YouTubePlayerInstance } from "@/types/youtube";
 import { formatTime, parseLrc, parseTime } from "@/utils/lrc-parser";
+import { cn } from "@/utils/utils";
 
 interface AdminEditorClientProps {
   song: {
@@ -61,11 +62,14 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
     setCurrentIndex,
     isRecording,
     setIsRecording,
+    currentTimeRef,
     onTimeUpdate,
     subscribeToTime,
     updateLine,
     captureTime,
     addExtraLine,
+    addSegmentToExtra,
+    removeSegmentFromExtra,
     deleteLine,
     importLyrics,
     applyGlobalOffset,
@@ -106,6 +110,30 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
     if (!isAdPlaying) {
       onTimeUpdate(time);
     }
+  };
+
+  /**
+   * 현재 재생 시간을 기준으로 특정 세그먼트의 startTimeOffset을 캡처합니다.
+   * offset = 현재 재생 시간 - 라인의 startTime
+   */
+  const captureSegmentOffset = (lineIndex: number, segmentIndex: number) => {
+    const line = lyrics[lineIndex];
+    if (!line) return;
+    const offset = parseFloat((currentTimeRef.current - line.startTime).toFixed(2));
+    const newSegments = [...line.segments];
+    newSegments[segmentIndex] = { ...newSegments[segmentIndex], startTimeOffset: Math.max(0, offset) };
+    updateLine(lineIndex, { segments: newSegments });
+  };
+
+  /**
+   * 특정 세그먼트의 속성을 부분 업데이트하는 헬퍼.
+   */
+  const updateSegment = (lineIndex: number, segmentIndex: number, partial: Partial<LyricSegment>) => {
+    const line = lyrics[lineIndex];
+    if (!line) return;
+    const newSegments = [...line.segments];
+    newSegments[segmentIndex] = { ...newSegments[segmentIndex], ...partial };
+    updateLine(lineIndex, { segments: newSegments });
   };
 
   const handleYoutubeIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -407,17 +435,77 @@ export function AdminEditorClient({ song }: AdminEditorClientProps) {
 
                         {/* Lyrics Segments */}
                         {line.isExtra ? (
-                          <Input
-                            id={`extra-input-${line.startTime}`}
-                            value={line.segments[0]?.text || ""}
-                            onChange={(e) =>
-                              updateLine(index, {
-                                segments: [{ text: e.target.value, isCheer: true, isEcho: false }],
-                              })
-                            }
-                            className="border-qwer-e/30 bg-qwer-e/5 text-qwer-e focus-visible:ring-qwer-e/50 placeholder:text-qwer-e/30 h-8 text-sm font-bold"
-                            placeholder="(추임새 입력)"
-                          />
+                          <div className="flex flex-col gap-1.5">
+                            {line.segments.map((seg, sIdx) => (
+                              <div
+                                key={sIdx}
+                                className="border-qwer-e/30 bg-qwer-e/5 flex items-center gap-1 rounded border p-1"
+                              >
+                                {/* 세그먼트 텍스트 */}
+                                <Input
+                                  value={seg.text}
+                                  onChange={(e) => updateSegment(index, sIdx, { text: e.target.value })}
+                                  placeholder="텍스트"
+                                  className="border-qwer-e/20 text-qwer-e placeholder:text-qwer-e/30 h-7 w-24 text-xs font-bold"
+                                />
+                                {/* startTimeOffset 입력 */}
+                                <span className="text-qwer-e/40 text-[10px]">+</span>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={seg.startTimeOffset ?? 0}
+                                  onChange={(e) =>
+                                    updateSegment(index, sIdx, {
+                                      startTimeOffset: parseFloat(e.target.value),
+                                    })
+                                  }
+                                  className="border-qwer-e/20 text-qwer-e h-7 w-16 text-[10px] font-mono"
+                                />
+                                <span className="text-qwer-e/40 text-[10px]">s</span>
+                                {/* 현재 시간으로 offset 캡처 */}
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-qwer-e/70 hover:text-qwer-e hover:bg-qwer-e/10 h-6 w-6"
+                                  title="현재 재생 시간으로 오프셋 캡처"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    captureSegmentOffset(index, sIdx);
+                                  }}
+                                >
+                                  <Target size={11} />
+                                </Button>
+                                {/* 세그먼트 삭제 */}
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="text-destructive/60 hover:text-destructive hover:bg-destructive/10 h-6 w-6"
+                                  title="이 세그먼트 삭제"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeSegmentFromExtra(index, sIdx);
+                                  }}
+                                >
+                                  <CloseIcon size={11} />
+                                </Button>
+                              </div>
+                            ))}
+                            {/* 세그먼트 추가 버튼 */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className={cn(
+                                "text-qwer-e border-qwer-e/30 hover:bg-qwer-e/10 h-7 border border-dashed text-xs",
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addSegmentToExtra(index);
+                              }}
+                            >
+                              <Plus size={12} className="mr-1" />
+                              조각 추가
+                            </Button>
+                          </div>
                         ) : (
                           <div
                             className={`border-input bg-muted/20 flex h-8 items-center overflow-x-auto rounded border px-2 text-sm`}
