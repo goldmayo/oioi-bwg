@@ -11,7 +11,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   } = await supabase.auth.getUser();
 
   // 관리자 권한 체크 (role === "admin")
-  const isAdmin = user?.user_metadata?.role === "admin";
+  const isAdmin = user?.app_metadata?.role === "admin";
 
   if (!isAdmin) {
     return (
