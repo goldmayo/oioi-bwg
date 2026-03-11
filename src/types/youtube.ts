@@ -13,6 +13,7 @@ export interface YouTubePlayerInstance {
   seekTo(seconds: number, allowSeekAhead: boolean): void;
   playVideo(): void;
   pauseVideo(): void;
+  getPlayerState(): number;
   destroy(): void;
 }
 

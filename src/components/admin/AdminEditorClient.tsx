@@ -40,23 +40,55 @@ function AdminEditorInner() {
     subscribeToTime,
     handleTimeUpdate,
     setPlayer,
+    captureTime,
+    currentIndex,
+    player,
     addExtraLine,
     lastAddedTimeRef,
   } = useAdminEditorContext();
 
-  // X 키: 현재 위치에 추임새(isExtra) 행 추가
+  // QWER 단축키 시스템
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 입력창(Input, Textarea 등)을 포커스 중일 때는 단축키 무시
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key.toLowerCase() === "x") {
-        e.preventDefault();
-        const addedTime = addExtraLine();
-        lastAddedTimeRef.current = addedTime;
+
+      const key = e.key.toLowerCase();
+      if (!["q", "w", "e", "r"].includes(key)) return;
+
+      e.preventDefault(); // 영상 재생/일시정지, 텍스트 입력 등의 기본 동작 방지
+
+      switch (key) {
+        case "q":
+          // Q: 현재 행 캡처 (Sync)
+          captureTime(currentIndex);
+          break;
+        case "w":
+          // W: 재생 / 일시정지 토글
+          if (player) {
+            const state = player.getPlayerState();
+            // 1: playing
+            if (state === 1) {
+              player.pauseVideo();
+            } else {
+              player.playVideo();
+            }
+          }
+          break;
+        case "e":
+          // E: Extra(추임새) 행 추가
+          const addedTime = addExtraLine(currentIndex);
+          lastAddedTimeRef.current = addedTime;
+          break;
+        case "r":
+          // R: Recording(녹화) 모드 토글
+          setIsRecording(!isRecording);
+          break;
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [addExtraLine, lastAddedTimeRef]);
+  }, [isRecording, captureTime, currentIndex, player, addExtraLine, lastAddedTimeRef, setIsRecording]);
 
   return (
     <div className="bg-background flex h-full flex-col gap-4 overflow-hidden p-4">
@@ -72,13 +104,20 @@ function AdminEditorInner() {
           {/* 좌 패널: YoutubePlayer + 녹화 모드 버튼 */}
           <ResizablePanel defaultSize={50} minSize={20}>
             <div className="flex h-full flex-col gap-2">
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center bg-muted/30 px-3 py-2 rounded-t-lg border-b border-border text-xs text-muted-foreground">
+                <div className="flex gap-3">
+                  <span className="font-bold"><kbd className="bg-background border px-1 rounded text-primary">Q</kbd> 캡처</span>
+                  <span className="font-bold"><kbd className="bg-background border px-1 rounded">W</kbd> 재생/일시정지</span>
+                  <span className="font-bold"><kbd className="bg-background border px-1 rounded">E</kbd> 추임새 행 추가</span>
+                  <span className="font-bold"><kbd className="bg-background border px-1 rounded">R</kbd> 녹화(자동이동) 토글</span>
+                </div>
                 <Button
                   onClick={() => setIsRecording(!isRecording)}
                   variant={isRecording ? "destructive" : "secondary"}
-                  className="font-bold"
+                  size="sm"
+                  className="font-bold h-7 text-xs"
                 >
-                  {isRecording ? "[REC] 녹화 중 (Space로 캡처)" : "녹화 모드 켜기"}
+                  {isRecording ? "[R] 녹화 중 (자동이동 ON)" : "[R] 녹화 모드 켜기"}
                 </Button>
               </div>
               <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
