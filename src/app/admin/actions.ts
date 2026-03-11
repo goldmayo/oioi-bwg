@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { updateSong } from "@/libs/db/drizzle/commands"; // 명령 헬퍼 사용
-import { createClient } from "@/libs/db/supabase/server";
+import { checkServerAdmin, createClient } from "@/libs/db/supabase/server";
 import { LyricsDataSchema } from "@/types/lyrics";
 
 /**
@@ -24,8 +24,8 @@ export async function signIn(formData: FormData) {
     return { error: error.message };
   }
 
-  // 관리자 권한 체크
-  const userRole = data.user.user_metadata?.role;
+  // 관리자 권한 체크 (app_metadata를 사용)
+  const userRole = data.user.app_metadata?.role;
   if (userRole !== "admin") {
     await supabase.auth.signOut();
     return { error: "관리자 권한이 없습니다." };
@@ -45,13 +45,19 @@ export async function signOut() {
 
   // 로그아웃 시 전체 레이아웃 재검증
   revalidatePath("/", "layout");
-  redirect("/login");
+  redirect("/admin"); // /login 페이지가 따로 없으므로 /admin(로그인 폼 렌더링)으로 보냄
 }
 
 /**
  * 가사 데이터 저장 액션
  */
 export async function saveSongData(songId: number, data: { lyrics: unknown; youtubeId: string }) {
+  const { isAdmin } = await checkServerAdmin();
+
+  if (!isAdmin) {
+    return { success: false, error: "권한이 없습니다." };
+  }
+
   try {
     const validatedLyrics = LyricsDataSchema.parse(data.lyrics);
 

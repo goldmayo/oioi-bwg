@@ -26,3 +26,18 @@ export async function createClient() {
     }
   );
 }
+
+/**
+ * 서버 환경(서버 컴포넌트, 서버 액션)에서 호출하여 
+ * 현재 사용자 및 관리자(Admin) 여부를 반환하는 SSOT 유틸리티
+ */
+export async function checkServerAdmin() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isAdmin = user?.app_metadata?.role === "admin";
+
+  return { supabase, user, isAdmin };
+}

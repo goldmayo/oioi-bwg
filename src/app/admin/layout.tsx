@@ -2,16 +2,10 @@ import { ReactNode } from "react";
 
 import { LoginForm } from "@/components/admin/LoginForm";
 import { AdminSidebar } from "@/components/admin/sidebar/AdminSidebar";
-import { createClient } from "@/libs/db/supabase/server";
+import { checkServerAdmin } from "@/libs/db/supabase/server";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // 관리자 권한 체크 (role === "admin")
-  const isAdmin = user?.app_metadata?.role === "admin";
+  const { isAdmin } = await checkServerAdmin();
 
   if (!isAdmin) {
     return (
