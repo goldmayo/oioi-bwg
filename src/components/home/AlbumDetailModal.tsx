@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef } from "react";
 
-import { OfficialBadge } from "@/components/common/OfficialBadge";
+// import { OfficialBadge } from "@/components/common/OfficialBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Album } from "@/types/album";
@@ -147,7 +147,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                         {song.title}
                       </h4>
                     </div>
-                    {song.hasOfficial && <OfficialBadge type={"e"} />}
+                    {/* {song.hasOfficial && <OfficialBadge type={"e"} />} */}
                   </Link>
                 ))}
               </div>

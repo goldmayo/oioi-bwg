@@ -14,7 +14,9 @@ export const SITE_CONFIG = {
 } as const;
 
 export const DEFAULT_METADATA: Metadata = {
-  metadataBase: new URL(SITE_CONFIG.url),
+  metadataBase: new URL(
+    process.env.NODE_ENV === "development" ? "http://localhost:3000" : SITE_CONFIG.url,
+  ),
   title: {
     default: SITE_CONFIG.name,
     template: `%s | ${SITE_CONFIG.shortName}`,
@@ -24,10 +26,9 @@ export const DEFAULT_METADATA: Metadata = {
   authors: [{ name: SITE_CONFIG.author }],
   creator: SITE_CONFIG.author,
   /**
-   * Next.js App Router는 src/app 폴더 내의 favicon.ico, apple-icon.png 등을 
+   * Next.js App Router는 src/app 폴더 내의 favicon.ico, apple-icon.png 등을
    * 자동으로 인식하므로 icons 속성을 명시적으로 설정하지 않는 것이 권장됩니다.
    */
-  manifest: "/manifest.json",
   openGraph: {
     type: "website",
     locale: "ko_KR",

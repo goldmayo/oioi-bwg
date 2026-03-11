@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npx wrangler types && vinext dev --worker",
+    "dev": "vinext dev",
     "build": "npx wrangler types && vinext build",
     "start": "npx wrangler dev",
     "dev:next": "next dev",

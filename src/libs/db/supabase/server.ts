@@ -15,7 +15,7 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, options),
             );
           } catch {
             // 서버 컴포넌트에서 호출될 경우 setAll이 실패할 수 있습니다.
@@ -23,12 +23,12 @@ export async function createClient() {
           }
         },
       },
-    }
+    },
   );
 }
 
 /**
- * 서버 환경(서버 컴포넌트, 서버 액션)에서 호출하여 
+ * 서버 환경(서버 컴포넌트, 서버 액션)에서 호출하여
  * 현재 사용자 및 관리자(Admin) 여부를 반환하는 SSOT 유틸리티
  */
 export async function checkServerAdmin() {

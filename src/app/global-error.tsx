@@ -23,8 +23,10 @@ export default function GlobalError({
   return (
     <html lang="ko">
       <body>
-        <div className="flex min-h-screen flex-col items-center justify-center p-4 text-center">
-          <h2 className="text-foreground mb-4 text-2xl font-bold">앗! 무언가 잘못되었습니다.</h2>
+        <div className="flex min-h-screen flex-col items-center justify-center bg-black p-4 text-center">
+          <h2 className="text-muted-foreground mb-4 text-2xl font-bold">
+            앗! 무언가 잘못되었습니다.
+          </h2>
           <p className="text-muted-foreground mb-8">
             예기치 못한 오류가 발생했습니다. 서비스 이용에 불편을 드려 죄송합니다.
           </p>

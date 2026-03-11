@@ -6,7 +6,7 @@ import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
-import { OfficialBadge } from "@/components/common/OfficialBadge";
+// import { OfficialBadge } from "@/components/common/OfficialBadge";
 import { YoutubePlayer } from "@/components/common/YoutubePlayer";
 import {
   Accordion,
@@ -163,8 +163,8 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
       selector,
       { scale: 1, y: 0, filter: "brightness(1)" },
       {
-        scale: 1.2,
-        y: -8,
+        scale: 1.02,
+        y: -2,
         filter: "brightness(1.5) drop-shadow(0 0 8px rgba(255,255,255,0.8))",
         duration: 0.15,
         yoyo: true,
@@ -179,7 +179,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
       {/* 고정 영역: 동영상 + 정보 헤더 */}
       <div className="border-border relative z-20 w-full shrink-0 border-b bg-black shadow-2xl md:h-full md:w-[40%] md:border-r md:border-b-0">
         <div className="flex h-full flex-col">
-          <div className="aspect-video w-full">
+          <div className="aspect-video w-full border-b">
             <YoutubePlayer
               videoId={song.youtubeId}
               onTimeUpdate={handleTimeUpdate}
@@ -197,7 +197,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
                       <h1 className="truncate text-xl font-black tracking-tight text-white md:text-2xl">
                         {song.title}
                       </h1>
-                      {song.hasOfficialCheer && <OfficialBadge type="e" className="shrink-0" />}
+                      {/* {song.hasOfficialCheer && <OfficialBadge type="e" className="shrink-0" />} */}
                     </div>
                     {album && (
                       <div className="flex flex-col gap-1">
