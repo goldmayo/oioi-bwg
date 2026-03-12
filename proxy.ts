@@ -6,9 +6,15 @@ import { updateSession } from "./src/libs/db/supabase/middleware";
  * Next.js 16 Proxy Function
  * 기존의 middleware 역할을 수행하며, 세션 갱신 로직을 호출합니다.
  */
-export default async function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   return await updateSession(request);
 }
+
+// 만약 빌드 도구가 middleware라는 이름도 찾고 있다면 아래처럼 별칭을 주거나 추가해줄 수 있습니다.
+export const middleware = proxy;
+
+// Default Export (빌드 로그에서 "default" is not exported 에러 해결)
+export default proxy;
 
 export const config = {
   matcher: [
