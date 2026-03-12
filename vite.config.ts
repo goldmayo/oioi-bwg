@@ -1,38 +1,46 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import vinext from "vinext";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 
-export default defineConfig({
-  plugins: [
-    vinext(),
-    cloudflare({
-      viteEnvironment: {
-        name: "rsc",
-        childEnvironments: ["ssr"],
-      },
-    }), // Sentry 빌드 타임 최적화 및 소스맵 업로드 설정
-    sentryVitePlugin({
-      org: "oioibawige",
-      project: "cheer-rock-crab",
-      authToken: process.env.SENTRY_AUTH_TOKEN,
+export default defineConfig(({ mode }) => {
+  // .env 파일에서 SENTRY_AUTH_TOKEN 등을 로드합니다.
+  const env = loadEnv(mode, process.cwd(), "");
 
-      // 빌드 로그 정돈
-      silent: true,
+  return {
+    plugins: [
+      vinext(),
+      cloudflare({
+        viteEnvironment: {
+          name: "rsc",
+          childEnvironments: ["ssr"],
+        },
+      }),
+      sentryVitePlugin({
+        org: "oioibawige",
+        project: "cheer-rock-crab",
+        // loadEnv를 통해 가져온 토큰을 사용합니다.
+        authToken: env.SENTRY_AUTH_TOKEN,
 
-      // 보안: 업로드 완료 후 빌드 결과물에서 소스맵 파일(.map) 자동 삭제
-      sourcemaps: {
-        // filesToDeleteAfterUpload: ["./dist/**/*.map", "./.vinext/**/*.map"],
-      },
+        silent: false,
 
-      // 서버리스(Cloudflare) 환경을 위한 번들 사이즈 최적화
-      bundleSizeOptimizations: {
-        excludeDebugStatements: true,
-        excludeReplayIframe: true,
-      },
-    }),
-  ],
-  build: {
-    sourcemap: true,
-  },
+        sourcemaps: {
+          // [핵심 수정] dist 폴더 내의 모든 하위 경로를 탐색하도록 설정합니다.
+          assets: ["./dist/**"],
+
+          // Cloudflare Workers 용량 제한 준수를 위해 업로드 후 반드시 삭제합니다.
+          filesToDeleteAfterUpload: ["./dist/**/*.map"],
+        },
+
+        bundleSizeOptimizations: {
+          excludeDebugStatements: true,
+          excludeReplayIframe: true,
+        },
+      }),
+    ],
+    build: {
+      // 빌드 시 소스맵 생성을 활성화합니다.
+      sourcemap: "hidden",
+    },
+  };
 });
