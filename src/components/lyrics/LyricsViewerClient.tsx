@@ -236,17 +236,6 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
             </Accordion>
           </div>
         </div>
-
-        {/* 광고 오버레이 */}
-        {isAdPlaying && (
-          <div className="bg-background/80 absolute inset-0 z-30 flex items-center justify-center backdrop-blur-md">
-            <div className="animate-pulse p-6 text-center">
-              <p className="text-destructive text-xl font-bold tracking-widest uppercase">
-                Ad Playing...
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 가사 스크롤 영역 */}
