@@ -1,15 +1,23 @@
 // src/utils/analytics.ts
-import { sendGTMEvent } from "@next/third-parties/google";
 /**
  * 프로젝트 전역에서 사용할 분석 이벤트 래퍼입니다.
- * 라이브러리 교체 시 이 함수 내부만 수정하면 됩니다.
+ * 외부 라이브러리 의존성을 제거하고 전역 dataLayer를 사용합니다.
  */
+declare global {
+  interface Window {
+    dataLayer: Record<string, unknown>[] | undefined;
+  }
+}
+
 export const analytics = {
   // 버튼 클릭 및 인터랙션 이벤트
   trackEvent: (eventName: string, params?: Record<string, unknown>) => {
     if (typeof window !== "undefined") {
-      // sendGTMEvent는 내부적으로 window.dataLayer.push를 수행합니다.
-      sendGTMEvent({ event: eventName, ...params });
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: eventName,
+        ...params,
+      });
     }
   },
 
