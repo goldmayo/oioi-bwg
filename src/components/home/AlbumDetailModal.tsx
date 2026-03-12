@@ -11,6 +11,7 @@ import { useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Album } from "@/types/album";
+import { analytics } from "@/utils/analytics";
 
 interface AlbumDetailModalProps {
   album: Album;
@@ -137,6 +138,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                   <Link
                     key={song.title}
                     href={`/songs/${song.slug}`}
+                    onClick={() => analytics.trackSongClick(song.title, album.name)}
                     className="song-item border-border/30 bg-background/50 hover:bg-accent flex items-center justify-between rounded-2xl border p-5 transition-all duration-300"
                   >
                     <div className="flex items-center gap-6">
