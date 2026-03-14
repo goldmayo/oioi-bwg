@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 
+import { debounce } from "./utils";
+
 const IS_PROD = process.env.NODE_ENV === "production";
 
 /**
@@ -36,7 +38,7 @@ export const logger = {
   /**
    * 경고 메시지를 전송합니다.
    */
-  warn: (message: string, context?: Record<string, unknown>) => {
+  warn: debounce((message: string, context?: Record<string, unknown>) => {
     if (!IS_PROD) {
       console.warn(`[Sentry Dev Warn]: ${message}`, context);
       return;
@@ -48,18 +50,18 @@ export const logger = {
       }
       Sentry.captureMessage(message, "warning");
     });
-  },
+  }, 1000),
 
   /**
    * 일반적인 정보 메시지를 전송합니다.
    */
-  info: (message: string) => {
+  info: debounce((message: string) => {
     if (!IS_PROD) {
       console.info(`[Sentry Dev Info]: ${message}`);
       return;
     }
     Sentry.captureMessage(message, "info");
-  },
+  }, 1000),
 
   /**
    * 현재 사용자의 정보를 Sentry 컨텍스트에 설정합니다.
