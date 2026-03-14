@@ -1,5 +1,26 @@
 # Changelog
 
+# [0.2.0](https://github.com/goldmayo/oioi-bwg/compare/v0.1.0...v0.2.0) (2026-03-14)
+
+
+### Bug Fixes
+
+* GTM 설정 방식 변경 ([de660bc](https://github.com/goldmayo/oioi-bwg/commit/de660bc14ee0a92fda383fe78186579af4891828))
+* staging 환경 배포 오류 수정 ([cd1a38d](https://github.com/goldmayo/oioi-bwg/commit/cd1a38d55c0ca87bdd3ef1c3fd9381ae00f4befd))
+
+
+### Features
+
+* GTM 배포로인한 재배포 ([4f2be97](https://github.com/goldmayo/oioi-bwg/commit/4f2be975ba9484890ccac2ed49ee5338cc131e79))
+
+
+### Performance Improvements
+
+* admin 페이지 불필요한 prefetch 제거 ([707bbee](https://github.com/goldmayo/oioi-bwg/commit/707bbee751f6871b4fe13a5d7eb9392869598c95))
+* 곡 목록 쿼리 최적화 ([9b82d37](https://github.com/goldmayo/oioi-bwg/commit/9b82d37ca2d8c448765d1d61e8e13705141957f6))
+* 사이트 메타데이터 및 SEO 최적화 ([5069cb4](https://github.com/goldmayo/oioi-bwg/commit/5069cb415b46cb2ec8aa9c9c24149b8afccc3e69))
+* 사이트 퍼포먼스 최적화 ([0fce508](https://github.com/goldmayo/oioi-bwg/commit/0fce5081442de18de7810b7a5eda73243f4422b7))
+
 # 0.1.0 (2026-03-12)
 
 
