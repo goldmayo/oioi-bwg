@@ -23,6 +23,9 @@
     "deploy": "npx wrangler types && vinext deploy",
     "deploy:staging": "npx wrangler types && env-cmd -f .env.staging vinext deploy --env staging",
     "deploy:prod": "npx wrangler types && env-cmd -f .env.production vinext deploy",
+    "test:load": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/load.js",
+    "test:stress": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/stress.js",
+    "test:spike": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/spike.js",
     "release": "release-it"
   },
   "dependencies": {
