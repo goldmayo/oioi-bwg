@@ -56,8 +56,8 @@ jobs:
         # CI 환경에서는 env-cmd 없이 셸 환경 변수를 직접 사용합니다.
         run: |
           npx wrangler types
-          vinext build
-          vinext deploy --env production
+          npx vinext build
+          npx vinext deploy --env production
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
