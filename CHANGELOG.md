@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/goldmayo/oioi-bwg/compare/v0.2.0...v0.2.1) (2026-03-14)
+
+
+### Bug Fixes
+
+* production 배포 오류 수정 ([362e5f9](https://github.com/goldmayo/oioi-bwg/commit/362e5f9f1cb56e7e93c3dec1f01c89deb3f9ec94))
+
 # [0.2.0](https://github.com/goldmayo/oioi-bwg/compare/v0.1.0...v0.2.0) (2026-03-14)
 
 
