@@ -39,3 +39,9 @@ export const song = pgTable(
  */
 export type Song = typeof song.$inferSelect; // 조회용 타입
 export type InsertSong = typeof song.$inferInsert; // 삽입/수정용 타입
+
+// 가사를 제외한 곡 정보 타입 정의
+export type SongListItem = Pick<
+  Song,
+  "id" | "title" | "slug" | "albumName" | "order" | "updatedAt" | "hasOfficialCheer"
+>;
