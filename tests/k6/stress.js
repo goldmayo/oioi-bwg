@@ -20,7 +20,9 @@ export default function stress_scenarios() {
   const BASE_URL = __ENV.BASE_URL || "https://staging.oioibawige.com";
 
   // 캐시 우회를 위해 타임스탬프 파라미터 추가
-  const res = http.get(`${BASE_URL}/?t=${Date.now()}`);
+  const res = http.get(`${BASE_URL}/?t=${Date.now()}`, {
+    tags: { name: "Home_Page" },
+  });
 
   check(res, {
     "status is 200": (r) => r.status === 200,

@@ -22,7 +22,9 @@ export default function spike_scenarios() {
 
   // 실제 DB 조회를 유도하기 위해 랜덤 페이지 접속
   const slug = getRandomSlug();
-  const res = http.get(`${BASE_URL}/songs/${slug}?t=${Date.now()}`);
+  const res = http.get(`${BASE_URL}/songs/${slug}?t=${Date.now()}`, {
+    tags: { name: "Song_Detail" },
+  });
 
   check(res, {
     "status is 200": (r) => r.status === 200,
