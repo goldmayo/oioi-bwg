@@ -5,7 +5,14 @@ import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  console.log("loaded env:", env.NEXT_PUBLIC_ENVIRONMENT);
+
+  // env-cmd나 파일에서 읽어온 CLOUDFLARE_ENV가 있으면 process.env에 주입하여 Wrangler 환경을 선택합니다.
+  if (env.CLOUDFLARE_ENV) {
+    process.env.CLOUDFLARE_ENV = env.CLOUDFLARE_ENV;
+  }
+
+  console.log(`[Vite] Mode: ${mode}, Cloudflare Target: ${process.env.CLOUDFLARE_ENV || "local"}`);
+
   return {
     plugins: [
       vinext(),
@@ -14,7 +21,8 @@ export default defineConfig(({ mode }) => {
           name: "rsc",
           childEnvironments: ["ssr"],
         },
-      }), // Sentry 빌드 타임 최적화 및 소스맵 업로드 설정
+      }),
+      // Sentry 빌드 타임 최적화 및 소스맵 업로드 설정
       sentryVitePlugin({
         org: "oioibawige",
         project: "cheer-rock-crab",

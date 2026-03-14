@@ -13,6 +13,14 @@
           "id": "298a3509345e4518ae0b0f9b64c4fd32",
         },
       ],
+      "images": {
+        "binding": "IMAGES",
+      },
+      "assets": {
+        "directory": ".vinext/client",
+        "not_found_handling": "none",
+        "binding": "ASSETS",
+      },
       "routes": [
         {
           "pattern": "staging.oioibawige.com",

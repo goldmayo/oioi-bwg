@@ -59,7 +59,7 @@ jobs:
           npx vinext build
           npx vinext deploy
         env:
-          NEXT_PUBLIC_ENVIRONMENT: ${{ secrets.NEXT_PUBLIC_ENVIRONMENT }}
+          CLOUDFLARE_ENV: ${{ vars.CLOUDFLARE_ENV }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
           CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB: ${{ secrets.CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB }}
