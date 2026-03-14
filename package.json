@@ -9,7 +9,7 @@
     "build:prod": "npx wrangler types && env-cmd -f .env.production vinext build",
     "start": "npx wrangler dev",
     "start:staging": "env-cmd -f .env.staging npx wrangler dev --env staging",
-    "start:prod": "env-cmd -f .env.production npx wrangler dev --env production",
+    "start:prod": "env-cmd -f .env.production npx wrangler dev",
     "dev:next": "next dev",
     "build:next": "next build",
     "start:next": "next start",
@@ -21,8 +21,8 @@
     "db:pull": "drizzle-kit pull",
     "db:studio": "drizzle-kit studio",
     "deploy": "npx wrangler types && vinext deploy",
-    "deploy:staging": "pnpm run build:staging && vinext deploy --env staging",
-    "deploy:prod": "pnpm run build:prod && vinext deploy --env production",
+    "deploy:staging": "npx wrangler types && env-cmd -f .env.staging vinext deploy --env staging",
+    "deploy:prod": "npx wrangler types && env-cmd -f .env.production vinext deploy",
     "release": "release-it"
   },
   "dependencies": {

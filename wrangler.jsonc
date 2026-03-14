@@ -5,66 +5,14 @@
   "compatibility_flags": ["nodejs_compat", "no_handle_cross_request_promise_resolution"],
   "main": "./worker/index.ts",
   "env": {
-    "production": {
-      "name": "oioibawige",
-      "compatibility_date": "2026-03-01",
-      "hyperdrive": [
-        {
-          "binding": "DB",
-          "id": "d4d97ef26b31474fbb416e678f7ab857",
-        },
-      ],
-      "assets": {
-        "directory": ".vinext/client",
-        "not_found_handling": "none",
-        "binding": "ASSETS",
-      },
-      "images": {
-        "binding": "IMAGES",
-      },
-      "routes": [
-        {
-          "pattern": "oioibawige.com",
-          "custom_domain": true,
-        },
-        {
-          "pattern": "www.oioibawige.com",
-          "custom_domain": true,
-        },
-      ],
-      "observability": {
-        "enabled": false,
-        "head_sampling_rate": 1,
-        "logs": {
-          "enabled": true,
-          "head_sampling_rate": 1,
-          "persist": true,
-          "invocation_logs": true,
-        },
-        "traces": {
-          "enabled": false,
-          "persist": true,
-          "head_sampling_rate": 1,
-        },
-      },
-    },
     "staging": {
       "name": "oioibawige-staging",
-      "compatibility_date": "2026-03-01",
       "hyperdrive": [
         {
           "binding": "DB",
           "id": "298a3509345e4518ae0b0f9b64c4fd32",
         },
       ],
-      "assets": {
-        "directory": ".vinext/client",
-        "not_found_handling": "none",
-        "binding": "ASSETS",
-      },
-      "images": {
-        "binding": "IMAGES",
-      },
       "routes": [
         {
           "pattern": "staging.oioibawige.com",
@@ -77,4 +25,47 @@
       ],
     },
   },
+  "assets": {
+    "directory": ".vinext/client",
+    "not_found_handling": "none",
+    "binding": "ASSETS",
+  },
+  "images": {
+    "binding": "IMAGES",
+  },
+  "hyperdrive": [
+    {
+      "binding": "DB",
+      "id": "d4d97ef26b31474fbb416e678f7ab857",
+    },
+  ],
+  "routes": [
+    {
+      "pattern": "oioibawige.com",
+      "custom_domain": true,
+    },
+    {
+      "pattern": "www.oioibawige.com",
+      "custom_domain": true,
+    },
+  ],
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true,
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1,
+    },
+  },
+  "placement": {
+    "region": "aws:ap-northeast-2",
+  },
+  "minify": true,
 }
