@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "npx wrangler types && vinext build",
+    "build:staging": "npx wrangler types && env-cmd -f .env.staging vinext build",
+    "build:prod": "npx wrangler types && env-cmd -f .env.production vinext build",
     "start": "npx wrangler dev",
+    "start:staging": "env-cmd -f .env.staging npx wrangler dev --env staging",
+    "start:prod": "env-cmd -f .env.production npx wrangler dev --env production",
     "dev:next": "next dev",
     "build:next": "next build",
     "start:next": "next start",
@@ -17,6 +21,8 @@
     "db:pull": "drizzle-kit pull",
     "db:studio": "drizzle-kit studio",
     "deploy": "npx wrangler types && vinext deploy",
+    "deploy:staging": "pnpm run build:staging && vinext deploy --env staging",
+    "deploy:prod": "pnpm run build:prod && vinext deploy --env production",
     "release": "release-it"
   },
   "dependencies": {
@@ -56,6 +62,7 @@
     "@vitejs/plugin-rsc": "^0.5.21",
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.9",
+    "env-cmd": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "eslint-config-prettier": "^10.1.8",
