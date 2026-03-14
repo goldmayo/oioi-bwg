@@ -1,37 +1,75 @@
-"use client";
+"use cache";
 
-import { useRouter } from "next/navigation";
-import { use } from "react";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { AlbumDetailModal } from "@/components/home/AlbumDetailModal";
-import { ALBUMS } from "@/types/album";
+import { AlbumDetailSkeleton } from "@/components/home/AlbumDetailSkeleton";
+import { Album, ALBUMS } from "@/types/album";
+import { constructMetadata } from "@/utils/metadata";
+
+interface AlbumPageProps {
+  params: Promise<{ slug: string }>;
+}
 
 /**
- * 일반 라우트: /albums/[slug]로 직접 접속 시 보여줄 전체 화면 페이지
+ * 동적 메타데이터 생성
  */
-export default function AlbumFullPage({ params }: { params: Promise<{ slug: string }> }) {
-  const router = useRouter();
-  const { slug } = use(params);
-
+export async function generateMetadata({ params }: AlbumPageProps) {
+  const { slug } = await params;
   const album = ALBUMS.find((a) => a.imageSlug === slug);
 
-  if (!album)
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center font-bold">
-        Album not found.
-      </div>
-    );
+  if (!album) return {};
 
-  /**
-   * 직접 접속한 페이지에서 닫기를 누르면 메인으로 이동
-   */
-  const handleClose = () => {
-    router.replace("/", { scroll: false });
-  };
+  return constructMetadata({
+    title: album.name,
+    description: `${album.name} 앨범의 수록곡 리스트와 응원법 정보를 확인하세요.`,
+    image: `/images/albums/${album.imageSlug}.webp`,
+  });
+}
+
+/**
+ * 사용자용 앨범 상세 페이지 (Server Component)
+ */
+export default async function AlbumDetailPage({ params }: AlbumPageProps) {
+  const { slug } = await params;
+
+  if (!slug) {
+    return notFound();
+  }
+
+  // 앨범 데이터 조회를 위한 프로미스 생성 (현재는 정적 데이터이므로 즉시 해소)
+  const albumPromise = Promise.resolve(ALBUMS.find((a) => a.imageSlug === slug));
 
   return (
-    <div className="bg-background h-full pt-10">
-      <AlbumDetailModal album={album} onClose={handleClose} />
+    <main className="bg-background flex flex-col px-4 pt-10 md:px-10">
+      <Suspense fallback={<AlbumPageLoader />}>
+        <AlbumDetailLoader promise={albumPromise} />
+      </Suspense>
+    </main>
+  );
+}
+
+/**
+ * 데이터를 실제로 해소하여 클라이언트 모달 컴포넌트로 넘겨주는 중간 컴포넌트
+ */
+async function AlbumDetailLoader({ promise }: { promise: Promise<Album | undefined> }) {
+  const album = await promise;
+
+  if (!album) {
+    return notFound();
+  }
+
+  return <AlbumDetailModal album={album} />;
+}
+
+/**
+ * 앨범 상세 페이지 전용 로딩 스켈레톤
+ */
+function AlbumPageLoader() {
+  return (
+    <div className="mx-auto flex h-[85vh] w-full max-w-5xl animate-pulse items-center justify-center">
+      <AlbumDetailSkeleton />
     </div>
   );
 }

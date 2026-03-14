@@ -35,7 +35,7 @@ export function GridContainer({ albums }: GridContainerProps) {
       gsap.to(gridRef.current, {
         opacity: 0.3,
         scale: 0.99,
-        duration: 0.5,
+        duration: 0.2,
         ease: "power2.out",
       });
     } else {
@@ -43,7 +43,7 @@ export function GridContainer({ albums }: GridContainerProps) {
       gsap.to(gridRef.current, {
         opacity: 1,
         scale: 1,
-        duration: 0.5,
+        duration: 0.2,
         ease: "power2.inOut",
       });
     }
@@ -61,6 +61,7 @@ export function GridContainer({ albums }: GridContainerProps) {
             key={album.name}
             href={`/albums/${album.imageSlug}`}
             scroll={false}
+            prefetch={false}
             onClick={() => analytics.trackAlbumClick(album.name, album.imageSlug)}
             className="group bg-card border-border/50 hover:border-border relative aspect-square cursor-pointer overflow-hidden rounded-2xl border transition-all duration-500 hover:-translate-y-3 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)]"
           >

@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef } from "react";
 
 // import { OfficialBadge } from "@/components/common/OfficialBadge";
@@ -15,10 +16,11 @@ import { analytics } from "@/utils/analytics";
 
 interface AlbumDetailModalProps {
   album: Album;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
+  const router = useRouter();
   const modalRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -31,26 +33,26 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
 
       gsap.fromTo(
         modalRef.current,
-        { scale: 0.99, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.2)" },
-      );
-
-      gsap.fromTo(
-        ".song-item",
-        { y: 10, opacity: 0 },
-        { y: 0, opacity: 1, stagger: 0.03, duration: 0.4, delay: 0.2, ease: "power2.out" },
+        { scale: 0.99 },
+        { scale: 1, duration: 0.5, ease: "back.out(1.2)" },
       );
     }
   }, []);
 
   /**
-   * 닫기 애니메이션 수행 후 부모의 onClose 호출
+   * 닫기 애니메이션 수행 후 부모의 onClose 호출 혹은 홈으로 이동
    */
   const handleClose = () => {
     if (!modalRef.current || !backdropRef.current) return;
 
     const tl = gsap.timeline({
-      onComplete: onClose,
+      onComplete: () => {
+        if (onClose) {
+          onClose();
+        } else {
+          router.replace("/", { scroll: false });
+        }
+      },
     });
 
     tl.to(modalRef.current, {
@@ -138,6 +140,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                   <Link
                     key={song.title}
                     href={`/songs/${song.slug}`}
+                    prefetch={false}
                     onClick={() => analytics.trackSongClick(song.title, album.name)}
                     className="song-item border-border/30 bg-background/50 hover:bg-accent flex items-center justify-between rounded-2xl border p-5 transition-all duration-300"
                   >

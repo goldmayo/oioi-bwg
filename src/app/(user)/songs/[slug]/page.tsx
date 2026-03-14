@@ -17,16 +17,16 @@ interface SongPageProps {
  */
 export async function generateMetadata({ params }: SongPageProps) {
   const { slug } = await params;
-  const song = await getSongBySlug(slug);
 
-  if (!song) return {};
+  // ALBUMS 상수에서 해당 slug를 가진 곡과 앨범 찾기
+  const album = ALBUMS.find((a) => a.songs.some((s) => s.slug === slug));
+  const song = album?.songs.find((s) => s.slug === slug);
 
-  const album = ALBUMS.find((a) => a.name === song.albumName);
+  if (!song || !album) return {};
 
   return constructMetadata({
     title: song.title,
-    description: `${song.albumName} 수록곡 '${song.title}'의 응원법 가이드입니다.`,
-    image: album ? `/images/albums/${album.imageSlug}.webp` : undefined,
+    description: `${album.name} 수록곡 '${song.title}'의 비공식 응원법 가이드입니다.`,
   });
 }
 

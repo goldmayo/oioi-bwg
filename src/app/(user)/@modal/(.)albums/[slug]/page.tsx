@@ -1,30 +1,60 @@
-"use client";
+"use cache";
 
-import { useRouter } from "next/navigation";
-import { use } from "react";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { AlbumDetailModal } from "@/components/home/AlbumDetailModal";
-import { ALBUMS } from "@/types/album";
+import { AlbumDetailSkeleton } from "@/components/home/AlbumDetailSkeleton";
+import { Album, ALBUMS } from "@/types/album";
+
+interface InterceptedAlbumProps {
+  params: Promise<{ slug: string }>;
+}
 
 /**
  * 인터셉팅 라우트: 메인 페이지에서 /albums/[slug]로 이동 시 가로채서 모달을 띄웁니다.
  */
-export default function InterceptedAlbumPage({ params }: { params: Promise<{ slug: string }> }) {
-  const router = useRouter();
-  const { slug } = use(params);
+export default async function InterceptedAlbumPage({ params }: InterceptedAlbumProps) {
+  const { slug } = await params;
 
-  // 통합 상수에서 해당 슬러그의 앨범 찾기
-  const album = ALBUMS.find((a) => a.imageSlug === slug);
+  if (!slug) return null;
 
-  if (!album) return null;
+  // 앨범 데이터 조회를 위한 프로미스 생성
+  const albumPromise = Promise.resolve(ALBUMS.find((a) => a.imageSlug === slug));
 
-  /**
-   * 모달 닫기: 단순히 상태를 바꾸는 게 아니라 히스토리를 뒤로 돌립니다.
-   * 이렇게 하면 URL이 다시 메인(/)으로 돌아가며 모달이 닫힙니다.
-   */
-  const handleClose = () => {
-    router.replace("/", { scroll: false });
-  };
+  return (
+    <Suspense fallback={<AlbumModalLoader />}>
+      <AlbumDetailLoader promise={albumPromise} />
+    </Suspense>
+  );
+}
 
-  return <AlbumDetailModal album={album} onClose={handleClose} />;
+/**
+ * 데이터를 실제로 해소하여 클라이언트 모달 컴포넌트로 넘겨주는 중간 컴포넌트
+ */
+async function AlbumDetailLoader({ promise }: { promise: Promise<Album | undefined> }) {
+  const album = await promise;
+
+  if (!album) {
+    return notFound();
+  }
+
+  return <AlbumDetailModal album={album} />;
+}
+
+/**
+ * 인터셉팅 모달 전용 로딩 스켈레톤
+ */
+function AlbumModalLoader() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10">
+      {/* Backdrop 스켈레톤 */}
+      <div className="bg-background/40 absolute inset-0 backdrop-blur-sm" />
+
+      {/* Shared Modal Skeleton */}
+      <div className="relative flex h-full max-h-[85vh] w-full max-w-5xl animate-pulse items-center justify-center">
+        <AlbumDetailSkeleton />
+      </div>
+    </div>
+  );
 }
