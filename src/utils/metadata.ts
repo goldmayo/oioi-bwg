@@ -19,7 +19,7 @@ export function constructMetadata({
   image = SITE_CONFIG.ogImage,
   noIndex = false,
 }: ConstructMetadataProps = {}): Metadata {
-  const fullTitle = title ? `${title} | ${SITE_CONFIG.shortName}` : SITE_CONFIG.name;
+  const fullTitle = title ? `${title}` : SITE_CONFIG.name;
 
   return {
     title: fullTitle,
