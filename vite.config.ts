@@ -11,7 +11,9 @@ export default defineConfig(({ mode }) => {
     process.env.CLOUDFLARE_ENV = env.CLOUDFLARE_ENV;
   }
 
-  console.log(`[Vite] Mode: ${mode}, Cloudflare Target: ${process.env.CLOUDFLARE_ENV || "local"}`);
+  console.log(
+    `[Vite] Mode: ${mode}, Cloudflare Target: ${process.env.CLOUDFLARE_ENV || "production"}`,
+  );
 
   return {
     plugins: [
