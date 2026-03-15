@@ -49,10 +49,14 @@
 
 ### Infrastructure
 
-- **Runtime**: Cloudflare Workers
+- **Runtime**: Cloudflare Workers (staging, production)
 - **Connection**: Cloudflare Hyperdrive (Database connection pooling)
 - **Monitoring**: Sentry (Error & Performance tracking)
 - **Analytics**: Google Analytics & Google Tag Manager
+
+### Test
+
+- **stress / spike / load**: K6
 
 ---
 
@@ -60,16 +64,25 @@
 
 ```text
 cheer-rock-crab/
+├── .github/workflows/  # cicd pipe (.yml)
 ├── data/lyrics/        # 원본 가사 파일 (.lrc)
+├── docs/               # 문서 (.md)
 ├── drizzle/            # SQL 마이그레이션 이력
 ├── src/
 │   ├── app/
 │   │   ├── (user)/     # 사용자 페이지 (메인, 뷰어)
 │   │   └── admin/      # 관리자 편집기
 │   ├── components/     # UI 및 비즈니스 컴포넌트
-│   ├── libs/db/        # Drizzle ORM 레이어 (Queries, Commands)
+│   ├── config/         # 사이트맵
 │   ├── hooks/          # 커스텀 훅 (LyricsEditor, AdWatcher 등)
-│   └── utils/          # 가사 파서 및 유틸리티
+│   ├── libs/db/        # Drizzle / Supabase ORM 레이어 (Queries, Commands)
+│   ├── types/          # 공용타입
+│   └── utils/          # 가사 파서 및 라이브러리 유틸리티
+├── tests/              # stress, load, spike 테스트 스크립트
+├── worker/             # cloudflare worker 진입점
+├── proxy.ts            # 미들웨어
+├── next.config.mjs     # nextjs 설정
+├── vite.config.ts      # vite 번들러 설정
 ├── wrangler.jsonc      # Cloudflare 설정
 └── package.json        # 의존성 및 스크립트
 
@@ -92,29 +105,44 @@ cheer-rock-crab/
 ### 설치
 
 ```bash
-pnpm install
-
+pnpm install --frozen-lockfile
 ```
 
 ### 개발 서버 실행
 
 ```bash
 pnpm dev
-
 ```
 
 ### 데이터베이스 마이그레이션
 
 ```bash
 pnpm db:push
+```
 
+### 테스트
+
+```bash
+# k6 tests
+pnpm test:load
+pnpm test:stress
+pnpm test:spike
 ```
 
 ### 배포
 
 ```bash
-pnpm deploy
-
+## local
+## staging
+pnpm deploy:staging
+## production
+pnpm deploy:prod
+---
+## staging
+git push origin staging
+---
+## production
+pnpm release
 ```
 
 ---
