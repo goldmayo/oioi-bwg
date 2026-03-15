@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/goldmayo/oioi-bwg/compare/v0.2.1...v0.2.2) (2026-03-15)
+
+
+### Bug Fixes
+
+* sentry, GA 디바운스 적용 ([72bc5a6](https://github.com/goldmayo/oioi-bwg/commit/72bc5a644bc892452618782557e52bab368929a9))
+
 ## [0.2.1](https://github.com/goldmayo/oioi-bwg/compare/v0.2.0...v0.2.1) (2026-03-14)
 
 
