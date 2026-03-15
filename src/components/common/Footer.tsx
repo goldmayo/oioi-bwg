@@ -1,7 +1,3 @@
-import Link from "next/link";
-
-import { GithubIcon } from "@/components/icons/index";
-
 /**
  * 전역 푸터 컴포넌트
  * 프로젝트의 비영리 성격과 면책 문구를 명시합니다.
@@ -17,7 +13,7 @@ export function Footer() {
           </h2>
 
           {/* 깃허브 & 오픈카톡 (아이콘 스타일 추천) */}
-          <div className="text-muted-foreground flex justify-center gap-6">
+          {/* <div className="text-muted-foreground flex justify-center gap-6">
             <Link
               href="https://github.com/goldmayo/oioi-bwg"
               className="hover:text-primary flex items-center gap-1.5 text-xs transition-colors"
@@ -25,14 +21,14 @@ export function Footer() {
               <GithubIcon className="h-4 w-4" />
               GitHub
             </Link>
-            {/* <Link
+            <Link
               href="#"
               className="hover:text-primary flex items-center gap-1.5 text-xs transition-colors"
             >
               <KaKaoTalkIcon className="h-4 w-4" />
               제보하기
-            </Link> */}
-          </div>
+            </Link>
+          </div> */}
         </div>
 
         {/* 설명 섹션 */}
