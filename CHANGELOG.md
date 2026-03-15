@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/goldmayo/oioi-bwg/compare/v0.2.2...v0.2.3) (2026-03-15)
+
+
+### Bug Fixes
+
+* 푸터 컴포넌트에 GitHub 링크 제거 ([0e914a7](https://github.com/goldmayo/oioi-bwg/commit/0e914a7c30f2cc9b3953797326d149fb9571f68d))
+
 ## [0.2.2](https://github.com/goldmayo/oioi-bwg/compare/v0.2.1...v0.2.2) (2026-03-15)
 
 
