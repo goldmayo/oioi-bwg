@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/goldmayo/oioi-bwg/compare/v0.2.4...v0.2.5) (2026-03-17)
+
+
+### Bug Fixes
+
+* 리전 위치 스마트 설정 추가 ([9fa1872](https://github.com/goldmayo/oioi-bwg/commit/9fa18729cac5f83cc20d5b5649536dc4897a1936))
+
 ## [0.2.4](https://github.com/goldmayo/oioi-bwg/compare/v0.2.3...v0.2.4) (2026-03-17)
 
 
