@@ -72,8 +72,4 @@
       "head_sampling_rate": 1,
     },
   },
-  "placement": {
-    "region": "aws:ap-northeast-2",
-  },
-  "minify": true,
 }
