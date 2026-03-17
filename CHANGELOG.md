@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/goldmayo/oioi-bwg/compare/v0.2.3...v0.2.4) (2026-03-17)
+
+
+### Bug Fixes
+
+* wrangler 배포 설정 수정 ([f1e60a4](https://github.com/goldmayo/oioi-bwg/commit/f1e60a47e9a14baae453288fae3c2c51f011432c))
+
 ## [0.2.3](https://github.com/goldmayo/oioi-bwg/compare/v0.2.2...v0.2.3) (2026-03-15)
 
 
