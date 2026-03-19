@@ -2,9 +2,11 @@
 
 import { useEffect } from "react";
 
+import { logger } from "@/utils/sentry";
+
 /**
  * 전역 에러 핸들러 (App Router 전용)
- * 에러 발생 시에만 logger(Sentry)를 동적으로 로드하여 초기 번들 사이즈를 최적화합니다.
+ * 추상화된 logger 유틸리티를 사용하여 Sentry로 에러를 전송합니다.
  */
 export default function GlobalError({
   error,
@@ -14,10 +16,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // 에러 발생 시점에만 Sentry 로거를 불러와서 전송
-    import("@/utils/sentry").then(({ logger }) => {
-      logger.error(error, { digest: error.digest });
-    });
+    // 전문가 피드백이 반영된 logger 유틸리티 사용
+    logger.error(error, { digest: error.digest });
   }, [error]);
 
   return (

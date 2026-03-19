@@ -159,7 +159,7 @@ function AdminEditorInner() {
  * AdminEditorProvider로 감싸 하위 컴포넌트들이 Context를 통해
  * 모든 상태와 핸들러에 prop drilling 없이 접근할 수 있게 합니다.
  */
-export function AdminEditorClient({ song }: AdminEditorClientProps) {
+export default function AdminEditorClient({ song }: AdminEditorClientProps) {
   return (
     <AdminEditorProvider song={song}>
       <AdminEditorInner />

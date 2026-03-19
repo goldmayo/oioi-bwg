@@ -3,9 +3,8 @@ import { ReactNode } from "react";
 
 import { createClient } from "@/libs/db/supabase/server";
 
-// LoginForm을 지연 로딩합니다. (zod, react-hook-form 등 무거운 라이브러리 포함)
 const LoginForm = dynamic(
-  () => import("@/components/admin/LoginForm").then((mod) => mod.LoginForm),
+  () => import("@/components/admin/LoginForm"),
   {
     ssr: false,
     loading: () => (
@@ -14,9 +13,8 @@ const LoginForm = dynamic(
   },
 );
 
-// AdminSidebar를 지연 로딩합니다. (곡 목록 데이터 및 UI 로직 포함)
 const AdminSidebar = dynamic(
-  () => import("@/components/admin/sidebar/AdminSidebar").then((mod) => mod.AdminSidebar),
+  () => import("@/components/admin/sidebar/AdminSidebar"),
   {
     ssr: false,
     loading: () => <div className="border-border bg-muted/20 w-64 animate-pulse border-r" />,

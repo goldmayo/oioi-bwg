@@ -3,9 +3,8 @@ import { notFound } from "next/navigation";
 
 import { getSongBySlug } from "@/libs/db/drizzle/queries";
 
-// AdminEditorClient를 지연 로딩합니다.
 const AdminEditorClient = dynamic(
-  () => import("@/components/admin/AdminEditorClient").then((mod) => mod.AdminEditorClient),
+  () => import("@/components/admin/AdminEditorClient"),
   {
     ssr: false,
     loading: () => (

@@ -12,7 +12,7 @@ import { ALBUMS } from "@/types/album";
 import { SidebarWrapper } from "./SidebarWrapper";
 
 // 순수 서버 컴포넌트: 데이터 페칭만 담당
-export async function AdminSidebar() {
+export default async function AdminSidebar() {
   // 직접 db 호출 대신 캡슐화된 쿼리 함수 사용
   const songs = await getAllSongs();
 
