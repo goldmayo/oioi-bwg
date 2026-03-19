@@ -1,25 +1,15 @@
 import dynamic from "next/dynamic";
 import { ReactNode } from "react";
 
+import AdminSidebar from "@/components/admin/sidebar/AdminSidebar";
 import { createClient } from "@/libs/db/supabase/server";
 
-const LoginForm = dynamic(
-  () => import("@/components/admin/LoginForm"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex min-h-screen items-center justify-center p-4">로그인 폼 로딩 중...</div>
-    ),
-  },
-);
-
-const AdminSidebar = dynamic(
-  () => import("@/components/admin/sidebar/AdminSidebar"),
-  {
-    ssr: false,
-    loading: () => <div className="border-border bg-muted/20 w-64 animate-pulse border-r" />,
-  },
-);
+const LoginForm = dynamic(() => import("@/components/admin/LoginForm"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-screen items-center justify-center p-4">로그인 폼 로딩 중...</div>
+  ),
+});
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient();
