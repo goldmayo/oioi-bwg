@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.6](https://github.com/goldmayo/oioi-bwg/compare/v0.2.5...v0.2.6) (2026-03-19)
+
+
+### Bug Fixes
+
+* next/dynamic 대신 Client Wrapper 패턴으로 지연 로딩 재적용 ([07039c6](https://github.com/goldmayo/oioi-bwg/commit/07039c66b66c0eecd42b56bcf170f4bc17cd5a86))
+* wrangler 배포 설정 수정 ([3950e88](https://github.com/goldmayo/oioi-bwg/commit/3950e88f4c0194fc9a2c986349c12e8dbe1891be))
+* 리전 위치 스마트 설정 추가 ([cc4d841](https://github.com/goldmayo/oioi-bwg/commit/cc4d8415b751cae6e4323e47011e9c6fdc485dd3))
+* 서버 컴포넌트 오남용 수정 및 어드민 페이지 안정화 ([a94abd8](https://github.com/goldmayo/oioi-bwg/commit/a94abd8c8a5499723e923fdc85ef7cbddade01ae))
+* 어드민 컴포넌트 지연 로딩 방식 수정 및 배포 에러 해결 ([45c6424](https://github.com/goldmayo/oioi-bwg/commit/45c6424c2f4d75a8376e452db7ed31ede8ae6b93))
+
+
+### Performance Improvements
+
+* 성능 개선 ([8796ead](https://github.com/goldmayo/oioi-bwg/commit/8796eadbb6cf9b8143a0af729e907b73234235da))
+
 ## [0.2.5](https://github.com/goldmayo/oioi-bwg/compare/v0.2.4...v0.2.5) (2026-03-17)
 
 
