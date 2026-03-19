@@ -1,7 +1,20 @@
+import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 
-import { AdminEditorClient } from "@/components/admin/AdminEditorClient";
 import { getSongBySlug } from "@/libs/db/drizzle/queries";
+
+// AdminEditorClient를 지연 로딩합니다.
+const AdminEditorClient = dynamic(
+  () => import("@/components/admin/AdminEditorClient").then((mod) => mod.AdminEditorClient),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-screen items-center justify-center bg-zinc-950 text-zinc-500">
+        에디터 로딩 중...
+      </div>
+    ),
+  },
+);
 
 interface AdminEditPageProps {
   params: Promise<{ slug: string }>;

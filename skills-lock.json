@@ -11,6 +11,11 @@
       "sourceType": "github",
       "computedHash": "b14b593094e779e0e32d1ce0175be9576366476507f7dde0c30bfeeb31e0e74e"
     },
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "computedHash": "9c87c315aed143ee3b34bec8117100f5035e0df09e6b23e1ecc772cff434c9ad"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
