@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { AdminEditorClient } from "@/components/admin/AdminEditorClient";
+import { LazyAdminEditor } from "@/components/admin/LazyAdminEditor";
 import { getSongBySlug } from "@/libs/db/drizzle/queries";
 
 interface AdminEditPageProps {
@@ -27,7 +27,7 @@ export default async function AdminEditPage({ params }: AdminEditPageProps) {
 
   return (
     <div className="h-screen overflow-hidden">
-      <AdminEditorClient song={song} />
+      <LazyAdminEditor song={song} />
     </div>
   );
 }

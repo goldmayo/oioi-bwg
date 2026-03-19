@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 
-import { LoginForm } from "@/components/admin/LoginForm";
-import { AdminSidebar } from "@/components/admin/sidebar/AdminSidebar";
+import { LazyLoginForm } from "@/components/admin/LazyLoginForm";
+import AdminSidebar from "@/components/admin/sidebar/AdminSidebar";
 import { createClient } from "@/libs/db/supabase/server";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     return (
       <div className="bg-background flex min-h-screen items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <LoginForm />
+          <LazyLoginForm />
         </div>
       </div>
     );

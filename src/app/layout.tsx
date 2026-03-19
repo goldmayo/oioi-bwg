@@ -2,6 +2,7 @@ import "./globals.css";
 
 import type { Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 
 import { Providers } from "@/components/providers";
 import { DEFAULT_METADATA } from "@/config/site";
@@ -44,10 +45,11 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
-        {/* Google Tag Manager (Manual Script) */}
+        {/* Google Tag Manager (Script) */}
         {gtmId && (
-          // eslint-disable-next-line @next/next/next-script-for-ga
-          <script
+          <Script
+            id="gtm-script"
+            strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
               new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],

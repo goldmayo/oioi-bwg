@@ -1,5 +1,6 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
+import { visualizer } from "rollup-plugin-visualizer";
 import vinext from "vinext";
 import { defineConfig, loadEnv } from "vite";
 
@@ -41,7 +42,15 @@ export default defineConfig(({ mode }) => {
           excludeReplayIframe: true,
         },
       }),
-    ],
+      // 번들 사이즈 분석 (ANALYZE=true 일 때만 리포트 생성)
+      process.env.ANALYZE === "true" &&
+        visualizer({
+          filename: "./dist/report.html",
+          open: true,
+          gzipSize: true,
+          brotliSize: true,
+        }),
+    ].filter(Boolean),
     build: {
       sourcemap: "hidden",
     },
