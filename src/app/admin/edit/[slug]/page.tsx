@@ -1,19 +1,7 @@
-import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 
+import { LazyAdminEditor } from "@/components/admin/LazyAdminEditor";
 import { getSongBySlug } from "@/libs/db/drizzle/queries";
-
-const AdminEditorClient = dynamic(
-  () => import("@/components/admin/AdminEditorClient"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-screen items-center justify-center bg-zinc-950 text-zinc-500">
-        에디터 로딩 중...
-      </div>
-    ),
-  },
-);
 
 interface AdminEditPageProps {
   params: Promise<{ slug: string }>;
@@ -39,7 +27,7 @@ export default async function AdminEditPage({ params }: AdminEditPageProps) {
 
   return (
     <div className="h-screen overflow-hidden">
-      <AdminEditorClient song={song} />
+      <LazyAdminEditor song={song} />
     </div>
   );
 }
