@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Remove Staging Resources
     # OIDC 인증을 위한 필수 권한
+    environment: staging
     permissions:
       id-token: write
       contents: read

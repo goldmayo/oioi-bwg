@@ -3,14 +3,14 @@ name: Deploy to AWS Lambda (Staging)
 on:
   push:
     branches:
-      - feature/aws-lambda-migration # 실험용 브랜치
-  workflow_dispatch: # 수동 실행 기능 추가 (롤백 및 테스트용)
+      - feature/aws-lambda-migration # 실험 전용 브랜치로 한정
 
 jobs:
   destroy:
     runs-on: ubuntu-latest
     name: Remove Staging Resources
     # OIDC 인증을 위한 필수 권한
+    environment: staging
     permissions:
       id-token: write
       contents: read
