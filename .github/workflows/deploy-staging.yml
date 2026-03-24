@@ -7,105 +7,40 @@ on:
   workflow_dispatch: # 수동 실행 기능 추가 (롤백 및 테스트용)
 
 jobs:
-  deploy:
+  destroy:
     runs-on: ubuntu-latest
-    name: Build & Deploy (Staging)
-    environment: staging
-    # 🔥 OIDC 인증을 위한 필수 권한 부여
+    name: Remove Staging Resources
+    # OIDC 인증을 위한 필수 권한
     permissions:
       id-token: write
       contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Slack Notification - Start
-        uses: 8398a7/action-slack@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          status: custom
-          fields: workflow,commit,author,ref
-          custom_payload: |
-            {
-              "attachments": [{
-                "color": "#36a64f",
-                "title": "🚧 스테이징 배포 시작: AWS Lambda (ap-northeast-2)",
-                "text": ${{ toJSON(format('새로운 버전({0})의 배포를 시작합니다.\n작성자: {1}\n커밋: {2}', github.ref_name, github.actor, github.event.head_commit.message)) }},
-                "footer": "GitHub Actions"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          node-version: 22
 
-      # 1. pnpm 설치
-      - name: Install pnpm
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
 
-      # 2. Node.js 설정 및 pnpm 캐싱
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: "pnpm"
-
-      # 3. 의존성 설치
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 4. 🔥 AWS OIDC 인증 (비밀키 없이 임시 토큰 발급)
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: ap-northeast-2
 
-      # 5. AWS Lambda 배포 (SST - Staging)
-      - name: Deploy to AWS (SST)
-        run: npx sst deploy --stage staging
+      - name: SST Remove
+        run: npx sst remove --stage staging
         env:
-          # 런타임 환경변수 주입 (AWS 키는 OIDC가 자동 주입하므로 생략)
-          NEXT_PUBLIC_APP_ENV: staging
+          # sst.config.ts 해석을 위해 필요한 환경변수들 (삭제 시에도 필요할 수 있음)
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
-      - name: Slack Notification - Success
-        if: success()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          fields: workflow,commit,author,ref
-          custom_payload: |
-            {
-              "attachments": [{
-                "color": "#2eb886",
-                "title": "✅ 스테이징 배포 완료!",
-                "text": "AWS Lambda 서울 리전에 성공적으로 배포되었습니다.\n버전: ${{ github.ref_name }}",
-                "footer": "GitHub Actions"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Slack Notification - Failure
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          fields: workflow,commit,author,ref
-          custom_payload: |
-            {
-              "attachments": [{
-                "color": "#ff0000",
-                "title": "❌ 스테이징 배포 실패!",
-                "text": "배포 중 오류가 발생했습니다. 로그를 확인해 주세요.\n워크플로우: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                "footer": "GitHub Actions"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
