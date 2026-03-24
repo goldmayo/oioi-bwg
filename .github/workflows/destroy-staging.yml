@@ -36,3 +36,8 @@ jobs:
 
       - name: SST Remove
         run: npx sst remove --stage staging
+        env:
+          # sst.config.ts 해석을 위해 필요한 환경변수들 (삭제 시에도 필요할 수 있음)
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
