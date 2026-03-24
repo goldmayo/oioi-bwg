@@ -20,7 +20,8 @@ export default $config({
       warm: 0, // 과금 방지를 위해 Provisioned Concurrency는 끕니다.
       transform: {
         server: {
-          memory: "1024 MB", // 🔥 성능 최적화: 서버 람다 메모리 증설
+          memory: "1024 MB",
+          architecture: "arm64", // 🔥 가성비 최강 ARM64(Graviton) 적용
         },
       },
 

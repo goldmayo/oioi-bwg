@@ -1,0 +1,38 @@
+name: Destroy Staging Environment
+
+on:
+  workflow_dispatch: # 깃허브 웹 UI에서 수동으로만 실행 가능
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    name: Remove Staging Resources
+    # OIDC 인증을 위한 필수 권한
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: SST Remove
+        run: npx sst remove --stage staging
