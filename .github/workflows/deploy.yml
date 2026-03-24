@@ -1,38 +1,20 @@
-name: Deploy to Cloudflare Workers (Production)
+name: Deploy to AWS Lambda (Production)
 
 on:
   push:
-    # release-it을 통한 정식 릴리즈(태그) 시에만 배포를 실행하여 중복 실행을 방지합니다.
-    tags:
-      - "v*"
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Build & Deploy
+    name: Build & Deploy (Production)
     environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 태그 및 히스토리 분석을 위해 필요
-
-      - name: Slack Notification - Start
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          fields: workflow,commit,author,ref
-          custom_payload: |
-            {
-              "attachments": [{
-                "color": "#36a64f",
-                "title": "🚀 프로덕션 배포 시작: oioibawige.com",
-                "text": ${{ toJSON(format('새로운 버전({0})의 배포를 시작합니다.\n작성자: {1}\n커밋: {2}', github.ref_name, github.actor, github.event.head_commit.message)) }},
-                "footer": "GitHub Actions"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          fetch-depth: 0
 
       # 1. pnpm 설치
       - name: Install pnpm
@@ -51,56 +33,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 4. Cloudflare Workers 배포 (Production)
-      - name: Build & Deploy
-        # CI 환경에서는 env-cmd 없이 셸 환경 변수를 직접 사용합니다.
-        run: |
-          npx wrangler types
-          npx vinext deploy
+      # 4. 프로젝트 빌드 (Nitro)
+      - name: Build project (Nitro)
+        run: pnpm run build
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
-          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB: ${{ secrets.CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      # 5. AWS Lambda 배포 (SST - Production)
+      - name: Deploy to AWS (SST)
+        run: npx sst deploy --stage production
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-northeast-2
+          # 런타임용 환경변수 주입
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${{ secrets.NEXT_PUBLIC_SENTRY_ENVIRONMENT }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          NEXT_PUBLIC_GTM_ID: ${{ secrets.NEXT_PUBLIC_GTM_ID }}
-      - name: Slack Notification - Success
-        if: success()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          fields: workflow,commit,author,ref
-          custom_payload: |
-            {
-              "attachments": [{
-                "color": "#2eb886",
-                "title": "✅ 배포 완료!",
-                "text": "성공적으로 배포되었습니다.\n주소: https://oioibawige.com\n버전: ${{ github.ref_name }}",
-                "footer": "GitHub Actions"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Slack Notification - Failure
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: custom
-          fields: workflow,commit,author,ref
-          custom_payload: |
-            {
-              "attachments": [{
-                "color": "#ff0000",
-                "title": "❌ 배포 실패!",
-                "text": "배포 중 오류가 발생했습니다. 로그를 확인해 주세요.\n워크플로우: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                "footer": "GitHub Actions"
-              }]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

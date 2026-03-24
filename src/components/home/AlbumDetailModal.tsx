@@ -40,7 +40,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
   }, []);
 
   /**
-   * 닫기 애니메이션 수행 후 부모의 onClose 호출 혹은 홈으로 이동
+   * 닫기 애니메이션 수행 후 부모의 onClose 호출 혹은 뒤로가기
    */
   const handleClose = () => {
     if (!modalRef.current || !backdropRef.current) return;
@@ -50,7 +50,12 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
         if (onClose) {
           onClose();
         } else {
-          router.replace("/", { scroll: false });
+          // 🔥 핵심: router.back()으로 히스토리를 복구하고 refresh()로 유령 DOM을 완전히 제거합니다.
+          router.back();
+          // 내비게이션 완료 후 부드럽게 캐시를 새로고침
+          setTimeout(() => {
+            router.refresh();
+          }, 50);
         }
       },
     });
@@ -58,13 +63,13 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
     tl.to(modalRef.current, {
       scale: 0.99,
       opacity: 0,
-      duration: 0.4,
+      duration: 0.3,
       ease: "power2.out",
     }).to(
       backdropRef.current,
       {
         opacity: 0,
-        duration: 0.4,
+        duration: 0.3,
         ease: "power2.out",
       },
       "<",

@@ -1,14 +1,14 @@
-name: Deploy to Cloudflare Workers (Staging)
+name: Deploy to AWS Lambda (Staging)
 
 on:
   push:
     branches:
-      - staging
+      - feature/aws-lambda-migration # 실험 전용 브랜치로 한정
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Build & Deploy
+    name: Build & Deploy (Staging)
     environment: staging
     steps:
       - name: Checkout
@@ -25,7 +25,7 @@ jobs:
             {
               "attachments": [{
                 "color": "#36a64f",
-                "title": "🚧 스테이징 배포 시작: staging.oioibawige.com",
+                "title": "🚧 스테이징 배포 시작: AWS Lambda (ap-northeast-2)",
                 "text": ${{ toJSON(format('새로운 버전({0})의 배포를 시작합니다.\n작성자: {1}\n커밋: {2}', github.ref_name, github.actor, github.event.head_commit.message)) }},
                 "footer": "GitHub Actions"
               }]
@@ -50,25 +50,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 4. Cloudflare Workers 배포 (Staging)
-      - name: Build & Deploy
-        # CI 환경에서는 env-cmd 없이 셸 환경 변수를 직접 사용합니다.
-        run: |
-          npx wrangler types
-          npx vinext deploy --env staging
+      # 4. 프로젝트 빌드 (Nitro)
+      - name: Build project (Nitro)
+        run: pnpm run build
         env:
-          CLOUDFLARE_ENV: ${{ vars.CLOUDFLARE_ENV }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
-          CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB: ${{ secrets.CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      # 5. AWS Lambda 배포 (SST - Staging)
+      - name: Deploy to AWS (SST)
+        run: npx sst deploy --stage staging
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-northeast-2
+          # 런타임용 환경변수 주입
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${{ secrets.NEXT_PUBLIC_SENTRY_ENVIRONMENT }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          NEXT_PUBLIC_GTM_ID: "" # 스테이징에서는 GTM 제외
 
       - name: Slack Notification - Success
         if: success()
@@ -81,7 +82,7 @@ jobs:
               "attachments": [{
                 "color": "#2eb886",
                 "title": "✅ 스테이징 배포 완료!",
-                "text": "성공적으로 배포되었습니다.\n주소: https://staging.oioibawige.com\n버전: ${{ github.ref_name }}",
+                "text": "AWS Lambda 서울 리전에 성공적으로 배포되었습니다.\n버전: ${{ github.ref_name }}",
                 "footer": "GitHub Actions"
               }]
             }

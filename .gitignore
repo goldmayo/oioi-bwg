@@ -49,3 +49,11 @@ next-env.d.ts
 /docs/.pdca-snapshots
 /docs/.bkit-memory.json
 /docs/.pdca-status.json
+
+# sst
+.sst
+
+# open-next
+.open-next
+
+.output
