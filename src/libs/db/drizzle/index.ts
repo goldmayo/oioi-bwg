@@ -24,7 +24,7 @@ const queryClient =
     fetch_types: false, // 불필요한 라운드트립 제거
   });
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NEXT_PUBLIC_APP_ENV !== "production") {
   globalForDb.queryClient = queryClient;
 }
 

@@ -15,7 +15,7 @@ export const SITE_CONFIG = {
 
 export const DEFAULT_METADATA: Metadata = {
   metadataBase: new URL(
-    process.env.NODE_ENV === "development" ? "http://localhost:3000" : SITE_CONFIG.url,
+    process.env.NEXT_PUBLIC_APP_ENV === "development" ? "http://localhost:3000" : SITE_CONFIG.url,
   ),
   title: {
     default: SITE_CONFIG.name,

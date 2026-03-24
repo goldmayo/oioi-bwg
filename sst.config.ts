@@ -4,52 +4,50 @@
 export default $config({
   app(input) {
     return {
-      name: "cheer-rock-crab",
+      name: "oioi-bawige",
       removal: input?.stage === "production" ? "retain" : "remove",
       protect: ["production"].includes(input?.stage),
       home: "aws",
+      providers: {
+        aws: {
+          region: "ap-northeast-2", // 🔥 서울 리전 고정
+        },
+      },
     };
   },
   async run() {
-    // SST Ion은 --stage 값에 따라 .env.staging 또는 .env.production을 자동으로 로드합니다.
-    // 따라서 별도의 분기 로직 없이 process.env를 직접 사용하면 됩니다.
-
-    // Vinext(Nitro)가 생성한 서버 핸들러를 AWS Lambda로 띄웁니다.
-    const server = new sst.aws.Function("VinextServer", {
-      handler: ".output/server/index.handler",
-      url: true, // Function URL 활성화
-      memory: "1024 MB",
-      timeout: "15 seconds",
-      architecture: "arm64",
-      logging: {
-        retention: "1 day", // 비용 방어: 로그 1일 보관
+    const site = new sst.aws.Nextjs("OioibawigeWeb", {
+      warm: 0, // 과금 방지를 위해 Provisioned Concurrency는 끕니다.
+      transform: {
+        server: {
+          memory: "1024 MB", // 🔥 성능 최적화: 서버 람다 메모리 증설
+        },
       },
+
       environment: {
-        // 🔥 배포되는 환경은 항상 최적화 모드(production)여야 합니다.
-        NODE_ENV: "production", 
+        NODE_ENV: "production", // 배포 환경은 스테이지와 상관없이 항상 최적화(production) 모드여야 합니다.
+        NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV || $app.stage,
         DATABASE_URL: process.env.DATABASE_URL!,
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL!,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN || "",
-        // 현재 환경(staging/production) 구분은 전용 변수를 사용합니다.
         NEXT_PUBLIC_SENTRY_ENVIRONMENT: $app.stage,
       },
     });
 
-    // 콜드 스타트 방지 (Warming) - 5분마다 람다 호출 (최신 CronV2 적용)
+    // 가성비 웜업 (비용 0원)
     new sst.aws.CronV2("Warmer", {
       schedule: "rate(5 minutes)",
       function: {
         handler: "scripts/warm.handler",
         environment: {
-          TARGET_URL: server.url,
-        }
-      }
+          TARGET_URL: site.url,
+        },
+      },
     });
 
     return {
-      url: server.url,
+      url: site.url,
     };
   },
 });
-
