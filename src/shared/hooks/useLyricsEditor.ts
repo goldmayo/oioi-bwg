@@ -36,13 +36,13 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
    * 실행 취소(undo)/다시 실행(redo)을 위한 가사 스냅샷 히스토리 스택.
    * 최대 50개의 스냅샷을 유지하며, 초과 시 가장 오래된 항목을 제거합니다.
    */
-  const [history, setHistory] = useState<LyricLine[][]>([]);
+  const [history, setHistory] = useState<LyricLine[][]>([initialLyrics]);
 
   /**
    * 현재 히스토리 스택에서 가리키는 인덱스.
    * `-1`은 히스토리가 없는 초기 상태를 의미합니다.
    */
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [historyIndex, setHistoryIndex] = useState(0);
 
   /**
    * 외부 미디어(오디오/비디오)로부터 실시간으로 업데이트되는 현재 재생 시간(초).
@@ -128,7 +128,10 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
       if (index < 0 || index >= lyrics.length) return;
 
       const newLyrics = [...lyrics];
-      newLyrics[index].startTime = parseFloat(currentTimeRef.current.toFixed(2));
+      newLyrics[index] = {
+        ...newLyrics[index],
+        startTime: parseFloat(currentTimeRef.current.toFixed(2)),
+      };
 
       setLyrics(newLyrics);
       saveToHistory(newLyrics);
@@ -165,15 +168,13 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
         isExtra: true,
       };
 
-      let newIndex = 0;
-      setLyrics((prev) => {
-        const newLyrics = [...prev, newLine].sort((a, b) => a.startTime - b.startTime);
-        newIndex = newLyrics.findIndex((l) => l === newLine);
-        saveToHistory(newLyrics);
-        return newLyrics;
-      });
+      const newLyrics = [...lyrics, newLine].sort((a, b) => a.startTime - b.startTime);
+      const newIndex = newLyrics.findIndex((l) => l === newLine);
 
+      setLyrics(newLyrics);
+      saveToHistory(newLyrics);
       setCurrentIndex(newIndex);
+
       return time; // 포커스 식별용으로 시간 반환
     },
     [lyrics, saveToHistory],
@@ -188,16 +189,15 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
    */
   const deleteLine = useCallback(
     (index: number) => {
-      setLyrics((prev) => {
-        const newLyrics = prev.filter((_, i) => i !== index);
-        saveToHistory(newLyrics);
-        return newLyrics;
-      });
-      if (currentIndex >= lyrics.length - 1) {
-        setCurrentIndex(Math.max(0, lyrics.length - 2));
+      const newLyrics = lyrics.filter((_, i) => i !== index);
+      setLyrics(newLyrics);
+      saveToHistory(newLyrics);
+
+      if (currentIndex >= newLyrics.length) {
+        setCurrentIndex(Math.max(0, newLyrics.length - 1));
       }
     },
-    [currentIndex, lyrics.length, saveToHistory],
+    [lyrics, currentIndex, saveToHistory],
   );
 
   /**
@@ -211,15 +211,20 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
   const addSegmentToExtra = useCallback(
     (index: number) => {
       const newLyrics = [...lyrics];
-      const line = newLyrics[index];
+      const line = { ...newLyrics[index] };
       if (!line.isExtra) return;
 
-      line.segments.push({
-        text: "",
-        isCheer: true,
-        isEcho: false,
-        startTimeOffset: 0,
-      });
+      line.segments = [
+        ...line.segments,
+        {
+          text: "",
+          isCheer: true,
+          isEcho: false,
+          startTimeOffset: 0,
+        },
+      ];
+      newLyrics[index] = line;
+
       setLyrics(newLyrics);
       saveToHistory(newLyrics);
     },
@@ -238,13 +243,15 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
   const removeSegmentFromExtra = useCallback(
     (lineIndex: number, segmentIndex: number) => {
       const newLyrics = [...lyrics];
-      const line = newLyrics[lineIndex];
+      const line = { ...newLyrics[lineIndex] };
       if (!line.isExtra) return;
 
       line.segments = line.segments.filter((_, i) => i !== segmentIndex);
       if (line.segments.length === 0) {
         line.segments = [{ text: "", isCheer: true, isEcho: false, startTimeOffset: 0 }];
       }
+      newLyrics[lineIndex] = line;
+
       setLyrics(newLyrics);
       saveToHistory(newLyrics);
     },

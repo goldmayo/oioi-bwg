@@ -1,5 +1,6 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
+import path from "path";
 import { visualizer } from "rollup-plugin-visualizer";
 import vinext from "vinext";
 import { defineConfig, loadEnv } from "vite";
@@ -17,6 +18,11 @@ export default defineConfig(({ mode }) => {
   );
 
   return {
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
     plugins: [
       vinext(),
       cloudflare({
