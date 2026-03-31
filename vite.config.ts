@@ -7,13 +7,13 @@ import { defineConfig, loadEnv } from "vite";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
 
-  // env-cmd나 파일에서 읽어온 CLOUDFLARE_ENV가 있으면 process.env에 주입하여 Wrangler 환경을 선택합니다.
-  if (env.CLOUDFLARE_ENV) {
-    process.env.CLOUDFLARE_ENV = env.CLOUDFLARE_ENV;
+  // env-cmd나 파일에서 읽어온 NEXT_PUBLIC_APP_ENV가 있으면 process.env에 주입하여 Wrangler 환경을 선택합니다.
+  if (env.NEXT_PUBLIC_APP_ENV) {
+    process.env.NEXT_PUBLIC_APP_ENV = env.NEXT_PUBLIC_APP_ENV;
   }
 
   console.log(
-    `[Vite] Mode: ${mode}, Cloudflare Target: ${process.env.CLOUDFLARE_ENV || "production"}`,
+    `[Vite] Mode: ${mode}, Cloudflare Target: ${process.env.NEXT_PUBLIC_APP_ENV || "production"}`,
   );
 
   return {
