@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
-import { LyricsViewerClient } from "@/components/lyrics/LyricsViewerClient";
-import { getSongBySlug } from "@/libs/db/drizzle/queries";
-import { Song } from "@/libs/db/drizzle/schema";
-import { ALBUMS } from "@/types/album";
-import { LyricLine } from "@/types/lyrics";
-import { constructMetadata } from "@/utils/metadata";
+import { LyricsViewerClient } from "@/features/chant-sync/LyricsViewerClient";
+import { getSongBySlug } from "@/shared/api/db/drizzle/queries";
+import { Song } from "@/shared/api/db/drizzle/schema";
+import { ALBUMS } from "@/shared/types/album";
+import { LyricLine } from "@/shared/types/lyrics";
+import { constructMetadata } from "@/shared/utils/metadata";
 
 interface SongPageProps {
   params: Promise<{ slug: string }>;

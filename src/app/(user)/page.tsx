@@ -1,6 +1,6 @@
-import { GridContainer } from "@/components/home/GridContainer";
-import { getAllSongs } from "@/libs/db/drizzle/queries"; // 쿼리 헬퍼 사용
-import { Album, ALBUMS } from "@/types/album";
+import { GridContainer } from "@/containers/GridContainer";
+import { getAllSongs } from "@/shared/api/db/drizzle/queries"; // 쿼리 헬퍼 사용
+import { Album, ALBUMS } from "@/shared/types/album";
 
 /**
  * 사용자 메인 페이지: "Harmony Mosaic" 리뉴얼

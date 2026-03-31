@@ -2,7 +2,7 @@
 
 import { MetadataRoute } from "next";
 
-import { getAllSongs } from "@/libs/db/drizzle/queries";
+import { getAllSongs } from "@/shared/api/db/drizzle/queries";
 
 /**
  * 동적 사이트맵 생성
