@@ -3,6 +3,19 @@ const nextConfig = {
   // React 19 자동 메모이제이션 컴파일러 활성화
   reactCompiler: true,
 
+  // 이미지 최적화 설정을 위한 외부 도메인 허용 (Cloudflare R2)
+  images: {
+    unoptimized: true, // Next.js의 기본 이미지 최적화 비활성화 (Cloudflare R2 사용 시)
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "assets.oioibawige.com",
+        port: "",
+        pathname: "/**",
+      },
+    ],
+  },
+
   // 서버 사이드 데이터 페칭 로그 강화 (캐시 히트/미스 확인용)
   logging: {
     fetches: {

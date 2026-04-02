@@ -3,10 +3,10 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
-import { AlbumDetailModal } from "@/components/home/AlbumDetailModal";
-import { AlbumDetailSkeleton } from "@/components/home/AlbumDetailSkeleton";
-import { Album, ALBUMS } from "@/types/album";
-import { constructMetadata } from "@/utils/metadata";
+import { AlbumDetailModal } from "@/features/album-info/AlbumDetailModal";
+import { AlbumDetailSkeleton } from "@/features/album-info/AlbumDetailSkeleton";
+import { Album, ALBUMS } from "@/shared/types/album";
+import { constructMetadata } from "@/shared/utils/metadata";
 
 interface AlbumPageProps {
   params: Promise<{ slug: string }>;

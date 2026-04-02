@@ -2,7 +2,7 @@ import { House } from "lucide-react";
 import Link from "next/link";
 import { ReactNode } from "react";
 
-import { Footer } from "@/components/common/Footer";
+import { Footer } from "@/shared/ui/Footer";
 
 /**
  * 사용자 페이지 공통 레이아웃 (Parallel Routes 지원)
