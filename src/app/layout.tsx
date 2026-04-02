@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 
 import { Providers } from "@/app/providers";
+import { InAppBrowserGuard } from "@/shared/components/InAppBrowserGuard";
 import { DEFAULT_METADATA } from "@/shared/constants/site";
 
 const geistSans = Geist({
@@ -61,6 +62,8 @@ export default function RootLayout({
         )}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {/* 인앱 브라우저 탈출을 위한 투명 가드 */}
+        <InAppBrowserGuard />
         {/* Google Tag Manager (noscript) */}
         {gtmId && (
           <noscript>
