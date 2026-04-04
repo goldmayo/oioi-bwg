@@ -62,6 +62,9 @@
   --color-album-ep2-secondary: var(--album-ep2-secondary);
   --color-album-ep3-primary: var(--album-ep3-primary);
   --color-album-ep3-secondary: var(--album-ep3-secondary);
+
+  /* 브레이크 포인트 */
+  --breakpoint-xs: 30rem;
 }
 
 :root {

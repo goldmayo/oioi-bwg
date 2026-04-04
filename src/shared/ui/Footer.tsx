@@ -4,7 +4,7 @@
  */
 export function Footer() {
   return (
-    <footer className="border-t border-white/5 px-4 py-12">
+    <footer className="max-h-50 border-t border-white/5 px-4 py-12">
       <div className="mx-auto max-w-3xl space-y-6 text-center">
         {/* 브랜드 & 링크 섹션 */}
         <div className="space-y-4">

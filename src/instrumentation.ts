@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
+// Sentry는 개발 환경에서의 성능 간섭(Cloudflare Worker Crash)을 완전히 막기 위해 동적 로드만 사용합니다.
 
 /**
  * Next.js 15/16 + Vinext 표준 초기화 훅
@@ -11,6 +11,7 @@ import * as Sentry from "@sentry/nextjs";
 export async function register() {
   if (process.env.NODE_ENV === "development") {
     // 개발 모드에서는 에러 수집 및 트레이싱 비활성화 (Cloudflare I/O Span 에러 방지)
+    // Sentry를 상단에서 import 하는 것만으로도 OpenTelemetry가 개입하므로 동적 로드합니다.
     return;
   }
 
@@ -25,7 +26,11 @@ export async function register() {
 
 /**
  * Next.js 15+ 서버 요청 에러 자동 캡처 (SDK 8.28.0+)
- * 프레임워크 레벨에서 발생하는 렌더링/데이터 페칭 에러를 포착합니다.
- * 개발 모드에서는 Sentry가 초기화되지 않았으므로 아무 일도 일어나지 않습니다.
+ * 개발 모드에서는 Sentry 로드를 건너뛰어 성능 및 호환성을 유지합니다.
  */
-export const onRequestError = Sentry.captureRequestError;
+export async function onRequestError(error: unknown, request: Request, context: unknown) {
+  if (process.env.NODE_ENV === "development") return;
+  const Sentry = await import("@sentry/nextjs");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Sentry.captureRequestError(error, request as any, context as any);
+}

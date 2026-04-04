@@ -23,7 +23,6 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
   const router = useRouter();
   const modalRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
-
   /**
    * 모달 진입 애니메이션
    */
@@ -42,15 +41,17 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
   /**
    * 닫기 애니메이션 수행 후 부모의 onClose 호출 혹은 홈으로 이동
    */
-  const handleClose = () => {
+  const handleClose = (e?: React.MouseEvent) => {
+    e?.preventDefault();
     if (!modalRef.current || !backdropRef.current) return;
 
+    // 강제 라우팅(replace) 대신 부드러운 푸시(push)를 사용하여 Next.js <Link>와 똑같이 캐시를 활용하도록 합니다
     const tl = gsap.timeline({
       onComplete: () => {
         if (onClose) {
           onClose();
         } else {
-          router.replace("/", { scroll: false });
+          router.push("/", { scroll: false });
         }
       },
     });
@@ -89,11 +90,12 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
           {/* 좌측: 앨범 커버 */}
           <div className="border-border/50 relative h-[35vh] w-full shrink-0 overflow-hidden border-b md:h-full md:w-[45%] md:border-r md:border-b-0">
             <Image
-              src={`${process.env.NEXT_PUBLIC_ASSETS_URL}/images/albums/${album.imageSlug}.webp`}
+              src={album.imgUrl}
               alt={album.name}
               fill
               sizes="(max-width: 768px) 100vw, 45vw"
-              className="object-cover"
+              className="h-full w-full object-cover"
+              priority
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent md:bg-linear-to-r md:from-transparent md:to-black/20" />
 

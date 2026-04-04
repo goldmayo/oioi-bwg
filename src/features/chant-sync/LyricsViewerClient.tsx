@@ -1,6 +1,7 @@
 "use client";
 
 import { useGSAP } from "@gsap/react";
+import { cva } from "class-variance-authority";
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import Link from "next/link";
@@ -43,6 +44,12 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
 
   // 광고 감시 훅 연동
   const isAdPlaying = useAdWatcher(player, song.youtubeId);
+
+  const handleLyricClick = (line: LyricLine) => {
+    player?.seekTo(line.startTime, true);
+    const fullText = line.segments.map((s) => s.text).join(" ");
+    analytics.trackLyricClick(song.title, fullText, line.startTime);
+  };
 
   /**
    * 유튜브 재생 시간 업데이트 콜백
@@ -109,8 +116,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
       {
         scale: 1.02,
         y: -2,
-        filter: "brightness(1.5) drop-shadow(0 0 8px rgba(255,255,255,0.8))",
-        duration: 0.15,
+        duration: 0.09,
         yoyo: true,
         repeat: 1,
         ease: "power2.out",
@@ -189,84 +195,116 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
       >
         <div className="mx-auto max-w-3xl py-12 md:py-20">
           {/* 가사 목록 */}
-          <div className="space-y-8 md:space-y-10">
-            {song.lyrics.map((line, index) => {
-              const isActive = index === currentIndex;
-
-              return (
-                <div
-                  key={index}
-                  ref={(el) => {
-                    lineRefs.current[index] = el;
-                  }}
-                  onClick={() => {
-                    player?.seekTo(line.startTime, true);
-                    const fullText = line.segments.map((s) => s.text).join(" ");
-                    analytics.trackLyricClick(song.title, fullText, line.startTime);
-                  }}
-                  className={cn(
-                    "group origin-left cursor-pointer transition-all duration-700 ease-out",
-                    isActive
-                      ? "translate-x-2 scale-105 opacity-100"
-                      : "blur-0 scale-100 opacity-50 hover:opacity-70",
-                  )}
-                >
-                  {line.isExtra ? (
-                    <div
-                      className={cn(
-                        "inline-flex flex-wrap gap-2 rounded-xl px-5 py-2 text-lg shadow-lg transition-colors md:px-6 md:py-3",
-                        isActive ? "bg-qwer-e" : "bg-qwer-e/10",
-                      )}
-                    >
-                      {line.segments.map((seg, sIdx) => (
-                        <span
-                          key={sIdx}
-                          className={cn(
-                            `seg-${index}-${sIdx}`,
-                            "inline-block font-black italic transition-colors duration-150 md:text-xl",
-                            isActive
-                              ? sIdx === activeSegmentIndex
-                                ? "text-white"
-                                : "text-black/70"
-                              : "text-qwer-e/50",
-                          )}
-                        >
-                          {seg.text}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <div
-                      className={cn(
-                        "text-xl leading-tight font-bold tracking-tighter transition-colors md:text-2xl",
-                        isActive ? "text-foreground" : "text-muted-foreground",
-                      )}
-                    >
-                      {line.segments.map((seg, sIdx) => (
-                        <span
-                          key={sIdx}
-                          className={cn(
-                            "wrap-break-word whitespace-pre-wrap",
-                            seg.isEcho &&
-                              "text-qwer-r decoration-qwer-r/40 underline underline-offset-8 md:underline-offset-12",
-                            seg.isCheer &&
-                              !seg.isEcho &&
-                              "text-qwer-bwg decoration-qwer-bwg/40 underline underline-offset-8 md:underline-offset-12",
-                          )}
-                        >
-                          {seg.text}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div className="xs:space-y-6 space-y-5 text-center text-lg sm:space-y-7 sm:text-xl md:space-y-9 md:text-2xl">
+            {song.lyrics.map((line, index) => (
+              <LyricLineItem
+                key={index}
+                line={line}
+                index={index}
+                isActive={index === currentIndex}
+                activeSeg={activeSegmentIndex}
+                onLineRef={(el) => {
+                  lineRefs.current[index] = el;
+                }}
+                onClick={() => handleLyricClick(line)}
+              />
+            ))}
           </div>
 
           {/* [Bottom Spacer] 마지막 가사가 중앙에 올 수 있도록 공간 확보 */}
           <div className="h-[50vh]" />
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------
+// 로컬 컴포넌트 & CVA (Class Variance Authority) 스타일 정의
+// ----------------------------------------------------------------------
+
+const lyricContainerVariants = cva("transition-colors", {
+  variants: {
+    variant: {
+      extra: "inline-flex flex-wrap gap-2 shadow-lg",
+      normal: "leading-tight font-bold tracking-tighter",
+    },
+    isActive: {
+      true: "",
+      false: "",
+    },
+  },
+  compoundVariants: [
+    { variant: "normal", isActive: true, className: "text-foreground" },
+    { variant: "normal", isActive: false, className: "text-muted-foreground" },
+  ],
+});
+
+const lyricSegmentVariants = cva("transition-colors", {
+  variants: {
+    variant: {
+      extra: "inline-block font-black italic duration-100 md:text-xl",
+      normal: "wrap-break-word whitespace-pre-wrap",
+    },
+    colorState: {
+      default: "",
+      extraTarget: "text-qwer-e",
+      extraUntarget: "text-qwer-e/60",
+      echo: "text-qwer-r decoration-qwer-r/40 underline underline-offset-8 md:underline-offset-12",
+      cheer:
+        "text-qwer-bwg decoration-qwer-bwg/40 underline underline-offset-8 md:underline-offset-12",
+    },
+  },
+});
+
+interface LyricLineItemProps {
+  line: LyricLine;
+  index: number;
+  isActive: boolean;
+  activeSeg: number;
+  onLineRef: (el: HTMLDivElement | null) => void;
+  onClick: () => void;
+}
+
+function LyricLineItem({
+  line,
+  index,
+  isActive,
+  activeSeg,
+  onLineRef,
+  onClick,
+}: LyricLineItemProps) {
+  const variantType = line.isExtra ? "extra" : "normal";
+  const wrapperClass = cn(
+    "group origin-center cursor-pointer transition-all duration-700 ease-out",
+    isActive ? "scale-105 opacity-100" : "blur-0 scale-100 opacity-50 hover:opacity-70",
+  );
+
+  return (
+    <div ref={onLineRef} onClick={onClick} className={wrapperClass}>
+      <div className={lyricContainerVariants({ variant: variantType, isActive })}>
+        {line.segments.map((seg, sIdx) => {
+          let colorState: "default" | "extraTarget" | "extraUntarget" | "echo" | "cheer" =
+            "default";
+          if (line.isExtra) {
+            colorState = isActive && sIdx === activeSeg ? "extraTarget" : "extraUntarget";
+          } else {
+            if (seg.isEcho) colorState = "echo";
+            else if (seg.isCheer) colorState = "cheer";
+          }
+
+          return (
+            <span
+              key={sIdx}
+              className={cn(
+                line.isExtra && `seg-${index}-${sIdx}`,
+                lyricSegmentVariants({ variant: variantType, colorState }),
+              )}
+            >
+              {seg.text}
+            </span>
+          );
+        })}
       </div>
     </div>
   );

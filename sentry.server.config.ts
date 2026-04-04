@@ -7,8 +7,9 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || "production",
 
-  // 성능 트래킹 설정
-  tracesSampleRate: 1.0,
+  // 성능 트래킹 설정: Cloudflare 호환성을 위해 트레이싱 비활성 (에러 수집은 정상 동작)
+  tracesSampleRate: 0.0,
+  skipOpenTelemetrySetup: true,
 
   // 디버깅 모드
   debug: false,
