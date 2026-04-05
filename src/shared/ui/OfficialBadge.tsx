@@ -60,7 +60,7 @@ export function OfficialBadge({
       {...props}
     >
       {showIcon && <Check size={iconSize} className="stroke-[4px]" />}
-      OFFICIAL
+      OFFICIAL CHEER
     </Badge>
   );
 }
