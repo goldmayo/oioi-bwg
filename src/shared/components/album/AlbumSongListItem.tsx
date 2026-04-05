@@ -4,7 +4,6 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import { AlbumSong } from "@/shared/types/album";
-import { OfficialBadge } from "@/shared/ui/OfficialBadge";
 import { analytics } from "@/shared/utils/analytics";
 import { cn } from "@/shared/utils/utils";
 
@@ -42,7 +41,7 @@ export function AlbumSongListItem({ song, idx, albumName, className }: AlbumSong
 
           {/* 공식 로고/뱃지 */}
         </div>
-        {song.hasOfficial && <OfficialBadge />}
+        {/* {song.hasOfficial && <OfficialBadge type="w" />} */}
       </div>
 
       {/* 액션문구: 연습하기 (Rockation 컬러 포인트) */}

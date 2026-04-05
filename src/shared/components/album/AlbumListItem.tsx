@@ -114,7 +114,7 @@ export function AlbumListItem({ album, className }: AlbumListItemProps) {
             <Link
               prefetch={false}
               href={`/albums/${album.imageSlug}`}
-              className="mt-2 flex w-full items-center justify-center py-4 text-xs font-black tracking-widest text-white/20 transition-colors hover:text-white/60"
+              className="mt-2 flex w-full items-center justify-center py-4 text-xs font-black tracking-widest text-white/50 transition-colors hover:text-white/60"
             >
               앨범 상세 정보 및 전체 보기
             </Link>
