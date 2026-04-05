@@ -28,7 +28,7 @@ export function AlbumListContainer({ albums }: AlbumListContainerProps) {
     const items = containerRef.current.querySelectorAll(".album-item-wrapper");
     gsap.fromTo(
       items,
-      { opacity: 0, y: 30, filter: "blur(10px)" },
+      { opacity: 0, y: 30, filter: "blur(2px)" },
       {
         opacity: 1,
         y: 0,
