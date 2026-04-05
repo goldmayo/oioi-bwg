@@ -15,8 +15,8 @@ export interface AlbumSong {
 export interface Album {
   name: string;
   songs: AlbumSong[];
-  imageSlug: string;     // 정적 에셋 풀업 시 사용하는 레거시/혹은 대체 식별자
-  imgUrl: string;        // DB에서 동적으로 관리하게 된 외부 저장소 이미지 주소
+  imageSlug: string; // 정적 에셋 풀업 시 사용하는 레거시/혹은 대체 식별자
+  imgUrl: string; // DB에서 동적으로 관리하게 된 외부 저장소 이미지 주소
   color: string;
   officialLink?: string; // 나중에 고도화 시 사용할 공식 카페/영상 링크
 }
