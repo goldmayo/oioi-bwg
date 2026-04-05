@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.3.0](https://github.com/goldmayo/oioi-bwg/compare/v0.2.6...v0.3.0) (2026-04-05)
+
+
+### Features
+
+* 프로젝트 리뉴얼 ([66255b9](https://github.com/goldmayo/oioi-bwg/commit/66255b973bc829437a296132ad480bf2ea7bb483)), closes [#2](https://github.com/goldmayo/oioi-bwg/issues/2) [#3](https://github.com/goldmayo/oioi-bwg/issues/3) [#8](https://github.com/goldmayo/oioi-bwg/issues/8)
+
 ## [0.2.6](https://github.com/goldmayo/oioi-bwg/compare/v0.2.5...v0.2.6) (2026-03-19)
 
 
