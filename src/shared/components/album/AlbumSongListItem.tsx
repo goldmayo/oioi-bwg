@@ -45,7 +45,7 @@ export function AlbumSongListItem({ song, idx, albumName, className }: AlbumSong
 
       {/* 액션문구: 연습하기 */}
       <div className="flex items-center gap-1.5 transition-opacity group-hover:opacity-100">
-        <span className="text-qwer-r group-hover:text-primary text-2xs font-black tracking-tighter uppercase transition-colors">
+        <span className="text-qwer-q group-hover:text-primary text-2xs font-black tracking-tighter uppercase transition-colors">
           연습하기
         </span>
         <ChevronRight className="text-qwer-e/60 h-3 w-3" />
