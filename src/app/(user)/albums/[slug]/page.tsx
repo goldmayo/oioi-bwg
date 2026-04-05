@@ -3,10 +3,11 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
-import { AlbumDetailModal } from "@/components/home/AlbumDetailModal";
-import { AlbumDetailSkeleton } from "@/components/home/AlbumDetailSkeleton";
-import { Album, ALBUMS } from "@/types/album";
-import { constructMetadata } from "@/utils/metadata";
+import { AlbumDetailModal } from "@/features/album-info/AlbumDetailModal";
+import { AlbumDetailSkeleton } from "@/features/album-info/AlbumDetailSkeleton";
+import { getAlbumBySlug } from "@/shared/api/db/drizzle/queries";
+import { Album } from "@/shared/types/album";
+import { constructMetadata } from "@/shared/utils/metadata";
 
 interface AlbumPageProps {
   params: Promise<{ slug: string }>;
@@ -17,14 +18,14 @@ interface AlbumPageProps {
  */
 export async function generateMetadata({ params }: AlbumPageProps) {
   const { slug } = await params;
-  const album = ALBUMS.find((a) => a.imageSlug === slug);
+  const album = await getAlbumBySlug(slug);
 
   if (!album) return {};
 
   return constructMetadata({
     title: album.name,
     description: `${album.name} 앨범의 수록곡 리스트와 응원법 정보를 확인하세요.`,
-    image: `/images/albums/${album.imageSlug}.webp`,
+    image: `/images/albums/${album.slug}.webp`,
   });
 }
 
@@ -38,8 +39,8 @@ export default async function AlbumDetailPage({ params }: AlbumPageProps) {
     return notFound();
   }
 
-  // 앨범 데이터 조회를 위한 프로미스 생성 (현재는 정적 데이터이므로 즉시 해소)
-  const albumPromise = Promise.resolve(ALBUMS.find((a) => a.imageSlug === slug));
+  // 앨범 데이터 조회를 위한 프로미스 생성
+  const albumPromise = getAlbumBySlug(slug);
 
   return (
     <main className="bg-background flex flex-col px-4 pt-10 md:px-10">
@@ -53,14 +54,29 @@ export default async function AlbumDetailPage({ params }: AlbumPageProps) {
 /**
  * 데이터를 실제로 해소하여 클라이언트 모달 컴포넌트로 넘겨주는 중간 컴포넌트
  */
-async function AlbumDetailLoader({ promise }: { promise: Promise<Album | undefined> }) {
-  const album = await promise;
+async function AlbumDetailLoader({ promise }: { promise: ReturnType<typeof getAlbumBySlug> }) {
+  const dbAlbum = await promise;
 
-  if (!album) {
+  if (!dbAlbum) {
     return notFound();
   }
 
-  return <AlbumDetailModal album={album} />;
+  // 프론트의 Album 타입 스펙에 맞춰 매핑
+  const albumData: Album = {
+    name: dbAlbum.name,
+    imageSlug: dbAlbum.slug,
+    imgUrl: dbAlbum.imgUrl,
+    color: dbAlbum.color,
+    songs: dbAlbum.songs.map((s) => ({
+      title: s.title,
+      slug: s.slug,
+      file: "",
+      youtubeId: s.youtubeId || "",
+      hasOfficial: s.hasOfficialCheer,
+    })),
+  };
+
+  return <AlbumDetailModal album={albumData} />;
 }
 
 /**

@@ -1,34 +1,40 @@
-import { GridContainer } from "@/components/home/GridContainer";
-import { getAllSongs } from "@/libs/db/drizzle/queries"; // 쿼리 헬퍼 사용
-import { Album, ALBUMS } from "@/types/album";
+import { Suspense } from "react";
 
-/**
- * 사용자 메인 페이지: "Harmony Mosaic" 리뉴얼
- * 데이터 접근 계층(Queries)을 활용하여 앨범 정보를 렌더링합니다.
- */
-export default async function UserMainPage() {
-  // 직접 db 호출 대신 캡슐화된 쿼리 함수 사용
-  const songs = await getAllSongs();
+import { AlbumListContainer } from "@/containers/AlbumListContainer";
+import { getAllAlbumsWithSongs } from "@/shared/api/db/drizzle/queries";
+import { AlbumListSkeleton } from "@/shared/components/album/AlbumListSkeleton";
+import { Album } from "@/shared/types/album";
 
-  // 앨범별 곡 그룹화 로직
-  const albumsData = ALBUMS.map((album) => {
-    const albumSongs = songs
-      .filter((s) => s.albumName === album.name)
-      .map((s) => ({
-        id: s.id,
-        slug: s.slug,
+// ----------------------------------------------------------------------
+// 1. 데이터 페칭 컴포넌트 (Async 래퍼)
+// ----------------------------------------------------------------------
+async function AsyncAlbumsList() {
+  const dbAlbums = await getAllAlbumsWithSongs();
+
+  // 프론트 컴포넌트(AlbumListContainer) 뷰모델 매핑
+  const albumsData = dbAlbums
+    .map((album) => ({
+      name: album.name,
+      imageSlug: album.slug,
+      imgUrl: album.imgUrl,
+      color: album.color,
+      songs: album.songs.map((s) => ({
         title: s.title,
-        hasOfficialCheer: s.hasOfficialCheer,
-      }));
+        slug: s.slug,
+        file: "", // Not strictly needed for basic rendering if missing
+        youtubeId: s.youtubeId,
+        hasOfficial: s.hasOfficialCheer,
+      })),
+    }))
+    .filter((a) => a.songs.length > 0);
 
-    if (albumSongs.length === 0) return null;
+  return <AlbumListContainer albums={albumsData as unknown as Album[]} />;
+}
 
-    return {
-      ...album,
-      songs: albumSongs,
-    };
-  }).filter(Boolean);
-
+// ----------------------------------------------------------------------
+// 2. 메인 페이지 레이아웃
+// ----------------------------------------------------------------------
+export default function UserMainPage() {
   return (
     <div className="container mx-auto min-h-screen px-4 py-12 lg:py-20">
       <header className="mb-8 text-center md:mb-12">
@@ -45,7 +51,7 @@ export default async function UserMainPage() {
         <div className="mt-8 flex justify-center">
           <div className="max-w-xl">
             <p className="text-muted-foreground/80 text-center text-sm leading-relaxed break-keep md:text-base">
-              앵콘에서 같이 응원하면 더 즐거운 응원법을 바위게분들과 공유합니다.
+              같이 응원하면 더 즐거운 응원법을 공유합니다.
             </p>
             <p className="text-muted-foreground/80 text-center text-sm leading-relaxed break-keep md:text-base">
               공식 응원법과는 다를 수 있습니다.
@@ -54,7 +60,9 @@ export default async function UserMainPage() {
         </div>
       </header>
 
-      <GridContainer albums={albumsData as unknown as Album[]} />
+      <Suspense fallback={<AlbumListSkeleton />}>
+        <AsyncAlbumsList />
+      </Suspense>
     </div>
   );
 }

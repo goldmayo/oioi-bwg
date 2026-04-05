@@ -1,12 +1,10 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
-import { LyricsViewerClient } from "@/components/lyrics/LyricsViewerClient";
-import { getSongBySlug } from "@/libs/db/drizzle/queries";
-import { Song } from "@/libs/db/drizzle/schema";
-import { ALBUMS } from "@/types/album";
-import { LyricLine } from "@/types/lyrics";
-import { constructMetadata } from "@/utils/metadata";
+import { LyricsViewerClient } from "@/features/chant-sync/LyricsViewerClient";
+import { getSongBySlug } from "@/shared/api/db/drizzle/queries";
+import { LyricLine } from "@/shared/types/lyrics";
+import { constructMetadata } from "@/shared/utils/metadata";
 
 interface SongPageProps {
   params: Promise<{ slug: string }>;
@@ -17,16 +15,13 @@ interface SongPageProps {
  */
 export async function generateMetadata({ params }: SongPageProps) {
   const { slug } = await params;
+  const song = await getSongBySlug(slug);
 
-  // ALBUMS 상수에서 해당 slug를 가진 곡과 앨범 찾기
-  const album = ALBUMS.find((a) => a.songs.some((s) => s.slug === slug));
-  const song = album?.songs.find((s) => s.slug === slug);
-
-  if (!song || !album) return {};
+  if (!song || !song.album) return {};
 
   return constructMetadata({
     title: song.title,
-    description: `${album.name} 수록곡 '${song.title}'의 비공식 응원법 가이드입니다.`,
+    description: `${song.album.name} 수록곡 '${song.title}'의 비공식 응원법 가이드입니다.`,
   });
 }
 
@@ -55,15 +50,12 @@ export default async function SongDetailPage({ params }: SongPageProps) {
 /**
  * 데이터를 실제로 해소하여 클라이언트 뷰어에게 넘겨주는 중간 컴포넌트
  */
-async function LyricsViewerLoader({ promise }: { promise: Promise<Song | undefined> }) {
+async function LyricsViewerLoader({ promise }: { promise: ReturnType<typeof getSongBySlug> }) {
   const song = await promise;
 
-  if (!song) {
+  if (!song || !song.album) {
     return notFound();
   }
-
-  // 앨범 정보 찾기 (song.albumName과 일치하는 앨범 검색)
-  const album = ALBUMS.find((a) => a.name === song.albumName);
 
   // JsonValue 타입을 LyricLine[] 타입으로 안전하게 캐스팅하여 포맷팅
   const formattedSong = {
@@ -71,7 +63,22 @@ async function LyricsViewerLoader({ promise }: { promise: Promise<Song | undefin
     lyrics: (song.lyrics as unknown as LyricLine[]) || [],
   };
 
-  return <LyricsViewerClient song={formattedSong} album={album} />;
+  // 프론트 컴포넌트 스펙 구성을 위한 앨범 변환
+  const albumData = {
+    name: song.album.name,
+    imageSlug: song.album.slug,
+    imgUrl: song.album.imgUrl,
+    color: song.album.color,
+    songs: song.album.songs.map((s) => ({
+      title: s.title,
+      slug: s.slug,
+      file: "", // Not strictly needed for basic rendering if missing
+      youtubeId: s.youtubeId,
+      hasOfficial: s.hasOfficialCheer,
+    })),
+  };
+
+  return <LyricsViewerClient song={formattedSong} album={albumData} />;
 }
 
 /**
