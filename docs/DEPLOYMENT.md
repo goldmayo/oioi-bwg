@@ -107,5 +107,41 @@ pnpm release
 
 ---
 
-_Last Updated: 2026-03-16_
-_Managed by Gemini CLI (bkit methodology)_
+## 6. 브랜치 커밋 전략 (Tag-based Release)
+
+히스토리 충돌을 구조적으로 방지하기 위해 **태그(Tag) 전용 릴리즈** 방식을 사용합니다.  
+릴리즈 시 커밋을 생성하지 않고 태그만 생성하므로, `staging`과 `main`의 히스토리가 항상 일치합니다.
+
+### 전체 워크플로우
+
+```bash
+# 1. 기능 개발 (feat/* 브랜치에서 작업)
+git checkout -b feat/기능명 staging
+git commit -m "feat: 구현한 기능 설명"
+
+# 2. staging에 Squash Merge
+git checkout staging
+git merge feat/기능명 --squash
+git commit -m "feat: 구현한 기능 설명"
+git push origin staging
+git branch -d feat/기능명
+
+# 3. staging → main (Fast-forward Only, 해시값 보존)
+git checkout main
+git merge staging --ff-only
+git push origin main
+
+# 4. 릴리즈 (커밋 없이 태그만 생성 → CI/CD 자동 트리거)
+pnpm release
+
+# 5. 끝! staging은 아무것도 안 해도 됨 (main과 100% 동일)
+```
+
+> **핵심 규칙**
+> - `feat/*` → `staging`: **Squash Merge** (커밋 정리)
+> - `staging` → `main`: **Fast-forward Only** (`--ff-only`, 해시값 유지)
+> - 릴리즈: **태그만 생성** (`commit: false` in `.release-it.json`)
+
+---
+
+_Last Updated: 2026-04-07_

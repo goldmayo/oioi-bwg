@@ -20,7 +20,6 @@ interface AlbumSongListItemProps {
  * 아코디언 내부나 검색 결과 등에서 곡 단위로 표시될 때 재사용 가능합니다.
  */
 export function AlbumSongListItem({ song, idx, albumName, className }: AlbumSongListItemProps) {
-  console.log({ song });
   return (
     <Link
       href={`/songs/${song.slug}`}
