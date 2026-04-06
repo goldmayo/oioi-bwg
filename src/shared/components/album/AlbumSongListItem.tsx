@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import { AlbumSong } from "@/shared/types/album";
+import { TitleBadge } from "@/shared/ui/TitleBadge";
 import { analytics } from "@/shared/utils/analytics";
 import { cn } from "@/shared/utils/utils";
 
@@ -19,6 +20,7 @@ interface AlbumSongListItemProps {
  * 아코디언 내부나 검색 결과 등에서 곡 단위로 표시될 때 재사용 가능합니다.
  */
 export function AlbumSongListItem({ song, idx, albumName, className }: AlbumSongListItemProps) {
+  console.log({ song });
   return (
     <Link
       href={`/songs/${song.slug}`}
@@ -37,10 +39,9 @@ export function AlbumSongListItem({ song, idx, albumName, className }: AlbumSong
 
         <div className="flex flex-col leading-tight">
           <span className="truncate text-sm font-bold text-white/90">{song.title}</span>
-
-          {/* 공식 로고/뱃지 */}
         </div>
-        {/* {song.hasOfficial && <OfficialBadge type="w" />} */}
+        {song.isTitle && <TitleBadge theme="rock" size="sm" />}
+        {/* {song.hasOfficial && <OfficialBadge type="w" size="sm" />} */}
       </div>
 
       {/* 액션문구: 연습하기 */}

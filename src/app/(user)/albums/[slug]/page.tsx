@@ -73,6 +73,7 @@ async function AlbumDetailLoader({ promise }: { promise: ReturnType<typeof getAl
       file: "",
       youtubeId: s.youtubeId || "",
       hasOfficial: s.hasOfficialCheer,
+      isTitle: s.isTitle,
     })),
   };
 

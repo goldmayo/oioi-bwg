@@ -24,6 +24,7 @@ async function AsyncAlbumsList() {
         file: "", // Not strictly needed for basic rendering if missing
         youtubeId: s.youtubeId,
         hasOfficial: s.hasOfficialCheer,
+        isTitle: s.isTitle,
       })),
     }))
     .filter((a) => a.songs.length > 0);
