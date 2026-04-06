@@ -1,5 +1,23 @@
 # Changelog
 
+# [0.4.0](https://github.com/goldmayo/oioi-bwg/compare/v0.3.1...v0.4.0) (2026-04-06)
+
+
+### Bug Fixes
+
+* AlbumSongListItem의 임의 컬러 값을 시스템 토큰으로 정화 ([bfb74ec](https://github.com/goldmayo/oioi-bwg/commit/bfb74ec1bede012f9c7593a088df09564d593bfc))
+* 공지, 약관 및 정책, 업데이트 문구 수정 ([98bdc04](https://github.com/goldmayo/oioi-bwg/commit/98bdc0442874d575cd41e58dd759842d43d3ca55))
+* 공지사항, 업데이트, 정책 페이지 문구 수정 ([#10](https://github.com/goldmayo/oioi-bwg/issues/10)) ([e4ea7f9](https://github.com/goldmayo/oioi-bwg/commit/e4ea7f95198e11ae7c69b10844785be58f292cac))
+* 앨범 곡 목록 연습하기 텍스트 색상 변경 ([5607c9a](https://github.com/goldmayo/oioi-bwg/commit/5607c9a9b4b85f2e7c33c514b2d2572851f8a992))
+* 프로젝트 구조 확립 및 인앱브라우저 탈출 기능 추가 ([1062304](https://github.com/goldmayo/oioi-bwg/commit/10623048e54e9671b1d4c2779af1f1eec091ffb0)), closes [#2](https://github.com/goldmayo/oioi-bwg/issues/2) [#3](https://github.com/goldmayo/oioi-bwg/issues/3)
+
+
+### Features
+
+* 모바일 UX개선 및 스키마 수정  ([881d6aa](https://github.com/goldmayo/oioi-bwg/commit/881d6aac1f4c431be932e4417103c9e0446ed1d8))
+* 응원법 리스트 및 더보기 페이지 리뉴얼 및 성능 최적화 ([0417479](https://github.com/goldmayo/oioi-bwg/commit/0417479f69da3268348b8768093ed164e07c6095))
+* 홈 화면 디스코그래피 하이브리드 레이아웃 리뉴얼 및 아코디언 기능 도입 ([#8](https://github.com/goldmayo/oioi-bwg/issues/8)) ([af88646](https://github.com/goldmayo/oioi-bwg/commit/af886468f08b65b7a319f496365ab176043c4e50))
+
 ## [0.3.1](https://github.com/goldmayo/oioi-bwg/compare/v0.3.0...v0.3.1) (2026-04-06)
 
 
