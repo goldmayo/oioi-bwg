@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/goldmayo/oioi-bwg/compare/v0.3.0...v0.3.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* 공지, 약관 및 정책, 업데이트 문구 수정 ([de5050e](https://github.com/goldmayo/oioi-bwg/commit/de5050e889098dac99f27d994cd6478d0f873e70)), closes [#2](https://github.com/goldmayo/oioi-bwg/issues/2) [#3](https://github.com/goldmayo/oioi-bwg/issues/3) [#8](https://github.com/goldmayo/oioi-bwg/issues/8) [#10](https://github.com/goldmayo/oioi-bwg/issues/10)
+
 # [0.3.0](https://github.com/goldmayo/oioi-bwg/compare/v0.2.6...v0.3.0) (2026-04-05)
 
 
