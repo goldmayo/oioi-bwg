@@ -1,5 +1,56 @@
 # Changelog
 
+# [0.3.0](https://github.com/goldmayo/oioi-bwg/compare/v0.2.6...v0.3.0) (2026-04-05)
+
+
+### Features
+
+* 프로젝트 리뉴얼 ([66255b9](https://github.com/goldmayo/oioi-bwg/commit/66255b973bc829437a296132ad480bf2ea7bb483)), closes [#2](https://github.com/goldmayo/oioi-bwg/issues/2) [#3](https://github.com/goldmayo/oioi-bwg/issues/3) [#8](https://github.com/goldmayo/oioi-bwg/issues/8)
+
+## [0.2.6](https://github.com/goldmayo/oioi-bwg/compare/v0.2.5...v0.2.6) (2026-03-19)
+
+
+### Bug Fixes
+
+* next/dynamic 대신 Client Wrapper 패턴으로 지연 로딩 재적용 ([07039c6](https://github.com/goldmayo/oioi-bwg/commit/07039c66b66c0eecd42b56bcf170f4bc17cd5a86))
+* wrangler 배포 설정 수정 ([3950e88](https://github.com/goldmayo/oioi-bwg/commit/3950e88f4c0194fc9a2c986349c12e8dbe1891be))
+* 리전 위치 스마트 설정 추가 ([cc4d841](https://github.com/goldmayo/oioi-bwg/commit/cc4d8415b751cae6e4323e47011e9c6fdc485dd3))
+* 서버 컴포넌트 오남용 수정 및 어드민 페이지 안정화 ([a94abd8](https://github.com/goldmayo/oioi-bwg/commit/a94abd8c8a5499723e923fdc85ef7cbddade01ae))
+* 어드민 컴포넌트 지연 로딩 방식 수정 및 배포 에러 해결 ([45c6424](https://github.com/goldmayo/oioi-bwg/commit/45c6424c2f4d75a8376e452db7ed31ede8ae6b93))
+
+
+### Performance Improvements
+
+* 성능 개선 ([8796ead](https://github.com/goldmayo/oioi-bwg/commit/8796eadbb6cf9b8143a0af729e907b73234235da))
+
+## [0.2.5](https://github.com/goldmayo/oioi-bwg/compare/v0.2.4...v0.2.5) (2026-03-17)
+
+
+### Bug Fixes
+
+* 리전 위치 스마트 설정 추가 ([9fa1872](https://github.com/goldmayo/oioi-bwg/commit/9fa18729cac5f83cc20d5b5649536dc4897a1936))
+
+## [0.2.4](https://github.com/goldmayo/oioi-bwg/compare/v0.2.3...v0.2.4) (2026-03-17)
+
+
+### Bug Fixes
+
+* wrangler 배포 설정 수정 ([f1e60a4](https://github.com/goldmayo/oioi-bwg/commit/f1e60a47e9a14baae453288fae3c2c51f011432c))
+
+## [0.2.3](https://github.com/goldmayo/oioi-bwg/compare/v0.2.2...v0.2.3) (2026-03-15)
+
+
+### Bug Fixes
+
+* 푸터 컴포넌트에 GitHub 링크 제거 ([0e914a7](https://github.com/goldmayo/oioi-bwg/commit/0e914a7c30f2cc9b3953797326d149fb9571f68d))
+
+## [0.2.2](https://github.com/goldmayo/oioi-bwg/compare/v0.2.1...v0.2.2) (2026-03-15)
+
+
+### Bug Fixes
+
+* sentry, GA 디바운스 적용 ([72bc5a6](https://github.com/goldmayo/oioi-bwg/commit/72bc5a644bc892452618782557e52bab368929a9))
+
 ## [0.2.1](https://github.com/goldmayo/oioi-bwg/compare/v0.2.0...v0.2.1) (2026-03-14)
 
 
