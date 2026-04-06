@@ -32,11 +32,14 @@ export const song = pgTable(
   "Song",
   {
     id: serial().primaryKey().notNull(),
-    albumId: integer().notNull().references(() => album.id, { onDelete: "cascade" }),
+    albumId: integer()
+      .notNull()
+      .references(() => album.id, { onDelete: "cascade" }),
     title: text().notNull(),
     youtubeId: text().notNull(),
     lyrics: jsonb().notNull(),
     hasOfficialCheer: boolean().default(false).notNull(),
+    isTitle: boolean().default(false).notNull(),
     order: integer().default(0).notNull(),
     createdAt: timestamp({ precision: 3, mode: "string" })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -75,5 +78,5 @@ export type InsertSong = typeof song.$inferInsert;
 // 가사를 제외한 곡 정보 타입 정의
 export type SongListItem = Pick<
   Song,
-  "id" | "title" | "slug" | "albumId" | "order" | "updatedAt" | "hasOfficialCheer"
+  "id" | "title" | "slug" | "albumId" | "order" | "updatedAt" | "hasOfficialCheer" | "isTitle"
 >;

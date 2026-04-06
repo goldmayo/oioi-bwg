@@ -8,10 +8,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 
-// import { OfficialBadge } from "@/components/common/OfficialBadge";
 import { Album } from "@/shared/types/album";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { TitleBadge } from "@/shared/ui/TitleBadge";
 import { analytics } from "@/shared/utils/analytics";
 
 interface AlbumDetailModalProps {
@@ -154,7 +154,10 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                         {song.title}
                       </h4>
                     </div>
-                    {/* {song.hasOfficial && <OfficialBadge type={"e"} />} */}
+                    <div className="flex items-center gap-2">
+                      {song.isTitle && <TitleBadge theme="rock" size="md" />}
+                      {/* {song.hasOfficial && <OfficialBadge type="w" size="md" />} */}
+                    </div>
                   </Link>
                 ))}
               </div>

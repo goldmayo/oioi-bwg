@@ -42,6 +42,7 @@ export async function getAllSongs(): Promise<SongListItem[]> {
       order: true,
       updatedAt: true,
       hasOfficialCheer: true,
+      isTitle: true,
     },
     orderBy: (s, { asc }) => [asc(s.order)],
   });
@@ -62,10 +63,11 @@ export async function getAllAlbumsWithSongs() {
           title: true,
           hasOfficialCheer: true,
           youtubeId: true,
+          isTitle: true,
         },
       },
     },
-    orderBy: (a, { asc }) => [asc(a.releaseDate)], 
+    orderBy: (a, { asc }) => [asc(a.releaseDate)],
   });
 }
 
@@ -85,6 +87,7 @@ export async function getAlbumBySlug(slug: string) {
           title: true,
           hasOfficialCheer: true,
           youtubeId: true,
+          isTitle: true,
         },
       },
     },
