@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.5.0](https://github.com/goldmayo/oioi-bwg/compare/v0.4.0...v0.5.0) (2026-04-06)
+
+
+### Features
+
+* title 뱃지 추가 ([#13](https://github.com/goldmayo/oioi-bwg/issues/13)) ([1872b12](https://github.com/goldmayo/oioi-bwg/commit/1872b12ebabb52d076d5d21abc6ba508e66c3d3a))
+
 # [0.4.0](https://github.com/goldmayo/oioi-bwg/compare/v0.3.1...v0.4.0) (2026-04-06)
 
 
