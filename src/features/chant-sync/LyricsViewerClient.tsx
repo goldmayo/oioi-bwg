@@ -4,8 +4,10 @@ import { useGSAP } from "@gsap/react";
 import { cva } from "class-variance-authority";
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
+import { Link2 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 
 // import { OfficialBadge } from "@/components/common/OfficialBadge";
 import { useAdWatcher } from "@/shared/hooks/useAdWatcher";
@@ -44,6 +46,11 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
 
   // 광고 감시 훅 연동
   const isAdPlaying = useAdWatcher(player, song.youtubeId);
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast("링크가 복사되었습니다.");
+  };
 
   const handleLyricClick = (line: LyricLine) => {
     player?.seekTo(line.startTime, true);
@@ -149,13 +156,21 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
                       {/* {song.hasOfficialCheer && <OfficialBadge type="e" className="shrink-0" />} */}
                     </div>
                     {album && (
-                      <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between gap-1">
                         <Link
                           href={`/albums/${album.imageSlug}`}
                           className="text-qwer-w inline-block text-sm font-bold transition-colors hover:underline"
                         >
                           {album.name}
                         </Link>
+                        <button
+                          onClick={handleShare}
+                          className="text-white/60 transition-colors hover:text-white"
+                          aria-label="공유하기"
+                          title="공유하기"
+                        >
+                          <Link2 className="size-5 md:size-5" />
+                        </button>
                       </div>
                     )}
                   </div>

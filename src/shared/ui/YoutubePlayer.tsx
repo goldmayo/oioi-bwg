@@ -82,6 +82,7 @@ export function YoutubePlayer({
           controls: 1,
           rel: 0,
           modestbranding: 1,
+          origin: window.location.origin,
         },
         events: {
           onReady: (event: YouTubeEvent) => {

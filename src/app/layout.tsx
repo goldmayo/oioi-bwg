@@ -7,6 +7,7 @@ import Script from "next/script";
 import { Providers } from "@/app/providers";
 import { InAppBrowserGuard } from "@/shared/components/InAppBrowserGuard";
 import { DEFAULT_METADATA } from "@/shared/constants/site";
+import { Toaster } from "@/shared/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -76,6 +77,13 @@ export default function RootLayout({
           </noscript>
         )}
         <Providers>{children}</Providers>
+        <Toaster
+          position="top-center"
+          duration={800}
+          toastOptions={{
+            className: "text-base font-bold tracking-tight px-6 py-3.5 justify-center",
+          }}
+        />
       </body>
     </html>
   );
