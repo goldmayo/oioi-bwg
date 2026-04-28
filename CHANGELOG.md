@@ -1,5 +1,16 @@
 # Changelog
 
+* chore(ci): Node 24 강제 적용 및 pnpm lockfile 의존성 동기화 (50eed5b)
+* fix(admin): Zod v4 타입 문제 해결 및 표시 제어 폼 추가 (4d9c5a9)
+* feat(admin): 콘텐츠 표시 여부 제어 UI 및 상태 뱃지 추가 (2cbbe85)
+* feat(db): 앨범 및 곡 표시 제어 컬럼 추가 및 메인페이지 정렬 개선 (e0eb985)
+* feat(lyrics): 곡 상세 페이지 링크 복사 기능 및 토스트 알림 추가 (24567c6)
+* refactor(admin): 가사 에디터 및 뷰어 UI 반응형 개선 (49bdea5)
+* feat(admin): 앨범 및 곡 관리 페이지 추가 및 사이드바 개편 (a5eabf5)
+* feat(db): 앨범 및 곡 관리를 위한 CRUD 쿼리 및 커맨드 추가 (8768fd6)
+* feat(ui): Shadcn UI 컴포넌트 및 미디어 쿼리 훅 추가 (8fb1cbd)
+* chore: vinext 버전 최신화 (8d31196)
+
 # [0.5.0](https://github.com/goldmayo/oioi-bwg/compare/v0.4.0...v0.5.0) (2026-04-06)
 
 
