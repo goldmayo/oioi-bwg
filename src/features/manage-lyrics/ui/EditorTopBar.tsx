@@ -69,9 +69,9 @@ export function EditorTopBar() {
   const selectedLine = currentIndex >= 0 ? lyrics[currentIndex] : null;
 
   return (
-    <div className="border-border bg-card flex shrink-0 items-center justify-between rounded-lg border p-3 shadow-sm">
+    <div className="border-border bg-card flex shrink-0 flex-col items-center justify-between gap-2 rounded-lg border p-3 shadow-sm md:gap-0 lg:flex-row">
       {/* 좌측 컨트롤 그룹 */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col items-start gap-4 lg:flex-row lg:items-center">
         {/* 시간 표시 */}
         <TimeDisplay />
 
@@ -82,64 +82,65 @@ export function EditorTopBar() {
             placeholder="URL 또는 ID 붙여넣기"
             value={youtubeId}
             onChange={handleYoutubeIdChange}
-            className="border-input bg-background text-foreground h-8 w-56 text-xs"
+            className="border-input bg-background text-foreground h-8 w-48 text-xs"
           />
         </div>
 
-        {/* 전체 오프셋 조절 */}
-        <div className="border-border flex flex-col gap-1 border-l pl-4">
-          <span className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-            전체 오프셋
-          </span>
-          <div className="flex gap-1">
-            <Button variant="outline" size="sm" onClick={() => applyGlobalOffset(-0.1)}>
-              -0.1s
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => applyGlobalOffset(0.1)}>
-              +0.1s
-            </Button>
+        <div className="flex gap-2">
+          {/* 전체 오프셋 조절 */}
+          <div className="border-border flex flex-col gap-1 border-l pl-4">
+            <span className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+              전체 오프셋
+            </span>
+            <div className="flex gap-1">
+              <Button variant="outline" size="sm" onClick={() => applyGlobalOffset(-0.1)}>
+                -0.1s
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => applyGlobalOffset(0.1)}>
+                +0.1s
+              </Button>
+            </div>
+          </div>
+
+          {/* 선택 행 오프셋 조절 */}
+          <div className="border-border flex flex-col gap-1 border-l pl-4">
+            <span
+              className={cn(
+                "text-[10px] font-semibold tracking-wider uppercase",
+                selectedLine ? "text-primary" : "text-muted-foreground/40",
+              )}
+            >
+              선택 행
+              {selectedLine && (
+                <span className="ml-1 font-mono font-normal">
+                  ({formatTime(selectedLine.startTime)})
+                </span>
+              )}
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="default"
+                size="sm"
+                disabled={!selectedLine}
+                onClick={() => applyRowOffset(-0.1)}
+                className="bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 border"
+              >
+                -0.1s
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                disabled={!selectedLine}
+                onClick={() => applyRowOffset(0.1)}
+                className="bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 border"
+              >
+                +0.1s
+              </Button>
+            </div>
           </div>
         </div>
-
-        {/* 선택 행 오프셋 조절 */}
-        <div className="border-border flex flex-col gap-1 border-l pl-4">
-          <span
-            className={cn(
-              "text-[10px] font-semibold tracking-wider uppercase",
-              selectedLine ? "text-primary" : "text-muted-foreground/40",
-            )}
-          >
-            선택 행
-            {selectedLine && (
-              <span className="ml-1 font-mono font-normal">
-                ({formatTime(selectedLine.startTime)})
-              </span>
-            )}
-          </span>
-          <div className="flex gap-1">
-            <Button
-              variant="default"
-              size="sm"
-              disabled={!selectedLine}
-              onClick={() => applyRowOffset(-0.1)}
-              className="bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 border"
-            >
-              -0.1s
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              disabled={!selectedLine}
-              onClick={() => applyRowOffset(0.1)}
-              className="bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 border"
-            >
-              +0.1s
-            </Button>
-          </div>
-        </div>
-
         {/* Undo / Redo */}
-        <div className="ml-4 flex gap-2">
+        <div className="flex gap-2 border-l pl-4">
           <Button variant="secondary" size="sm" onClick={undo} disabled={!canUndo}>
             Undo
           </Button>
@@ -150,7 +151,7 @@ export function EditorTopBar() {
       </div>
 
       {/* 우측: LRC Import + 저장 */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 self-center">
         <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
           <DialogTrigger asChild>
             <Button variant="outline">LRC Import</Button>

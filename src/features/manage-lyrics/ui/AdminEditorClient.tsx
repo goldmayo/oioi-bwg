@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 import { Button } from "@/shared/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/shared/ui/resizable";
 import { YoutubePlayer } from "@/shared/ui/YoutubePlayer";
@@ -46,6 +47,8 @@ function AdminEditorInner() {
     addExtraLine,
     lastAddedTimeRef,
   } = useAdminEditorContext();
+
+  const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
 
   // QWER 단축키 시스템
   useEffect(() => {
@@ -99,7 +102,7 @@ function AdminEditorInner() {
   ]);
 
   return (
-    <div className="bg-background flex h-full flex-col gap-4 overflow-hidden p-4">
+    <div className="bg-background flex h-full flex-col gap-4 overflow-y-auto p-4">
       {/* 드래그 선택 말풍선 툴바 (전역 fixed 포지션) */}
       <FloatingToolbar />
 
@@ -107,54 +110,97 @@ function AdminEditorInner() {
       <EditorTopBar />
 
       {/* 메인 패널: YoutubePlayer + LyricsTable */}
-      <div className="flex h-[50vh] min-h-100 shrink-0">
-        <ResizablePanelGroup orientation="horizontal" className="flex gap-4">
-          {/* 좌 패널: YoutubePlayer + 녹화 모드 버튼 */}
-          <ResizablePanel defaultSize={50} minSize={20}>
-            <div className="flex h-full flex-col gap-2">
-              <div className="bg-muted/30 border-border text-muted-foreground flex items-center justify-between rounded-t-lg border-b px-3 py-2 text-xs">
-                <div className="flex gap-3">
-                  <span className="font-bold">
-                    <kbd className="bg-background text-primary rounded border px-1">Q</kbd> 캡처
-                  </span>
-                  <span className="font-bold">
-                    <kbd className="bg-background rounded border px-1">W</kbd> 재생/일시정지
-                  </span>
-                  <span className="font-bold">
-                    <kbd className="bg-background rounded border px-1">E</kbd> 추임새 행 추가
-                  </span>
-                  <span className="font-bold">
-                    <kbd className="bg-background rounded border px-1">R</kbd> 녹화(자동이동) 토글
-                  </span>
+      {!isSmallDevice ? (
+        <div className="flex h-[50vh] min-h-100 shrink-0">
+          <ResizablePanelGroup orientation="horizontal" className="flex gap-4">
+            {/* 좌 패널: YoutubePlayer + 녹화 모드 버튼 */}
+            <ResizablePanel defaultSize={50} minSize={20}>
+              <div className="flex h-full flex-col gap-2">
+                <div className="bg-muted/30 border-border text-muted-foreground flex items-center justify-between rounded-t-lg border-b px-3 py-2 text-xs">
+                  <div className="flex gap-3">
+                    <span className="font-bold">
+                      <kbd className="bg-background text-primary rounded border px-1">Q</kbd> 캡처
+                    </span>
+                    <span className="font-bold">
+                      <kbd className="bg-background rounded border px-1">W</kbd> 재생/일시정지
+                    </span>
+                    <span className="font-bold">
+                      <kbd className="bg-background rounded border px-1">E</kbd> 추임새 행 추가
+                    </span>
+                    <span className="font-bold">
+                      <kbd className="bg-background rounded border px-1">R</kbd> 녹화(자동이동) 토글
+                    </span>
+                  </div>
+                  <Button
+                    onClick={() => setIsRecording(!isRecording)}
+                    variant={isRecording ? "destructive" : "secondary"}
+                    size="sm"
+                    className="h-7 text-xs font-bold"
+                  >
+                    {isRecording ? "[R] 녹화 중 (자동이동 ON)" : "[R] 녹화 모드 켜기"}
+                  </Button>
                 </div>
-                <Button
-                  onClick={() => setIsRecording(!isRecording)}
-                  variant={isRecording ? "destructive" : "secondary"}
-                  size="sm"
-                  className="h-7 text-xs font-bold"
-                >
-                  {isRecording ? "[R] 녹화 중 (자동이동 ON)" : "[R] 녹화 모드 켜기"}
-                </Button>
+                <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
+                  <YoutubePlayer
+                    key={youtubeId}
+                    videoId={youtubeId}
+                    onTimeUpdate={handleTimeUpdate}
+                    onPlayerReady={setPlayer}
+                  />
+                </div>
               </div>
-              <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
-                <YoutubePlayer
-                  key={youtubeId}
-                  videoId={youtubeId}
-                  onTimeUpdate={handleTimeUpdate}
-                  onPlayerReady={setPlayer}
-                />
+            </ResizablePanel>
+
+            <ResizableHandle withHandle className="w-2 border-none bg-transparent" />
+
+            {/* 우 패널: 가사 편집 테이블 */}
+            <ResizablePanel defaultSize={50} minSize={30}>
+              <LyricsTable />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+      ) : (
+        <>
+          {/* 모바일용 패널: YoutubePlayer + LyricsTable */}
+          <div className="flex flex-col gap-2">
+            <div className="bg-muted/30 border-border text-muted-foreground flex items-center justify-between rounded-t-lg border-b px-3 py-2 text-xs">
+              <div className="flex gap-3">
+                <span className="font-bold">
+                  <kbd className="bg-background text-primary rounded border px-1">Q</kbd> 캡처
+                </span>
+                <span className="font-bold">
+                  <kbd className="bg-background rounded border px-1">W</kbd> 재생/일시정지
+                </span>
+                <span className="font-bold">
+                  <kbd className="bg-background rounded border px-1">E</kbd> 추임새 행 추가
+                </span>
+                <span className="font-bold">
+                  <kbd className="bg-background rounded border px-1">R</kbd> 녹화(자동이동) 토글
+                </span>
               </div>
+              <Button
+                onClick={() => setIsRecording(!isRecording)}
+                variant={isRecording ? "destructive" : "secondary"}
+                size="sm"
+                className="h-7 text-xs font-bold"
+              >
+                {isRecording ? "[R] 녹화 중 (자동이동 ON)" : "[R] 녹화 모드 켜기"}
+              </Button>
             </div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle className="w-2 border-none bg-transparent" />
-
-          {/* 우 패널: 가사 편집 테이블 */}
-          <ResizablePanel defaultSize={50} minSize={30}>
+            <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
+              <YoutubePlayer
+                key={youtubeId}
+                videoId={youtubeId}
+                onTimeUpdate={handleTimeUpdate}
+                onPlayerReady={setPlayer}
+              />
+            </div>
+          </div>
+          <div className="h-2/5 min-h-100">
             <LyricsTable />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
+          </div>
+        </>
+      )}
 
       {/* 하단: 실시간 타임라인 미리보기 */}
       <div className="border-border bg-card flex min-h-50 flex-1 flex-col rounded-lg border p-4 shadow-sm">

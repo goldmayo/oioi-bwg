@@ -63,7 +63,9 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
   return (
     <div
       className={cn(
-        "grid grid-cols-[100px_1fr_60px_220px] items-center gap-2 rounded-md border p-2 transition-all",
+        "grid items-center gap-2 rounded-md border p-2 transition-all",
+        // lg+: 기존 4컬럼 한 줄 | lg 미만: Time·Extra·Action 1행 + Lyrics 2행
+        "grid-cols-[100px_1fr_220px] lg:grid-cols-[100px_1fr_60px_220px]",
         isCurrent
           ? "border-primary/50 bg-accent/50 ring-primary/20 ring-1"
           : "border-border/50 bg-background",
@@ -85,33 +87,8 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
         className="border-input bg-muted/30 focus-visible:ring-primary/30 h-8 font-mono text-xs"
       />
 
-      {/* 가사 영역: isExtra / 일반 분기 */}
-      {line.isExtra ? (
-        <ExtraSegmentEditor line={line} lineIndex={index} />
-      ) : (
-        <div
-          className="border-input bg-muted/20 flex h-8 items-center overflow-x-auto rounded border px-2 text-sm"
-          onMouseUp={(e) => handleMouseUpText(e, index)}
-        >
-          {line.segments?.map((seg, sIdx) => (
-            <span
-              key={sIdx}
-              data-line={index}
-              data-seg={sIdx}
-              className={cn(
-                "selection:bg-primary/20 cursor-text whitespace-pre",
-                seg.isCheer && "text-qwer-r font-bold",
-                seg.isEcho && "text-qwer-r decoration-qwer-r/50 underline underline-offset-4",
-              )}
-            >
-              {seg.text}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* isExtra 체크박스 */}
-      <div className="flex justify-center">
+      {/* isExtra 체크박스 (lg 미만에서 1행에 표시) */}
+      <div className="flex justify-center lg:hidden">
         <Checkbox
           checked={line.isExtra}
           onCheckedChange={(c) => updateLine(index, { isExtra: !!c })}
@@ -119,9 +96,97 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
         />
       </div>
 
-      {/* Action 버튼 그룹 */}
-      <div className="flex justify-center gap-1">
-        {/* 텍스트 직접 수정 */}
+      {/* Action 버튼 그룹 (lg 미만에서 1행에 표시) */}
+      <div className="flex justify-end gap-1 lg:hidden">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-muted-foreground hover:text-foreground hover:bg-accent h-7 w-7"
+          title="텍스트 수정"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEditRawText(index);
+          }}
+        >
+          <Pencil size={12} />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="hover:bg-primary/10 hover:text-primary h-7 w-7"
+          title="SYNC"
+          onClick={(e) => {
+            e.stopPropagation();
+            captureTime(index);
+          }}
+        >
+          <RefreshCw size={12} />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-qwer-e/70 hover:text-qwer-e hover:bg-qwer-e/10 h-7 w-7"
+          title="추임새 추가"
+          onClick={(e) => {
+            e.stopPropagation();
+            const t = addExtraLine(index);
+            lastAddedTimeRef.current = t;
+          }}
+        >
+          <Plus size={12} />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="text-destructive/70 hover:text-destructive hover:bg-destructive/10 h-7 w-7"
+          title="삭제"
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteLine(index);
+          }}
+        >
+          <Trash2 size={12} />
+        </Button>
+      </div>
+
+      {/* 가사 영역: lg 미만에서 2행 전체 너비, lg+에서 원래 위치 */}
+      <div className="col-span-3 lg:col-span-1">
+        {line.isExtra ? (
+          <ExtraSegmentEditor line={line} lineIndex={index} />
+        ) : (
+          <div
+            className="border-input bg-muted/20 flex min-h-8 items-center overflow-x-auto rounded border px-2 text-sm"
+            onMouseUp={(e) => handleMouseUpText(e, index)}
+          >
+            {line.segments?.map((seg, sIdx) => (
+              <span
+                key={sIdx}
+                data-line={index}
+                data-seg={sIdx}
+                className={cn(
+                  "selection:bg-primary/20 cursor-text whitespace-pre",
+                  seg.isCheer && "text-qwer-r font-bold",
+                  seg.isEcho && "text-qwer-r decoration-qwer-r/50 underline underline-offset-4",
+                )}
+              >
+                {seg.text}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* isExtra 체크박스 (lg+ 전용, 기존 위치 유지) */}
+      <div className="hidden justify-center lg:flex">
+        <Checkbox
+          checked={line.isExtra}
+          onCheckedChange={(c) => updateLine(index, { isExtra: !!c })}
+          className="data-[state=checked]:bg-qwer-e data-[state=checked]:border-qwer-e"
+        />
+      </div>
+
+      {/* Action 버튼 그룹 (lg+ 전용, 기존 위치 유지) */}
+      <div className="hidden justify-center gap-1 lg:flex">
         <Button
           size="icon"
           variant="ghost"
@@ -134,8 +199,6 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
         >
           <Pencil size={14} />
         </Button>
-
-        {/* 현재 재생 시간으로 타임스탬프 동기화 */}
         <Button
           size="icon"
           variant="ghost"
@@ -148,8 +211,6 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
         >
           <RefreshCw size={14} />
         </Button>
-
-        {/* 아래에 추임새(isExtra) 행 추가 */}
         <Button
           size="icon"
           variant="ghost"
@@ -163,8 +224,6 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
         >
           <Plus size={14} />
         </Button>
-
-        {/* 현재 행 삭제 */}
         <Button
           size="icon"
           variant="ghost"

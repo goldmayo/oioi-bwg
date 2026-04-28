@@ -115,7 +115,6 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
       { scale: 1, y: 0, filter: "brightness(1)" },
       {
         scale: 1.02,
-        y: -2,
         duration: 0.09,
         yoyo: true,
         repeat: 1,

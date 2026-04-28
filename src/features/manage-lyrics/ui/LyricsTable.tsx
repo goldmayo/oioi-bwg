@@ -18,9 +18,9 @@ export function LyricsTable() {
   return (
     <div className="border-border bg-card flex h-full flex-col overflow-hidden rounded-lg border shadow-sm">
       {/* 테이블 헤더 */}
-      <div className="border-border bg-muted/50 text-muted-foreground grid shrink-0 grid-cols-[100px_1fr_60px_220px] gap-2 border-b p-3 text-xs font-bold tracking-wider uppercase">
+      <div className="border-border bg-muted/50 text-muted-foreground grid shrink-0 grid-cols-[100px_1fr_220px] gap-2 border-b p-3 text-xs font-bold tracking-wider uppercase lg:grid-cols-[100px_1fr_60px_220px]">
         <div className="text-center">Time</div>
-        <div className="text-center">Lyrics (드래그하여 분리)</div>
+        <div className="hidden text-center lg:block">Lyrics</div>
         <div className="text-center">Extra</div>
         <div className="text-center">Action</div>
       </div>
