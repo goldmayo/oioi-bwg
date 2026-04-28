@@ -29,6 +29,7 @@ export async function createAlbumAction(formData: unknown) {
       imgUrl: parsed.imgUrl,
       color: parsed.color,
       releaseDate: parsed.releaseDate || null,
+      isVisible: parsed.isVisible,
     };
 
     await db.insert(album).values(insertData);
@@ -56,6 +57,7 @@ export async function updateAlbumAction(id: number, formData: unknown) {
         imgUrl: parsed.imgUrl,
         color: parsed.color,
         releaseDate: parsed.releaseDate || null,
+        isVisible: parsed.isVisible,
       })
       .where(eq(album.id, id));
 
@@ -115,6 +117,7 @@ export async function createSongAction(formData: unknown) {
       lyrics: validatedLyrics,
       hasOfficialCheer: parsed.hasOfficialCheer,
       isTitle: parsed.isTitle,
+      isVisible: parsed.isVisible,
       order: parsed.order,
       createdAt: now,
       updatedAt: now,
@@ -145,6 +148,7 @@ export async function updateSongAction(id: number, formData: unknown) {
       youtubeId: parsed.youtubeId,
       hasOfficialCheer: parsed.hasOfficialCheer,
       isTitle: parsed.isTitle,
+      isVisible: parsed.isVisible,
       order: parsed.order,
       updatedAt: new Date().toISOString(),
     };

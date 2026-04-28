@@ -20,6 +20,7 @@ export const album = pgTable("Album", {
   imgUrl: text().notNull(),
   color: text().notNull(),
   releaseDate: timestamp({ precision: 3, mode: "string" }),
+  isVisible: boolean().default(true).notNull(),
   createdAt: timestamp({ precision: 3, mode: "string" })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -40,6 +41,7 @@ export const song = pgTable(
     lyrics: jsonb().notNull(),
     hasOfficialCheer: boolean().default(false).notNull(),
     isTitle: boolean().default(false).notNull(),
+    isVisible: boolean().default(true).notNull(),
     order: integer().default(0).notNull(),
     createdAt: timestamp({ precision: 3, mode: "string" })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -78,5 +80,5 @@ export type InsertSong = typeof song.$inferInsert;
 // 가사를 제외한 곡 정보 타입 정의
 export type SongListItem = Pick<
   Song,
-  "id" | "title" | "slug" | "albumId" | "order" | "updatedAt" | "hasOfficialCheer" | "isTitle"
+  "id" | "title" | "slug" | "albumId" | "order" | "updatedAt" | "hasOfficialCheer" | "isTitle" | "isVisible"
 >;
