@@ -48,6 +48,7 @@ interface SongWithAlbum {
   updatedAt: string;
   hasOfficialCheer: boolean;
   isTitle: boolean;
+  isVisible: boolean;
   album: { name: string };
 }
 
@@ -219,6 +220,11 @@ export function SongManagerClient({ initialSongs, albums }: SongManagerClientPro
                       {song.hasOfficialCheer && (
                         <Badge variant="secondary" className="text-2xs px-1.5 py-0">
                           응원법
+                        </Badge>
+                      )}
+                      {!song.isVisible && (
+                        <Badge variant="outline" className="text-2xs px-1.5 py-0 text-muted-foreground">
+                          숨김
                         </Badge>
                       )}
                     </div>

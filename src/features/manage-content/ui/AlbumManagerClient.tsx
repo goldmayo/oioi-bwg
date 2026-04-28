@@ -4,6 +4,7 @@ import { Edit, Plus, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { Album } from "@/shared/api/db/drizzle/schema";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -117,6 +118,7 @@ export function AlbumManagerClient({ initialAlbums }: AlbumManagerClientProps) {
               <TableHead>이름</TableHead>
               <TableHead className="hidden sm:table-cell">Slug</TableHead>
               <TableHead className="w-16">색상</TableHead>
+              <TableHead className="w-16 text-center">표시</TableHead>
               <TableHead className="hidden md:table-cell">발매일</TableHead>
               <TableHead className="w-24 text-right">관리</TableHead>
             </TableRow>
@@ -124,7 +126,7 @@ export function AlbumManagerClient({ initialAlbums }: AlbumManagerClientProps) {
           <TableBody>
             {paged.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
+                <TableCell colSpan={7} className="text-muted-foreground py-8 text-center">
                   {search ? "검색 결과가 없습니다." : "등록된 앨범이 없습니다."}
                 </TableCell>
               </TableRow>
@@ -142,6 +144,11 @@ export function AlbumManagerClient({ initialAlbums }: AlbumManagerClientProps) {
                       style={{ backgroundColor: album.color }}
                       title={album.color}
                     />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={album.isVisible ? "default" : "outline"} className="text-2xs px-1.5 py-0">
+                      {album.isVisible ? "표시" : "숨김"}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden text-sm md:table-cell">
                     {album.releaseDate
