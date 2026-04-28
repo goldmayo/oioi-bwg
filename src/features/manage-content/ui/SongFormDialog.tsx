@@ -27,7 +27,7 @@ import {
 import { Switch } from "@/shared/ui/switch";
 
 import { createSongAction, updateSongAction } from "../actions";
-import { SongEditSchema, SongEditValues } from "../schemas";
+import { type SongEditInput, SongEditSchema, type SongEditValues } from "../schemas";
 import { LrcUploader } from "./LrcUploader";
 
 /** 곡 편집 시 필요한 최소 데이터 */
@@ -39,6 +39,7 @@ interface SongEditData {
   youtubeId: string;
   hasOfficialCheer: boolean;
   isTitle: boolean;
+  isVisible: boolean;
   order: number;
 }
 
@@ -66,9 +67,8 @@ export function SongFormDialog({
 
   // SongEditSchema(lrcText optional)로 통일하여 타입 호환성 문제 회피
   // 생성 시 lrcText 필수 검증은 onSubmit에서 직접 수행
-  const form = useForm<SongEditValues>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- zodResolver + zod v4 타입 호환성 이슈
-    resolver: zodResolver(SongEditSchema) as any,
+  const form = useForm<SongEditInput, unknown, SongEditValues>({
+    resolver: zodResolver(SongEditSchema),
     defaultValues: {
       albumId: song?.albumId ?? 0,
       title: song?.title ?? "",
@@ -76,6 +76,7 @@ export function SongFormDialog({
       youtubeId: song?.youtubeId ?? "",
       hasOfficialCheer: song?.hasOfficialCheer ?? false,
       isTitle: song?.isTitle ?? false,
+      isVisible: song?.isVisible ?? true,
       order: song?.order ?? 0,
       lrcText: "",
     },
@@ -241,6 +242,25 @@ export function SongFormDialog({
                 )}
               />
             </div>
+
+            {/* 화면 표시 설정 */}
+            <FormField
+              control={form.control}
+              name="isVisible"
+              render={({ field }) => (
+                <FormItem className="bg-accent/30 flex items-center justify-between rounded-lg p-3">
+                  <div>
+                    <FormLabel className="cursor-pointer">화면 표시</FormLabel>
+                    <p className="text-muted-foreground text-xs">
+                      미표시 시 사용자 화면에서 숨겨집니다.
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             {/* LRC 업로드 */}
             <FormField

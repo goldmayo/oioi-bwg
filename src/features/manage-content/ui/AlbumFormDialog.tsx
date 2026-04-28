@@ -17,9 +17,10 @@ import {
 } from "@/shared/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
+import { Switch } from "@/shared/ui/switch";
 
 import { createAlbumAction, updateAlbumAction, uploadAlbumImageAction } from "../actions";
-import { AlbumFormSchema, AlbumFormValues } from "../schemas";
+import { type AlbumFormInput, AlbumFormSchema, type AlbumFormValues } from "../schemas";
 
 interface AlbumFormDialogProps {
   open: boolean;
@@ -36,7 +37,7 @@ export function AlbumFormDialog({ open, onOpenChange, album, onSuccess }: AlbumF
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<AlbumFormValues>({
+  const form = useForm<AlbumFormInput, unknown, AlbumFormValues>({
     resolver: zodResolver(AlbumFormSchema),
     defaultValues: {
       name: album?.name ?? "",
@@ -44,6 +45,7 @@ export function AlbumFormDialog({ open, onOpenChange, album, onSuccess }: AlbumF
       imgUrl: album?.imgUrl ?? "",
       color: album?.color ?? "#000000",
       releaseDate: album?.releaseDate ? album.releaseDate.split("T")[0] : "",
+      isVisible: album?.isVisible ?? true,
     },
   });
 
@@ -201,6 +203,25 @@ export function AlbumFormDialog({ open, onOpenChange, album, onSuccess }: AlbumF
                 )}
               />
             </div>
+
+            {/* 화면 표시 설정 */}
+            <FormField
+              control={form.control}
+              name="isVisible"
+              render={({ field }) => (
+                <FormItem className="bg-accent/30 flex items-center justify-between rounded-lg p-3">
+                  <div>
+                    <FormLabel className="cursor-pointer">화면 표시</FormLabel>
+                    <p className="text-muted-foreground text-xs">
+                      미표시 시 사용자 화면에서 숨겨집니다.
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
