@@ -1,5 +1,5 @@
 import { getDb } from "./index";
-import { Song, SongListItem } from "./schema";
+import { Album, Song, SongListItem } from "./schema";
 
 /**
  * 슬러그를 기반으로 곡 정보를 앨범 정보와 함께 조회하는 헬퍼 함수
@@ -93,3 +93,40 @@ export async function getAlbumBySlug(slug: string) {
     },
   });
 }
+
+/**
+ * 관리자용: 전체 앨범 목록 조회
+ */
+export async function getAllAlbums(): Promise<Album[]> {
+  const db = getDb();
+  return await db.query.album.findMany({
+    orderBy: (a, { asc }) => [asc(a.releaseDate)],
+  });
+}
+
+/**
+ * 관리자용: 전체 곡 목록 + 앨범명 포함 조회
+ */
+export async function getSongsWithAlbum() {
+  const db = getDb();
+  return await db.query.song.findMany({
+    columns: {
+      id: true,
+      title: true,
+      slug: true,
+      albumId: true,
+      order: true,
+      youtubeId: true,
+      updatedAt: true,
+      hasOfficialCheer: true,
+      isTitle: true,
+    },
+    with: {
+      album: {
+        columns: { name: true },
+      },
+    },
+    orderBy: (s, { asc }) => [asc(s.albumId), asc(s.order)],
+  });
+}
+

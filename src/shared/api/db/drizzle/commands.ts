@@ -1,8 +1,34 @@
 import { eq } from "drizzle-orm";
-import { updateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { getDb } from "./index";
-import { InsertSong, song as songTable } from "./schema";
+import { album, InsertAlbum, InsertSong, song as songTable } from "./schema";
+
+// === Album Actions ===
+
+export async function createAlbum(data: InsertAlbum) {
+  const db = getDb();
+  try {
+    await db.insert(album).values(data);
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to create album:", error);
+    return { success: false, error: "앨범 생성에 실패했습니다." };
+  }
+}
+
+export async function updateAlbumInfo(id: number, data: Partial<InsertAlbum>) {
+  const db = getDb();
+  try {
+    await db.update(album).set(data).where(eq(album.id, id));
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update album:", error);
+    return { success: false, error: "앨범 수정에 실패했습니다." };
+  }
+}
 
 /**
  * 곡 데이터 업데이트 명령 (Partial<InsertSong> 활용)
