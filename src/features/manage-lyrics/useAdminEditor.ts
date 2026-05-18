@@ -209,24 +209,6 @@ export function useAdminEditor(song: AdminEditorSong) {
   );
 
   /**
-   * prompt를 통해 가사 행의 전체 텍스트를 수정합니다.
-   * 수정 시 기존 세그먼트 속성이 초기화됩니다.
-   */
-  const handleEditRawText = useCallback(
-    (index: number) => {
-      const rawText = lyrics[index].segments.map((s) => s.text).join("");
-      const newText = prompt(
-        "가사 텍스트를 수정하세요 (기존 세그먼트 속성이 초기화됩니다):",
-        rawText,
-      );
-      if (newText !== null && newText !== rawText) {
-        updateLine(index, { segments: [{ text: newText, isCheer: false, isEcho: false }] });
-      }
-    },
-    [lyrics, updateLine],
-  );
-
-  /**
    * 현재 재생 시간을 기준으로 특정 세그먼트의 startTimeOffset을 캡처합니다.
    * offset = 현재 재생 시간 - 라인의 startTime (최소 0)
    */
@@ -315,7 +297,6 @@ export function useAdminEditor(song: AdminEditorSong) {
     handleImportLrc,
     handleMouseUpText,
     handleSplitSegment,
-    handleEditRawText,
     captureSegmentOffset,
     updateSegment,
     applyRowOffset,
