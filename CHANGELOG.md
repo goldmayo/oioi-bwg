@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/goldmayo/oioi-bwg/compare/v0.7.0...v0.7.1) (2026-05-18)
+
+
+### Features
+
+* **manage-lyrics:** 모바일 전용 페인트 에디터 및 UI 다이얼로그 개편 ([#14](https://github.com/goldmayo/oioi-bwg/issues/14)) ([25a20b2](https://github.com/goldmayo/oioi-bwg/commit/25a20b240b3e52e2ef235085871bb379a22c015d))
+
 * chore(ci): Node 24 강제 적용 및 pnpm lockfile 의존성 동기화 (50eed5b)
 * fix(admin): Zod v4 타입 문제 해결 및 표시 제어 폼 추가 (4d9c5a9)
 * feat(admin): 콘텐츠 표시 여부 제어 UI 및 상태 뱃지 추가 (2cbbe85)

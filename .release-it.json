@@ -7,7 +7,8 @@
     "releaseName": "v${version}"
   },
   "git": {
-    "commit": false,
+    "commit": true,
+    "commitMessage": "chore(release): v${version}",
     "tag": true,
     "tagName": "v${version}",
     "requireCleanWorkingDir": true
