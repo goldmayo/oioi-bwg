@@ -71,6 +71,9 @@ export const songRelations = relations(song, ({ one }) => ({
 /**
  * Drizzle 추천 방식의 타입 추론
  */
+export type AlbumEntity = typeof album.$inferSelect;
+export type SongEntity = typeof song.$inferSelect;
+
 export type Album = typeof album.$inferSelect;
 export type InsertAlbum = typeof album.$inferInsert;
 
@@ -80,5 +83,13 @@ export type InsertSong = typeof song.$inferInsert;
 // 가사를 제외한 곡 정보 타입 정의
 export type SongListItem = Pick<
   Song,
-  "id" | "title" | "slug" | "albumId" | "order" | "updatedAt" | "hasOfficialCheer" | "isTitle" | "isVisible"
+  | "id"
+  | "title"
+  | "slug"
+  | "albumId"
+  | "order"
+  | "updatedAt"
+  | "hasOfficialCheer"
+  | "isTitle"
+  | "isVisible"
 >;

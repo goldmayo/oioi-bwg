@@ -1,5 +1,5 @@
 import { getDb } from "./index";
-import { Album, Song, SongListItem } from "./schema";
+import { AlbumEntity, SongEntity, SongListItem } from "./schema";
 
 /**
  * 슬러그를 기반으로 곡 정보를 앨범 정보와 함께 조회하는 헬퍼 함수
@@ -21,7 +21,7 @@ export async function getSongBySlug(slug: string) {
 /**
  * 관리자용: ID를 기반으로 곡 정보를 조회
  */
-export async function getSongById(id: number): Promise<Song | undefined> {
+export async function getSongById(id: number): Promise<SongEntity | undefined> {
   const db = getDb();
   return await db.query.song.findFirst({
     where: (s, { eq }) => eq(s.id, id),
@@ -107,7 +107,7 @@ export async function getAlbumBySlug(slug: string) {
 /**
  * 관리자용: 전체 앨범 목록 조회 (isVisible 필터 없음)
  */
-export async function getAllAlbums(): Promise<Album[]> {
+export async function getAllAlbums(): Promise<AlbumEntity[]> {
   const db = getDb();
   return await db.query.album.findMany({
     orderBy: (a, { asc }) => [asc(a.releaseDate)],
@@ -140,4 +140,3 @@ export async function getSongsWithAlbum() {
     orderBy: (s, { asc }) => [asc(s.albumId), asc(s.order)],
   });
 }
-
