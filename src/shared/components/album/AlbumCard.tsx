@@ -1,11 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { Album } from "@/shared/types/album";
+import { AlbumViewModel } from "@/shared/types/viewmodel/album.viewmodel";
 import { analytics } from "@/shared/utils/analytics";
 
 interface AlbumCardProps {
-  album: Album;
+  album: AlbumViewModel;
 }
 
 /**

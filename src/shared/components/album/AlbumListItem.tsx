@@ -5,13 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { Album } from "@/shared/types/album";
+import { AlbumViewModel } from "@/shared/types/viewmodel/album.viewmodel";
 import { cn } from "@/shared/utils/utils";
 
 import { AlbumSongListItem } from "./AlbumSongListItem";
 
 interface AlbumListItemProps {
-  album: Album;
+  album: AlbumViewModel;
   className?: string;
 }
 

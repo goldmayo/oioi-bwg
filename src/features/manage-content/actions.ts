@@ -6,7 +6,7 @@ import { updateTag } from "next/cache";
 
 import { getDb } from "@/shared/api/db/drizzle/index";
 import { album, InsertAlbum, InsertSong, song as songTable } from "@/shared/api/db/drizzle/schema";
-import { LyricsDataSchema } from "@/shared/types/lyrics";
+import { LyricsDataSchema } from "@/shared/types/schema/lyrics.schema";
 import { parseLrc } from "@/shared/utils/lrc-parser";
 
 import { AlbumFormSchema, SongEditSchema, SongFormSchema } from "./schemas";

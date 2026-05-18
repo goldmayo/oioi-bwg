@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { AlbumListContainer } from "@/containers/AlbumListContainer";
 import { getAllAlbumsWithSongs } from "@/shared/api/db/drizzle/queries";
 import { AlbumListSkeleton } from "@/shared/components/album/AlbumListSkeleton";
-import { Album } from "@/shared/types/album";
+import { AlbumViewModel } from "@/shared/types/viewmodel/album.viewmodel";
 
 // ----------------------------------------------------------------------
 // 1. 데이터 페칭 컴포넌트 (Async 래퍼)
@@ -29,7 +29,7 @@ async function AsyncAlbumsList() {
     }))
     .filter((a) => a.songs.length > 0);
 
-  return <AlbumListContainer albums={albumsData as unknown as Album[]} />;
+  return <AlbumListContainer albums={albumsData as unknown as AlbumViewModel[]} />;
 }
 
 // ----------------------------------------------------------------------

@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { AlbumCard } from "@/shared/components/album/AlbumCard";
-import { Album } from "@/shared/types/album";
+import { AlbumViewModel } from "@/shared/types/viewmodel/album.viewmodel";
 
 interface GridContainerProps {
-  albums: Album[];
+  albums: AlbumViewModel[];
 }
 
 /**

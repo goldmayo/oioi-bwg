@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { updateSong } from "@/shared/api/db/drizzle/commands";
-import { LyricsDataSchema } from "@/shared/types/lyrics";
+import { LyricsDataSchema } from "@/shared/types/schema/lyrics.schema";
 
 /**
  * 가사 데이터 저장 액션

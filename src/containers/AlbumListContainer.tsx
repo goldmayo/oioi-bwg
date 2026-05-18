@@ -5,10 +5,10 @@ import { useEffect, useRef } from "react";
 
 import { AlbumCard } from "@/shared/components/album/AlbumCard";
 import { AlbumListItem } from "@/shared/components/album/AlbumListItem";
-import { Album } from "@/shared/types/album";
+import { AlbumViewModel } from "@/shared/types/viewmodel/album.viewmodel";
 
 interface AlbumListContainerProps {
-  albums: Album[];
+  albums: AlbumViewModel[];
 }
 
 /**

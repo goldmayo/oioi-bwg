@@ -3,13 +3,13 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-import { AlbumSong } from "@/shared/types/album";
+import { SongViewModel } from "@/shared/types/viewmodel/song.viewmodel";
 import { TitleBadge } from "@/shared/ui/TitleBadge";
 import { analytics } from "@/shared/utils/analytics";
 import { cn } from "@/shared/utils/utils";
 
 interface AlbumSongListItemProps {
-  song: AlbumSong;
+  song: SongViewModel;
   idx: number;
   albumName: string;
   className?: string;

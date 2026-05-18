@@ -2,7 +2,7 @@
 
 import { Plus, Target, X as CloseIcon } from "lucide-react";
 
-import { LyricLine } from "@/shared/types/lyrics";
+import { LyricLine } from "@/shared/types/schema/lyrics.schema";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { cn } from "@/shared/utils/utils";

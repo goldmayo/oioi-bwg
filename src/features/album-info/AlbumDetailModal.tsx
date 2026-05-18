@@ -8,14 +8,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
 
-import { Album } from "@/shared/types/album";
+import { AlbumViewModel } from "@/shared/types/viewmodel/album.viewmodel";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { TitleBadge } from "@/shared/ui/TitleBadge";
 import { analytics } from "@/shared/utils/analytics";
 
 interface AlbumDetailModalProps {
-  album: Album;
+  album: AlbumViewModel;
   onClose?: () => void;
 }
 

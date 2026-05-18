@@ -9,7 +9,7 @@ import { useDeferredValue, useEffect, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
-import { AlbumSong } from "@/shared/types/album";
+import { SongViewModel } from "@/shared/types/viewmodel/song.viewmodel";
 import { Form, FormControl, FormField, FormItem } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
 
@@ -26,7 +26,7 @@ type SearchFormValues = z.infer<typeof searchSchema>;
 // 2. Props
 // ----------------------------------------------------------------------
 interface FilteredChantListProps {
-  initialSongs: (AlbumSong & { albumName: string; albumCover: string })[];
+  initialSongs: (SongViewModel & { albumName: string; albumCover: string })[];
 }
 
 // ----------------------------------------------------------------------

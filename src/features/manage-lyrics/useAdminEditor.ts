@@ -5,7 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import { saveSongData } from "@/features/manage-lyrics/actions";
 import { useAdWatcher } from "@/shared/hooks/useAdWatcher";
 import { useLyricsEditor } from "@/shared/hooks/useLyricsEditor";
-import { LyricLine, LyricSegment } from "@/shared/types/lyrics";
+import { LyricLine, LyricSegment } from "@/shared/types/schema/lyrics.schema";
 import { YouTubePlayerInstance } from "@/shared/types/youtube";
 import { parseLrc } from "@/shared/utils/lrc-parser";
 

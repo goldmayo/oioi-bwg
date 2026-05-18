@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { AlbumDetailModal } from "@/features/album-info/AlbumDetailModal";
 import { AlbumDetailSkeleton } from "@/features/album-info/AlbumDetailSkeleton";
 import { getAlbumBySlug } from "@/shared/api/db/drizzle/queries";
-import { Album } from "@/shared/types/album";
+import { AlbumViewModel } from "@/shared/types/viewmodel/album.viewmodel";
 import { constructMetadata } from "@/shared/utils/metadata";
 
 interface AlbumPageProps {
@@ -62,7 +62,7 @@ async function AlbumDetailLoader({ promise }: { promise: ReturnType<typeof getAl
   }
 
   // 프론트의 Album 타입 스펙에 맞춰 매핑
-  const albumData: Album = {
+  const albumData: AlbumViewModel = {
     name: dbAlbum.name,
     imageSlug: dbAlbum.slug,
     imgUrl: dbAlbum.imgUrl,

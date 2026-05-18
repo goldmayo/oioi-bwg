@@ -11,8 +11,8 @@ import { toast } from "sonner";
 
 // import { OfficialBadge } from "@/components/common/OfficialBadge";
 import { useAdWatcher } from "@/shared/hooks/useAdWatcher";
-import { Album } from "@/shared/types/album";
-import { LyricLine } from "@/shared/types/lyrics";
+import { LyricLine } from "@/shared/types/schema/lyrics.schema";
+import { AlbumViewModel } from "@/shared/types/viewmodel/album.viewmodel";
 import { YouTubePlayerInstance } from "@/shared/types/youtube";
 import {
   Accordion,
@@ -34,7 +34,7 @@ interface LyricsViewerClientProps {
     lyrics: LyricLine[];
     hasOfficialCheer?: boolean;
   };
-  album?: Album;
+  album?: AlbumViewModel;
 }
 
 export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {

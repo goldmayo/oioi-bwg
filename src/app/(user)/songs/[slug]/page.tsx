@@ -3,7 +3,7 @@ import { Suspense } from "react";
 
 import { LyricsViewerClient } from "@/features/chant-sync/LyricsViewerClient";
 import { getSongBySlug } from "@/shared/api/db/drizzle/queries";
-import { LyricLine } from "@/shared/types/lyrics";
+import { LyricLine } from "@/shared/types/schema/lyrics.schema";
 import { constructMetadata } from "@/shared/utils/metadata";
 
 interface SongPageProps {

@@ -3,7 +3,7 @@
 import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { LyricLine } from "@/shared/types/lyrics";
+import { LyricLine } from "@/shared/types/schema/lyrics.schema";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";

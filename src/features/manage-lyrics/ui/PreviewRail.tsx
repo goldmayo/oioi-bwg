@@ -3,7 +3,7 @@
 import gsap from "gsap";
 import { useEffect, useRef } from "react";
 
-import { LyricLine } from "@/shared/types/lyrics";
+import { LyricLine } from "@/shared/types/schema/lyrics.schema";
 
 interface PreviewRailProps {
   lyrics: LyricLine[];
