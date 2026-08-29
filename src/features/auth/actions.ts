@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/shared/api/db/supabase/server";
@@ -29,8 +28,6 @@ export async function signIn(formData: FormData) {
     return { error: "관리자 권한이 없습니다." };
   }
 
-  // 로그인 시 전체 레이아웃 재검증하여 헤더/사이드바 등 최신화
-  revalidatePath("/", "layout");
   redirect("/admin");
 }
 
@@ -41,7 +38,5 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
 
-  // 로그아웃 시 전체 레이아웃 재검증
-  revalidatePath("/", "layout");
   redirect("/"); // /login 페이지가 따로 없으므로 /admin(로그인 폼 렌더링)으로 보냄
 }

@@ -1,5 +1,3 @@
-"use cache";
-
 import { MetadataRoute } from "next";
 
 import { getAllSongs } from "@/shared/api/db/drizzle/queries";

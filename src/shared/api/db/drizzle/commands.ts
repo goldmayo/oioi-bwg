@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import { revalidatePath, updateTag } from "next/cache";
 
 import { getDb } from "./index";
 import { album, InsertAlbum, InsertSong, song as songTable } from "./schema";
@@ -10,7 +9,6 @@ export async function createAlbum(data: InsertAlbum) {
   const db = getDb();
   try {
     await db.insert(album).values(data);
-    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     console.error("Failed to create album:", error);
@@ -22,7 +20,6 @@ export async function updateAlbumInfo(id: number, data: Partial<InsertAlbum>) {
   const db = getDb();
   try {
     await db.update(album).set(data).where(eq(album.id, id));
-    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     console.error("Failed to update album:", error);
@@ -43,10 +40,6 @@ export async function updateSong(id: number, data: Partial<InsertSong>) {
     })
     .where(eq(songTable.id, id));
 
-  // 데이터 변경 시 관련 캐시 즉시 갱신 (Next.js 16 updateTag 적용)
-  updateTag("songs");
-  updateTag(`song-id-${id}`);
-
   return result;
 }
 
@@ -61,9 +54,6 @@ export async function createSong(data: InsertSong) {
     updatedAt: data.updatedAt ?? new Date().toISOString(),
   });
 
-  // 새 데이터 추가 시 목록 캐시 즉시 갱신
-  updateTag("songs");
-
   return result;
 }
 
@@ -73,10 +63,6 @@ export async function createSong(data: InsertSong) {
 export async function deleteSong(id: number) {
   const db = getDb();
   const result = await db.delete(songTable).where(eq(songTable.id, id));
-
-  // 데이터 삭제 시 관련 캐시 즉시 갱신
-  updateTag("songs");
-  updateTag(`song-id-${id}`);
 
   return result;
 }

@@ -1,11 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
+
   // React 19 자동 메모이제이션 컴파일러 활성화
   reactCompiler: true,
 
-  // 이미지 최적화 설정을 위한 외부 도메인 허용 (Cloudflare R2)
+  // 현재 외부 asset URL을 그대로 사용한다. 최종 provider 정책은 M8에서 확정한다.
   images: {
-    unoptimized: true, // Next.js의 기본 이미지 최적화 비활성화 (Cloudflare R2 사용 시)
+    unoptimized: true, // 기존 외부 asset URL을 그대로 사용
     remotePatterns: [
       {
         protocol: "https",
@@ -23,22 +25,7 @@ const nextConfig = {
     },
   },
 
-  experimental: {
-    // Next.js 16 핵심: 명시적 캐싱(use cache) 엔진 활성화
-    cacheComponents: true,
-
-    // 브라우저 Router Cache의 유효 기간(staleTime) 설정
-    staleTimes: {
-      dynamic: 30, // 동적 페이지: 30초 동안 브라우저에 캐싱 (이후 재요청)
-      static: 60, // 정적 페이지: 60초 동안 브라우저에 캐싱
-    },
-    // ---------------------------------------------------------
-
-    // instrumentation.ts 활성화
-    instrumentationHook: true,
-  },
-
-  // 서버리스 환경에서 외부 바이너리 의존성 최적화
+  // standalone Node runtime에서 postgres.js를 외부 패키지로 유지한다.
   serverExternalPackages: ["postgres"],
 };
 
