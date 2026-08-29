@@ -1,6 +1,14 @@
 {
   "extends": ["@commitlint/config-conventional"],
+  "parserPreset": {
+    "parserOpts": {
+      "headerPattern": "^(.*)$",
+      "headerCorrespondence": ["subject"]
+    }
+  },
   "rules": {
+    "type-empty": [0],
+    "subject-empty": [2, "never"],
     "subject-case": [0]
   }
 }
