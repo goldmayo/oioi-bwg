@@ -1,13 +1,16 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  bigint,
+  bigserial,
   boolean,
+  foreignKey,
+  index,
   integer,
   jsonb,
   pgTable,
   serial,
   text,
   timestamp,
-  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 /**
@@ -16,7 +19,7 @@ import {
 export const album = pgTable("Album", {
   id: serial().primaryKey().notNull(),
   name: text().notNull(),
-  slug: text().notNull(),
+  slug: text().notNull().unique("Album_slug_key"),
   imgUrl: text().notNull(),
   color: text().notNull(),
   releaseDate: timestamp({ precision: 3, mode: "string" }),
@@ -32,25 +35,26 @@ export const album = pgTable("Album", {
 export const song = pgTable(
   "Song",
   {
-    id: serial().primaryKey().notNull(),
-    albumId: integer()
-      .notNull()
-      .references(() => album.id, { onDelete: "cascade" }),
-    title: text().notNull(),
-    youtubeId: text().notNull(),
-    lyrics: jsonb().notNull(),
-    hasOfficialCheer: boolean().default(false).notNull(),
+    id: bigserial({ mode: "number" }).primaryKey().notNull(),
+    albumId: integer().notNull(),
+    title: text(),
+    youtubeId: text(),
+    lyrics: jsonb(),
+    hasOfficialCheer: boolean(),
     isTitle: boolean().default(false).notNull(),
     isVisible: boolean().default(true).notNull(),
-    order: integer().default(0).notNull(),
-    createdAt: timestamp({ precision: 3, mode: "string" })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp({ precision: 3, mode: "string" }).notNull(),
-    slug: text().notNull(),
+    order: bigint({ mode: "number" }),
+    createdAt: timestamp({ precision: 3, withTimezone: true, mode: "string" }),
+    updatedAt: timestamp({ precision: 3, withTimezone: true, mode: "string" }),
+    slug: text(),
   },
   (table) => [
-    uniqueIndex("Song_slug_key").using("btree", table.slug.asc().nullsLast().op("text_ops")),
+    foreignKey({
+      columns: [table.albumId],
+      foreignColumns: [album.id],
+      name: "Song_albumId_fkey",
+    }).onDelete("cascade"),
+    index("Song_albumId_idx").on(table.albumId),
   ],
 );
 

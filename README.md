@@ -43,8 +43,9 @@
 
 ### Database & Backend
 
-- **Database**: Supabase (PostgreSQL)
+- **Database**: PostgreSQL 17 (OCI production / isolated local Docker)
 - **ORM**: Drizzle ORM
+- **Auth**: Supabase Auth
 - **Runtime**: Node.js standalone server
 
 ### Infrastructure
@@ -101,16 +102,20 @@ cheer-rock-crab/
 pnpm install --frozen-lockfile
 ```
 
-### 개발 서버 실행
+### 로컬 Docker 개발환경
 
 ```bash
-pnpm dev
+cp .env.example .env.local
+docker compose --env-file .env.local -f compose.dev.yml up -d --build
+docker compose --env-file .env.local -f compose.dev.yml exec next pnpm db:seed
 ```
 
-### 데이터베이스 마이그레이션
+브라우저에서 `http://localhost:3000`을 엽니다. 자세한 migration, reset, 운영 DB 안전 원칙은 [로컬 개발환경 문서](docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md)를 따릅니다.
+
+### 컨테이너 종료
 
 ```bash
-pnpm db:push
+docker compose --env-file .env.local -f compose.dev.yml down
 ```
 
 ### 테스트
