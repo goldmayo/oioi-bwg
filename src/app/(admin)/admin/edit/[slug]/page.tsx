@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
-import { LazyAdminEditor } from "@/features/manage-lyrics/ui/LazyAdminEditor";
+import { LazyAdminEditor } from "@/features/manage-lyrics";
+
 import { getSongBySlug } from "@/shared/api/db/drizzle/queries";
 
 interface AdminEditPageProps {

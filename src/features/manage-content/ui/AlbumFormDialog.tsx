@@ -1,9 +1,9 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ImagePlus, Loader2 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ImagePlus, Loader2 } from "lucide-react";
 
 import { Album } from "@/shared/api/db/drizzle/schema";
 import { Button } from "@/shared/ui/button";
@@ -19,8 +19,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/shared/ui/input";
 import { Switch } from "@/shared/ui/switch";
 
-import { createAlbumAction, updateAlbumAction, uploadAlbumImageAction } from "../actions";
-import { type AlbumFormInput, AlbumFormSchema, type AlbumFormValues } from "../schemas";
+import { createAlbumAction, updateAlbumAction, uploadAlbumImageAction } from "../api/actions";
+import { type AlbumFormInput, AlbumFormSchema, type AlbumFormValues } from "../model/schemas";
 
 interface AlbumFormDialogProps {
   open: boolean;

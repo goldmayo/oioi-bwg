@@ -2,7 +2,7 @@
 
 import { lazy, Suspense } from "react";
 
-import type { AdminEditorSong } from "../useAdminEditor";
+import type { AdminEditorSong } from "../model/useAdminEditor";
 
 // React.lazy를 사용한 클라이언트 사이드 지연 로딩
 const AdminEditorClient = lazy(() => import("./AdminEditorClient"));

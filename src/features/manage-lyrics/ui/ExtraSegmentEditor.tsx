@@ -2,10 +2,11 @@
 
 import { Plus, Target, X as CloseIcon } from "lucide-react";
 
-import { LyricLine } from "@/shared/types/lyrics";
+import type { LyricLine } from "@/entities/cheer-guide";
+
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
-import { cn } from "@/shared/utils/utils";
 
 import { useAdminEditorContext } from "./AdminEditorContext";
 

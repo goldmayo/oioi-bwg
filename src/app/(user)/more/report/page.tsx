@@ -1,9 +1,9 @@
 "use client";
 
-import { ExternalLink, RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { ExternalLink, RefreshCw } from "lucide-react";
 
-import { MoreBackButton, MoreHeader } from "@/shared/components/more/MoreCommon";
+import { MoreBackButton, MoreHeader } from "../_ui/more-common";
 
 /**
  * [RENEWAL] 오류 제보 페이지 (디자인 토큰 정화)

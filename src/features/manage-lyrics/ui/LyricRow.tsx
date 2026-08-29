@@ -1,14 +1,15 @@
 "use client";
 
-import { Paintbrush, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Paintbrush, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
-import { LyricLine } from "@/shared/types/lyrics";
+import type { LyricLine } from "@/entities/cheer-guide";
+import { formatTime, parseTime } from "@/entities/cheer-guide";
+
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
-import { formatTime, parseTime } from "@/shared/utils/lrc-parser";
-import { cn } from "@/shared/utils/utils";
 
 import { useAdminEditorContext } from "./AdminEditorContext";
 import { ExtraSegmentEditor } from "./ExtraSegmentEditor";

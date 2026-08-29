@@ -1,9 +1,10 @@
 import { ReactNode } from "react";
 
-import { BottomNav } from "@/shared/components/navigation/BottomNav";
-import { GlobalNav } from "@/shared/components/navigation/GlobalNav";
-import { MobileHeader } from "@/shared/components/navigation/MobileHeader";
 import { Footer } from "@/shared/ui/Footer";
+
+import { BottomNav } from "./_ui/navigation/BottomNav";
+import { GlobalNav } from "./_ui/navigation/GlobalNav";
+import { MobileHeader } from "./_ui/navigation/MobileHeader";
 
 /**
  * 사용자 페이지 공통 레이아웃.

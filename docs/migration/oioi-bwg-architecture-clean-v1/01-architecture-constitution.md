@@ -1,7 +1,7 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.4"
+version: "2.5"
 status: "active"
 authority: "constitution"
 updated_at: "2026-08-29"
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.4
+# oioi-bwg Architecture Constitution v2.5
 
 ## 1. 목적
 
@@ -221,6 +221,108 @@ meaning-based promotion
 - `AlbumCover` -> `entities/album/ui`
 - `EditSongForm` -> `features/edit-song/ui`
 - `Button` -> `shared/ui`
+
+---
+
+## 7.1. Bottom-up foundation, top-down extraction
+
+FSD 구조는 빈 `widgets`, `features`, `entities` 디렉터리를 먼저 설계한 뒤 기존 코드를 끼워
+맞추는 방식으로 만들지 않는다.
+
+기본 구축 순서는 다음과 같다.
+
+```text
+1. shared에 도메인 독립 기반을 bottom-up으로 구축
+2. app route와 route-local private segment에서 실제 화면과 흐름 구현
+3. 중복, 독립 책임, 안정된 도메인 계약을 실제 코드에서 식별
+4. widgets / features / entities로 top-down 추출
+5. consumer와 책임이 사라지면 다시 route-local로 내리거나 제거
+```
+
+`shared`의 bottom-up 대상은 다음으로 제한한다.
+
+- shadcn/ui 기반 primitive UI
+- `cn`, date formatting 같은 도메인 독립 순수 helper
+- media query 같은 범용 hook
+- runtime/configuration primitive
+- `ky` client와 transport-level error parsing 같은 범용 HTTP infrastructure
+
+다음은 `shared`에 두지 않는다.
+
+- Album, Song, CheerGuide 같은 도메인 모델과 도메인 UI
+- 특정 page의 layout/composition
+- 특정 사용자 행동을 구현하는 hook이나 mutation
+- Drizzle schema/query/command, database client, server auth client
+
+도메인 이름이 등장한다는 이유만으로 즉시 `entities`로 승격하지 않는다. 먼저 route-local에서
+구현하고, 다음 중 하나 이상이 확인될 때 승격한다.
+
+- 여러 상위 consumer가 같은 도메인 계약이나 UI를 실제 사용한다.
+- consumer 수와 무관하게 독립된 도메인 identity와 안정된 public contract가 형성됐다.
+- 해당 책임을 route에 남기면 같은 도메인 규칙이 여러 곳에 중복된다.
+- 별도 slice로 분리했을 때 dependency direction과 응집도가 명확해진다.
+
+예:
+
+```text
+홈 route 한 곳에서만 쓰는 AlbumCard
+-> app/(public)/_ui/album-card.tsx
+
+여러 route/feature가 공유하는 안정된 Album projection
+-> entities/album/model
+
+여러 화면이 공유하는 AlbumCover
+-> entities/album/ui
+
+범용 ky instance
+-> shared/api
+
+Drizzle client와 persistence query
+-> server/db, server/repositories
+```
+
+즉, FSD의 기본 방향은 다음과 같다.
+
+```text
+shared foundation은 bottom-up
+product implementation은 app에서 시작
+의미 있는 slice는 상위 사용처에서 top-down으로 추출
+```
+
+---
+
+## 7.2. FSD 배치 판단 순서
+
+파일을 이동하거나 새 slice를 만들기 전에 다음 순서로 판정한다.
+
+1. 서버 전용 persistence/application 책임인가? -> `server`
+2. 도메인과 무관한 기반 primitive인가? -> `shared`
+3. 한 route의 화면 조합 또는 구현 세부사항인가? -> route-local private segment
+4. 사용자가 수행하는 독립된 행동/use-case인가? -> `features`
+5. 안정된 도메인 identity/model/UI인가? -> `entities`
+6. 여러 route에서 재사용되는 완성된 화면 block인가? -> `widgets`
+
+consumer 수만으로 레이어를 결정하지 않는다.
+
+- 한 곳에서 사용한다는 이유만으로 도메인 책임을 `shared`에 두지 않는다.
+- 두 곳에서 사용한다는 이유만으로 presentation을 `shared`나 `widgets`로 올리지 않는다.
+- 도메인 이름이 있다는 이유만으로 route 전용 UI를 곧바로 `entities`로 올리지 않는다.
+- 이미 승격한 코드라도 근거가 약하면 route-local로 되돌린다.
+
+`shared/api`, Entity API, `server`는 다음처럼 구분한다.
+
+```text
+shared/api
+= domain-independent HTTP client / transport primitive
+
+entities/*/api
+= domain-specific browser API adapter / queryOptions / mutationOptions
+
+server
+= DB / Repository / Service / Auth / Authz / HTTP boundary
+```
+
+`shared/api`를 서버 persistence 코드를 임시로 모아두는 폴더로 사용하지 않는다.
 
 ---
 

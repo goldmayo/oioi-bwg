@@ -21,6 +21,6 @@
   },
   "hooks": {
     "before:init": "pnpm run type-check",
-    "after:bump": "npx wrangler types && pnpm run build"
+    "after:bump": "pnpm run build"
   }
 }

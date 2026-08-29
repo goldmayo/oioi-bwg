@@ -1,7 +1,7 @@
 "use client";
 
-import { Edit, Plus, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { Edit, Plus, Trash2 } from "lucide-react";
 
 import { Album } from "@/shared/api/db/drizzle/schema";
 import { Badge } from "@/shared/ui/badge";
@@ -15,16 +15,10 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/shared/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-import { deleteAlbumAction } from "../actions";
+import { deleteAlbumAction } from "../api/actions";
+
 import { AlbumFormDialog } from "./AlbumFormDialog";
 
 const PAGE_SIZE = 10;
@@ -146,7 +140,10 @@ export function AlbumManagerClient({ initialAlbums }: AlbumManagerClientProps) {
                     />
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant={album.isVisible ? "default" : "outline"} className="text-2xs px-1.5 py-0">
+                    <Badge
+                      variant={album.isVisible ? "default" : "outline"}
+                      className="text-2xs px-1.5 py-0"
+                    >
                       {album.isVisible ? "표시" : "숨김"}
                     </Badge>
                   </TableCell>

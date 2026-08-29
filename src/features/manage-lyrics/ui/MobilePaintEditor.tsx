@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react";
 
-import { LyricLine, LyricSegment } from "@/shared/types/lyrics";
+import type { LyricLine, LyricSegment } from "@/entities/cheer-guide";
+
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
-import { cn } from "@/shared/utils/utils";
 
 import { useAdminEditorContext } from "./AdminEditorContext";
 

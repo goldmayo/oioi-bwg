@@ -1,9 +1,9 @@
 "use client";
 
-import gsap from "gsap";
 import { useEffect, useRef } from "react";
+import gsap from "gsap";
 
-import { LyricLine } from "@/shared/types/lyrics";
+import type { LyricLine } from "@/entities/cheer-guide";
 
 interface PreviewRailProps {
   lyrics: LyricLine[];

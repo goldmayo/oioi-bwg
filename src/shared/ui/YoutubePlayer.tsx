@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { YouTubeEvent, YouTubePlayerInstance } from "@/shared/types/youtube";
+import { YouTubeEvent, YouTubePlayerInstance } from "@/shared/model/youtube";
 
 interface YoutubePlayerProps {
   videoId: string;

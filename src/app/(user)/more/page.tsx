@@ -1,8 +1,9 @@
 import { AlertCircle, ChevronRight, History, Megaphone, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
-import { MoreHeader } from "@/shared/components/more/MoreCommon";
-import { cn } from "@/shared/utils/utils";
+import { cn } from "@/shared/lib/utils";
+
+import { MoreHeader } from "./_ui/more-common";
 
 // ----------------------------------------------------------------------
 // 1. 메뉴 섹션 정의 (기획서 하위 경로 반영 + 디자인 토큰 적용)

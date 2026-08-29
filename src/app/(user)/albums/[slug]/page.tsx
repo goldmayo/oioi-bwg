@@ -1,11 +1,12 @@
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
 
-import { AlbumDetailModal } from "@/features/album-info/AlbumDetailModal";
-import { AlbumDetailSkeleton } from "@/features/album-info/AlbumDetailSkeleton";
+import { AlbumDetailModal, AlbumDetailSkeleton } from "@/features/album-info";
+
+import type { Album } from "@/entities/album";
+
 import { getAlbumBySlug } from "@/shared/api/db/drizzle/queries";
-import { Album } from "@/shared/types/album";
-import { constructMetadata } from "@/shared/utils/metadata";
+import { constructMetadata } from "@/shared/lib/metadata";
 
 interface AlbumPageProps {
   params: Promise<{ slug: string }>;

@@ -36,7 +36,7 @@ const useLyricsEditor = (initialLyrics: LyricLine[]) => {
 
 ## 4. UI/UX 상세 설계
 - **Commands Layer:** `src/libs/db/drizzle/commands.ts`를 통한 물리적 DB 접근 캡슐화.
-- **Viewport Control:** Vinext `proxy.ts`를 통한 관리자 권한 보호.
+- **Viewport Control:** Next.js `proxy.ts`를 통한 관리자 권한 보호.
 
 ---
 *Created by Gemini CLI (bkit methodology)*

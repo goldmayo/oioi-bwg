@@ -1,5 +1,6 @@
-import { MoreBackButton, MoreHeader } from "@/shared/components/more/MoreCommon";
-import { NoticeAccordion } from "@/shared/components/more/NoticeAccordion";
+import { MoreBackButton, MoreHeader } from "../_ui/more-common";
+
+import { NoticeAccordion } from "./_ui/notice-accordion";
 
 // 공지사항 상세 데이터 (Server Side)
 const NOTICES = [

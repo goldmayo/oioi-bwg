@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
-import { AlbumManagerClient } from "@/features/manage-content/ui/AlbumManagerClient";
+import { AlbumManagerClient } from "@/features/manage-content";
+
 import { getAllAlbums } from "@/shared/api/db/drizzle/queries";
 
 /**
@@ -21,7 +22,9 @@ export default async function AdminAlbumsPage() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-6">
           <h1 className="text-foreground text-xl font-bold sm:text-2xl">앨범 관리</h1>
-          <p className="text-muted-foreground mt-1 text-sm">앨범을 추가, 수정, 삭제할 수 있습니다.</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            앨범을 추가, 수정, 삭제할 수 있습니다.
+          </p>
         </div>
         <Suspense
           fallback={

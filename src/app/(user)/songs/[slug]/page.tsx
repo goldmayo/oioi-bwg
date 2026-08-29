@@ -1,10 +1,12 @@
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
 
-import { LyricsViewerClient } from "@/features/chant-sync/LyricsViewerClient";
+import { LyricsViewerClient } from "@/features/chant-sync";
+
+import type { LyricLine } from "@/entities/cheer-guide";
+
 import { getSongBySlug } from "@/shared/api/db/drizzle/queries";
-import { LyricLine } from "@/shared/types/lyrics";
-import { constructMetadata } from "@/shared/utils/metadata";
+import { constructMetadata } from "@/shared/lib/metadata";
 
 interface SongPageProps {
   params: Promise<{ slug: string }>;

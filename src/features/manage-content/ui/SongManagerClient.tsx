@@ -1,8 +1,8 @@
 "use client";
 
+import { useCallback, useMemo, useState } from "react";
 import { Edit, FileMusic, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
 
 import { Album } from "@/shared/api/db/drizzle/schema";
 import { Badge } from "@/shared/ui/badge";
@@ -16,23 +16,11 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/shared/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-import { deleteSongAction } from "../actions";
+import { deleteSongAction } from "../api/actions";
+
 import { SongFormDialog } from "./SongFormDialog";
 
 const PAGE_SIZE = 15;
@@ -162,8 +150,7 @@ export function SongManagerClient({ initialSongs, albums }: SongManagerClientPro
           </Select>
         </div>
         <Button onClick={handleAdd} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          곡 추가
+          <Plus className="mr-2 h-4 w-4" />곡 추가
         </Button>
       </div>
 
@@ -177,7 +164,7 @@ export function SongManagerClient({ initialSongs, albums }: SongManagerClientPro
               <TableHead className="hidden sm:table-cell">앨범</TableHead>
               <TableHead className="hidden lg:table-cell">Slug</TableHead>
               <TableHead className="w-20 text-center">구분</TableHead>
-              <TableHead className="hidden md:table-cell w-16 text-center">순서</TableHead>
+              <TableHead className="hidden w-16 text-center md:table-cell">순서</TableHead>
               <TableHead className="w-24 text-right">관리</TableHead>
             </TableRow>
           </TableHeader>
@@ -223,7 +210,10 @@ export function SongManagerClient({ initialSongs, albums }: SongManagerClientPro
                         </Badge>
                       )}
                       {!song.isVisible && (
-                        <Badge variant="outline" className="text-2xs px-1.5 py-0 text-muted-foreground">
+                        <Badge
+                          variant="outline"
+                          className="text-2xs text-muted-foreground px-1.5 py-0"
+                        >
                           숨김
                         </Badge>
                       )}
@@ -264,8 +254,7 @@ export function SongManagerClient({ initialSongs, albums }: SongManagerClientPro
       {/* 페이지네이션 */}
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground text-sm">
-          총 {filtered.length}곡{" "}
-          {(search || albumFilter !== "all") && `(전체 ${songs.length}곡)`}
+          총 {filtered.length}곡 {(search || albumFilter !== "all") && `(전체 ${songs.length}곡)`}
         </span>
         {totalPages > 1 && (
           <div className="flex items-center gap-2">

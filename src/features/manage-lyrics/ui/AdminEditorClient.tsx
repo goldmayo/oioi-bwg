@@ -2,12 +2,13 @@
 
 import { useEffect } from "react";
 
-import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
+import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Button } from "@/shared/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/shared/ui/resizable";
 import { YoutubePlayer } from "@/shared/ui/YoutubePlayer";
 
-import { AdminEditorSong } from "../useAdminEditor";
+import { AdminEditorSong } from "../model/useAdminEditor";
+
 import { AdminEditorProvider, useAdminEditorContext } from "./AdminEditorContext";
 import { EditorTopBar } from "./EditorTopBar";
 import { FloatingToolbar } from "./FloatingToolbar";

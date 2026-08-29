@@ -1,9 +1,9 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 
 import { Album } from "@/shared/api/db/drizzle/schema";
 import { Button } from "@/shared/ui/button";
@@ -17,17 +17,12 @@ import {
 } from "@/shared/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Switch } from "@/shared/ui/switch";
 
-import { createSongAction, updateSongAction } from "../actions";
-import { type SongEditInput, SongEditSchema, type SongEditValues } from "../schemas";
+import { createSongAction, updateSongAction } from "../api/actions";
+import { type SongEditInput, SongEditSchema, type SongEditValues } from "../model/schemas";
+
 import { LrcUploader } from "./LrcUploader";
 
 /** 곡 편집 시 필요한 최소 데이터 */
@@ -269,8 +264,7 @@ export function SongFormDialog({
               render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel>
-                    LRC 가사 파일{" "}
-                    {isEdit && <span className="text-muted-foreground">(선택)</span>}
+                    LRC 가사 파일 {isEdit && <span className="text-muted-foreground">(선택)</span>}
                   </FormLabel>
                   <LrcUploader
                     value={field.value}

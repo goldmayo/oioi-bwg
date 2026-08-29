@@ -1,7 +1,7 @@
 ---
 title: "Frontend Architecture & Refactoring Rules"
 document_id: "02"
-version: "1.6"
+version: "1.7"
 status: "active"
 authority: "architecture"
 updated_at: "2026-08-29"
@@ -17,7 +17,7 @@ tags:
   - "refactoring"
 ---
 
-# oioi-bwg Frontend Architecture & Refactoring Rules v1.6
+# oioi-bwg Frontend Architecture & Refactoring Rules v1.7
 
 ## 1. 목적
 
@@ -330,6 +330,24 @@ app/(public)/songs/[slug]/
 처음부터 모든 코드를 `features`나 `entities`로 분류하려 하지 않는다.
 
 실제 독립성과 재사용이 생기면 적절한 FSD layer로 승격한다.
+
+구축 방향은 `shared` 기반을 bottom-up으로 만들고, 실제 product UI를 route에서 구현한 뒤
+검증된 책임을 top-down으로 추출하는 것이다.
+
+```text
+shared primitive
+  -> app route implementation
+  -> repeated/stable responsibility discovery
+  -> widget / feature / entity extraction
+```
+
+`shared`에는 shadcn primitive, 범용 hook, `cn`·date helper, 범용 API client처럼 도메인에
+독립적인 코드만 둔다. 특정 도메인을 렌더링하는 UI나 특정 use-case 상태는 route-local 또는
+적절한 entity/feature가 소유한다.
+
+도메인 이름과 consumer 수는 판단 자료이지 단독 승격 기준이 아니다. 단일 route 전용 UI는
+도메인 데이터를 받더라도 우선 route-local에 둘 수 있으며, 안정된 도메인 contract나 실제
+재사용이 확인될 때 entity로 승격한다.
 
 ---
 
@@ -677,13 +695,13 @@ rendering과 interaction contract 중심으로 테스트한다.
 8. 라이브러리 어휘를 숨기지 않는다.
 9. route-local에서 시작하고 실제 근거가 생기면 승격한다.
 10. 줄 수보다 책임과 응집도를 기준으로 리팩토링한다.
-
-
-
-11. Mutation key는 mutation identity와 observability를 위해 사용한다.
-12. Query invalidation은 query key를 기준으로 mutation 성공 시 명시적으로 수행한다.
-13. RHF vocabulary는 UI/model에 직접 드러날 수 있다.
-14. Custom hook은 RHF를 숨기기 위해 만들지 않는다.
-15. 외부 상태를 변경하는 mutation과 side effect는 가능한 한 model에 격리한다.
-16. 순수 presentation state와 UI event는 UI에 남겨도 된다.
-17. Base UI 기반 shadcn/ui + Tailwind CSS를 프로젝트 스타일링 표준으로 사용한다.
+11. shared 기반은 bottom-up으로 구축하고 product slice는 app의 실제 사용처에서 top-down으로 추출한다.
+12. 도메인 이름이나 consumer 수만으로 entity/widget 승격을 결정하지 않는다.
+13. `shared/api`는 범용 HTTP infrastructure이며 server persistence를 두지 않는다.
+14. Mutation key는 mutation identity와 observability를 위해 사용한다.
+15. Query invalidation은 query key를 기준으로 mutation 성공 시 명시적으로 수행한다.
+16. RHF vocabulary는 UI/model에 직접 드러날 수 있다.
+17. Custom hook은 RHF를 숨기기 위해 만들지 않는다.
+18. 외부 상태를 변경하는 mutation과 side effect는 가능한 한 model에 격리한다.
+19. 순수 presentation state와 UI event는 UI에 남겨도 된다.
+20. Base UI 기반 shadcn/ui + Tailwind CSS를 프로젝트 스타일링 표준으로 사용한다.

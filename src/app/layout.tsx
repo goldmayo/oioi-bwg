@@ -1,13 +1,15 @@
-import "./globals.css";
-
 import type { Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 
 import { Providers } from "@/app/providers";
-import { InAppBrowserGuard } from "@/shared/components/InAppBrowserGuard";
-import { DEFAULT_METADATA } from "@/shared/constants/site";
+
+import { DEFAULT_METADATA } from "@/shared/config/site";
 import { Toaster } from "@/shared/ui/sonner";
+
+import { InAppBrowserGuard } from "./_ui/in-app-browser-guard";
+
+import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
