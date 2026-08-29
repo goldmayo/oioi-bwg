@@ -52,6 +52,8 @@ migration implementation plan/result
   `origin/migration_develop`의 기준 커밋을 확인해 stale local branch에서 분기하지 않는다.
 - 작업 중에는 해당 단계 브랜치만 수정한다.
 - 단계 작업이 끝나면 검증 후 하나의 의미 있는 커밋을 만든다.
+- Git 커밋 제목과 본문은 반드시 한글로 작성한다. Conventional Commit type 등 영어 접두사도
+  사용하지 않는다.
 - 사용자가 보류를 요청하지 않은 단계 완료 작업은 commit → push → PR 생성까지 진행하고 링크를 보고한다.
 - PR 대상은 `migration_develop`이며, merge 방식은 squash and merge를 전제로 한다. 작업 브랜치의
   upstream은 PR 대상이 아니라 같은 이름의 원격 작업 브랜치로만 설정한다.
