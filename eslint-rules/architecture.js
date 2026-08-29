@@ -3,6 +3,7 @@ import path from "node:path";
 const PROJECT_LAYERS = new Set(["app", "widgets", "features", "entities", "shared", "server"]);
 const SLICED_LAYERS = new Set(["widgets", "features", "entities"]);
 const SLICE_SEGMENTS = new Set(["ui", "model", "api", "lib", "config"]);
+const SHARED_SEGMENTS = new Set(["ui", "model", "api", "lib", "config", "contracts"]);
 const ROUTE_SEGMENTS = new Set(["_ui", "_model", "_lib", "_config"]);
 
 function getSourceParts(filename) {
@@ -56,7 +57,7 @@ export const architectureRule = {
       invalidRouteHookSegment:
         "route-local hook은 _model 또는 _lib segment에 둡니다. 현재 segment는 '{{segment}}'입니다.",
       invalidSharedSegment:
-        "shared segment '{{segment}}'은 허용되지 않습니다. ui/model/api/lib/config 중 책임에 맞게 이동하세요.",
+        "shared segment '{{segment}}'은 허용되지 않습니다. ui/model/api/lib/config/contracts 중 책임에 맞게 이동하세요.",
       deepSliceImport:
         "승격된 slice 내부를 직접 import하지 마세요. '{{layer}}/{{slice}}'의 index.ts public API를 사용하세요.",
       crossSliceImport:
@@ -168,7 +169,7 @@ export const architectureRule = {
           }
         }
 
-        if (layer === "shared" && slice && !SLICE_SEGMENTS.has(slice)) {
+        if (layer === "shared" && slice && !SHARED_SEGMENTS.has(slice)) {
           reportAtProgram("invalidSharedSegment", { segment: slice });
         }
       },

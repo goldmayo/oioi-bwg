@@ -819,6 +819,32 @@ idempotency가 명확하고 실제 요구가 있을 때만 별도로 허용한�
 
 ---
 
+# 29.2. Ky transport 구현 제약
+
+M4의 `shared/api` Ky instance는 Client Component의 `/api/*` HTTP transport만 담당한다.
+RSC와 server service는 Ky 또는 localhost HTTP를 사용하지 않고 service를 직접 호출한다.
+
+```text
+Client Query의 queryFn signal
+→ Ky request의 signal로 그대로 전달
+→ 더 이상 필요한 request를 취소할 수 있어야 함
+```
+
+취소 lifecycle을 가리는 별도 `AbortController`를 만들거나, signal을 받지 않는 wrapper를 만들지
+않는다. timeout, credentials, prefix URL 같은 transport option은 암묵적 기본값에 기대지 말고
+요청 성격과 보안 요구가 확인된 위치에서 명시한다.
+
+Ky hook은 실제로 반복되는 transport concern이 확인된 경우에만 작고 투명하게 사용한다.
+domain rule, authorization 판단, response DTO mapping, 전역 token-refresh/retry framework를 hook에
+넣지 않는다. M5 auth 경계가 확정되기 전에는 authorization header나 refresh retry를 선제 도입하지
+않는다.
+
+일반 JSON API용 Ky instance에 waveform source 등 대용량 파일 upload/download 정책을 섞지 않는다.
+progress, object storage, resumable upload, retry/idempotency가 필요한 경우 해당 전송 protocol과
+사용자 경험을 별도 설계한 뒤 전용 adapter를 둔다.
+
+---
+
 # 30. Suspense Query
 
 초기 hydration 데이터가 있고
