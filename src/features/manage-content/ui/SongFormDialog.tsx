@@ -17,13 +17,7 @@ import {
 } from "@/shared/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Switch } from "@/shared/ui/switch";
 
 import { createSongAction, updateSongAction } from "../actions";
@@ -269,8 +263,7 @@ export function SongFormDialog({
               render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel>
-                    LRC 가사 파일{" "}
-                    {isEdit && <span className="text-muted-foreground">(선택)</span>}
+                    LRC 가사 파일 {isEdit && <span className="text-muted-foreground">(선택)</span>}
                   </FormLabel>
                   <LrcUploader
                     value={field.value}

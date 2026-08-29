@@ -15,14 +15,7 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/shared/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
 import { deleteAlbumAction } from "../actions";
 import { AlbumFormDialog } from "./AlbumFormDialog";
@@ -146,7 +139,10 @@ export function AlbumManagerClient({ initialAlbums }: AlbumManagerClientProps) {
                     />
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant={album.isVisible ? "default" : "outline"} className="text-2xs px-1.5 py-0">
+                    <Badge
+                      variant={album.isVisible ? "default" : "outline"}
+                      className="text-2xs px-1.5 py-0"
+                    >
                       {album.isVisible ? "표시" : "숨김"}
                     </Badge>
                   </TableCell>

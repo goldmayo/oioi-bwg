@@ -36,7 +36,7 @@ export const FEATURE_FLAGS = {
    * [DEV] 개발/실험 기능 제어용 플래그
    */
   // DEV_EXPERIMENTAL_CHART: 'NEXT_PUBLIC_FF_DEV_EXPERIMENTAL_CHART',
-  DEV_CAREON: 'FF_DEV_CAREON',
+  DEV_CAREON: "FF_DEV_CAREON",
 } as const;
 
 export type FeatureFlagKey = keyof typeof FEATURE_FLAGS;
@@ -50,7 +50,7 @@ const FEATURE_FLAG_VALUES: Record<FeatureFlagKey, string | undefined> = {
   DEV_CAREON: process.env.FF_DEV_CAREON ?? process.env.NEXT_PUBLIC_FF_DEV_CAREON,
 };
 
-const IS_REAL_PROD = process.env.NEXT_PUBLIC_APP_ENV === 'production';
+const IS_REAL_PROD = process.env.NEXT_PUBLIC_APP_ENV === "production";
 
 /**
  * 플래그 활성 상태를 반환한다.
@@ -58,12 +58,12 @@ const IS_REAL_PROD = process.env.NEXT_PUBLIC_APP_ENV === 'production';
  * - env 값이 없으면 defaultValue 사용
  */
 export const isFeatureEnabled = (key: FeatureFlagKey, defaultValue: boolean = false): boolean => {
-  if (IS_REAL_PROD && key.startsWith('DEV_')) {
+  if (IS_REAL_PROD && key.startsWith("DEV_")) {
     return false;
   }
 
   const value = FEATURE_FLAG_VALUES[key];
 
   if (value === undefined) return defaultValue;
-  return value === 'true';
+  return value === "true";
 };

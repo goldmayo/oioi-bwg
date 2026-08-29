@@ -18,14 +18,10 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="rounded-md p-2 hover:bg-accent"
+      className="hover:bg-accent rounded-md p-2"
       aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
     >
-      {theme === "dark" ? (
-        <Sun className="size-5" />
-      ) : (
-        <Moon className="size-5" />
-      )}
+      {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
     </button>
   );
 }

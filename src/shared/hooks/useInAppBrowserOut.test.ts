@@ -58,7 +58,9 @@ describe("useInAppBrowserOut Hook", () => {
     // Then
     expect(sessionStorage.getItem("has_redirected")).toBe("1");
     // URL 컴포넌트가 퍼센트(URL) 인코딩된 상태여야 함
-    expect(window.location.href).toBe("kakaotalk://web/openExternal?url=https%3A%2F%2Fexample.com%2Ftest");
+    expect(window.location.href).toBe(
+      "kakaotalk://web/openExternal?url=https%3A%2F%2Fexample.com%2Ftest",
+    );
   });
 
   it("안드로이드(Android) 타 인앱(Instagram 등) 환경이면 크롬 앱 인텐트 스킴으로 강제 우회한다.", () => {
@@ -72,7 +74,9 @@ describe("useInAppBrowserOut Hook", () => {
 
     // Then
     expect(sessionStorage.getItem("has_redirected")).toBe("1");
-    expect(window.location.href).toBe("intent://example.com/test#Intent;scheme=https;package=com.android.chrome;end");
+    expect(window.location.href).toBe(
+      "intent://example.com/test#Intent;scheme=https;package=com.android.chrome;end",
+    );
   });
 
   it("이미 리다이렉트를 시도한 상태(sessionStorage 1)라면 무한루프 방지를 위해 추가 우회 동작을 하지 않는다.", () => {

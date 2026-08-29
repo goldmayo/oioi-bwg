@@ -9,7 +9,10 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-background/90 fixed bottom-0 left-0 z-50 flex h-[68px] w-full items-center justify-around border-t backdrop-blur-xl md:hidden pb-safe" suppressHydrationWarning>
+    <nav
+      className="bg-background/90 pb-safe fixed bottom-0 left-0 z-50 flex h-[68px] w-full items-center justify-around border-t backdrop-blur-xl md:hidden"
+      suppressHydrationWarning
+    >
       {NAV_ITEMS.map((item) => {
         const isActive = pathname === item.href;
         return (

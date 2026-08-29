@@ -19,7 +19,7 @@ export function useInAppBrowserOut() {
 
     const userAgent = navigator.userAgent.toLowerCase();
     const isInAppBrowser = IN_APP_BROWSER_REGEX.test(userAgent);
-    
+
     // 2. 인앱 브라우저가 아니라면(기본 브라우저라면) 스토리지 플래그 데이터 초기화 후 종료
     if (!isInAppBrowser) {
       sessionStorage.removeItem(EXTERNAL_REDIRECT_FLAG_KEY);
@@ -28,7 +28,7 @@ export function useInAppBrowserOut() {
 
     // 3. 인앱 환경이지만 이미 우회를 시도한 적이 있는 유저라면(1 값) 무한 루프 방지를 위해 조기 종료
     if (sessionStorage.getItem(EXTERNAL_REDIRECT_FLAG_KEY) === "1") return;
-    
+
     // 이번 사이클에 즉각적으로 우회를 시도함을 세션에 마킹 (성공/실패 무관)
     sessionStorage.setItem(EXTERNAL_REDIRECT_FLAG_KEY, "1");
 

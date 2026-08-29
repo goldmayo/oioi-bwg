@@ -2,9 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 
 import { debounce } from "./utils";
 
-const IS_PROD = ["production", "staging"].includes(
-  process.env.NEXT_PUBLIC_APP_ENV || "",
-);
+const IS_PROD = ["production", "staging"].includes(process.env.NEXT_PUBLIC_APP_ENV || "");
 
 /**
  * 에러 추적 시스템 (Sentry) 추상화 유틸리티

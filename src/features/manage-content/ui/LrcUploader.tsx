@@ -100,7 +100,13 @@ export function LrcUploader({ onLrcParsed, value, error }: LrcUploaderProps) {
             <p className="text-foreground truncate text-sm font-medium">{fileName}</p>
             <p className="text-muted-foreground text-xs">{lineCount}줄</p>
           </div>
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={handleClear}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={handleClear}
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
