@@ -20,6 +20,12 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     files: ["src/**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        project: "./tsconfig.json",
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     plugins: {
       "unused-imports": unusedImports,
       "simple-import-sort": simpleImportSort,
@@ -45,8 +51,32 @@ const eslintConfig = defineConfig([
     },
     rules: {
       "project/architecture": "error",
-      "simple-import-sort/imports": "error",
+      "simple-import-sort/imports": [
+        "error",
+        {
+          groups: [
+            ["^\\u0000"],
+            ["^node:"],
+            ["^react", "^@?\\w"],
+            ["^@/app"],
+            ["^@/widgets"],
+            ["^@/features"],
+            ["^@/entities"],
+            ["^@/server"],
+            ["^@/shared"],
+            ["^\\.\\."],
+            ["^\\./"],
+            ["^.+\\.s?css$"],
+          ],
+        },
+      ],
       "simple-import-sort/exports": "error",
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        { checksVoidReturn: { attributes: false } },
+      ],
+      "max-lines-per-function": ["warn", { max: 200, skipComments: true, skipBlankLines: true }],
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",
@@ -100,13 +130,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "coverage/**",
-    ".wrangler/**",
-    ".vinext/**",
-    "dist/**",
     ".agents/**",
     "docs/migration/harness/**",
     "next-env.d.ts",
-    "worker-configuration.d.ts",
   ]),
   prettierConfig,
 ]);

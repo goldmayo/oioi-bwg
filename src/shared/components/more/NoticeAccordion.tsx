@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 
 import { cn } from "@/shared/utils/utils";
 

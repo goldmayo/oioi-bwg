@@ -1,9 +1,9 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 
 import { Album } from "@/shared/api/db/drizzle/schema";
 import { Button } from "@/shared/ui/button";
@@ -22,6 +22,7 @@ import { Switch } from "@/shared/ui/switch";
 
 import { createSongAction, updateSongAction } from "../actions";
 import { type SongEditInput, SongEditSchema, type SongEditValues } from "../schemas";
+
 import { LrcUploader } from "./LrcUploader";
 
 /** 곡 편집 시 필요한 최소 데이터 */

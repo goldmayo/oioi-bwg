@@ -1,10 +1,7 @@
 .next
-.vinext
-.wrangler
 .agents
 .vscode
 coverage
-dist
 drizzle
 node_modules
 out

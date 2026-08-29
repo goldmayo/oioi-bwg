@@ -1,7 +1,7 @@
 "use client";
 
-import { Edit, Plus, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { Edit, Plus, Trash2 } from "lucide-react";
 
 import { Album } from "@/shared/api/db/drizzle/schema";
 import { Badge } from "@/shared/ui/badge";
@@ -18,6 +18,7 @@ import { Input } from "@/shared/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
 import { deleteAlbumAction } from "../actions";
+
 import { AlbumFormDialog } from "./AlbumFormDialog";
 
 const PAGE_SIZE = 10;

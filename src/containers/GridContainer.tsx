@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
 
 import { AlbumCard } from "@/shared/components/album/AlbumCard";
 import { Album } from "@/shared/types/album";

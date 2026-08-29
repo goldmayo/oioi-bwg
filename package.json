@@ -11,7 +11,7 @@
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "pnpm type-check && pnpm lint && pnpm lint:fsd && pnpm test:unit:run",
+    "verify": "pnpm type-check && pnpm test:harness && pnpm lint && pnpm lint:fsd && pnpm test:unit:run",
     "prepare": "husky",
     "db:seed": "tsx src/libs/db/drizzle/seed.ts",
     "db:push": "drizzle-kit push",
@@ -21,6 +21,7 @@
     "test:load": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/load.js",
     "test:unit": "vitest",
     "test:unit:run": "vitest run",
+    "test:harness": "node --test eslint-rules/*.test.js",
     "test:stress": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/stress.js",
     "test:spike": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/spike.js",
     "release": "release-it"
@@ -87,7 +88,7 @@
     "vitest": "^4.1.2"
   },
   "lint-staged": {
-    "*.{ts,tsx}": [
+    "*.{js,mjs,cjs,ts,tsx,mts,cts}": [
       "eslint --fix",
       "prettier --write"
     ],

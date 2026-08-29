@@ -1,12 +1,11 @@
 "use client";
 
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import Link from "next/link";
 import { z } from "zod";
 
-import { signIn } from "@/features/auth/actions";
 import { Button } from "@/shared/ui/button";
 import {
   Card,
@@ -18,6 +17,8 @@ import {
 } from "@/shared/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
+
+import { signIn } from "./actions";
 
 /**
  * 로그인 폼 유효성 검사 스키마

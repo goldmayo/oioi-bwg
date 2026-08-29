@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { AlbumManagerClient } from "@/features/manage-content/ui/AlbumManagerClient";
+
 import { getAllAlbums } from "@/shared/api/db/drizzle/queries";
 
 /**

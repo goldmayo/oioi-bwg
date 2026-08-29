@@ -1,12 +1,12 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import { cva } from "class-variance-authority";
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { Link2 } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 // import { OfficialBadge } from "@/components/common/OfficialBadge";
@@ -47,9 +47,13 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
   // 광고 감시 훅 연동
   const isAdPlaying = useAdWatcher(player, song.youtubeId);
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast("링크가 복사되었습니다.");
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast("링크가 복사되었습니다.");
+    } catch {
+      toast.error("링크 복사에 실패했습니다.");
+    }
   };
 
   const handleLyricClick = (line: LyricLine) => {

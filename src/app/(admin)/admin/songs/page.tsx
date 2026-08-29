@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { SongManagerClient } from "@/features/manage-content/ui/SongManagerClient";
+
 import { getAllAlbums, getSongsWithAlbum } from "@/shared/api/db/drizzle/queries";
 
 /**

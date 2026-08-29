@@ -2,12 +2,13 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import { saveSongData } from "@/features/manage-lyrics/actions";
 import { useAdWatcher } from "@/shared/hooks/useAdWatcher";
 import { useLyricsEditor } from "@/shared/hooks/useLyricsEditor";
 import { LyricLine, LyricSegment } from "@/shared/types/lyrics";
 import { YouTubePlayerInstance } from "@/shared/types/youtube";
 import { parseLrc } from "@/shared/utils/lrc-parser";
+
+import { saveSongData } from "./actions";
 
 /** 드래그 선택 말풍선 툴바의 상태 */
 export interface ToolbarState {

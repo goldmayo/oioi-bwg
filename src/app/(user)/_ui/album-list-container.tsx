@@ -1,7 +1,7 @@
 "use client";
 
-import gsap from "gsap";
 import { useEffect, useRef } from "react";
+import gsap from "gsap";
 
 import { AlbumCard } from "@/shared/components/album/AlbumCard";
 import { AlbumListItem } from "@/shared/components/album/AlbumListItem";

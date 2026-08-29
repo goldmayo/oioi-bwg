@@ -1,12 +1,12 @@
 "use client";
 
+import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
 
 import { Album } from "@/shared/types/album";
 import { Badge } from "@/shared/ui/badge";

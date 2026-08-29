@@ -1,7 +1,7 @@
 "use client";
 
-import gsap from "gsap";
 import { useEffect, useRef } from "react";
+import gsap from "gsap";
 
 import { LyricLine } from "@/shared/types/lyrics";
 

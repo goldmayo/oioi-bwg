@@ -2,11 +2,7 @@
 
 import { createContext, useContext } from "react";
 
-import {
-  AdminEditorSong,
-  AdminEditorStore,
-  useAdminEditor,
-} from "@/features/manage-lyrics/useAdminEditor";
+import { AdminEditorSong, AdminEditorStore, useAdminEditor } from "../useAdminEditor";
 
 /**
  * AdminEditor 전역 Context.

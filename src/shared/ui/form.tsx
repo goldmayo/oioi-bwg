@@ -1,7 +1,5 @@
 "use client";
 
-import type { Label as LabelPrimitive } from "radix-ui";
-import { Slot } from "radix-ui";
 import * as React from "react";
 import {
   Controller,
@@ -12,6 +10,8 @@ import {
   useFormContext,
   useFormState,
 } from "react-hook-form";
+import type { Label as LabelPrimitive } from "radix-ui";
+import { Slot } from "radix-ui";
 
 import { Label } from "@/shared/ui/label";
 import { cn } from "@/shared/utils/utils";

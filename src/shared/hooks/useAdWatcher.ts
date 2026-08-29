@@ -1,6 +1,6 @@
+import { useEffect, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { useEffect, useState } from "react";
 
 import { YouTubePlayerInstance } from "@/shared/types/youtube";
 

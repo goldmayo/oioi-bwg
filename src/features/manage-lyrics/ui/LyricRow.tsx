@@ -1,7 +1,7 @@
 "use client";
 
-import { Paintbrush, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Paintbrush, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 import { LyricLine } from "@/shared/types/lyrics";
 import { Button } from "@/shared/ui/button";

@@ -8,6 +8,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/shared/u
 import { YoutubePlayer } from "@/shared/ui/YoutubePlayer";
 
 import { AdminEditorSong } from "../useAdminEditor";
+
 import { AdminEditorProvider, useAdminEditorContext } from "./AdminEditorContext";
 import { EditorTopBar } from "./EditorTopBar";
 import { FloatingToolbar } from "./FloatingToolbar";

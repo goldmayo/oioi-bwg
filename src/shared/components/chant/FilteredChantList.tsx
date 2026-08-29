@@ -1,12 +1,12 @@
 "use client";
 
+import { useDeferredValue, useEffect, useRef } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import gsap from "gsap";
 import { ChevronRight, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useDeferredValue, useEffect, useRef } from "react";
-import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { AlbumSong } from "@/shared/types/album";

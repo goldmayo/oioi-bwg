@@ -1,6 +1,6 @@
+import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Check } from "lucide-react";
-import * as React from "react";
 
 import { Badge } from "@/shared/ui/badge";
 import { cn } from "@/shared/utils/utils";

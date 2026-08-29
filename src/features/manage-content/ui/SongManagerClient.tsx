@@ -1,8 +1,8 @@
 "use client";
 
+import { useCallback, useMemo, useState } from "react";
 import { Edit, FileMusic, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
 
 import { Album } from "@/shared/api/db/drizzle/schema";
 import { Badge } from "@/shared/ui/badge";
@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
 import { deleteSongAction } from "../actions";
+
 import { SongFormDialog } from "./SongFormDialog";
 
 const PAGE_SIZE = 15;

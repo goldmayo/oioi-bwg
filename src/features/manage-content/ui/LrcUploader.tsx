@@ -1,7 +1,7 @@
 "use client";
 
-import { FileUp, Upload, X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
+import { FileUp, Upload, X } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/utils/utils";
@@ -51,7 +51,7 @@ export function LrcUploader({ onLrcParsed, value, error }: LrcUploaderProps) {
       setIsDragOver(false);
 
       const file = e.dataTransfer.files[0];
-      if (file) processFile(file);
+      if (file) void processFile(file);
     },
     [processFile],
   );
@@ -69,7 +69,7 @@ export function LrcUploader({ onLrcParsed, value, error }: LrcUploaderProps) {
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) processFile(file);
+      if (file) void processFile(file);
       // 동일 파일 재선택 허용
       e.target.value = "";
     },

@@ -1,12 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { saveSongData } from "@/features/manage-lyrics/actions";
-
+import { saveSongData } from "./actions";
 import { useAdminEditor } from "./useAdminEditor";
 
 // 서버 액션 모킹
-vi.mock("@/features/manage-lyrics/actions", () => ({
+vi.mock("./actions", () => ({
   saveSongData: vi.fn(),
 }));
 

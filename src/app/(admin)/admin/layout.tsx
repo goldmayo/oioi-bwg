@@ -1,8 +1,10 @@
 import { ReactNode } from "react";
 
-import AdminSidebar from "@/containers/sidebar/AdminSidebar";
 import { LazyLoginForm } from "@/features/auth/LazyLoginForm";
+
 import { createClient } from "@/shared/api/db/supabase/server";
+
+import AdminSidebar from "@/containers/sidebar/AdminSidebar";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient();

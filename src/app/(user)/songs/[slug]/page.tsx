@@ -1,7 +1,8 @@
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
 
 import { LyricsViewerClient } from "@/features/chant-sync/LyricsViewerClient";
+
 import { getSongBySlug } from "@/shared/api/db/drizzle/queries";
 import { LyricLine } from "@/shared/types/lyrics";
 import { constructMetadata } from "@/shared/utils/metadata";

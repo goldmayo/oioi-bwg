@@ -36,7 +36,7 @@
 
 ### Framework & Library
 
-- **Framework**: [Vinext](https://github.com/cloudflare/vinext) (Vite-based Next.js), React 19
+- **Framework**: Next.js 16 (App Router, standalone output), React 19
 - **Styling**: Tailwind CSS 4, Shadcn UI
 - **Animation**: GSAP
 - **State & Form**: React Hook Form, Zod, nuqs
@@ -45,12 +45,11 @@
 
 - **Database**: Supabase (PostgreSQL)
 - **ORM**: Drizzle ORM
-- **Deployment**: GitHub Actions & Wrangler
+- **Runtime**: Node.js standalone server
 
 ### Infrastructure
 
-- **Runtime**: Cloudflare Workers (staging, production)
-- **Connection**: Cloudflare Hyperdrive (Database connection pooling)
+- **Build**: Next.js standalone output
 - **Monitoring**: Sentry (Error & Performance tracking)
 - **Analytics**: Google Analytics & Google Tag Manager
 
@@ -69,21 +68,15 @@ cheer-rock-crab/
 ├── docs/               # 문서 (.md)
 ├── drizzle/            # SQL 마이그레이션 이력
 ├── src/
-│   ├── app/
-│   │   ├── (user)/     # 사용자 페이지 (메인, 뷰어)
-│   │   └── admin/      # 관리자 편집기
-│   ├── components/     # UI 및 비즈니스 컴포넌트
-│   ├── config/         # 사이트맵
-│   ├── hooks/          # 커스텀 훅 (LyricsEditor, AdWatcher 등)
-│   ├── libs/db/        # Drizzle / Supabase ORM 레이어 (Queries, Commands)
-│   ├── types/          # 공용타입
-│   └── utils/          # 가사 파서 및 라이브러리 유틸리티
+│   ├── app/            # App Router와 route-local private segment
+│   ├── widgets/        # 화면 구획 단위 조합
+│   ├── features/       # 사용자 행동과 유스케이스
+│   ├── entities/       # 도메인 모델과 표현
+│   ├── shared/         # 도메인 비종속 공용 코드
+│   └── server/         # 서버 전용 조합과 인프라 경계
 ├── tests/              # stress, load, spike 테스트 스크립트
-├── worker/             # cloudflare worker 진입점
-├── proxy.ts            # 미들웨어
-├── next.config.mjs     # nextjs 설정
-├── vite.config.ts      # vite 번들러 설정
-├── wrangler.jsonc      # Cloudflare 설정
+├── proxy.ts            # Next.js proxy
+├── next.config.ts      # Next.js 설정
 └── package.json        # 의존성 및 스크립트
 
 ```
@@ -123,29 +116,23 @@ pnpm db:push
 ### 테스트
 
 ```bash
-# k6 tests
+# 정적 검사와 단위 테스트
+pnpm verify
+
+# k6 부하 테스트
 pnpm test:load
 pnpm test:stress
 pnpm test:spike
 ```
 
-### 배포
+### 프로덕션 빌드와 로컬 실행
 
 ```bash
-## local
-## staging
-pnpm deploy:staging
-## production
-pnpm deploy:prod
----
-## staging
-git push origin staging
----
-## production
-pnpm release
+pnpm build
+pnpm start
 ```
 
 ---
 
-_Last Updated: 2026-03-13_
+_Last Updated: 2026-08-29_
 _Copyright © 2026 CheerRockCrab Team._

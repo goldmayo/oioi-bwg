@@ -1,9 +1,10 @@
 "use client";
 
-import { LogOut, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useState } from "react";
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { signOut } from "@/features/auth/actions";
+
 import { Button } from "@/shared/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/ui/sheet";
 
@@ -25,7 +26,7 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
           className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive w-full justify-start gap-3 px-3 transition-colors"
           onClick={() => {
             if (confirm("로그아웃 하시겠습니까?")) {
-              signOut();
+              void signOut();
             }
           }}
           title="로그아웃"
