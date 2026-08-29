@@ -2,16 +2,17 @@
 
 import { lazy, Suspense } from "react";
 
-import type { AdminEditorSong } from "../model/useAdminEditor";
+import type { AdminEditorSong, SaveSongDataAction } from "../model/useAdminEditor";
 
 // React.lazy를 사용한 클라이언트 사이드 지연 로딩
 const AdminEditorClient = lazy(() => import("./AdminEditorClient"));
 
 interface LazyAdminEditorProps {
   song: AdminEditorSong;
+  saveSongData: SaveSongDataAction;
 }
 
-export function LazyAdminEditor({ song }: LazyAdminEditorProps) {
+export function LazyAdminEditor({ song, saveSongData }: LazyAdminEditorProps) {
   return (
     <Suspense
       fallback={
@@ -20,7 +21,7 @@ export function LazyAdminEditor({ song }: LazyAdminEditorProps) {
         </div>
       }
     >
-      <AdminEditorClient song={song} />
+      <AdminEditorClient song={song} saveSongData={saveSongData} />
     </Suspense>
   );
 }

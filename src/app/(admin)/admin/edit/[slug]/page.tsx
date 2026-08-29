@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 
 import { LazyAdminEditor } from "@/features/manage-lyrics";
 
-import { getAdminSongBySlug } from "@/shared/api/db/drizzle/queries";
+import { getAdminSongEditorBySlug } from "@/server/services/song-service";
+
+import { saveSongData } from "../_lib/save-song-data";
 
 interface AdminEditPageProps {
   params: Promise<{ slug: string }>;
@@ -20,7 +22,7 @@ export default async function AdminEditPage({ params }: AdminEditPageProps) {
   }
 
   // 캡슐화된 쿼리 함수 사용
-  const song = await getAdminSongBySlug(slug);
+  const song = await getAdminSongEditorBySlug(slug);
 
   if (!song) {
     return notFound();
@@ -28,7 +30,7 @@ export default async function AdminEditPage({ params }: AdminEditPageProps) {
 
   return (
     <div className="h-screen overflow-hidden">
-      <LazyAdminEditor key={slug} song={song} />
+      <LazyAdminEditor key={slug} song={song} saveSongData={saveSongData} />
     </div>
   );
 }

@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 
-import { Album } from "@/shared/api/db/drizzle/schema";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -20,8 +19,9 @@ import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Switch } from "@/shared/ui/switch";
 
-import { createSongAction, updateSongAction } from "../api/actions";
+import type { CreateSongAction, UpdateSongAction } from "../model/actions";
 import { type SongEditInput, SongEditSchema, type SongEditValues } from "../model/schemas";
+import type { ManagedAlbum } from "../model/types";
 
 import { LrcUploader } from "./LrcUploader";
 
@@ -42,9 +42,11 @@ interface SongFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** 앨범 목록 (select 옵션용) */
-  albums: Album[];
+  albums: ManagedAlbum[];
   /** 편집 시 기존 곡 데이터 */
   song?: SongEditData;
+  createSongAction: CreateSongAction;
+  updateSongAction: UpdateSongAction;
   /** 저장 완료 콜백 */
   onSuccess?: () => void;
 }
@@ -54,6 +56,8 @@ export function SongFormDialog({
   onOpenChange,
   albums,
   song,
+  createSongAction,
+  updateSongAction,
   onSuccess,
 }: SongFormDialogProps) {
   const isEdit = !!song;
@@ -100,7 +104,7 @@ export function SongFormDialog({
         alert(result.error);
       }
     },
-    [isEdit, song, onOpenChange, form, onSuccess],
+    [isEdit, song, createSongAction, updateSongAction, onOpenChange, form, onSuccess],
   );
 
   return (

@@ -1,6 +1,6 @@
 import { MetadataRoute } from "next";
 
-import { getAllSongs } from "@/shared/api/db/drizzle/queries";
+import { listVisibleSongsForSitemap } from "@/server/services/song-service";
 
 /**
  * 동적 사이트맵 생성
@@ -10,7 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://oioibawige.com";
 
   // 1. 모든 곡 데이터 가져오기
-  const songs = await getAllSongs();
+  const songs = await listVisibleSongsForSitemap();
 
   // 2. 곡 상세 페이지 URL 목록 생성
   const songUrls = songs.map((song) => ({

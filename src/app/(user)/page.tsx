@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { Album, AlbumListSkeleton } from "@/entities/album";
 
-import { getAllAlbumsWithSongs } from "@/shared/api/db/drizzle/queries";
+import { listVisibleAlbumsWithSongs } from "@/server/services/album-service";
 
 import { AlbumListContainer } from "./_ui/album-list-container";
 
@@ -10,7 +10,7 @@ import { AlbumListContainer } from "./_ui/album-list-container";
 // 1. 데이터 페칭 컴포넌트 (Async 래퍼)
 // ----------------------------------------------------------------------
 async function AsyncAlbumsList() {
-  const dbAlbums = await getAllAlbumsWithSongs();
+  const dbAlbums = await listVisibleAlbumsWithSongs();
 
   // 프론트 컴포넌트(AlbumListContainer) 뷰모델 매핑
   const albumsData = dbAlbums

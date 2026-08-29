@@ -2,7 +2,7 @@
 title: "M3 Preflight"
 document_id: "M3-PREFLIGHT"
 version: "1.0"
-status: "planned"
+status: "completed"
 authority: "plan"
 updated_at: "2026-08-29"
 depends_on:
@@ -15,11 +15,11 @@ M2 종료 후 M3 Server Foundation 착수 전에 확인할 추가 작업이다.
 
 ## 착수 전 필수 확인
 
-- `migration_develop`에 M2 squash merge가 반영됐는지 확인
-- `migration_m3-server-foundation`을 `migration_develop`에서 새로 생성
-- M2의 URL/route ownership 변경이 동작에 영향을 주지 않았는지 smoke 결과 보관
-- `.env`와 production DB 접근 방식은 변경하지 않고 server boundary만 이동
-- M3 범위를 Service/Repository/transaction/DTO mapping으로 고정
+- [x] `migration_develop`에 M2 squash merge가 반영됐는지 확인
+- [x] `migration_m3-server-foundation`을 `migration_develop`에서 새로 생성
+- [x] M2의 URL/route ownership 변경이 동작에 영향을 주지 않았는지 smoke 결과 보관
+- [x] `.env`와 production DB 접근 방식은 변경하지 않고 server boundary만 이동
+- [x] M3 범위를 Service/Repository/transaction/DTO mapping으로 고정
 
 ## M3에서 처리할 현재 문제
 

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { AlbumListSkeleton } from "@/entities/album";
 
-import { getAllAlbumsWithSongs } from "@/shared/api/db/drizzle/queries";
+import { listVisibleAlbumsWithSongs } from "@/server/services/album-service";
 
 import { FilteredChantList } from "./_ui/filtered-chant-list";
 
@@ -10,7 +10,7 @@ import { FilteredChantList } from "./_ui/filtered-chant-list";
  * [RENEWAL] 서버 사이드 데이터 페칭 및 렌더링
  */
 async function ChantsDataWrapper() {
-  const dbAlbums = await getAllAlbumsWithSongs();
+  const dbAlbums = await listVisibleAlbumsWithSongs();
 
   // 인터페이스 매핑 및 평탄화
   const allSongs = dbAlbums.flatMap((album) =>

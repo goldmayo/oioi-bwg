@@ -15,7 +15,6 @@
     "prepare": "husky",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/assert-local-database.ts && drizzle-kit migrate",
-    "db:seed": "tsx scripts/assert-local-database.ts && tsx src/shared/api/db/drizzle/seed.ts",
     "db:restore-local": "sh scripts/restore-local-dump.sh",
     "db:pull": "tsx scripts/assert-local-database.ts && drizzle-kit pull",
     "db:studio": "tsx scripts/assert-local-database.ts && drizzle-kit studio",

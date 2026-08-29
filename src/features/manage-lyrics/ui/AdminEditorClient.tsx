@@ -7,7 +7,7 @@ import { Button } from "@/shared/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/shared/ui/resizable";
 import { YoutubePlayer } from "@/shared/ui/YoutubePlayer";
 
-import { AdminEditorSong } from "../model/useAdminEditor";
+import { AdminEditorSong, SaveSongDataAction } from "../model/useAdminEditor";
 
 import { AdminEditorProvider, useAdminEditorContext } from "./AdminEditorContext";
 import { EditorTopBar } from "./EditorTopBar";
@@ -17,6 +17,7 @@ import { PreviewRail } from "./PreviewRail";
 
 interface AdminEditorClientProps {
   song: AdminEditorSong;
+  saveSongData: SaveSongDataAction;
 }
 
 /**
@@ -222,9 +223,9 @@ function AdminEditorInner() {
  * AdminEditorProvider로 감싸 하위 컴포넌트들이 Context를 통해
  * 모든 상태와 핸들러에 prop drilling 없이 접근할 수 있게 합니다.
  */
-export default function AdminEditorClient({ song }: AdminEditorClientProps) {
+export default function AdminEditorClient({ song, saveSongData }: AdminEditorClientProps) {
   return (
-    <AdminEditorProvider song={song}>
+    <AdminEditorProvider song={song} saveSongData={saveSongData}>
       <AdminEditorInner />
     </AdminEditorProvider>
   );

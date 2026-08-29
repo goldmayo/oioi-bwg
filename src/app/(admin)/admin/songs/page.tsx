@@ -2,7 +2,14 @@ import { Suspense } from "react";
 
 import { SongManagerClient } from "@/features/manage-content";
 
-import { getAllAlbums, getSongsWithAlbum } from "@/shared/api/db/drizzle/queries";
+import { listAdminAlbums } from "@/server/services/album-service";
+import { listAdminSongs } from "@/server/services/song-service";
+
+import {
+  createSongAction,
+  deleteSongAction,
+  updateSongAction,
+} from "../_lib/manage-content-actions";
 
 /**
  * 관리자 곡 관리 페이지
@@ -15,7 +22,7 @@ export const metadata = {
 };
 
 export default async function AdminSongsPage() {
-  const [songs, albums] = await Promise.all([getSongsWithAlbum(), getAllAlbums()]);
+  const [songs, albums] = await Promise.all([listAdminSongs(), listAdminAlbums()]);
 
   return (
     <div className="bg-background min-h-screen p-4 sm:p-6 lg:p-8">
@@ -33,7 +40,13 @@ export default async function AdminSongsPage() {
             </div>
           }
         >
-          <SongManagerClient initialSongs={songs} albums={albums} />
+          <SongManagerClient
+            initialSongs={songs}
+            albums={albums}
+            createSongAction={createSongAction}
+            updateSongAction={updateSongAction}
+            deleteSongAction={deleteSongAction}
+          />
         </Suspense>
       </div>
     </div>
