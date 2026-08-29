@@ -26,7 +26,8 @@ export function findVisibleAlbumsWithSongs(executor: DbExecutor) {
 
 export function findAlbumBySlug(executor: DbExecutor, slug: string) {
   return executor.query.album.findFirst({
-    where: (table, { eq: equals }) => equals(table.slug, slug),
+    where: (table, { and, eq: equals }) =>
+      and(equals(table.slug, slug), equals(table.isVisible, true)),
     with: {
       songs: {
         where: (table, { eq: equals }) => equals(table.isVisible, true),

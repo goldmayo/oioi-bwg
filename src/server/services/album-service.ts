@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getDatabase } from "../db";
+import { AppError } from "../errors/app-error";
 import {
   findAlbumBySlug,
   findAllAlbums,
@@ -91,6 +92,17 @@ export async function listVisibleAlbumsWithSongs() {
 export async function getAlbumDetailBySlug(slug: string) {
   const row = await findAlbumBySlug(getDatabase(), slug);
   return row ? mapAlbumWithRenderableSongs(row) : undefined;
+}
+
+/** HTTP 전달 계층이 사용할 공개 앨범 조회 use case다. */
+export async function requireAlbumDetailBySlug(slug: string) {
+  const album = await getAlbumDetailBySlug(slug);
+
+  if (!album) {
+    throw new AppError("ALBUM_NOT_FOUND");
+  }
+
+  return album;
 }
 
 export async function listAdminAlbums(): Promise<AlbumDto[]> {
