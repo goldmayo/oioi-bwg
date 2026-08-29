@@ -5,6 +5,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 
+import type { AdminAlbumSummary } from "@/entities/album";
+import type { AdminSongSummary } from "@/entities/song";
+
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -20,31 +23,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/shared/ui/switch";
 
 import type { CreateSongAction, UpdateSongAction } from "../model/actions";
-import { type SongEditInput, SongEditSchema, type SongEditValues } from "../model/schemas";
-import type { ManagedAlbum } from "../model/types";
+import { type SongEditInput, songEditSchema, type SongEditValues } from "../model/schemas";
 
 import { LrcUploader } from "./LrcUploader";
-
-/** 곡 편집 시 필요한 최소 데이터 */
-interface SongEditData {
-  id: number;
-  title: string;
-  slug: string;
-  albumId: number;
-  youtubeId: string;
-  hasOfficialCheer: boolean;
-  isTitle: boolean;
-  isVisible: boolean;
-  order: number;
-}
 
 interface SongFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** 앨범 목록 (select 옵션용) */
-  albums: ManagedAlbum[];
+  albums: AdminAlbumSummary[];
   /** 편집 시 기존 곡 데이터 */
-  song?: SongEditData;
+  song?: AdminSongSummary;
   createSongAction: CreateSongAction;
   updateSongAction: UpdateSongAction;
   /** 저장 완료 콜백 */
@@ -64,10 +53,10 @@ export function SongFormDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lrcError, setLrcError] = useState<string | null>(null);
 
-  // SongEditSchema(lrcText optional)로 통일하여 타입 호환성 문제 회피
+  // songEditSchema(lrcText optional)로 통일하여 타입 호환성 문제를 피한다.
   // 생성 시 lrcText 필수 검증은 onSubmit에서 직접 수행
   const form = useForm<SongEditInput, unknown, SongEditValues>({
-    resolver: zodResolver(SongEditSchema),
+    resolver: zodResolver(songEditSchema),
     defaultValues: {
       albumId: song?.albumId ?? 0,
       title: song?.title ?? "",

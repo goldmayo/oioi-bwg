@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 
 import type { LyricLine, LyricSegment } from "@/entities/cheer-guide";
 import { parseLrc } from "@/entities/cheer-guide";
+import type { SongEditor } from "@/entities/song";
 
 import { useAdWatcher } from "@/shared/model/useAdWatcher";
 import { YouTubePlayerInstance } from "@/shared/model/youtube";
@@ -21,14 +22,6 @@ export interface ToolbarState {
   endOffset: number;
 }
 
-/** useAdminEditor 훅에 필요한 초기 곡 정보 */
-export interface AdminEditorSong {
-  id: number;
-  title: string;
-  youtubeId: string;
-  lyrics: unknown;
-}
-
 export type SaveSongDataAction = (
   songId: number,
   data: { lyrics: unknown; youtubeId: string },
@@ -41,7 +34,7 @@ export type SaveSongDataAction = (
  * - 가사 편집 로직은 useLyricsEditor에 위임
  * - 어드민 전용 상태(YouTube ID, 저장, LRC Import, 툴바)를 추가로 관리
  */
-export function useAdminEditor(song: AdminEditorSong, saveSongData: SaveSongDataAction) {
+export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataAction) {
   // ─── 가사 편집 (useLyricsEditor에 위임) ───────────────────────────────────
   const lyricsEditor = useLyricsEditor((song.lyrics as LyricLine[]) || []);
   const {

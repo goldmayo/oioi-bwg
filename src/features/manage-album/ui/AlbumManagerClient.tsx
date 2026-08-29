@@ -3,6 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
 
+import type { AdminAlbumSummary } from "@/entities/album";
+
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
@@ -17,14 +19,13 @@ import { Input } from "@/shared/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
 import type { CreateAlbumAction, DeleteAlbumAction, UpdateAlbumAction } from "../model/actions";
-import type { ManagedAlbum } from "../model/types";
 
 import { AlbumFormDialog } from "./AlbumFormDialog";
 
 const PAGE_SIZE = 10;
 
 interface AlbumManagerClientProps {
-  initialAlbums: ManagedAlbum[];
+  initialAlbums: AdminAlbumSummary[];
   createAlbumAction: CreateAlbumAction;
   updateAlbumAction: UpdateAlbumAction;
   deleteAlbumAction: DeleteAlbumAction;
@@ -42,10 +43,10 @@ export function AlbumManagerClient({
 
   // 폼 다이얼로그
   const [formOpen, setFormOpen] = useState(false);
-  const [editingAlbum, setEditingAlbum] = useState<ManagedAlbum | undefined>();
+  const [editingAlbum, setEditingAlbum] = useState<AdminAlbumSummary | undefined>();
 
   // 삭제 확인 다이얼로그
-  const [deleteTarget, setDeleteTarget] = useState<ManagedAlbum | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminAlbumSummary | null>(null);
 
   // 검색 필터링
   const filtered = useMemo(() => {
@@ -71,7 +72,7 @@ export function AlbumManagerClient({
     setFormOpen(true);
   }, []);
 
-  const handleEdit = useCallback((album: ManagedAlbum) => {
+  const handleEdit = useCallback((album: AdminAlbumSummary) => {
     setEditingAlbum(album);
     setFormOpen(true);
   }, []);

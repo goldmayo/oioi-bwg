@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import type { AlbumSong } from "@/entities/album";
-import { TitleBadge } from "@/entities/album";
+import { TitleBadge } from "@/entities/song";
 
 import { analytics } from "@/shared/lib/analytics";
 import { cn } from "@/shared/lib/utils";

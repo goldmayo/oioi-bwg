@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import type { Album } from "@/entities/album";
-import { TitleBadge } from "@/entities/album";
+import { TitleBadge } from "@/entities/song";
 
 import { analytics } from "@/shared/lib/analytics";
 import { Badge } from "@/shared/ui/badge";

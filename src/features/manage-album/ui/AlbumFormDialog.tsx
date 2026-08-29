@@ -5,6 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImagePlus, Loader2 } from "lucide-react";
 
+import type { AdminAlbumSummary } from "@/entities/album";
+
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -18,16 +20,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/shared/ui/input";
 import { Switch } from "@/shared/ui/switch";
 
-import { uploadAlbumImageAction } from "../api/actions";
+import { uploadAlbumImageAction } from "../api/upload-album-image-action";
 import type { CreateAlbumAction, UpdateAlbumAction } from "../model/actions";
-import { type AlbumFormInput, AlbumFormSchema, type AlbumFormValues } from "../model/schemas";
-import type { ManagedAlbum } from "../model/types";
+import { type AlbumFormInput, albumFormSchema, type AlbumFormValues } from "../model/schemas";
 
 interface AlbumFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** 편집 시 기존 앨범 데이터 */
-  album?: ManagedAlbum;
+  album?: AdminAlbumSummary;
   createAlbumAction: CreateAlbumAction;
   updateAlbumAction: UpdateAlbumAction;
   /** 저장 완료 콜백 */
@@ -48,7 +49,7 @@ export function AlbumFormDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<AlbumFormInput, unknown, AlbumFormValues>({
-    resolver: zodResolver(AlbumFormSchema),
+    resolver: zodResolver(albumFormSchema),
     defaultValues: {
       name: album?.name ?? "",
       slug: album?.slug ?? "",

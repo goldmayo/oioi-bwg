@@ -4,6 +4,9 @@ import { useCallback, useMemo, useState } from "react";
 import { Edit, FileMusic, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 
+import type { AdminAlbumSummary } from "@/entities/album";
+import type { AdminSongSummary } from "@/entities/song";
+
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
@@ -19,30 +22,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
 import type { CreateSongAction, DeleteSongAction, UpdateSongAction } from "../model/actions";
-import type { ManagedAlbum } from "../model/types";
 
 import { SongFormDialog } from "./SongFormDialog";
 
 const PAGE_SIZE = 15;
 
-/** getSongsWithAlbum 쿼리 결과 타입 */
-interface SongWithAlbum {
-  id: number;
-  title: string;
-  slug: string;
-  albumId: number;
-  order: number;
-  youtubeId: string;
-  updatedAt: string;
-  hasOfficialCheer: boolean;
-  isTitle: boolean;
-  isVisible: boolean;
-  album: { name: string };
-}
-
 interface SongManagerClientProps {
-  initialSongs: SongWithAlbum[];
-  albums: ManagedAlbum[];
+  initialSongs: AdminSongSummary[];
+  albums: AdminAlbumSummary[];
   createSongAction: CreateSongAction;
   updateSongAction: UpdateSongAction;
   deleteSongAction: DeleteSongAction;
@@ -62,10 +49,10 @@ export function SongManagerClient({
 
   // 폼 다이얼로그
   const [formOpen, setFormOpen] = useState(false);
-  const [editingSong, setEditingSong] = useState<SongWithAlbum | undefined>();
+  const [editingSong, setEditingSong] = useState<AdminSongSummary | undefined>();
 
   // 삭제 확인 다이얼로그
-  const [deleteTarget, setDeleteTarget] = useState<SongWithAlbum | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminSongSummary | null>(null);
 
   // 필터링
   const filtered = useMemo(() => {
@@ -104,7 +91,7 @@ export function SongManagerClient({
     setFormOpen(true);
   }, []);
 
-  const handleEdit = useCallback((song: SongWithAlbum) => {
+  const handleEdit = useCallback((song: AdminSongSummary) => {
     setEditingSong(song);
     setFormOpen(true);
   }, []);
