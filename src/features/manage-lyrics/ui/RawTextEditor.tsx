@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { LyricLine } from "@/shared/types/lyrics";
+import { LyricLine } from "@/shared/model/lyrics";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,

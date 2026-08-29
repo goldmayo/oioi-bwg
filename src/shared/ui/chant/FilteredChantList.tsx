@@ -9,7 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { z } from "zod";
 
-import { AlbumSong } from "@/shared/types/album";
+import { AlbumSong } from "@/shared/model/album";
 import { Form, FormControl, FormField, FormItem } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
 

@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 
 import { getAllAlbumsWithSongs } from "@/shared/api/db/drizzle/queries";
-import { AlbumListSkeleton } from "@/shared/components/album/AlbumListSkeleton";
-import { FilteredChantList } from "@/shared/components/chant/FilteredChantList";
+import { AlbumListSkeleton } from "@/shared/ui/album/AlbumListSkeleton";
+import { FilteredChantList } from "@/shared/ui/chant/FilteredChantList";
 
 /**
  * [RENEWAL] 서버 사이드 데이터 페칭 및 렌더링

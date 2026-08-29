@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { logger } from "@/shared/utils/sentry";
+import { logger } from "@/shared/lib/sentry";
 
 /**
  * 전역 에러 핸들러 (App Router 전용)

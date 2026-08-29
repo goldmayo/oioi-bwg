@@ -1,7 +1,7 @@
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-import { cn } from "@/shared/utils/utils";
+import { cn } from "@/shared/lib/utils";
 
 interface MoreBackButtonProps {
   href?: string;

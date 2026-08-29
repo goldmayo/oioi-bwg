@@ -3,8 +3,8 @@
 import { useCallback, useRef, useState } from "react";
 import { FileUp, Upload, X } from "lucide-react";
 
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
-import { cn } from "@/shared/utils/utils";
 
 interface LrcUploaderProps {
   /** 파싱된 LRC 텍스트를 부모에 전달 */

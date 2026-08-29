@@ -9,11 +9,13 @@ import { Link2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
+import { analytics } from "@/shared/lib/analytics";
+import { cn } from "@/shared/lib/utils";
+import { Album } from "@/shared/model/album";
+import { LyricLine } from "@/shared/model/lyrics";
 // import { OfficialBadge } from "@/components/common/OfficialBadge";
-import { useAdWatcher } from "@/shared/hooks/useAdWatcher";
-import { Album } from "@/shared/types/album";
-import { LyricLine } from "@/shared/types/lyrics";
-import { YouTubePlayerInstance } from "@/shared/types/youtube";
+import { useAdWatcher } from "@/shared/model/useAdWatcher";
+import { YouTubePlayerInstance } from "@/shared/model/youtube";
 import {
   Accordion,
   AccordionContent,
@@ -21,8 +23,6 @@ import {
   AccordionTrigger,
 } from "@/shared/ui/accordion";
 import { YoutubePlayer } from "@/shared/ui/YoutubePlayer";
-import { analytics } from "@/shared/utils/analytics";
-import { cn } from "@/shared/utils/utils";
 
 gsap.registerPlugin(ScrollToPlugin);
 

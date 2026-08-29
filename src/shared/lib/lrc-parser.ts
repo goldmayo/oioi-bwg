@@ -1,4 +1,4 @@
-import { LyricLine } from "@/shared/types/lyrics";
+import { LyricLine } from "@/shared/model/lyrics";
 
 export function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);

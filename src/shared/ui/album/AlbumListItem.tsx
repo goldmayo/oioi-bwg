@@ -5,8 +5,8 @@ import { ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-import { Album } from "@/shared/types/album";
-import { cn } from "@/shared/utils/utils";
+import { cn } from "@/shared/lib/utils";
+import { Album } from "@/shared/model/album";
 
 import { AlbumSongListItem } from "./AlbumSongListItem";
 

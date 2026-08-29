@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { formatTime } from "@/shared/lib/lrc-parser";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -12,8 +14,6 @@ import {
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
-import { formatTime } from "@/shared/utils/lrc-parser";
-import { cn } from "@/shared/utils/utils";
 
 import { useAdminEditorContext } from "./AdminEditorContext";
 

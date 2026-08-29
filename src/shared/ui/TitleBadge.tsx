@@ -1,8 +1,8 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
-import { cn } from "@/shared/utils/utils";
 
 const titleBadgeVariants = cva(
   "inline-flex items-center justify-center gap-1 border-none font-bold leading-none tracking-wide text-white transition-all hover:scale-105",

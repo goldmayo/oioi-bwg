@@ -1,7 +1,7 @@
 import { Disc3, Music } from "lucide-react";
 import Link from "next/link";
 
-import { SidebarWrapper } from "./SidebarWrapper";
+import { SidebarWrapper } from "./sidebar-wrapper";
 
 const ADMIN_NAV = [
   { href: "/admin/albums", label: "앨범 관리", icon: Disc3 },

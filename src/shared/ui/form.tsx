@@ -13,8 +13,8 @@ import {
 import type { Label as LabelPrimitive } from "radix-ui";
 import { Slot } from "radix-ui";
 
+import { cn } from "@/shared/lib/utils";
 import { Label } from "@/shared/ui/label";
-import { cn } from "@/shared/utils/utils";
 
 const Form = FormProvider;
 

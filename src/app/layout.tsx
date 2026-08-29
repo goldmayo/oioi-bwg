@@ -4,8 +4,8 @@ import Script from "next/script";
 
 import { Providers } from "@/app/providers";
 
-import { InAppBrowserGuard } from "@/shared/components/InAppBrowserGuard";
-import { DEFAULT_METADATA } from "@/shared/constants/site";
+import { DEFAULT_METADATA } from "@/shared/config/site";
+import { InAppBrowserGuard } from "@/shared/ui/InAppBrowserGuard";
 import { Toaster } from "@/shared/ui/sonner";
 
 import "./globals.css";

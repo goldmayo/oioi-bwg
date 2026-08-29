@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 
-import { YouTubePlayerInstance } from "@/shared/types/youtube";
+import { YouTubePlayerInstance } from "@/shared/model/youtube";
 
 /**
  * YouTube 광고를 감지하고 상태를 반환하는 훅

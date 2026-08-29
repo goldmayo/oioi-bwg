@@ -1,6 +1,6 @@
 "use client";
 
-import { useInAppBrowserOut } from "@/shared/hooks/useInAppBrowserOut";
+import { useInAppBrowserOut } from "@/shared/model/useInAppBrowserOut";
 
 /**
  * 인앱 브라우저 진입 시 기본 브라우저로 화면을 강제 전환시키는 투명 가드 컴포넌트입니다.

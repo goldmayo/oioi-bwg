@@ -1,5 +1,5 @@
-import { MoreBackButton, MoreHeader } from "@/shared/components/more/MoreCommon";
-import { cn } from "@/shared/utils/utils";
+import { cn } from "@/shared/lib/utils";
+import { MoreBackButton, MoreHeader } from "@/shared/ui/more/MoreCommon";
 
 // 기획서 기반 데이터 (Server Side)
 const UPDATES = [

@@ -3,10 +3,10 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-import { AlbumSong } from "@/shared/types/album";
+import { analytics } from "@/shared/lib/analytics";
+import { cn } from "@/shared/lib/utils";
+import { AlbumSong } from "@/shared/model/album";
 import { TitleBadge } from "@/shared/ui/TitleBadge";
-import { analytics } from "@/shared/utils/analytics";
-import { cn } from "@/shared/utils/utils";
 
 interface AlbumSongListItemProps {
   song: AlbumSong;

@@ -1,8 +1,7 @@
 "use server";
-// src/shared/feature-flag/server/withFeatureFlag.ts
 import { notFound } from "next/navigation";
 
-import { type FeatureFlagKey, isFeatureEnabled } from "./feature-flag";
+import { type FeatureFlagKey, isFeatureEnabled } from "@/shared/config/feature-flag";
 
 /**
  * Server Action 또는 API Route를 감싸는 Feature Flag 래퍼 (Guard 대체재)

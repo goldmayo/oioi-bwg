@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { Album } from "@/shared/types/album";
-import { analytics } from "@/shared/utils/analytics";
+import { analytics } from "@/shared/lib/analytics";
+import { Album } from "@/shared/model/album";
 
 interface AlbumCardProps {
   album: Album;

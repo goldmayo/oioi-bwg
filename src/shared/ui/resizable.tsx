@@ -4,7 +4,7 @@ import * as React from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { GripVertical } from "lucide-react";
 
-import { cn } from "@/shared/utils/utils";
+import { cn } from "@/shared/lib/utils";
 
 const ResizablePanelGroup = ({ className, ...props }: React.ComponentProps<typeof Group>) => (
   <Group className={cn("flex h-full w-full", className)} {...props} />

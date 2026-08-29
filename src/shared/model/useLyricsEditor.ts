@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import { LyricLine } from "@/shared/types/lyrics";
+import { LyricLine } from "@/shared/model/lyrics";
 
 /**
  * 가사 에디터의 핵심 상태와 조작 메소드를 제공하는 커스텀 훅.

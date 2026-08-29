@@ -2,8 +2,8 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Check } from "lucide-react";
 
+import { cn } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
-import { cn } from "@/shared/utils/utils";
 
 const officialBadgeVariants = cva("flex items-center gap-1 border-none font-black text-white", {
   variants: {

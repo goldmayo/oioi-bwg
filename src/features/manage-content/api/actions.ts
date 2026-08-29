@@ -4,8 +4,8 @@ import { eq } from "drizzle-orm";
 
 import { getDb } from "@/shared/api/db/drizzle/index";
 import { album, InsertAlbum, InsertSong, song as songTable } from "@/shared/api/db/drizzle/schema";
-import { LyricsDataSchema } from "@/shared/types/lyrics";
-import { parseLrc } from "@/shared/utils/lrc-parser";
+import { parseLrc } from "@/shared/lib/lrc-parser";
+import { LyricsDataSchema } from "@/shared/model/lyrics";
 
 import { AlbumFormSchema, SongEditSchema, SongFormSchema } from "../model/schemas";
 

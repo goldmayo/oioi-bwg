@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { AlbumDetailModal, AlbumDetailSkeleton } from "@/features/album-info";
 
 import { getAlbumBySlug } from "@/shared/api/db/drizzle/queries";
-import { Album } from "@/shared/types/album";
-import { constructMetadata } from "@/shared/utils/metadata";
+import { constructMetadata } from "@/shared/lib/metadata";
+import { Album } from "@/shared/model/album";
 
 interface AlbumPageProps {
   params: Promise<{ slug: string }>;

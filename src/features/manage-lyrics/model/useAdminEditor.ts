@@ -2,11 +2,11 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import { useAdWatcher } from "@/shared/hooks/useAdWatcher";
-import { useLyricsEditor } from "@/shared/hooks/useLyricsEditor";
-import { LyricLine, LyricSegment } from "@/shared/types/lyrics";
-import { YouTubePlayerInstance } from "@/shared/types/youtube";
-import { parseLrc } from "@/shared/utils/lrc-parser";
+import { parseLrc } from "@/shared/lib/lrc-parser";
+import { LyricLine, LyricSegment } from "@/shared/model/lyrics";
+import { useAdWatcher } from "@/shared/model/useAdWatcher";
+import { useLyricsEditor } from "@/shared/model/useLyricsEditor";
+import { YouTubePlayerInstance } from "@/shared/model/youtube";
 
 import { saveSongData } from "../api/actions";
 

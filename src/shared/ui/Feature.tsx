@@ -1,6 +1,6 @@
 import React from "react";
 
-import { FeatureFlagKey, isFeatureEnabled } from "./feature-flag";
+import { FeatureFlagKey, isFeatureEnabled } from "@/shared/config/feature-flag";
 
 interface FeatureProps {
   /** 확인할 피처 플래그 키 */

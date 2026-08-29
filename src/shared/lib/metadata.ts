@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 
-import { SITE_CONFIG } from "@/shared/constants/site";
+import { SITE_CONFIG } from "@/shared/config/site";
 
 interface ConstructMetadataProps {
   title?: string;

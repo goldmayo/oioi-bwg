@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 
-import { cn } from "@/shared/utils/utils";
+import { cn } from "@/shared/lib/utils";
 
 interface NoticeAccordionProps {
   notice: {
