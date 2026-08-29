@@ -77,10 +77,12 @@ cp .env.example .env.local
 `.env.local`에 Supabase Auth 공개 환경변수를 채운 뒤 실행한다.
 
 ```bash
-docker compose -f compose.dev.yml up -d --build
+docker compose -f compose.dev.yml up -d postgres
+docker compose --profile tools -f compose.dev.yml run --rm migrate
+docker compose -f compose.dev.yml up -d next
 ```
 
-`postgres` healthcheck가 통과하면 일회성 `migrate` 서비스가 migration을 적용하고, 성공한 뒤 `next`가 시작한다.
+`migrate`는 `tools` profile의 일회성 도구이므로 `up`에 자동 포함되지 않는다. schema 변경을 검토한 뒤 명령을 직접 실행하고, 성공을 확인한 후 Next를 시작한다.
 
 ### Seed
 
@@ -95,7 +97,9 @@ Album은 unique slug upsert를 사용한다. 운영에 없는 Song slug unique c
 `.local/`에 전달받은 PostgreSQL custom dump가 있는 경우에만 전체 개발 데이터를 복원할 수 있다. `.local/`은 Git에서 제외되며 운영 DB에 연결하지 않는다.
 
 ```bash
-docker compose -f compose.dev.yml up -d
+docker compose -f compose.dev.yml up -d postgres
+docker compose --profile tools -f compose.dev.yml run --rm migrate
+docker compose -f compose.dev.yml up -d next
 pnpm db:restore-local
 ```
 
@@ -130,7 +134,9 @@ docker compose -f compose.dev.yml down
 
 ```bash
 docker compose -f compose.dev.yml down -v
-docker compose -f compose.dev.yml up -d
+docker compose -f compose.dev.yml up -d postgres
+docker compose --profile tools -f compose.dev.yml run --rm migrate
+docker compose -f compose.dev.yml up -d next
 docker compose -f compose.dev.yml exec next pnpm db:seed
 ```
 

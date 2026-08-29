@@ -106,7 +106,9 @@ pnpm install --frozen-lockfile
 
 ```bash
 cp .env.example .env.local
-docker compose -f compose.dev.yml up -d --build
+docker compose -f compose.dev.yml up -d postgres
+docker compose --profile tools -f compose.dev.yml run --rm migrate
+docker compose -f compose.dev.yml up -d next
 docker compose -f compose.dev.yml exec next pnpm db:seed
 ```
 
