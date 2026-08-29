@@ -47,6 +47,6 @@ locale routing, 데이터 계약과 서버 Service/Repository 책임은 변경�
 
 ## 다음 작업
 
-M2 구조 하네스 기준의 폴더/segment 오류는 해소됐다. 다음 단계는 route inventory와 route-local
-composition을 실제 consumer 근거로 재검토하고, M3 이후로 넘길 server/query 책임을 문서화하는
-것이다.
+M2 구조 하네스 기준의 폴더/segment 오류는 해소됐다. route inventory와 추가 route-local
+이관은 `M2-ROUTE-INVENTORY.md`, `M2-STRUCTURE-REFACTOR-INVENTORY.md`에 기록했다. M3 이후로
+넘길 server/query 책임은 `M2-HANDOFF.md`에 문서화했다.
