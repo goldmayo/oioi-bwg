@@ -4,7 +4,7 @@ import { getAllAlbumsWithSongs } from "@/shared/api/db/drizzle/queries";
 import { AlbumListSkeleton } from "@/shared/components/album/AlbumListSkeleton";
 import { Album } from "@/shared/types/album";
 
-import { AlbumListContainer } from "./_components/AlbumListContainer";
+import { AlbumListContainer } from "./_ui/album-list-container";
 
 // ----------------------------------------------------------------------
 // 1. 데이터 페칭 컴포넌트 (Async 래퍼)
