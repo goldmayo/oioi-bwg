@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { LogOut, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
-import { signOut } from "@/features/auth/actions";
+import { signOut } from "@/features/auth";
 
 import { Button } from "@/shared/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/ui/sheet";

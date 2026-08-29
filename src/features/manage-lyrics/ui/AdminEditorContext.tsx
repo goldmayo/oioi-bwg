@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from "react";
 
-import { AdminEditorSong, AdminEditorStore, useAdminEditor } from "../useAdminEditor";
+import { AdminEditorSong, AdminEditorStore, useAdminEditor } from "../model/useAdminEditor";
 
 /**
  * AdminEditor 전역 Context.

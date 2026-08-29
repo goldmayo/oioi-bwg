@@ -7,7 +7,7 @@ import { album, InsertAlbum, InsertSong, song as songTable } from "@/shared/api/
 import { LyricsDataSchema } from "@/shared/types/lyrics";
 import { parseLrc } from "@/shared/utils/lrc-parser";
 
-import { AlbumFormSchema, SongEditSchema, SongFormSchema } from "./schemas";
+import { AlbumFormSchema, SongEditSchema, SongFormSchema } from "../model/schemas";
 
 // ════════════════════════════════════════════════════════════════════════════════
 // Album Actions

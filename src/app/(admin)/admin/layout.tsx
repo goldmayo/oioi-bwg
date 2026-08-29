@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 
-import { LazyLoginForm } from "@/features/auth/LazyLoginForm";
+import { LazyLoginForm } from "@/features/auth";
 
 import { createClient } from "@/shared/api/db/supabase/server";
 

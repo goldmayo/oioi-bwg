@@ -96,7 +96,7 @@ Next.js 16.3.3은 현재 Node 22.16 환경에서 `next.config.mts`를 지원하�
 | `pnpm format:check` | PASS |
 | `pnpm build` | PASS — Next.js 16.3.3 standalone |
 | `pnpm test:harness` | PASS — architecture rule 7 tests |
-| `pnpm lint` | EXPECTED FAIL — M2 구조 오류 56건, 리뷰 warning 4건 |
+| `pnpm lint` | EXPECTED FAIL — M2 구조 오류 38건, 리뷰 warning 4건 |
 | `pnpm lint:fsd` | EXPECTED FAIL — 기존 slice 구조 위반 5건 |
 | `pnpm verify` | BLOCKED — 위 구조 위반이 0이 될 때 통과 |
 

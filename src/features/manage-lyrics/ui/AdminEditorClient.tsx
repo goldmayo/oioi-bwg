@@ -7,7 +7,7 @@ import { Button } from "@/shared/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/shared/ui/resizable";
 import { YoutubePlayer } from "@/shared/ui/YoutubePlayer";
 
-import { AdminEditorSong } from "../useAdminEditor";
+import { AdminEditorSong } from "../model/useAdminEditor";
 
 import { AdminEditorProvider, useAdminEditorContext } from "./AdminEditorContext";
 import { EditorTopBar } from "./EditorTopBar";

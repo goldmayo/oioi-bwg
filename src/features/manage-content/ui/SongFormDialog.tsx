@@ -20,8 +20,8 @@ import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Switch } from "@/shared/ui/switch";
 
-import { createSongAction, updateSongAction } from "../actions";
-import { type SongEditInput, SongEditSchema, type SongEditValues } from "../schemas";
+import { createSongAction, updateSongAction } from "../api/actions";
+import { type SongEditInput, SongEditSchema, type SongEditValues } from "../model/schemas";
 
 import { LrcUploader } from "./LrcUploader";
 

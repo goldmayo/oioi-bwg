@@ -19,8 +19,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/shared/ui/input";
 import { Switch } from "@/shared/ui/switch";
 
-import { createAlbumAction, updateAlbumAction, uploadAlbumImageAction } from "../actions";
-import { type AlbumFormInput, AlbumFormSchema, type AlbumFormValues } from "../schemas";
+import { createAlbumAction, updateAlbumAction, uploadAlbumImageAction } from "../api/actions";
+import { type AlbumFormInput, AlbumFormSchema, type AlbumFormValues } from "../model/schemas";
 
 interface AlbumFormDialogProps {
   open: boolean;

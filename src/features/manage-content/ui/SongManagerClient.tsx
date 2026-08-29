@@ -19,7 +19,7 @@ import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-import { deleteSongAction } from "../actions";
+import { deleteSongAction } from "../api/actions";
 
 import { SongFormDialog } from "./SongFormDialog";
 

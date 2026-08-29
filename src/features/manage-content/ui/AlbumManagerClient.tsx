@@ -17,7 +17,7 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-import { deleteAlbumAction } from "../actions";
+import { deleteAlbumAction } from "../api/actions";
 
 import { AlbumFormDialog } from "./AlbumFormDialog";
 

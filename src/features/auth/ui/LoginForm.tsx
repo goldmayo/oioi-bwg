@@ -18,7 +18,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
 
-import { signIn } from "./actions";
+import { signIn } from "../api/actions";
 
 /**
  * 로그인 폼 유효성 검사 스키마
