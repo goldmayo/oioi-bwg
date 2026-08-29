@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import type { Album } from "@/entities/album";
-import { TitleBadge } from "@/entities/song";
+import { SongTitleBadge } from "@/entities/song";
 
 import { analytics } from "@/shared/lib/analytics";
 import { Badge } from "@/shared/ui/badge";
@@ -156,7 +156,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                       </h4>
                     </div>
                     <div className="flex items-center gap-2">
-                      {song.isTitle && <TitleBadge theme="rock" size="md" />}
+                      {song.isTitle && <SongTitleBadge theme="rock" size="md" />}
                       {/* {song.hasOfficial && <OfficialBadge type="w" size="md" />} */}
                     </div>
                   </Link>

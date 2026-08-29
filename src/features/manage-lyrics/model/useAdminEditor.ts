@@ -4,11 +4,11 @@ import { useCallback, useRef, useState } from "react";
 
 import type { LyricLine, LyricSegment } from "@/entities/cheer-guide";
 import { parseLrc } from "@/entities/cheer-guide";
-import type { SongEditor } from "@/entities/song";
 
 import { useAdWatcher } from "@/shared/model/useAdWatcher";
 import { YouTubePlayerInstance } from "@/shared/model/youtube";
 
+import type { SongEditor } from "./types";
 import { useLyricsEditor } from "./useLyricsEditor";
 
 /** 드래그 선택 말풍선 툴바의 상태 */

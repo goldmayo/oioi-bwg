@@ -5,7 +5,6 @@ import { Edit, FileMusic, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import type { AdminAlbumSummary } from "@/entities/album";
-import type { AdminSongSummary } from "@/entities/song";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -22,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
 import type { CreateSongAction, DeleteSongAction, UpdateSongAction } from "../model/actions";
+import type { AdminSongSummary } from "../model/types";
 
 import { SongFormDialog } from "./SongFormDialog";
 

@@ -2,8 +2,7 @@
 
 import { createContext, useContext } from "react";
 
-import type { SongEditor } from "@/entities/song";
-
+import type { SongEditor } from "../model/types";
 import { AdminEditorStore, SaveSongDataAction, useAdminEditor } from "../model/useAdminEditor";
 
 /**

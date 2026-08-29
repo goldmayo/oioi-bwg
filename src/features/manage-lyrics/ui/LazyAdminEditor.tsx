@@ -2,8 +2,7 @@
 
 import { lazy, Suspense } from "react";
 
-import type { SongEditor } from "@/entities/song";
-
+import type { SongEditor } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
 // React.lazy를 사용한 클라이언트 사이드 지연 로딩

@@ -1,3 +1,5 @@
+import "client-only";
+
 import type { Options, ResponsePromise } from "ky";
 import ky from "ky";
 

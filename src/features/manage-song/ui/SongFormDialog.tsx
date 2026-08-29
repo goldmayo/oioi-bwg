@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 
 import type { AdminAlbumSummary } from "@/entities/album";
-import type { AdminSongSummary } from "@/entities/song";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -24,6 +23,7 @@ import { Switch } from "@/shared/ui/switch";
 
 import type { CreateSongAction, UpdateSongAction } from "../model/actions";
 import { type SongEditInput, songEditSchema, type SongEditValues } from "../model/schemas";
+import type { AdminSongSummary } from "../model/types";
 
 import { LrcUploader } from "./LrcUploader";
 
