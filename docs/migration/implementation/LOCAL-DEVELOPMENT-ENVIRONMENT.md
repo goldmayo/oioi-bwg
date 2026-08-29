@@ -90,6 +90,25 @@ docker compose -f compose.dev.yml exec next pnpm db:seed
 
 Album은 unique slug upsert를 사용한다. 운영에 없는 Song slug unique constraint에 의존하지 않기 위해 Song은 slug 조회 후 update/insert한다. 반복 실행해도 fixture 수가 늘어나지 않는다.
 
+### 운영 데이터 dump의 로컬 복원
+
+`.local/`에 전달받은 PostgreSQL custom dump가 있는 경우에만 전체 개발 데이터를 복원할 수 있다. `.local/`은 Git에서 제외되며 운영 DB에 연결하지 않는다.
+
+```bash
+docker compose -f compose.dev.yml up -d
+pnpm db:restore-local
+```
+
+기본 경로는 `.local/oioibawige_20260829_030417.dump`이며 다른 파일은 인자로 지정한다.
+
+```bash
+pnpm db:restore-local -- .local/another.dump
+```
+
+복원 명령은 dump의 schema/extension/constraint를 실행하지 않고 Album/Song 행과 sequence만 로컬 migration 결과에 넣는다. 따라서 로컬 canonical schema는 항상 Drizzle migration이 만들고, dump는 데이터 fixture로만 사용한다. dump에 포함된 운영 sequence 값은 로컬 개발 DB에만 적용된다.
+
+복원 대상 테이블이 비어 있지 않으면 중복 삽입을 막기 위해 명령이 실패한다. 다시 복원하려면 로컬 volume을 초기화한 후 migration을 재실행한다.
+
 ### 상태와 로그
 
 ```bash
@@ -131,6 +150,7 @@ docker compose -f compose.dev.yml exec next pnpm db:seed
 - cascade write path: transaction 안에서 parent 삭제 후 child 0건 확인, rollback
 - index: `Song_albumId_idx`
 - seed 2회 실행: Album 2건, Song 2건 유지
+- local custom dump 복원: Album 7건, Song 26건, sequence 7/104 확인
 - Next query: `/`와 `/albums/algorithm-blossom` HTTP 200 및 fixture 렌더링
 - Playwright Chromium: 앨범 이미지와 화면 렌더링 확인
 - source bind mount: 변경 후 image rebuild 없이 요청 성공
