@@ -33,16 +33,13 @@ architecture 11과 migration runbook 12에 따라 URL locale 전략을 먼저 �
 | URL 형태 | `/albums/[slug]` 등 | `/ko/...` prefix 도입 여부 |
 | i18n library | 미선정 | URL 전략과 함께 선정 |
 
-### 2.1 구현 전 승인 필요
+### 2.1 확정 결정
 
-다음 중 하나를 명시적으로 선택한다.
+M2에서는 URL 구조를 변경하지 않는다. 현재 route에 locale prefix를 추가하지 않고, 기존
+`/albums/[slug]`, `/songs/[slug]`, `/more/*` 등의 URL을 그대로 유지한다.
 
-1. **prefix 없음 유지**: 기존 URL을 유지하고 UI locale은 요청/사용자 설정 정책으로 별도 결정한다.
-2. **locale prefix 도입**: 지원 locale, 기본 locale, fallback, 기존 URL redirect/redirect 제외 정책을
-   확정한 뒤 route segment를 이동한다.
-
-결정 전에는 `src/app` route segment를 변경하지 않는다. 현재 호환성을 우선한다면 M2의 기본
-가정은 **prefix 없음 유지**이며, 사용자의 승인을 받은 경우에만 적용한다.
+locale routing과 UI i18n library 선정은 별도 제품 요구가 생길 때 독립된 설계 단계로 진행한다.
+따라서 이번 M2의 route/FSD 이동은 locale segment 추가나 redirect 정책을 포함하지 않는다.
 
 ## 3. 현재 구조 분류
 
@@ -92,7 +89,7 @@ src/server    server-only composition; M3에서 본격 정착
 
 - `migration_develop`에서 분기된 `migration_m2-structure`인지 확인
 - 작업 트리 clean 확인
-- URL locale 결정 상태 확인
+- M2 URL 정책 확인: 기존 URL 유지, locale prefix 미도입
 
 ### Checkpoint 1 — route inventory 고정
 
@@ -133,8 +130,8 @@ src/server    server-only composition; M3에서 본격 정착
 - 사용자가 명시할 때만 `squash and merge`한다.
 - 문서만 변경한 checkpoint에서는 lint/typecheck/test/build를 실행하지 않는다.
 
-## 7. 현재 blocker
+## 7. 결정 기록
 
-URL locale 전략이 아직 승인되지 않았다. 따라서 이 커밋에서는 계획 문서만 추가하고 route/FSD
-코드 이동은 시작하지 않는다.
-
+- M2 URL 구조: 변경하지 않음
+- locale routing: 별도 요구 발생 시 후속 설계
+- 기존 URL redirect/redirect 제외 정책: M2 범위 외
