@@ -1,6 +1,7 @@
 .git
 .next
 node_modules
+.pnpm-store
 .env
 .env.*
 coverage
