@@ -1,0 +1,15 @@
+.next
+.vinext
+.wrangler
+.agents
+.vscode
+coverage
+dist
+drizzle
+node_modules
+out
+pnpm-lock.yaml
+docs/**
+CHANGELOG.md
+.github/ISSUE_TEMPLATE/**
+.github/PULL_REQUEST_TEMPLATE.md
