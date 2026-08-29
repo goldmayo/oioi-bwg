@@ -77,7 +77,7 @@ cp .env.example .env.local
 `.env.local`에 Supabase Auth 공개 환경변수를 채운 뒤 실행한다.
 
 ```bash
-docker compose --env-file .env.local -f compose.dev.yml up -d --build
+docker compose -f compose.dev.yml up -d --build
 ```
 
 `postgres` healthcheck가 통과하면 일회성 `migrate` 서비스가 migration을 적용하고, 성공한 뒤 `next`가 시작한다.
@@ -85,7 +85,7 @@ docker compose --env-file .env.local -f compose.dev.yml up -d --build
 ### Seed
 
 ```bash
-docker compose --env-file .env.local -f compose.dev.yml exec next pnpm db:seed
+docker compose -f compose.dev.yml exec next pnpm db:seed
 ```
 
 Album은 unique slug upsert를 사용한다. 운영에 없는 Song slug unique constraint에 의존하지 않기 위해 Song은 slug 조회 후 update/insert한다. 반복 실행해도 fixture 수가 늘어나지 않는다.
@@ -93,8 +93,8 @@ Album은 unique slug upsert를 사용한다. 운영에 없는 Song slug unique c
 ### 상태와 로그
 
 ```bash
-docker compose --env-file .env.local -f compose.dev.yml ps -a
-docker compose --env-file .env.local -f compose.dev.yml logs -f next
+docker compose -f compose.dev.yml ps -a
+docker compose -f compose.dev.yml logs -f next
 ```
 
 브라우저에서 `http://localhost:3000`을 연다. 소스는 bind mount되어 있어 코드 변경에 image rebuild가 필요하지 않다.
@@ -104,15 +104,15 @@ docker compose --env-file .env.local -f compose.dev.yml logs -f next
 컨테이너만 종료하고 DB를 보존한다.
 
 ```bash
-docker compose --env-file .env.local -f compose.dev.yml down
+docker compose -f compose.dev.yml down
 ```
 
 로컬 DB와 dependency/cache volume까지 제거하고 처음부터 재현한다.
 
 ```bash
-docker compose --env-file .env.local -f compose.dev.yml down -v
-docker compose --env-file .env.local -f compose.dev.yml up -d
-docker compose --env-file .env.local -f compose.dev.yml exec next pnpm db:seed
+docker compose -f compose.dev.yml down -v
+docker compose -f compose.dev.yml up -d
+docker compose -f compose.dev.yml exec next pnpm db:seed
 ```
 
 `down -v`는 로컬 개발 데이터와 cache를 복구 불가능하게 삭제한다. 운영 volume에는 사용할 수 없다.

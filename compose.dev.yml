@@ -9,7 +9,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - oioi-bwg-postgres-dev:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U oioibawige -d oioibawige"]
       interval: 5s
@@ -22,20 +22,20 @@ services:
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     working_dir: /app
-    command: pnpm dev
+    command: pnpm dev --hostname 0.0.0.0
+    env_file:
+      - .env.local
     ports:
       - "127.0.0.1:3000:3000"
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://oioibawige:oioibawige_dev_only@postgres:5432/oioibawige
       NEXT_PUBLIC_APP_ENV: local
-      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
-      NEXT_PUBLIC_ASSETS_URL: ${NEXT_PUBLIC_ASSETS_URL:-https://assets.oioibawige.com}
+      NEXT_PUBLIC_ASSETS_URL: https://assets.oioibawige.com
     volumes:
       - .:/app
-      - oioi-bwg-node-modules:/app/node_modules
-      - oioi-bwg-next-cache:/app/.next
+      - node_modules:/app/node_modules
+      - next_cache:/app/.next
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -50,16 +50,13 @@ services:
       DATABASE_URL: postgresql://oioibawige:oioibawige_dev_only@postgres:5432/oioibawige
     volumes:
       - .:/app
-      - oioi-bwg-node-modules:/app/node_modules
+      - node_modules:/app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
     restart: "no"
 
 volumes:
-  oioi-bwg-postgres-dev:
-    name: oioi-bwg-postgres-dev
-  oioi-bwg-node-modules:
-    name: oioi-bwg-node-modules
-  oioi-bwg-next-cache:
-    name: oioi-bwg-next-cache
+  postgres_data:
+  node_modules:
+  next_cache:
