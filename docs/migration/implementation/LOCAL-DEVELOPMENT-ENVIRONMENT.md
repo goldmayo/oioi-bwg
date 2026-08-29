@@ -116,6 +116,32 @@ docker compose -f compose.dev.yml logs -f next
 
 브라우저에서 `http://localhost:3000`을 연다. 소스는 bind mount되어 있어 코드 변경에 image rebuild가 필요하지 않다.
 
+### 의존성 변경
+
+실행 중인 `next` 컨테이너에서 `pnpm install`, `pnpm add`, `pnpm remove`를 실행하지 않는다.
+`/app`은 host bind mount이고 컨테이너는 root로 실행되므로, 이 명령은 host 작업 트리에
+root 소유 파일을 만들 수 있다. 의존성 변경은 host에서 수행하고 lockfile을 검토한다.
+
+```bash
+pnpm add <package>
+pnpm install --frozen-lockfile
+```
+
+컨테이너의 dependency volume을 갱신해야 할 경우에는 DB volume을 삭제하지 말고, `next`
+컨테이너와 `node_modules` volume만 재생성한다. volume의 정확한 이름은 먼저 확인한다.
+
+```bash
+docker compose -f compose.dev.yml stop next
+docker compose -f compose.dev.yml rm -sf next
+docker volume ls --format '{{.Name}}' | rg 'node_modules'
+docker volume rm <현재-프로젝트의-node_modules-volume>
+docker compose -f compose.dev.yml up -d --build next
+```
+
+`Dockerfile.dev`는 `NPM_CONFIG_STORE_DIR=/pnpm/store`로 pnpm store를 컨테이너 내부에
+명시적으로 고정한다. 따라서 위 절차 이외의 실수로 install을 실행해도 project root에
+`.pnpm-store`가 생기지 않는다.
+
 ### 종료와 reset
 
 컨테이너만 종료하고 DB를 보존한다.

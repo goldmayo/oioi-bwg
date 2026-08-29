@@ -34,6 +34,7 @@ test("rejects invalid route-private and shared segments", () => {
   assert.deepEqual(lint("src/app/(user)/_components/card.js"), ["invalidRouteSegment"]);
   assert.deepEqual(lint("src/app/(user)/_ui/use-card.js"), ["invalidRouteHookSegment"]);
   assert.deepEqual(lint("src/shared/utils/date.js"), ["invalidSharedSegment"]);
+  assert.deepEqual(lint("src/shared/contracts/song.js"), []);
 });
 
 test("enforces promoted slice public APIs", () => {

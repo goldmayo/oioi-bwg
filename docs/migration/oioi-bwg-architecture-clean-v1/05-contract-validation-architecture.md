@@ -579,17 +579,27 @@ ClientContractError
 
 ky가 non-2xx response를 받으면 error payload를 검증한 뒤 `ApiError`로 정규화한다.
 
-```ts
-const raw = await response
-  .json<unknown>()
-  .catch(() => null);
+M4의 shared Ky client는 `throwHttpErrors: false`를 설정하지 않는다. non-2xx를 정상
+response 흐름으로 섞지 않고, Ky의 HTTP error boundary에서만 아래 정규화를 수행한다.
+Ky 2의 `HTTPError`는 error body를 `error.data`에 한 번 소비해 둔다. 따라서
+`error.response.json()`을 다시 호출하지 않고 `error.data`를 `unknown`으로 검증한다. JSON이
+아니거나 schema가 맞지 않으면 안정적인 fallback `ApiError`를 만든다.
 
-const parsed = apiErrorResponseSchema.safeParse(raw);
+```ts
+if (isHTTPError(error)) {
+  const raw: unknown = error.data;
+
+  const parsed = apiErrorResponseSchema.safeParse(raw);
+}
 ```
 
 정상 contract면 해당 `code/message/details`로 `ApiError`를 생성한다.
 
 잘못된 error body라면 안정적인 fallback error로 정규화한다.
+
+성공 response도 신뢰하지 않는다. Client API는 `json<unknown>()` 결과를 output schema parser로
+넘기며, 2xx body가 contract를 위반하면 `ClientContractError`와 observability 경로로 처리한다.
+이 규칙을 Ky hook이나 범용 response wrapper에 숨기지 않는다.
 
 ---
 

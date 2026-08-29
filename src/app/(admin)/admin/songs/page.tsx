@@ -1,15 +1,11 @@
 import { Suspense } from "react";
 
-import { SongManagerClient } from "@/features/manage-content";
+import { SongManagerClient } from "@/features/manage-song";
 
 import { listAdminAlbums } from "@/server/services/album-service";
 import { listAdminSongs } from "@/server/services/song-service";
 
-import {
-  createSongAction,
-  deleteSongAction,
-  updateSongAction,
-} from "../_lib/manage-content-actions";
+import { createSongAction, deleteSongAction, updateSongAction } from "../_lib/song-actions";
 
 /**
  * 관리자 곡 관리 페이지

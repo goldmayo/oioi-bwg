@@ -7,7 +7,8 @@ import { Button } from "@/shared/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/shared/ui/resizable";
 import { YoutubePlayer } from "@/shared/ui/YoutubePlayer";
 
-import { AdminEditorSong, SaveSongDataAction } from "../model/useAdminEditor";
+import type { SongEditor } from "../model/types";
+import { SaveSongDataAction } from "../model/useAdminEditor";
 
 import { AdminEditorProvider, useAdminEditorContext } from "./AdminEditorContext";
 import { EditorTopBar } from "./EditorTopBar";
@@ -16,7 +17,7 @@ import { LyricsTable } from "./LyricsTable";
 import { PreviewRail } from "./PreviewRail";
 
 interface AdminEditorClientProps {
-  song: AdminEditorSong;
+  song: SongEditor;
   saveSongData: SaveSongDataAction;
 }
 

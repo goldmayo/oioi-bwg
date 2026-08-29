@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import type { AlbumSong } from "@/entities/album";
-import { TitleBadge } from "@/entities/album";
+import { SongTitleBadge } from "@/entities/song";
 
 import { analytics } from "@/shared/lib/analytics";
 import { cn } from "@/shared/lib/utils";
@@ -40,7 +40,7 @@ export function AlbumSongListItem({ song, idx, albumName, className }: AlbumSong
         <div className="flex flex-col leading-tight">
           <span className="truncate text-sm font-bold text-white/90">{song.title}</span>
         </div>
-        {song.isTitle && <TitleBadge theme="rock" size="sm" />}
+        {song.isTitle && <SongTitleBadge theme="rock" size="sm" />}
         {/* {song.hasOfficial && <OfficialBadge type="w" size="sm" />} */}
       </div>
 

@@ -83,6 +83,8 @@ app → pages/widgets/features/entities → shared
 - `src/server`는 FSD 계층 밖의 server boundary다. client feature/entity/shared가 직접 import하지 않는다.
 - `shared/api`는 domain-independent HTTP transport만 둔다. domain browser API와
   `queryOptions`/`mutationOptions`는 `entities/*/api`가 소유한다.
+- `shared/contracts`는 client/server 양쪽이 소비하는 serializable HTTP boundary contract의
+  명시적 예외다. 도메인 UI·행동·persistence dependency를 두지 않으며 Zod schema와 DTO type만 둔다.
 
 구현 순서는 bottom-up 공용 기반 구축 후 실제 consumer에서 top-down 승격을 검토한다. 중복이
 확인되기 전에는 범용 wrapper나 추상화를 만들지 않는다.
@@ -190,6 +192,8 @@ RSC는 필요한 경우 service를 직접 호출한다. 사용자 URL/locale rou
 - Route Handler 한 곳에서만 `AppError`/`ZodError`/unknown error를 HTTP response로 변환한다.
 - Client는 HTTP JSON을 `unknown`으로 받은 뒤 response parser를 통과시킨다.
 - `ky`의 non-2xx는 `ApiError`로 정규화한다.
+- Ky transport retry는 기본으로 두지 않는다. Query retry는 TanStack Query가 소유하며 queryFn의
+  `signal`은 Ky request까지 전달한다.
 - API-wide `Result<T, E>` 또는 `{ success, error }` envelope를 기본 convention으로 만들지 않는다.
 - error `details`에 DB row, stack, SQL, secret, 내부 구현 정보를 노출하지 않는다.
 

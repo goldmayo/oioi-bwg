@@ -2,12 +2,8 @@
 
 import { createContext, useContext } from "react";
 
-import {
-  AdminEditorSong,
-  AdminEditorStore,
-  SaveSongDataAction,
-  useAdminEditor,
-} from "../model/useAdminEditor";
+import type { SongEditor } from "../model/types";
+import { AdminEditorStore, SaveSongDataAction, useAdminEditor } from "../model/useAdminEditor";
 
 /**
  * AdminEditor 전역 Context.
@@ -25,7 +21,7 @@ export function AdminEditorProvider({
   saveSongData,
   children,
 }: {
-  song: AdminEditorSong;
+  song: SongEditor;
   saveSongData: SaveSongDataAction;
   children: React.ReactNode;
 }) {

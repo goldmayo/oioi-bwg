@@ -5,7 +5,8 @@ import { type InsertSongRow, song } from "../db/schema";
 
 export function findSongBySlug(executor: DbExecutor, slug: string) {
   return executor.query.song.findFirst({
-    where: (table, { eq: equals }) => equals(table.slug, slug),
+    where: (table, { and, eq: equals }) =>
+      and(equals(table.slug, slug), equals(table.isVisible, true)),
     with: {
       album: {
         with: {

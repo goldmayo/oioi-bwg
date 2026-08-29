@@ -1,14 +1,10 @@
 import { Suspense } from "react";
 
-import { AlbumManagerClient } from "@/features/manage-content";
+import { AlbumManagerClient } from "@/features/manage-album";
 
 import { listAdminAlbums } from "@/server/services/album-service";
 
-import {
-  createAlbumAction,
-  deleteAlbumAction,
-  updateAlbumAction,
-} from "../_lib/manage-content-actions";
+import { createAlbumAction, deleteAlbumAction, updateAlbumAction } from "../_lib/album-actions";
 
 /**
  * 관리자 앨범 관리 페이지

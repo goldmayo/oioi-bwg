@@ -1,13 +1,14 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
-import { AlbumDetailModal, AlbumDetailSkeleton } from "@/features/album-info";
-
 import type { Album } from "@/entities/album";
 
 import { getAlbumDetailBySlug } from "@/server/services/album-service";
 
 import { constructMetadata } from "@/shared/lib/metadata";
+
+import { AlbumDetailModal } from "./_ui/album-detail-modal";
+import { AlbumDetailSkeleton } from "./_ui/album-detail-skeleton";
 
 interface AlbumPageProps {
   params: Promise<{ slug: string }>;

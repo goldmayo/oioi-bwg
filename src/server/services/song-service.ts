@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getDatabase } from "../db";
+import { AppError } from "../errors/app-error";
 import {
   findAdminSongBySlug,
   findSongBySlug,
@@ -77,6 +78,17 @@ export async function getSongDetailBySlug(slug: string) {
       }),
     },
   };
+}
+
+/** HTTP 전달 계층이 사용할 공개 곡 조회 use case다. */
+export async function requireSongDetailBySlug(slug: string) {
+  const song = await getSongDetailBySlug(slug);
+
+  if (!song) {
+    throw new AppError("SONG_NOT_FOUND");
+  }
+
+  return song;
 }
 
 export async function getAdminSongEditorBySlug(slug: string) {
