@@ -2,7 +2,12 @@
 
 import { createContext, useContext } from "react";
 
-import { AdminEditorSong, AdminEditorStore, useAdminEditor } from "../model/useAdminEditor";
+import {
+  AdminEditorSong,
+  AdminEditorStore,
+  SaveSongDataAction,
+  useAdminEditor,
+} from "../model/useAdminEditor";
 
 /**
  * AdminEditor 전역 Context.
@@ -17,12 +22,14 @@ const AdminEditorContext = createContext<AdminEditorStore | null>(null);
  */
 export function AdminEditorProvider({
   song,
+  saveSongData,
   children,
 }: {
   song: AdminEditorSong;
+  saveSongData: SaveSongDataAction;
   children: React.ReactNode;
 }) {
-  const store = useAdminEditor(song);
+  const store = useAdminEditor(song, saveSongData);
 
   return <AdminEditorContext.Provider value={store}>{children}</AdminEditorContext.Provider>;
 }

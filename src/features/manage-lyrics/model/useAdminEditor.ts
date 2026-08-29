@@ -8,8 +8,6 @@ import { parseLrc } from "@/entities/cheer-guide";
 import { useAdWatcher } from "@/shared/model/useAdWatcher";
 import { YouTubePlayerInstance } from "@/shared/model/youtube";
 
-import { saveSongData } from "../api/actions";
-
 import { useLyricsEditor } from "./useLyricsEditor";
 
 /** 드래그 선택 말풍선 툴바의 상태 */
@@ -31,6 +29,11 @@ export interface AdminEditorSong {
   lyrics: unknown;
 }
 
+export type SaveSongDataAction = (
+  songId: number,
+  data: { lyrics: unknown; youtubeId: string },
+) => Promise<{ success: boolean; error?: string }>;
+
 /**
  * AdminEditor의 모든 상태와 핸들러를 담는 단일 로직 게이트웨이.
  *
@@ -38,7 +41,7 @@ export interface AdminEditorSong {
  * - 가사 편집 로직은 useLyricsEditor에 위임
  * - 어드민 전용 상태(YouTube ID, 저장, LRC Import, 툴바)를 추가로 관리
  */
-export function useAdminEditor(song: AdminEditorSong) {
+export function useAdminEditor(song: AdminEditorSong, saveSongData: SaveSongDataAction) {
   // ─── 가사 편집 (useLyricsEditor에 위임) ───────────────────────────────────
   const lyricsEditor = useLyricsEditor((song.lyrics as LyricLine[]) || []);
   const {
@@ -113,7 +116,7 @@ export function useAdminEditor(song: AdminEditorSong) {
     } else {
       alert(`저장 실패: ${result.error}`);
     }
-  }, [song.id, lyrics, youtubeId]);
+  }, [song.id, lyrics, youtubeId, saveSongData]);
 
   /**
    * LRC 형식 텍스트를 파싱하여 가사를 교체합니다.

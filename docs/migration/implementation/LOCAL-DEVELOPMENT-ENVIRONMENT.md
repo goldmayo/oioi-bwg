@@ -23,13 +23,13 @@ Next.js development container     Caddy -> Next.js standalone container
 - `drizzle.config.ts`가 제거된 `src/libs/db/drizzle/schema.ts`를 가리켰다.
 - Drizzle 명령은 Supabase 시절의 `DATABASE_DIRECT_URL`에 의존했다.
 - 기존 migration은 주석 처리된 `Song` 단일 테이블뿐이라 빈 DB를 재현할 수 없었다.
-- `db:seed`의 기준 구현이 없고 `db:push`가 README의 공식 절차였다.
+- 신뢰할 수 있는 로컬 데이터 복원 기준이 없고 `db:push`가 README의 공식 절차였다.
 - 기존 Drizzle schema가 실제 운영 DB보다 강한 nullability와 작은 정수 타입을 선언했다.
 - 저장소의 `Song_slug_key`는 운영 DB에서 확인되지 않았다.
 
 ### 안전장치
 
-`db:migrate`, `db:seed`, `db:pull`, `db:studio`는 DB hostname이 다음 중 하나가 아니면 연결 전에 실패한다.
+`db:migrate`, `db:pull`, `db:studio`는 DB hostname이 다음 중 하나가 아니면 연결 전에 실패한다.
 
 ```text
 localhost
@@ -84,14 +84,6 @@ docker compose -f compose.dev.yml exec next pnpm db:migrate
 
 Compose는 PostgreSQL과 Next만 실행한다. migration은 실행 중인 Next 컨테이너에서 개발자가 명시적으로 실행한다. 빈 DB에서는 앱 페이지를 사용하기 전에 migration 성공을 확인한다.
 
-### Seed
-
-```bash
-docker compose -f compose.dev.yml exec next pnpm db:seed
-```
-
-Album은 unique slug upsert를 사용한다. 운영에 없는 Song slug unique constraint에 의존하지 않기 위해 Song은 slug 조회 후 update/insert한다. 반복 실행해도 fixture 수가 늘어나지 않는다.
-
 ### 운영 데이터 dump의 로컬 복원
 
 `.local/`에 전달받은 PostgreSQL custom dump가 있는 경우에만 전체 개발 데이터를 복원할 수 있다. `.local/`은 Git에서 제외되며 운영 DB에 연결하지 않는다.
@@ -109,7 +101,9 @@ pnpm db:restore-local
 pnpm db:restore-local -- .local/another.dump
 ```
 
-복원 명령은 dump의 schema/extension/constraint를 실행하지 않고 Album/Song 행과 sequence만 로컬 migration 결과에 넣는다. 따라서 로컬 canonical schema는 항상 Drizzle migration이 만들고, dump는 데이터 fixture로만 사용한다. dump에 포함된 운영 sequence 값은 로컬 개발 DB에만 적용된다.
+복원 명령은 dump의 schema/extension/constraint를 실행하지 않고 Album/Song 행과 sequence만 로컬 migration 결과에 넣는다. 따라서 로컬 canonical schema는 항상 Drizzle migration이 만들고, dump는 승인된 로컬 데이터 snapshot으로만 사용한다. dump에 포함된 운영 sequence 값은 로컬 개발 DB에만 적용된다.
+
+저장소는 임의로 선별하거나 작성한 seed 데이터를 제공하지 않는다. 전체 데이터가 필요한 개발자는 전달받은 `.local/` dump를 명시적으로 복원하고, dump가 없으면 schema만 생성된 빈 로컬 DB를 사용한다.
 
 복원 대상 테이블이 비어 있지 않으면 중복 삽입을 막기 위해 명령이 실패한다. 다시 복원하려면 로컬 volume을 초기화한 후 migration을 재실행한다.
 
@@ -137,8 +131,10 @@ docker compose -f compose.dev.yml down -v
 docker compose -f compose.dev.yml up -d postgres
 docker compose -f compose.dev.yml up -d next
 docker compose -f compose.dev.yml exec next pnpm db:migrate
-docker compose -f compose.dev.yml exec next pnpm db:seed
+pnpm db:restore-local
 ```
+
+마지막 복원 명령은 승인된 `.local/` dump가 있을 때만 실행한다.
 
 `down -v`는 로컬 개발 데이터와 cache를 복구 불가능하게 삭제한다. 운영 volume에는 사용할 수 없다.
 
@@ -155,12 +151,11 @@ docker compose -f compose.dev.yml exec next pnpm db:seed
 - FK: `Song.albumId -> Album.id ON DELETE CASCADE`
 - cascade write path: transaction 안에서 parent 삭제 후 child 0건 확인, rollback
 - index: `Song_albumId_idx`
-- seed 2회 실행: Album 2건, Song 2건 유지
 - local custom dump 복원: Album 7건, Song 26건, sequence 7/104 확인
-- Next query: `/`와 `/albums/algorithm-blossom` HTTP 200 및 fixture 렌더링
+- Next query: `/`와 `/albums/algorithm-blossom` HTTP 200 및 복원 데이터 렌더링
 - Playwright Chromium: 앨범 이미지와 화면 렌더링 확인
 - source bind mount: 변경 후 image rebuild 없이 요청 성공
-- clean rebuild: `down -v` 후 migration/seed/query 동일 재현
+- clean rebuild: `down -v` 후 migration/dump restore/query 동일 재현
 - remote-host guard: 기존 Supabase pooler hostname을 연결 전에 거부
 - typecheck, ESLint, FSD harness, unit tests: 통과
 

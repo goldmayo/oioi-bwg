@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Edit, Plus, Trash2 } from "lucide-react";
 
-import { Album } from "@/shared/api/db/drizzle/schema";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
@@ -17,27 +16,36 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-import { deleteAlbumAction } from "../api/actions";
+import type { CreateAlbumAction, DeleteAlbumAction, UpdateAlbumAction } from "../model/actions";
+import type { ManagedAlbum } from "../model/types";
 
 import { AlbumFormDialog } from "./AlbumFormDialog";
 
 const PAGE_SIZE = 10;
 
 interface AlbumManagerClientProps {
-  initialAlbums: Album[];
+  initialAlbums: ManagedAlbum[];
+  createAlbumAction: CreateAlbumAction;
+  updateAlbumAction: UpdateAlbumAction;
+  deleteAlbumAction: DeleteAlbumAction;
 }
 
-export function AlbumManagerClient({ initialAlbums }: AlbumManagerClientProps) {
+export function AlbumManagerClient({
+  initialAlbums,
+  createAlbumAction,
+  updateAlbumAction,
+  deleteAlbumAction,
+}: AlbumManagerClientProps) {
   const [albums, setAlbums] = useState(initialAlbums);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
 
   // 폼 다이얼로그
   const [formOpen, setFormOpen] = useState(false);
-  const [editingAlbum, setEditingAlbum] = useState<Album | undefined>();
+  const [editingAlbum, setEditingAlbum] = useState<ManagedAlbum | undefined>();
 
   // 삭제 확인 다이얼로그
-  const [deleteTarget, setDeleteTarget] = useState<Album | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ManagedAlbum | null>(null);
 
   // 검색 필터링
   const filtered = useMemo(() => {
@@ -63,7 +71,7 @@ export function AlbumManagerClient({ initialAlbums }: AlbumManagerClientProps) {
     setFormOpen(true);
   }, []);
 
-  const handleEdit = useCallback((album: Album) => {
+  const handleEdit = useCallback((album: ManagedAlbum) => {
     setEditingAlbum(album);
     setFormOpen(true);
   }, []);
@@ -77,7 +85,7 @@ export function AlbumManagerClient({ initialAlbums }: AlbumManagerClientProps) {
     } else {
       alert(result.error);
     }
-  }, [deleteTarget]);
+  }, [deleteTarget, deleteAlbumAction]);
 
   const handleSuccess = useCallback(() => {
     // Server Action 후 router refresh로 최신 데이터 반영
@@ -212,6 +220,8 @@ export function AlbumManagerClient({ initialAlbums }: AlbumManagerClientProps) {
         open={formOpen}
         onOpenChange={setFormOpen}
         album={editingAlbum}
+        createAlbumAction={createAlbumAction}
+        updateAlbumAction={updateAlbumAction}
         onSuccess={handleSuccess}
       />
 

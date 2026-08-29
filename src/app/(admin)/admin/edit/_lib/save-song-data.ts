@@ -2,20 +2,12 @@
 
 import { LyricsDataSchema } from "@/entities/cheer-guide";
 
-import { updateSong } from "@/shared/api/db/drizzle/commands";
+import { saveSongLyrics } from "@/server/services/song-service";
 
-/**
- * 가사 데이터 저장 액션
- */
 export async function saveSongData(songId: number, data: { lyrics: unknown; youtubeId: string }) {
   try {
-    const validatedLyrics = LyricsDataSchema.parse(data.lyrics);
-
-    await updateSong(songId, {
-      lyrics: validatedLyrics,
-      youtubeId: data.youtubeId,
-    });
-
+    const lyrics = LyricsDataSchema.parse(data.lyrics);
+    await saveSongLyrics(songId, { lyrics, youtubeId: data.youtubeId });
     return { success: true };
   } catch (error) {
     console.error("Failed to save song data:", error);

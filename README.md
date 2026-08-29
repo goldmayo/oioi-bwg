@@ -109,12 +109,11 @@ cp .env.example .env.local
 docker compose -f compose.dev.yml up -d postgres
 docker compose -f compose.dev.yml up -d next
 docker compose -f compose.dev.yml exec next pnpm db:migrate
-docker compose -f compose.dev.yml exec next pnpm db:seed
 ```
 
 브라우저에서 `http://localhost:3000`을 엽니다. 자세한 migration, reset, 운영 DB 안전 원칙은 [로컬 개발환경 문서](docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md)를 따릅니다.
 
-팀에서 전달받은 `.local/` PostgreSQL dump가 있으면 전체 개발 데이터를 복원할 수 있습니다.
+팀에서 전달받은 `.local/` PostgreSQL dump가 있으면 전체 개발 데이터를 명시적으로 복원합니다. 저장소는 임의의 seed 데이터를 제공하지 않습니다.
 
 ```bash
 pnpm db:restore-local

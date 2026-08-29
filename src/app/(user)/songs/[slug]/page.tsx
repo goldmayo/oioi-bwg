@@ -5,7 +5,8 @@ import { LyricsViewerClient } from "@/features/chant-sync";
 
 import type { LyricLine } from "@/entities/cheer-guide";
 
-import { getSongBySlug } from "@/shared/api/db/drizzle/queries";
+import { getSongDetailBySlug } from "@/server/services/song-service";
+
 import { constructMetadata } from "@/shared/lib/metadata";
 
 interface SongPageProps {
@@ -17,7 +18,7 @@ interface SongPageProps {
  */
 export async function generateMetadata({ params }: SongPageProps) {
   const { slug } = await params;
-  const song = await getSongBySlug(slug);
+  const song = await getSongDetailBySlug(slug);
 
   if (!song || !song.album) return {};
 
@@ -38,7 +39,7 @@ export default async function SongDetailPage({ params }: SongPageProps) {
     return notFound();
   }
 
-  const songPromise = getSongBySlug(slug);
+  const songPromise = getSongDetailBySlug(slug);
 
   return (
     <main className="bg-background flex flex-col">
@@ -52,7 +53,11 @@ export default async function SongDetailPage({ params }: SongPageProps) {
 /**
  * 데이터를 실제로 해소하여 클라이언트 뷰어에게 넘겨주는 중간 컴포넌트
  */
-async function LyricsViewerLoader({ promise }: { promise: ReturnType<typeof getSongBySlug> }) {
+async function LyricsViewerLoader({
+  promise,
+}: {
+  promise: ReturnType<typeof getSongDetailBySlug>;
+}) {
   const song = await promise;
 
   if (!song || !song.album) {

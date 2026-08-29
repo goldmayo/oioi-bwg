@@ -5,7 +5,8 @@ import { AlbumDetailModal, AlbumDetailSkeleton } from "@/features/album-info";
 
 import type { Album } from "@/entities/album";
 
-import { getAlbumBySlug } from "@/shared/api/db/drizzle/queries";
+import { getAlbumDetailBySlug } from "@/server/services/album-service";
+
 import { constructMetadata } from "@/shared/lib/metadata";
 
 interface AlbumPageProps {
@@ -17,7 +18,7 @@ interface AlbumPageProps {
  */
 export async function generateMetadata({ params }: AlbumPageProps) {
   const { slug } = await params;
-  const album = await getAlbumBySlug(slug);
+  const album = await getAlbumDetailBySlug(slug);
 
   if (!album) return {};
 
@@ -39,7 +40,7 @@ export default async function AlbumDetailPage({ params }: AlbumPageProps) {
   }
 
   // 앨범 데이터 조회를 위한 프로미스 생성
-  const albumPromise = getAlbumBySlug(slug);
+  const albumPromise = getAlbumDetailBySlug(slug);
 
   return (
     <main className="bg-background flex flex-col px-4 pt-10 md:px-10">
@@ -53,7 +54,11 @@ export default async function AlbumDetailPage({ params }: AlbumPageProps) {
 /**
  * 데이터를 실제로 해소하여 클라이언트 모달 컴포넌트로 넘겨주는 중간 컴포넌트
  */
-async function AlbumDetailLoader({ promise }: { promise: ReturnType<typeof getAlbumBySlug> }) {
+async function AlbumDetailLoader({
+  promise,
+}: {
+  promise: ReturnType<typeof getAlbumDetailBySlug>;
+}) {
   const dbAlbum = await promise;
 
   if (!dbAlbum) {

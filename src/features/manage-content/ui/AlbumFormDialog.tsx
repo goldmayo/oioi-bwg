@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImagePlus, Loader2 } from "lucide-react";
 
-import { Album } from "@/shared/api/db/drizzle/schema";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -19,19 +18,30 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/shared/ui/input";
 import { Switch } from "@/shared/ui/switch";
 
-import { createAlbumAction, updateAlbumAction, uploadAlbumImageAction } from "../api/actions";
+import { uploadAlbumImageAction } from "../api/actions";
+import type { CreateAlbumAction, UpdateAlbumAction } from "../model/actions";
 import { type AlbumFormInput, AlbumFormSchema, type AlbumFormValues } from "../model/schemas";
+import type { ManagedAlbum } from "../model/types";
 
 interface AlbumFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** 편집 시 기존 앨범 데이터 */
-  album?: Album;
+  album?: ManagedAlbum;
+  createAlbumAction: CreateAlbumAction;
+  updateAlbumAction: UpdateAlbumAction;
   /** 저장 완료 콜백 */
   onSuccess?: () => void;
 }
 
-export function AlbumFormDialog({ open, onOpenChange, album, onSuccess }: AlbumFormDialogProps) {
+export function AlbumFormDialog({
+  open,
+  onOpenChange,
+  album,
+  createAlbumAction,
+  updateAlbumAction,
+  onSuccess,
+}: AlbumFormDialogProps) {
   const isEdit = !!album;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -87,7 +97,7 @@ export function AlbumFormDialog({ open, onOpenChange, album, onSuccess }: AlbumF
         alert(result.error);
       }
     },
-    [isEdit, album, onOpenChange, form, onSuccess],
+    [isEdit, album, createAlbumAction, updateAlbumAction, onOpenChange, form, onSuccess],
   );
 
   return (

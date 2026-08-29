@@ -2,7 +2,13 @@ import { Suspense } from "react";
 
 import { AlbumManagerClient } from "@/features/manage-content";
 
-import { getAllAlbums } from "@/shared/api/db/drizzle/queries";
+import { listAdminAlbums } from "@/server/services/album-service";
+
+import {
+  createAlbumAction,
+  deleteAlbumAction,
+  updateAlbumAction,
+} from "../_lib/manage-content-actions";
 
 /**
  * 관리자 앨범 관리 페이지
@@ -15,7 +21,7 @@ export const metadata = {
 };
 
 export default async function AdminAlbumsPage() {
-  const albums = await getAllAlbums();
+  const albums = await listAdminAlbums();
 
   return (
     <div className="bg-background min-h-screen p-4 sm:p-6 lg:p-8">
@@ -33,7 +39,12 @@ export default async function AdminAlbumsPage() {
             </div>
           }
         >
-          <AlbumManagerClient initialAlbums={albums} />
+          <AlbumManagerClient
+            initialAlbums={albums}
+            createAlbumAction={createAlbumAction}
+            updateAlbumAction={updateAlbumAction}
+            deleteAlbumAction={deleteAlbumAction}
+          />
         </Suspense>
       </div>
     </div>

@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from "react";
 import { Edit, FileMusic, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 
-import { Album } from "@/shared/api/db/drizzle/schema";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
@@ -19,7 +18,8 @@ import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-import { deleteSongAction } from "../api/actions";
+import type { CreateSongAction, DeleteSongAction, UpdateSongAction } from "../model/actions";
+import type { ManagedAlbum } from "../model/types";
 
 import { SongFormDialog } from "./SongFormDialog";
 
@@ -42,10 +42,19 @@ interface SongWithAlbum {
 
 interface SongManagerClientProps {
   initialSongs: SongWithAlbum[];
-  albums: Album[];
+  albums: ManagedAlbum[];
+  createSongAction: CreateSongAction;
+  updateSongAction: UpdateSongAction;
+  deleteSongAction: DeleteSongAction;
 }
 
-export function SongManagerClient({ initialSongs, albums }: SongManagerClientProps) {
+export function SongManagerClient({
+  initialSongs,
+  albums,
+  createSongAction,
+  updateSongAction,
+  deleteSongAction,
+}: SongManagerClientProps) {
   const [songs, setSongs] = useState(initialSongs);
   const [search, setSearch] = useState("");
   const [albumFilter, setAlbumFilter] = useState<string>("all");
@@ -109,7 +118,7 @@ export function SongManagerClient({ initialSongs, albums }: SongManagerClientPro
     } else {
       alert(result.error);
     }
-  }, [deleteTarget]);
+  }, [deleteTarget, deleteSongAction]);
 
   const handleSuccess = useCallback(() => {
     window.location.reload();
@@ -288,6 +297,8 @@ export function SongManagerClient({ initialSongs, albums }: SongManagerClientPro
         onOpenChange={setFormOpen}
         albums={albums}
         song={editingSong}
+        createSongAction={createSongAction}
+        updateSongAction={updateSongAction}
         onSuccess={handleSuccess}
       />
 
