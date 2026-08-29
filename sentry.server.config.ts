@@ -7,7 +7,7 @@ Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || "production",
 
-  // 성능 트래킹 설정: Cloudflare 호환성을 위해 트레이싱 비활성 (에러 수집은 정상 동작)
+  // M1에서는 error capture만 유지하고 tracing은 비활성화한다.
   tracesSampleRate: 0.0,
   skipOpenTelemetrySetup: true,
 

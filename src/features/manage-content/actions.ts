@@ -1,8 +1,6 @@
 "use server";
 
 import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
-import { updateTag } from "next/cache";
 
 import { getDb } from "@/shared/api/db/drizzle/index";
 import { album, InsertAlbum, InsertSong, song as songTable } from "@/shared/api/db/drizzle/schema";
@@ -33,7 +31,6 @@ export async function createAlbumAction(formData: unknown) {
     };
 
     await db.insert(album).values(insertData);
-    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     console.error("Failed to create album:", error);
@@ -61,7 +58,6 @@ export async function updateAlbumAction(id: number, formData: unknown) {
       })
       .where(eq(album.id, id));
 
-    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     console.error("Failed to update album:", error);
@@ -78,8 +74,6 @@ export async function deleteAlbumAction(id: number) {
     const db = getDb();
     await db.delete(album).where(eq(album.id, id));
 
-    revalidatePath("/", "layout");
-    updateTag("songs");
     return { success: true };
   } catch (error) {
     console.error("Failed to delete album:", error);
@@ -124,8 +118,6 @@ export async function createSongAction(formData: unknown) {
     };
 
     await db.insert(songTable).values(insertData);
-    updateTag("songs");
-    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     console.error("Failed to create song:", error);
@@ -164,9 +156,6 @@ export async function updateSongAction(id: number, formData: unknown) {
 
     await db.update(songTable).set(updateData).where(eq(songTable.id, id));
 
-    updateTag("songs");
-    updateTag(`song-id-${id}`);
-    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     console.error("Failed to update song:", error);
@@ -182,9 +171,6 @@ export async function deleteSongAction(id: number) {
     const db = getDb();
     await db.delete(songTable).where(eq(songTable.id, id));
 
-    updateTag("songs");
-    updateTag(`song-id-${id}`);
-    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     console.error("Failed to delete song:", error);
