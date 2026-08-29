@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Paintbrush, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
-import { formatTime, parseTime } from "@/shared/lib/lrc-parser";
+import type { LyricLine } from "@/entities/cheer-guide";
+import { formatTime, parseTime } from "@/entities/cheer-guide";
+
 import { cn } from "@/shared/lib/utils";
-import { LyricLine } from "@/shared/model/lyrics";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";

@@ -1,7 +1,8 @@
 "use server";
 
+import { LyricsDataSchema } from "@/entities/cheer-guide";
+
 import { updateSong } from "@/shared/api/db/drizzle/commands";
-import { LyricsDataSchema } from "@/shared/model/lyrics";
 
 /**
  * 가사 데이터 저장 액션

@@ -2,13 +2,15 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import { parseLrc } from "@/shared/lib/lrc-parser";
-import { LyricLine, LyricSegment } from "@/shared/model/lyrics";
+import type { LyricLine, LyricSegment } from "@/entities/cheer-guide";
+import { parseLrc } from "@/entities/cheer-guide";
+
 import { useAdWatcher } from "@/shared/model/useAdWatcher";
-import { useLyricsEditor } from "@/shared/model/useLyricsEditor";
 import { YouTubePlayerInstance } from "@/shared/model/youtube";
 
 import { saveSongData } from "../api/actions";
+
+import { useLyricsEditor } from "./useLyricsEditor";
 
 /** 드래그 선택 말풍선 툴바의 상태 */
 export interface ToolbarState {

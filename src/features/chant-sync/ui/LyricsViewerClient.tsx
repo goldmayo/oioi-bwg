@@ -9,13 +9,14 @@ import { Link2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
+import type { Album } from "@/entities/album";
+import type { LyricLine } from "@/entities/cheer-guide";
+
 import { analytics } from "@/shared/lib/analytics";
 import { cn } from "@/shared/lib/utils";
-import { Album } from "@/shared/model/album";
-import { LyricLine } from "@/shared/model/lyrics";
 // import { OfficialBadge } from "@/components/common/OfficialBadge";
 import { useAdWatcher } from "@/shared/model/useAdWatcher";
-import { YouTubePlayerInstance } from "@/shared/model/youtube";
+import type { YouTubePlayerInstance } from "@/shared/model/youtube";
 import {
   Accordion,
   AccordionContent,

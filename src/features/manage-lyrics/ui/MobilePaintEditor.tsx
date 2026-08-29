@@ -2,8 +2,9 @@
 
 import { useRef, useState } from "react";
 
+import type { LyricLine, LyricSegment } from "@/entities/cheer-guide";
+
 import { cn } from "@/shared/lib/utils";
-import { LyricLine, LyricSegment } from "@/shared/model/lyrics";
 import { Button } from "@/shared/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 

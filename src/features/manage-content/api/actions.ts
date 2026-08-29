@@ -2,10 +2,10 @@
 
 import { eq } from "drizzle-orm";
 
+import { LyricsDataSchema, parseLrc } from "@/entities/cheer-guide";
+
 import { getDb } from "@/shared/api/db/drizzle/index";
 import { album, InsertAlbum, InsertSong, song as songTable } from "@/shared/api/db/drizzle/schema";
-import { parseLrc } from "@/shared/lib/lrc-parser";
-import { LyricsDataSchema } from "@/shared/model/lyrics";
 
 import { AlbumFormSchema, SongEditSchema, SongFormSchema } from "../model/schemas";
 

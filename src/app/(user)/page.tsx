@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 
+import { Album, AlbumListSkeleton } from "@/entities/album";
+
 import { getAllAlbumsWithSongs } from "@/shared/api/db/drizzle/queries";
-import { Album } from "@/shared/model/album";
-import { AlbumListSkeleton } from "@/shared/ui/album/AlbumListSkeleton";
 
 import { AlbumListContainer } from "./_ui/album-list-container";
 

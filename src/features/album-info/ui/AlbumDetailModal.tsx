@@ -8,11 +8,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import type { Album } from "@/entities/album";
+import { TitleBadge } from "@/entities/album";
+
 import { analytics } from "@/shared/lib/analytics";
-import { Album } from "@/shared/model/album";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { TitleBadge } from "@/shared/ui/TitleBadge";
 
 interface AlbumDetailModalProps {
   album: Album;

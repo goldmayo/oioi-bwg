@@ -5,8 +5,10 @@ import Link from "next/link";
 
 import { analytics } from "@/shared/lib/analytics";
 import { cn } from "@/shared/lib/utils";
-import { AlbumSong } from "@/shared/model/album";
-import { TitleBadge } from "@/shared/ui/TitleBadge";
+
+import type { AlbumSong } from "../model/album";
+
+import { TitleBadge } from "./TitleBadge";
 
 interface AlbumSongListItemProps {
   song: AlbumSong;

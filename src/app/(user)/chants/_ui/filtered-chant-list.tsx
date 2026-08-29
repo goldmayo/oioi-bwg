@@ -9,7 +9,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { z } from "zod";
 
-import { AlbumSong } from "@/shared/model/album";
+import type { AlbumSong } from "@/entities/album";
+
 import { Form, FormControl, FormField, FormItem } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
 

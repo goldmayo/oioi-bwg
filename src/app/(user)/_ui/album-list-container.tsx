@@ -3,10 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 
-import { Album } from "@/shared/model/album";
-import { AlbumListItem } from "@/shared/ui/album/AlbumListItem";
-
-import { AlbumCard } from "./album-card";
+import { Album, AlbumCard, AlbumListItem } from "@/entities/album";
 
 interface AlbumListContainerProps {
   albums: Album[];

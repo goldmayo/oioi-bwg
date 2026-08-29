@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-import { formatTime } from "@/shared/lib/lrc-parser";
+import { formatTime } from "@/entities/cheer-guide";
+
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import {
