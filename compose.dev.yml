@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: oioibawige
+      POSTGRES_USER: oioibawige
+      POSTGRES_PASSWORD: oioibawige_dev_only
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oioibawige -d oioibawige"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  next:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    working_dir: /app
+    command: pnpm dev --hostname 0.0.0.0
+    env_file:
+      - .env.local
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://oioibawige:oioibawige_dev_only@postgres:5432/oioibawige
+      NEXT_PUBLIC_APP_ENV: local
+      NEXT_PUBLIC_ASSETS_URL: https://assets.oioibawige.com
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - next_cache:/app/.next
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  node_modules:
+  next_cache:

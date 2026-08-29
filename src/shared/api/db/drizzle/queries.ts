@@ -1,12 +1,12 @@
 import { getDb } from "./index";
-import { Album, Song, SongListItem } from "./schema";
+import { Album, Song } from "./schema";
 
 /**
  * 슬러그를 기반으로 곡 정보를 앨범 정보와 함께 조회하는 헬퍼 함수
  */
 export async function getSongBySlug(slug: string) {
   const db = getDb();
-  return await db.query.song.findFirst({
+  const song = await db.query.song.findFirst({
     where: (s, { eq }) => eq(s.slug, slug),
     with: {
       album: {
@@ -16,6 +16,64 @@ export async function getSongBySlug(slug: string) {
       },
     },
   });
+
+  if (!song?.title || !song.slug || song.youtubeId === null) {
+    return undefined;
+  }
+
+  return {
+    ...song,
+    title: song.title,
+    slug: song.slug,
+    youtubeId: song.youtubeId,
+    hasOfficialCheer: song.hasOfficialCheer ?? false,
+    order: song.order ?? 0,
+    album: {
+      ...song.album,
+      songs: song.album.songs.flatMap((albumSong) => {
+        if (!albumSong.title || !albumSong.slug || albumSong.youtubeId === null) {
+          return [];
+        }
+
+        return [
+          {
+            ...albumSong,
+            title: albumSong.title,
+            slug: albumSong.slug,
+            youtubeId: albumSong.youtubeId,
+            hasOfficialCheer: albumSong.hasOfficialCheer ?? false,
+            order: albumSong.order ?? 0,
+          },
+        ];
+      }),
+    },
+  };
+}
+
+/**
+ * 관리자 가사 편집용 조회.
+ * 운영 DB의 legacy nullable 필드는 빈 값으로 정규화해 관리자가 복구할 수 있게 한다.
+ */
+export async function getAdminSongBySlug(slug: string) {
+  const db = getDb();
+  const song = await db.query.song.findFirst({
+    where: (s, { eq }) => eq(s.slug, slug),
+    columns: {
+      id: true,
+      title: true,
+      youtubeId: true,
+      lyrics: true,
+    },
+  });
+
+  if (!song) return undefined;
+
+  return {
+    ...song,
+    title: song.title ?? "",
+    youtubeId: song.youtubeId ?? "",
+    lyrics: song.lyrics ?? [],
+  };
 }
 
 /**
@@ -32,9 +90,9 @@ export async function getSongById(id: number): Promise<Song | undefined> {
  * 정렬 순서에 따른 전체 곡 목록 조회 (앨범 참조 ID 포함)
  * 사용자 대상: isVisible=true인 곡만 조회
  */
-export async function getAllSongs(): Promise<SongListItem[]> {
+export async function getAllSongs() {
   const db = getDb();
-  return await db.query.song.findMany({
+  const songs = await db.query.song.findMany({
     where: (s, { eq }) => eq(s.isVisible, true),
     columns: {
       id: true,
@@ -49,6 +107,21 @@ export async function getAllSongs(): Promise<SongListItem[]> {
     },
     orderBy: (s, { asc }) => [asc(s.order)],
   });
+
+  return songs.flatMap((song) => {
+    if (!song.title || !song.slug || !song.updatedAt) return [];
+
+    return [
+      {
+        ...song,
+        title: song.title,
+        slug: song.slug,
+        updatedAt: song.updatedAt,
+        hasOfficialCheer: song.hasOfficialCheer ?? false,
+        order: song.order ?? 0,
+      },
+    ];
+  });
 }
 
 /**
@@ -59,7 +132,7 @@ export async function getAllSongs(): Promise<SongListItem[]> {
  */
 export async function getAllAlbumsWithSongs() {
   const db = getDb();
-  return await db.query.album.findMany({
+  const albums = await db.query.album.findMany({
     where: (a, { eq }) => eq(a.isVisible, true),
     with: {
       songs: {
@@ -77,6 +150,23 @@ export async function getAllAlbumsWithSongs() {
     },
     orderBy: (a, { desc }) => [desc(a.releaseDate)],
   });
+
+  return albums.map((album) => ({
+    ...album,
+    songs: album.songs.flatMap((song) => {
+      if (!song.title || !song.slug || song.youtubeId === null) return [];
+
+      return [
+        {
+          ...song,
+          title: song.title,
+          slug: song.slug,
+          youtubeId: song.youtubeId,
+          hasOfficialCheer: song.hasOfficialCheer ?? false,
+        },
+      ];
+    }),
+  }));
 }
 
 /**
@@ -85,7 +175,7 @@ export async function getAllAlbumsWithSongs() {
  */
 export async function getAlbumBySlug(slug: string) {
   const db = getDb();
-  return await db.query.album.findFirst({
+  const album = await db.query.album.findFirst({
     where: (a, { eq }) => eq(a.slug, slug),
     with: {
       songs: {
@@ -102,6 +192,25 @@ export async function getAlbumBySlug(slug: string) {
       },
     },
   });
+
+  if (!album) return undefined;
+
+  return {
+    ...album,
+    songs: album.songs.flatMap((song) => {
+      if (!song.title || !song.slug || song.youtubeId === null) return [];
+
+      return [
+        {
+          ...song,
+          title: song.title,
+          slug: song.slug,
+          youtubeId: song.youtubeId,
+          hasOfficialCheer: song.hasOfficialCheer ?? false,
+        },
+      ];
+    }),
+  };
 }
 
 /**
@@ -119,7 +228,7 @@ export async function getAllAlbums(): Promise<Album[]> {
  */
 export async function getSongsWithAlbum() {
   const db = getDb();
-  return await db.query.song.findMany({
+  const songs = await db.query.song.findMany({
     columns: {
       id: true,
       title: true,
@@ -139,5 +248,14 @@ export async function getSongsWithAlbum() {
     },
     orderBy: (s, { asc }) => [asc(s.albumId), asc(s.order)],
   });
-}
 
+  return songs.map((song) => ({
+    ...song,
+    title: song.title ?? "",
+    slug: song.slug ?? "",
+    youtubeId: song.youtubeId ?? "",
+    order: song.order ?? 0,
+    updatedAt: song.updatedAt ?? "",
+    hasOfficialCheer: song.hasOfficialCheer ?? false,
+  }));
+}
