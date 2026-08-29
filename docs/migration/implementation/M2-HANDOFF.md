@@ -61,4 +61,12 @@ mutation 권한을 보장하지 않는다.
 - [x] route-local 후보 이관
 - [x] import boundary 검증
 - [x] M3/M4/M5 handoff 기록
+- [x] standalone build 및 주요 route smoke
 - [ ] 사용자 확인 후 M2 브랜치 push/PR
+
+### Route smoke evidence
+
+Next.js 16.3.3 standalone server에서 다음 경로가 모두 HTTP 200을 반환했다.
+
+`/`, `/chants`, `/more`, `/more/notice`, `/more/policy`, `/more/report`, `/more/updates`,
+`/robots.txt`, `/sitemap.xml`, `/albums/not-found`, `/songs/not-found`, `/admin`

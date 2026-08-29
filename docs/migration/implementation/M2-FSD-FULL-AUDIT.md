@@ -77,8 +77,9 @@ M3에서 `src/server/db`, `repositories`, `services`로 이동하고 M4에서 DT
 
 ## 결론
 
-현재 M2 구조는 route-local과 feature/shared segment는 일부 정리됐지만, Album/Song/Lyrics
-도메인 UI와 model이 `shared`에 남아 있어 top-down FSD 기준으로 완료 상태가 아니다.
+현재 M2 구조는 route-local과 feature/shared segment를 정리했고, Album/Lyrics 도메인 model과
+실제 재사용 UI는 entity에, 단일 route UI는 route-local에 배치했다. 서버 persistence 경계는
+M3 handoff로 남아 있다.
 
 다음 코드 작업의 우선순위는 다음과 같다.
 
