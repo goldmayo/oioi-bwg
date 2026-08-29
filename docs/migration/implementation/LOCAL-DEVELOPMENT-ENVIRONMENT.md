@@ -78,11 +78,11 @@ cp .env.example .env.local
 
 ```bash
 docker compose -f compose.dev.yml up -d postgres
-docker compose --profile tools -f compose.dev.yml run --rm migrate
 docker compose -f compose.dev.yml up -d next
+docker compose -f compose.dev.yml exec next pnpm db:migrate
 ```
 
-`migrate`는 `tools` profile의 일회성 도구이므로 `up`에 자동 포함되지 않는다. schema 변경을 검토한 뒤 명령을 직접 실행하고, 성공을 확인한 후 Next를 시작한다.
+Compose는 PostgreSQL과 Next만 실행한다. migration은 실행 중인 Next 컨테이너에서 개발자가 명시적으로 실행한다. 빈 DB에서는 앱 페이지를 사용하기 전에 migration 성공을 확인한다.
 
 ### Seed
 
@@ -98,8 +98,8 @@ Album은 unique slug upsert를 사용한다. 운영에 없는 Song slug unique c
 
 ```bash
 docker compose -f compose.dev.yml up -d postgres
-docker compose --profile tools -f compose.dev.yml run --rm migrate
 docker compose -f compose.dev.yml up -d next
+docker compose -f compose.dev.yml exec next pnpm db:migrate
 pnpm db:restore-local
 ```
 
@@ -135,8 +135,8 @@ docker compose -f compose.dev.yml down
 ```bash
 docker compose -f compose.dev.yml down -v
 docker compose -f compose.dev.yml up -d postgres
-docker compose --profile tools -f compose.dev.yml run --rm migrate
 docker compose -f compose.dev.yml up -d next
+docker compose -f compose.dev.yml exec next pnpm db:migrate
 docker compose -f compose.dev.yml exec next pnpm db:seed
 ```
 
