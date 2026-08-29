@@ -1,4 +1,4 @@
-import { MoreBackButton, MoreHeader } from "@/shared/ui/more/MoreCommon";
+import { MoreBackButton, MoreHeader } from "../_ui/more-common";
 
 import { NoticeAccordion } from "./_ui/notice-accordion";
 

@@ -16,15 +16,12 @@ depends_on:
 ### `entities/album`
 
 - `model/album.ts`: Album/AlbumSong view model
-- `ui/AlbumCard.tsx`
-- `ui/AlbumListItem.tsx`
-- `ui/AlbumSongListItem.tsx`
 - `ui/AlbumListSkeleton.tsx`
 - `ui/TitleBadge.tsx`
 - `index.ts` public API
 
-Album 도메인 UI와 모델은 더 이상 `shared`에 두지 않는다. route와 feature는
-`@/entities/album` public API를 사용한다.
+안정된 Album 모델과 실제 재사용이 확인된 UI만 entity에 둔다. 홈 route 전용 AlbumCard,
+AlbumListItem, AlbumSongListItem은 `app/(user)/_ui`에 둔다.
 
 ### `entities/cheer-guide`
 

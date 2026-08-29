@@ -53,6 +53,6 @@ consumer와 함께 도입한다. 빈 디렉터리나 이름만 있는 slice는 �
 
 - [x] 단일 consumer UI의 route-local 이관
 - [x] root layout 전용 guard의 app-local 이관
-- [x] widgets/entities/server를 추측으로 생성하지 않음
+- [x] entities는 안정된 모델·실제 재사용 UI만 유지
 - [ ] route inventory와 M2 handoff 문서 최종화
 - [ ] 사용자 확인 후 M2 브랜치 커밋/PR 진행

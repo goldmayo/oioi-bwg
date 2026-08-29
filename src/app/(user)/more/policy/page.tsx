@@ -1,7 +1,7 @@
 import { ChevronRight, FileText } from "lucide-react";
 import Link from "next/link";
 
-import { MoreBackButton, MoreHeader } from "@/shared/ui/more/MoreCommon";
+import { MoreBackButton, MoreHeader } from "../_ui/more-common";
 
 // 기획서 기반 약관 목록 (Server Side)
 const POLICIES = [

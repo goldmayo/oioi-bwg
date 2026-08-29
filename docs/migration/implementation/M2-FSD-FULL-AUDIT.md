@@ -32,10 +32,10 @@ depends_on:
 |---|---|---|---|
 | `shared/model/album.ts` | Album/Song 도메인 view model | `entities/album/model`, `entities/song/model` | M2→M4 |
 | `shared/model/lyrics.ts` | Cheer Guide/Lyrics domain schema | `entities/cheer-guide/model` | M3→M4 |
-| `shared/ui/album/AlbumListItem.tsx` | Album aggregate와 곡 목록을 표현 | `entities/album/ui` | M2 |
-| `shared/ui/album/AlbumSongListItem.tsx` | Song 도메인과 상세 route를 표현 | `entities/song/ui` | M2 |
+| `shared/ui/album/AlbumListItem.tsx` | 홈 route 전용 Album aggregate 조합 | `app/(user)/_ui` | M2 |
+| `shared/ui/album/AlbumSongListItem.tsx` | AlbumListItem 내부 구현 | `app/(user)/_ui` | M2 |
 | `shared/ui/album/AlbumListSkeleton.tsx` | Album list 전용 loading composition | `entities/album/ui` 또는 route-local | M2 |
-| `src/app/(user)/_ui/album-card.tsx` | Album 도메인 UI인데 route-local로만 이관됨 | `entities/album/ui` | M2 |
+| `src/app/(user)/_ui/album-card.tsx` | 홈 route 단일 consumer | `app/(user)/_ui` 유지 | M2 |
 | `shared/ui/TitleBadge.tsx` | 타이틀곡이라는 Song 도메인 의미 | `entities/song/ui` | M2 |
 | `shared/ui/OfficialBadge.tsx` | 공식 응원법이라는 Cheer Guide 의미 | `entities/cheer-guide/ui` | M2 |
 | `shared/lib/lrc-parser.ts` | Lyrics/Cheer Guide 형식 해석 | `entities/cheer-guide/lib` | M3/M4 |

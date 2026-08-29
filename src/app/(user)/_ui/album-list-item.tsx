@@ -5,11 +5,11 @@ import { ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
+import type { Album } from "@/entities/album";
+
 import { cn } from "@/shared/lib/utils";
 
-import type { Album } from "../model/album";
-
-import { AlbumSongListItem } from "./AlbumSongListItem";
+import { AlbumSongListItem } from "./album-song-list-item";
 
 interface AlbumListItemProps {
   album: Album;

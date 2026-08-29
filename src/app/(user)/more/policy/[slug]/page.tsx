@@ -1,4 +1,4 @@
-import { MoreBackButton, MoreHeader } from "@/shared/ui/more/MoreCommon";
+import { MoreBackButton, MoreHeader } from "../../_ui/more-common";
 
 // ----------------------------------------------------------------------
 // 1. 약관 상세 데이터 정의 (서버 사이드에서 참조)

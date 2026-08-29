@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { NavLinks } from "@/shared/ui/navigation/NavLinks";
+import { NavLinks } from "./NavLinks";
 
 /**
  * 전역 상단 네비게이션 (서버 컴포넌트)
