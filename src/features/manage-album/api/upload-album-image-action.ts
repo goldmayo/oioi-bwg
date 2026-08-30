@@ -19,8 +19,8 @@ export async function uploadAlbumImageAction(formData: FormData) {
       return { success: false, error: "이미지 파일만 업로드 가능합니다." };
     }
 
-    const { createClient } = await import("@/shared/api/db/supabase/server");
-    const supabase = await createClient();
+    const { createStorageClient } = await import("@/shared/api/db/supabase/storage");
+    const supabase = createStorageClient();
 
     const ext = file.name.split(".").pop();
     const fileName = `album-covers/${Date.now()}-${crypto.randomUUID()}.${ext}`;

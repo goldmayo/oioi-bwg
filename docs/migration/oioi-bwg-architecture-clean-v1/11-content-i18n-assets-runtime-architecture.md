@@ -4,7 +4,7 @@ document_id: "11"
 version: "1.0"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-26"
+updated_at: "2026-08-30"
 depends_on:
   - "01"
   - "05"
@@ -125,11 +125,32 @@ small immutable file
 
 사용자가 바꾸거나 운영 중 변경되는 asset은 application container filesystem에 영구 저장하지 않는다.
 
-후보:
+현재 public album asset provider:
 
 ```text
-object storage
-external storage provider
+Cloudflare R2 + assets.oioibawige.com custom domain
+```
+
+현재 운영 기준은 다음과 같다.
+
+- 기존 DB `Album.imgUrl`은 `https://assets.oioibawige.com/images/albums/*.webp` canonical URL을 사용한다.
+- 앨범 표지는 관리자 런타임 업로드를 지원한다. 업로드는 OCI Compute의 server boundary를 통과해 R2에만
+  기록하며, browser에 R2 쓰기 credential을 노출하지 않는다.
+- R2 custom domain은 public asset delivery와 cache를 담당한다.
+- DB에는 provider-specific temporary URL 대신 stable asset identifier 또는 canonical URL 저장을 우선한다.
+
+OCI Object Storage는 Cloudflare를 완전히 제거하는 별도 제품·운영 결정이 있을 때의 후보다. 이 전환은
+R2 object migration, `assets` canonical URL 유지 전략, public delivery/cache 비용을 함께 결정한 뒤에만 수행한다.
+
+Supabase Storage 업로드 경계는 현재 R2 delivery와 별개인 미사용 구현이다. R2 유지 결정을 따를 경우
+이 구현과 `@supabase/supabase-js`, Supabase 환경변수를 제거한다.
+
+후보 검토 이력:
+
+```text
+Supabase Storage (미사용 구현, 제거 대상)
+Cloudflare R2 (현재 public album asset provider 및 관리자 업로드 대상)
+OCI Object Storage (Cloudflare 제거 결정 시 재검토)
 ```
 
 Storage provider 선택은 **11이 소유한다**. 12는 선택된 provider의 credential/env/deploy 검증만 담당한다.
