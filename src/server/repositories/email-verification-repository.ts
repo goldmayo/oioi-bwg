@@ -40,6 +40,15 @@ export function invalidatePendingChallenges(executor: DbExecutor, email: string,
     );
 }
 
+export function invalidateChallenge(executor: DbExecutor, id: string, now: string) {
+  return executor
+    .update(emailVerificationChallenge)
+    .set({ status: "INVALIDATED", invalidatedAt: now })
+    .where(
+      and(eq(emailVerificationChallenge.id, id), eq(emailVerificationChallenge.status, "PENDING")),
+    );
+}
+
 export function findChallengeById(executor: DbExecutor, id: string) {
   return executor.query.emailVerificationChallenge.findFirst({
     where: (table, { eq: equals }) => equals(table.id, id),
