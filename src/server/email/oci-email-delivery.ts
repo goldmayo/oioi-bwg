@@ -39,6 +39,7 @@ function required(name: string) {
   return value;
 }
 
+/** OCI Email Delivery 또는 local no-send 경계로 메일을 제출한다. */
 export async function sendEmail(email: OutboundEmail): Promise<EmailDeliveryResult> {
   const mode =
     process.env.EMAIL_DELIVERY_MODE ?? (process.env.NODE_ENV === "production" ? "oci" : "dev");
@@ -84,6 +85,7 @@ export async function sendEmail(email: OutboundEmail): Promise<EmailDeliveryResu
   };
 }
 
+/** OCI 오류가 실제 미제출로 확정되는 4xx 거부인지 판별한다. */
 export function isDefinitiveEmailDeliveryFailure(error: unknown) {
   return error instanceof oci.common.OciError && error.statusCode >= 400 && error.statusCode < 500;
 }

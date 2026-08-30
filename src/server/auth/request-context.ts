@@ -54,8 +54,10 @@ async function loadRequestContext(): Promise<RequestContext> {
   };
 }
 
+/** 현재 요청의 활성 Account와 CASL ability를 반환한다. 인증되지 않은 요청도 guest context로 표현한다. */
 export const getRequestContext = cache(loadRequestContext);
 
+/** 인증이 필요한 service 경계에서 guest context를 거부한다. */
 export function requireUser(ctx: RequestContext): asserts ctx is AuthenticatedRequestContext {
   if (!ctx.user) {
     throw new AppError("UNAUTHENTICATED");

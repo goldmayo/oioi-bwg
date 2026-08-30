@@ -69,6 +69,7 @@ const PUBLIC_SUBJECTS: AppSubjectName[] = [
   "PerformanceSchedule",
 ];
 
+/** authorization facts에 따라 서버에서 사용할 CASL rule 목록을 생성한다. */
 export function buildAbilityRules(facts: AuthorizationFacts): RawRuleOf<AppAbility>[] {
   const { can, rules } = new AbilityBuilder<AppAbility>(createMongoAbility);
 
@@ -98,6 +99,7 @@ export function createEmptyAbility(): AppAbility {
   return createMongoAbility<AppAbility>([]);
 }
 
+/** authorization facts를 CASL ability로 컴파일한다. */
 export function buildAbility(facts: AuthorizationFacts): AppAbility {
   return createMongoAbility<AppAbility>(buildAbilityRules(facts));
 }
