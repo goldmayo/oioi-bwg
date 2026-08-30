@@ -10,6 +10,7 @@ import {
   incrementFailedAttempts,
   incrementRateLimit,
   insertChallenge,
+  invalidateChallenge,
   invalidatePendingChallenges,
   markChallengeVerified,
 } from "../repositories/email-verification-repository";
@@ -78,6 +79,10 @@ export async function requestOtp(emailInput: string, ipAddress: string) {
   if (!result) throw new Error("OTP challenge was not created");
   // OCI/application email 함수가 소비할 내부 값이다. Route Handler 응답으로 전달하지 않는다.
   return { challengeId: result.id, otp };
+}
+
+export async function invalidateOtpAfterDeliveryFailure(challengeId: string) {
+  await invalidateChallenge(getDatabase(), challengeId, new Date().toISOString());
 }
 
 export async function verifyOtp(challengeId: string, otp: string) {
