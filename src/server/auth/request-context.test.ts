@@ -25,7 +25,8 @@ describe("getRequestContext", () => {
     const context = await getRequestContext();
 
     expect(context.user).toBeNull();
-    expect(context.ability.can("read", "Song")).toBe(false);
+    expect(context.ability.can("read", "Song")).toBe(true);
+    expect(context.ability.can("create", "Contribution")).toBe(false);
     expect(mockedFindFacts).not.toHaveBeenCalled();
   });
 

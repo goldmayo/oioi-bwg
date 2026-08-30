@@ -1,8 +1,103 @@
-import { createMongoAbility, type MongoAbility } from "@casl/ability";
+import {
+  AbilityBuilder,
+  createMongoAbility,
+  type MongoAbility,
+  type RawRuleOf,
+} from "@casl/ability";
 
-export type AppAbility = MongoAbility<[string, string]>;
+import type { AccountRole } from "../db/schema";
 
-/** 실제 정책은 M5 CASL policy checkpoint에서 추가한다. */
+export const APP_ACTIONS = [
+  "read",
+  "create",
+  "update",
+  "delete",
+  "resolve",
+  "reject",
+  "approve",
+  "review",
+  "carryOver",
+  "process",
+  "connect",
+  "disconnect",
+  "manage",
+  "suspend",
+  "unsuspend",
+  "lock",
+  "unlock",
+  "register",
+  "analyze",
+  "override",
+] as const;
+
+export const APP_SUBJECTS = [
+  "all",
+  "Artist",
+  "Song",
+  "CheerGuide",
+  "Revision",
+  "Contribution",
+  "DiscussionThread",
+  "DiscussionComment",
+  "Report",
+  "Sanction",
+  "Account",
+  "Profile",
+  "OAuthIdentity",
+  "WaveformSource",
+  "PerformanceSchedule",
+  "AuditLog",
+] as const;
+
+export type AppAction = (typeof APP_ACTIONS)[number];
+export type AppSubjectName = (typeof APP_SUBJECTS)[number];
+export type AppSubject = AppSubjectName | { accountId?: string; authorAccountId?: string };
+export type AuthorizationFacts = {
+  accountId: string | null;
+  role: AccountRole | null;
+};
+
+export type AppAbility = MongoAbility<[AppAction, AppSubject]>;
+
+const PUBLIC_SUBJECTS: AppSubjectName[] = [
+  "Artist",
+  "Song",
+  "CheerGuide",
+  "Revision",
+  "DiscussionThread",
+  "DiscussionComment",
+  "PerformanceSchedule",
+];
+
+export function buildAbilityRules(facts: AuthorizationFacts): RawRuleOf<AppAbility>[] {
+  const { can, rules } = new AbilityBuilder<AppAbility>(createMongoAbility);
+
+  can("read", PUBLIC_SUBJECTS);
+
+  if (!facts.role || !facts.accountId) return rules;
+
+  can("create", ["Contribution", "DiscussionThread", "DiscussionComment", "Report"]);
+  can("update", "Profile", { accountId: facts.accountId });
+  can("connect", "OAuthIdentity", { accountId: facts.accountId });
+  can("disconnect", "OAuthIdentity", { accountId: facts.accountId });
+  can("update", "DiscussionComment", { authorAccountId: facts.accountId });
+  can("delete", "DiscussionComment", { authorAccountId: facts.accountId });
+
+  if (facts.role === "REVIEWER" || facts.role === "ADMIN") {
+    can(["resolve", "reject", "review", "carryOver"], "DiscussionThread");
+  }
+
+  if (facts.role === "ADMIN") {
+    can("manage", "all");
+  }
+
+  return rules;
+}
+
 export function createEmptyAbility(): AppAbility {
-  return createMongoAbility<[string, string]>([]);
+  return createMongoAbility<AppAbility>([]);
+}
+
+export function buildAbility(facts: AuthorizationFacts): AppAbility {
+  return createMongoAbility<AppAbility>(buildAbilityRules(facts));
 }

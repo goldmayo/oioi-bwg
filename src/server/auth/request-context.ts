@@ -1,18 +1,12 @@
 import { cache } from "react";
 
 import { getDatabase } from "../db";
-import type { AccountRole } from "../db/schema";
 import { AppError } from "../errors/app-error";
 import { findAuthorizationFactsByAccountId } from "../repositories/auth-repository";
 
-import { type AppAbility, createEmptyAbility } from "./ability";
+import { type AppAbility, type AuthorizationFacts, buildAbility } from "./ability";
 
 import { auth } from "@/auth";
-
-export type AuthorizationFacts = {
-  accountId: string | null;
-  role: AccountRole | null;
-};
 
 export type AuthenticatedRequestContext = {
   user: { id: string };
@@ -27,7 +21,7 @@ export type GuestRequestContext = {
 export type RequestContext = AuthenticatedRequestContext | GuestRequestContext;
 
 function guestContext(): GuestRequestContext {
-  return { user: null, ability: createEmptyAbility() };
+  return { user: null, ability: buildAbility({ accountId: null, role: null }) };
 }
 
 function toAccountId(value: string) {
@@ -36,11 +30,6 @@ function toAccountId(value: string) {
   } catch {
     return null;
   }
-}
-
-// 실제 role rule 연결은 다음 CASL policy checkpoint에서 구현한다.
-function buildAbility(_facts: AuthorizationFacts): AppAbility {
-  return createEmptyAbility();
 }
 
 async function loadRequestContext(): Promise<RequestContext> {
