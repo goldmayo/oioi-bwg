@@ -9,7 +9,13 @@ export interface OutboundEmail {
   html?: string;
 }
 
-type EmailDeliveryResult = { messageId: string | null; mode: "dev" | "oci" };
+export type EmailDeliveryResult = {
+  mode: "dev" | "oci";
+  messageId: string | null;
+  envelopeId: string | null;
+  suppressedRecipients: string[];
+  opcRequestId: string | null;
+};
 
 let clientPromise: Promise<oci.emaildataplane.EmailDPClient> | undefined;
 
@@ -40,7 +46,13 @@ export async function sendEmail(email: OutboundEmail): Promise<EmailDeliveryResu
     if (process.env.NODE_ENV === "production") {
       throw new Error("dev email delivery is not allowed in production");
     }
-    return { messageId: null, mode };
+    return {
+      mode,
+      messageId: null,
+      envelopeId: null,
+      suppressedRecipients: [],
+      opcRequestId: null,
+    };
   }
   if (mode !== "oci") throw new Error("EMAIL_DELIVERY_MODE must be dev or oci");
 
@@ -61,5 +73,17 @@ export async function sendEmail(email: OutboundEmail): Promise<EmailDeliveryResu
     },
   });
 
-  return { messageId: response.opcRequestId ?? null, mode };
+  return {
+    mode,
+    messageId: response.emailSubmittedResponse.messageId,
+    envelopeId: response.emailSubmittedResponse.envelopeId,
+    suppressedRecipients: response.emailSubmittedResponse.suppressedRecipients.map(
+      ({ email }) => email,
+    ),
+    opcRequestId: response.opcRequestId ?? null,
+  };
+}
+
+export function isDefinitiveEmailDeliveryFailure(error: unknown) {
+  return error instanceof oci.common.OciError && error.statusCode >= 400 && error.statusCode < 500;
 }
