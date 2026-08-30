@@ -46,6 +46,7 @@
     "next-auth": "5.0.0-beta.32",
     "next-themes": "^0.4.6",
     "nuqs": "^2.8.8",
+    "oci-sdk": "^2.140.0",
     "postgres": "^3.4.8",
     "radix-ui": "^1.4.3",
     "react": "19.2.5",
