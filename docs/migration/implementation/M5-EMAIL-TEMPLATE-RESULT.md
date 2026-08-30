@@ -23,3 +23,8 @@
 - multi-client visual rendering 검증은 실제 OCI Email Delivery 운영 준비 후 Gmail, Outlook, Apple Mail에서
   test recipient로 수행한다.
 - 관리자 편집 template CMS와 React Email은 email 종류·운영 요구가 늘어날 때 별도 제품 기능으로 검토한다.
+
+## Handoff
+
+현재 로컬·OCI 검증 경계와 다음 작업 순서는
+[`M5-EMAIL-TEST-HANDOFF.md`](./M5-EMAIL-TEST-HANDOFF.md)에 기록한다.
