@@ -154,7 +154,7 @@ export function AlbumFormDialog({
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/avif,image/jpeg,image/png,image/webp"
                       onChange={handleImageUpload}
                       className="hidden"
                     />
