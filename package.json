@@ -28,6 +28,7 @@
     "release": "release-it"
   },
   "dependencies": {
+    "@casl/ability": "^7.0.1",
     "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^5.2.2",
     "@sentry/nextjs": "^10.42.0",

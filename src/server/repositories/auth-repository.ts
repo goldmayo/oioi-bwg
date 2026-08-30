@@ -17,3 +17,14 @@ export function findPasswordCredentialByEmail(executor: DbExecutor, email: strin
     },
   });
 }
+
+export function findAuthorizationFactsByAccountId(executor: DbExecutor, accountId: bigint) {
+  return executor.query.account.findFirst({
+    where: (table, { eq: equals }) => equals(table.id, accountId),
+    columns: {
+      id: true,
+      role: true,
+      status: true,
+    },
+  });
+}
