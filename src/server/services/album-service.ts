@@ -1,5 +1,6 @@
 import "server-only";
 
+import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
 import {
@@ -105,19 +106,28 @@ export async function requireAlbumDetailBySlug(slug: string) {
   return album;
 }
 
-export async function listAdminAlbums(): Promise<AlbumDto[]> {
+function requireAdmin(ctx: RequestContext) {
+  requireUser(ctx);
+  if (ctx.ability.cannot("manage", "all")) throw new AppError("FORBIDDEN");
+}
+
+export async function listAdminAlbums(ctx: RequestContext): Promise<AlbumDto[]> {
+  requireAdmin(ctx);
   const rows = await findAllAlbums(getDatabase());
   return rows.map(mapAlbum);
 }
 
-export function createAlbum(input: SaveAlbumInput) {
+export function createAlbum(ctx: RequestContext, input: SaveAlbumInput) {
+  requireAdmin(ctx);
   return insertAlbum(getDatabase(), input);
 }
 
-export function editAlbum(id: number, input: SaveAlbumInput) {
+export function editAlbum(ctx: RequestContext, id: number, input: SaveAlbumInput) {
+  requireAdmin(ctx);
   return updateAlbum(getDatabase(), id, input);
 }
 
-export function deleteAlbum(id: number) {
+export function deleteAlbum(ctx: RequestContext, id: number) {
+  requireAdmin(ctx);
   return removeAlbum(getDatabase(), id);
 }

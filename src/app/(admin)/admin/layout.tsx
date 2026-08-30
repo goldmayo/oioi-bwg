@@ -1,21 +1,16 @@
 import { ReactNode } from "react";
+import { forbidden } from "next/navigation";
 
 import { LazyLoginForm } from "@/features/auth";
 
-import { createClient } from "@/shared/api/db/supabase/server";
+import { getRequestContext } from "@/server/auth/request-context";
 
 import AdminSidebar from "./_ui/admin-sidebar";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const context = await getRequestContext();
 
-  // 관리자 권한 체크 (role === "admin")
-  const isAdmin = user?.app_metadata?.role === "admin";
-
-  if (!isAdmin) {
+  if (!context.user) {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center p-4">
         <div className="w-full max-w-md">
@@ -24,6 +19,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </div>
     );
   }
+
+  if (context.ability.cannot("manage", "all")) forbidden();
 
   return (
     <div className="bg-background text-foreground flex h-screen flex-col overflow-hidden md:flex-row">

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
 import {
@@ -91,7 +92,13 @@ export async function requireSongDetailBySlug(slug: string) {
   return song;
 }
 
-export async function getAdminSongEditorBySlug(slug: string) {
+function requireAdmin(ctx: RequestContext) {
+  requireUser(ctx);
+  if (ctx.ability.cannot("manage", "all")) throw new AppError("FORBIDDEN");
+}
+
+export async function getAdminSongEditorBySlug(ctx: RequestContext, slug: string) {
+  requireAdmin(ctx);
   const row = await findAdminSongBySlug(getDatabase(), slug);
 
   if (!row) return undefined;
@@ -123,7 +130,8 @@ export async function listVisibleSongsForSitemap() {
   });
 }
 
-export async function listAdminSongs() {
+export async function listAdminSongs(ctx: RequestContext) {
+  requireAdmin(ctx);
   const rows = await findSongsWithAlbum(getDatabase());
 
   return rows.map((song) => ({
@@ -137,7 +145,8 @@ export async function listAdminSongs() {
   }));
 }
 
-export function createSong(input: CreateSongInput) {
+export function createSong(ctx: RequestContext, input: CreateSongInput) {
+  requireAdmin(ctx);
   const now = new Date().toISOString();
   const row = {
     ...input,
@@ -148,7 +157,8 @@ export function createSong(input: CreateSongInput) {
   return insertSong(getDatabase(), row);
 }
 
-export function editSong(id: number, input: EditSongInput) {
+export function editSong(ctx: RequestContext, id: number, input: EditSongInput) {
+  requireAdmin(ctx);
   const row = {
     ...input,
     updatedAt: new Date().toISOString(),
@@ -157,13 +167,19 @@ export function editSong(id: number, input: EditSongInput) {
   return updateSong(getDatabase(), id, row);
 }
 
-export function saveSongLyrics(id: number, input: { lyrics: unknown; youtubeId: string }) {
+export function saveSongLyrics(
+  ctx: RequestContext,
+  id: number,
+  input: { lyrics: unknown; youtubeId: string },
+) {
+  requireAdmin(ctx);
   return updateSong(getDatabase(), id, {
     ...input,
     updatedAt: new Date().toISOString(),
   });
 }
 
-export function deleteSong(id: number) {
+export function deleteSong(ctx: RequestContext, id: number) {
+  requireAdmin(ctx);
   return removeSong(getDatabase(), id);
 }
