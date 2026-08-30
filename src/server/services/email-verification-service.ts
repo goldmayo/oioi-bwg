@@ -50,6 +50,7 @@ function windowStart(now: Date) {
   return new Date(Math.floor(now.getTime() / RATE_LIMIT_WINDOW_MS) * RATE_LIMIT_WINDOW_MS);
 }
 
+/** OTP challenge를 발급하고 transaction 이후 회원가입 인증 메일을 발송한다. */
 export async function requestOtp(emailInput: string, ipAddress: string) {
   const email = normalizeEmail(emailInput);
   if (!email || !ipAddress) throw new AppError("OTP_INVALID");
@@ -93,6 +94,7 @@ export async function requestOtp(emailInput: string, ipAddress: string) {
   return { challengeId: result.id };
 }
 
+/** OTP challenge를 검증해 성공 시 VERIFIED 상태로 원자 전이한다. */
 export async function verifyOtp(challengeId: string, otp: string) {
   const database = getDatabase();
   const now = new Date();

@@ -9,6 +9,7 @@ export class SignupEmailSuppressedError extends Error {
   }
 }
 
+/** 회원가입 OTP를 이메일 본문으로 구성해 발송한다. */
 export async function sendSignupVerificationEmail(
   to: string,
   otp: string,

@@ -16,6 +16,7 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+/** Credentials를 검증하고 Auth.js session에 넣을 최소 Account identity를 반환한다. */
 export async function authenticateCredentials(email: string, password: string) {
   const credential = await findPasswordCredentialByEmail(getDatabase(), normalizeEmail(email));
   const passwordHash = credential?.passwordHash ?? DUMMY_PASSWORD_HASH;
