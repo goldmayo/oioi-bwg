@@ -18,6 +18,8 @@ const appErrorDefinitions = {
   OTP_INVALID: { message: "인증 코드가 올바르지 않습니다.", status: 400 },
   OTP_ATTEMPTS_EXCEEDED: { message: "인증 시도 횟수를 초과했습니다.", status: 400 },
   OTP_NOT_VERIFIED: { message: "이메일 인증을 먼저 완료해 주세요.", status: 400 },
+  EMAIL_ALREADY_REGISTERED: { message: "이미 등록된 이메일입니다.", status: 409 },
+  NICKNAME_ALREADY_REGISTERED: { message: "이미 사용 중인 닉네임입니다.", status: 409 },
 } satisfies Record<AppErrorCode, { message: string; status: number }>;
 
 /** 성공 payload를 외부 DTO contract로 검증한 뒤 반환한다. */
