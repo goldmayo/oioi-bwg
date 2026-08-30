@@ -1,42 +1,28 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
 
-import { createClient } from "@/shared/api/db/supabase/server";
+import { signIn as authSignIn, signOut as authSignOut } from "@/auth";
 
 /**
  * 관리자 로그인 액션
  */
 export async function signIn(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const supabase = await createClient();
+  try {
+    formData.set("redirectTo", "/admin");
+    await authSignIn("credentials", formData);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return { error: "이메일 또는 비밀번호를 확인해주세요." };
+    }
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    return { error: error.message };
+    throw error;
   }
-
-  // 관리자 권한 체크 (app_metadata를 사용)
-  const userRole = data.user.app_metadata?.role;
-  if (userRole !== "admin") {
-    await supabase.auth.signOut();
-    return { error: "관리자 권한이 없습니다." };
-  }
-
-  redirect("/admin");
 }
 
 /**
  * 로그아웃 액션
  */
 export async function signOut() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-
-  redirect("/"); // /login 페이지가 따로 없으므로 /admin(로그인 폼 렌더링)으로 보냄
+  await authSignOut({ redirectTo: "/" });
 }
