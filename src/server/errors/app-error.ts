@@ -1,6 +1,6 @@
 import "server-only";
 
-export type AppErrorCode = "ALBUM_NOT_FOUND" | "SONG_NOT_FOUND";
+export type AppErrorCode = "ALBUM_NOT_FOUND" | "SONG_NOT_FOUND" | "UNAUTHENTICATED" | "FORBIDDEN";
 
 /** HTTP에 독립적인 예상 application failure다. */
 export class AppError extends Error {
