@@ -22,8 +22,9 @@ depends_on:
 
 ## CASL 경계
 
-이번 checkpoint에서는 CASL `AppAbility` 타입과 빈 deny-by-default Ability만 연결했다.
-role별 정책과 실제 `can/cannot` rule은 다음 M5 CASL policy checkpoint에서 추가한다.
+공용 action/subject vocabulary와 role별 `can/cannot` rule을 CASL `AppAbility`로 정의했다.
+guest는 public read만 가능하고, USER/REVIEWER/ADMIN 권한은 DOMAIN_SPECIFICATION의 matrix를 따른다.
+소유자 조건이 필요한 Profile/OAuthIdentity/Comment rule은 account id 조건으로 제한한다.
 
 ## 보류 범위
 
