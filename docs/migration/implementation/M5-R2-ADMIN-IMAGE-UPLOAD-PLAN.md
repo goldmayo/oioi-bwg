@@ -2,7 +2,7 @@
 title: "M5 R2 관리자 이미지 업로드 계획"
 document_id: "M5-R2-ADMIN-IMAGE-UPLOAD-PLAN"
 version: "1.0"
-status: "planned"
+status: "completed"
 authority: "implementation"
 updated_at: "2026-08-30"
 depends_on:
