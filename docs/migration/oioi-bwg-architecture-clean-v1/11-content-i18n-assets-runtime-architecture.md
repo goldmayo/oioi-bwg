@@ -4,7 +4,7 @@ document_id: "11"
 version: "1.0"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-26"
+updated_at: "2026-08-30"
 depends_on:
   - "01"
   - "05"
@@ -125,11 +125,28 @@ small immutable file
 
 사용자가 바꾸거나 운영 중 변경되는 asset은 application container filesystem에 영구 저장하지 않는다.
 
-후보:
+선택된 provider:
 
 ```text
-object storage
-external storage provider
+OCI Object Storage
+```
+
+운영 기준은 다음과 같다.
+
+- runtime은 OCI Compute Instance다.
+- 애플리케이션은 Instance Principal로 OCI Object Storage에 인증한다.
+- bucket과 namespace는 운영 환경변수로 주입하고, credential private key를 애플리케이션 환경변수에 저장하지 않는다.
+- 업로드 object key와 canonical asset URL 정책은 application implementation 문서에서 확정한다.
+- DB에는 provider-specific temporary URL 대신 stable asset identifier 또는 canonical URL 저장을 우선한다.
+
+기존 Supabase Storage 업로드는 OCI Object Storage 전환이 완료될 때까지 호환 경계로만 남길 수 있으며,
+전환 완료 후 `@supabase/supabase-js`와 Supabase Storage 환경변수를 제거한다.
+
+후보 검토 이력:
+
+```text
+Supabase Storage (기존 호환 경계, 폐기 예정)
+OCI Object Storage (선택)
 ```
 
 Storage provider 선택은 **11이 소유한다**. 12는 선택된 provider의 credential/env/deploy 검증만 담당한다.
