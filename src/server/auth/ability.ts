@@ -5,49 +5,11 @@ import {
   type RawRuleOf,
 } from "@casl/ability";
 
+import { APP_ACTIONS, APP_SUBJECTS } from "@/shared/contracts/authorization";
+
 import type { AccountRole } from "../db/schema";
 
-export const APP_ACTIONS = [
-  "read",
-  "create",
-  "update",
-  "delete",
-  "resolve",
-  "reject",
-  "approve",
-  "review",
-  "carryOver",
-  "process",
-  "connect",
-  "disconnect",
-  "manage",
-  "suspend",
-  "unsuspend",
-  "lock",
-  "unlock",
-  "register",
-  "analyze",
-  "override",
-] as const;
-
-export const APP_SUBJECTS = [
-  "all",
-  "Artist",
-  "Song",
-  "CheerGuide",
-  "Revision",
-  "Contribution",
-  "DiscussionThread",
-  "DiscussionComment",
-  "Report",
-  "Sanction",
-  "Account",
-  "Profile",
-  "OAuthIdentity",
-  "WaveformSource",
-  "PerformanceSchedule",
-  "AuditLog",
-] as const;
+export { APP_ACTIONS, APP_SUBJECTS } from "@/shared/contracts/authorization";
 
 export type AppAction = (typeof APP_ACTIONS)[number];
 export type AppSubjectName = (typeof APP_SUBJECTS)[number];
