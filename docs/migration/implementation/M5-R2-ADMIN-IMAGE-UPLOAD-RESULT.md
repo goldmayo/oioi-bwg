@@ -25,8 +25,14 @@ ASSETS_PUBLIC_BASE_URL=https://assets.oioibawige.com
 R2 access key와 secret은 browser 또는 저장소에 노출하지 않는다. 기존 Cloudflare API token을
 R2 S3 credential으로 재사용하지 않는다.
 
-## 검증과 보류
+## 검증
 
 - R2 SDK 호출은 mock한 unit test로 bucket, key, MIME type, cache policy, canonical URL을 검증했다.
-- 실제 R2 network call과 production DB 변경은 수행하지 않았다.
-- 운영 또는 staging runtime secret 주입 후 관리자 앨범 이미지 업로드 smoke가 필요하다.
+- local Docker PostgreSQL에 생성한 ADMIN account로 로그인한 뒤 관리자 UI에서 실제 staging R2 이미지 업로드를
+  확인했다. 반환된 canonical URL이 `imgUrl`에 반영되는 것을 검증했다.
+- 별도 R2 staging smoke에서 임시 object를 upload, head, delete해 server credential과 bucket 권한을 확인했다.
+- production DB와 production R2 bucket은 연결하거나 변경하지 않았다.
+
+## 보류
+
+- production runtime secret 주입과 production R2 upload smoke는 M9 배포 checkpoint에서 수행한다.
