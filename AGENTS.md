@@ -51,12 +51,22 @@ migration implementation plan/result
 - 새 단계 브랜치는 최신 `migration_develop` merge head에서 만든다. 분기 전 local과
   `origin/migration_develop`의 기준 커밋을 확인해 stale local branch에서 분기하지 않는다.
 - 작업 중에는 해당 단계 브랜치만 수정한다.
-- 단계 작업이 끝나면 검증 후 하나의 의미 있는 커밋을 만든다.
+- 단계 전체를 한 PR에 몰아넣지 않는다. 하나의 PR은 하나의 reviewable concern 또는 하나의
+  migration checkpoint만 다룬다.
+- PR은 원칙적으로 생성 파일·lockfile을 제외하고 변경 파일 20개 이하, 변경 라인 400줄 이하를
+  목표로 한다. 기준을 넘으면 동작을 보존하는 준비 작업, 계약, 구현, 전환, 정리처럼 독립 검증 가능한
+  단위로 나눈다. 분리할 수 없다면 결합 이유와 리뷰 순서를 PR 본문에 적는다.
+- 무관한 리팩터링, 의존성 정리, 설정 변경을 기능 PR에 끼워 넣지 않는다. 리뷰 중 발견한 별도 관심사는
+  후속 PR 후보로 기록한다.
+- 각 PR 작업이 끝나면 검증 후 하나 이상의 의미 있는 커밋을 만든다. 리뷰 중 추가 작업도 의미 단위로
+  커밋하며 기존 커밋을 임의로 합치지 않는다. 최종 병합 시에만 GitHub가 squash한다.
 - Git 커밋 제목은 Conventional Commit의 `type(scope): 한글 요약` 형식을 유지한다. 규격상
-  `type`과 선택적 `scope`만 영어로 쓰고, 제목 요약과 본문은 반드시 한글로 작성한다.
+  `type`과 선택적 `scope`만 영어로 쓰고, 모든 개별 커밋의 제목 요약과 본문은 반드시 한글로 작성한다.
 - 사용자가 보류를 요청하지 않은 단계 완료 작업은 commit → push → PR 생성까지 진행하고 링크를 보고한다.
 - PR 대상은 `migration_develop`이며, merge 방식은 squash and merge를 전제로 한다. 작업 브랜치의
   upstream은 PR 대상이 아니라 같은 이름의 원격 작업 브랜치로만 설정한다.
+- squash 커밋 제목은 PR 제목, 본문은 PR 본문을 사용한다. 병합 전에 PR 제목이
+  `type(scope): 한글 요약`인지, PR 본문이 최종 변경 사항과 검증 결과를 한글로 설명하는지 갱신한다.
 - PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 형식을 따른다.
 - PR 리뷰 중에는 같은 브랜치에 추가 커밋을 push해 기존 PR에 반영한다.
 
