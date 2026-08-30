@@ -25,7 +25,6 @@ CREATE TABLE "profile" (
 	"account_id" bigint PRIMARY KEY NOT NULL,
 	"nickname" text NOT NULL,
 	"avatar_url" text,
-	"bio" text,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "profile_nickname_key" UNIQUE("nickname")
 );

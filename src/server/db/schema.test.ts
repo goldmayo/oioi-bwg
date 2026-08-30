@@ -15,7 +15,12 @@ describe("M5 identity persistence schema", () => {
 
     expect(account.createdAt.name).toBe("created_at");
     expect(account.deletedAt.name).toBe("deleted_at");
-    expect(profile.accountId.name).toBe("account_id");
+    expect(getTableConfig(profile).columns.map(({ name }) => name)).toEqual([
+      "account_id",
+      "nickname",
+      "avatar_url",
+      "updated_at",
+    ]);
     expect(passwordCredential.passwordHash.name).toBe("password_hash");
   });
 

@@ -50,7 +50,6 @@ export const profile = pgTable(
     accountId: bigint("account_id", { mode: "bigint" }).primaryKey().notNull(),
     nickname: text().notNull().unique("profile_nickname_key"),
     avatarUrl: text("avatar_url"),
-    bio: text(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),

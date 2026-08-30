@@ -1394,13 +1394,11 @@ Deletion:
 - account_id PK/FK
 - nickname UNIQUE
 - avatar_url nullable
-- bio nullable
 - updated_at
 
 Account 탈퇴 시:
 - nickname 비식별 처리
 - avatar_url null
-- bio null
 
 ---
 

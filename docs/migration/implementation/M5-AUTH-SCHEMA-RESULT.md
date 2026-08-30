@@ -22,7 +22,7 @@ account
 ```
 
 - `account`: bigint identity, 단일 `USER/REVIEWER/ADMIN` role, Account status, tombstone 시각
-- `profile`: Account 1:1 공개 프로필과 unique nickname
+- `profile`: Account 1:1 공개 프로필, unique nickname, nullable avatar URL
 - `password_credential`: Account 1:1 canonical email, Argon2id PHC hash 저장 필드와 변경 시각
 
 locale, album/locale assignment, 복수 role, Auth.js adapter/session table은 추가하지 않았다.
