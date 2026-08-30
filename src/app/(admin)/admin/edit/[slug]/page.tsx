@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { LazyAdminEditor } from "@/features/manage-lyrics";
 
+import { getRequestContext } from "@/server/auth/request-context";
 import { getAdminSongEditorBySlug } from "@/server/services/song-service";
 
 import { saveSongData } from "../_lib/save-song-data";
@@ -22,7 +23,7 @@ export default async function AdminEditPage({ params }: AdminEditPageProps) {
   }
 
   // 캡슐화된 쿼리 함수 사용
-  const song = await getAdminSongEditorBySlug(slug);
+  const song = await getAdminSongEditorBySlug(await getRequestContext(), slug);
 
   if (!song) {
     return notFound();

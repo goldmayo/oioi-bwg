@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { AlbumManagerClient } from "@/features/manage-album";
 
+import { getRequestContext } from "@/server/auth/request-context";
 import { listAdminAlbums } from "@/server/services/album-service";
 
 import { createAlbumAction, deleteAlbumAction, updateAlbumAction } from "../_lib/album-actions";
@@ -17,7 +18,7 @@ export const metadata = {
 };
 
 export default async function AdminAlbumsPage() {
-  const albums = await listAdminAlbums();
+  const albums = await listAdminAlbums(await getRequestContext());
 
   return (
     <div className="bg-background min-h-screen p-4 sm:p-6 lg:p-8">

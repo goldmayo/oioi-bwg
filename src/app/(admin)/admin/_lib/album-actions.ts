@@ -2,12 +2,16 @@
 
 import { albumFormSchema } from "@/features/manage-album";
 
+import { getRequestContext } from "@/server/auth/request-context";
 import { createAlbum, deleteAlbum, editAlbum } from "@/server/services/album-service";
 
 export async function createAlbumAction(formData: unknown) {
   try {
     const parsed = albumFormSchema.parse(formData);
-    await createAlbum({ ...parsed, releaseDate: parsed.releaseDate || null });
+    await createAlbum(await getRequestContext(), {
+      ...parsed,
+      releaseDate: parsed.releaseDate || null,
+    });
     return { success: true };
   } catch (error) {
     console.error("Failed to create album:", error);
@@ -18,7 +22,10 @@ export async function createAlbumAction(formData: unknown) {
 export async function updateAlbumAction(id: number, formData: unknown) {
   try {
     const parsed = albumFormSchema.parse(formData);
-    await editAlbum(id, { ...parsed, releaseDate: parsed.releaseDate || null });
+    await editAlbum(await getRequestContext(), id, {
+      ...parsed,
+      releaseDate: parsed.releaseDate || null,
+    });
     return { success: true };
   } catch (error) {
     console.error("Failed to update album:", error);
@@ -28,7 +35,7 @@ export async function updateAlbumAction(id: number, formData: unknown) {
 
 export async function deleteAlbumAction(id: number) {
   try {
-    await deleteAlbum(id);
+    await deleteAlbum(await getRequestContext(), id);
     return { success: true };
   } catch (error) {
     console.error("Failed to delete album:", error);

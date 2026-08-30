@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { SongManagerClient } from "@/features/manage-song";
 
+import { getRequestContext } from "@/server/auth/request-context";
 import { listAdminAlbums } from "@/server/services/album-service";
 import { listAdminSongs } from "@/server/services/song-service";
 
@@ -18,7 +19,8 @@ export const metadata = {
 };
 
 export default async function AdminSongsPage() {
-  const [songs, albums] = await Promise.all([listAdminSongs(), listAdminAlbums()]);
+  const context = await getRequestContext();
+  const [songs, albums] = await Promise.all([listAdminSongs(context), listAdminAlbums(context)]);
 
   return (
     <div className="bg-background min-h-screen p-4 sm:p-6 lg:p-8">
