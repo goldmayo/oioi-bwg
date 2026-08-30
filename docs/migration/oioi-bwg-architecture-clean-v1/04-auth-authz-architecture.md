@@ -1,10 +1,10 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.1"
+version: "1.2"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-26"
+updated_at: "2026-08-30"
 depends_on:
   - "01"
   - "03"
@@ -21,7 +21,7 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.1
+# oioi-bwg Authentication / Authorization Architecture v1.2
 
 ## 1. 목적
 
@@ -34,7 +34,7 @@ oioi-bwg는 Next.js 16 단일 애플리케이션으로 구성한다.
 - 인증(Authentication)과 인가(Authorization)를 분리한다.
 - Auth.js는 identity/session 처리에 집중한다.
 - CASL을 서버와 클라이언트가 공유하는 인가 어휘로 사용한다.
-- DB에는 사용자 role과 assignment 같은 사실 데이터만 저장한다.
+- DB에는 사용자 role 같은 사실 데이터만 저장한다.
 - 인가 정책 자체는 TypeScript 코드에서 정의한다.
 - 서버가 항상 보안의 SSOT가 된다.
 - FE는 서버와 동일한 CASL rules를 사용해 UX 권한을 계산한다.
@@ -55,9 +55,7 @@ Auth.js
 getRequestContext()
        │
        ├─ user
-       ├─ roles
-       ├─ assigned album ids
-       └─ assigned locales
+       └─ role
        │
        ▼
 buildAbilityRules(ctx)
@@ -89,7 +87,7 @@ Auth.js
 = 누구인가
 
 DB
-= 현재 사용자의 role / assignment 사실 데이터
+= 현재 사용자의 role 사실 데이터
 
 buildAbilityRules()
 = 정책 정의
@@ -180,9 +178,7 @@ type SessionIdentity = {
 다음 정보는 기본적으로 JWT에 넣지 않는다.
 
 ```text
-roles
-assignedAlbumIds
-assignedLocales
+role
 permissions
 CASL rules
 ```
@@ -193,13 +189,11 @@ CASL rules
 
 # 5. Authorization facts의 SSOT는 DB다
 
-예:
+v1에서 mutable authorization fact는 Account의 단일 role이다.
 
 ```text
-editor role 회수
-album assignment 변경
-translator locale assignment 변경
-admin 승격/회수
+USER / REVIEWER / ADMIN role 변경
+Account 활성 상태 변경
 ```
 
 이런 변경은 다음 요청부터 인가 판단에 반영되어야 한다.
@@ -226,9 +220,8 @@ Authorization facts는 Ability를 만들기 위한 내부 입력이며 Service�
 
 ```ts
 type AuthorizationFacts = {
-  roles: readonly Role[];
-  albumIds: readonly string[];
-  locales: readonly string[];
+  accountId: string | null;
+  role: Role | null;
 };
 
 type RequestContext =
@@ -263,7 +256,7 @@ RequestContext
 ```text
 Auth.js session 확인
 현재 user 존재/활성 상태 확인
-role / album assignment / locale assignment 조회
+role 조회
 AuthorizationFacts 구성
 CASL rules / Ability 생성
 RequestContext 반환
@@ -280,7 +273,7 @@ business workflow 실행
 
 Service는 일반적으로 `ctx.user`와 `ctx.ability`만 소비한다.
 
-Role/assignment raw facts가 별도 business requirement로 실제 필요해질 때만 명시적으로 추가한다.
+Role raw fact가 별도 business requirement로 실제 필요해질 때만 명시적으로 추가한다.
 
 ---
 
@@ -306,9 +299,7 @@ export const getRequestContext = cache(async () => {
 
 목적은 동일 요청의 중복 계산 제거다.
 
-구현 시 role / album assignment / locale assignment를 각각 여러 쿼리로 고정하지 않는다.
-
-가능하면 현재 사용자 authorization facts를 join/aggregation 등을 사용해 적은 round-trip으로 읽는다.
+구현 시 현재 사용자 활성 상태와 role을 필요한 최소 projection과 적은 round-trip으로 읽는다.
 
 ```text
 React cache()
@@ -376,25 +367,18 @@ export function buildAbilityRules(
     status: 'published',
   });
 
-  if (ctx.roles.includes('editor')) {
-    can('update', 'Song', {
-      albumId: { $in: ctx.albumIds },
-      status: { $in: ['draft', 'in_review'] },
-    });
-
-    can('submit_review', 'Song', {
-      albumId: { $in: ctx.albumIds },
-      status: 'draft',
-    });
+  if (ctx.role) {
+    can('create', 'Contribution');
+    can('create', 'DiscussionThread');
+    can('create', 'DiscussionComment');
+    can('create', 'Report');
   }
 
-  if (ctx.roles.includes('translator')) {
-    can(['read', 'create', 'update'], 'LyricsTranslation', {
-      locale: { $in: ctx.locales },
-    });
+  if (ctx.role === 'REVIEWER') {
+    can(['resolve', 'reject'], 'DiscussionThread');
   }
 
-  if (ctx.roles.includes('admin')) {
+  if (ctx.role === 'ADMIN') {
     can('manage', 'all');
   }
 
@@ -420,7 +404,8 @@ export function buildAbility(
 }
 ```
 
-`getRequestContext()`는 최종적으로 `user + ability` shape를 반환한다. Service는 role/assignment 구조를 직접 알 필요가 없다.
+`getRequestContext()`는 최종적으로 `user + ability` shape를 반환한다. Service는 role 저장 구조를
+직접 알 필요가 없다.
 
 ---
 
@@ -502,13 +487,9 @@ Role은 정책을 만드는 입력 데이터일 뿐, service가 직접 알아야
 
 실제 resource 상태가 필요한 권한은 resource를 조회한 뒤 검사한다.
 
-예:
-
-```text
-editor가 자기 album의 song인가
-현재 status가 update 가능한가
-translator에게 locale이 배정되어 있는가
-```
+예를 들어 Comment 작성자 본인인가, Revision이 freeze됐는가 같은 실제 resource 상태는 resource를
+조회한 뒤 정책용 subject로 변환해 판단한다. 수정 허용 시간 같은 business rule은 Service가 별도로
+검증한다.
 
 ```ts
 if (
@@ -560,12 +541,13 @@ function toSongAuthSubject(
 FE가 다음처럼 서버 정책을 직접 복제하지 않는다.
 
 ```ts
-role === 'editor' &&
-assignedAlbumIds.includes(song.albumId) &&
-song.status !== 'published'
+role === 'REVIEWER' &&
+thread.status === 'OPEN'
 ```
 
 대신 현재 사용자의 CASL rules를 서버에서 전달받아 Ability를 만든다.
+
+v1 schema는 DOMAIN_SPECIFICATION의 단일 `USER/REVIEWER/ADMIN` role을 사용한다.
 
 개념적으로:
 
@@ -617,7 +599,8 @@ AbilityProvider
 const ability = createMongoAbility(rules);
 ```
 
-CASL rules를 client에 전달하면 조건에 포함된 album id, locale assignment 등 일부 authorization facts도 client에서 관찰 가능하다.
+CASL rules를 client에 전달하면 조건에 포함된 Account id나 resource 식별자 같은 일부
+authorization facts도 client에서 관찰 가능하다.
 
 이는 v1에서 의도적으로 수용하는 trade-off다.
 
@@ -736,7 +719,7 @@ TanStack Query에서는 현재 로그인 사용자 권한 상태로 관리한다
 
 # 21. 권한 변경 반영
 
-v1에서는 DB에 role/assignment가 변경되면 서버 다음 요청부터 새 ability가 만들어진다.
+v1에서는 DB의 role이나 Account 활성 상태가 변경되면 서버 다음 요청부터 새 ability가 만들어진다.
 
 FE는 즉시 최신 상태가 아닐 수 있다.
 
@@ -892,7 +875,7 @@ mutation request Origin 검증 필요성
 
 # 28. JWT session과 권한 회수
 
-JWT에 authorization state를 넣지 않으므로 role/assignment 회수는 다음 요청부터 반영 가능하다.
+JWT에 authorization state를 넣지 않으므로 role 변경은 다음 요청부터 반영 가능하다.
 
 사용자가 disabled/deleted 상태라면 `getRequestContext()`가 정상 authenticated context를 만들지 않도록 한다.
 
@@ -919,26 +902,18 @@ sessionVersion
 
 DB에는 정책 자체가 아니라 authorization facts만 저장한다.
 
-개념적으로:
+M5 v1의 저장 구조는 다음 사실만 포함한다.
 
 ```text
-users
-roles
-user_roles
-album_editors
-user_locales
+account.role = USER | REVIEWER | ADMIN
+account.status
 ```
 
-Role 예:
-
-```text
-guest
-editor
-translator
-admin
-```
-
-DB schema는 별도 schema 설계 단계에서 확정한다.
+Guest는 Account role이 아니라 인증되지 않은 RequestContext다. album/locale assignment와 복수 role은
+현재 DOMAIN_SPECIFICATION의 권한 모델이 아니므로 만들지 않는다. 이 문서의 조건부 CASL 예시는
+CASL 표현력을 설명할 뿐 제품 role/permission을 추가하는 근거가 아니다. scoped permission이 실제
+요구가 되면 DOMAIN_SPECIFICATION을 먼저 개정하고 schema/rules/test를 함께 변경한다. 구체 identity
+schema는 `docs/migration/implementation/M5-AUTH-PREFLIGHT.md`가 확정한다.
 
 ---
 
@@ -995,15 +970,8 @@ CASL을 도입했다고 해서 목록 조회 SQL filtering까지 처음부터 �
 
 초기에는 각 query/use case에서 명시적으로 필요한 조건을 적용한다.
 
-예:
-
-```text
-guest song list
-→ status = published
-
-editor working list
-→ assigned album ids + allowed statuses
-```
+예를 들어 공개 목록은 공개 상태를, 관리자 목록은 DOMAIN_SPECIFICATION의 role과 resource 상태를
+명시적인 repository/service 조건으로 적용한다.
 
 CASL rules → Drizzle SQL 자동 변환기를 직접 만들지 않는다.
 
@@ -1078,10 +1046,9 @@ server/authz
 
 ```text
 guest
-editor
-translator
+user
+reviewer
 admin
-editor + translator
 ```
 
 각 context에서 예상 CASL rule이 생성되는지 테스트한다.
@@ -1091,12 +1058,10 @@ editor + translator
 대표 resource fixture를 사용한다.
 
 ```text
-editor A + album A song → update true
-editor A + album B song → update false
-editor + published song → update false
+user + contribution create → true
+user + thread resolve → false
+reviewer + thread resolve → true
 admin + any song → manage true
-translator ja + ja translation → update true
-translator ja + zh-Hant translation → update false
 ```
 
 ## Service
@@ -1144,7 +1109,7 @@ CASL 자체를 다시 테스트하지 않는다.
 1. 인증과 인가는 분리한다.
 2. Auth.js는 identity/session만 담당한다.
 3. JWT에는 최소 identity만 저장한다.
-4. role/assignment 같은 mutable authorization facts는 DB가 SSOT다.
+4. role 같은 mutable authorization facts는 DB가 SSOT다.
 5. authorization policy는 TypeScript 코드에서 정의한다.
 6. CASL을 서버와 FE의 공통 authorization vocabulary로 사용한다.
 7. `buildAbilityRules()`가 v1 정책 정의의 SSOT다.
@@ -1183,7 +1148,7 @@ Auth.js
    ↓
 user identity
    ↓
-DB role / assignments
+DB role
    ↓
 getRequestContext()
    ↓
