@@ -1187,7 +1187,8 @@ ACCOUNT_SUSPENDED
 IP는 보안상 필요한 event에만 저장한다.
 
 정책:
-- Rate limit용 IP: Redis TTL
+- Rate limit counter: PostgreSQL 원자 counter
+- Rate limit counter는 Email/IP scope와 window를 포함하며 만료된 window는 정리 대상이다.
 - Security event IP: 30~90일 범위 초기 가정
 - Account row의 `lastLoginIp` 같은 영구 PII 컬럼은 지양
 
