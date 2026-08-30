@@ -10,7 +10,9 @@ export type AppErrorCode =
   | "OTP_EXPIRED"
   | "OTP_INVALID"
   | "OTP_ATTEMPTS_EXCEEDED"
-  | "OTP_NOT_VERIFIED";
+  | "OTP_NOT_VERIFIED"
+  | "EMAIL_ALREADY_REGISTERED"
+  | "NICKNAME_ALREADY_REGISTERED";
 
 /** HTTP에 독립적인 예상 application failure다. */
 export class AppError extends Error {

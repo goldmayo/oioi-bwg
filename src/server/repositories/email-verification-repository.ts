@@ -55,6 +55,16 @@ export function findChallengeById(executor: DbExecutor, id: string) {
   });
 }
 
+export function consumeVerifiedChallenge(executor: DbExecutor, id: string, now: string) {
+  return executor
+    .update(emailVerificationChallenge)
+    .set({ status: "CONSUMED", consumedAt: now })
+    .where(
+      and(eq(emailVerificationChallenge.id, id), eq(emailVerificationChallenge.status, "VERIFIED")),
+    )
+    .returning({ email: emailVerificationChallenge.email });
+}
+
 export function markChallengeVerified(executor: DbExecutor, id: string, now: string) {
   return executor
     .update(emailVerificationChallenge)

@@ -17,3 +17,19 @@ export const verifySignupOtpResponseSchema = z.object({
   challengeId: z.string().uuid(),
   verified: z.literal(true),
 });
+
+export const completeSignupSchema = z.object({
+  challengeId: z.string().uuid(),
+  password: z
+    .string()
+    .min(10)
+    .max(32)
+    .regex(/[A-Za-z]/)
+    .regex(/\d/)
+    .regex(/[^A-Za-z\d]/),
+  nickname: z.string().trim().min(1).max(32),
+});
+
+export const completeSignupResponseSchema = z.object({
+  accountId: z.string(),
+});
