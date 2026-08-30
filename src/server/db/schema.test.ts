@@ -1,6 +1,14 @@
 import { getTableConfig } from "drizzle-orm/pg-core";
 
-import { account, ACCOUNT_ROLES, ACCOUNT_STATUSES, passwordCredential, profile } from "./schema";
+import {
+  account,
+  ACCOUNT_ROLES,
+  ACCOUNT_STATUSES,
+  emailVerificationChallenge,
+  emailVerificationRateLimit,
+  passwordCredential,
+  profile,
+} from "./schema";
 
 describe("M5 identity persistence schema", () => {
   it("uses the canonical domain role and account status vocabulary", () => {
@@ -47,5 +55,26 @@ describe("M5 identity persistence schema", () => {
     expect(profileConfig.foreignKeys[0]?.onDelete).toBe("restrict");
     expect(credentialConfig.foreignKeys[0]?.getName()).toBe("password_credential_account_id_fkey");
     expect(credentialConfig.foreignKeys[0]?.onDelete).toBe("restrict");
+  });
+
+  it("defines one-time email verification and PostgreSQL rate-limit persistence", () => {
+    const challengeConfig = getTableConfig(emailVerificationChallenge);
+    const rateLimitConfig = getTableConfig(emailVerificationRateLimit);
+
+    expect(challengeConfig.name).toBe("email_verification_challenge");
+    expect(challengeConfig.columns.map(({ name }) => name)).toContain("otp_hash");
+    expect(challengeConfig.columns.map(({ name }) => name)).toContain("ip_address");
+    expect(challengeConfig.checks.map(({ name }) => name)).toEqual([
+      "email_verification_challenge_status_check",
+      "email_verification_challenge_otp_hash_check",
+      "email_verification_challenge_failed_attempts_check",
+      "email_verification_challenge_verified_at_check",
+      "email_verification_challenge_consumed_at_check",
+      "email_verification_challenge_invalidated_at_check",
+    ]);
+    expect(rateLimitConfig.name).toBe("email_verification_rate_limit");
+    expect(rateLimitConfig.primaryKeys[0]?.getName()).toBe(
+      "email_verification_rate_limit_scope_key_window_started_at_pk",
+    );
   });
 });
