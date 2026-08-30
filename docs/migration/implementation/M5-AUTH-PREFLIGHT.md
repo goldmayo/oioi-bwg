@@ -125,10 +125,9 @@ M5에서 바꾸지 않는다. 새 PK는 PostgreSQL identity `bigint`, 시간은 
 | `account_id` | bigint PK/FK → account.id, ON DELETE RESTRICT | Account와 1:1 |
 | `nickname` | text NOT NULL UNIQUE | 공개 nickname |
 | `avatar_url` | text nullable | 공개 avatar |
-| `bio` | text nullable | 공개 소개 |
 | `updated_at` | timestamptz NOT NULL default now | 변경 시각 |
 
-탈퇴는 row 삭제가 아니라 nickname을 Account id 기반 tombstone 값으로 교체하고 avatar/bio를
+탈퇴는 row 삭제가 아니라 nickname을 Account id 기반 tombstone 값으로 교체하고 avatar를
 비운다. 과거 nickname을 일반 화면에 유지하지 않는다.
 
 ### 5.3 `password_credential`
