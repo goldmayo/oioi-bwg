@@ -1,7 +1,5 @@
 import { ReactNode } from "react";
-import { forbidden } from "next/navigation";
-
-import { LazyLoginForm } from "@/features/auth";
+import { forbidden, redirect } from "next/navigation";
 
 import { getRequestContext } from "@/server/auth/request-context";
 
@@ -11,13 +9,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const context = await getRequestContext();
 
   if (!context.user) {
-    return (
-      <div className="bg-background flex min-h-screen items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <LazyLoginForm />
-        </div>
-      </div>
-    );
+    redirect("/admin-login");
   }
 
   if (context.ability.cannot("manage", "all")) forbidden();
