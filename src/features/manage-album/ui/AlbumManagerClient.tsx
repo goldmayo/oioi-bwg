@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Edit, Plus, Trash2 } from "lucide-react";
 
 import type { AdminAlbumSummary } from "@/entities/album";
@@ -18,26 +19,23 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-import type { CreateAlbumAction, DeleteAlbumAction, UpdateAlbumAction } from "../model/actions";
+import { adminAlbumMutations } from "../api/mutations";
+import { adminAlbumQueries } from "../api/queries";
+import { adminAlbumQueryKeys } from "../api/query-keys";
+import type { AlbumFormValues } from "../model/schemas";
 
 import { AlbumFormDialog } from "./AlbumFormDialog";
 
 const PAGE_SIZE = 10;
 
 interface AlbumManagerClientProps {
-  initialAlbums: AdminAlbumSummary[];
-  createAlbumAction: CreateAlbumAction;
-  updateAlbumAction: UpdateAlbumAction;
-  deleteAlbumAction: DeleteAlbumAction;
+  canManage: boolean;
+  onMutationError?: (error: unknown) => void;
 }
 
-export function AlbumManagerClient({
-  initialAlbums,
-  createAlbumAction,
-  updateAlbumAction,
-  deleteAlbumAction,
-}: AlbumManagerClientProps) {
-  const [albums, setAlbums] = useState(initialAlbums);
+export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerClientProps) {
+  const queryClient = useQueryClient();
+  const { data: albums } = useSuspenseQuery(adminAlbumQueries.list());
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
 
@@ -47,6 +45,19 @@ export function AlbumManagerClient({
 
   // 삭제 확인 다이얼로그
   const [deleteTarget, setDeleteTarget] = useState<AdminAlbumSummary | null>(null);
+
+  const createMutation = useMutation({
+    ...adminAlbumMutations.create(),
+    onError: onMutationError,
+  });
+  const updateMutation = useMutation({
+    ...adminAlbumMutations.update(),
+    onError: onMutationError,
+  });
+  const deleteMutation = useMutation({
+    ...adminAlbumMutations.delete(),
+    onError: onMutationError,
+  });
 
   // 검색 필터링
   const filtered = useMemo(() => {
@@ -59,13 +70,11 @@ export function AlbumManagerClient({
 
   // 페이지네이션
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages - 1);
   const paged = useMemo(
-    () => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [filtered, page],
+    () => filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE),
+    [currentPage, filtered],
   );
-
-  // 페이지 범위 초과 방지
-  if (page >= totalPages && page > 0) setPage(totalPages - 1);
 
   const handleAdd = useCallback(() => {
     setEditingAlbum(undefined);
@@ -77,21 +86,35 @@ export function AlbumManagerClient({
     setFormOpen(true);
   }, []);
 
+  const invalidateAlbums = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: adminAlbumQueryKeys.albums.queryKey }),
+    [queryClient],
+  );
+
+  const handleSubmit = useCallback(
+    async (values: AlbumFormValues) => {
+      const input = { ...values, releaseDate: values.releaseDate || null };
+
+      if (editingAlbum) {
+        await updateMutation.mutateAsync({ id: editingAlbum.id, input });
+      } else {
+        await createMutation.mutateAsync(input);
+      }
+      await invalidateAlbums();
+    },
+    [createMutation, editingAlbum, invalidateAlbums, updateMutation],
+  );
+
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
-    const result = await deleteAlbumAction(deleteTarget.id);
-    if (result.success) {
-      setAlbums((prev) => prev.filter((a) => a.id !== deleteTarget.id));
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
-    } else {
-      alert(result.error);
+      await invalidateAlbums();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "앨범 삭제에 실패했습니다.");
     }
-  }, [deleteTarget, deleteAlbumAction]);
-
-  const handleSuccess = useCallback(() => {
-    // Server Action 후 router refresh로 최신 데이터 반영
-    window.location.reload();
-  }, []);
+  }, [deleteMutation, deleteTarget, invalidateAlbums]);
 
   return (
     <div className="space-y-4">
@@ -106,10 +129,12 @@ export function AlbumManagerClient({
           }}
           className="sm:max-w-xs"
         />
-        <Button onClick={handleAdd} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          앨범 추가
-        </Button>
+        {canManage && (
+          <Button onClick={handleAdd} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" />
+            앨범 추가
+          </Button>
+        )}
       </div>
 
       {/* 테이블 */}
@@ -162,26 +187,28 @@ export function AlbumManagerClient({
                       : "-"}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEdit(album)}
-                        title="수정"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                        onClick={() => setDeleteTarget(album)}
-                        title="삭제"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {canManage && (
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(album)}
+                          title="수정"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive/10 h-8 w-8"
+                          onClick={() => setDeleteTarget(album)}
+                          title="삭제"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -196,18 +223,18 @@ export function AlbumManagerClient({
           <Button
             variant="outline"
             size="sm"
-            disabled={page === 0}
+            disabled={currentPage === 0}
             onClick={() => setPage((p) => p - 1)}
           >
             이전
           </Button>
           <span className="text-muted-foreground text-sm">
-            {page + 1} / {totalPages}
+            {currentPage + 1} / {totalPages}
           </span>
           <Button
             variant="outline"
             size="sm"
-            disabled={page >= totalPages - 1}
+            disabled={currentPage >= totalPages - 1}
             onClick={() => setPage((p) => p + 1)}
           >
             다음
@@ -216,39 +243,45 @@ export function AlbumManagerClient({
       )}
 
       {/* 앨범 폼 다이얼로그 */}
-      <AlbumFormDialog
-        key={editingAlbum?.id ?? "new"}
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        album={editingAlbum}
-        createAlbumAction={createAlbumAction}
-        updateAlbumAction={updateAlbumAction}
-        onSuccess={handleSuccess}
-      />
+      {canManage && (
+        <AlbumFormDialog
+          key={editingAlbum?.id ?? "new"}
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          album={editingAlbum}
+          onSubmit={handleSubmit}
+        />
+      )}
 
       {/* 삭제 확인 다이얼로그 */}
-      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>앨범 삭제</DialogTitle>
-            <DialogDescription>
-              <strong>&ldquo;{deleteTarget?.name}&rdquo;</strong> 앨범을 삭제하시겠습니까?
-              <br />
-              <span className="text-destructive font-semibold">
-                소속된 모든 곡이 함께 삭제됩니다.
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              취소
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              삭제
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {canManage && (
+        <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>앨범 삭제</DialogTitle>
+              <DialogDescription>
+                <strong>&ldquo;{deleteTarget?.name}&rdquo;</strong> 앨범을 삭제하시겠습니까?
+                <br />
+                <span className="text-destructive font-semibold">
+                  소속된 모든 곡이 함께 삭제됩니다.
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+                취소
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                onClick={handleDelete}
+              >
+                삭제
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

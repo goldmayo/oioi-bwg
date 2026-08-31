@@ -1,11 +1,16 @@
 import { Suspense } from "react";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
-import { AlbumManagerClient } from "@/features/manage-album";
+import { authAbilityQueryKeys } from "@/features/auth";
+import { adminAlbumQueryKeys } from "@/features/manage-album";
 
 import { getRequestContext } from "@/server/auth/request-context";
 import { listAdminAlbums } from "@/server/services/album-service";
 
-import { createAlbumAction, deleteAlbumAction, updateAlbumAction } from "../_lib/album-actions";
+import { getQueryClient } from "@/shared/api/query/get-query-client";
+import { serializedAbilityResponseSchema } from "@/shared/contracts/authorization";
+
+import { AdminAlbumManager } from "./_ui/AdminAlbumManager";
 
 /**
  * 관리자 앨범 관리 페이지
@@ -18,7 +23,14 @@ export const metadata = {
 };
 
 export default async function AdminAlbumsPage() {
-  const albums = await listAdminAlbums(await getRequestContext());
+  const context = await getRequestContext();
+  const albums = await listAdminAlbums(context);
+  const queryClient = getQueryClient();
+  queryClient.setQueryData(adminAlbumQueryKeys.albums.queryKey, albums);
+  queryClient.setQueryData(
+    authAbilityQueryKeys.ability.queryKey,
+    serializedAbilityResponseSchema.parse({ rules: context.ability.rules }),
+  );
 
   return (
     <div className="bg-background min-h-screen p-4 sm:p-6 lg:p-8">
@@ -29,20 +41,11 @@ export default async function AdminAlbumsPage() {
             앨범을 추가, 수정, 삭제할 수 있습니다.
           </p>
         </div>
-        <Suspense
-          fallback={
-            <div className="text-muted-foreground flex h-40 items-center justify-center">
-              로딩 중...
-            </div>
-          }
-        >
-          <AlbumManagerClient
-            initialAlbums={albums}
-            createAlbumAction={createAlbumAction}
-            updateAlbumAction={updateAlbumAction}
-            deleteAlbumAction={deleteAlbumAction}
-          />
-        </Suspense>
+        <HydrationBoundary state={dehydrate(queryClient)}>
+          <Suspense fallback={<div className="text-muted-foreground">앨범을 불러오는 중...</div>}>
+            <AdminAlbumManager />
+          </Suspense>
+        </HydrationBoundary>
       </div>
     </div>
   );

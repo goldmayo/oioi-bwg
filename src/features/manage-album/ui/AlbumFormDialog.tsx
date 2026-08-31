@@ -21,7 +21,6 @@ import { Input } from "@/shared/ui/input";
 import { Switch } from "@/shared/ui/switch";
 
 import { uploadAlbumImageAction } from "../api/upload-album-image-action";
-import type { CreateAlbumAction, UpdateAlbumAction } from "../model/actions";
 import { type AlbumFormInput, albumFormSchema, type AlbumFormValues } from "../model/schemas";
 
 interface AlbumFormDialogProps {
@@ -29,20 +28,10 @@ interface AlbumFormDialogProps {
   onOpenChange: (open: boolean) => void;
   /** 편집 시 기존 앨범 데이터 */
   album?: AdminAlbumSummary;
-  createAlbumAction: CreateAlbumAction;
-  updateAlbumAction: UpdateAlbumAction;
-  /** 저장 완료 콜백 */
-  onSuccess?: () => void;
+  onSubmit: (values: AlbumFormValues) => Promise<void>;
 }
 
-export function AlbumFormDialog({
-  open,
-  onOpenChange,
-  album,
-  createAlbumAction,
-  updateAlbumAction,
-  onSuccess,
-}: AlbumFormDialogProps) {
+export function AlbumFormDialog({ open, onOpenChange, album, onSubmit }: AlbumFormDialogProps) {
   const isEdit = !!album;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -82,23 +71,20 @@ export function AlbumFormDialog({
     [form],
   );
 
-  const onSubmit = useCallback(
+  const handleSubmit = useCallback(
     async (values: AlbumFormValues) => {
       setIsSubmitting(true);
-      const result = isEdit
-        ? await updateAlbumAction(album!.id, values)
-        : await createAlbumAction(values);
-      setIsSubmitting(false);
-
-      if (result.success) {
+      try {
+        await onSubmit(values);
         onOpenChange(false);
         form.reset();
-        onSuccess?.();
-      } else {
-        alert(result.error);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "앨범 저장에 실패했습니다.");
+      } finally {
+        setIsSubmitting(false);
       }
     },
-    [isEdit, album, createAlbumAction, updateAlbumAction, onOpenChange, form, onSuccess],
+    [form, onOpenChange, onSubmit],
   );
 
   return (
@@ -112,7 +98,7 @@ export function AlbumFormDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"

@@ -56,9 +56,14 @@ Album browser API는 다음 파일로 추가한다.
 ```text
 src/features/manage-album/api/
 ├─ api.ts         # ky 호출과 response contract parse
-├─ queries.ts     # admin album queryOptions와 query key
+├─ query-keys.ts  # RSC service seed와 CSC Query가 공유하는 cache identity
+├─ queries.ts     # admin album queryOptions
 └─ mutations.ts   # create/update/delete mutationOptions와 mutation key
 ```
+
+초기 계획의 `queryOptions().queryKey` 직접 공유는 M4의 `client-only` Ky 경계와 함께 사용할 때 RSC module
+graph를 오염시켰다. 따라서 `@lukemorales/query-key-factory`의 slice-local `createQueryKeys()`를 사용하고,
+RSC는 key만, CSC는 같은 key를 포함하는 `queryOptions()`를 소비한다.
 
 이 API는 `entities/album`이 아니라 `features/manage-album`이 소유한다. 이유는 현재 consumer와
 계약이 Album 일반 모델이 아니라 **관리자 Album 관리 use-case**에 한정되기 때문이다.
