@@ -52,13 +52,13 @@ export function findAllAlbums(executor: DbExecutor) {
 }
 
 export function insertAlbum(executor: DbExecutor, data: InsertAlbumRow) {
-  return executor.insert(album).values(data);
+  return executor.insert(album).values(data).returning();
 }
 
 export function updateAlbum(executor: DbExecutor, id: number, data: Partial<InsertAlbumRow>) {
-  return executor.update(album).set(data).where(eq(album.id, id));
+  return executor.update(album).set(data).where(eq(album.id, id)).returning();
 }
 
 export function removeAlbum(executor: DbExecutor, id: number) {
-  return executor.delete(album).where(eq(album.id, id));
+  return executor.delete(album).where(eq(album.id, id)).returning({ id: album.id });
 }

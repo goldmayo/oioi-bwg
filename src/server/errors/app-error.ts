@@ -2,6 +2,7 @@ import "server-only";
 
 export type AppErrorCode =
   | "ALBUM_NOT_FOUND"
+  | "ALBUM_SLUG_ALREADY_EXISTS"
   | "SONG_NOT_FOUND"
   | "UNAUTHENTICATED"
   | "FORBIDDEN"
