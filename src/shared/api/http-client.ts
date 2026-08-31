@@ -29,6 +29,15 @@ async function requestJson(request: ResponsePromise): Promise<unknown> {
   }
 }
 
+/** JSON body가 없는 성공 응답을 소비하고 HTTP 오류만 정규화한다. */
+async function requestVoid(request: ResponsePromise): Promise<void> {
+  try {
+    await request;
+  } catch (error) {
+    throw normalizeHttpError(error);
+  }
+}
+
 /**
  * JSON Route Handler 전송 객체. 성공 payload는 항상 unknown으로 반환하므로 entity API가
  * 해당 response contract로 검증해야 한다.
@@ -38,5 +47,5 @@ export const http = {
   post: (url: string, options?: Options) => requestJson(client.post(url, options)),
   put: (url: string, options?: Options) => requestJson(client.put(url, options)),
   patch: (url: string, options?: Options) => requestJson(client.patch(url, options)),
-  delete: (url: string, options?: Options) => requestJson(client.delete(url, options)),
+  delete: (url: string, options?: Options) => requestVoid(client.delete(url, options)),
 };
