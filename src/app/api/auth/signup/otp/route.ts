@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       requestHeaders.get("x-forwarded-for") ?? requestHeaders.get("x-real-ip"),
     );
     const { challengeId } = await requestOtp(input.email, ipAddress);
-    return jsonResponse(signupOtpResponseSchema, { challengeId });
+    return jsonResponse(signupOtpResponseSchema, { challengeId }, { status: 201 });
   } catch (error) {
     return toErrorResponse(error);
   }
