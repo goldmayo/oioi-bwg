@@ -19,9 +19,9 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-import { getAdminAlbums } from "../api/api";
 import { adminAlbumMutations } from "../api/mutations";
 import { adminAlbumQueries } from "../api/queries";
+import { adminAlbumQueryKeys } from "../api/query-keys";
 import type { AlbumFormValues } from "../model/schemas";
 
 import { AlbumFormDialog } from "./AlbumFormDialog";
@@ -35,9 +35,7 @@ interface AlbumManagerClientProps {
 
 export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerClientProps) {
   const queryClient = useQueryClient();
-  const { data: albums } = useSuspenseQuery(
-    adminAlbumQueries.list(({ signal }) => getAdminAlbums(signal)),
-  );
+  const { data: albums } = useSuspenseQuery(adminAlbumQueries.list());
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
 
@@ -89,7 +87,7 @@ export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerC
   }, []);
 
   const invalidateAlbums = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: adminAlbumQueries.all() }),
+    () => queryClient.invalidateQueries({ queryKey: adminAlbumQueryKeys.albums.queryKey }),
     [queryClient],
   );
 

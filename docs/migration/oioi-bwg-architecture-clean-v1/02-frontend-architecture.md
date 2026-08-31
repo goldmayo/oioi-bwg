@@ -302,6 +302,34 @@ export const songQueries = {
 };
 ```
 
+단, Next.js 모놀리식 구조에서 다음 두 acquisition path를 의도적으로 분리하고 browser HTTP adapter가
+`client-only`인 경우에는 server-safe query key factory를 별도 파일로 둔다.
+
+```text
+RSC → Service 직접 호출 → setQueryData
+CSC → queryOptions → ky → Route Handler
+```
+
+```ts
+// api/query-keys.ts
+export const songQueryKeys = createQueryKeys("song", {
+  detail: (id: string) => [id],
+});
+
+// api/queries.ts — client-only acquisition
+export const songQueries = {
+  detail: (id: string) =>
+    queryOptions({
+      ...songQueryKeys.detail(id),
+      queryFn: () => getSong(id),
+    }),
+};
+```
+
+이 예외에서는 `@lukemorales/query-key-factory`의 `createQueryKeys()`만 slice별로 사용한다. 전역
+`createQueryKeyStore()`, `mergeQueryKeys()` 또는 프로젝트 자체 key framework는 만들지 않는다.
+동일 queryFn을 server/client에서 안전하게 실행할 수 있다면 기본 `queryOptions()` 단독 패턴을 유지한다.
+
 Mutation도 같은 방식으로 라이브러리 primitive를 그대로 사용한다.
 
 ```ts
@@ -446,10 +474,12 @@ Invalidation
 = mutation 성공 이후 query key를 명시적으로 invalidate
 ```
 
-Query key는 §7의 `songQueries`가 유일하게 소유한다.
+Query key는 기본적으로 §7의 `songQueries`가 유일하게 소유한다. RSC direct service와 CSC
+`client-only` HTTP acquisition이 갈리는 예외에서는 `songQueryKeys`가 identity를 소유하고
+`songQueries`도 같은 factory 결과를 사용한다.
 
-상세 query의 invalidation key는 별도 key factory를 다시 만들지 않고
-`queryOptions()`가 반환한 `.queryKey`를 사용한다.
+Invalidation key는 `queryOptions()`가 반환한 `.queryKey` 또는 위 예외의 query key factory 결과를
+사용한다. 문자열 배열을 호출부에서 다시 작성하지 않는다.
 
 Mutation key는 별도 factory로 관리한다.
 
@@ -481,7 +511,7 @@ export const songMutations = {
 };
 ```
 
-Invalidation에서는 `queryOptions()`가 반환한 `.queryKey`를 그대로 사용한다.
+Invalidation에서는 `queryOptions()`의 `.queryKey` 또는 동일 query key factory 결과를 그대로 사용한다.
 
 ```ts
 const mutation = useMutation({

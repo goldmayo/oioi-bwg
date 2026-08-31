@@ -10,6 +10,8 @@ const http = vi.hoisted(() => ({
 vi.mock("@/shared/api/http-client", () => ({ http }));
 
 import { createAdminAlbum, deleteAdminAlbum, getAdminAlbums, updateAdminAlbum } from "./api";
+import { adminAlbumQueries } from "./queries";
+import { adminAlbumQueryKeys } from "./query-keys";
 
 const album = {
   id: 1,
@@ -36,6 +38,11 @@ afterEach(() => {
 });
 
 describe("manage-album API", () => {
+  it("shares the admin album query key across server and client consumers", () => {
+    expect(adminAlbumQueryKeys.albums.queryKey).toEqual(["admin", "albums"]);
+    expect(adminAlbumQueries.list().queryKey).toEqual(adminAlbumQueryKeys.albums.queryKey);
+  });
+
   it("validates the album list response", async () => {
     const controller = new AbortController();
     http.get.mockResolvedValue([album]);

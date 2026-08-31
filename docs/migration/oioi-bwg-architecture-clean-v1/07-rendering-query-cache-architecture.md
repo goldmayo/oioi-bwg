@@ -232,6 +232,9 @@ queryKey
 = server-seeded data와 client Query를 연결하는 identity
 ```
 
+RSC가 Service를 직접 호출하고 Client Query가 `client-only` HTTP adapter를 사용하는 경우 query identity는
+server-safe `createQueryKeys()` factory가 소유한다. `queryOptions()`는 그 key와 browser queryFn을 결합한다.
+
 ---
 
 # 9. 서버에서 queryOptions의 queryFn을 기본 실행하지 않는다
@@ -300,7 +303,7 @@ export default async function SongPage({
   const song = await getSong(ctx, { id });
 
   queryClient.setQueryData(
-    songQueries.detail(id).queryKey,
+    songQueryKeys.detail(id).queryKey,
     song,
   );
 
@@ -981,7 +984,9 @@ same acquisition path
 entities/song/api/queries.ts
 ```
 
-RSC는 이 options 객체의 `.queryKey`를 사용할 수 있다.
+동일 queryFn이 server/client 양쪽에서 안전하면 RSC도 이 options 객체의 `.queryKey`를 사용할 수 있다.
+RSC는 Service를 직접 호출하고 Client Query는 `client-only` HTTP adapter를 사용하는 경우
+`api/query-keys.ts`의 `createQueryKeys()` 결과를 공유한다.
 
 하지만 RSC용 별도:
 
@@ -990,7 +995,8 @@ songServerQueries
 songRscQueries
 ```
 
-같은 duplicate factory를 만들지 않는다.
+같은 duplicate options factory를 만들지 않는다. query key factory 예외에서도 Client `queryOptions()`는
+반드시 같은 factory 결과를 사용한다.
 
 ---
 
@@ -1022,7 +1028,7 @@ Query cache에는 결과적으로 동일한 `SongDto` shape가 들어간다.
 
 ```ts
 queryClient.setQueryData(
-  songQueries.detail(id).queryKey,
+  songQueryKeys.detail(id).queryKey,
   song,
 );
 ```
@@ -1063,12 +1069,12 @@ data ownership 명확화
 
 ```ts
 queryClient.setQueryData(
-  albumQueries.detail(albumId).queryKey,
+  albumQueryKeys.detail(albumId).queryKey,
   album,
 );
 
 queryClient.setQueryData(
-  songQueries.list(albumId).queryKey,
+  songQueryKeys.list(albumId).queryKey,
   songs,
 );
 ```
@@ -1513,7 +1519,8 @@ queryOptions duplicate server factory
 30. 초기 HTML은 RSC, 이후 server-state lifecycle은 Query가 담당할 수 있다.
 31. Server-only, hydrated, client-only data를 명시적으로 구분한다.
 32. `setQueryData()` bridge를 generic helper로 먼저 감싸지 않는다.
-33. 동일 queryOptions factory를 server/client용으로 복제하지 않는다.
+33. 동일 queryOptions factory를 server/client용으로 복제하지 않는다. acquisition path가 갈리는 경우
+    slice별 `createQueryKeys()` factory만 공유한다.
 34. 실제 route classification은 이 원칙에 대입해 결정한다.
 35. 한 문제에 두 cache vocabulary를 만들지 않는다.
 36. DB-backed route는 v1에서 dynamic rendering을 기본으로 한다.

@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
-import { authAbilityQueries } from "@/features/auth";
-import { adminAlbumQueries } from "@/features/manage-album";
+import { authAbilityQueryKeys } from "@/features/auth";
+import { adminAlbumQueryKeys } from "@/features/manage-album";
 
 import { getRequestContext } from "@/server/auth/request-context";
 import { listAdminAlbums } from "@/server/services/album-service";
@@ -26,9 +26,9 @@ export default async function AdminAlbumsPage() {
   const context = await getRequestContext();
   const albums = await listAdminAlbums(context);
   const queryClient = getQueryClient();
-  queryClient.setQueryData(adminAlbumQueries.list().queryKey, albums);
+  queryClient.setQueryData(adminAlbumQueryKeys.albums.queryKey, albums);
   queryClient.setQueryData(
-    authAbilityQueries.current().queryKey,
+    authAbilityQueryKeys.ability.queryKey,
     serializedAbilityResponseSchema.parse({ rules: context.ability.rules }),
   );
 

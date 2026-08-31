@@ -61,5 +61,3 @@ export const serializedAbilityRuleSchema = z.object({
 export const serializedAbilityResponseSchema = z.object({
   rules: z.array(serializedAbilityRuleSchema),
 });
-
-export type SerializedAbilityResponse = z.infer<typeof serializedAbilityResponseSchema>;
