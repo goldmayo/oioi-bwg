@@ -23,14 +23,18 @@ const appErrorDefinitions = {
 } satisfies Record<AppErrorCode, { message: string; status: number }>;
 
 /** 성공 payload를 외부 DTO contract로 검증한 뒤 반환한다. */
-export function jsonResponse<T>(schema: z.ZodType<T>, value: unknown): Response {
+export function jsonResponse<T>(
+  schema: z.ZodType<T>,
+  value: unknown,
+  init?: ResponseInit,
+): Response {
   const parsed = schema.safeParse(value);
 
   if (!parsed.success) {
     throw new Error("API response contract violation", { cause: parsed.error });
   }
 
-  return Response.json(parsed.data);
+  return Response.json(parsed.data, init);
 }
 
 /** Route Handler boundary에서만 application error를 HTTP failure contract로 변환한다. */

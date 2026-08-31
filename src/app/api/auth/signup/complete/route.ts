@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   try {
     const input = completeSignupSchema.parse(await request.json());
     const result = await completeSignup(input.challengeId, input.password, input.nickname);
-    return jsonResponse(completeSignupResponseSchema, result);
+    return jsonResponse(completeSignupResponseSchema, result, { status: 201 });
   } catch (error) {
     return toErrorResponse(error);
   }
