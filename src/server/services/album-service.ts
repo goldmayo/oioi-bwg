@@ -117,17 +117,40 @@ export async function listAdminAlbums(ctx: RequestContext): Promise<AlbumDto[]> 
   return rows.map(mapAlbum);
 }
 
-export function createAlbum(ctx: RequestContext, input: SaveAlbumInput) {
+export async function createAlbum(ctx: RequestContext, input: SaveAlbumInput): Promise<AlbumDto> {
   requireAdmin(ctx);
-  return insertAlbum(getDatabase(), input);
+  try {
+    const [album] = await insertAlbum(getDatabase(), input);
+    if (!album) throw new Error("Album was not created");
+    return mapAlbum(album);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Album_slug_key")) {
+      throw new AppError("ALBUM_SLUG_ALREADY_EXISTS");
+    }
+    throw error;
+  }
 }
 
-export function editAlbum(ctx: RequestContext, id: number, input: SaveAlbumInput) {
+export async function editAlbum(
+  ctx: RequestContext,
+  id: number,
+  input: SaveAlbumInput,
+): Promise<AlbumDto> {
   requireAdmin(ctx);
-  return updateAlbum(getDatabase(), id, input);
+  try {
+    const [album] = await updateAlbum(getDatabase(), id, input);
+    if (!album) throw new AppError("ALBUM_NOT_FOUND");
+    return mapAlbum(album);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Album_slug_key")) {
+      throw new AppError("ALBUM_SLUG_ALREADY_EXISTS");
+    }
+    throw error;
+  }
 }
 
-export function deleteAlbum(ctx: RequestContext, id: number) {
+export async function deleteAlbum(ctx: RequestContext, id: number) {
   requireAdmin(ctx);
-  return removeAlbum(getDatabase(), id);
+  const [album] = await removeAlbum(getDatabase(), id);
+  if (!album) throw new AppError("ALBUM_NOT_FOUND");
 }

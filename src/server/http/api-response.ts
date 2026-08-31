@@ -9,6 +9,7 @@ import { AppError, type AppErrorCode } from "../errors/app-error";
 
 const appErrorDefinitions = {
   ALBUM_NOT_FOUND: { message: "앨범을 찾을 수 없습니다.", status: 404 },
+  ALBUM_SLUG_ALREADY_EXISTS: { message: "이미 사용 중인 앨범 slug입니다.", status: 409 },
   SONG_NOT_FOUND: { message: "곡을 찾을 수 없습니다.", status: 404 },
   UNAUTHENTICATED: { message: "로그인이 필요합니다.", status: 401 },
   FORBIDDEN: { message: "접근 권한이 없습니다.", status: 403 },

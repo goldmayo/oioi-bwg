@@ -4,6 +4,22 @@ export const albumSlugParamsSchema = z.object({
   slug: z.string().trim().min(1),
 });
 
+export const adminAlbumIdParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
+export const saveAdminAlbumSchema = z.object({
+  name: z.string().trim().min(1),
+  slug: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9-]+$/),
+  imgUrl: z.string().url(),
+  color: z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/),
+  releaseDate: z.string().nullable(),
+  isVisible: z.boolean(),
+});
+
 export const renderableAlbumSongSchema = z.object({
   id: z.number().int(),
   title: z.string(),
@@ -31,3 +47,4 @@ export const albumDetailSchema = albumSummarySchema.extend({
 export type RenderableAlbumSong = z.infer<typeof renderableAlbumSongSchema>;
 export type AlbumSummary = z.infer<typeof albumSummarySchema>;
 export type AlbumDetail = z.infer<typeof albumDetailSchema>;
+export type SaveAdminAlbum = z.infer<typeof saveAdminAlbumSchema>;
