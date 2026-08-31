@@ -17,6 +17,27 @@ Admin Client
 M5에서 적용한 `RequestContext`와 CASL service security boundary를 재사용한다. Route Handler나
 client UI의 검사만으로 write 권한을 보장하지 않는다.
 
+## M4에서 전환하지 않은 이유
+
+M4는 공개 Album/Song **read** API contract와 client HTTP 기반을 먼저 확정한 checkpoint였다.
+`M4-API-CONTRACT-PLAN.md`와 `M4-API-CONTRACT-RESULT.md`는 admin mutation contract를 M5
+authentication/CASL authorization 및 revision/discussion/moderation lifecycle과 함께 의도적으로
+제외했다.
+
+당시 관리자 write를 Route Handler로 먼저 전환했다면 다음 보안 경계가 없는 상태에서 API contract를
+만들고, M5 후에 다시 고쳐야 했다.
+
+```text
+Auth.js identity
+RequestContext의 ACTIVE account fact
+CASL ability
+UNAUTHENTICATED / FORBIDDEN AppError → 401 / 403 변환
+```
+
+현재 M5가 이 경계를 제공하므로, M6에서 기존 Server Action을 동일 service security boundary를 쓰는
+HTTP mutation으로 전환한다. revision/discussion/moderation lifecycle은 여전히 이 Album/Song CRUD
+전환과 분리된 후속 도메인 작업이다.
+
 ## 현재 inventory
 
 | 영역 | 현재 delivery adapter | service | 전환 대상 |
