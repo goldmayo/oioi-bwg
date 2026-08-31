@@ -28,6 +28,28 @@ client UI의 검사만으로 write 권한을 보장하지 않는다.
 현재 Server Action은 Zod parse, LRC parse, error string 변환, `router.refresh()` 기반 갱신을 함께
 소유한다. 이는 M4 이후의 HTTP/`ApiError`/Query invalidation 계약과 병행하지 않는다.
 
+## Album client API 소유권
+
+Album browser API는 다음 파일로 추가한다.
+
+```text
+src/features/manage-album/api/
+├─ api.ts         # ky 호출과 response contract parse
+├─ queries.ts     # admin album queryOptions와 query key
+└─ mutations.ts   # create/update/delete mutationOptions와 mutation key
+```
+
+이 API는 `entities/album`이 아니라 `features/manage-album`이 소유한다. 이유는 현재 consumer와
+계약이 Album 일반 모델이 아니라 **관리자 Album 관리 use-case**에 한정되기 때문이다.
+
+- endpoint가 `/api/admin/albums`이고 `RequestContext`의 admin policy에 결합된다.
+- create/update/delete와 관리자 목록은 public Album 조회와 다른 입력·출력·권한·오류 계약을 가진다.
+- 현재 실제 browser consumer는 `AlbumManagerClient` 한 곳뿐이다.
+- 따라서 안정된 여러 consumer용 Album API라는 근거 없이 `entities/album/api`로 승격하지 않는다.
+
+`entities/album`에는 public Album projection과 재사용되는 Album UI만 남긴다. 향후 관리자 외의
+독립 consumer가 같은 admin DTO와 query/mutation contract를 실제로 공유할 때만 승격을 재검토한다.
+
 ## 확정 원칙
 
 - request body와 path param은 Route Handler에서 Zod로 한 번 검증한다.
@@ -45,10 +67,11 @@ client UI의 검사만으로 write 권한을 보장하지 않는다.
 
 1. **이 PR — mutation API 계획**: 현재 Server Action·service·client 연결을 기록하고 route/contract
    분할을 고정한다.
-2. **Album mutation contract + Route Handler**: create/update/delete input·response contract, path param,
-   401/403/validation/expected error test를 추가한다. 기존 Server Action consumer는 유지한다.
-3. **Album client transport 전환**: album manager를 ky/TanStack Query mutation으로 전환하고 query
-   invalidation 및 403 ability revalidation을 적용한 뒤 album Server Action을 제거한다.
+2. **Album HTTP contract + Route Handler**: admin list GET와 create/update/delete input·response contract,
+   path param, 401/403/validation/expected error test를 추가한다. 기존 Server Action consumer는 유지한다.
+3. **Album client transport 전환**: `features/manage-album/api/{api,queries,mutations}.ts`를 추가하고
+   Album manager가 `queryOptions`/`mutationOptions`를 직접 소비하게 한다. query invalidation 및 403
+   ability revalidation을 적용한 뒤 album Server Action을 제거한다.
 4. **Song mutation contract + Route Handler**: LRC parsing의 service 소유 경계를 정리한 뒤 song
    create/update/delete API와 테스트를 추가한다.
 5. **Song client transport 전환**: song manager 및 lyric editor consumer를 전환하고 기존 Server Action을
