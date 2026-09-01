@@ -1,12 +1,13 @@
-import "client-only";
-
 import type { Options, ResponsePromise } from "ky";
 import ky from "ky";
 
 import { normalizeHttpError } from "./http-errors";
 
 /**
- * 이 애플리케이션의 JSON Route Handler API를 위한 브라우저 전송 계층이다.
+ * 이 애플리케이션의 JSON Route Handler API를 위한 전송 계층이다.
+ *
+ * 호출부가 client component에서만 사용하므로 브라우저 요청을 기본으로 하지만,
+ * entity public index가 RSC에서도 import될 수 있어 client-only 모듈 경계는 두지 않는다.
  *
  * Query 재시도는 TanStack Query가 소유한다. 엔드포인트별 전송 재시도는 호출 지점에서
  * 멱등성을 명시적으로 판단한 경우에만 추가한다.
