@@ -1,13 +1,21 @@
+"use client";
+
 import { queryOptions } from "@tanstack/react-query";
 
-import { getAlbumDetail } from "./api";
+import { getAdminAlbums, getAlbumDetail } from "./api";
+import { albumQueryKeys } from "./query-keys";
 
 export const albumQueries = {
-  all: () => ["album"] as const,
-
   detail: (slug: string) =>
     queryOptions({
-      queryKey: [...albumQueries.all(), "detail", slug] as const,
+      ...albumQueryKeys.detail(slug),
       queryFn: ({ signal }) => getAlbumDetail(slug, signal),
+    }),
+
+  adminList: () =>
+    queryOptions({
+      ...albumQueryKeys.adminList,
+      staleTime: 30_000,
+      queryFn: ({ signal }) => getAdminAlbums(signal),
     }),
 };

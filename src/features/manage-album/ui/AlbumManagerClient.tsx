@@ -5,6 +5,7 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { Edit, Plus, Trash2 } from "lucide-react";
 
 import type { AdminAlbumSummary } from "@/entities/album";
+import { albumMutations, albumQueries, albumQueryKeys } from "@/entities/album/api";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -19,9 +20,6 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-import { adminAlbumMutations } from "../api/mutations";
-import { adminAlbumQueries } from "../api/queries";
-import { adminAlbumQueryKeys } from "../api/query-keys";
 import type { AlbumFormValues } from "../model/schemas";
 
 import { AlbumFormDialog } from "./AlbumFormDialog";
@@ -35,7 +33,7 @@ interface AlbumManagerClientProps {
 
 export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerClientProps) {
   const queryClient = useQueryClient();
-  const { data: albums } = useSuspenseQuery(adminAlbumQueries.list());
+  const { data: albums } = useSuspenseQuery(albumQueries.adminList());
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
 
@@ -47,15 +45,15 @@ export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerC
   const [deleteTarget, setDeleteTarget] = useState<AdminAlbumSummary | null>(null);
 
   const createMutation = useMutation({
-    ...adminAlbumMutations.create(),
+    ...albumMutations.create(),
     onError: onMutationError,
   });
   const updateMutation = useMutation({
-    ...adminAlbumMutations.update(),
+    ...albumMutations.update(),
     onError: onMutationError,
   });
   const deleteMutation = useMutation({
-    ...adminAlbumMutations.delete(),
+    ...albumMutations.delete(),
     onError: onMutationError,
   });
 
@@ -87,7 +85,7 @@ export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerC
   }, []);
 
   const invalidateAlbums = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: adminAlbumQueryKeys.albums.queryKey }),
+    () => queryClient.invalidateQueries({ queryKey: albumQueryKeys.adminList.queryKey }),
     [queryClient],
   );
 

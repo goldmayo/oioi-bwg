@@ -38,7 +38,14 @@ test("rejects invalid route-private and shared segments", () => {
 });
 
 test("enforces promoted slice public APIs", () => {
+  assert.deepEqual(
+    lint("src/app/page.js", 'import { songQueries } from "@/entities/song/api";'),
+    [],
+  );
   assert.deepEqual(lint("src/app/page.js", 'import x from "@/features/auth/ui/form";'), [
+    "deepSliceImport",
+  ]);
+  assert.deepEqual(lint("src/app/page.js", 'import x from "@/entities/song/api/queries";'), [
     "deepSliceImport",
   ]);
   assert.deepEqual(lint("src/app/page.js", 'export { x } from "@/features/auth/ui/form";'), [

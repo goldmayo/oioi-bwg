@@ -51,30 +51,42 @@ HTTP mutation으로 전환한다. revision/discussion/moderation lifecycle은 �
 
 ## Album client API 소유권
 
-Album browser API는 다음 파일로 추가한다.
+### 최초 결정 — superseded
+
+PR #41 계획과 PR #43 구현에서는 관리자 endpoint와 단일 browser consumer를 근거로 Album browser API를
+`features/manage-album/api`에 배치했다. 이 결정은 다음 상위 active architecture 규칙보다 endpoint의
+권한 성격을 과도하게 우선했으므로 superseded한다.
 
 ```text
-src/features/manage-album/api/
+domain-specific browser API adapter / queryOptions / mutationOptions
+→ entities/*/api
+```
+
+또한 `AdminAlbumSummary`는 Album manager뿐 아니라 Song manager의 앨범 선택에서도 이미 사용되고 있어
+안정된 Album projection과 복수 상위 consumer라는 승격 evidence가 존재했다.
+
+### 후속 정정
+
+Album browser API는 다음 파일이 소유한다.
+
+```text
+src/entities/album/api/
 ├─ api.ts         # ky 호출과 response contract parse
 ├─ query-keys.ts  # RSC service seed와 CSC Query가 공유하는 cache identity
-├─ queries.ts     # admin album queryOptions
+├─ queries.ts     # public detail 및 admin list queryOptions
 └─ mutations.ts   # create/update/delete mutationOptions와 mutation key
 ```
 
-초기 계획의 `queryOptions().queryKey` 직접 공유는 M4의 `client-only` Ky 경계와 함께 사용할 때 RSC module
-graph를 오염시켰다. 따라서 `@lukemorales/query-key-factory`의 slice-local `createQueryKeys()`를 사용하고,
-RSC는 key만, CSC는 같은 key를 포함하는 `queryOptions()`를 소비한다.
+M4의 `client-only` Ky 경계를 RSC module graph에 넣지 않도록 `query-keys.ts`는 server-safe module로
+분리한다. RSC는 key만, CSC는 같은 key를 포함하는 `queryOptions()`를 소비한다. 관리자 인증·인가는
+Route Handler와 service의 security policy이며 FSD browser API 소유권을 feature로 바꾸지 않는다.
 
-이 API는 `entities/album`이 아니라 `features/manage-album`이 소유한다. 이유는 현재 consumer와
-계약이 Album 일반 모델이 아니라 **관리자 Album 관리 use-case**에 한정되기 때문이다.
+slice root `index.ts`는 server-safe key를 공개하고, client-only Query/Mutation options는 같은 slice의
+`api/index.ts` public entry로 공개한다. 이를 통해 RSC가 사용하는 Album model/UI public API에서 Ky
+transport를 추적하지 않는다.
 
-- endpoint가 `/api/admin/albums`이고 `RequestContext`의 admin policy에 결합된다.
-- create/update/delete와 관리자 목록은 public Album 조회와 다른 입력·출력·권한·오류 계약을 가진다.
-- 현재 실제 browser consumer는 `AlbumManagerClient` 한 곳뿐이다.
-- 따라서 안정된 여러 consumer용 Album API라는 근거 없이 `entities/album/api`로 승격하지 않는다.
-
-`entities/album`에는 public Album projection과 재사용되는 Album UI만 남긴다. 향후 관리자 외의
-독립 consumer가 같은 admin DTO와 query/mutation contract를 실제로 공유할 때만 승격을 재검토한다.
+`features/manage-album`에는 Album 관리 폼·dialog·mutation orchestration과 R2 이미지 업로드 행동만
+남긴다.
 
 ## 확정 원칙
 
@@ -95,12 +107,14 @@ RSC는 key만, CSC는 같은 key를 포함하는 `queryOptions()`를 소비한�
    분할을 고정한다.
 2. **Album HTTP contract + Route Handler**: admin list GET와 create/update/delete input·response contract,
    path param, 401/403/validation/expected error test를 추가한다. 기존 Server Action consumer는 유지한다.
-3. **Album client transport 전환**: `features/manage-album/api/{api,queries,mutations}.ts`를 추가하고
+3. **Album client transport 전환**: 최초에는 `features/manage-album/api/{api,queries,mutations}.ts`를 추가하고
    Album manager가 `queryOptions`/`mutationOptions`를 직접 소비하게 한다. query invalidation 및 403
    ability revalidation을 적용한 뒤 album Server Action을 제거한다.
-4. **Song mutation contract + Route Handler**: LRC parsing의 service 소유 경계를 정리한 뒤 song
+4. **Album API 소유권 정정**: 상위 architecture와 실제 복수 consumer evidence에 맞춰 Album browser
+   API와 Query options를 `entities/album/api`로 이동한다. 동작과 HTTP contract는 바꾸지 않는다.
+5. **Song mutation contract + Route Handler**: LRC parsing의 service 소유 경계를 정리한 뒤 song
    create/update/delete API와 테스트를 추가한다.
-5. **Song client transport 전환**: song manager 및 lyric editor consumer를 전환하고 기존 Server Action을
+6. **Song client transport 전환**: song manager 및 lyric editor consumer를 전환하고 기존 Server Action을
    제거한다.
 
 Album과 Song을 한 PR에 함께 전환하지 않는다. Song의 LRC parsing과 lyric editor는 별도 reviewable

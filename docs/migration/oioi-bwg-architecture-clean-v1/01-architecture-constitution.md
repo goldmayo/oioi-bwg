@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.5"
+version: "2.6"
 status: "active"
 authority: "constitution"
-updated_at: "2026-08-29"
+updated_at: "2026-09-01"
 depends_on:
   - "00"
 supersedes:
@@ -374,6 +374,19 @@ import { SongCard } from '@/entities/song';
 ```
 
 slice 외부에서 내부 segment를 우회해서 import하지 않는다.
+
+단, Next.js의 server-safe root public API와 `client-only` browser API를 같은 barrel에서 재-export하면
+RSC module graph에 browser transport가 유입된다. 이 경우에만 `api/index.ts`를 두 번째 public entry로
+사용한다.
+
+```ts
+import { AlbumCover, albumQueryKeys } from '@/entities/album';
+import { albumQueries } from '@/entities/album/api';
+```
+
+root `index.ts`에는 model/UI와 server-safe query key를 노출하고, `client-only` HTTP adapter를 참조하는
+query/mutation options는 `api/index.ts`로 노출한다. `api/queries` 같은 segment 내부 파일 직접 import는
+여전히 금지한다.
 
 반면 route-local private folder에는 public API를 강제하지 않는다.
 

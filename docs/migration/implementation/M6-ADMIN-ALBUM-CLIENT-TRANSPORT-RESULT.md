@@ -1,5 +1,9 @@
 # M6 관리자 Album Client Transport 결과
 
+> PR #43 당시 browser API를 `features/manage-album/api`에 배치한 결과 기록이다. 후속 ownership
+> checkpoint에서 상위 architecture와 실제 복수 consumer evidence에 맞춰 Album API를
+> `entities/album/api`로 이동했으며, HTTP contract와 runtime flow는 유지했다.
+
 ## 완료 범위
 
 - `features/manage-album/api/{api,query-keys,queries,mutations}.ts`에 관리자 Album 브라우저 API,
@@ -28,6 +32,20 @@ Client: queryOptions(browser Ky queryFn) → hydrated cache → 필요 시 /api 
 store나 merge abstraction은 도입하지 않았고 mutation key는 기존 TanStack Query 구성을 유지한다. 초기
 hydration 직후 같은 데이터를 다시 요청하지 않도록 관리자 Album과 ability query에 30초 `staleTime`을
 적용했다.
+
+## 후속 Entity API 소유권 정정
+
+- Album의 공개 상세, 관리자 목록, create/update/delete HTTP adapter와 Query options를
+  `entities/album/api`에 통합했다.
+- `albumQueryKeys`가 public detail과 admin list cache identity를 함께 소유한다.
+- `features/manage-album`에는 관리 UI·폼 orchestration과 R2 이미지 업로드 행동만 남겼다.
+- 관리자 endpoint의 인증·인가는 기존 Route Handler → service security boundary를 그대로 사용한다.
+- server-safe key와 client-only Query options 파일 분리는 유지해 RSC가 Ky adapter를 실행하지 않는다.
+- production build에서 slice root barrel이 `client-only` Ky module을 RSC graph에 유입하는 문제가 확인되어,
+  root `index.ts`는 server-safe key만 공개하고 `api/index.ts`가 browser Query options를 공개하도록 분리했다.
+- 같은 barrel 문제가 있던 Auth ability query도 `features/auth/api` public entry로 분리했다.
+- architecture harness는 `slice/api` public entry까지만 허용하고 `slice/api/queries` deep import는 계속
+  차단한다.
 
 ## 검증
 
