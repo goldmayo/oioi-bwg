@@ -100,7 +100,7 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
         <div className="flex justify-center lg:hidden">
           <Checkbox
             checked={line.isExtra}
-            onCheckedChange={(c) => updateLine(index, { isExtra: !!c })}
+            onCheckedChange={(c: boolean | "indeterminate") => updateLine(index, { isExtra: !!c })}
             className="data-[state=checked]:bg-qwer-e data-[state=checked]:border-qwer-e"
           />
         </div>
@@ -201,7 +201,7 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
         <div className="hidden justify-center lg:flex">
           <Checkbox
             checked={line.isExtra}
-            onCheckedChange={(c) => updateLine(index, { isExtra: !!c })}
+            onCheckedChange={(c: boolean | "indeterminate") => updateLine(index, { isExtra: !!c })}
             className="data-[state=checked]:bg-qwer-e data-[state=checked]:border-qwer-e"
           />
         </div>

@@ -58,7 +58,7 @@ export function RawTextEditor({ line, lineIndex, isOpen, onClose }: RawTextEdito
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>가사 텍스트 수정</DialogTitle>

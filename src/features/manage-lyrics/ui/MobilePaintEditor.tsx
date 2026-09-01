@@ -125,7 +125,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent
         className="flex max-h-[80vh] flex-col overflow-hidden sm:max-w-md"
         onPointerUp={handlePointerUp}

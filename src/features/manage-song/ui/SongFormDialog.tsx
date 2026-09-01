@@ -108,7 +108,7 @@ export function SongFormDialog({
                   <FormLabel>앨범</FormLabel>
                   <Select
                     value={field.value ? String(field.value) : ""}
-                    onValueChange={(v) => field.onChange(Number(v))}
+                    onValueChange={(v: string) => field.onChange(Number(v))}
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
