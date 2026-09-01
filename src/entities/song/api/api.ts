@@ -4,6 +4,7 @@ import {
   adminSongMutationResultSchema,
   adminSongSummarySchema,
   type CreateAdminSong,
+  type SaveAdminSongLyrics,
   songDetailSchema,
   type UpdateAdminSong,
 } from "@/shared/contracts/song";
@@ -35,4 +36,10 @@ export async function updateAdminSong(id: number, input: UpdateAdminSong) {
 /** 관리자 곡을 삭제한다. 성공 응답에는 JSON body가 없다. */
 export async function deleteAdminSong(id: number) {
   await http.delete(`/api/admin/songs/${id}`);
+}
+
+/** 관리자 가사 편집기의 구조화된 가사와 YouTube ID를 저장한다. */
+export async function saveAdminSongLyrics(id: number, input: SaveAdminSongLyrics) {
+  const data = await http.patch(`/api/admin/songs/${id}/lyrics`, { json: input });
+  return parseClientResponse(adminSongMutationResultSchema, data);
 }

@@ -47,6 +47,11 @@ export const updateAdminSongSchema = adminSongFieldsSchema.extend({
   lrcText: z.string().optional(),
 });
 
+export const saveAdminSongLyricsSchema = z.object({
+  lyrics: lyricsDataSchema,
+  youtubeId: z.string().trim(),
+});
+
 export const adminSongSummarySchema = adminSongFieldsSchema.extend({
   id: z.number().int().positive(),
   updatedAt: z.string(),
@@ -75,4 +80,5 @@ export type LyricsData = z.infer<typeof lyricsDataSchema>;
 export type SongDetail = z.infer<typeof songDetailSchema>;
 export type CreateAdminSong = z.infer<typeof createAdminSongSchema>;
 export type UpdateAdminSong = z.infer<typeof updateAdminSongSchema>;
+export type SaveAdminSongLyrics = z.infer<typeof saveAdminSongLyricsSchema>;
 export type AdminSongSummary = z.infer<typeof adminSongSummarySchema>;

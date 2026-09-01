@@ -133,7 +133,7 @@ describe("useAdminEditor 훅 테스트", () => {
       const { result } = renderHook(() => useAdminEditor(mockSong, saveSongData));
 
       // Success 케이스
-      vi.mocked(saveSongData).mockResolvedValueOnce({ success: true, count: 1 } as never);
+      vi.mocked(saveSongData).mockResolvedValueOnce(undefined);
 
       await act(async () => {
         await result.current.handleSave();
@@ -143,10 +143,7 @@ describe("useAdminEditor 훅 테스트", () => {
       expect(mockAlert).toHaveBeenCalledWith("저장되었습니다.");
 
       // Error 케이스
-      vi.mocked(saveSongData).mockResolvedValueOnce({
-        success: false,
-        error: "Network Timeout",
-      } as never);
+      vi.mocked(saveSongData).mockRejectedValueOnce(new Error("Network Timeout"));
 
       await act(async () => {
         await result.current.handleSave();

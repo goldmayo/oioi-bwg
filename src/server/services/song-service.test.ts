@@ -22,7 +22,7 @@ vi.mock("../repositories/song-repository", () => ({
   updateSong,
 }));
 
-import { createSong, editSong } from "./song-service";
+import { createSong, editSong, saveSongLyrics } from "./song-service";
 
 const context = {
   user: { id: "1" },
@@ -79,5 +79,13 @@ describe("song-service LRC boundary", () => {
       2,
       expect.not.objectContaining({ lyrics: expect.anything() }),
     );
+  });
+
+  it("rejects saving lyrics for a missing song", async () => {
+    updateSong.mockResolvedValue([]);
+
+    await expect(
+      saveSongLyrics(context, 404, { lyrics: [], youtubeId: "youtube-id" }),
+    ).rejects.toMatchObject({ code: "SONG_NOT_FOUND" });
   });
 });

@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import type { LyricLine, LyricSegment } from "@/entities/cheer-guide";
 import { parseLrc } from "@/entities/cheer-guide";
 
+import type { SaveAdminSongLyrics } from "@/shared/contracts/song";
 import { useAdWatcher } from "@/shared/model/useAdWatcher";
 import { YouTubePlayerInstance } from "@/shared/model/youtube";
 
@@ -22,10 +23,7 @@ export interface ToolbarState {
   endOffset: number;
 }
 
-export type SaveSongDataAction = (
-  songId: number,
-  data: { lyrics: unknown; youtubeId: string },
-) => Promise<{ success: boolean; error?: string }>;
+export type SaveSongDataAction = (songId: number, data: SaveAdminSongLyrics) => Promise<void>;
 
 /**
  * AdminEditor의 모든 상태와 핸들러를 담는 단일 로직 게이트웨이.
@@ -102,12 +100,13 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
    */
   const handleSave = useCallback(async () => {
     setIsSaving(true);
-    const result = await saveSongData(song.id, { lyrics, youtubeId });
-    setIsSaving(false);
-    if (result.success) {
+    try {
+      await saveSongData(song.id, { lyrics, youtubeId });
       alert("저장되었습니다.");
-    } else {
-      alert(`저장 실패: ${result.error}`);
+    } catch (error) {
+      alert(`저장 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
+    } finally {
+      setIsSaving(false);
     }
   }, [song.id, lyrics, youtubeId, saveSongData]);
 

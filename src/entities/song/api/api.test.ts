@@ -9,7 +9,13 @@ const http = vi.hoisted(() => ({
 
 vi.mock("@/shared/api/http-client", () => ({ http }));
 
-import { createAdminSong, deleteAdminSong, getAdminSongs, updateAdminSong } from "./api";
+import {
+  createAdminSong,
+  deleteAdminSong,
+  getAdminSongs,
+  saveAdminSongLyrics,
+  updateAdminSong,
+} from "./api";
 import { songQueries } from "./queries";
 import { songQueryKeys } from "./query-keys";
 
@@ -68,8 +74,14 @@ describe("song browser API", () => {
     await expect(createAdminSong(input)).resolves.toEqual({ id: song.id });
     await expect(updateAdminSong(song.id, input)).resolves.toEqual({ id: song.id });
     await expect(deleteAdminSong(song.id)).resolves.toBeUndefined();
+    await expect(
+      saveAdminSongLyrics(song.id, { lyrics: [], youtubeId: input.youtubeId }),
+    ).resolves.toEqual({ id: song.id });
     expect(http.post).toHaveBeenCalledWith("/api/admin/songs", { json: input });
     expect(http.patch).toHaveBeenCalledWith("/api/admin/songs/2", { json: input });
     expect(http.delete).toHaveBeenCalledWith("/api/admin/songs/2");
+    expect(http.patch).toHaveBeenCalledWith("/api/admin/songs/2/lyrics", {
+      json: { lyrics: [], youtubeId: input.youtubeId },
+    });
   });
 });

@@ -1,20 +1,21 @@
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
 
-import { LazyAdminEditor } from "@/features/manage-lyrics";
+import { authAbilityQueryKeys } from "@/features/auth";
 
 import { getRequestContext } from "@/server/auth/request-context";
 import { getAdminSongEditorBySlug } from "@/server/services/song-service";
 
-import { saveSongData } from "../_lib/save-song-data";
+import { getQueryClient } from "@/shared/api/query/get-query-client";
+import { serializedAbilityResponseSchema } from "@/shared/contracts/authorization";
+
+import { AdminLyricsEditor } from "./_ui/AdminLyricsEditor";
 
 interface AdminEditPageProps {
   params: Promise<{ slug: string }>;
 }
 
-/**
- * 관리자 가사 에디터 페이지 (Server Component)
- * 데이터 접근 계층(Queries)을 활용하여 곡 데이터를 로드합니다.
- */
+/** 관리자 가사 편집 DTO와 Ability를 서버에서 준비한다. */
 export default async function AdminEditPage({ params }: AdminEditPageProps) {
   const { slug } = await params;
 
@@ -22,16 +23,24 @@ export default async function AdminEditPage({ params }: AdminEditPageProps) {
     return notFound();
   }
 
-  // 캡슐화된 쿼리 함수 사용
-  const song = await getAdminSongEditorBySlug(await getRequestContext(), slug);
+  const context = await getRequestContext();
+  const song = await getAdminSongEditorBySlug(context, slug);
 
   if (!song) {
     return notFound();
   }
 
+  const queryClient = getQueryClient();
+  queryClient.setQueryData(
+    authAbilityQueryKeys.ability.queryKey,
+    serializedAbilityResponseSchema.parse({ rules: context.ability.rules }),
+  );
+
   return (
-    <div className="h-screen overflow-hidden">
-      <LazyAdminEditor key={slug} song={song} saveSongData={saveSongData} />
-    </div>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <div className="h-screen overflow-hidden">
+        <AdminLyricsEditor song={song} />
+      </div>
+    </HydrationBoundary>
   );
 }
