@@ -64,7 +64,7 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
 
   // 필터링
   const filtered = useMemo(() => {
-    let result = songs;
+    let result: AdminSongSummary[] = songs;
 
     // 앨범 필터
     if (albumFilter !== "all") {
