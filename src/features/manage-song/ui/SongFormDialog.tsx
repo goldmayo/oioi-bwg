@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 
 import type { AdminAlbumSummary } from "@/entities/album";
+import type { AdminSongSummary } from "@/entities/song";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -21,9 +22,7 @@ import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Switch } from "@/shared/ui/switch";
 
-import type { CreateSongAction, UpdateSongAction } from "../model/actions";
 import { type SongEditInput, songEditSchema, type SongEditValues } from "../model/schemas";
-import type { AdminSongSummary } from "../model/types";
 
 import { LrcUploader } from "./LrcUploader";
 
@@ -34,10 +33,7 @@ interface SongFormDialogProps {
   albums: AdminAlbumSummary[];
   /** 편집 시 기존 곡 데이터 */
   song?: AdminSongSummary;
-  createSongAction: CreateSongAction;
-  updateSongAction: UpdateSongAction;
-  /** 저장 완료 콜백 */
-  onSuccess?: () => void;
+  onSubmit: (values: SongEditValues) => Promise<void>;
 }
 
 export function SongFormDialog({
@@ -45,9 +41,7 @@ export function SongFormDialog({
   onOpenChange,
   albums,
   song,
-  createSongAction,
-  updateSongAction,
-  onSuccess,
+  onSubmit,
 }: SongFormDialogProps) {
   const isEdit = !!song;
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,7 +64,7 @@ export function SongFormDialog({
     },
   });
 
-  const onSubmit = useCallback(
+  const handleSubmit = useCallback(
     async (values: SongEditValues) => {
       // 생성 시 lrcText 필수 검증
       if (!isEdit && (!values.lrcText || values.lrcText.trim() === "")) {
@@ -80,20 +74,17 @@ export function SongFormDialog({
       setLrcError(null);
 
       setIsSubmitting(true);
-      const result = isEdit
-        ? await updateSongAction(song!.id, values)
-        : await createSongAction(values);
-      setIsSubmitting(false);
-
-      if (result.success) {
+      try {
+        await onSubmit(values);
         onOpenChange(false);
         form.reset();
-        onSuccess?.();
-      } else {
-        alert(result.error);
+      } catch (error) {
+        alert(error instanceof Error ? error.message : "곡 저장에 실패했습니다.");
+      } finally {
+        setIsSubmitting(false);
       }
     },
-    [isEdit, song, createSongAction, updateSongAction, onOpenChange, form, onSuccess],
+    [form, isEdit, onOpenChange, onSubmit],
   );
 
   return (
@@ -107,7 +98,7 @@ export function SongFormDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             {/* 앨범 선택 */}
             <FormField
               control={form.control}

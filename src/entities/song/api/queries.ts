@@ -1,13 +1,21 @@
+"use client";
+
 import { queryOptions } from "@tanstack/react-query";
 
-import { getSongDetail } from "./api";
+import { getAdminSongs, getSongDetail } from "./api";
+import { songQueryKeys } from "./query-keys";
 
 export const songQueries = {
-  all: () => ["song"] as const,
-
   detail: (slug: string) =>
     queryOptions({
-      queryKey: [...songQueries.all(), "detail", slug] as const,
+      ...songQueryKeys.detail(slug),
       queryFn: ({ signal }) => getSongDetail(slug, signal),
+    }),
+
+  adminList: () =>
+    queryOptions({
+      ...songQueryKeys.adminList,
+      staleTime: 30_000,
+      queryFn: ({ signal }) => getAdminSongs(signal),
     }),
 };
