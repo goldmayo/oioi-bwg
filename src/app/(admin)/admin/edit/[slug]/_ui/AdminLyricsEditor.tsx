@@ -4,10 +4,10 @@ import { useCallback, useMemo } from "react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { authAbilityQueryKeys, createClientAbility } from "@/features/auth";
-import { authAbilityQueries } from "@/features/auth/api";
+import { authAbilityQueries } from "@/features/auth";
 import { LazyAdminEditor, type SongEditor } from "@/features/manage-lyrics";
 
-import { songMutations } from "@/entities/song/api";
+import { songMutations } from "@/entities/song";
 
 import { ApiError } from "@/shared/api/http-errors";
 import type { SaveAdminSongLyrics } from "@/shared/contracts/song";

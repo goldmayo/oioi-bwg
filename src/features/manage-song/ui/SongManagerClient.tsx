@@ -5,9 +5,9 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { Edit, FileMusic, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 
-import { albumQueries } from "@/entities/album/api";
+import { albumQueries } from "@/entities/album";
 import type { AdminSongSummary } from "@/entities/song";
-import { songMutations, songQueries, songQueryKeys } from "@/entities/song/api";
+import { songMutations, songQueries, songQueryKeys } from "@/entities/song";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";

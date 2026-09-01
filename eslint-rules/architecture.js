@@ -118,9 +118,7 @@ export const architectureRule = {
 
       const match = source.match(/^@\/(widgets|features|entities)\/([^/]+)\/(.+)$/);
 
-      const isSegmentPublicApi = match?.[3] === "api";
-
-      if (match && !isSegmentPublicApi && !(layer === match[1] && slice === match[2])) {
+      if (match && !(layer === match[1] && slice === match[2])) {
         context.report({
           node: sourceNode,
           messageId: "deepSliceImport",

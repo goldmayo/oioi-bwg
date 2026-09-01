@@ -1,3 +1,4 @@
+export { albumMutations, albumQueries } from "./api";
 export { albumQueryKeys } from "./api/query-keys";
 export type { AdminAlbumSummary } from "./model/admin-album-summary";
 export type { Album, AlbumSong } from "./model/album";

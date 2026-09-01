@@ -4,7 +4,7 @@ import { useCallback, useMemo } from "react";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { authAbilityQueryKeys, createClientAbility } from "@/features/auth";
-import { authAbilityQueries } from "@/features/auth/api";
+import { authAbilityQueries } from "@/features/auth";
 import { AlbumManagerClient } from "@/features/manage-album";
 
 import { ApiError } from "@/shared/api/http-errors";
