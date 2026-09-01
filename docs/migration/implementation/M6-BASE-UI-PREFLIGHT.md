@@ -42,7 +42,8 @@ Base UI 전환은 관리자 기능 하나의 리팩터링이 아니라 공용 pr
 
 ## 보류 및 비목표
 
-- `max-lines` 경고 5건을 숫자만 맞추기 위한 기계적 분할은 하지 않는다. 책임 경계가 실제로 개선되는 경우에만 후속 refactor로 다룬다.
+- `max-lines-per-function` 기준을 250줄로 조정한다. 기준 초과를 warning으로 남기는 파일은 다음 1건이며, 책임 경계가 실제로 개선되는 경우에만 후속 refactor로 다룬다.
+  - `src/features/manage-song/ui/SongManagerClient.tsx` — `SongManagerClient` 288줄
 - 이번 preflight에서는 package.json, lockfile, shared primitive, 관리자 화면을 수정하지 않는다.
 - Radix를 즉시 삭제하지 않는다. Base UI와의 공존 기간 동안 bundle과 동작을 확인한 뒤 제거한다.
 

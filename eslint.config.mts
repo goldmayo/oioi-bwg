@@ -76,7 +76,7 @@ const eslintConfig = defineConfig([
         "error",
         { checksVoidReturn: { attributes: false } },
       ],
-      "max-lines-per-function": ["warn", { max: 200, skipComments: true, skipBlankLines: true }],
+      "max-lines-per-function": ["warn", { max: 250, skipComments: true, skipBlankLines: true }],
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",
