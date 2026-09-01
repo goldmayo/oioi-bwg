@@ -1,10 +1,10 @@
 ---
 title: "Frontend Architecture & Refactoring Rules"
 document_id: "02"
-version: "1.7"
+version: "1.8"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-29"
+updated_at: "2026-09-01"
 depends_on:
   - "01"
 supersedes:
@@ -171,6 +171,18 @@ entities/song/api/
 
 이곳은 `src/server`를 직접 import하지 않는다.
 
+Next.js RSC가 slice root의 server-safe export를 소비하고 browser API가 `client-only` transport를
+참조한다면 public API를 다음처럼 분리한다.
+
+```text
+entities/album/index.ts      # model/UI/server-safe query key
+entities/album/api/index.ts  # client-only query/mutation options
+```
+
+외부 consumer는 `entities/album/api`까지만 import할 수 있고 `api/queries` 내부 파일을 우회하지 않는다.
+이 분리는 API 소유권을 feature로 옮기는 것이 아니라 하나의 Entity slice 안에서 runtime boundary를
+보존하기 위한 public entry 분리다.
+
 Client path:
 
 ```text
@@ -280,6 +292,15 @@ queryOptions
 mutationOptions
 ```
 
+도메인 browser API의 소유권은 endpoint 경로나 접근 권한이 아니라 cache에 저장되는 resource/DTO
+identity를 기준으로 정한다. Album의 공개 상세와 관리자 목록·변경처럼 projection과 권한이 달라도 안정된
+Album resource lifecycle이면 `entities/album/api`가 소유한다. Feature는 이 options를 소비해 폼, 권한
+반응, 알림 같은 use-case orchestration을 담당한다.
+
+안정된 entity identity가 없는 인증 challenge나 현재 사용자 capability 같은 workflow server-state만 해당
+feature API가 직접 소유할 수 있다. domain entity API를 feature 전용 endpoint라는 이유만으로 feature에
+중복 생성하지 않는다.
+
 TanStack Query의 `useQuery`, `useSuspenseQuery`, `useMutation` 등의 어휘를 프로젝트 wrapper 뒤로 숨기지 않는다.
 
 ---
@@ -326,7 +347,8 @@ export const songQueries = {
 };
 ```
 
-이 예외에서는 `@lukemorales/query-key-factory`의 `createQueryKeys()`만 slice별로 사용한다. 전역
+이 예외에서는 `@lukemorales/query-key-factory`의 `createQueryKeys()`만 query options 소유 slice별로
+사용한다. 도메인 entity key는 해당 `entities/*/api/query-keys.ts`에 둔다. 전역
 `createQueryKeyStore()`, `mergeQueryKeys()` 또는 프로젝트 자체 key framework는 만들지 않는다.
 동일 queryFn을 server/client에서 안전하게 실행할 수 있다면 기본 `queryOptions()` 단독 패턴을 유지한다.
 

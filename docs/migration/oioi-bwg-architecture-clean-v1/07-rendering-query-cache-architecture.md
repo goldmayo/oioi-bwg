@@ -1,10 +1,10 @@
 ---
 title: "Rendering / Query / Cache Architecture"
 document_id: "07"
-version: "1.1"
+version: "1.2"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-26"
+updated_at: "2026-09-01"
 depends_on:
   - "01"
   - "02"
@@ -976,13 +976,26 @@ same acquisition path
 
 # 35. Query option code ownership
 
-`queryOptions()` 구현은 Entity API layer가 소유한다.
+도메인 resource의 `queryOptions()` 구현은 Entity API layer가 소유한다.
 
 예:
 
 ```text
 entities/song/api/queries.ts
 ```
+
+소유권은 endpoint 경로나 authorization policy가 아니라 Query cache에 저장되는 resource/DTO identity를
+기준으로 판단한다. 예를 들어 관리자 전용 Album endpoint라도 cache identity가 안정된 Album projection이면
+`entities/album/api`가 API adapter, query key, query/mutation options를 소유한다. Album 관리 feature는
+이를 소비해 폼과 mutation orchestration을 구성한다.
+
+안정된 entity identity가 없는 인증 challenge나 현재 capability 같은 workflow server-state는 예외적으로
+해당 Feature API layer가 소유할 수 있다. Query key factory는 항상 query options와 같은 slice가 소유하며,
+전역 key store로 합치지 않는다.
+
+RSC도 사용하는 slice root public API에서 `client-only` query options를 재-export하지 않는다. root에는
+server-safe key만 공개하고, browser Query options는 같은 slice의 `api/index.ts` public entry로 분리한다.
+이는 query ownership 분리가 아니라 Next.js module graph 경계 분리다.
 
 동일 queryFn이 server/client 양쪽에서 안전하면 RSC도 이 options 객체의 `.queryKey`를 사용할 수 있다.
 RSC는 Service를 직접 호출하고 Client Query는 `client-only` HTTP adapter를 사용하는 경우
@@ -1520,7 +1533,7 @@ queryOptions duplicate server factory
 31. Server-only, hydrated, client-only data를 명시적으로 구분한다.
 32. `setQueryData()` bridge를 generic helper로 먼저 감싸지 않는다.
 33. 동일 queryOptions factory를 server/client용으로 복제하지 않는다. acquisition path가 갈리는 경우
-    slice별 `createQueryKeys()` factory만 공유한다.
+    query options 소유 slice의 `createQueryKeys()` factory만 공유한다.
 34. 실제 route classification은 이 원칙에 대입해 결정한다.
 35. 한 문제에 두 cache vocabulary를 만들지 않는다.
 36. DB-backed route는 v1에서 dynamic rendering을 기본으로 한다.
