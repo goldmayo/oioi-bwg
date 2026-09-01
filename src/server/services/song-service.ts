@@ -1,5 +1,11 @@
 import "server-only";
 
+import {
+  type CreateAdminSong,
+  lyricsDataSchema,
+  type UpdateAdminSong,
+} from "@/shared/contracts/song";
+
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
@@ -13,29 +19,8 @@ import {
   updateSong,
 } from "../repositories/song-repository";
 
-export interface CreateSongInput {
-  albumId: number;
-  title: string;
-  slug: string;
-  youtubeId: string;
-  lyrics: unknown;
-  hasOfficialCheer: boolean;
-  isTitle: boolean;
-  isVisible: boolean;
-  order: number;
-}
-
-export interface EditSongInput {
-  albumId: number;
-  title: string;
-  slug: string;
-  youtubeId: string;
-  hasOfficialCheer: boolean;
-  isTitle: boolean;
-  isVisible: boolean;
-  order: number;
-  lyrics?: unknown;
-}
+export type CreateSongInput = CreateAdminSong;
+export type EditSongInput = UpdateAdminSong;
 
 function mapRenderableAlbumSong<
   T extends {
@@ -97,6 +82,29 @@ function requireAdmin(ctx: RequestContext) {
   if (ctx.ability.cannot("manage", "all")) throw new AppError("FORBIDDEN");
 }
 
+function parseSongLyrics(lrcText: string) {
+  const timestamp = /\[(\d{2}):(\d{2})[.:](\d{2,3})\]/;
+  const parsedLines = lrcText.split("\n").flatMap((line) => {
+    const match = timestamp.exec(line);
+    if (!match) return [];
+
+    const text = line.replace(timestamp, "").trim();
+    if (!text) return [];
+
+    const fraction = Number(match[3]) / (match[3].length === 3 ? 1000 : 100);
+    return [
+      {
+        startTime: Number(match[1]) * 60 + Number(match[2]) + fraction,
+        segments: [{ text, isCheer: false, isEcho: false }],
+        isExtra: false,
+      },
+    ];
+  });
+  const lyrics = lyricsDataSchema.parse(parsedLines.sort((a, b) => a.startTime - b.startTime));
+  if (lyrics.length === 0) throw new AppError("SONG_LYRICS_INVALID");
+  return lyrics;
+}
+
 export async function getAdminSongEditorBySlug(ctx: RequestContext, slug: string) {
   requireAdmin(ctx);
   const row = await findAdminSongBySlug(getDatabase(), slug);
@@ -148,23 +156,32 @@ export async function listAdminSongs(ctx: RequestContext) {
 export function createSong(ctx: RequestContext, input: CreateSongInput) {
   requireAdmin(ctx);
   const now = new Date().toISOString();
+  const { lrcText, ...fields } = input;
   const row = {
-    ...input,
+    ...fields,
+    lyrics: parseSongLyrics(lrcText),
     createdAt: now,
     updatedAt: now,
   };
 
-  return insertSong(getDatabase(), row);
+  return insertSong(getDatabase(), row).then(([song]) => {
+    if (!song) throw new Error("Song was not created");
+    return song;
+  });
 }
 
-export function editSong(ctx: RequestContext, id: number, input: EditSongInput) {
+export async function editSong(ctx: RequestContext, id: number, input: EditSongInput) {
   requireAdmin(ctx);
+  const { lrcText, ...fields } = input;
   const row = {
-    ...input,
+    ...fields,
+    ...(lrcText?.trim() ? { lyrics: parseSongLyrics(lrcText) } : {}),
     updatedAt: new Date().toISOString(),
   };
 
-  return updateSong(getDatabase(), id, row);
+  const [song] = await updateSong(getDatabase(), id, row);
+  if (!song) throw new AppError("SONG_NOT_FOUND");
+  return song;
 }
 
 export function saveSongLyrics(
@@ -181,5 +198,7 @@ export function saveSongLyrics(
 
 export function deleteSong(ctx: RequestContext, id: number) {
   requireAdmin(ctx);
-  return removeSong(getDatabase(), id);
+  return removeSong(getDatabase(), id).then(([song]) => {
+    if (!song) throw new AppError("SONG_NOT_FOUND");
+  });
 }

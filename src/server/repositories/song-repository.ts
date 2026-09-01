@@ -71,13 +71,13 @@ export function findSongsWithAlbum(executor: DbExecutor) {
 }
 
 export function insertSong(executor: DbExecutor, data: InsertSongRow) {
-  return executor.insert(song).values(data);
+  return executor.insert(song).values(data).returning({ id: song.id });
 }
 
 export function updateSong(executor: DbExecutor, id: number, data: Partial<InsertSongRow>) {
-  return executor.update(song).set(data).where(eq(song.id, id));
+  return executor.update(song).set(data).where(eq(song.id, id)).returning({ id: song.id });
 }
 
 export function removeSong(executor: DbExecutor, id: number) {
-  return executor.delete(song).where(eq(song.id, id));
+  return executor.delete(song).where(eq(song.id, id)).returning({ id: song.id });
 }
