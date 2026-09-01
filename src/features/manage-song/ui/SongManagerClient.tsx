@@ -147,7 +147,7 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
           />
           <Select
             value={albumFilter}
-            onValueChange={(v) => {
+            onValueChange={(v: string) => {
               setAlbumFilter(v);
               setPage(0);
             }}
