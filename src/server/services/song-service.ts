@@ -3,6 +3,7 @@ import "server-only";
 import {
   type CreateAdminSong,
   lyricsDataSchema,
+  type SaveAdminSongLyrics,
   type UpdateAdminSong,
 } from "@/shared/contracts/song";
 
@@ -184,16 +185,14 @@ export async function editSong(ctx: RequestContext, id: number, input: EditSongI
   return song;
 }
 
-export function saveSongLyrics(
-  ctx: RequestContext,
-  id: number,
-  input: { lyrics: unknown; youtubeId: string },
-) {
+export async function saveSongLyrics(ctx: RequestContext, id: number, input: SaveAdminSongLyrics) {
   requireAdmin(ctx);
-  return updateSong(getDatabase(), id, {
+  const [song] = await updateSong(getDatabase(), id, {
     ...input,
     updatedAt: new Date().toISOString(),
   });
+  if (!song) throw new AppError("SONG_NOT_FOUND");
+  return song;
 }
 
 export function deleteSong(ctx: RequestContext, id: number) {
