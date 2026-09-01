@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Edit, FileMusic, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 
-import type { AdminAlbumSummary } from "@/entities/album";
+import { albumQueries } from "@/entities/album/api";
+import type { AdminSongSummary } from "@/entities/song";
+import { songMutations, songQueries, songQueryKeys } from "@/entities/song/api";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -20,29 +23,21 @@ import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
-import type { CreateSongAction, DeleteSongAction, UpdateSongAction } from "../model/actions";
-import type { AdminSongSummary } from "../model/types";
+import type { SongEditValues } from "../model/schemas";
 
 import { SongFormDialog } from "./SongFormDialog";
 
 const PAGE_SIZE = 15;
 
 interface SongManagerClientProps {
-  initialSongs: AdminSongSummary[];
-  albums: AdminAlbumSummary[];
-  createSongAction: CreateSongAction;
-  updateSongAction: UpdateSongAction;
-  deleteSongAction: DeleteSongAction;
+  canManage: boolean;
+  onMutationError?: (error: unknown) => void;
 }
 
-export function SongManagerClient({
-  initialSongs,
-  albums,
-  createSongAction,
-  updateSongAction,
-  deleteSongAction,
-}: SongManagerClientProps) {
-  const [songs, setSongs] = useState(initialSongs);
+export function SongManagerClient({ canManage, onMutationError }: SongManagerClientProps) {
+  const queryClient = useQueryClient();
+  const { data: songs } = useSuspenseQuery(songQueries.adminList());
+  const { data: albums } = useSuspenseQuery(albumQueries.adminList());
   const [search, setSearch] = useState("");
   const [albumFilter, setAlbumFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
@@ -53,6 +48,19 @@ export function SongManagerClient({
 
   // 삭제 확인 다이얼로그
   const [deleteTarget, setDeleteTarget] = useState<AdminSongSummary | null>(null);
+
+  const createMutation = useMutation({
+    ...songMutations.create(),
+    onError: onMutationError,
+  });
+  const updateMutation = useMutation({
+    ...songMutations.update(),
+    onError: onMutationError,
+  });
+  const deleteMutation = useMutation({
+    ...songMutations.delete(),
+    onError: onMutationError,
+  });
 
   // 필터링
   const filtered = useMemo(() => {
@@ -79,12 +87,11 @@ export function SongManagerClient({
 
   // 페이지네이션
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages - 1);
   const paged = useMemo(
-    () => filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [filtered, page],
+    () => filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE),
+    [currentPage, filtered],
   );
-
-  if (page >= totalPages && page > 0) setPage(totalPages - 1);
 
   const handleAdd = useCallback(() => {
     setEditingSong(undefined);
@@ -96,20 +103,33 @@ export function SongManagerClient({
     setFormOpen(true);
   }, []);
 
+  const invalidateSongs = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList.queryKey }),
+    [queryClient],
+  );
+
+  const handleSubmit = useCallback(
+    async (values: SongEditValues) => {
+      if (editingSong) {
+        await updateMutation.mutateAsync({ id: editingSong.id, input: values });
+      } else {
+        await createMutation.mutateAsync({ ...values, lrcText: values.lrcText ?? "" });
+      }
+      await invalidateSongs();
+    },
+    [createMutation, editingSong, invalidateSongs, updateMutation],
+  );
+
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
-    const result = await deleteSongAction(deleteTarget.id);
-    if (result.success) {
-      setSongs((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
-    } else {
-      alert(result.error);
+      await invalidateSongs();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "곡 삭제에 실패했습니다.");
     }
-  }, [deleteTarget, deleteSongAction]);
-
-  const handleSuccess = useCallback(() => {
-    window.location.reload();
-  }, []);
+  }, [deleteMutation, deleteTarget, invalidateSongs]);
 
   return (
     <div className="space-y-4">
@@ -145,9 +165,11 @@ export function SongManagerClient({
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={handleAdd} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />곡 추가
-        </Button>
+        {canManage && (
+          <Button onClick={handleAdd} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" />곡 추가
+          </Button>
+        )}
       </div>
 
       {/* 테이블 */}
@@ -219,26 +241,28 @@ export function SongManagerClient({
                     {song.order}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEdit(song)}
-                        title="수정"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                        onClick={() => setDeleteTarget(song)}
-                        title="삭제"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {canManage && (
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(song)}
+                          title="수정"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive/10 h-8 w-8"
+                          onClick={() => setDeleteTarget(song)}
+                          title="삭제"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -257,18 +281,18 @@ export function SongManagerClient({
             <Button
               variant="outline"
               size="sm"
-              disabled={page === 0}
+              disabled={currentPage === 0}
               onClick={() => setPage((p) => p - 1)}
             >
               이전
             </Button>
             <span className="text-muted-foreground text-sm">
-              {page + 1} / {totalPages}
+              {currentPage + 1} / {totalPages}
             </span>
             <Button
               variant="outline"
               size="sm"
-              disabled={page >= totalPages - 1}
+              disabled={currentPage >= totalPages - 1}
               onClick={() => setPage((p) => p + 1)}
             >
               다음
@@ -278,37 +302,43 @@ export function SongManagerClient({
       </div>
 
       {/* 곡 폼 다이얼로그 */}
-      <SongFormDialog
-        key={editingSong?.id ?? "new"}
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        albums={albums}
-        song={editingSong}
-        createSongAction={createSongAction}
-        updateSongAction={updateSongAction}
-        onSuccess={handleSuccess}
-      />
+      {canManage && (
+        <SongFormDialog
+          key={editingSong?.id ?? "new"}
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          albums={albums}
+          song={editingSong}
+          onSubmit={handleSubmit}
+        />
+      )}
 
       {/* 삭제 확인 다이얼로그 */}
-      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>곡 삭제</DialogTitle>
-            <DialogDescription>
-              <strong>&ldquo;{deleteTarget?.title}&rdquo;</strong> 곡을 삭제하시겠습니까?
-              <br />이 작업은 되돌릴 수 없습니다.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              취소
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              삭제
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {canManage && (
+        <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>곡 삭제</DialogTitle>
+              <DialogDescription>
+                <strong>&ldquo;{deleteTarget?.title}&rdquo;</strong> 곡을 삭제하시겠습니까?
+                <br />이 작업은 되돌릴 수 없습니다.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+                취소
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                onClick={handleDelete}
+              >
+                삭제
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
