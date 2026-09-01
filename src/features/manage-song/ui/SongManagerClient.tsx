@@ -29,6 +29,57 @@ import { SongFormDialog } from "./SongFormDialog";
 
 const PAGE_SIZE = 15;
 
+interface SongManagerToolbarProps {
+  search: string;
+  albumFilter: string;
+  albums: { id: number; name: string }[];
+  canManage: boolean;
+  onSearchChange: (value: string) => void;
+  onAlbumChange: (value: string) => void;
+  onAdd: () => void;
+}
+
+function SongManagerToolbar({
+  search,
+  albumFilter,
+  albums,
+  canManage,
+  onSearchChange,
+  onAlbumChange,
+  onAdd,
+}: SongManagerToolbarProps) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+        <Input
+          placeholder="곡 제목, slug, 앨범명으로 검색..."
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="sm:max-w-xs"
+        />
+        <Select value={albumFilter} onValueChange={onAlbumChange}>
+          <SelectTrigger className="w-full sm:w-40">
+            <SelectValue placeholder="전체 앨범" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 앨범</SelectItem>
+            {albums.map((album) => (
+              <SelectItem key={album.id} value={String(album.id)}>
+                {album.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {canManage && (
+        <Button onClick={onAdd} className="w-full sm:w-auto">
+          <Plus className="mr-2 h-4 w-4" />곡 추가
+        </Button>
+      )}
+    </div>
+  );
+}
+
 interface SongManagerClientProps {
   canManage: boolean;
   onMutationError?: (error: unknown) => void;
@@ -42,11 +93,9 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
   const [albumFilter, setAlbumFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
 
-  // 폼 다이얼로그
   const [formOpen, setFormOpen] = useState(false);
   const [editingSong, setEditingSong] = useState<AdminSongSummary | undefined>();
 
-  // 삭제 확인 다이얼로그
   const [deleteTarget, setDeleteTarget] = useState<AdminSongSummary | null>(null);
 
   const createMutation = useMutation({
@@ -62,16 +111,13 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
     onError: onMutationError,
   });
 
-  // 필터링
   const filtered = useMemo(() => {
     let result: AdminSongSummary[] = songs;
 
-    // 앨범 필터
     if (albumFilter !== "all") {
       result = result.filter((s) => s.albumId === Number(albumFilter));
     }
 
-    // 검색 필터
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -85,7 +131,6 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
     return result;
   }, [songs, search, albumFilter]);
 
-  // 페이지네이션
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
   const paged = useMemo(
@@ -133,46 +178,22 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
 
   return (
     <div className="space-y-4">
-      {/* 상단 액션 바 */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-col gap-2 sm:flex-row">
-          <Input
-            placeholder="곡 제목, slug, 앨범명으로 검색..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-            className="sm:max-w-xs"
-          />
-          <Select
-            value={albumFilter}
-            onValueChange={(v: string) => {
-              setAlbumFilter(v);
-              setPage(0);
-            }}
-          >
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="전체 앨범" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 앨범</SelectItem>
-              {albums.map((album) => (
-                <SelectItem key={album.id} value={String(album.id)}>
-                  {album.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {canManage && (
-          <Button onClick={handleAdd} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />곡 추가
-          </Button>
-        )}
-      </div>
+      <SongManagerToolbar
+        search={search}
+        albumFilter={albumFilter}
+        albums={albums}
+        canManage={canManage}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setPage(0);
+        }}
+        onAlbumChange={(value) => {
+          setAlbumFilter(value);
+          setPage(0);
+        }}
+        onAdd={handleAdd}
+      />
 
-      {/* 테이블 */}
       <div className="border-border overflow-x-auto rounded-lg border">
         <Table>
           <TableHeader>
@@ -271,7 +292,6 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
         </Table>
       </div>
 
-      {/* 페이지네이션 */}
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground text-sm">
           총 {filtered.length}곡 {(search || albumFilter !== "all") && `(전체 ${songs.length}곡)`}
