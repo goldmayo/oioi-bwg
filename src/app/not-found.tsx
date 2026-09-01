@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { Button } from "@/shared/ui/button";
 
+export const dynamic = "force-dynamic";
+
 /**
  * 프로젝트 통합 404 페이지 (OiOiBawige 스타일)
  */
