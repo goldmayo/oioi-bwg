@@ -2,22 +2,13 @@
 
 import { songEditSchema, songFormSchema } from "@/features/manage-song";
 
-import { LyricsDataSchema, parseLrc } from "@/entities/cheer-guide";
-
 import { getRequestContext } from "@/server/auth/request-context";
 import { createSong, deleteSong, editSong } from "@/server/services/song-service";
 
 export async function createSongAction(formData: unknown) {
   try {
     const parsed = songFormSchema.parse(formData);
-    const parsedLyrics = parseLrc(parsed.lrcText);
-
-    if (parsedLyrics.length === 0) {
-      return { success: false, error: "LRC 파일에서 유효한 가사를 찾을 수 없습니다." };
-    }
-
-    const lyrics = LyricsDataSchema.parse(parsedLyrics);
-    await createSong(await getRequestContext(), { ...parsed, lyrics });
+    await createSong(await getRequestContext(), parsed);
     return { success: true };
   } catch (error) {
     console.error("Failed to create song:", error);
@@ -28,22 +19,7 @@ export async function createSongAction(formData: unknown) {
 export async function updateSongAction(id: number, formData: unknown) {
   try {
     const parsed = songEditSchema.parse(formData);
-    const { lrcText, ...input } = parsed;
-
-    if (!lrcText) {
-      await editSong(await getRequestContext(), id, input);
-      return { success: true };
-    }
-
-    const parsedLyrics = parseLrc(lrcText);
-    if (parsedLyrics.length === 0) {
-      return { success: false, error: "LRC 파일에서 유효한 가사를 찾을 수 없습니다." };
-    }
-
-    await editSong(await getRequestContext(), id, {
-      ...input,
-      lyrics: LyricsDataSchema.parse(parsedLyrics),
-    });
+    await editSong(await getRequestContext(), id, parsed);
     return { success: true };
   } catch (error) {
     console.error("Failed to update song:", error);
