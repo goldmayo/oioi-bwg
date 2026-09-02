@@ -82,3 +82,4 @@ export type CreateAdminSong = z.infer<typeof createAdminSongSchema>;
 export type UpdateAdminSong = z.infer<typeof updateAdminSongSchema>;
 export type SaveAdminSongLyrics = z.infer<typeof saveAdminSongLyricsSchema>;
 export type AdminSongSummary = z.infer<typeof adminSongSummarySchema>;
+export type AdminSongMutationResult = z.infer<typeof adminSongMutationResultSchema>;

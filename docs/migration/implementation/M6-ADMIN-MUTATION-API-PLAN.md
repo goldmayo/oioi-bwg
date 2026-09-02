@@ -98,8 +98,8 @@ transport를 추적하지 않는다.
   복제하지 않는다.
 - Query mutation 성공 후 관련 admin query key를 명시적으로 invalidate한다. `router.refresh()`와
   Next Data Cache invalidation을 대체 수단으로 사용하지 않는다.
-- production DB migration, revision/discussion/moderation lifecycle, UI foundation(Base UI) 전환은 이
-  API 전환 PR에 넣지 않는다.
+- production DB migration, revision/discussion/moderation lifecycle은 이 API 전환 PR에 넣지 않는다.
+- UI foundation(Base UI) 실제 전환은 M6에서 폐기하며 shared primitive 교체와 회귀 검증을 진행하지 않는다.
 
 ## PR 분할 순서
 
@@ -130,7 +130,7 @@ concern이다.
 
 ## 비범위 및 보류
 
-- OCI Compute 배포 및 Instance Principal 실발송 smoke
+- OCI Compute 배포 및 Instance Principal 실발송 smoke (보류)
 - isolated PostgreSQL integration test lifecycle 및 CI service container(M7)
 - 일반 사용자 회원가입 UI와 자동 로그인 UX
 - 관리자 template CMS

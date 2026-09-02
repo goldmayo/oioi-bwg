@@ -1,5 +1,9 @@
 # M6 Base UI 점진 전환 사전 점검
 
+> 상태: **폐기(superseded)**. M6 범위에서 Base UI 실제 전환을 진행하지 않기로 결정했다. 이 문서는
+> 당시 검토 결과를 보존하는 기록이며, shared primitive 교체·Playwright 회귀 검증·Radix 제거 작업은
+> M6 완료 범위에서 제외한다.
+
 ## 목적
 
 M6의 관리자 API·클라이언트 전환 이후 남은 UI foundation 작업의 범위와 검증 순서를 확정한다. 현재 `src/shared/ui`는 `radix-ui` unified package를 사용하고 있으며, 이번 문서는 코드나 의존성을 변경하지 않는 preflight다.
@@ -42,9 +46,10 @@ Base UI 전환은 관리자 기능 하나의 리팩터링이 아니라 공용 pr
 
 ## 보류 및 비목표
 
-- `max-lines` 경고 5건을 숫자만 맞추기 위한 기계적 분할은 하지 않는다. 책임 경계가 실제로 개선되는 경우에만 후속 refactor로 다룬다.
+- `max-lines-per-function` 기준은 250줄을 유지한다. `SongManagerClient`는 책임 단위 리팩터링으로
+  warning을 해소했다.
 - 이번 preflight에서는 package.json, lockfile, shared primitive, 관리자 화면을 수정하지 않는다.
-- Radix를 즉시 삭제하지 않는다. Base UI와의 공존 기간 동안 bundle과 동작을 확인한 뒤 제거한다.
+- Radix 제거는 Base UI 전환 폐기 결정에 따라 보류한다.
 
 ## 참고
 

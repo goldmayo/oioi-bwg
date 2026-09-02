@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import type { LyricLine, LyricSegment } from "@/entities/cheer-guide";
+import type { LyricSegment } from "@/entities/cheer-guide";
 import { parseLrc } from "@/entities/cheer-guide";
 
 import type { SaveAdminSongLyrics } from "@/shared/contracts/song";
@@ -34,7 +34,7 @@ export type SaveSongDataAction = (songId: number, data: SaveAdminSongLyrics) => 
  */
 export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataAction) {
   // ─── 가사 편집 (useLyricsEditor에 위임) ───────────────────────────────────
-  const lyricsEditor = useLyricsEditor((song.lyrics as LyricLine[]) || []);
+  const lyricsEditor = useLyricsEditor(song.lyrics);
   const {
     lyrics,
     currentIndex,

@@ -2,8 +2,10 @@ import "server-only";
 
 import {
   type CreateAdminSong,
+  type LyricsData,
   lyricsDataSchema,
   type SaveAdminSongLyrics,
+  type SongDetail,
   type UpdateAdminSong,
 } from "@/shared/contracts/song";
 
@@ -20,51 +22,66 @@ import {
   updateSong,
 } from "../repositories/song-repository";
 
-export type CreateSongInput = CreateAdminSong;
-export type EditSongInput = UpdateAdminSong;
+type PublicSongRow = NonNullable<Awaited<ReturnType<typeof findSongBySlug>>>;
+type PublicAlbumSongRow = PublicSongRow["album"]["songs"][number];
 
-function mapRenderableAlbumSong<
-  T extends {
-    title: string | null;
-    slug: string | null;
-    youtubeId: string | null;
-    hasOfficialCheer: boolean | null;
-    order: number | null;
-  },
->(song: T) {
+function mapRenderableAlbumSong(song: PublicAlbumSongRow) {
   const { title, slug, youtubeId } = song;
-  if (!title || !slug || youtubeId === null) return null;
+  if (!song.isVisible || !title || !slug || youtubeId === null) return null;
 
   return {
-    ...song,
+    id: song.id,
     title,
     slug,
     youtubeId,
     hasOfficialCheer: song.hasOfficialCheer ?? false,
-    order: song.order ?? 0,
+    isTitle: song.isTitle,
   };
 }
 
-export async function getSongDetailBySlug(slug: string) {
-  const row = await findSongBySlug(getDatabase(), slug);
+function parseStoredLyrics(value: unknown): LyricsData {
+  const parsed = lyricsDataSchema.safeParse(value ?? []);
 
-  if (!row?.title || !row.slug || row.youtubeId === null) return undefined;
+  if (!parsed.success) {
+    throw new Error("Stored song lyrics contract violation", { cause: parsed.error });
+  }
+
+  return parsed.data;
+}
+
+function mapSongDetail(row: PublicSongRow): SongDetail | undefined {
+  const { album, title, slug, youtubeId } = row;
+  if (!album.isVisible || !title || !slug || youtubeId === null) return undefined;
 
   return {
-    ...row,
-    title: row.title,
-    slug: row.slug,
-    youtubeId: row.youtubeId,
+    id: row.id,
+    title,
+    slug,
+    youtubeId,
+    lyrics: parseStoredLyrics(row.lyrics),
     hasOfficialCheer: row.hasOfficialCheer ?? false,
+    isTitle: row.isTitle,
     order: row.order ?? 0,
     album: {
-      ...row.album,
-      songs: row.album.songs.flatMap((song) => {
+      id: album.id,
+      name: album.name,
+      slug: album.slug,
+      imgUrl: album.imgUrl,
+      color: album.color,
+      releaseDate: album.releaseDate,
+      isVisible: album.isVisible,
+      createdAt: album.createdAt,
+      songs: album.songs.flatMap((song) => {
         const mapped = mapRenderableAlbumSong(song);
         return mapped ? [mapped] : [];
       }),
     },
   };
+}
+
+export async function getSongDetailBySlug(slug: string) {
+  const row = await findSongBySlug(getDatabase(), slug);
+  return row ? mapSongDetail(row) : undefined;
 }
 
 /** HTTP 전달 계층이 사용할 공개 곡 조회 use case다. */
@@ -113,10 +130,10 @@ export async function getAdminSongEditorBySlug(ctx: RequestContext, slug: string
   if (!row) return undefined;
 
   return {
-    ...row,
+    id: row.id,
     title: row.title ?? "",
     youtubeId: row.youtubeId ?? "",
-    lyrics: row.lyrics ?? [],
+    lyrics: parseStoredLyrics(row.lyrics),
   };
 }
 
@@ -154,7 +171,7 @@ export async function listAdminSongs(ctx: RequestContext) {
   }));
 }
 
-export function createSong(ctx: RequestContext, input: CreateSongInput) {
+export function createSong(ctx: RequestContext, input: CreateAdminSong) {
   requireAdmin(ctx);
   const now = new Date().toISOString();
   const { lrcText, ...fields } = input;
@@ -171,7 +188,7 @@ export function createSong(ctx: RequestContext, input: CreateSongInput) {
   });
 }
 
-export async function editSong(ctx: RequestContext, id: number, input: EditSongInput) {
+export async function editSong(ctx: RequestContext, id: number, input: UpdateAdminSong) {
   requireAdmin(ctx);
   const { lrcText, ...fields } = input;
   const row = {

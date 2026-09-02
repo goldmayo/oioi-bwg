@@ -1,5 +1,12 @@
 import "server-only";
 
+import type {
+  AlbumDetail,
+  AlbumSummary,
+  RenderableAlbumSong,
+  SaveAdminAlbum,
+} from "@/shared/contracts/album";
+
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
@@ -12,44 +19,11 @@ import {
   updateAlbum,
 } from "../repositories/album-repository";
 
-export interface SaveAlbumInput {
-  name: string;
-  slug: string;
-  imgUrl: string;
-  color: string;
-  releaseDate: string | null;
-  isVisible: boolean;
-}
-
-export interface AlbumDto {
-  id: number;
-  name: string;
-  slug: string;
-  imgUrl: string;
-  color: string;
-  releaseDate: string | null;
-  isVisible: boolean;
-  createdAt: string;
-}
-
 type AlbumPersistenceRow = Awaited<ReturnType<typeof findAllAlbums>>[number];
 type AlbumWithSongsPersistenceRow = Awaited<ReturnType<typeof findVisibleAlbumsWithSongs>>[number];
 type AlbumSongPersistenceRow = AlbumWithSongsPersistenceRow["songs"][number];
 
-export interface AlbumSongDto {
-  id: number;
-  title: string;
-  slug: string;
-  youtubeId: string;
-  hasOfficialCheer: boolean;
-  isTitle: boolean;
-}
-
-export interface AlbumWithSongsDto extends AlbumDto {
-  songs: AlbumSongDto[];
-}
-
-function mapAlbum(row: AlbumPersistenceRow): AlbumDto {
+function mapAlbum(row: AlbumPersistenceRow): AlbumSummary {
   return {
     id: row.id,
     name: row.name,
@@ -62,7 +36,7 @@ function mapAlbum(row: AlbumPersistenceRow): AlbumDto {
   };
 }
 
-function mapRenderableSong(song: AlbumSongPersistenceRow): AlbumSongDto | null {
+function mapRenderableSong(song: AlbumSongPersistenceRow): RenderableAlbumSong | null {
   const { title, slug, youtubeId } = song;
   if (!title || !slug || youtubeId === null) return null;
 
@@ -75,7 +49,7 @@ function mapRenderableSong(song: AlbumSongPersistenceRow): AlbumSongDto | null {
   };
 }
 
-function mapAlbumWithRenderableSongs(album: AlbumWithSongsPersistenceRow): AlbumWithSongsDto {
+function mapAlbumWithRenderableSongs(album: AlbumWithSongsPersistenceRow): AlbumDetail {
   return {
     ...mapAlbum(album),
     songs: album.songs.flatMap((song) => {
@@ -111,13 +85,16 @@ function requireAdmin(ctx: RequestContext) {
   if (ctx.ability.cannot("manage", "all")) throw new AppError("FORBIDDEN");
 }
 
-export async function listAdminAlbums(ctx: RequestContext): Promise<AlbumDto[]> {
+export async function listAdminAlbums(ctx: RequestContext): Promise<AlbumSummary[]> {
   requireAdmin(ctx);
   const rows = await findAllAlbums(getDatabase());
   return rows.map(mapAlbum);
 }
 
-export async function createAlbum(ctx: RequestContext, input: SaveAlbumInput): Promise<AlbumDto> {
+export async function createAlbum(
+  ctx: RequestContext,
+  input: SaveAdminAlbum,
+): Promise<AlbumSummary> {
   requireAdmin(ctx);
   try {
     const [album] = await insertAlbum(getDatabase(), input);
@@ -134,8 +111,8 @@ export async function createAlbum(ctx: RequestContext, input: SaveAlbumInput): P
 export async function editAlbum(
   ctx: RequestContext,
   id: number,
-  input: SaveAlbumInput,
-): Promise<AlbumDto> {
+  input: SaveAdminAlbum,
+): Promise<AlbumSummary> {
   requireAdmin(ctx);
   try {
     const [album] = await updateAlbum(getDatabase(), id, input);

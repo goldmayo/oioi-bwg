@@ -5,7 +5,7 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { Edit, Plus, Trash2 } from "lucide-react";
 
 import type { AdminAlbumSummary } from "@/entities/album";
-import { albumMutations, albumQueries, albumQueryKeys } from "@/entities/album/api";
+import { albumMutations, albumQueries, albumQueryKeys } from "@/entities/album";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";

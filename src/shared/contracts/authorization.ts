@@ -42,14 +42,6 @@ export const APP_SUBJECTS = [
   "AuditLog",
 ] as const;
 
-export type SerializedAbilityRule = {
-  action: string | string[];
-  subject: string | string[];
-  inverted?: boolean;
-  conditions?: Record<string, unknown>;
-  fields?: string[];
-};
-
 export const serializedAbilityRuleSchema = z.object({
   action: z.union([z.string(), z.array(z.string())]),
   subject: z.union([z.string(), z.array(z.string())]),
@@ -61,3 +53,6 @@ export const serializedAbilityRuleSchema = z.object({
 export const serializedAbilityResponseSchema = z.object({
   rules: z.array(serializedAbilityRuleSchema),
 });
+
+export type SerializedAbilityRule = z.infer<typeof serializedAbilityRuleSchema>;
+export type SerializedAbilityResponse = z.infer<typeof serializedAbilityResponseSchema>;

@@ -6,6 +6,8 @@ import { listVisibleAlbumsWithSongs } from "@/server/services/album-service";
 
 import { FilteredChantList } from "./_ui/filtered-chant-list";
 
+export const dynamic = "force-dynamic";
+
 /**
  * [RENEWAL] 서버 사이드 데이터 페칭 및 렌더링
  */
