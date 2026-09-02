@@ -33,3 +33,10 @@ export const completeSignupSchema = z.object({
 export const completeSignupResponseSchema = z.object({
   accountId: z.string(),
 });
+
+export type RequestSignupOtp = z.infer<typeof requestSignupOtpSchema>;
+export type VerifySignupOtp = z.infer<typeof verifySignupOtpSchema>;
+export type SignupOtpResponse = z.infer<typeof signupOtpResponseSchema>;
+export type VerifySignupOtpResponse = z.infer<typeof verifySignupOtpResponseSchema>;
+export type CompleteSignup = z.infer<typeof completeSignupSchema>;
+export type CompleteSignupResponse = z.infer<typeof completeSignupResponseSchema>;

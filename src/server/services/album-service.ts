@@ -1,6 +1,11 @@
 import "server-only";
 
-import type { AlbumDetail, AlbumSummary, RenderableAlbumSong } from "@/shared/contracts/album";
+import type {
+  AlbumDetail,
+  AlbumSummary,
+  RenderableAlbumSong,
+  SaveAdminAlbum,
+} from "@/shared/contracts/album";
 
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
@@ -13,15 +18,6 @@ import {
   removeAlbum,
   updateAlbum,
 } from "../repositories/album-repository";
-
-export interface SaveAlbumInput {
-  name: string;
-  slug: string;
-  imgUrl: string;
-  color: string;
-  releaseDate: string | null;
-  isVisible: boolean;
-}
 
 type AlbumPersistenceRow = Awaited<ReturnType<typeof findAllAlbums>>[number];
 type AlbumWithSongsPersistenceRow = Awaited<ReturnType<typeof findVisibleAlbumsWithSongs>>[number];
@@ -97,7 +93,7 @@ export async function listAdminAlbums(ctx: RequestContext): Promise<AlbumSummary
 
 export async function createAlbum(
   ctx: RequestContext,
-  input: SaveAlbumInput,
+  input: SaveAdminAlbum,
 ): Promise<AlbumSummary> {
   requireAdmin(ctx);
   try {
@@ -115,7 +111,7 @@ export async function createAlbum(
 export async function editAlbum(
   ctx: RequestContext,
   id: number,
-  input: SaveAlbumInput,
+  input: SaveAdminAlbum,
 ): Promise<AlbumSummary> {
   requireAdmin(ctx);
   try {

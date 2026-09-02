@@ -22,9 +22,6 @@ import {
   updateSong,
 } from "../repositories/song-repository";
 
-export type CreateSongInput = CreateAdminSong;
-export type EditSongInput = UpdateAdminSong;
-
 type PublicSongRow = NonNullable<Awaited<ReturnType<typeof findSongBySlug>>>;
 type PublicAlbumSongRow = PublicSongRow["album"]["songs"][number];
 
@@ -174,7 +171,7 @@ export async function listAdminSongs(ctx: RequestContext) {
   }));
 }
 
-export function createSong(ctx: RequestContext, input: CreateSongInput) {
+export function createSong(ctx: RequestContext, input: CreateAdminSong) {
   requireAdmin(ctx);
   const now = new Date().toISOString();
   const { lrcText, ...fields } = input;
@@ -191,7 +188,7 @@ export function createSong(ctx: RequestContext, input: CreateSongInput) {
   });
 }
 
-export async function editSong(ctx: RequestContext, id: number, input: EditSongInput) {
+export async function editSong(ctx: RequestContext, id: number, input: UpdateAdminSong) {
   requireAdmin(ctx);
   const { lrcText, ...fields } = input;
   const row = {

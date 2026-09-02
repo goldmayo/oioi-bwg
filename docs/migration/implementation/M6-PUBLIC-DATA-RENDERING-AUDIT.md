@@ -75,6 +75,28 @@ Album/Song 상세의 `generateMetadata()`와 page는 같은 slug로 같은 DB se
 각 route module에서 같은 memoized function을 공유해 server request/render 범위에서만 dedupe한다.
 이는 persistent Next Data Cache가 아니다.
 
+## Contract·DTO 이름 목록
+
+HTTP 경계의 Zod schema가 입력·출력 계약과 TypeScript 타입의 SSOT다. 타입은 schema의 `z.infer`로
+파생하며, service는 persistence row를 직접 노출하지 않고 아래 DTO만 반환한다.
+
+| 계약 파일 | Schema | DTO/타입 |
+| --- | --- | --- |
+| `album.ts` | `albumSummarySchema`, `albumDetailSchema`, `renderableAlbumSongSchema` | `AlbumSummary`, `AlbumDetail`, `RenderableAlbumSong` |
+| `album.ts` | `saveAdminAlbumSchema` | `SaveAdminAlbum` |
+| `song.ts` | `songDetailSchema`, `adminSongSummarySchema`, `adminSongMutationResultSchema` | `SongDetail`, `AdminSongSummary`, `AdminSongMutationResult` |
+| `song.ts` | `createAdminSongSchema`, `updateAdminSongSchema`, `saveAdminSongLyricsSchema` | `CreateAdminSong`, `UpdateAdminSong`, `SaveAdminSongLyrics` |
+| `song.ts` | `lyricsDataSchema`, `lyricLineSchema`, `lyricSegmentSchema` | `LyricsData`, `LyricLine`, `LyricSegment` |
+| `signup.ts` | request/complete schemas | `RequestSignupOtp`, `VerifySignupOtp`, `CompleteSignup` |
+| `signup.ts` | response schemas | `SignupOtpResponse`, `VerifySignupOtpResponse`, `CompleteSignupResponse` |
+| `authorization.ts` | `serializedAbilityRuleSchema`, `serializedAbilityResponseSchema` | `SerializedAbilityRule`, `SerializedAbilityResponse` |
+| `error.ts` | `apiErrorResponseSchema` | `ApiErrorResponse` |
+
+`AdminAlbumSummary`는 별도 구조체가 아니라 `AlbumSummary`의 entity public alias다. `SaveAlbumInput`,
+`CreateSongInput`, `EditSongInput`처럼 contract와 동일 구조를 재선언하는 service 전용 이름은 제거했다.
+반면 `SongEditInput`/`SongEditValues`, `AlbumFormInput`/`AlbumFormValues`는 React Hook Form의 input·parsed
+form state 경계이므로 HTTP DTO와 혼동하지 않도록 feature 내부에 유지한다.
+
 ## 유지하거나 보류한 항목
 
 - 공개 페이지에 TanStack Query, prefetch, dehydrate, HydrationBoundary를 추가하지 않는다.
