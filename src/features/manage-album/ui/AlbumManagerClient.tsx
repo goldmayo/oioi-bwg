@@ -85,7 +85,7 @@ export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerC
   }, []);
 
   const invalidateAlbums = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: albumQueryKeys.adminList.queryKey }),
+    () => queryClient.invalidateQueries({ queryKey: albumQueryKeys.adminList() }),
     [queryClient],
   );
 

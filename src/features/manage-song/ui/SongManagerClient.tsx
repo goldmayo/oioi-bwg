@@ -51,7 +51,7 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
     [currentPage, filtered],
   );
   const invalidateSongs = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList.queryKey }),
+    () => queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() }),
     [queryClient],
   );
   const handleSubmit = useCallback(

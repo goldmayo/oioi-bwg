@@ -8,13 +8,13 @@ import { songQueryKeys } from "./query-keys";
 export const songQueries = {
   detail: (slug: string) =>
     queryOptions({
-      ...songQueryKeys.detail(slug),
+      queryKey: songQueryKeys.detail(slug),
       queryFn: ({ signal }) => getSongDetail(slug, signal),
     }),
 
   adminList: () =>
     queryOptions({
-      ...songQueryKeys.adminList,
+      queryKey: songQueryKeys.adminList(),
       staleTime: 30_000,
       queryFn: ({ signal }) => getAdminSongs(signal),
     }),

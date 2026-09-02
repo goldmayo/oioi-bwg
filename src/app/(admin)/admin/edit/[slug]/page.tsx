@@ -32,7 +32,7 @@ export default async function AdminEditPage({ params }: AdminEditPageProps) {
 
   const queryClient = getQueryClient();
   queryClient.setQueryData(
-    authAbilityQueryKeys.ability.queryKey,
+    authAbilityQueryKeys.ability(),
     serializedAbilityResponseSchema.parse({ rules: context.ability.rules }),
   );
 

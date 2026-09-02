@@ -8,7 +8,7 @@ import { authAbilityQueryKeys } from "./query-keys";
 export const authAbilityQueries = {
   current: () =>
     queryOptions({
-      ...authAbilityQueryKeys.ability,
+      queryKey: authAbilityQueryKeys.ability(),
       staleTime: 30_000,
       queryFn: ({ signal }) => getCurrentAbility(signal),
     }),

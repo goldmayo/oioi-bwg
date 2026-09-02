@@ -21,7 +21,7 @@ export function AdminLyricsEditor({ song }: { song: SongEditor }) {
     ...songMutations.saveLyrics(),
     onError: (error) => {
       if (error instanceof ApiError && error.status === 403) {
-        void queryClient.invalidateQueries({ queryKey: authAbilityQueryKeys.ability.queryKey });
+        void queryClient.invalidateQueries({ queryKey: authAbilityQueryKeys.ability() });
       }
     },
   });

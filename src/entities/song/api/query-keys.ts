@@ -1,5 +1,8 @@
 /** RSC seed와 Client Query가 공유하는 Song cache identity다. */
 export const songQueryKeys = {
-  adminList: { queryKey: ["song", "adminList"] as const },
-  detail: (slug: string) => ({ queryKey: ["song", "detail", slug] as const }),
+  all: ["song"] as const,
+  lists: () => [...songQueryKeys.all, "list"] as const,
+  adminList: () => [...songQueryKeys.lists(), "admin"] as const,
+  details: () => [...songQueryKeys.all, "detail"] as const,
+  detail: (slug: string) => [...songQueryKeys.details(), slug] as const,
 };
