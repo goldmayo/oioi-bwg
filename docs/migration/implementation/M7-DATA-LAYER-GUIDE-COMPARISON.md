@@ -92,16 +92,40 @@ freshness/consistency는 현재 dynamic RSC service read를 기본으로 하며,
 추상화가 늘어난다. Reader DI는 동일 query policy를 공유해야 하는 실제 도메인이 생길 때만 별도
 checkpoint에서 검토한다.
 
-## Query key의 isomorphic contract 이동
+## Query key 소유권 정정
 
 Query key는 HTTP response DTO는 아니지만 RSC seed와 Client Query를 연결하는 직렬화 가능한 cache
-identity 계약이다. 따라서 다음 contract 파일이 key의 SSOT가 된다.
+identity 계약이지만 HTTP DTO contract와는 변경 이유가 다르다. 따라서 shared contract로 승격하지
+않고 각 domain API slice가 key의 SSOT를 소유한다.
 
-- `src/shared/contracts/query-keys.ts` → `albumQueryKeys`, `songQueryKeys`, `authAbilityQueryKeys`
+- `src/entities/album/api/query-keys.ts` → `albumQueryKeys`
+- `src/entities/song/api/query-keys.ts` → `songQueryKeys`
+- `src/features/auth/api/query-keys.ts` → `authAbilityQueryKeys`
 
-HTTP DTO/validation contract와 Query identity contract는 파일 책임을 분리한다. Entity/feature API는
-`query-keys.ts`의 key를 재수출하고, `queryOptions`는 key와 browser HTTP queryFn만 결합한다. Query
-key에는 server-only, DB, repository, service 의존성을 넣지 않는다.
+Entity/feature API는 같은 slice의 key를 재수출하고, `queryOptions`는 key와 browser HTTP queryFn만
+결합한다. Query key에는 server-only, DB, repository, service 의존성을 넣지 않는다.
+
+## `useQuery`와 `useSuspenseQuery` 소비자 선택
+
+현재 Admin 소비자가 `useSuspenseQuery`를 사용하는 이유는 초기 데이터가 선택적 보조 데이터가 아니라
+화면 본문을 구성하는 필수 목록이기 때문이다. RSC가 service 결과를 Query cache에 seed하고, Client
+subtree는 `HydrationBoundary` 아래에서 데이터를 소비한다. loading/error 분기를 각 컴포넌트에
+반복하지 않고 route의 Suspense/Error Boundary로 위임하는 구조다.
+
+TanStack Query 공식 동작상 `useSuspenseQuery`는 `data`가 정의됨을 보장하지만 `enabled`,
+`placeholderData`, `throwOnError`를 지원하지 않고 cancellation caveat가 있다. `useQuery`는
+`isPending`/`isError`/`data`를 컴포넌트가 직접 처리하며 조건부 조회와 placeholder UX를 표현할 수 있다.
+
+다음이면 `useQuery`가 더 적합하다.
+
+- query가 선택적이거나 `enabled` 조건이 필요한 경우
+- 화면 일부만 늦게 갱신되고 나머지는 계속 보여줘야 하는 경우
+- stale/background refetch 상태를 inline UX로 표시해야 하는 경우
+- placeholder/previous data를 이용한 pagination·filter 전환이 필요한 경우
+
+현재 Admin Album/Song 화면처럼 필수 목록을 Suspense boundary 안에서 함께 준비하는 경우에는
+`useSuspenseQuery`가 적절하다. 같은 컴포넌트에서 독립 suspense query를 여러 개 추가할 때는
+waterfall을 피하기 위해 서버 병렬 조회 또는 `useSuspenseQueries`를 검토한다.
 
 ## Global mutation error 설계 (구현 전)
 

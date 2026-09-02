@@ -2,9 +2,8 @@
 
 import { queryOptions } from "@tanstack/react-query";
 
-import { authAbilityQueryKeys } from "@/shared/contracts/query-keys";
-
 import { getCurrentAbility } from "./api";
+import { authAbilityQueryKeys } from "./query-keys";
 
 export const authAbilityQueries = {
   current: () =>

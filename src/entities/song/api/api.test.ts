@@ -9,8 +9,6 @@ const http = vi.hoisted(() => ({
 
 vi.mock("@/shared/api/http-client", () => ({ http }));
 
-import { songQueryKeys } from "@/shared/contracts/query-keys";
-
 import {
   createAdminSong,
   deleteAdminSong,
@@ -19,6 +17,7 @@ import {
   updateAdminSong,
 } from "./api";
 import { songQueries } from "./queries";
+import { songQueryKeys } from "./query-keys";
 
 const song = {
   id: 2,

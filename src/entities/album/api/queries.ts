@@ -2,9 +2,8 @@
 
 import { queryOptions } from "@tanstack/react-query";
 
-import { albumQueryKeys } from "@/shared/contracts/query-keys";
-
 import { getAdminAlbums, getAlbumDetail } from "./api";
+import { albumQueryKeys } from "./query-keys";
 
 export const albumQueries = {
   detail: (slug: string) =>

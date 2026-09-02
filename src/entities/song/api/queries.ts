@@ -2,9 +2,8 @@
 
 import { queryOptions } from "@tanstack/react-query";
 
-import { songQueryKeys } from "@/shared/contracts/query-keys";
-
 import { getAdminSongs, getSongDetail } from "./api";
+import { songQueryKeys } from "./query-keys";
 
 export const songQueries = {
   detail: (slug: string) =>
