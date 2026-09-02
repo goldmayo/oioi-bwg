@@ -18,6 +18,15 @@ API 레이어를 수정하기 전에 현재 App Router의 모든 페이지와 la
 `07-rendering-query-cache-architecture.md`의 Next Data Cache 미사용 결정과 충돌하므로 이번 구현에서
 적용하지 않는다.
 
+## M-06 현재 상태
+
+- 관리자 Album/Song/Lyrics HTTP contract와 Client Transport 전환: 완료
+- 공개 페이지 렌더링·DTO 경계 감사: 완료
+- `SongManagerClient` 함수 길이 warning: 책임 단위 리팩터링으로 해소
+- Base UI 실제 전환: M-06 범위에서 폐기
+- OCI/운영 환경 smoke: 보류
+- Revision/Discussion/moderation lifecycle: M-07 이후 진행
+
 ## 전체 페이지 분류
 
 | Route | 현재 렌더링·데이터 경계 | 소유권 판정 | 감사 결과 |
@@ -102,8 +111,11 @@ form state 경계이므로 HTTP DTO와 혼동하지 않도록 feature 내부에 
 - 공개 페이지에 TanStack Query, prefetch, dehydrate, HydrationBoundary를 추가하지 않는다.
 - 관리자 Query/Hydration 흐름은 실제 mutation lifecycle이 있으므로 유지한다.
 - 공개 `cacheTag`, `revalidateTag`, `revalidatePath`는 active architecture 변경 없이 도입하지 않는다.
-- Revision, Discussion, CheerGuide mode 등 `DOMAIN_SPECIFICATION.md`의 목표 도메인은 현재 legacy
-  Album/Song API와 섞어 선제 구현하지 않는다.
+- Revision, Discussion, moderation lifecycle 등 `DOMAIN_SPECIFICATION.md`의 목표 도메인은 현재
+  legacy Album/Song API와 섞어 선제 구현하지 않으며 M-07 이후 진행한다.
+- Base UI 실제 전환은 M6 범위에서 폐기했다. shared primitive 교체, Playwright 회귀 검증, Radix 제거는
+  이 단계의 완료 조건에서 제외한다.
+- OCI/운영 환경 smoke 검증은 보류한다.
 - Production DB와 credential은 사용하지 않는다.
 
 ## 검증 결과
