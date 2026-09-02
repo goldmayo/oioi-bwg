@@ -1,13 +1,17 @@
-import { Suspense } from "react";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 
 import { LyricsViewerClient } from "@/features/chant-sync";
 
-import type { LyricLine } from "@/entities/cheer-guide";
+import { toAlbumViewModel } from "@/entities/album";
 
 import { getSongDetailBySlug } from "@/server/services/song-service";
 
 import { constructMetadata } from "@/shared/lib/metadata";
+
+export const dynamic = "force-dynamic";
+
+const getSongDetail = cache(getSongDetailBySlug);
 
 interface SongPageProps {
   params: Promise<{ slug: string }>;
@@ -18,7 +22,7 @@ interface SongPageProps {
  */
 export async function generateMetadata({ params }: SongPageProps) {
   const { slug } = await params;
-  const song = await getSongDetailBySlug(slug);
+  const song = await getSongDetail(slug);
 
   if (!song || !song.album) return {};
 
@@ -39,70 +43,24 @@ export default async function SongDetailPage({ params }: SongPageProps) {
     return notFound();
   }
 
-  const songPromise = getSongDetailBySlug(slug);
+  const song = await getSongDetail(slug);
 
-  return (
-    <main className="bg-background flex flex-col">
-      <Suspense fallback={<SongPageLoader />}>
-        <LyricsViewerLoader promise={songPromise} />
-      </Suspense>
-    </main>
-  );
-}
-
-/**
- * 데이터를 실제로 해소하여 클라이언트 뷰어에게 넘겨주는 중간 컴포넌트
- */
-async function LyricsViewerLoader({
-  promise,
-}: {
-  promise: ReturnType<typeof getSongDetailBySlug>;
-}) {
-  const song = await promise;
-
-  if (!song || !song.album) {
+  if (!song) {
     return notFound();
   }
 
-  // JsonValue 타입을 LyricLine[] 타입으로 안전하게 캐스팅하여 포맷팅
-  const formattedSong = {
-    ...song,
-    lyrics: (song.lyrics as unknown as LyricLine[]) || [],
-  };
-
-  // 프론트 컴포넌트 스펙 구성을 위한 앨범 변환
-  const albumData = {
-    name: song.album.name,
-    imageSlug: song.album.slug,
-    imgUrl: song.album.imgUrl,
-    color: song.album.color,
-    songs: song.album.songs.map((s) => ({
-      title: s.title,
-      slug: s.slug,
-      file: "", // Not strictly needed for basic rendering if missing
-      youtubeId: s.youtubeId,
-      hasOfficial: s.hasOfficialCheer,
-    })),
-  };
-
-  return <LyricsViewerClient song={formattedSong} album={albumData} />;
-}
-
-/**
- * 곡 상세 페이지 전용 로딩 스켈레톤
- */
-function SongPageLoader() {
   return (
-    <div className="flex h-screen animate-pulse flex-col lg:flex-row">
-      {/* 플레이어 영역 스켈레톤 */}
-      <div className="bg-muted border-border h-[40vh] w-full border-b lg:h-full lg:w-[40%] lg:border-r lg:border-b-0" />
-      {/* 가사 영역 스켈레톤 */}
-      <div className="mx-auto w-full max-w-3xl flex-1 space-y-12 p-12">
-        <div className="bg-muted h-10 w-3/4 rounded" />
-        <div className="bg-muted h-10 w-1/2 rounded" />
-        <div className="bg-muted h-10 w-2/3 rounded" />
-        <div className="bg-muted h-10 w-3/4 rounded" />
-      </div>
-    </div>
+    <main className="bg-background flex flex-col">
+      <LyricsViewerClient
+        song={{
+          id: song.id,
+          title: song.title,
+          youtubeId: song.youtubeId,
+          lyrics: song.lyrics,
+          hasOfficialCheer: song.hasOfficialCheer,
+        }}
+        album={toAlbumViewModel(song.album)}
+      />
+    </main>
   );
 }

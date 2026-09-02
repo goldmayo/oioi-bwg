@@ -1,14 +1,17 @@
-import { Suspense } from "react";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 
-import type { Album } from "@/entities/album";
+import { toAlbumViewModel } from "@/entities/album";
 
 import { getAlbumDetailBySlug } from "@/server/services/album-service";
 
 import { constructMetadata } from "@/shared/lib/metadata";
 
 import { AlbumDetailModal } from "./_ui/album-detail-modal";
-import { AlbumDetailSkeleton } from "./_ui/album-detail-skeleton";
+
+export const dynamic = "force-dynamic";
+
+const getAlbumDetail = cache(getAlbumDetailBySlug);
 
 interface AlbumPageProps {
   params: Promise<{ slug: string }>;
@@ -19,7 +22,7 @@ interface AlbumPageProps {
  */
 export async function generateMetadata({ params }: AlbumPageProps) {
   const { slug } = await params;
-  const album = await getAlbumDetailBySlug(slug);
+  const album = await getAlbumDetail(slug);
 
   if (!album) return {};
 
@@ -40,58 +43,15 @@ export default async function AlbumDetailPage({ params }: AlbumPageProps) {
     return notFound();
   }
 
-  // 앨범 데이터 조회를 위한 프로미스 생성
-  const albumPromise = getAlbumDetailBySlug(slug);
+  const album = await getAlbumDetail(slug);
 
-  return (
-    <main className="bg-background flex flex-col px-4 pt-10 md:px-10">
-      <Suspense fallback={<AlbumPageLoader />}>
-        <AlbumDetailLoader promise={albumPromise} />
-      </Suspense>
-    </main>
-  );
-}
-
-/**
- * 데이터를 실제로 해소하여 클라이언트 모달 컴포넌트로 넘겨주는 중간 컴포넌트
- */
-async function AlbumDetailLoader({
-  promise,
-}: {
-  promise: ReturnType<typeof getAlbumDetailBySlug>;
-}) {
-  const dbAlbum = await promise;
-
-  if (!dbAlbum) {
+  if (!album) {
     return notFound();
   }
 
-  // 프론트의 Album 타입 스펙에 맞춰 매핑
-  const albumData: Album = {
-    name: dbAlbum.name,
-    imageSlug: dbAlbum.slug,
-    imgUrl: dbAlbum.imgUrl,
-    color: dbAlbum.color,
-    songs: dbAlbum.songs.map((s) => ({
-      title: s.title,
-      slug: s.slug,
-      file: "",
-      youtubeId: s.youtubeId || "",
-      hasOfficial: s.hasOfficialCheer,
-      isTitle: s.isTitle,
-    })),
-  };
-
-  return <AlbumDetailModal album={albumData} />;
-}
-
-/**
- * 앨범 상세 페이지 전용 로딩 스켈레톤
- */
-function AlbumPageLoader() {
   return (
-    <div className="mx-auto flex h-[85vh] w-full max-w-5xl animate-pulse items-center justify-center">
-      <AlbumDetailSkeleton />
-    </div>
+    <main className="bg-background flex flex-col px-4 pt-10 md:px-10">
+      <AlbumDetailModal album={toAlbumViewModel(album)} />
+    </main>
   );
 }

@@ -1,10 +1,12 @@
 import { Suspense } from "react";
 
-import { Album, AlbumListSkeleton } from "@/entities/album";
+import { AlbumListSkeleton, toAlbumViewModel } from "@/entities/album";
 
 import { listVisibleAlbumsWithSongs } from "@/server/services/album-service";
 
 import { AlbumListContainer } from "./_ui/album-list-container";
+
+export const dynamic = "force-dynamic";
 
 // ----------------------------------------------------------------------
 // 1. 데이터 페칭 컴포넌트 (Async 래퍼)
@@ -13,24 +15,9 @@ async function AsyncAlbumsList() {
   const dbAlbums = await listVisibleAlbumsWithSongs();
 
   // 프론트 컴포넌트(AlbumListContainer) 뷰모델 매핑
-  const albumsData = dbAlbums
-    .map((album) => ({
-      name: album.name,
-      imageSlug: album.slug,
-      imgUrl: album.imgUrl,
-      color: album.color,
-      songs: album.songs.map((s) => ({
-        title: s.title,
-        slug: s.slug,
-        file: "", // Not strictly needed for basic rendering if missing
-        youtubeId: s.youtubeId,
-        hasOfficial: s.hasOfficialCheer,
-        isTitle: s.isTitle,
-      })),
-    }))
-    .filter((a) => a.songs.length > 0);
+  const albumsData = dbAlbums.map(toAlbumViewModel).filter((album) => album.songs.length > 0);
 
-  return <AlbumListContainer albums={albumsData as unknown as Album[]} />;
+  return <AlbumListContainer albums={albumsData} />;
 }
 
 // ----------------------------------------------------------------------
