@@ -81,7 +81,9 @@ export default function RootLayout({
         <Providers>{children}</Providers>
         <Toaster
           position="top-center"
-          duration={800}
+          expand
+          visibleToasts={3}
+          duration={4000}
           toastOptions={{
             className: "text-base font-bold tracking-tight px-6 py-3.5 justify-center",
           }}
