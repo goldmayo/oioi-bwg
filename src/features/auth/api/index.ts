@@ -1,2 +1,2 @@
 export { authAbilityQueries } from "./queries";
-export { authAbilityQueryKeys } from "./query-keys";
+export { authAbilityQueryKeys } from "@/shared/contracts/authorization";

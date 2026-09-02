@@ -73,3 +73,65 @@ freshness/consistency는 현재 dynamic RSC service read를 기본으로 하며,
 - Base UI 실제 전환은 폐기된 M-06 범위이며 M-07 분석 대상이 아니다.
 - Revision, Discussion, moderation lifecycle은 M-07 이후 도메인 작업으로 별도 계획한다.
 - 새로운 generic query wrapper, DI framework, Next Data Cache abstraction은 도입하지 않는다.
+
+## `setQueryData`와 `prefetchQuery + Reader DI`
+
+두 방식은 모두 서버에서 Client Query cache를 채울 수 있지만, 공유하는 대상이 다르다.
+
+| 항목 | `setQueryData` seeding | `prefetchQuery + Reader DI` |
+| --- | --- | --- |
+| 서버 조회 | RSC가 service를 직접 호출 | reader를 queryFn에 주입해 prefetch |
+| Query 옵션 공유 | query key만 공유 | query key + query policy + reader 계약 공유 |
+| 서버 HTTP round-trip | 없음 | queryFn이 Ky면 발생 가능 |
+| 적합한 경우 | 서버 DTO를 이미 얻었고 Client가 같은 cache를 이어 사용 | 동일 acquisition policy를 server/client가 실제로 공유 |
+| 비용 | 낮음, 명시적 | DI/reader/factory 복잡성 증가 |
+
+현재 Admin 목록은 `service → DTO → setQueryData → dehydrate`가 맞다. RSC에서 얻은 DTO를 이미
+보유하고, Client는 hydration 이후 refetch/invalidation을 HTTP Query로 수행하기 때문이다. `prefetchQuery`
+로 바꾸면 현재 client-only queryFn이 내부 Route Handler를 다시 호출할 수 있어 이점 없이 round-trip과
+추상화가 늘어난다. Reader DI는 동일 query policy를 공유해야 하는 실제 도메인이 생길 때만 별도
+checkpoint에서 검토한다.
+
+## Query key의 isomorphic contract 이동
+
+Query key는 HTTP response DTO는 아니지만 RSC seed와 Client Query를 연결하는 직렬화 가능한 cache
+identity 계약이다. 따라서 다음 contract 파일이 key의 SSOT가 된다.
+
+- `src/shared/contracts/album.ts` → `albumQueryKeys`
+- `src/shared/contracts/song.ts` → `songQueryKeys`
+- `src/shared/contracts/authorization.ts` → `authAbilityQueryKeys`
+
+Entity/feature API는 해당 contract를 재수출하고, `queryOptions`는 key와 browser HTTP queryFn만
+결합한다. Query key에는 server-only, DB, repository, service 의존성을 넣지 않는다.
+
+## Global mutation error 설계 (구현 전)
+
+active error architecture와 가이드의 공통 방향에 따라 다음 정책을 먼저 확정한다.
+
+1. `QueryClient`의 `MutationCache.onError`가 기본 global mutation UX를 담당한다.
+2. `ApiError`의 공개 `code`를 기준으로 사용자 메시지를 매핑한다. 내부 DB/stack/details는 노출하지 않는다.
+3. validation 및 feature-specific conflict는 global toast 대신 local UX가 우선이다.
+4. mutation options의 `meta.skipGlobalError`로 global 처리를 건너뛸 수 있게 한다.
+5. `meta.errorMessage`는 정말 필요한 feature의 명시적 문구 override로만 허용한다.
+6. global handler는 mutation을 재시도하거나 invalidate하지 않는다. consistency는 mutation consumer가
+   명시적으로 처리한다.
+7. 중복 toast 방지를 위해 local `onError`와 global handler의 책임을 하나의 mutation에서 동시에
+   사용하지 않는다.
+
+구현 시점에는 먼저 `MutationMeta` 타입과 toast presentation adapter의 위치를 정하고, `createQueryClient`
+단위 테스트로 `ApiError`/contract error/unknown error 및 `skipGlobalError`를 검증한다. 현재 각
+관리자 화면의 `onMutationError`는 이 설계로 이전하기 전까지 유지한다.
+
+## Admin SPA-like와 Public RSC 중심 비교
+
+| 기준 | Admin | Public |
+| --- | --- | --- |
+| 기본 경계 | RSC auth/layout + Client Query 화면 | RSC service read + 필요한 Client props |
+| 데이터 ownership | mutable server-state는 Query | lifecycle 없는 공개 read는 RSC/server |
+| mutation | Ky → Route Handler → service | 일반적으로 없음; server write는 service 직접 호출 |
+| hydration | 초기 목록/ability처럼 Client가 계속 소비할 때 사용 | Client refetch/invalidation이 없으면 사용하지 않음 |
+| navigation | SPA-like 상호작용 허용 | 서버 렌더/SEO/단순 전환 우선 |
+
+이는 route 이름으로 강제하는 대칭 규칙이 아니다. Admin editor의 초기 DTO와 form draft처럼 한 화면에
+RSC props, Query state, RHF state가 섞일 수 있고, Public도 향후 댓글처럼 mutation lifecycle이 생기면
+Query-owned hydration을 선택할 수 있다. 판단 기준은 페이지 종류가 아니라 데이터 lifecycle이다.
