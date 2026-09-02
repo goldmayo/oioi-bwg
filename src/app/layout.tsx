@@ -1,6 +1,6 @@
+import { GoogleTagManager } from "@next/third-parties/google";
 import type { Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 
 import { Providers } from "@/app/providers";
 
@@ -49,35 +49,11 @@ export default function RootLayout({
     <html lang="ko" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
-        {/* Google Tag Manager (Script) */}
-        {gtmId && (
-          <Script
-            id="gtm-script"
-            strategy="afterInteractive"
-            dangerouslySetInnerHTML={{
-              __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-              j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-              'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-              })(window,document,'script','dataLayer','${gtmId}');`,
-            }}
-          />
-        )}
       </head>
+      {gtmId && <GoogleTagManager gtmId={gtmId} />}
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {/* 인앱 브라우저 탈출을 위한 투명 가드 */}
         <InAppBrowserGuard />
-        {/* Google Tag Manager (noscript) */}
-        {gtmId && (
-          <noscript>
-            <iframe
-              src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
-              height="0"
-              width="0"
-              style={{ display: "none", visibility: "hidden" }}
-            />
-          </noscript>
-        )}
         <Providers>{children}</Providers>
         <Toaster
           position="top-center"
