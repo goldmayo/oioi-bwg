@@ -17,12 +17,14 @@ export const songMutations = {
     mutationOptions({
       mutationKey: songMutationKeys.create(),
       mutationFn: createAdminSong,
+      meta: { skipGlobalError: true },
     }),
   update: () =>
     mutationOptions({
       mutationKey: songMutationKeys.update(),
       mutationFn: ({ id, input }: { id: number; input: UpdateAdminSong }) =>
         updateAdminSong(id, input),
+      meta: { skipGlobalError: true },
     }),
   delete: () =>
     mutationOptions({

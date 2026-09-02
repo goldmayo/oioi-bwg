@@ -16,12 +16,14 @@ export const albumMutations = {
     mutationOptions({
       mutationKey: albumMutationKeys.create(),
       mutationFn: createAdminAlbum,
+      meta: { skipGlobalError: true },
     }),
   update: () =>
     mutationOptions({
       mutationKey: albumMutationKeys.update(),
       mutationFn: ({ id, input }: { id: number; input: SaveAdminAlbum }) =>
         updateAdminAlbum(id, input),
+      meta: { skipGlobalError: true },
     }),
   delete: () =>
     mutationOptions({

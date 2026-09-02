@@ -12,7 +12,7 @@ export async function signIn(formData: FormData) {
     formData.set("redirectTo", "/admin");
     await authSignIn("credentials", formData);
   } catch (error) {
-    if (error instanceof AuthError) {
+    if (error instanceof AuthError && error.type === "CredentialsSignin") {
       return { error: "이메일 또는 비밀번호를 확인해주세요." };
     }
 

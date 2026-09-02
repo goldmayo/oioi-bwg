@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 
 import type { AdminAlbumSummary } from "@/entities/album";
 import type { AdminSongSummary } from "@/entities/song";
 
+import { ApiError, getValidationFieldErrors } from "@/shared/api/http-errors";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -34,6 +35,39 @@ interface SongFormDialogProps {
   /** 편집 시 기존 곡 데이터 */
   song?: AdminSongSummary;
   onSubmit: (values: SongEditValues) => Promise<void>;
+}
+
+const songFormFieldNames = [
+  "albumId",
+  "title",
+  "slug",
+  "youtubeId",
+  "hasOfficialCheer",
+  "isTitle",
+  "isVisible",
+  "order",
+  "lrcText",
+] as const;
+
+function applySongFormError(
+  error: unknown,
+  form: UseFormReturn<SongEditInput, unknown, SongEditValues>,
+  setLrcError: (message: string) => void,
+) {
+  const fieldErrors = getValidationFieldErrors(error);
+
+  for (const fieldName of songFormFieldNames) {
+    const message = fieldErrors?.[fieldName]?.[0];
+    if (message) form.setError(fieldName, { message });
+  }
+
+  if (error instanceof ApiError && error.code === "SONG_LYRICS_INVALID") {
+    setLrcError(error.message);
+  } else if (!fieldErrors || Object.keys(fieldErrors).length === 0) {
+    form.setError("root.server", {
+      message: error instanceof Error ? error.message : "곡 저장에 실패했습니다.",
+    });
+  }
 }
 
 export function SongFormDialog({
@@ -72,6 +106,7 @@ export function SongFormDialog({
         return;
       }
       setLrcError(null);
+      form.clearErrors("root.server");
 
       setIsSubmitting(true);
       try {
@@ -79,7 +114,7 @@ export function SongFormDialog({
         onOpenChange(false);
         form.reset();
       } catch (error) {
-        alert(error instanceof Error ? error.message : "곡 저장에 실패했습니다.");
+        applySongFormError(error, form, setLrcError);
       } finally {
         setIsSubmitting(false);
       }
@@ -261,6 +296,12 @@ export function SongFormDialog({
                 </FormItem>
               )}
             />
+
+            {form.formState.errors.root?.server?.message && (
+              <p role="alert" className="text-destructive text-sm">
+                {form.formState.errors.root.server.message}
+              </p>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

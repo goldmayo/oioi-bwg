@@ -27,7 +27,7 @@ ownership·hydration·error lifecycle의 일관성 검토다.
 | 서버 QueryClient | request/render 단위 격리 | `getQueryClient()`가 React `cache()`로 생성 | 일치 |
 | Query retry | Query가 retry 소유, Ky retry 금지 | Query retry 정책과 Ky transport 분리 | 일치 |
 | Next Data Cache | 가이드는 server-owned에 사용 가능하다고 설명 | active architecture는 application data consistency에 사용 금지 | **충돌: active 우선** |
-| Global mutation error | `MutationCache` global toast 제안 | 현재는 각 mutation의 `onError`/route-local 처리 | 후속 검토 |
+| Global mutation error | `MutationCache` global toast 제안 | global toast + form-local escape hatch 적용 | 일치 |
 | `prefetchQuery` | client lifecycle이 있을 때 검토 | 현재는 service → `setQueryData` 기본 경로 | 일치 |
 
 ## 가이드와 Active Architecture의 충돌
@@ -60,7 +60,7 @@ freshness/consistency는 현재 dynamic RSC service read를 기본으로 하며,
 
 ## M-07 후속 분석 항목
 
-1. `MutationCache` global error policy가 필요한지, 현재 per-mutation `onError`와 중복되는지 확인한다.
+1. ~~`MutationCache` global error policy가 필요한지, 현재 per-mutation `onError`와 중복되는지 확인한다.~~ 완료
 2. Admin 페이지의 `Suspense` fallback이 실제 독립 streaming UX를 제공하는지 확인한다.
 3. Admin editor의 song data를 Query-owned로 승격할 필요가 있는지 mutation/refetch lifecycle 기준으로
    판단한다. 현재는 RSC initial DTO + form draft가 단순한 경로다.
@@ -127,7 +127,7 @@ TanStack Query 공식 동작상 `useSuspenseQuery`는 `data`가 정의됨을 보
 `useSuspenseQuery`가 적절하다. 같은 컴포넌트에서 독립 suspense query를 여러 개 추가할 때는
 waterfall을 피하기 위해 서버 병렬 조회 또는 `useSuspenseQueries`를 검토한다.
 
-## Global mutation error 설계 (구현 전)
+## Global mutation error 설계 및 구현 결과
 
 active error architecture와 가이드의 공통 방향에 따라 다음 정책을 먼저 확정한다.
 
@@ -141,9 +141,15 @@ active error architecture와 가이드의 공통 방향에 따라 다음 정책�
 7. 중복 toast 방지를 위해 local `onError`와 global handler의 책임을 하나의 mutation에서 동시에
    사용하지 않는다.
 
-구현 시점에는 먼저 `MutationMeta` 타입과 toast presentation adapter의 위치를 정하고, `createQueryClient`
-단위 테스트로 `ApiError`/contract error/unknown error 및 `skipGlobalError`를 검증한다. 현재 각
-관리자 화면의 `onMutationError`는 이 설계로 이전하기 전까지 유지한다.
+`MutationMeta` 타입은 shared Query infrastructure에 선언했고, browser provider가 Sonner adapter를
+주입한다. `createQueryClient` 단위 테스트로 `ApiError`/transport error/contract error/unknown error와
+`skipGlobalError`를 검증했다. Album/Song 생성·수정 폼은 서버 `VALIDATION_ERROR.fieldErrors`를 RHF
+field/root error로 변환하고, 삭제·가사 저장은 전역 mutation UX를 사용한다. Admin route에는 초기
+Suspense query 및 render failure를 격리하는 `error.tsx`를 추가했다.
+
+추가로 request JSON syntax failure를 500이 아닌 400 `VALIDATION_ERROR`로 분리하고, Ky의 network,
+timeout, malformed HTTP payload를 각각 typed transport error로 정규화했다. Client contract failure는
+Query cache와 Error Boundary가 같은 Error 인스턴스를 중복 capture하지 않도록 한 번만 관측한다.
 
 ## Admin SPA-like와 Public RSC 중심 비교
 

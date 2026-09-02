@@ -23,12 +23,13 @@ export function LrcUploader({ onLrcParsed, value, error }: LrcUploaderProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [lineCount, setLineCount] = useState(0);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFile = useCallback(
     async (file: File) => {
       if (!file.name.endsWith(".lrc")) {
-        alert("LRC 파일(.lrc)만 업로드 가능합니다.");
+        setFileError("LRC 파일(.lrc)만 업로드 가능합니다.");
         return;
       }
 
@@ -37,9 +38,10 @@ export function LrcUploader({ onLrcParsed, value, error }: LrcUploaderProps) {
         const lines = text.split("\n").filter((line) => line.trim().length > 0);
         setFileName(file.name);
         setLineCount(lines.length);
+        setFileError(null);
         onLrcParsed(text);
       } catch {
-        alert("파일 읽기에 실패했습니다.");
+        setFileError("파일 읽기에 실패했습니다.");
       }
     },
     [onLrcParsed],
@@ -79,6 +81,7 @@ export function LrcUploader({ onLrcParsed, value, error }: LrcUploaderProps) {
   const handleClear = useCallback(() => {
     setFileName(null);
     setLineCount(0);
+    setFileError(null);
     onLrcParsed("");
   }, [onLrcParsed]);
 
@@ -122,7 +125,7 @@ export function LrcUploader({ onLrcParsed, value, error }: LrcUploaderProps) {
             isDragOver
               ? "border-primary bg-primary/5 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50 hover:bg-accent/30",
-            error && "border-destructive",
+            (error || fileError) && "border-destructive",
           )}
         >
           <Upload className="h-8 w-8" />
@@ -135,7 +138,11 @@ export function LrcUploader({ onLrcParsed, value, error }: LrcUploaderProps) {
         </div>
       )}
 
-      {error && <p className="text-destructive text-sm">{error}</p>}
+      {(error || fileError) && (
+        <p role="alert" className="text-destructive text-sm">
+          {error || fileError}
+        </p>
+      )}
     </div>
   );
 }

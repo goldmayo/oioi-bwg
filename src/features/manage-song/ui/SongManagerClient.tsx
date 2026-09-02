@@ -62,15 +62,14 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
     },
     [createMutation, editingSong, invalidateSongs, updateMutation],
   );
-  const handleDelete = useCallback(async () => {
+  const handleDelete = useCallback(() => {
     if (!deleteTarget) return;
-    try {
-      await deleteMutation.mutateAsync(deleteTarget.id);
-      setDeleteTarget(null);
-      await invalidateSongs();
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "곡 삭제에 실패했습니다.");
-    }
+    deleteMutation.mutate(deleteTarget.id, {
+      onSuccess: () => {
+        setDeleteTarget(null);
+        void invalidateSongs();
+      },
+    });
   }, [deleteMutation, deleteTarget, invalidateSongs]);
   return (
     <div className="space-y-4">
