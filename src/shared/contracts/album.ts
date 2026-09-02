@@ -1,11 +1,4 @@
-import { createQueryKeys } from "@lukemorales/query-key-factory";
 import { z } from "zod";
-
-/** RSC seed와 Client Query가 공유하는 isomorphic Album cache identity다. */
-export const albumQueryKeys = createQueryKeys("album", {
-  adminList: null,
-  detail: (slug: string) => [slug],
-});
 
 export const albumSlugParamsSchema = z.object({
   slug: z.string().trim().min(1),

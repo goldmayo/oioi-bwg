@@ -2,7 +2,7 @@
 
 import { queryOptions } from "@tanstack/react-query";
 
-import { albumQueryKeys } from "@/shared/contracts/album";
+import { albumQueryKeys } from "@/shared/contracts/query-keys";
 
 import { getAdminAlbums, getAlbumDetail } from "./api";
 

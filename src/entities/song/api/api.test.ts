@@ -9,7 +9,7 @@ const http = vi.hoisted(() => ({
 
 vi.mock("@/shared/api/http-client", () => ({ http }));
 
-import { songQueryKeys } from "@/shared/contracts/song";
+import { songQueryKeys } from "@/shared/contracts/query-keys";
 
 import {
   createAdminSong,

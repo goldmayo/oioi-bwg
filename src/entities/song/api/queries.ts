@@ -2,7 +2,7 @@
 
 import { queryOptions } from "@tanstack/react-query";
 
-import { songQueryKeys } from "@/shared/contracts/song";
+import { songQueryKeys } from "@/shared/contracts/query-keys";
 
 import { getAdminSongs, getSongDetail } from "./api";
 

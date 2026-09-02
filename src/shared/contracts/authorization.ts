@@ -1,10 +1,4 @@
-import { createQueryKeys } from "@lukemorales/query-key-factory";
 import { z } from "zod";
-
-/** RSC seed와 Client Query가 공유하는 isomorphic ability cache identity다. */
-export const authAbilityQueryKeys = createQueryKeys("auth", {
-  ability: null,
-});
 
 export const APP_ACTIONS = [
   "read",

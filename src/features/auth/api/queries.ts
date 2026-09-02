@@ -2,7 +2,7 @@
 
 import { queryOptions } from "@tanstack/react-query";
 
-import { authAbilityQueryKeys } from "@/shared/contracts/authorization";
+import { authAbilityQueryKeys } from "@/shared/contracts/query-keys";
 
 import { getCurrentAbility } from "./api";
 

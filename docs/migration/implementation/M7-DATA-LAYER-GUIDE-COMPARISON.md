@@ -97,12 +97,11 @@ checkpoint에서 검토한다.
 Query key는 HTTP response DTO는 아니지만 RSC seed와 Client Query를 연결하는 직렬화 가능한 cache
 identity 계약이다. 따라서 다음 contract 파일이 key의 SSOT가 된다.
 
-- `src/shared/contracts/album.ts` → `albumQueryKeys`
-- `src/shared/contracts/song.ts` → `songQueryKeys`
-- `src/shared/contracts/authorization.ts` → `authAbilityQueryKeys`
+- `src/shared/contracts/query-keys.ts` → `albumQueryKeys`, `songQueryKeys`, `authAbilityQueryKeys`
 
-Entity/feature API는 해당 contract를 재수출하고, `queryOptions`는 key와 browser HTTP queryFn만
-결합한다. Query key에는 server-only, DB, repository, service 의존성을 넣지 않는다.
+HTTP DTO/validation contract와 Query identity contract는 파일 책임을 분리한다. Entity/feature API는
+`query-keys.ts`의 key를 재수출하고, `queryOptions`는 key와 browser HTTP queryFn만 결합한다. Query
+key에는 server-only, DB, repository, service 의존성을 넣지 않는다.
 
 ## Global mutation error 설계 (구현 전)
 
