@@ -1,5 +1,5 @@
 import { getRequestContext } from "@/server/auth/request-context";
-import { jsonResponse, toErrorResponse } from "@/server/http/api-response";
+import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 import { saveSongLyrics } from "@/server/services/song-service";
 
 import {
@@ -15,7 +15,7 @@ interface SongLyricsRouteContext {
 export async function PATCH(request: Request, context: SongLyricsRouteContext) {
   try {
     const { id } = adminSongIdParamsSchema.parse(await context.params);
-    const input = saveAdminSongLyricsSchema.parse(await request.json());
+    const input = await parseJsonRequest(request, saveAdminSongLyricsSchema);
     const song = await saveSongLyrics(await getRequestContext(), id, input);
     return jsonResponse(adminSongMutationResultSchema, song);
   } catch (error) {
