@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/sh
 /**
  * 사이드바 래퍼 (데스크톱: 고정 aside, 모바일: Sheet 슬라이드)
  */
-export function SidebarWrapper({ children }: { children: React.ReactNode }) {
+export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
   const [isMinimized, setIsMinimized] = useState(false);
 
   const sidebarContent = (

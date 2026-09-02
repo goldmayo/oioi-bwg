@@ -16,14 +16,14 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
 
-import { useAdminEditorContext } from "./AdminEditorContext";
+import { useLyricsEditorContext } from "./LyricsEditorContext";
 
 /**
  * 현재 재생 시간을 구독하여 표시하는 독립 컴포넌트.
  * 리렌더링을 이 컴포넌트 내부로 격리하여 상위 트리의 불필요한 렌더링을 방지합니다.
  */
 function TimeDisplay() {
-  const { subscribeToTime } = useAdminEditorContext();
+  const { subscribeToTime } = useLyricsEditorContext();
   const [time, setTime] = useState(0);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ function TimeDisplay() {
  * 좌측: 곡 제목 / YouTube URL 입력 / 전체 오프셋(-0.1s, +0.1s) / Undo·Redo
  * 우측: LRC Import Dialog / 저장 버튼
  *
- * YoutubePlayer 패널의 TimeDisplay도 이 컴포넌트 외부에서 관리하지만,
+ * YouTubePlayer 패널의 TimeDisplay도 이 컴포넌트 외부에서 관리하지만,
  * TimeDisplay는 subscribeToTime이 필요하므로 Context에서 직접 접근합니다.
  */
 export function EditorTopBar() {
@@ -65,7 +65,7 @@ export function EditorTopBar() {
     setIsImportOpen,
     setLrcInput,
     handleImportLrc,
-  } = useAdminEditorContext();
+  } = useLyricsEditorContext();
 
   const selectedLine = currentIndex >= 0 ? lyrics[currentIndex] : null;
 

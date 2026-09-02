@@ -6,14 +6,14 @@ import type { SongEditor } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
 // React.lazy를 사용한 클라이언트 사이드 지연 로딩
-const AdminEditorClient = lazy(() => import("./AdminEditorClient"));
+const LyricsEditorClient = lazy(() => import("./LyricsEditorClient"));
 
-interface LazyAdminEditorProps {
+interface LazyLyricsEditorProps {
   song: SongEditor;
   saveSongData: SaveSongDataAction;
 }
 
-export function LazyAdminEditor({ song, saveSongData }: LazyAdminEditorProps) {
+export function LazyLyricsEditor({ song, saveSongData }: LazyLyricsEditorProps) {
   return (
     <Suspense
       fallback={
@@ -22,7 +22,7 @@ export function LazyAdminEditor({ song, saveSongData }: LazyAdminEditorProps) {
         </div>
       }
     >
-      <AdminEditorClient song={song} saveSongData={saveSongData} />
+      <LyricsEditorClient song={song} saveSongData={saveSongData} />
     </Suspense>
   );
 }

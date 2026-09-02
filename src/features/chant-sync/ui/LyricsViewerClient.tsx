@@ -23,7 +23,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/shared/ui/accordion";
-import { YoutubePlayer } from "@/shared/ui/YoutubePlayer";
+import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
 
 gsap.registerPlugin(ScrollToPlugin);
 
@@ -141,7 +141,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
       <div className="border-border relative z-20 w-full shrink-0 border-b bg-black shadow-2xl md:h-full md:w-[40%] md:border-r md:border-b-0">
         <div className="flex h-full flex-col">
           <div className="aspect-video w-full border-b">
-            <YoutubePlayer
+            <YouTubePlayer
               videoId={song.youtubeId}
               onTimeUpdate={handleTimeUpdate}
               onPlayerReady={setPlayer}

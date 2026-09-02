@@ -2,7 +2,7 @@ import { GoogleTagManager } from "@next/third-parties/google";
 import type { Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
-import { Providers } from "@/app/providers";
+import { AppProviders } from "@/app/app-providers";
 
 import { DEFAULT_METADATA } from "@/shared/config/site";
 import { Toaster } from "@/shared/ui/sonner";
@@ -54,7 +54,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {/* 인앱 브라우저 탈출을 위한 투명 가드 */}
         <InAppBrowserGuard />
-        <Providers>{children}</Providers>
+        <AppProviders>{children}</AppProviders>
         <Toaster
           position="top-center"
           expand

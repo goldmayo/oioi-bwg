@@ -29,7 +29,7 @@ export type SaveSongDataAction = (songId: number, data: SaveAdminSongLyrics) => 
 /**
  * AdminEditor의 모든 상태와 핸들러를 담는 단일 로직 게이트웨이.
  *
- * 이 파일 하나로 AdminEditorClient의 전체 동작을 이해할 수 있습니다.
+ * 이 파일 하나로 LyricsEditorClient의 전체 동작을 이해할 수 있습니다.
  * - 가사 편집 로직은 useLyricsEditor에 위임
  * - 어드민 전용 상태(YouTube ID, 저장, LRC Import, 툴바)를 추가로 관리
  */

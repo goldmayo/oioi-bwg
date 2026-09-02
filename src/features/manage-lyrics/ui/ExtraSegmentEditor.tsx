@@ -8,7 +8,7 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 
-import { useAdminEditorContext } from "./AdminEditorContext";
+import { useLyricsEditorContext } from "./LyricsEditorContext";
 
 interface ExtraSegmentEditorProps {
   line: LyricLine;
@@ -28,7 +28,7 @@ interface ExtraSegmentEditorProps {
  */
 export function ExtraSegmentEditor({ line, lineIndex }: ExtraSegmentEditorProps) {
   const { updateSegment, captureSegmentOffset, removeSegmentFromExtra, addSegmentToExtra } =
-    useAdminEditorContext();
+    useLyricsEditorContext();
 
   return (
     <div className="flex flex-col gap-1.5">

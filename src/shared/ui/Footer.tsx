@@ -25,7 +25,7 @@ export function Footer() {
               href="#"
               className="hover:text-primary flex items-center gap-1.5 text-xs transition-colors"
             >
-              <KaKaoTalkIcon className="h-4 w-4" />
+              <KakaoTalkIcon className="h-4 w-4" />
               제보하기
             </Link>
           </div> */}

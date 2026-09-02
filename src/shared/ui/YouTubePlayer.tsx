@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { YouTubeEvent, YouTubePlayerInstance } from "@/shared/model/youtube";
 
-interface YoutubePlayerProps {
+interface YouTubePlayerProps {
   videoId: string;
   onTimeUpdate: (time: number) => void;
   onStateChange?: (state: number) => void;
@@ -21,12 +21,12 @@ declare global {
   }
 }
 
-export function YoutubePlayer({
+export function YouTubePlayer({
   videoId,
   onTimeUpdate,
   onStateChange,
   onPlayerReady,
-}: YoutubePlayerProps) {
+}: YouTubePlayerProps) {
   const playerRef = useRef<YouTubePlayerInstance | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number>(0);

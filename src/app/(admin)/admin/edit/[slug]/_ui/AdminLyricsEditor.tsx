@@ -5,7 +5,7 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 
 import { authAbilityQueryKeys, createClientAbility } from "@/features/auth";
 import { authAbilityQueries } from "@/features/auth";
-import { LazyAdminEditor, type SongEditor } from "@/features/manage-lyrics";
+import { LazyLyricsEditor, type SongEditor } from "@/features/manage-lyrics";
 
 import { songMutations } from "@/entities/song";
 
@@ -34,5 +34,5 @@ export function AdminLyricsEditor({ song }: { song: SongEditor }) {
   );
 
   if (ability.cannot("manage", "all")) return null;
-  return <LazyAdminEditor key={song.id} song={song} saveSongData={saveSongData} />;
+  return <LazyLyricsEditor key={song.id} song={song} saveSongData={saveSongData} />;
 }

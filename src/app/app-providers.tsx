@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { createQueryClient } from "@/shared/api/query/query-client";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function AppProviders({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() =>
     createQueryClient({ onMutationError: (message) => toast.error(message) }),
   );

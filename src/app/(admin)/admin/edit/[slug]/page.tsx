@@ -16,7 +16,7 @@ interface AdminEditPageProps {
 }
 
 /** 관리자 가사 편집 DTO와 Ability를 서버에서 준비한다. */
-export default async function AdminEditPage({ params }: AdminEditPageProps) {
+export default async function AdminLyricsEditPage({ params }: AdminEditPageProps) {
   const { slug } = await params;
 
   if (!slug) {
