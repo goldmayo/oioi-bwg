@@ -1,7 +1,7 @@
 ---
 title: "As-Is 주요 사용자 프로세스 목록"
 document_id: "RE-PROCESS-001"
-version: "0.1.2"
+version: "0.1.3"
 status: "draft"
 authority: "plan"
 updated_at: "2026-09-05"
@@ -15,6 +15,7 @@ tags:
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| 0.1.3 | 2026-09-05 | - | 2차 화면 설계서 반영 및 공통 예외 표현 중립화 |
 | 0.1.2 | 2026-09-05 | - | 정책 상세 잘못된 slug의 실제 privacy fallback 동작 반영 |
 | 0.1.1 | 2026-09-05 | - | 예외 컬럼을 후보로 조정하고 관찰/모니터링 표현을 제거했으며 Change Log 위치 보정 |
 | 0.1.0 | 2026-09-05 | - | 현재 구현 기준 주요 사용자 프로세스 목록 작성 |
@@ -60,15 +61,17 @@ flowchart TD
     SERVER -- 인증 없음 --> LOGIN_REQUIRED[로그인 필요 처리]
     SERVER -- 권한 없음 --> FORBIDDEN[접근 거부]
     SERVER -- 대상 없음 --> NOT_FOUND[Not Found]
-    SERVER -- 성공 --> UPDATE[화면 또는 Query 상태 갱신]
+    SERVER -- 성공 --> UPDATE[화면 또는 데이터 상태 갱신]
     SERVER -- 기타 오류 --> ERROR[오류 처리]
 ```
 
-## 5. 다음 단계로 확장할 항목
+## 5. 후속 상세화 현황
 
-- 각 화면의 UI Element별 표시/비활성/로딩/빈 상태/오류 상태
-- 관리자 앨범·곡 CRUD의 입력 검증과 mutation별 상세 흐름
+- UI Element별 표시/비활성/Loading/Empty/Error 상태
+  - `RE-SCREEN-SPEC-001`에서 상세화 완료
+- 곡 응원법 뷰어의 YouTube 재생 및 가사 활성화 규칙
+  - `RE-SCREEN-SPEC-001`에서 상세화 완료
 - 가사 편집기의 편집 상태와 저장 전후 동작
-- 곡 뷰어의 YouTube 재생 상태와 가사 활성화 규칙
-
-위 항목은 이번 1차 산출물에서 상세 명세로 확정하지 않는다.
+  - `RE-SCREEN-SPEC-001`에서 상세화 완료
+- 관리자 앨범·곡 CRUD의 mutation별 상세 프로세스
+  - 3차 상세 Process Flow에서 분석
