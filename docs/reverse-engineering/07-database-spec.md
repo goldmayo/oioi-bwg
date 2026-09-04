@@ -2,17 +2,17 @@
 title: Database Specification
 document_id: RE-DB-001
 version: 0.1.0
-status: As-Is 분석본
-authority: 현재 저장소의 스키마·마이그레이션·데이터 접근 코드
+status: draft
+authority: plan
 ---
 
 # Database Specification
 
 ## Change Log
 
-| 버전 | 일자 | 변경 내용 |
-|---|---|---|
-| 0.1.0 | 2026-09-05 | 현재 저장소의 Drizzle schema, migration, relation, repository, service를 기준으로 데이터베이스 구조를 정리 |
+| Version | Date | Author | Changes |
+|---|---|---|---|
+| 0.1.0 | 2026-09-05 | Codex | 현재 저장소의 Drizzle schema, migration, relation, repository, service를 기준으로 데이터베이스 구조를 정리 |
 
 ## 1. 문서 범위와 분석 기준
 
@@ -26,6 +26,8 @@ authority: 현재 저장소의 스키마·마이그레이션·데이터 접근 �
 - `src/shared/contracts/song.ts`의 가사 JSON 계약
 
 이번 문서에는 API endpoint, request/response 명세, 미래 도메인 테이블, 임의의 개선안을 포함하지 않는다.
+
+길이 제한이 없는 `text` 계열은 별도 `Length` column을 두지 않는다. 길이 제약이 확인되는 경우에는 해당 column 설명 또는 제약조건에 기록한다.
 
 ### 1.1 확인 상태 표기
 
@@ -300,11 +302,11 @@ DB는 JSONB column으로 저장하고, 구조 검증 및 기본값 부여는 현
 
 | 부모 | 자식 | 자식 column | 삭제 동작 | 상태 |
 |---|---|---|---|---|
-| `account` | `profile` | `profile.account_id` | `RESTRICT` | 확인됨 |
-| `account` | `password_credential` | `password_credential.account_id` | `RESTRICT` | 확인됨 |
-| `Album` | `Song` | `Song.albumId` | `CASCADE` | 확인됨 |
+| `account` | `profile` | `profile.account_id` | `ON DELETE RESTRICT` | 확인됨 |
+| `account` | `password_credential` | `password_credential.account_id` | `ON DELETE RESTRICT` | 확인됨 |
+| `Album` | `Song` | `Song.albumId` | `ON DELETE CASCADE` | 확인됨 |
 
-모든 외래키에 별도 `ON UPDATE CASCADE`는 확인되지 않으며 migration 기준 기본 동작인 `NO ACTION`으로 보인다.
+모든 외래키는 migration SQL에 `ON UPDATE NO ACTION`이 명시되어 있다.
 
 ### 6.2 Drizzle relations
 
@@ -380,7 +382,7 @@ DB는 JSONB column으로 저장하고, 구조 검증 및 기본값 부여는 현
 | 이메일 OTP 요청 | 기존 challenge lock, rate limit 증가, 기존 pending 무효화, 새 challenge insert | 동일 요청에 대한 challenge·제한 상태의 원자적 변경 |
 | 회원가입 완료 | 검증된 challenge 소비, account/profile/password credential insert | 인증 소비와 계정 생성의 원자성 |
 
-`verifyOtp`의 challenge 조회 및 성공/실패 상태 변경은 현재 service/repository 코드의 호출 순서를 기준으로 확인되며, 위 두 흐름과 같은 명시적 다중 repository transaction 여부는 해당 구현을 추가로 구분해 기록할 운영 검토 항목이다.
+`verifyOtp`는 `findChallengeById`로 조회한 뒤 `incrementFailedAttempts` 또는 `markChallengeVerified`를 database executor에 직접 수행한다. 해당 service에는 명시적인 transaction 경계가 없다. 따라서 OTP 검증 자체는 위의 transaction 흐름과 별도로 동작하는 것으로 확인된다.
 
 앨범·곡 단일 insert/update/delete는 repository에 전달된 executor로 직접 수행된다. 앨범 삭제 시 DB FK cascade가 곡 삭제를 담당한다.
 
@@ -433,10 +435,10 @@ DB는 JSONB column으로 저장하고, 구조 검증 및 기본값 부여는 현
 |---|---|---|
 | `01-ia-menu-structure.md` | 앨범·곡 공개 구조 및 관리자 메뉴가 현재 Album/Song 데이터 구조와 연결됨 | 정합 |
 | `02-screen-id-list.md` | 공개 앨범/곡 및 관리자 앨범/곡 화면의 식별 대상이 확인됨 | 정합 |
-| `03-access-control-structure.md` | 관리자 데이터 변경은 service의 `manage all` 검사와 연결됨 | 정합 |
-| `04-user-process-inventory.md` | 앨범 삭제 시 소속 곡 삭제, 곡 가사 편집·저장, 회원가입/OTP 흐름이 실제 FK·JSONB·challenge 구조와 연결됨 | 정합 |
+| `03-access-control-structure.md` | 관리자 layout의 session/ability 접근 제어와 정합함. 일부 server service에서도 `manage all` 권한 검사가 확인됨 | 정합 |
+| `04-user-process-inventory.md` | 앨범 삭제, 곡 가사 편집·저장 흐름과 DB 구조가 정합함. 회원가입/OTP 관련 DB 구조는 존재하지만 현재 Process Inventory의 문서화 대상에는 포함되지 않음 | 정합 |
 | `05-screen-spec.md` | 가사 editor의 저장 대상이 `Song.lyrics` JSONB이고, 앨범 삭제 시 곡 동반 삭제가 확인됨 | 정합 |
-| `06-process-flow.md` | CRUD, OTP/회원가입, 가사 저장의 상태·transaction 근거가 현재 repository/service와 연결됨 | 정합 |
+| `06-process-flow.md` | 앨범·곡 CRUD와 가사 저장의 상태·transaction 근거가 현재 repository/service와 연결됨 | 정합 |
 
 ## 14. 산출물 범위 외 항목
 
