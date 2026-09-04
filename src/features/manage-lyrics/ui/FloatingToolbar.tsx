@@ -2,7 +2,7 @@
 
 import { Button } from "@/shared/ui/button";
 
-import { useAdminEditorContext } from "./AdminEditorContext";
+import { useLyricsEditorContext } from "./LyricsEditorContext";
 
 /**
  * 가사 텍스트 드래그 선택 시 나타나는 말풍선 툴바.
@@ -13,7 +13,7 @@ import { useAdminEditorContext } from "./AdminEditorContext";
  * 위치: toolbar.x / toolbar.y (뷰포트 기준 fixed 포지션)
  */
 export function FloatingToolbar() {
-  const { toolbar, handleSplitSegment } = useAdminEditorContext();
+  const { toolbar, handleSplitSegment } = useLyricsEditorContext();
 
   if (!toolbar?.show) return null;
 

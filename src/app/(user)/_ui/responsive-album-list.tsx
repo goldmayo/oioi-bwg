@@ -8,7 +8,7 @@ import type { Album } from "@/entities/album";
 import { AlbumCard } from "./album-card";
 import { AlbumListItem } from "./album-list-item";
 
-interface AlbumListContainerProps {
+interface ResponsiveAlbumListProps {
   albums: Album[];
 }
 
@@ -16,7 +16,7 @@ interface AlbumListContainerProps {
  * 사용자 홈 전용 앨범 목록 컨테이너.
  * 모바일 리스트와 데스크톱 그리드를 함께 렌더링한다.
  */
-export function AlbumListContainer({ albums }: AlbumListContainerProps) {
+export function ResponsiveAlbumList({ albums }: ResponsiveAlbumListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

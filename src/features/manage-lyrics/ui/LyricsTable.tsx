@@ -2,8 +2,8 @@
 
 import { ScrollArea } from "@/shared/ui/scroll-area";
 
-import { useAdminEditorContext } from "./AdminEditorContext";
 import { LyricRow } from "./LyricRow";
+import { useLyricsEditorContext } from "./LyricsEditorContext";
 
 /**
  * 가사 편집 테이블 컨테이너.
@@ -13,7 +13,7 @@ import { LyricRow } from "./LyricRow";
  * - 컨테이너 클릭 시 드래그 툴바 닫기
  */
 export function LyricsTable() {
-  const { lyrics, currentIndex, setToolbar } = useAdminEditorContext();
+  const { lyrics, currentIndex, setToolbar } = useLyricsEditorContext();
 
   return (
     <div className="border-border bg-card flex h-full flex-col overflow-hidden rounded-lg border shadow-sm">

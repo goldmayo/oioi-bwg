@@ -1,5 +1,5 @@
 import { getRequestContext } from "@/server/auth/request-context";
-import { jsonResponse, toErrorResponse } from "@/server/http/api-response";
+import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 import { createSong, listAdminSongs } from "@/server/services/song-service";
 
 import {
@@ -19,7 +19,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const input = createAdminSongSchema.parse(await request.json());
+    const input = await parseJsonRequest(request, createAdminSongSchema);
     const song = await createSong(await getRequestContext(), input);
     return jsonResponse(adminSongMutationResultSchema, song, { status: 201 });
   } catch (error) {

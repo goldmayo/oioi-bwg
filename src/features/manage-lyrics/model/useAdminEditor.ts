@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import type { LyricSegment } from "@/entities/cheer-guide";
 import { parseLrc } from "@/entities/cheer-guide";
@@ -28,7 +29,7 @@ export type SaveSongDataAction = (songId: number, data: SaveAdminSongLyrics) => 
 /**
  * AdminEditor의 모든 상태와 핸들러를 담는 단일 로직 게이트웨이.
  *
- * 이 파일 하나로 AdminEditorClient의 전체 동작을 이해할 수 있습니다.
+ * 이 파일 하나로 LyricsEditorClient의 전체 동작을 이해할 수 있습니다.
  * - 가사 편집 로직은 useLyricsEditor에 위임
  * - 어드민 전용 상태(YouTube ID, 저장, LRC Import, 툴바)를 추가로 관리
  */
@@ -102,9 +103,9 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     setIsSaving(true);
     try {
       await saveSongData(song.id, { lyrics, youtubeId });
-      alert("저장되었습니다.");
-    } catch (error) {
-      alert(`저장 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
+      toast.success("저장되었습니다.");
+    } catch {
+      // MutationCache의 전역 오류 UX가 실패를 표시한다.
     } finally {
       setIsSaving(false);
     }
@@ -121,10 +122,10 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
         setIsImportOpen(false);
         setLrcInput("");
       } else {
-        alert("파싱된 가사가 없습니다. 형식을 확인해주세요.");
+        toast.error("파싱된 가사가 없습니다. 형식을 확인해 주세요.");
       }
     } catch (_e) {
-      alert("LRC 파싱 중 오류가 발생했습니다.");
+      toast.error("LRC 파싱 중 오류가 발생했습니다.");
     }
   }, [lrcInput, importLyrics]);
 

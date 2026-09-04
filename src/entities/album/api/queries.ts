@@ -8,13 +8,13 @@ import { albumQueryKeys } from "./query-keys";
 export const albumQueries = {
   detail: (slug: string) =>
     queryOptions({
-      ...albumQueryKeys.detail(slug),
+      queryKey: albumQueryKeys.detail(slug),
       queryFn: ({ signal }) => getAlbumDetail(slug, signal),
     }),
 
   adminList: () =>
     queryOptions({
-      ...albumQueryKeys.adminList,
+      queryKey: albumQueryKeys.adminList(),
       staleTime: 30_000,
       queryFn: ({ signal }) => getAdminAlbums(signal),
     }),

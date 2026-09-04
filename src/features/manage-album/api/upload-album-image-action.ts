@@ -1,6 +1,7 @@
 "use server";
 
 import { uploadPublicAsset } from "@/shared/api/r2/upload-public-asset";
+import { logger } from "@/shared/lib/sentry";
 
 const IMAGE_EXTENSIONS = {
   "image/avif": "avif",
@@ -37,7 +38,7 @@ export async function uploadAlbumImageAction(formData: FormData) {
 
     return { success: true, url };
   } catch (error) {
-    console.error("Failed to upload image:", error);
+    logger.error(error, { source: "upload-album-image-action" });
     return { success: false, error: "이미지 업로드에 실패했습니다." };
   }
 }

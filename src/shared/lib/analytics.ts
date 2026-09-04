@@ -1,22 +1,16 @@
-// src/utils/analytics.ts
+import { sendGTMEvent } from "@next/third-parties/google";
+
 import { debounce } from "./utils";
 
 /**
  * 프로젝트 전역에서 사용할 분석 이벤트 래퍼입니다.
- * 외부 라이브러리 의존성을 제거하고 전역 dataLayer를 사용합니다.
+ * Next.js 공식 GTM adapter를 통해 dataLayer event를 전송합니다.
  */
-declare global {
-  interface Window {
-    dataLayer: Record<string, unknown>[] | undefined;
-  }
-}
-
 export const analytics = {
   // 버튼 클릭 및 인터랙션 이벤트
   trackEvent: (eventName: string, params?: Record<string, unknown>) => {
     if (typeof window !== "undefined") {
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({
+      sendGTMEvent({
         event: eventName,
         ...params,
       });

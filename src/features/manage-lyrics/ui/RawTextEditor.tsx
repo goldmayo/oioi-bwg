@@ -15,7 +15,7 @@ import {
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 
-import { useAdminEditorContext } from "./AdminEditorContext";
+import { useLyricsEditorContext } from "./LyricsEditorContext";
 
 interface RawTextEditorProps {
   line: LyricLine;
@@ -25,7 +25,7 @@ interface RawTextEditorProps {
 }
 
 export function RawTextEditor({ line, lineIndex, isOpen, onClose }: RawTextEditorProps) {
-  const { updateLine } = useAdminEditorContext();
+  const { updateLine } = useLyricsEditorContext();
   const [text, setText] = useState("");
 
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);

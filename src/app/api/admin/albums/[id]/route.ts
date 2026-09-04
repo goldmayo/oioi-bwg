@@ -1,5 +1,5 @@
 import { getRequestContext } from "@/server/auth/request-context";
-import { jsonResponse, toErrorResponse } from "@/server/http/api-response";
+import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 import { deleteAlbum, editAlbum } from "@/server/services/album-service";
 
 import {
@@ -15,7 +15,7 @@ interface AlbumRouteContext {
 export async function PATCH(request: Request, context: AlbumRouteContext) {
   try {
     const { id } = adminAlbumIdParamsSchema.parse(await context.params);
-    const input = saveAdminAlbumSchema.parse(await request.json());
+    const input = await parseJsonRequest(request, saveAdminAlbumSchema);
     const album = await editAlbum(await getRequestContext(), id, input);
     return jsonResponse(albumSummarySchema, album);
   } catch (error) {

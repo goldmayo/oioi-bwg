@@ -24,6 +24,26 @@ const appErrorDefinitions = {
   NICKNAME_ALREADY_REGISTERED: { message: "이미 사용 중인 닉네임입니다.", status: 409 },
 } satisfies Record<AppErrorCode, { message: string; status: number }>;
 
+class InvalidJsonBodyError extends Error {
+  constructor(options?: ErrorOptions) {
+    super("Invalid JSON request body", options);
+    this.name = "InvalidJsonBodyError";
+  }
+}
+
+/** JSON syntax failure와 schema failure를 모두 request validation failure로 보존한다. */
+export async function parseJsonRequest<T>(request: Request, schema: z.ZodType<T>): Promise<T> {
+  let value: unknown;
+
+  try {
+    value = await request.json();
+  } catch (error) {
+    throw new InvalidJsonBodyError({ cause: error });
+  }
+
+  return schema.parse(value);
+}
+
 /** 성공 payload를 외부 DTO contract로 검증한 뒤 반환한다. */
 export function jsonResponse<T>(
   schema: z.ZodType<T>,
@@ -41,11 +61,28 @@ export function jsonResponse<T>(
 
 /** Route Handler boundary에서만 application error를 HTTP failure contract로 변환한다. */
 export function toErrorResponse(error: unknown): Response {
+  if (error instanceof InvalidJsonBodyError) {
+    return Response.json(
+      apiErrorResponseSchema.parse({
+        code: "VALIDATION_ERROR",
+        message: "요청 본문이 올바른 JSON 형식이 아닙니다.",
+      }),
+      { status: 400 },
+    );
+  }
+
   if (error instanceof z.ZodError) {
+    const fieldErrors = Object.fromEntries(
+      Object.entries(z.flattenError(error).fieldErrors).filter(
+        (entry): entry is [string, string[]] => Array.isArray(entry[1]),
+      ),
+    );
+
     return Response.json(
       apiErrorResponseSchema.parse({
         code: "VALIDATION_ERROR",
         message: "입력값이 올바르지 않습니다.",
+        details: { fieldErrors },
       }),
       { status: 400 },
     );

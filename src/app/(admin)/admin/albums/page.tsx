@@ -27,9 +27,9 @@ export default async function AdminAlbumsPage() {
   const context = await getRequestContext();
   const albums = await listAdminAlbums(context);
   const queryClient = getQueryClient();
-  queryClient.setQueryData(albumQueryKeys.adminList.queryKey, albums);
+  queryClient.setQueryData(albumQueryKeys.adminList(), albums);
   queryClient.setQueryData(
-    authAbilityQueryKeys.ability.queryKey,
+    authAbilityQueryKeys.ability(),
     serializedAbilityResponseSchema.parse({ rules: context.ability.rules }),
   );
 

@@ -13,7 +13,7 @@
  *
  * 3) 분리(Decoupling)
  * - 비즈니스 코드 전역에 `if (isFeatureEnabled(...))`를 흩뿌리지 않는다.
- * - UI는 `<Feature />` 같은 래퍼로, 서버는 Guard/모듈 로딩 단계에서 제어한다.
+ * - UI는 `<FeatureFlagBoundary />` 같은 래퍼로, 서버는 Guard/모듈 로딩 단계에서 제어한다.
  *
  * 4) 환경변수 정책
  * - 서버 제어 플래그는 서버 전용 env를 사용한다.

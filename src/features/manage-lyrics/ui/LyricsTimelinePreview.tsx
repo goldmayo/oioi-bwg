@@ -5,12 +5,12 @@ import gsap from "gsap";
 
 import type { LyricLine } from "@/entities/cheer-guide";
 
-interface PreviewRailProps {
+interface LyricsTimelinePreviewProps {
   lyrics: LyricLine[];
   subscribeToTime: (listener: (time: number) => void) => () => void;
 }
 
-export function PreviewRail({ lyrics, subscribeToTime }: PreviewRailProps) {
+export function LyricsTimelinePreview({ lyrics, subscribeToTime }: LyricsTimelinePreviewProps) {
   const railRef = useRef<HTMLDivElement>(null);
 
   // 1초당 이동 픽셀 (속도)

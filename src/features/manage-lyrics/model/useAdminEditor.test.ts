@@ -1,26 +1,21 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAdminEditor } from "./useAdminEditor";
 
 const saveSongData = vi.fn();
+const { mockToastError, mockToastSuccess } = vi.hoisted(() => ({
+  mockToastError: vi.fn(),
+  mockToastSuccess: vi.fn(),
+}));
 
-const mockAlert = vi.fn();
-const mockPrompt = vi.fn();
-const originalAlert = global.alert;
-const originalPrompt = global.prompt;
+vi.mock("sonner", () => ({
+  toast: { error: mockToastError, success: mockToastSuccess },
+}));
 
 describe("useAdminEditor 훅 테스트", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.alert = mockAlert;
-    global.prompt = mockPrompt;
-  });
-
-  afterAll(() => {
-    global.alert = originalAlert;
-    global.prompt = originalPrompt;
-    vi.restoreAllMocks();
   });
 
   const mockSong = {
@@ -129,7 +124,7 @@ describe("useAdminEditor 훅 테스트", () => {
   });
 
   describe("handleSave (Inverse / Error 처리)", () => {
-    it("저장이 성공적으로 이루어질 경우 Success Alert를, 에러가 발생하면 실패 에러 Alert를 다르게 발생시켜야 한다", async () => {
+    it("성공은 toast로 알리고 실패 UX는 MutationCache에 위임한다", async () => {
       const { result } = renderHook(() => useAdminEditor(mockSong, saveSongData));
 
       // Success 케이스
@@ -140,7 +135,7 @@ describe("useAdminEditor 훅 테스트", () => {
       });
 
       expect(saveSongData).toHaveBeenCalled();
-      expect(mockAlert).toHaveBeenCalledWith("저장되었습니다.");
+      expect(mockToastSuccess).toHaveBeenCalledWith("저장되었습니다.");
 
       // Error 케이스
       vi.mocked(saveSongData).mockRejectedValueOnce(new Error("Network Timeout"));
@@ -149,7 +144,7 @@ describe("useAdminEditor 훅 테스트", () => {
         await result.current.handleSave();
       });
 
-      expect(mockAlert).toHaveBeenCalledWith("저장 실패: Network Timeout");
+      expect(mockToastError).not.toHaveBeenCalled();
     });
   });
 });

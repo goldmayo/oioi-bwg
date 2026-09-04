@@ -1,7 +1,7 @@
 import { Disc3, Music } from "lucide-react";
 import Link from "next/link";
 
-import { SidebarWrapper } from "./sidebar-wrapper";
+import { AdminSidebarShell } from "./admin-sidebar-shell";
 
 const ADMIN_NAV = [
   { href: "/admin/albums", label: "앨범 관리", icon: Disc3 },
@@ -29,5 +29,5 @@ export default function AdminSidebar() {
     </nav>
   );
 
-  return <SidebarWrapper>{navContent}</SidebarWrapper>;
+  return <AdminSidebarShell>{navContent}</AdminSidebarShell>;
 }

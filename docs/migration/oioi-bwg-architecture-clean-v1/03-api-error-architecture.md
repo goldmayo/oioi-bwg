@@ -1,10 +1,10 @@
 ---
 title: "API / Error Architecture"
 document_id: "03"
-version: "1.3"
+version: "1.4"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-26"
+updated_at: "2026-09-03"
 depends_on:
   - "01"
 related:
@@ -20,7 +20,7 @@ tags:
   - "sentry"
 ---
 
-# oioi-bwg API & Error Architecture v1.3
+# oioi-bwg API & Error Architecture v1.4
 
 ## 1. 목적
 
@@ -157,11 +157,15 @@ HTTP status가 성공과 실패를 표현한다.
 
 ```ts
 type ApiErrorResponse = {
-  code: string;
+  code: ApiErrorCode;
   message: string;
-  details?: unknown;
+  details?: ClientSafeErrorDetails;
 };
 ```
+
+현재 구현에서 `ApiErrorCode`는 shared contract의 명시적 enum이고, 공개 `details`는 우선
+`VALIDATION_ERROR`의 `{ fieldErrors: Record<string, string[]> }`만 허용한다. 새 code나 공개 details
+shape를 추가할 때는 server mapping과 client parser를 같은 변경 단위에서 확장한다.
 
 예:
 
@@ -434,6 +438,8 @@ function parseResponseContract<T>(
 ```
 
 Request body/params/query의 boundary parse에서 발생한 `ZodError`만 400으로 취급한다.
+`request.json()`의 JSON syntax failure도 공용 request parser가 400 `VALIDATION_ERROR`로 번역하며,
+service 내부의 임의 `SyntaxError`까지 validation으로 오인하지 않는다.
 
 AppError의 HTTP status/message/details mapping은 하나의 exhaustive table로 관리한다.
 

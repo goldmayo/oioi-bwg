@@ -18,7 +18,7 @@ export function AdminAlbumManager() {
   const handleMutationError = useCallback(
     (error: unknown) => {
       if (error instanceof ApiError && error.status === 403) {
-        void queryClient.invalidateQueries({ queryKey: authAbilityQueryKeys.ability.queryKey });
+        void queryClient.invalidateQueries({ queryKey: authAbilityQueryKeys.ability() });
       }
     },
     [queryClient],

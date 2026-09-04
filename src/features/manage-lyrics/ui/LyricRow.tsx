@@ -11,8 +11,8 @@ import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
 
-import { useAdminEditorContext } from "./AdminEditorContext";
 import { ExtraSegmentEditor } from "./ExtraSegmentEditor";
+import { useLyricsEditorContext } from "./LyricsEditorContext";
 import { MobilePaintEditor } from "./MobilePaintEditor";
 import { RawTextEditor } from "./RawTextEditor";
 
@@ -44,7 +44,7 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
     handleMouseUpText,
     lastAddedTimeRef,
     setCurrentIndex,
-  } = useAdminEditorContext();
+  } = useLyricsEditorContext();
 
   /**
    * 타임스킬프 입력 로컬 상태

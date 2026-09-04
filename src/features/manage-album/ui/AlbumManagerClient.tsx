@@ -85,7 +85,7 @@ export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerC
   }, []);
 
   const invalidateAlbums = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: albumQueryKeys.adminList.queryKey }),
+    () => queryClient.invalidateQueries({ queryKey: albumQueryKeys.adminList() }),
     [queryClient],
   );
 
@@ -103,15 +103,14 @@ export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerC
     [createMutation, editingAlbum, invalidateAlbums, updateMutation],
   );
 
-  const handleDelete = useCallback(async () => {
+  const handleDelete = useCallback(() => {
     if (!deleteTarget) return;
-    try {
-      await deleteMutation.mutateAsync(deleteTarget.id);
-      setDeleteTarget(null);
-      await invalidateAlbums();
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "앨범 삭제에 실패했습니다.");
-    }
+    deleteMutation.mutate(deleteTarget.id, {
+      onSuccess: () => {
+        setDeleteTarget(null);
+        void invalidateAlbums();
+      },
+    });
   }, [deleteMutation, deleteTarget, invalidateAlbums]);
 
   return (

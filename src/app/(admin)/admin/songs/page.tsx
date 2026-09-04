@@ -29,10 +29,10 @@ export default async function AdminSongsPage() {
   const context = await getRequestContext();
   const [songs, albums] = await Promise.all([listAdminSongs(context), listAdminAlbums(context)]);
   const queryClient = getQueryClient();
-  queryClient.setQueryData(songQueryKeys.adminList.queryKey, songs);
-  queryClient.setQueryData(albumQueryKeys.adminList.queryKey, albums);
+  queryClient.setQueryData(songQueryKeys.adminList(), songs);
+  queryClient.setQueryData(albumQueryKeys.adminList(), albums);
   queryClient.setQueryData(
-    authAbilityQueryKeys.ability.queryKey,
+    authAbilityQueryKeys.ability(),
     serializedAbilityResponseSchema.parse({ rules: context.ability.rules }),
   );
 

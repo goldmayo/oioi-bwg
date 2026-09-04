@@ -6,6 +6,7 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import Link from "next/link";
 import { z } from "zod";
 
+import { captureClientErrorOnce } from "@/shared/api/capture-client-error";
 import { Button } from "@/shared/ui/button";
 import {
   Card,
@@ -57,7 +58,8 @@ export default function LoginForm() {
         setServerError(result.error);
         setLoading(false);
       }
-    } catch (_e) {
+    } catch (error) {
+      captureClientErrorOnce(error, { source: "admin-login-form" });
       setServerError("로그인 중 오류가 발생했습니다.");
       setLoading(false);
     }

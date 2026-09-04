@@ -1,4 +1,4 @@
-export const KaKaoTalkIcon = ({ className }: { className?: string }) => (
+export const KakaoTalkIcon = ({ className }: { className?: string }) => (
   <svg
     role="img"
     viewBox="0 0 24 24"

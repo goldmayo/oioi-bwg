@@ -1,10 +1,10 @@
 ---
 title: "Error UX / Observability Architecture"
 document_id: "09"
-version: "1.1"
+version: "1.2"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-29"
+updated_at: "2026-09-03"
 depends_on:
   - "03"
   - "04"
@@ -21,7 +21,7 @@ tags:
   - "observability"
 ---
 
-# oioi-bwg Error UX / Observability Architecture v1.1
+# oioi-bwg Error UX / Observability Architecture v1.2
 
 ## 1. 목적
 
@@ -86,7 +86,7 @@ mutation failure는 기본적으로 전역 공통 UX를 제공할 수 있다.
 
 단 feature가 더 구체적인 UX를 제공해야 하는 경우 escape hatch를 둔다.
 
-현재 후보:
+현재 규칙:
 
 ```text
 MutationCache global handler
@@ -94,9 +94,10 @@ MutationCache global handler
 meta.skipGlobalError
 ```
 
-정확한 구현은 상세 설계 시 확정한다.
-
-MutationCache 전역 error handler 구현 예시는 09가 소유한다.
+`MutationCache`는 비폼 mutation의 기본 toast를 담당한다. RHF 폼처럼 field/root 오류를 완전히
+표시하는 consumer는 mutation option에 `meta.skipGlobalError`를 선언한다. `meta.errorMessage`는
+use-case 전용의 안전한 문구가 필요한 경우에만 사용한다. 전역 handler는 retry나 invalidation을
+수행하지 않으며, `ClientContractError`와 비정상 HTTP failure는 중복 없이 관측한다.
 
 ---
 

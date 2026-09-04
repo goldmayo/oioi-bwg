@@ -8,7 +8,7 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 
-import { useAdminEditorContext } from "./AdminEditorContext";
+import { useLyricsEditorContext } from "./LyricsEditorContext";
 
 type PaintMode = "normal" | "cheer" | "echo";
 
@@ -27,7 +27,7 @@ interface MobilePaintEditorProps {
 }
 
 export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePaintEditorProps) {
-  const { updateLine } = useAdminEditorContext();
+  const { updateLine } = useLyricsEditorContext();
   const [chars, setChars] = useState<CharItem[]>([]);
   const [currentMode, setCurrentMode] = useState<PaintMode>("normal");
 

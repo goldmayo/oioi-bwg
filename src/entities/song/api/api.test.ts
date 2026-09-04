@@ -48,9 +48,9 @@ afterEach(() => vi.clearAllMocks());
 
 describe("song browser API", () => {
   it("shares entity query keys across server and client consumers", () => {
-    expect(songQueryKeys.detail("test-song").queryKey).toEqual(["song", "detail", "test-song"]);
-    expect(songQueryKeys.adminList.queryKey).toEqual(["song", "adminList"]);
-    expect(songQueries.adminList().queryKey).toEqual(songQueryKeys.adminList.queryKey);
+    expect(songQueryKeys.detail("test-song")).toEqual(["song", "detail", "test-song"]);
+    expect(songQueryKeys.adminList()).toEqual(["song", "list", "admin"]);
+    expect(songQueries.adminList().queryKey).toEqual(songQueryKeys.adminList());
   });
 
   it("validates the admin song list response", async () => {

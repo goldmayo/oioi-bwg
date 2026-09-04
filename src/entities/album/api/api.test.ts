@@ -39,9 +39,9 @@ afterEach(() => {
 
 describe("album browser API", () => {
   it("shares entity query keys across server and client consumers", () => {
-    expect(albumQueryKeys.detail("manito").queryKey).toEqual(["album", "detail", "manito"]);
-    expect(albumQueryKeys.adminList.queryKey).toEqual(["album", "adminList"]);
-    expect(albumQueries.adminList().queryKey).toEqual(albumQueryKeys.adminList.queryKey);
+    expect(albumQueryKeys.detail("manito")).toEqual(["album", "detail", "manito"]);
+    expect(albumQueryKeys.adminList()).toEqual(["album", "list", "admin"]);
+    expect(albumQueries.adminList().queryKey).toEqual(albumQueryKeys.adminList());
   });
 
   it("validates the admin album list response", async () => {

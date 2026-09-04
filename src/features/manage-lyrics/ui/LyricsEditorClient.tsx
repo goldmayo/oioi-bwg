@@ -5,37 +5,37 @@ import { useEffect } from "react";
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Button } from "@/shared/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/shared/ui/resizable";
-import { YoutubePlayer } from "@/shared/ui/YoutubePlayer";
+import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
 
 import type { SongEditor } from "../model/types";
 import { SaveSongDataAction } from "../model/useAdminEditor";
 
-import { AdminEditorProvider, useAdminEditorContext } from "./AdminEditorContext";
 import { EditorTopBar } from "./EditorTopBar";
 import { FloatingToolbar } from "./FloatingToolbar";
+import { LyricsEditorProvider, useLyricsEditorContext } from "./LyricsEditorContext";
 import { LyricsTable } from "./LyricsTable";
-import { PreviewRail } from "./PreviewRail";
+import { LyricsTimelinePreview } from "./LyricsTimelinePreview";
 
-interface AdminEditorClientProps {
+interface LyricsEditorClientProps {
   song: SongEditor;
   saveSongData: SaveSongDataAction;
 }
 
 /**
- * AdminEditor의 실제 UI 조립도.
- * AdminEditorProvider 내부에서 렌더링되므로 useAdminEditorContext() 사용 가능.
+ * 가사 편집기의 실제 UI 조립도.
+ * LyricsEditorProvider 내부에서 렌더링되므로 useLyricsEditorContext() 사용 가능.
  *
  * 레이아웃 구조:
  * ┌────────────────────────────────────────┐
  * │ EditorTopBar (상단 컨트롤)             │
  * ├──────────────────┬─────────────────────┤
- * │ YoutubePlayer    │ LyricsTable         │
+ * │ YouTubePlayer    │ LyricsTable         │
  * │ (좌 패널)        │ (우 패널)           │
  * ├──────────────────┴─────────────────────┤
- * │ PreviewRail (하단 타임라인 미리보기)   │
+ * │ LyricsTimelinePreview (하단 미리보기)  │
  * └────────────────────────────────────────┘
  */
-function AdminEditorInner() {
+function LyricsEditorWorkspace() {
   const {
     youtubeId,
     isRecording,
@@ -49,7 +49,7 @@ function AdminEditorInner() {
     player,
     addExtraLine,
     lastAddedTimeRef,
-  } = useAdminEditorContext();
+  } = useLyricsEditorContext();
 
   const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
 
@@ -112,11 +112,11 @@ function AdminEditorInner() {
       {/* 상단 컨트롤 바 */}
       <EditorTopBar />
 
-      {/* 메인 패널: YoutubePlayer + LyricsTable */}
+      {/* 메인 패널: YouTubePlayer + LyricsTable */}
       {!isSmallDevice ? (
         <div className="flex h-[50vh] min-h-100 shrink-0">
           <ResizablePanelGroup orientation="horizontal" className="flex gap-4">
-            {/* 좌 패널: YoutubePlayer + 녹화 모드 버튼 */}
+            {/* 좌 패널: YouTubePlayer + 녹화 모드 버튼 */}
             <ResizablePanel defaultSize={50} minSize={20}>
               <div className="flex h-full flex-col gap-2">
                 <div className="bg-muted/30 border-border text-muted-foreground flex items-center justify-between rounded-t-lg border-b px-3 py-2 text-xs">
@@ -144,7 +144,7 @@ function AdminEditorInner() {
                   </Button>
                 </div>
                 <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
-                  <YoutubePlayer
+                  <YouTubePlayer
                     key={youtubeId}
                     videoId={youtubeId}
                     onTimeUpdate={handleTimeUpdate}
@@ -164,7 +164,7 @@ function AdminEditorInner() {
         </div>
       ) : (
         <>
-          {/* 모바일용 패널: YoutubePlayer + LyricsTable */}
+          {/* 모바일용 패널: YouTubePlayer + LyricsTable */}
           <div className="flex flex-col gap-2">
             <div className="bg-muted/30 border-border text-muted-foreground flex items-center justify-between rounded-t-lg border-b px-3 py-2 text-xs">
               <div className="flex gap-3">
@@ -191,7 +191,7 @@ function AdminEditorInner() {
               </Button>
             </div>
             <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
-              <YoutubePlayer
+              <YouTubePlayer
                 key={youtubeId}
                 videoId={youtubeId}
                 onTimeUpdate={handleTimeUpdate}
@@ -211,7 +211,7 @@ function AdminEditorInner() {
           실시간 프리뷰 레일
         </h2>
         <div className="relative min-h-0 flex-1">
-          <PreviewRail lyrics={lyrics} subscribeToTime={subscribeToTime} />
+          <LyricsTimelinePreview lyrics={lyrics} subscribeToTime={subscribeToTime} />
         </div>
       </div>
     </div>
@@ -221,13 +221,13 @@ function AdminEditorInner() {
 /**
  * 어드민 에디터 최상위 컴포넌트.
  *
- * AdminEditorProvider로 감싸 하위 컴포넌트들이 Context를 통해
+ * LyricsEditorProvider로 감싸 하위 컴포넌트들이 Context를 통해
  * 모든 상태와 핸들러에 prop drilling 없이 접근할 수 있게 합니다.
  */
-export default function AdminEditorClient({ song, saveSongData }: AdminEditorClientProps) {
+export default function LyricsEditorClient({ song, saveSongData }: LyricsEditorClientProps) {
   return (
-    <AdminEditorProvider song={song} saveSongData={saveSongData}>
-      <AdminEditorInner />
-    </AdminEditorProvider>
+    <LyricsEditorProvider song={song} saveSongData={saveSongData}>
+      <LyricsEditorWorkspace />
+    </LyricsEditorProvider>
   );
 }

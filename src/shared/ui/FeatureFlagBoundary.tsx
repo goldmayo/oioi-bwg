@@ -2,7 +2,7 @@ import React from "react";
 
 import { FeatureFlagKey, isFeatureEnabled } from "@/shared/config/feature-flag";
 
-interface FeatureProps {
+interface FeatureFlagBoundaryProps {
   /** 확인할 피처 플래그 키 */
   flag: FeatureFlagKey;
   /** 활성화 시 렌더링할 UI */
@@ -18,11 +18,11 @@ interface FeatureProps {
  * 코드 전반에 걸친 if-else 분기 처리를 줄이고, 선언적으로 기능을 제어하기 위해 사용합니다.
  *
  * @example
- * <Feature flag="RELEASE_NEW_PAYMENT_UI" fallback={<LegacyPayment />}>
+ * <FeatureFlagBoundary flag="RELEASE_NEW_PAYMENT_UI" fallback={<LegacyPayment />}>
  *   <NewPaymentSystem />
- * </Feature>
+ * </FeatureFlagBoundary>
  */
-export function Feature({ flag, children, fallback = null }: FeatureProps) {
+export function FeatureFlagBoundary({ flag, children, fallback = null }: FeatureFlagBoundaryProps) {
   const enabled = isFeatureEnabled(flag, false);
 
   if (!enabled) {

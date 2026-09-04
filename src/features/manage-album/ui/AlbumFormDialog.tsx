@@ -7,6 +7,7 @@ import { ImagePlus, Loader2 } from "lucide-react";
 
 import type { AdminAlbumSummary } from "@/entities/album";
 
+import { ApiError, getValidationFieldErrors } from "@/shared/api/http-errors";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -64,7 +65,9 @@ export function AlbumFormDialog({ open, onOpenChange, album, onSubmit }: AlbumFo
       if (result.success && result.url) {
         form.setValue("imgUrl", result.url, { shouldValidate: true });
       } else {
-        alert(result.error || "업로드 실패");
+        form.setError("imgUrl", {
+          message: result.error || "이미지 업로드에 실패했습니다.",
+        });
       }
       e.target.value = "";
     },
@@ -73,13 +76,28 @@ export function AlbumFormDialog({ open, onOpenChange, album, onSubmit }: AlbumFo
 
   const handleSubmit = useCallback(
     async (values: AlbumFormValues) => {
+      form.clearErrors("root.server");
       setIsSubmitting(true);
       try {
         await onSubmit(values);
         onOpenChange(false);
         form.reset();
       } catch (error) {
-        alert(error instanceof Error ? error.message : "앨범 저장에 실패했습니다.");
+        const fieldErrors = getValidationFieldErrors(error);
+        const fieldNames = ["name", "slug", "imgUrl", "color", "releaseDate", "isVisible"] as const;
+
+        for (const fieldName of fieldNames) {
+          const message = fieldErrors?.[fieldName]?.[0];
+          if (message) form.setError(fieldName, { message });
+        }
+
+        if (error instanceof ApiError && error.code === "ALBUM_SLUG_ALREADY_EXISTS") {
+          form.setError("slug", { message: error.message });
+        } else if (!fieldErrors || Object.keys(fieldErrors).length === 0) {
+          form.setError("root.server", {
+            message: error instanceof Error ? error.message : "앨범 저장에 실패했습니다.",
+          });
+        }
       } finally {
         setIsSubmitting(false);
       }
@@ -219,6 +237,12 @@ export function AlbumFormDialog({ open, onOpenChange, album, onSubmit }: AlbumFo
                 </FormItem>
               )}
             />
+
+            {form.formState.errors.root?.server?.message && (
+              <p role="alert" className="text-destructive text-sm">
+                {form.formState.errors.root.server.message}
+              </p>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
