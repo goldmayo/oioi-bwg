@@ -1,7 +1,7 @@
 ---
 title: "As-Is 상세 Process Flow"
 document_id: "RE-PROCESS-FLOW-001"
-version: "0.1.0"
+version: "0.1.1"
 status: "draft"
 authority: "plan"
 updated_at: "2026-09-05"
@@ -15,6 +15,7 @@ tags:
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| 0.1.1 | 2026-09-05 | - | 더보기 예외 근거 보정, 곡 관리 CRUD 분리, 접근 범위 용어 통일 및 광고 감지 정합성 반영 |
 | 0.1.0 | 2026-09-05 | - | 현재 구현 기준 상세 Process Flow 최초 작성 |
 
 # As-Is 상세 Process Flow
@@ -38,7 +39,7 @@ tags:
 |---|---|
 | Process ID | PROC-PUB-001 |
 | 관련 Screen | SCR-PUB-001, SCR-PUB-003, SCR-PUB-004 |
-| 접근 주체 | Public |
+| 접근 범위 | Public |
 | 시작점 | `/` 진입 |
 | 종료점 | 앨범 상세 또는 곡 뷰어 진입 |
 
@@ -96,7 +97,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-PUB-002 |
 | 관련 Screen | SCR-PUB-002, SCR-PUB-004 |
-| 접근 주체 | Public |
+| 접근 범위 | Public |
 | 시작점 | `/chants` 진입 |
 | 종료점 | 필터 결과 확인 또는 곡 뷰어 진입 |
 
@@ -151,7 +152,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-PUB-003 |
 | 관련 Screen | SCR-PUB-001, SCR-PUB-003, SCR-PUB-004 |
-| 접근 주체 | Public |
+| 접근 범위 | Public |
 | 시작점 | 앨범 링크 또는 `/albums/{slug}` 진입 |
 | 종료점 | 곡 뷰어, 홈 또는 404 |
 
@@ -201,7 +202,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-PUB-004 |
 | 관련 Screen | SCR-PUB-004, SCR-PUB-003 |
-| 접근 주체 | Public |
+| 접근 범위 | Public |
 | 시작점 | `/songs/{slug}` 진입 |
 | 종료점 | 뷰어 사용, 앨범 이동 또는 공유 결과 확인 |
 
@@ -270,7 +271,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-PUB-005 |
 | 관련 Screen | SCR-PUB-005, SCR-PUB-006, SCR-PUB-007, SCR-PUB-009, SCR-PUB-010 |
-| 접근 주체 | Public |
+| 접근 범위 | Public |
 | 시작점 | `/more` 진입 |
 | 종료점 | 선택한 정보 화면 진입 |
 
@@ -292,9 +293,7 @@ flowchart TD
 
 ### 예외 처리
 
-| 조건 | 처리 | 사용자 결과 | 후속 상태 |
-|---|---|---|---|
-| 하위 route 없음 | 링크 대상 route로 이동하지 않음 | 현재 메뉴 유지 | 저장 상태 없음 |
+현재 정의된 메뉴 항목은 모두 구현된 Route를 가리키며, 별도 화면 내 예외 처리 로직은 확인되지 않는다.
 
 ### 후조건
 
@@ -308,7 +307,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-PUB-006 |
 | 관련 Screen | SCR-PUB-006 |
-| 접근 주체 | Public |
+| 접근 범위 | Public |
 | 시작점 | `/more/notice` 진입 |
 | 종료점 | 공지 내용 확인 |
 
@@ -346,7 +345,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-PUB-007 |
 | 관련 Screen | SCR-PUB-007, SCR-PUB-008 |
-| 접근 주체 | Public |
+| 접근 범위 | Public |
 | 시작점 | `/more/policy` 또는 정책 상세 링크 |
 | 종료점 | 정책 본문 확인 |
 
@@ -393,7 +392,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-PUB-008 |
 | 관련 Screen | SCR-PUB-009 |
-| 접근 주체 | Public |
+| 접근 범위 | Public |
 | 시작점 | `/more/report` 진입 |
 | 종료점 | 외부 Form 사용 또는 새 창 이동 |
 
@@ -434,7 +433,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-ADM-001 |
 | 관련 Screen | SCR-AUTH-001, SCR-ADM-001, SCR-ADM-002 |
-| 접근 주체 | Guest / Authenticated / Admin |
+| 접근 범위 | Guest / Authenticated / Admin |
 | 시작점 | `/admin-login` 또는 관리자 URL 접근 |
 | 종료점 | 관리자 앨범 관리 진입 또는 로그인 오류 |
 
@@ -495,7 +494,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-ADM-002 |
 | 관련 Screen | SCR-ADM-002 |
-| 접근 주체 | Admin |
+| 접근 범위 | Admin |
 | 시작점 | `/admin/albums` 진입 |
 | 종료점 | 목록 확인 또는 생성·수정·삭제 결과 반영 |
 
@@ -563,7 +562,7 @@ flowchart TD
 
 | 조건 | 처리 | 사용자 결과 | 후속 상태 |
 |---|---|---|---|
-| 목록 조회 중 | Query loading 상태 | `앨범을 불러오는 중...` 표시 | 조회 완료 대기 |
+| 목록 조회 중 | 앨범 목록 조회 중 | `앨범을 불러오는 중...` 표시 | 조회 완료 대기 |
 | 앨범 0건 | 목록 Empty 분기 | `등록된 앨범이 없습니다.` 표시 | 추가 가능 |
 | 검색 결과 0건 | 목록 Empty 분기 | `검색 결과가 없습니다.` 표시 | 검색어 유지 |
 | Form validation 실패 | 필드별 오류 반영 | 각 입력 필드 오류 표시 | Dialog 유지 |
@@ -586,7 +585,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-ADM-003 |
 | 관련 Screen | SCR-ADM-003, SCR-ADM-004 |
-| 접근 주체 | Admin |
+| 접근 범위 | Admin |
 | 시작점 | `/admin/songs` 진입 |
 | 종료점 | 곡 목록 결과 또는 가사 편집 진입 |
 
@@ -621,17 +620,46 @@ flowchart TD
 5. 곡 추가/수정은 Form Dialog를 사용하고, 삭제는 확인 Dialog를 거친다.
 6. 곡 제목 링크 또는 편집 동작을 통해 `/admin/edit/{slug}`로 이동한다.
 
+### 정상 흐름: 곡 생성·수정
+
+~~~mermaid
+flowchart TD
+    LIST["곡 목록"] --> ACTION{"생성 또는 수정 선택"}
+    ACTION -- "생성" --> CREATE["곡 추가 Form 열기"]
+    ACTION -- "수정" --> EDIT["기존 값이 채워진 Form 열기"]
+    CREATE --> INPUT["앨범·기본 정보·LRC 입력"]
+    EDIT --> UPDATE_INPUT["곡 정보 수정"]
+    INPUT --> VALIDATE{"Validation 통과?"}
+    UPDATE_INPUT --> VALIDATE
+    VALIDATE -- "아니오" --> ERROR["필드/LRC 오류 표시"]
+    VALIDATE -- "예" --> SAVE["곡 저장 요청"]
+    SAVE --> REFRESH["목록 데이터 갱신"]
+~~~
+
+### 정상 흐름: 곡 삭제·가사 편집 진입
+
+~~~mermaid
+flowchart TD
+    LIST["곡 목록"] --> ACTION{"사용자 선택"}
+    ACTION -- "삭제" --> CONFIRM["삭제 확인 Dialog"]
+    CONFIRM --> DELETE["곡 삭제 요청"]
+    DELETE --> REFRESH["목록 데이터 갱신"]
+    ACTION -- "가사 편집" --> SLUG["대상 곡 slug 선택"]
+    SLUG --> EDITOR["/admin/edit/{slug} 이동"]
+~~~
+
+
 ### 예외 처리
 
 | 조건 | 처리 | 사용자 결과 | 후속 상태 |
 |---|---|---|---|
-| 목록 조회 중 | Query loading 상태 | `로딩 중...` 표시 | 조회 완료 대기 |
+| 목록 조회 중 | 곡·앨범 목록 조회 중 | `로딩 중...` 표시 | 조회 완료 대기 |
 | 필터 결과 0건 | `hasFilter` 기준 Empty 분기 | `검색 결과가 없습니다.` 표시 | 필터 유지 |
 | 전체 곡 0건 | Empty 분기 | `등록된 곡이 없습니다.` 표시 | 추가 가능 |
 | 생성 시 LRC 없음 | 생성 submit 단계에서 차단 | `LRC 파일을 업로드해주세요.` 표시 | Form 유지 |
 | 입력/API 오류 | 필드·LRC·form 오류 반영 | 오류 메시지 표시 | Form 유지 |
 | 삭제 진행 중 | mutation pending | 삭제 버튼 disabled | 요청 완료 대기 |
-| 저장/삭제 성공 | 목록 query 갱신 | 최신 목록 표시 | 관리 화면 유지 |
+| 저장/삭제 성공 | 목록 데이터 갱신 | 최신 목록 표시 | 관리 화면 유지 |
 
 ### 후조건
 
@@ -646,7 +674,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-ADM-004 |
 | 관련 Screen | SCR-ADM-003, SCR-ADM-004 |
-| 접근 주체 | Admin |
+| 접근 범위 | Admin |
 | 시작점 | `/admin/edit/{slug}` 진입 |
 | 종료점 | 편집 상태 저장 또는 편집 화면 유지 |
 
