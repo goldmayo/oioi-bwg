@@ -1,7 +1,7 @@
 ---
 title: "As-Is 화면 설계서 / UI Description"
 document_id: "RE-SCREEN-SPEC-001"
-version: "0.1.0"
+version: "0.1.1"
 status: "draft"
 authority: "plan"
 updated_at: "2026-09-05"
@@ -15,6 +15,7 @@ tags:
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| 0.1.1 | 2026-09-05 | - | 1차 프로세스와 정책 slug 동작 정합성 보정 및 확인 필요 항목 재검증 |
 | 0.1.0 | 2026-09-05 | - | 현재 구현 기준 2차 화면 설계서 최초 작성 |
 
 # As-Is 화면 설계서 / UI Description
@@ -156,7 +157,7 @@ tags:
 
 ### Validation / Disabled / Text Rule
 
-- Validation: URL slug는 Route boundary에서 검증된다.
+- slug는 dynamic route parameter로 전달된다. 해당 slug의 앨범 조회 결과가 없으면 `notFound()` 처리된다.
 - Disabled: 해당 없음.
 - 앨범명과 곡명에 별도 최대 글자 수 규칙은 확인되지 않음.
 
@@ -487,7 +488,7 @@ tags:
 | Submitting | 앨범 저장 중 | 저장 버튼 disabled 및 spinner |
 | Uploading | 이미지 업로드 중 | 이미지 업로드 버튼 disabled 및 spinner |
 | Deleting | 삭제 요청 중 | 삭제 버튼 disabled |
-| Error | validation/API 오류 | 필드 오류 또는 form root 오류 표시; mutation 공통 오류는 호출부에 전달 |
+| Error | validation/API 오류 | 필드 오류 또는 form root 오류 표시; mutation 실패는 현재 공통 오류 처리 경로에 따라 피드백 |
 
 ### Validation
 
@@ -539,7 +540,7 @@ tags:
 | 상태 | 조건 | UI 동작 |
 |---|---|---|
 | Loading | 곡/앨범 목록 조회 중 | `로딩 중...` |
-| Empty | 필터 결과 0건 | 테이블의 실제 빈 상태 문구는 `SongManagerTable` 구현 기준으로 표시 |
+| Empty | 필터 결과 0건 | 필터 사용 시 `검색 결과가 없습니다.`, 미사용 시 `등록된 곡이 없습니다.` 표시 |
 | Submitting | 곡 저장 중 | 저장 버튼 disabled 및 spinner |
 | Deleting | 곡 삭제 요청 중 | 삭제 버튼 disabled |
 | Error | 입력/API 오류 | 필드·LRC·form 오류 표시; mutation 오류는 공통 오류 처리 경로 |
@@ -626,13 +627,13 @@ tags:
 
 ## 6. 기존 1차 문서 정합성 이슈
 
-- 확인된 이슈 없음.
-- 본 문서는 기존 Screen ID, URL, 접근 범위 및 화면 목적을 1차 문서와 동일하게 유지했다.
+- `PROC-PUB-007`의 “잘못된 정책 slug → not found” 기술이 실제 구현과 불일치한다.
+- 현재 구현은 정의되지 않은 정책 slug에 대해 `privacy` 데이터를 fallback한다.
+- `04-user-process-inventory.md`의 `PROC-PUB-007` 수정이 필요했으며, 본 작업에서 실제 동작에 맞게 수정 완료했다.
 
 ## 7. 확인 필요
 
-- 공개 홈·응원법 목록 조회 실패 시 사용자에게 노출되는 최종 오류 화면은 현재 화면 전용 코드만으로 확정하기 어렵다.
-- 관리자 곡 목록의 빈 목록 세부 문구는 `SongManagerTable` 전체 구현 확인이 필요하다.
+- 공개 홈·응원법 목록에는 route 전용 `error.tsx`가 없으며, 앱 전역 `global-error.tsx`에 오류 문구와 `다시 시도하기` 동작이 구현되어 있다. 공개 목록 오류가 해당 전역 fallback으로 연결되는 세부 Next 실행 동작은 별도 확인 필요하다.
 - 외부 Google Form 내부의 입력 검증과 제출 성공/실패 화면은 저장소 범위 밖이다.
 
 ## 8. 다음 단계 후보
