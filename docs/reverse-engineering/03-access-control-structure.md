@@ -35,15 +35,15 @@ tags:
 
 ```mermaid
 flowchart TD
-    REQUEST[관리자 URL 요청] --> SESSION{활성 session 존재?}
-    SESSION -- 아니오 --> LOGIN[/admin-login 이동]
-    SESSION -- 예 --> ABILITY{manage all 가능?}
-    ABILITY -- 아니오 --> FORBIDDEN[403 Forbidden 화면]
-    ABILITY -- 예 --> ADMIN_PAGE[관리자 화면 렌더링]
-    LOGIN --> SUBMIT[이메일/비밀번호 제출]
-    SUBMIT --> AUTH[NextAuth Credentials 인증]
-    AUTH -- 성공 --> ADMIN_PAGE
-    AUTH -- 실패 --> LOGIN_ERROR[로그인 오류 표시]
+    REQUEST["관리자 URL 요청"] --> SESSION{"활성 session 존재?"}
+    SESSION -- "아니오" --> LOGIN["/admin-login 이동"]
+    SESSION -- "예" --> ABILITY{"manage all 가능?"}
+    ABILITY -- "아니오" --> FORBIDDEN["403 Forbidden 화면"]
+    ABILITY -- "예" --> ADMIN_PAGE["관리자 화면 렌더링"]
+    LOGIN --> SUBMIT["이메일/비밀번호 제출"]
+    SUBMIT --> AUTH["NextAuth Credentials 인증"]
+    AUTH -- "성공" --> ADMIN_PAGE
+    AUTH -- "실패" --> LOGIN_ERROR["로그인 오류 표시"]
 ```
 
 ## 4. 인증 방식
