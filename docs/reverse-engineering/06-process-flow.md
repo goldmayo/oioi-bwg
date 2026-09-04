@@ -1,7 +1,7 @@
 ---
 title: "As-Is 상세 Process Flow"
 document_id: "RE-PROCESS-FLOW-001"
-version: "0.1.1"
+version: "0.1.2"
 status: "draft"
 authority: "plan"
 updated_at: "2026-09-05"
@@ -15,6 +15,7 @@ tags:
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| 0.1.2 | 2026-09-05 | - | dynamic route와 Page 내부 slug guard 표현, 로그인 주체 용어 및 Mermaid fence 보정 |
 | 0.1.1 | 2026-09-05 | - | 더보기 예외 근거 보정, 곡 관리 CRUD 분리, 접근 범위 용어 통일 및 광고 감지 정합성 반영 |
 | 0.1.0 | 2026-09-05 | - | 현재 구현 기준 상세 Process Flow 최초 작성 |
 
@@ -185,7 +186,7 @@ flowchart TD
 
 | 조건 | 처리 | 사용자 결과 | 후속 상태 |
 |---|---|---|---|
-| slug 없음 | `notFound()` 호출 | 공통 404 화면 | 홈 이동 가능 |
+| Page 내부 slug가 falsy하거나 앨범 조회 결과 없음 | `notFound()` 호출 | 공통 404 화면 | 홈 이동 가능 |
 | 앨범 조회 결과 없음 | `notFound()` 호출 | 공통 404 화면 | 홈 이동 가능 |
 | 상세 조회 중 | route loading fallback | 앨범 상세 skeleton 표시 | 조회 완료 대기 |
 
@@ -433,7 +434,7 @@ flowchart TD
 |---|---|
 | Process ID | PROC-ADM-001 |
 | 관련 Screen | SCR-AUTH-001, SCR-ADM-001, SCR-ADM-002 |
-| 접근 범위 | Guest / Authenticated / Admin |
+| 관련 주체 | Guest / Authenticated / Admin |
 | 시작점 | `/admin-login` 또는 관리자 URL 접근 |
 | 종료점 | 관리자 앨범 관리 진입 또는 로그인 오류 |
 
@@ -622,7 +623,7 @@ flowchart TD
 
 ### 정상 흐름: 곡 생성·수정
 
-~~~mermaid
+```mermaid
 flowchart TD
     LIST["곡 목록"] --> ACTION{"생성 또는 수정 선택"}
     ACTION -- "생성" --> CREATE["곡 추가 Form 열기"]
@@ -634,11 +635,11 @@ flowchart TD
     VALIDATE -- "아니오" --> ERROR["필드/LRC 오류 표시"]
     VALIDATE -- "예" --> SAVE["곡 저장 요청"]
     SAVE --> REFRESH["목록 데이터 갱신"]
-~~~
+```
 
 ### 정상 흐름: 곡 삭제·가사 편집 진입
 
-~~~mermaid
+```mermaid
 flowchart TD
     LIST["곡 목록"] --> ACTION{"사용자 선택"}
     ACTION -- "삭제" --> CONFIRM["삭제 확인 Dialog"]
@@ -646,7 +647,7 @@ flowchart TD
     DELETE --> REFRESH["목록 데이터 갱신"]
     ACTION -- "가사 편집" --> SLUG["대상 곡 slug 선택"]
     SLUG --> EDITOR["/admin/edit/{slug} 이동"]
-~~~
+```
 
 
 ### 예외 처리
@@ -751,7 +752,7 @@ flowchart TD
 | 조건 | 처리 | 사용자 결과 | 후속 상태 |
 |---|---|---|---|
 | editor 데이터 로딩 중 | route/lazy loading fallback | `에디터 로딩 중...` 표시 | 로딩 완료 대기 |
-| slug 없음/곡 없음 | `notFound()` 호출 | 공통 404 화면 | editor 미표시 |
+| Page 내부 slug가 falsy하거나 곡 조회 결과 없음 | `notFound()` 호출 | 공통 404 화면 | editor 미표시 |
 | 권한 없음 | 관리자 layout 또는 client ability 검사 | forbidden 또는 editor 미표시 | 저장 불가 |
 | 잘못된 행 시간 | 유효한 0 이상 값만 반영 | 기존 시간 표시값으로 복원 | 편집 화면 유지 |
 | LRC 파싱 결과 없음 | toast 오류 | `파싱된 가사가 없습니다. 형식을 확인해 주세요.` | Import Dialog 유지 |

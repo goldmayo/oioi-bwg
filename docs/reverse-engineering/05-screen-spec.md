@@ -1,7 +1,7 @@
 ---
 title: "As-Is 화면 설계서 / UI Description"
 document_id: "RE-SCREEN-SPEC-001"
-version: "0.1.2"
+version: "0.1.3"
 status: "draft"
 authority: "plan"
 updated_at: "2026-09-05"
@@ -15,6 +15,7 @@ tags:
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
+| 0.1.3 | 2026-09-05 | - | dynamic route와 Page 내부 slug guard를 구분한 Not Found 표현 보정 |
 | 0.1.2 | 2026-09-05 | - | 곡 뷰어 광고 감지에 따른 동기화·자동 스크롤 일시 중지 동작 반영 |
 | 0.1.1 | 2026-09-05 | - | 1차 프로세스와 정책 slug 동작 정합성 보정 및 확인 필요 항목 재검증 |
 | 0.1.0 | 2026-09-05 | - | 현재 구현 기준 2차 화면 설계서 최초 작성 |
@@ -153,7 +154,7 @@ tags:
 |---|---|---|
 | Loading | 상세 조회 중 | route `loading.tsx`의 상세 skeleton 사용 |
 | Default | 앨범 조회 성공 | 상세 UI 표시 |
-| Not Found | slug가 없거나 앨범 조회 결과 없음 | 공통 404 화면 |
+| Not Found | Page 내부 slug가 falsy하거나 앨범 조회 결과 없음 | 공통 404 화면 |
 | Error | 조회 실패 | 별도 화면 전용 Error UI는 확인되지 않음 |
 
 ### Validation / Disabled / Text Rule
@@ -199,7 +200,7 @@ tags:
 | Loading | 곡 상세 조회 중 또는 Player API 준비 전 | route loading 또는 `Loading Player...` 표시 |
 | Default | 곡과 Player 준비 완료 | YouTube와 가사 표시 |
 | Advertising | 광고 상태 감지 | 가사 시간 동기화와 자동 스크롤 일시 중지; 광고 종료 후 재개 |
-| Not Found | slug가 없거나 곡 조회 결과 없음 | 공통 404 화면 |
+| Not Found | Page 내부 slug가 falsy하거나 곡 조회 결과 없음 | 공통 404 화면 |
 | Empty | lyrics가 빈 배열인 경우 | 별도 Empty UI는 확인되지 않음 |
 | Error | YouTube/클립보드/조회 실패 | YouTube 자체 오류 또는 toast 외의 화면 전용 오류 UI는 확인되지 않음 |
 
