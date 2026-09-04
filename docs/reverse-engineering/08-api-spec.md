@@ -1,18 +1,19 @@
 ---
 title: API Specification
 document_id: RE-API-001
-version: 0.1.0
+version: 0.1.1
 status: draft
 authority: plan
 ---
-
-# API Specification
 
 ## Change Log
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 0.1.0 | 2026-09-05 | Codex | 현재 Route Handler, contract, service, error mapper 및 client 호출부 기준 As-Is HTTP API 정리 |
+| 0.1.1 | 2026-09-05 | Codex | 문서 구조와 동적 route validation 표현, 정합성 항목 보완 |
+
+# API Specification
 
 ## 1. 문서 범위와 분석 기준
 
@@ -169,7 +170,7 @@ authority: plan
 
 | HTTP Status | Code | 조건 |
 |---:|---|---|
-| 400 | `VALIDATION_ERROR` | slug가 없거나 빈 값 |
+| 400 | `VALIDATION_ERROR` | Route Handler에 전달된 slug가 validation을 통과하지 못함(예: trim 후 빈 값) |
 | 404 | `ALBUM_NOT_FOUND` | slug의 공개 앨범 조회 결과 없음 |
 | 500 | `INTERNAL_SERVER_ERROR` | 기타 오류 |
 
@@ -207,7 +208,7 @@ authority: plan
 
 | HTTP Status | Code | 조건 |
 |---:|---|---|
-| 400 | `VALIDATION_ERROR` | slug가 없거나 빈 값 |
+| 400 | `VALIDATION_ERROR` | Route Handler에 전달된 slug가 validation을 통과하지 못함(예: trim 후 빈 값) |
 | 404 | `SONG_NOT_FOUND` | 공개 곡 또는 필요한 상세 데이터 조회 결과 없음 |
 | 500 | `INTERNAL_SERVER_ERROR` | 저장된 lyrics contract 위반 등 기타 오류 |
 
@@ -258,7 +259,7 @@ Query parameter가 없으며 전체 앨범을 반환한다. 정렬은 repository
 | `slug` | string | Yes | trim 후 lowercase 영문·숫자·하이픈 패턴 |
 | `imgUrl` | string | Yes | URL |
 | `color` | string | Yes | `#RGB` 또는 `#RRGGBB` |
-| `releaseDate` | string | null | Yes | nullable; 별도 date 형식 검증은 schema에서 확인되지 않음 |
+| `releaseDate` | string \| null | Yes | nullable; 별도 date 형식 검증은 schema에서 확인되지 않음 |
 | `isVisible` | boolean | Yes | boolean |
 
 #### Error Response
@@ -344,7 +345,7 @@ Request body는 `createAdminSongSchema`이며 `albumId`, `title`, `slug`, `youtu
 
 | Status | Code | 조건 |
 |---:|---|---|
-| 400 | `VALIDATION_ERROR` | path/body contract 오류 |
+| 400 | `VALIDATION_ERROR` | JSON 또는 body contract 오류 |
 | 400 | `SONG_LYRICS_INVALID` | 유효한 LRC line 없음 |
 | 401 | `UNAUTHENTICATED` | 활성 session 없음 |
 | 403 | `FORBIDDEN` | `manage all` 없음 |
@@ -592,7 +593,7 @@ POST /api/auth/signup/otp
 | timestamps | Song mutation에서 `updatedAt`을 service가 전달 | 정합 |
 | account/auth 보조 테이블 | signup API의 실제 challenge·account/profile/credential 저장과 연결 | 정합 |
 
-## 13. 기존 역기획 문서 정합성 및 이슈
+## 13. 기존 역기획 문서 정합성
 
 ### 13.1 기존 문서와 정합한 항목
 
@@ -602,13 +603,11 @@ POST /api/auth/signup/otp
 - `04-user-process-inventory.md`, `06-process-flow.md`의 앨범·곡 CRUD와 가사 저장 흐름은 실제 API와 연결된다.
 - `07-database-spec.md`의 slug nullable/non-unique, lyrics JSONB, Album-Song cascade가 API 동작과 충돌하지 않는다.
 
-### 13.2 ISSUE-001 — 기존 Process의 Public 조회 경계 표현
+### 13.2 추가 확인 사항 — Public 조회 경계
 
-- 관련 문서: `04-user-process-inventory.md`, `06-process-flow.md`
-- 기존 기술: Public 앨범·곡 조회 흐름을 서버 데이터 조회로 설명
-- 실제 API 구현: `/api/albums/{slug}`, `/api/songs/{slug}` GET route가 존재하지만, Public RSC 페이지는 service 직접 호출 경로도 사용한다.
-- 영향: 문서의 “서버 조회”만으로는 HTTP API 사용 여부를 판단할 수 없다.
-- 수정 필요 문서: 현재 문서에서 HTTP API 경계를 분리해 기록했으며, 기존 문서의 기능 흐름 자체를 변경할 근거는 확인되지 않음
+- Public 상세용 HTTP Route Handler인 `/api/albums/{slug}`, `/api/songs/{slug}`가 존재한다.
+- Public RSC는 별도로 service를 직접 호출하는 경로도 사용한다.
+- 기존 Process의 기능 흐름과 충돌하지 않으며, 이번 API 분석에서 실행 경계를 구체화한 사항이다.
 
 ## 14. 확인 필요
 
