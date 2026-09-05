@@ -9,6 +9,8 @@ import { AlbumManagerClient } from "@/features/manage-album";
 
 import { ApiError } from "@/shared/api/http-errors";
 
+import { uploadAlbumImageAction } from "../_lib/upload-album-image-action";
+
 /** Auth와 Album feature를 조합하고 403 발생 시 client ability를 다시 동기화한다. */
 export function AdminAlbumManager() {
   const queryClient = useQueryClient();
@@ -27,6 +29,7 @@ export function AdminAlbumManager() {
   return (
     <AlbumManagerClient
       canManage={ability.can("manage", "all")}
+      onUploadImage={uploadAlbumImageAction}
       onMutationError={handleMutationError}
     />
   );

@@ -21,18 +21,30 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/shared/ui/input";
 import { Switch } from "@/shared/ui/switch";
 
-import { uploadAlbumImageAction } from "../api/upload-album-image-action";
 import { type AlbumFormInput, albumFormSchema, type AlbumFormValues } from "../model/schemas";
+
+export type UploadAlbumImage = (formData: FormData) => Promise<{
+  success: boolean;
+  url?: string;
+  error?: string;
+}>;
 
 interface AlbumFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** 편집 시 기존 앨범 데이터 */
   album?: AdminAlbumSummary;
+  onUploadImage: UploadAlbumImage;
   onSubmit: (values: AlbumFormValues) => Promise<void>;
 }
 
-export function AlbumFormDialog({ open, onOpenChange, album, onSubmit }: AlbumFormDialogProps) {
+export function AlbumFormDialog({
+  open,
+  onOpenChange,
+  album,
+  onUploadImage,
+  onSubmit,
+}: AlbumFormDialogProps) {
   const isEdit = !!album;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -59,7 +71,7 @@ export function AlbumFormDialog({ open, onOpenChange, album, onSubmit }: AlbumFo
       const formData = new FormData();
       formData.append("file", file);
 
-      const result = await uploadAlbumImageAction(formData);
+      const result = await onUploadImage(formData);
       setIsUploading(false);
 
       if (result.success && result.url) {
@@ -71,7 +83,7 @@ export function AlbumFormDialog({ open, onOpenChange, album, onSubmit }: AlbumFo
       }
       e.target.value = "";
     },
-    [form],
+    [form, onUploadImage],
   );
 
   const handleSubmit = useCallback(

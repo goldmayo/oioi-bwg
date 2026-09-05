@@ -2,7 +2,7 @@
 
 ## Status
 
-PLANNED
+VERIFIED
 
 ## PLAN
 
@@ -221,11 +221,154 @@ scope 밖 파일이 필요하면 구현을 중단하고 근거와 필요한 결�
 
 ## IMPLEMENTATION
 
-pending
+### Changed Files
+
+- 추가: `src/app/(admin)/admin/albums/_lib/upload-album-image-action.ts`
+- 추가: `src/app/(admin)/admin/albums/_lib/upload-album-image-action.test.ts`
+- 수정: `src/app/(admin)/admin/albums/_ui/AdminAlbumManager.tsx`
+- 삭제: `src/features/manage-album/api/upload-album-image-action.ts`
+- 수정: `src/features/manage-album/ui/AlbumManagerClient.tsx`
+- 수정: `src/features/manage-album/ui/AlbumFormDialog.tsx`
+- 추가: `src/server/services/album-image-service.ts`
+- 추가: `src/server/services/album-image-service.test.ts`
+- 이동: `src/shared/api/r2/upload-public-asset.ts` →
+  `src/server/storage/upload-public-asset.ts`
+- 이동·보강: `src/shared/api/r2/upload-public-asset.test.ts` →
+  `src/server/storage/upload-public-asset.test.ts`
+- 갱신: `docs/migration/m7-foundation-fixes/DATA-002.md`
+
+### Implemented Decision
+
+- 업로드 권한은 기존 정책대로 ADMIN의 CASL `manage/all`만 허용했다. 새 ROOT role이나 직접 role 비교를
+  추가하지 않았다.
+- 새 `uploadAlbumImage()` Service가 `requireUser()` → `ability.cannot("manage", "all")` → 파일
+  validation → byte 변환 → storage 호출 순서를 소유한다.
+- 파일 없음/비-File entry, 5 MiB 초과, AVIF/JPEG/PNG/WebP 외 MIME은 Service-private Zod validation으로
+  거부한다. UUID object key, MIME별 확장자, canonical URL 계약은 유지했다.
+- route-private Server Action은 `getRequestContext()`, FormData entry 추출, Service 호출, 기존
+  `{ success, url? | error }` 결과 매핑만 담당한다. Zod 메시지만 안전한 validation 실패로 반환하고,
+  authorization/storage 오류는 고정된 일반 메시지와 원본 cause를 포함하지 않는 safe error로 처리한다.
+- Client feature가 `src/server`나 app-private 파일을 import하지 않도록 app 조합 경계가 Action callback을
+  `AdminAlbumManager → AlbumManagerClient → AlbumFormDialog`로 전달한다.
+- R2 credential/client/PutObject 구현은 `shared/api`에서 `server/storage`로 이동했다. provider, bucket,
+  cache header와 URL 생성 동작은 바꾸지 않았다.
+
+### Plan Deviations
+
+- 계획의 route-private `_actions` 폴더는 실제 repository architecture rule이 허용하는 private segment
+  (`_ui/_model/_lib/_config`)가 아니어서 첫 lint에서 거부됐다. 계획이 허용한 naming 조정 범위 안에서
+  Action과 테스트를 `_lib`에 배치했다. delivery/Service/storage 책임과 허용 파일 범위의 의미상 변경은
+  없다.
+- 그 외 정책·contract·schema·provider·검증 범위 deviation은 없다.
+
+### Tests Added or Changed
+
+- `album-image-service.test.ts`: 실제 `buildAbility()`와 `requireUser()`로 guest/USER/REVIEWER가 invalid와
+  valid file 모두 storage 호출 0회로 거부되는지, ADMIN만 성공하는지 검증한다.
+- 같은 Service test에서 file 없음/문자열 entry/5 MiB 초과/unsupported MIME 거부, 5 MiB 정확한 경계,
+  허용 MIME 4종의 확장자, UUID key, byte body와 content type을 검증한다.
+- `upload-album-image-action.test.ts`: exported Action 직접 호출, RequestContext/File 위임, validation
+  message, authorization/storage 원본 오류 비노출을 검증한다.
+- 이동한 `upload-public-asset.test.ts`: R2 endpoint/region/credential config와
+  Bucket/Key/Body/ContentType/CacheControl, trailing slash가 제거된 canonical URL을 검증한다.
+
+### Selected Model / Effort
+
+- Registry IMPLEMENT recommendation은 `Terra`다.
+- 실제 runtime model/effort 선택값은 노출되지 않아 추정하지 않았으며 별도 model override를 사용하지
+  않았다.
 
 ## VERIFICATION
 
-pending
+### Commands Run and Actual Results
+
+1. 최초 focused test:
+
+   ```bash
+   pnpm exec vitest run src/server/services/album-image-service.test.ts \
+     src/server/storage/upload-public-asset.test.ts \
+     'src/app/(admin)/admin/albums/_actions/upload-album-image-action.test.ts' \
+     --reporter=verbose
+   ```
+
+   결과: 3 files, 17 tests 통과.
+
+2. 최초 static gate:
+
+   ```bash
+   pnpm type-check
+   pnpm lint
+   pnpm lint:fsd
+   pnpm format:check
+   ```
+
+   결과: type-check와 lint:fsd 통과. lint는 허용되지 않는 `_actions` segment 2건과 import order 1건으로
+   실패했다. format:check는 Service test formatting 1건으로 실패했다.
+
+3. 실패 수정:
+
+   ```bash
+   pnpm exec prettier --write src/server/services/album-image-service.test.ts
+   ```
+
+   `_actions`를 `_lib`로 옮기고 import order를 수정한 뒤 formatting command가 완료됐다.
+
+4. 최종 focused/static gate:
+
+   ```bash
+   pnpm exec vitest run src/server/services/album-image-service.test.ts \
+     src/server/storage/upload-public-asset.test.ts \
+     'src/app/(admin)/admin/albums/_lib/upload-album-image-action.test.ts' \
+     --reporter=verbose
+   pnpm type-check
+   pnpm lint
+   pnpm lint:fsd
+   pnpm format:check
+   ```
+
+   결과: focused 3 files/18 tests, type-check, lint, lint:fsd, format:check 모두 통과.
+
+5. 전체 runtime/repository gate:
+
+   ```bash
+   pnpm test:harness
+   pnpm test:unit:run
+   pnpm build
+   ```
+
+   결과: harness 7 tests, Vitest 41 files/154 tests 통과. Next.js 16.3.3 production build와 23개 static
+   page generation이 성공했고 `/admin/albums` route가 정상 compile됐다.
+
+### PostgreSQL / External Storage Evidence
+
+- DATA-002는 schema/repository/transaction을 변경하지 않으므로 PostgreSQL 검증은 해당 없음이다. local
+  application DB와 production DB를 사용하거나 변경하지 않았다.
+- 실제 R2 network write는 계획상 필수가 아니며 수행하지 않았다. AWS SDK client를 mock해 storage 호출
+  여부와 payload/config를 검증했고 production credential을 사용하지 않았다.
+
+### Failures
+
+- 최초 lint/format 실패는 위 Plan Deviations와 Commands에 기록한 대로 수정했으며 최종 재실행은 모두
+  통과했다.
+- 미해결된 test, lint, type, FSD, format, build 실패는 없다.
+
+### Remaining Unknowns
+
+- 실제 browser의 Server Action transport-level round trip은 현재 Playwright suite가 없어 검증하지 않았다.
+  exported Action 직접 호출과 production build까지만 확인했다.
+- MIME validation은 기존대로 `File.type`을 신뢰하며 magic-byte 검사는 범위 밖이다.
+- 앨범 저장 실패 후 orphan R2 object cleanup, upload audit/rate limit은 별도 concern으로 남는다.
+
+### Diff Review Packet
+
+```text
+finding: DATA-002 — Album image upload authorization bypass
+plan 핵심: ADMIN manage/all만 허용하고 Service에서 authn/authz → file validation → storage 순서를 강제
+changed files: code/test 10개 diff + canonical evidence 1개
+git diff summary: route-private Action 추가, feature callback 주입, upload Service 추가, R2 helper server 이동
+test results: focused 18, harness 7, full unit 154, type/lint/FSD/format/build 최종 통과
+known risks: browser Action E2E 없음, File.type 신뢰, orphan cleanup·audit·rate limit 비범위
+```
 
 ## REVIEW
 
