@@ -2,7 +2,7 @@
 
 ## Status
 
-VERIFIED
+CLOSED
 
 ## PLAN
 
@@ -582,7 +582,51 @@ docker compose -f compose.dev.yml exec -T postgres psql ... <임시 DB 잔존 �
 
 ## RE-REVIEW
 
-pending
+### Verdict
 
-Run `/m7-review DATA-004`.
+APPROVE
+
+### Findings by Severity
+
+없음.
+
+### Blocking Issues
+
+없음. 최신 P0 Foundation Checkpoint의 두 DATA-004 blocker가 모두 해소됐다.
+
+- `src/server/observability/safe-server-event.ts`는 final Sentry event의 최상위 exception stack에서
+  `filename`, `function`, `lineno`, `colno`만 새 객체로 복사한다. SQL/params가 들어간 raw message,
+  frame source context/vars, email, password hash, OTP hash, IP, mechanism data와 raw cause는 복사하지
+  않는다.
+- `src/server/observability/server-logger.ts`는 allowlisted payload를 `JSON.stringify()`하고
+  `console.error()`에 단일 문자열 인자로 전달한다. 변경 test는 반환 인자의 타입과 개수, JSON parse,
+  실제 CR/LF 부재를 직접 검증한다.
+
+### Minor Issues
+
+없음.
+
+### Remaining Risks
+
+- 실제 Sentry 조직의 수신 payload, Relay 처리, source-map 해석, grouping, retention과 접근 권한은
+  production credential을 사용하지 않아 확인하지 않았다. 이 범위는 승인된 PLAN의 remaining unknown과
+  동일하며 application의 fail-closed `beforeSend` 동작을 막지 않는다.
+- ignored local PostgreSQL verification fixture는 review 대상 commit에 포함되지 않지만, canonical
+  REWORK VERIFICATION에 격리 PostgreSQL 17 실행 명령과 1 file / 1 test 통과, 임시 DB 제거 결과가
+  기록돼 있다.
+
+### Reviewer Recommendation
+
+- APPROVE. `Status = CLOSED`로 갱신한다.
+- REWORK diff는 기존 관측 설계를 바꾸지 않고 두 blocker만 해결했다. 새 dependency나 범용 logging/error
+  abstraction은 추가하지 않았다.
+- 기존 HTTP generic 500 body는 변경되지 않았고 focused API test가 이를 재확인했다.
+- Sentry `sendDefaultPii: false`/fail-closed `beforeSend`와 Next instrumentation의 allowlisted metadata
+  경계는 약화되지 않았다.
+- review에서 다음 focused command를 현재 HEAD에 다시 실행했다.
+  `pnpm exec vitest run src/server/observability/server-logger.test.ts src/server/observability/auth-error-reporter.test.ts src/server/http/api-response.test.ts src/instrumentation.test.ts --reporter=verbose`
+  결과는 4 files / 20 tests 통과였다.
+- Registry REVIEW recommendation은 `Sol / High`다. 실제 review runtime model은 `GPT-5`이며 reasoning
+  effort는 실행 환경에 노출되지 않아 추정하지 않았다.
+
 Canonical evidence: `docs/migration/m7-foundation-fixes/DATA-004.md`
