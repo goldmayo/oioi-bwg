@@ -4,6 +4,7 @@ import argon2 from "argon2";
 
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
+import { isPostgresUniqueViolation } from "../errors/postgres-error";
 import {
   insertAccount,
   insertPasswordCredential,
@@ -36,10 +37,10 @@ export async function completeSignup(challengeId: string, password: string, nick
     });
     return { accountId: accountId.toString() };
   } catch (error) {
-    if (error instanceof Error && error.message.includes("password_credential_email_key")) {
+    if (isPostgresUniqueViolation(error, "password_credential_email_key")) {
       throw new AppError("EMAIL_ALREADY_REGISTERED");
     }
-    if (error instanceof Error && error.message.includes("profile_nickname_key")) {
+    if (isPostgresUniqueViolation(error, "profile_nickname_key")) {
       throw new AppError("NICKNAME_ALREADY_REGISTERED");
     }
     throw error;

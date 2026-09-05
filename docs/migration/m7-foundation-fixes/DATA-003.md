@@ -2,7 +2,7 @@
 
 ## Status
 
-PLANNED
+VERIFIED
 
 ## PLAN
 
@@ -218,11 +218,130 @@ evidence와 필요한 결정을 보고하며 중단한다.
 
 ## IMPLEMENTATION
 
-pending
+### Changed Files
+
+- `src/server/errors/postgres-error.ts`: 실제 `DrizzleQueryError`의 direct cause에서 exact SQLSTATE와
+  constraint 이름만 확인하는 `isPostgresUniqueViolation` predicate를 추가했다.
+- `src/server/errors/postgres-error.test.ts`: wrapper shape, exact match, 다른 SQLSTATE, message-only
+  match, nested cause, 잘못되거나 읽을 수 없는 cause를 검증한다.
+- `src/server/services/album-service.ts`: create/edit의 outer message 검사를
+  `Album_slug_key` allowlist 판별로 교체했다.
+- `src/server/services/album-service.test.ts`: create/edit conflict mapping과 unknown unique violation의
+  원형 전파 및 generic 500을 검증한다.
+- `src/server/services/signup-service.ts`: email/nickname의 outer message 검사를 각 known constraint
+  allowlist 판별로 교체했다.
+- `src/server/services/signup-service.test.ts`: 실제 wrapper-shaped email/nickname conflict와 unknown
+  unique violation 회귀 coverage를 추가했다.
+- `docs/migration/m7-foundation-fixes/DATA-003.md`: 구현 및 검증 evidence를 기록했다.
+
+### Implemented Decision
+
+PLAN의 Option 2를 그대로 구현했다. Predicate는 `DrizzleQueryError`만 허용하고 `cause`를 한 단계만
+안전하게 읽는다. `code === "23505"`와 호출 service가 전달한 `constraint_name`이 정확히 일치해야
+true다. Application 의미와 다음 매핑은 service에 남겼다.
+
+```text
+Album_slug_key
+-> ALBUM_SLUG_ALREADY_EXISTS
+
+password_credential_email_key
+-> EMAIL_ALREADY_REGISTERED
+
+profile_nickname_key
+-> NICKNAME_ALREADY_REGISTERED
+```
+
+다른 SQLSTATE와 unknown constraint는 기존 exception identity를 유지한다. Repository, transaction,
+HTTP mapper, contract, schema/migration, route, observability 경계는 변경하지 않았다.
+
+### Plan Deviations
+
+없음. 허용된 application/test 파일과 canonical evidence만 변경했다. 실제 PostgreSQL 검증용
+`.local/m7-data-003-verification.{config,test}.ts`는 계획대로 Git 비추적 local artifact로만 사용했다.
+
+### Tests Added or Changed
+
+- 새 helper unit test 4개.
+- 새 Album service regression test 2개.
+- Signup service regression test 3개 추가.
+- 격리 PostgreSQL 검증 4개: PostgreSQL/migration baseline, Album create/update conflict, nickname
+  conflict와 rollback, email conflict와 rollback.
 
 ## VERIFICATION
 
-pending
+### Commands Run
+
+```text
+pnpm exec prettier --write <변경된 application/test 파일>
+pnpm exec vitest run src/server/errors/postgres-error.test.ts src/server/services/album-service.test.ts src/server/services/signup-service.test.ts
+docker compose -f compose.dev.yml ps --format json
+docker compose -f compose.dev.yml exec -T postgres psql -U oioibawige -d postgres ... CREATE DATABASE m7_data_003_20260906_0452
+DATABASE_URL=<격리 localhost URL> node --import tsx scripts/assert-local-database.ts
+M7_DATA_003_DATABASE_URL=<격리 localhost URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-003-verification.config.ts --reporter=verbose
+docker compose -f compose.dev.yml exec -T postgres psql ... <version/migration/constraint catalog 확인>
+docker compose -f compose.dev.yml exec -T postgres psql ... <격리 DB 연결 수 확인>
+docker compose -f compose.dev.yml exec -T postgres psql ... DROP DATABASE m7_data_003_20260906_0452
+pnpm type-check
+pnpm test:harness
+pnpm lint
+pnpm lint:fsd
+pnpm test:unit:run
+pnpm format:check
+pnpm build
+```
+
+Targeted test에 최종 generic 500 assertion을 추가한 뒤 같은 targeted Vitest와 해당 파일 Prettier를
+한 번 더 실행했다.
+
+### Results
+
+- Targeted Vitest: 3 files, 11 tests 통과. Final rerun도 동일하게 통과했다.
+- `pnpm type-check`: 통과.
+- `pnpm test:harness`: 7 tests 통과.
+- `pnpm lint`: 통과.
+- `pnpm lint:fsd`: 통과, Steiger 문제 0개.
+- `pnpm test:unit:run`: 39 files, 137 tests 통과.
+- `pnpm format:check`: 모든 대상이 Prettier format과 일치.
+- `pnpm build`: Next.js 16.3.3 production build, TypeScript, 23개 static page generation 통과.
+- 검증 중 실패한 command/test는 없다.
+
+### Actual PostgreSQL Evidence
+
+- 대상: `compose.dev.yml`의 isolated local PostgreSQL
+  `17.11 (Debian 17.11-1.pgdg13+2)`.
+- 임시 database: `m7_data_003_20260906_0452`. Local database guard를 통과한 뒤 실제 Drizzle
+  migrator로 tracked migration 4개를 적용했다.
+- Catalog에서 `Album_slug_key`, `password_credential_email_key`, `profile_nickname_key`가 모두
+  unique constraint(`contype = u`)임을 확인했다.
+- 실제 Repository/Service/Drizzle 경로의 Album duplicate create와 update가
+  `ALBUM_SLUG_ALREADY_EXISTS` 및 공개 409로 변환됐다.
+- 실제 VERIFIED challenge를 사용한 duplicate nickname과 duplicate email signup이 각각
+  `NICKNAME_ALREADY_REGISTERED`, `EMAIL_ALREADY_REGISTERED` 및 공개 409로 변환됐다.
+- 두 signup conflict 뒤 account count가 유지됐고 challenge는 `VERIFIED`, `consumedAt = null`로
+  rollback됐다. Email conflict에서 transaction 중 삽입했던 새 nickname profile도 0건이었다.
+- 외부 email은 spy로 대체했고 Sentry/production service는 호출하지 않았다. DB/Repository/Service,
+  PostgreSQL constraint와 transaction은 mock하지 않았다.
+- test client 종료 후 임시 DB 연결 0개를 확인하고 `DROP DATABASE`를 실행했다. 이후 catalog에서
+  database count 0을 확인했다. 기존 local application DB와 production DB는 사용하거나 변경하지
+  않았다.
+
+### Remaining Unknowns
+
+- 실제 PostgreSQL integration test를 영구 CI lifecycle에 편입하는 작업은 계획대로 DATA-008에 남긴다.
+- Production DB와 production credential은 범위 밖이어서 확인하지 않았다.
+- 현재 Drizzle 0.45.1/PostgreSQL 17.11 wrapper shape는 unit과 실제 DB에서 확인했다. 이후 dependency
+  upgrade로 shape가 바뀌면 unit 및 PostgreSQL 검증이 다시 필요하다.
+
+### Diff Review Packet
+
+```text
+finding: M7-DATA-003 — Drizzle unique conflict mapping
+plan 핵심: direct Drizzle cause의 23505와 service allowlist constraint가 모두 일치할 때만 기존 AppError conflict로 변환
+changed files: postgres-error helper/test, album-service/test, signup-service/test, DATA-003 evidence
+git diff summary: narrow predicate 추가, outer message 검사 3개 교체, focused regression coverage와 evidence 추가
+test results: targeted 3 files/11 tests, full unit 39 files/137 tests, harness 7 tests, type/lint/FSD/format/build 및 실제 PostgreSQL 4 tests 통과
+known risks: constraint 이름 및 Drizzle direct cause shape에 의존하며 dependency 변경 시 재검증 필요; permanent DB CI coverage는 DATA-008 범위
+```
 
 ## REVIEW
 

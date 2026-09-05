@@ -10,6 +10,7 @@ import type {
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
+import { isPostgresUniqueViolation } from "../errors/postgres-error";
 import {
   findAlbumBySlug,
   findAllAlbums,
@@ -101,7 +102,7 @@ export async function createAlbum(
     if (!album) throw new Error("Album was not created");
     return mapAlbum(album);
   } catch (error) {
-    if (error instanceof Error && error.message.includes("Album_slug_key")) {
+    if (isPostgresUniqueViolation(error, "Album_slug_key")) {
       throw new AppError("ALBUM_SLUG_ALREADY_EXISTS");
     }
     throw error;
@@ -119,7 +120,7 @@ export async function editAlbum(
     if (!album) throw new AppError("ALBUM_NOT_FOUND");
     return mapAlbum(album);
   } catch (error) {
-    if (error instanceof Error && error.message.includes("Album_slug_key")) {
+    if (isPostgresUniqueViolation(error, "Album_slug_key")) {
       throw new AppError("ALBUM_SLUG_ALREADY_EXISTS");
     }
     throw error;

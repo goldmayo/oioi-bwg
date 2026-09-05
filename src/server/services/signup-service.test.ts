@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -24,6 +25,14 @@ vi.mock("../repositories/auth-repository", () => ({
 }));
 
 import { completeSignup } from "./signup-service";
+
+function uniqueViolation(constraintName: string) {
+  const cause = Object.assign(new Error("duplicate key"), {
+    code: "23505",
+    constraint_name: constraintName,
+  });
+  return new DrizzleQueryError("insert into identity values ($1)", ["PRIVATE_VALUE"], cause);
+}
 
 describe("completeSignup", () => {
   beforeEach(() => {
@@ -53,5 +62,23 @@ describe("completeSignup", () => {
       code: "OTP_NOT_VERIFIED",
     });
     expect(mocks.insertAccount).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["password_credential_email_key", "EMAIL_ALREADY_REGISTERED", mocks.insertPasswordCredential],
+    ["profile_nickname_key", "NICKNAME_ALREADY_REGISTERED", mocks.insertProfile],
+  ])("maps %s to %s", async (constraintName, code, repositoryCall) => {
+    repositoryCall.mockRejectedValueOnce(uniqueViolation(constraintName));
+
+    await expect(completeSignup("challenge-id", "Password!123", "user")).rejects.toMatchObject({
+      code,
+    });
+  });
+
+  it("preserves an unknown unique violation as an unexpected error", async () => {
+    const error = uniqueViolation("another_constraint_key");
+    mocks.insertProfile.mockRejectedValueOnce(error);
+
+    await expect(completeSignup("challenge-id", "Password!123", "user")).rejects.toBe(error);
   });
 });
