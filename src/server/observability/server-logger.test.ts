@@ -26,6 +26,8 @@ const MARKERS = {
   email: "private-email-marker@example.test",
   passwordHash: "PASSWORD_HASH_MARKER",
   otpHash: "OTP_HASH_MARKER",
+  ip: "203.0.113.77",
+  rawCause: "RAW_CAUSE_MARKER",
   token: "TOKEN_MARKER",
 };
 
@@ -62,11 +64,21 @@ describe("reportServerError", () => {
       }),
     ).toBeNull();
 
-    const output = serialized(consoleError.mock.calls);
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    const call = consoleError.mock.calls[0];
+    expect(call).toHaveLength(1);
+    expect(call?.[0]).toEqual(expect.any(String));
+
+    const output = call?.[0] as string;
+    expect(output).not.toMatch(/[\r\n]/);
+    expect(JSON.parse(output)).toEqual({
+      timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      level: "error",
+      event: "api.unexpected_error",
+      source: "api-route-handler",
+      error: { type: "database", code: "23505" },
+    });
     for (const marker of Object.values(MARKERS)) expect(output).not.toContain(marker);
-    expect(output).toContain('"event":"api.unexpected_error"');
-    expect(output).toContain('"type":"database"');
-    expect(output).toContain('"code":"23505"');
     expect(sentryMocks.captureException).not.toHaveBeenCalled();
   });
 
@@ -130,7 +142,10 @@ describe("reportServerError", () => {
         source: "sentry-auto-capture",
       }),
     ).not.toThrow();
-    expect(serialized(consoleError.mock.calls)).not.toMatch(/TOKEN_MARKER|SECRET_MARKER/);
+    const output = consoleError.mock.calls[0]?.[0];
+    expect(output).toEqual(expect.any(String));
+    expect(output).not.toMatch(/TOKEN_MARKER|SECRET_MARKER/);
+    expect(() => JSON.parse(output as string)).not.toThrow();
   });
 
   it.each(["STRING_SECRET_MARKER", 42, null])(
@@ -145,9 +160,10 @@ describe("reportServerError", () => {
           source: "sentry-auto-capture",
         }),
       ).not.toThrow();
-      const output = serialized(consoleError.mock.calls);
+      const output = consoleError.mock.calls[0]?.[0];
+      expect(output).toEqual(expect.any(String));
       if (typeof value === "string") expect(output).not.toContain(value);
-      expect(output).toContain('"type":"unknown"');
+      expect(JSON.parse(output as string)).toMatchObject({ error: { type: "unknown" } });
     },
   );
 
@@ -165,12 +181,15 @@ describe("reportServerError", () => {
       },
     } as never);
 
-    const output = serialized(consoleError.mock.calls);
+    const output = consoleError.mock.calls[0]?.[0];
+    expect(output).toEqual(expect.any(String));
     expect(output).not.toMatch(
       /ERROR_MARKER|EVENT_MARKER|SOURCE_MARKER|METHOD_MARKER|ROUTER_MARKER|ROUTE_MARKER/,
     );
-    expect(output).toContain('"event":"server.unhandled_error"');
-    expect(output).toContain('"source":"sentry-auto-capture"');
+    expect(JSON.parse(output as string)).toMatchObject({
+      event: "server.unhandled_error",
+      source: "sentry-auto-capture",
+    });
   });
 });
 
@@ -200,7 +219,31 @@ describe("sanitizeServerSentryEvent", () => {
           {
             type: "DrizzleQueryError",
             value: `${MARKERS.sql} params ${MARKERS.email}`,
-            mechanism: { data: { token: MARKERS.token } },
+            mechanism: { data: { cause: MARKERS.rawCause, token: MARKERS.token } },
+            stacktrace: {
+              frames: [
+                {
+                  filename: "src/server/services/signup-service.ts",
+                  function: "completeSignup",
+                  lineno: 42,
+                  colno: 11,
+                  abs_path: `/private/${MARKERS.email}`,
+                  context_line: `${MARKERS.sql} ${MARKERS.passwordHash}`,
+                  pre_context: [MARKERS.otpHash],
+                  post_context: [MARKERS.ip],
+                  vars: { cause: MARKERS.rawCause, params: Object.values(MARKERS) },
+                  module: MARKERS.passwordHash,
+                },
+                {
+                  filename: "src/server/http/api-response.ts",
+                  function: "toErrorResponse",
+                  lineno: 107,
+                  colno: 3,
+                  context_line: MARKERS.token,
+                  vars: { email: MARKERS.email },
+                },
+              ],
+            },
           },
         ],
       },
@@ -209,7 +252,7 @@ describe("sanitizeServerSentryEvent", () => {
         headers: { cookie: MARKERS.token, authorization: MARKERS.passwordHash },
         data: MARKERS.otpHash,
       },
-      user: { email: MARKERS.email, ip_address: "203.0.113.77" },
+      user: { email: MARKERS.email, ip_address: MARKERS.ip },
       extra: { params: Object.values(MARKERS) },
       breadcrumbs: [{ message: MARKERS.token, data: { otp: MARKERS.otpHash } }],
       tags: {
@@ -238,7 +281,28 @@ describe("sanitizeServerSentryEvent", () => {
       platform: "node",
       environment: "staging",
       exception: {
-        values: [{ type: "DatabaseError", value: "Unexpected server error" }],
+        values: [
+          {
+            type: "DatabaseError",
+            value: "Unexpected server error",
+            stacktrace: {
+              frames: [
+                {
+                  filename: "src/server/services/signup-service.ts",
+                  function: "completeSignup",
+                  lineno: 42,
+                  colno: 11,
+                },
+                {
+                  filename: "src/server/http/api-response.ts",
+                  function: "toErrorResponse",
+                  lineno: 107,
+                  colno: 3,
+                },
+              ],
+            },
+          },
+        ],
       },
       tags: {
         event: "api.unexpected_error",

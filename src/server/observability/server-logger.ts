@@ -47,14 +47,16 @@ export function reportServerError(
     ...(request?.routeType ? { "next.route_type": request.routeType } : {}),
   };
 
-  console.error({
-    timestamp: new Date().toISOString(),
-    level: "error",
-    event,
-    source,
-    error: descriptor,
-    ...(request ? { request } : {}),
-  });
+  console.error(
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: "error",
+      event,
+      source,
+      error: descriptor,
+      ...(request ? { request } : {}),
+    }),
+  );
 
   if (!shouldCaptureSentry()) return null;
 
