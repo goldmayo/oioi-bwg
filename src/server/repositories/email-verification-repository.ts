@@ -58,7 +58,7 @@ export function findChallengeById(executor: DbExecutor, id: string) {
 export function consumeVerifiedChallenge(executor: DbExecutor, id: string, now: string) {
   return executor
     .update(emailVerificationChallenge)
-    .set({ status: "CONSUMED", consumedAt: now })
+    .set({ status: "CONSUMED", verifiedAt: null, consumedAt: now })
     .where(
       and(eq(emailVerificationChallenge.id, id), eq(emailVerificationChallenge.status, "VERIFIED")),
     )
