@@ -2,7 +2,7 @@
 
 ## Status
 
-PLANNED
+VERIFIED
 
 ## PLAN
 
@@ -257,11 +257,138 @@ production credential은 사용하지 않는다.
 
 ## IMPLEMENTATION
 
-pending
+### Changed Files
+
+- `src/server/observability/safe-server-event.ts` (new)
+- `src/server/observability/server-logger.ts` (new)
+- `src/server/observability/auth-error-reporter.ts` (new)
+- `src/server/observability/server-logger.test.ts` (new)
+- `src/server/observability/auth-error-reporter.test.ts` (new)
+- `src/server/http/api-response.ts`
+- `src/server/http/api-response.test.ts`
+- `src/instrumentation.ts`
+- `src/instrumentation.test.ts` (new)
+- `src/auth.ts`
+- `sentry.server.config.ts`
+- `src/features/manage-album/api/upload-album-image-action.ts`
+- `docs/migration/m7-foundation-fixes/DATA-004.md`
+
+### Implemented Decision
+
+- Registry recommendation은 `IMPLEMENT: Sol High`다. 실제 implementation model은 `GPT-5`이며
+  reasoning effort는 실행 환경에서 노출되지 않아 확인할 수 없다.
+- `server-only` logger는 raw error를 분류 입력으로만 받고 structured console payload와 Sentry에는
+  timestamp/level, finite event/source, safe error type, 검증된 code, allowlisted Next request metadata만
+  전달한다.
+- PostgreSQL code는 실제 `DrizzleQueryError`의 바로 아래 cause에서만 읽고 5자리 SQLSTATE 형식만
+  보존한다. arbitrary Error의 `message`, `stack`, `cause`, `params`는 직렬화하지 않는다.
+- Sentry server init은 `sendDefaultPii: false`와 fail-closed `beforeSend`를 사용한다. 최종 event는
+  event ID, level/environment, safe exception type/value, allowlisted tags, 검증된 trace/span ID만 남기고
+  request/user/extra/breadcrumb/raw exception/message/logentry를 제거한다.
+- HTTP mapper는 expected `AppError`와 request `ZodError`를 capture하지 않는다. unexpected error는
+  `api.unexpected_error`, output-contract failure는 raw Zod cause 없이
+  `api.output_contract_violation`/`OUTPUT_CONTRACT_VIOLATION`으로 구분하며 기존 generic 500 body를 유지한다.
+- Next instrumentation은 raw `captureRequestError`를 제거하고 method/router kind/route type만 safe logger에
+  전달한다. path/query/header/cookie와 unknown context는 전달하지 않는다.
+- Auth.js custom logger는 stable `CredentialsSignin` type의 정상 credentials 거부를 capture하지 않고,
+  unexpected wrapper failure만 `auth.failure`/`AUTH_FAILURE`로 기록한다. Auth.js response/session 계약은
+  바꾸지 않았다.
+- album image upload action은 storage error 원본을 버리고 고정된 `AlbumImageUploadError`만 기존 shared
+  adapter에 전달한다. server `beforeSend`는 이 고정 type을 `upload.failure` 및
+  `upload-album-image-action`으로 정규화한다.
+
+### Plan Deviations
+
+- `features`에서 `src/server` 직접 import는 현재 ESLint FSD rule이 금지한다. 따라서 upload action을
+  server logger로 직접 전환하거나 shared Sentry adapter에 `client-only` marker를 추가하지 않았다.
+  대신 원본 storage error를 action에서 즉시 폐기하고 고정 safe Error를 전달하며, server
+  `beforeSend`가 고정 type을 allowlist event/source로 바꾼다. upload action의 이동과 authorization은
+  계획대로 DATA-002에 남겼다.
+- 최종 Sentry allowlist는 안전한 stack frame 위치도 보존하지 않는다. file/function 이름까지 raw event에서
+  복사하지 않는 fail-closed 처리를 선택했으며, 계획의 필수 불변성인 event/source/type/code와 검증된
+  trace/event correlation은 유지한다.
+- 별도 upload action test는 추가하지 않았다. action이 raw caught value를 사용하지 않는 것은 정적 diff로
+  확인했고, 고정 `AlbumImageUploadError`의 최종 event/source 및 storage detail 제거는 server Sentry
+  sanitizer unit test로 검증했다.
+
+### Tests Added or Changed
+
+- `server-logger.test.ts`: 실제 `DrizzleQueryError` shape, nested markers, structured console,
+  staging Sentry capture, hostile Proxy/getter, primitive input, runtime type bypass, final event allowlist,
+  `captureMessage` fallback, upload 고정 type, `beforeSend` 등록을 검증한다.
+- `auth-error-reporter.test.ts`: `CredentialsSignin` 미capture와 nested DB cause가 있는 unexpected Auth.js
+  failure의 safe classification을 검증한다.
+- `instrumentation.test.ts`: URL/query/cookie/authorization/context marker를 제외하고 method/router/route
+  metadata만 전달하며 development capture를 생략하는지 검증한다.
+- `api-response.test.ts`: expected failure 미capture, unexpected/output-contract safe event, 기존 500 body,
+  invalid output marker 폐기를 검증한다.
+- 최종 focused 결과: 4 files, 20 tests passed.
+
+### Implementation Failures and Corrections
+
+- 첫 focused run에서 test가 `next-auth` root를 직접 import하여 Vitest ESM 환경의 `next/server` resolution
+  오류로 시작하지 못했다. production code가 Auth.js logger에서 받는 stable `error.type`을 검사하도록
+  바꾸고 test fixture도 package runtime import 없이 같은 contract를 사용했다.
+- 같은 첫 점검의 type-check에서 Sentry malicious fixture와 AuthError constructor type 오류가 있었다.
+  fixture를 의도적인 `unknown as ErrorEvent`로 한정하고 Auth fixture를 실제 logger input shape로 바꿨다.
+- focused ESLint의 relative import 정렬 오류 1건을 수정했다. 이후 focused tests/type-check/lint와 모든
+  repository gate가 통과했다.
 
 ## VERIFICATION
 
-pending
+### Commands Run and Results
+
+- `pnpm exec vitest run src/server/observability/server-logger.test.ts src/server/observability/auth-error-reporter.test.ts src/server/http/api-response.test.ts src/instrumentation.test.ts`
+  - 최종: 4 files, 20 tests passed.
+- `pnpm type-check`
+  - 통과.
+- `pnpm test:harness`
+  - 7 tests passed.
+- `pnpm lint`
+  - 통과.
+- `pnpm lint:fsd`
+  - 통과, `No problems found`.
+- `pnpm test:unit:run`
+  - 37 files, 128 tests passed.
+- `pnpm format:check`
+  - 통과.
+- `pnpm build`
+  - Next.js 16.3.3 production build, TypeScript, 23개 static page generation 통과.
+- `rg`로 production source의 raw server capture를 재검색했다.
+  - API와 instrumentation의 raw 전달은 제거됐다. 남은 `logger.error(error, context)`는 client error
+    capture 경로이고, upload server action은 caught raw error를 사용하지 않는다.
+
+### Actual PostgreSQL Evidence
+
+- 대상: `compose.dev.yml`의 local PostgreSQL 17, 임시 database
+  `m7_data_004_20260906_0423`.
+- 임시 DB 생성 후 다음 URL로 local guard를 실행해 `127.0.0.1` 통과를 확인했다.
+  `M7_DATA_004_DATABASE_URL`과 `DATABASE_URL`은 임시 DB만 가리켰다.
+- `node node_modules/vitest/vitest.mjs run --config .local/m7-data-004-verification.config.ts --reporter=verbose`
+  - 현재 Drizzle migration을 임시 DB에 적용했다.
+  - 두 Account를 만들고 같은 synthetic email/password hash로 credential insert를 실행해 실제
+    `DrizzleQueryError` 및 `23505`를 얻었다.
+  - raw outer message에 synthetic email/password hash가 포함된 것을 먼저 assert하여 재현 근거를
+    유지했다.
+  - 실제 `toErrorResponse`/server logger와 mocked external Sentry capture를 통과시킨 뒤 structured console,
+    `captureException`, scope tags, final `beforeSend` event, HTTP body 전체에 email/hash/cookie/token marker,
+    credential INSERT SQL, `params:`가 없음을 assert했다.
+  - `api.unexpected_error`, `api-route-handler`, `database`, `23505`, generic 500 body와 검증된 trace/span ID는
+    유지됐다.
+  - 1 file, 1 test passed.
+- 종료 후 `pg_stat_activity`의 임시 DB connection이 0임을 확인하고 `DROP DATABASE`를 실행했다.
+  catalog 재조회 결과 database count는 0이었다. 기존 local application DB와 production DB는 변경하지
+  않았다.
+
+### Remaining Unknowns
+
+- 실제 Sentry 조직의 수신 payload, Relay 추가 scrubbing, retention과 접근 권한은 확인하지 않았다.
+  외부 전송은 의도적으로 mock했다.
+- client Sentry/replay의 별도 개인정보 정책은 DATA-004 범위 밖이며 변경하지 않았다.
+- application request ID는 아직 없다. 현재는 Sentry의 검증된 event/trace/span correlation만 보존한다.
+- upload action은 DATA-002에서 authorization과 server/storage 경계를 함께 이동해야 한다. 현재 DATA-004는
+  그 전까지 raw storage error가 관측 payload로 나가지 않는 것만 보장한다.
+- REVIEW는 아직 수행하지 않았다.
 
 ## REVIEW
 

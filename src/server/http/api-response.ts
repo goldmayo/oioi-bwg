@@ -2,8 +2,9 @@ import "server-only";
 
 import { z } from "zod";
 
+import { reportServerError } from "@/server/observability/server-logger";
+
 import { apiErrorResponseSchema } from "@/shared/contracts/error";
-import { logger } from "@/shared/lib/sentry";
 
 import { AppError, type AppErrorCode } from "../errors/app-error";
 
@@ -31,6 +32,13 @@ class InvalidJsonBodyError extends Error {
   }
 }
 
+class OutputContractError extends Error {
+  constructor() {
+    super("API response contract violation");
+    this.name = "OutputContractError";
+  }
+}
+
 /** JSON syntax failure와 schema failure를 모두 request validation failure로 보존한다. */
 export async function parseJsonRequest<T>(request: Request, schema: z.ZodType<T>): Promise<T> {
   let value: unknown;
@@ -53,7 +61,7 @@ export function jsonResponse<T>(
   const parsed = schema.safeParse(value);
 
   if (!parsed.success) {
-    throw new Error("API response contract violation", { cause: parsed.error });
+    throw new OutputContractError();
   }
 
   return Response.json(parsed.data, init);
@@ -96,7 +104,14 @@ export function toErrorResponse(error: unknown): Response {
     );
   }
 
-  logger.error(error, { source: "api-route-handler" });
+  const isOutputContractError = error instanceof OutputContractError;
+  reportServerError(error, {
+    event: isOutputContractError ? "api.output_contract_violation" : "api.unexpected_error",
+    source: "api-route-handler",
+    ...(isOutputContractError
+      ? { error: { type: "output-contract" as const, code: "OUTPUT_CONTRACT_VIOLATION" } }
+      : {}),
+  });
   return Response.json(
     apiErrorResponseSchema.parse({
       code: "INTERNAL_SERVER_ERROR",

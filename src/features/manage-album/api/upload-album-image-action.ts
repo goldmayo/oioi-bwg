@@ -37,8 +37,12 @@ export async function uploadAlbumImageAction(formData: FormData) {
     });
 
     return { success: true, url };
-  } catch (error) {
-    logger.error(error, { source: "upload-album-image-action" });
+  } catch {
+    const safeError = new Error("Album image upload failed");
+    safeError.name = "AlbumImageUploadError";
+    logger.error(safeError, {
+      source: "upload-album-image-action",
+    });
     return { success: false, error: "이미지 업로드에 실패했습니다." };
   }
 }
