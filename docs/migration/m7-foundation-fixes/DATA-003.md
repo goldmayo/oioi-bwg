@@ -2,7 +2,7 @@
 
 ## Status
 
-VERIFIED
+REVIEWED-MINOR
 
 ## PLAN
 
@@ -345,4 +345,56 @@ known risks: constraint 이름 및 Drizzle direct cause shape에 의존하며 de
 
 ## REVIEW
 
-pending
+### Verdict
+
+APPROVE WITH MINOR FIX
+
+### Findings by Severity
+
+- Critical/High/Medium: 없음.
+- Minor — PR #60은 `migration_develop...HEAD` 기준 7 files, 551 insertions, 4 deletions로 저장소의
+  400줄 목표를 넘는다. PLAN, 구현, 검증을 한 canonical evidence와 같은 checkpoint에 유지해야 하는
+  결합 이유 및 권장 리뷰 순서가 PR 본문에 없다. 현재 체크리스트는 이 설명 없이 해당 항목을 완료로
+  표시한다. 코드 동작이나 DATA-003 invariant를 막는 문제는 아니지만 merge 전에 PR 본문을 보완해야
+  한다.
+
+### Blocking Issues
+
+없음.
+
+### Minor Issues
+
+- PR 본문에 다음을 추가한다: PLAN/IMPLEMENTATION/VERIFICATION 이력을 같은 canonical evidence에
+  누적해야 하므로 문서와 구현을 더 분리할 수 없었다는 결합 이유, 그리고
+  `postgres-error helper -> Album/Signup service wiring -> unit tests -> PostgreSQL evidence` 순서의
+  리뷰 안내.
+
+### Review Checks
+
+- Root cause: outer message 검사가 제거됐고 실제 `DrizzleQueryError`의 direct cause만 검사한다.
+- Invariant: SQLSTATE 23505와 service별 exact known constraint가 모두 일치할 때만 기존 conflict
+  `AppError`로 변환한다. Unknown constraint와 다른 오류는 원형 및 generic 500을 유지한다.
+- Architecture: Repository, transaction ownership, HTTP mapper, contract, schema/migration,
+  authorization, cache, observability 경계를 변경하지 않았다. Helper는 30줄의 단일 책임 predicate이며
+  recursive parser나 generic DB framework가 아니다.
+- Regression coverage: wrapper shape/false cases, Album create/edit, signup email/nickname, unknown 500을
+  focused unit/service test가 다룬다.
+- PostgreSQL: 격리 PostgreSQL 17.11에서 migration 4개와 세 실제 unique constraint를 확인했고,
+  Album create/update 및 signup email/nickname 409, signup rollback, 임시 DB cleanup이 모두
+  통과했다.
+- Repository gates: targeted 3 files/11 tests, full unit 39 files/137 tests, harness 7 tests,
+  type-check, lint, FSD, format, build가 통과했다. PR #60 GitHub `verify`도 통과했다.
+- Sensitive data: known DB 오류는 raw cause 없이 새 `AppError`가 되며, unknown 오류의 기존 DATA-004
+  sanitization 경계는 수정하지 않았다.
+
+### Remaining Risks
+
+- Constraint 이름과 Drizzle direct cause shape는 persistence dependency에 대한 의도적인 결합점이다.
+  Dependency/schema 변경 시 unit과 실제 PostgreSQL 검증을 다시 수행해야 한다.
+- 실제 PostgreSQL test의 영구 CI lifecycle 편입은 계획대로 DATA-008에 남아 있다.
+- Production DB는 검증 범위가 아니며 production credential을 사용하지 않았다.
+
+### Reviewer Recommendation
+
+기술 구현은 승인한다. PR 본문에 위 결합 이유와 리뷰 순서를 추가한 뒤 DATA-003 review를 다시 실행해
+최종 `CLOSED` 상태를 기록한다. Application code나 test의 재작업은 요구하지 않는다.
