@@ -2,7 +2,7 @@
 
 ## Status
 
-VERIFIED
+REWORK
 
 ## PLAN
 
@@ -392,4 +392,59 @@ production credential은 사용하지 않는다.
 
 ## REVIEW
 
-pending
+### Verdict
+
+REWORK
+
+### Findings by Severity
+
+#### High — 최종 Sentry event가 안전한 stack frame 위치까지 제거한다
+
+`src/server/observability/safe-server-event.ts:189-215`는 exception을 고정 type/value만으로 다시 만들고
+`stacktrace.frames`를 전혀 보존하지 않는다. `src/server/observability/server-logger.ts:61-75`에서 새로 만든
+sanitized Error의 안전한 호출 stack도 같은 `beforeSend` 경계를 지나며 제거된다. 그 결과 서로 다른 코드
+위치에서 발생한 동일 분류의 장애는 event/source/type/code 외에 원인을 구분하거나 호출 위치를 찾을 정보가
+없다. 자동 capture된 unhandled error도 모두 같은 `server.unhandled_error`/`UnknownError` 형태로 축약된다.
+
+이는 승인된 PLAN의 `DATA-004.md:102` 및 `DATA-004.md:212-213`에 명시된 안전한 file/function/line 위치
+보존과, unexpected server exception의 관측 가능성을 유지한다는 불변성을 충족하지 못한다. 최종 event에는
+raw message/cause와 frame의 vars, context line, mechanism data를 넣지 않으면서, sanitized Error 또는 입력
+event에서 허용한 frame의 filename/function/line/column만 새 객체로 재구성해야 한다.
+서로 다른 두 caller가 최종 event에서 안전한 위치 정보로 구분되고 synthetic marker는 남지 않는 test도
+필요하다.
+
+#### Low — server logger의 stdout 출력이 structured JSON이 아니다
+
+`src/server/observability/server-logger.ts:50-57`은 allowlisted payload 객체를 `console.error`에 직접
+전달한다. Node.js stdout/stderr에서는 이 값이 여러 줄의 `util.inspect` 형식으로 출력되므로 active
+architecture의 structured JSON 및 Docker/stdout 친화성 기준을 충족하지 않는다.
+`src/server/observability/server-logger.test.ts:65-69`는 mock call을 사후 `JSON.stringify`하여 검사하기
+때문에 실제 출력 형식의 회귀를 잡지 못한다. logger가 한 줄 JSON 문자열을 출력하고 test가 유일한 console
+argument를 parse하여 schema와 marker 부재를 확인하도록 보완해야 한다.
+
+### Blocking Issues
+
+- 안전한 stack frame 위치를 final Sentry event에 복원하고, 민감 frame field를 제거한 상태에서 서로 다른
+  caller의 진단 가능성을 검증해야 한다.
+
+### Minor Issues
+
+- server stdout을 실제 structured JSON으로 출력하고 해당 wire format을 직접 검증해야 한다.
+
+### Remaining Risks
+
+- 실제 Sentry 조직의 수신 payload와 grouping은 production credential을 사용하지 않아 확인하지 않았다.
+  재작업에서는 mocked `beforeSend` 최종 event를 기준으로 허용 frame field와 marker 부재를 검증해야 한다.
+- album upload action은 FSD 경계 때문에 아직 shared Sentry adapter를 사용하는 계획 이탈 상태다. 현재는
+  caught storage error를 버리고 고정 Error만 전달하여 raw detail 유출은 차단하지만, DATA-002에서 action의
+  server/storage 경계를 이동할 때 server-only logger로 전환해야 한다.
+- PostgreSQL 17 임시 DB 검증은 실제 `DrizzleQueryError`의 SQL/params와 credential marker가 console,
+  capture argument, final event, HTTP body에 남지 않는 것을 충분히 입증했다. stack frame 및 stdout 수정 후
+  같은 검증을 다시 실행해야 한다.
+
+### Reviewer Recommendation
+
+안전한 stack frame allowlist와 한 줄 structured JSON 출력을 구현하고 focused marker tests, repository gate,
+isolated PostgreSQL 17 검증을 다시 실행한다. IMPLEMENTATION/VERIFICATION evidence를 추가한 뒤
+`/m7-review DATA-004`를 재실행한다. REVIEW registry recommendation은 `Sol / High`이며, 실제 review 세션의
+reasoning effort는 노출되지 않아 추정하지 않았다.
