@@ -2,7 +2,7 @@
 
 ## Status
 
-REVIEWED-MINOR
+CLOSED
 
 ## PLAN
 
@@ -398,3 +398,54 @@ APPROVE WITH MINOR FIX
 
 기술 구현은 승인한다. PR 본문에 위 결합 이유와 리뷰 순서를 추가한 뒤 DATA-003 review를 다시 실행해
 최종 `CLOSED` 상태를 기록한다. Application code나 test의 재작업은 요구하지 않는다.
+
+## REVIEW — 2026-09-06 Re-review
+
+### Verdict
+
+APPROVE
+
+### Findings by Severity
+
+- Critical/High/Medium/Minor: 없음.
+
+### Blocking Issues
+
+없음.
+
+### Minor Issues
+
+없음. 이전 review의 유일한 minor item은 해소됐다.
+
+### Minor Item Resolution
+
+- 병합된 PR #60 본문에 변경 라인 400줄 목표 초과의 결합 이유를 추가했다. Finding별 canonical
+  evidence가 승인된 PLAN, IMPLEMENTATION, VERIFICATION, REVIEW 이력을 하나의 감사 가능한
+  checkpoint로 누적하므로 DATA-003 문서를 구현과 분리하지 않았다는 점을 명시했다.
+- 같은 본문에 `postgres-error helper -> Album/Signup service wiring -> focused unit/service tests ->
+  canonical PostgreSQL verification evidence` 순서의 리뷰 안내를 추가했다.
+- 체크리스트의 UI 항목도 실제 상태인 "UI 변경 없음"으로 명확히 했다.
+
+### Review Checks
+
+- Approved PLAN과 구현 diff를 다시 대조했다. Direct `DrizzleQueryError.cause`의 SQLSTATE가 정확히
+  `23505`이고 service별 known constraint 이름이 정확히 일치할 때만 기존 conflict `AppError`로
+  변환하며, unknown constraint와 unrelated DB error는 원형 및 generic 500을 유지한다.
+- DATA-003 병합 커밋 `f7d2061` 이후 현재 통합 HEAD까지 관련 application/test 파일 변경은 없다.
+- 최신 P0 Foundation Checkpoint는 실제 PostgreSQL 17에서 Album create/update slug, signup
+  email/nickname conflict의 409, unrelated DB error의 generic 500, signup conflict rollback을 모두
+  PASS로 재검증했다. Focused regression과 repository gate 및 build도 모두 PASS다.
+- Repository, transaction ownership, authorization, HTTP contract, cache, observability, schema/migration
+  경계를 변경한 증거가 없다. 이번 re-review에서 application code나 test는 수정하지 않았다.
+
+### Remaining Risks
+
+- Constraint 이름과 Drizzle direct cause shape에 대한 의도적인 결합은 유지된다. Dependency 또는
+  schema 변경 시 unit과 실제 PostgreSQL 검증을 다시 수행해야 한다.
+- 실제 PostgreSQL test의 영구 CI lifecycle 편입은 승인된 범위대로 DATA-008에 남아 있다.
+- Production DB와 production credential은 검증 범위 밖이다.
+
+### Reviewer Recommendation
+
+이전 minor evidence item이 해소됐고 approved PLAN의 구현 및 필수 검증이 유지되므로 DATA-003을
+`CLOSED`로 종료한다. DATA-003에 필요한 후속 조치는 없다.
