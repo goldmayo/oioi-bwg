@@ -124,3 +124,39 @@ FAIL
 ## Verdict
 
 FAIL
+
+---
+
+## Re-run — 2026-09-06 06:43 KST
+
+### Current Integrated HEAD
+
+- 브랜치: `migration_M7_P0_Foundation_Checkpoint`
+- HEAD: `939aee85f730952447776b8747c6f0733ddc9519`
+- working tree: clean
+
+### Canonical Evidence Precondition
+
+- DATA-001 — `CLOSED`
+- DATA-009 — `CLOSED`
+- DATA-004 — `REWORK`
+- DATA-003 — `CLOSED`
+- DATA-002 — `CLOSED`
+
+DATA-004가 `CLOSED`가 아니므로 "다섯 canonical evidence가 모두 CLOSED"라는 필수 선행 조건을
+충족하지 않는다.
+
+### Execution
+
+사용자 지시의 immediate-fail 조건에 따라 integrated signup/concurrency/error/logging/upload 검사,
+repository gate, PostgreSQL verification을 실행하지 않았다. PostgreSQL service/database에 연결하지
+않았고 기존 local application DB와 production credential을 사용하거나 변경하지 않았다.
+
+### Required Next Action
+
+DATA-004의 canonical `REWORK` 항목을 승인된 범위에서 수정·검증·재검토해 `CLOSED`로 만든 뒤 현재
+통합 HEAD에서 P0 Foundation Checkpoint 전체를 다시 실행한다.
+
+### Verdict
+
+FAIL
