@@ -161,6 +161,48 @@ function safeTraceContext(event: ErrorEvent) {
   };
 }
 
+function safeStackText(value: unknown): string | undefined {
+  return typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 512 &&
+    !/[\r\n]/.test(value)
+    ? value
+    : undefined;
+}
+
+function safeStackNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+}
+
+function safeStacktrace(event: ErrorEvent) {
+  const values = readProperty(readProperty(event, "exception"), "values");
+  if (!Array.isArray(values) || values.length === 0) return undefined;
+
+  const stacktrace = readProperty(values[values.length - 1], "stacktrace");
+  const frames = readProperty(stacktrace, "frames");
+  if (!Array.isArray(frames)) return undefined;
+
+  const safeFrames = frames.flatMap((frame) => {
+    const filename = safeStackText(readProperty(frame, "filename"));
+    const functionName = safeStackText(readProperty(frame, "function"));
+    const lineno = safeStackNumber(readProperty(frame, "lineno"));
+    const colno = safeStackNumber(readProperty(frame, "colno"));
+
+    if (!filename && !functionName && lineno === undefined && colno === undefined) return [];
+
+    return [
+      {
+        ...(filename ? { filename } : {}),
+        ...(functionName ? { function: functionName } : {}),
+        ...(lineno !== undefined ? { lineno } : {}),
+        ...(colno !== undefined ? { colno } : {}),
+      },
+    ];
+  });
+
+  return safeFrames.length > 0 ? { frames: safeFrames } : undefined;
+}
+
 /** Sentry가 보강한 event도 전송 직전에 안전한 field만 남긴다. */
 export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
   const eventTag = safeTag(event, "event");
@@ -175,6 +217,7 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
   const routerKind = safeTag(event, "next.router_kind");
   const routeType = safeTag(event, "next.route_type");
   const trace = safeTraceContext(event);
+  const stacktrace = safeStacktrace(event);
 
   const tags = {
     event: eventName,
@@ -207,6 +250,7 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
                   ? "OutputContractError"
                   : "UnknownError",
           value: "Unexpected server error",
+          ...(stacktrace ? { stacktrace } : {}),
         },
       ],
     },

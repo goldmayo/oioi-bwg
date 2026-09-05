@@ -2,7 +2,7 @@
 
 ## Status
 
-REWORK
+CLOSED
 
 ## PLAN
 
@@ -448,3 +448,185 @@ argument를 parse하여 schema와 marker 부재를 확인하도록 보완해야 
 isolated PostgreSQL 17 검증을 다시 실행한다. IMPLEMENTATION/VERIFICATION evidence를 추가한 뒤
 `/m7-review DATA-004`를 재실행한다. REVIEW registry recommendation은 `Sol / High`이며, 실제 review 세션의
 reasoning effort는 노출되지 않아 추정하지 않았다.
+
+## REWORK IMPLEMENTATION
+
+### Changed Files
+
+- `src/server/observability/safe-server-event.ts`
+- `src/server/observability/server-logger.ts`
+- `src/server/observability/server-logger.test.ts`
+- `docs/migration/m7-foundation-fixes/DATA-004.md`
+
+검증 전용 `.local/m7-data-004-verification.test.ts`도 현재 동작을 검증하도록 갱신했지만 Git ignore
+대상이며 commit 범위에는 포함하지 않는다.
+
+### Implemented Decision
+
+- 최신 P0 Foundation Checkpoint가 재확인한 두 DATA-004 blocker만 수정했다.
+- `sanitizeServerSentryEvent()`는 Sentry exception chain의 최상위 exception에 있는 stacktrace에서
+  `filename`, `function`, `lineno`, `colno`만 새 frame 객체로 복사한다. 빈 값, 512자를 넘거나 줄바꿈이
+  포함된 location 문자열과 음수·비정수 위치는 버린다.
+- 원본 exception type/value, mechanism, module, absolute path, source context, pre/post context, frame vars,
+  nested cause, request, user, extra와 breadcrumb는 기존처럼 final event에 복사하지 않는다.
+- final exception의 안전한 type/value, event/source/type/code tags와 검증된 trace context는 유지한다.
+- `reportServerError()`는 기존 allowlist payload만 `JSON.stringify()`한 뒤 `console.error()`에 단일 문자열
+  인자로 전달한다. raw error는 JSON serialization 입력에 포함하지 않는다.
+- HTTP 공개 error body, API/Auth.js/instrumentation 연결, Sentry capture 조건과 외부 contract는 변경하지
+  않았다.
+
+### Tests Added or Changed
+
+- server logger test가 `console.error()`의 실제 call argument 수와 타입을 검사하고, 단일 JSON 문자열을
+  직접 parse해 timestamp/level/event/source/error type/code를 확인한다.
+- 같은 test가 console 인자 문자열에 실제 CR/LF가 없음을 확인한다.
+- Sentry sanitizer test에 서로 다른 두 safe frame을 추가해 filename/function/line/column이 final event에
+  남는지 확인한다.
+- 같은 frame의 `abs_path`, `context_line`, `pre_context`, `post_context`, `vars`, `module`, mechanism cause와
+  SQL/params/email/password hash/OTP hash/IP/token marker가 모두 제거되는지 확인한다.
+- 기존 API, Auth.js reporter와 Next instrumentation redaction test를 함께 재실행했다.
+- 격리 PostgreSQL test도 console JSON wire와 safe frame 보존 assertion을 추가하고 실제 credential
+  unique violation의 SQL/params/email/password hash 및 raw cause 비노출을 다시 확인했다.
+
+### Plan Deviations
+
+- 새 deviation은 없다. 이번 변경은 승인된 PLAN이 원래 요구했지만 최초 구현에서 제외했던 safe stack
+  location 보존과 structured JSON stdout을 복원한다.
+- 최초 구현의 upload Action 관련 deviation과 다른 DATA finding은 변경하지 않았다.
+- `m7-implement`의 최초 구현용 `PLANNED` 상태 대신 canonical review의 `REWORK` 상태에서 시작했으며,
+  사용자가 기존 PLAN을 다시 작성하지 않고 두 review blocker만 구현하도록 명시적으로 승인했다.
+
+### Selected Model / Effort
+
+- Registry IMPLEMENT recommendation은 `Sol / High`다.
+- 실제 rework runtime model은 `GPT-5`이며 별도 model override를 사용하지 않았다. Reasoning effort는
+  실행 환경에 노출되지 않아 추정하지 않는다.
+
+## REWORK VERIFICATION
+
+### Commands Run and Results
+
+1. `pnpm exec prettier --write src/server/observability/safe-server-event.ts src/server/observability/server-logger.ts src/server/observability/server-logger.test.ts .local/m7-data-004-verification.test.ts`
+   - 변경 source/test와 local verification artifact formatting 완료.
+2. `pnpm exec vitest run src/server/observability/server-logger.test.ts src/server/observability/auth-error-reporter.test.ts src/server/http/api-response.test.ts src/instrumentation.test.ts --reporter=verbose`
+   - 최초 실행: 16 tests 통과, 4 tests 실패. 기존 네 assertion이 console mock call array를 사후
+     `JSON.stringify()`한 결과의 escape된 문자열을 검사하고 있어 새 wire format과 맞지 않았다.
+3. 기존 console assertion을 실제 단일 문자열 인자 parse 방식으로 바꾼 뒤
+   `pnpm exec prettier --write src/server/observability/server-logger.test.ts`와 같은 focused Vitest 명령을
+   재실행했다.
+   - 최종: 4 files / 20 tests 통과.
+4. `pnpm type-check`
+   - 통과.
+5. `pnpm exec eslint src/server/observability/safe-server-event.ts src/server/observability/server-logger.ts src/server/observability/server-logger.test.ts .local/m7-data-004-verification.test.ts`
+   - tracked source/test 오류 0개. `.local` 파일은 repository ignore 규칙에 따라 ignored warning 1개,
+     command exit 0.
+6. `pnpm test:harness`
+   - 7 tests 통과.
+7. `pnpm lint`
+   - 통과.
+8. `pnpm lint:fsd`
+   - 통과, 문제 0개.
+9. `pnpm test:unit:run`
+   - 41 files / 154 tests 통과.
+10. `pnpm build`
+    - Next.js 16.3.3 production build, TypeScript 및 static page 23개 생성 통과.
+11. `pnpm format:check`
+    - 모든 대상이 Prettier format과 일치.
+12. `git diff --check`
+    - 통과.
+
+### Actual PostgreSQL Evidence
+
+- 대상은 `compose.dev.yml`의 local PostgreSQL
+  `17.11 (Debian 17.11-1.pgdg13+2)`와 신규 임시 DB
+  `m7_data_004_rework_20260906_0612`였다.
+- DB가 기존에 없음을 catalog에서 확인한 뒤 생성했고, 명시적 localhost URL로 local database guard를
+  통과했다. 실제 Drizzle migrator가 tracked migration 4개를 적용했다.
+- `M7_DATA_004_DATABASE_URL=<isolated-local-url> node node_modules/vitest/vitest.mjs run --config .local/m7-data-004-verification.config.ts --reporter=verbose`
+  - 1 file / 1 test 통과.
+  - 실제 password credential 23505의 raw Drizzle message에 synthetic email/password hash가 있음을 먼저
+    확인했다.
+  - 실제 `toErrorResponse()`와 server logger를 통과한 console 인자는 한 개의 줄바꿈 없는 JSON
+    문자열이었고, parse 결과에 safe level/event/source/database/23505가 남았다.
+  - final Sentry event는 safe filename/function/line/column과 trace/span ID를 유지했다.
+  - console/capture/tags/final event/HTTP body에는 credential SQL, params, email, password hash, cookie,
+    token과 raw cause marker가 남지 않았다. 공개 body는 기존 generic 500을 유지했다.
+- test client 종료 후 임시 DB connection 0을 확인하고 명시적으로 drop했다. catalog 재조회 결과 DB
+  잔존 수는 0이었다.
+- 기존 local application DB와 production DB에는 연결하거나 migration/fixture를 적용하지 않았다.
+
+PostgreSQL command sequence:
+
+```text
+docker compose -f compose.dev.yml ps --format json
+docker compose -f compose.dev.yml exec -T postgres psql ... <임시 DB 사전 존재 여부 확인>
+docker compose -f compose.dev.yml exec -T postgres createdb -U oioibawige m7_data_004_rework_20260906_0612
+DATABASE_URL=<isolated-local-url> node --import tsx scripts/assert-local-database.ts
+M7_DATA_004_DATABASE_URL=<isolated-local-url> node node_modules/vitest/vitest.mjs run --config .local/m7-data-004-verification.config.ts --reporter=verbose
+docker compose -f compose.dev.yml exec -T postgres psql ... <PostgreSQL version, migration 4개 확인>
+docker compose -f compose.dev.yml exec -T postgres psql ... <임시 DB connection 0 확인>
+docker compose -f compose.dev.yml exec -T postgres dropdb -U oioibawige m7_data_004_rework_20260906_0612
+docker compose -f compose.dev.yml exec -T postgres psql ... <임시 DB 잔존 수 0 확인>
+```
+
+### Remaining Unknowns
+
+- 실제 Sentry 조직의 최종 수신 payload, Relay 추가 processing/scrubbing, grouping, retention과 접근 권한은
+  production credential을 사용하지 않아 확인하지 않았다.
+- 실제 runtime에서 Sentry가 생성하는 frame availability와 source-map 해석 결과는 환경에 따라 달라질 수
+  있다. 현재 설치된 SDK의 `ErrorEvent` shape, final sanitizer test와 production build로 허용 필드의
+  보존을 검증했다.
+- client Sentry/replay 개인정보 정책과 application request ID 도입은 기존 PLAN대로 범위 밖이다.
+- P0 Foundation Checkpoint의 전체 PASS 여부는 DATA-004 re-review와 다른 included finding의 canonical
+  status를 반영해 별도로 다시 실행해야 한다.
+
+## RE-REVIEW
+
+### Verdict
+
+APPROVE
+
+### Findings by Severity
+
+없음.
+
+### Blocking Issues
+
+없음. 최신 P0 Foundation Checkpoint의 두 DATA-004 blocker가 모두 해소됐다.
+
+- `src/server/observability/safe-server-event.ts`는 final Sentry event의 최상위 exception stack에서
+  `filename`, `function`, `lineno`, `colno`만 새 객체로 복사한다. SQL/params가 들어간 raw message,
+  frame source context/vars, email, password hash, OTP hash, IP, mechanism data와 raw cause는 복사하지
+  않는다.
+- `src/server/observability/server-logger.ts`는 allowlisted payload를 `JSON.stringify()`하고
+  `console.error()`에 단일 문자열 인자로 전달한다. 변경 test는 반환 인자의 타입과 개수, JSON parse,
+  실제 CR/LF 부재를 직접 검증한다.
+
+### Minor Issues
+
+없음.
+
+### Remaining Risks
+
+- 실제 Sentry 조직의 수신 payload, Relay 처리, source-map 해석, grouping, retention과 접근 권한은
+  production credential을 사용하지 않아 확인하지 않았다. 이 범위는 승인된 PLAN의 remaining unknown과
+  동일하며 application의 fail-closed `beforeSend` 동작을 막지 않는다.
+- ignored local PostgreSQL verification fixture는 review 대상 commit에 포함되지 않지만, canonical
+  REWORK VERIFICATION에 격리 PostgreSQL 17 실행 명령과 1 file / 1 test 통과, 임시 DB 제거 결과가
+  기록돼 있다.
+
+### Reviewer Recommendation
+
+- APPROVE. `Status = CLOSED`로 갱신한다.
+- REWORK diff는 기존 관측 설계를 바꾸지 않고 두 blocker만 해결했다. 새 dependency나 범용 logging/error
+  abstraction은 추가하지 않았다.
+- 기존 HTTP generic 500 body는 변경되지 않았고 focused API test가 이를 재확인했다.
+- Sentry `sendDefaultPii: false`/fail-closed `beforeSend`와 Next instrumentation의 allowlisted metadata
+  경계는 약화되지 않았다.
+- review에서 다음 focused command를 현재 HEAD에 다시 실행했다.
+  `pnpm exec vitest run src/server/observability/server-logger.test.ts src/server/observability/auth-error-reporter.test.ts src/server/http/api-response.test.ts src/instrumentation.test.ts --reporter=verbose`
+  결과는 4 files / 20 tests 통과였다.
+- Registry REVIEW recommendation은 `Sol / High`다. 실제 review runtime model은 `GPT-5`이며 reasoning
+  effort는 실행 환경에 노출되지 않아 추정하지 않았다.
+
+Canonical evidence: `docs/migration/m7-foundation-fixes/DATA-004.md`
