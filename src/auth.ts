@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 
+import { reportAuthError } from "@/server/observability/auth-error-reporter";
 import { authenticateCredentials } from "@/server/services/authentication-service";
 
 const credentialsSchema = z.object({
@@ -10,6 +11,7 @@ const credentialsSchema = z.object({
 });
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
+  logger: { error: reportAuthError },
   providers: [
     Credentials({
       credentials: {

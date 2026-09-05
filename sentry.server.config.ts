@@ -1,11 +1,15 @@
 import * as Sentry from "@sentry/nextjs";
 
+import { sanitizeServerSentryEvent } from "./src/server/observability/safe-server-event";
+
 /**
  * Node.js 서버 환경 전용 Sentry 초기화
  */
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || "production",
+  sendDefaultPii: false,
+  beforeSend: sanitizeServerSentryEvent,
 
   // M1에서는 error capture만 유지하고 tracing은 비활성화한다.
   tracesSampleRate: 0.0,
