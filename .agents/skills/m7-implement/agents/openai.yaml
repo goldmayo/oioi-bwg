@@ -1,0 +1,4 @@
+interface:
+  display_name: "M7 Implement"
+  short_description: "Implement an approved M7 finding plan"
+  default_prompt: "Use $m7-implement for DATA-001."

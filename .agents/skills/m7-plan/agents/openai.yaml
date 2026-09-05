@@ -1,0 +1,4 @@
+interface:
+  display_name: "M7 Plan"
+  short_description: "Plan and record one M7 finding"
+  default_prompt: "Use $m7-plan for DATA-001."

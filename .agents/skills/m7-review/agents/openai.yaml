@@ -1,0 +1,4 @@
+interface:
+  display_name: "M7 Review"
+  short_description: "Review and record one M7 finding"
+  default_prompt: "Use $m7-review for DATA-001."
