@@ -1,0 +1,4 @@
+interface:
+  display_name: "M7 Foundation Fix"
+  short_description: "M7 foundation findings plan, implementation, review"
+  default_prompt: "Use $m7-foundation-fix to plan DATA-001 without changing code."
