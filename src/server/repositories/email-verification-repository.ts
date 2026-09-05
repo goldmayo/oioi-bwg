@@ -1,11 +1,19 @@
 import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
 
-import type { DbExecutor } from "../db";
+import type { DbExecutor, Transaction } from "../db";
 import {
   emailVerificationChallenge,
   emailVerificationRateLimit,
   type EmailVerificationRateLimitScope,
 } from "../db/schema";
+
+const OTP_REQUEST_LOCK_NAMESPACE = "oioi-bwg:signup-otp";
+
+export function acquireOtpRequestLock(executor: Transaction, email: string) {
+  return executor.execute(
+    sql`select pg_advisory_xact_lock(hashtextextended(${`${OTP_REQUEST_LOCK_NAMESPACE}:${email}`}, 0))`,
+  );
+}
 
 export async function findLatestChallengeForUpdate(executor: DbExecutor, email: string) {
   const [challenge] = await executor
