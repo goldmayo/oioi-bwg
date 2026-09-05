@@ -19,9 +19,7 @@ function createR2Client() {
   });
 }
 
-/**
- * R2에 public asset을 저장하고 custom domain 기반 canonical URL을 반환한다.
- */
+/** R2에 public asset을 저장하고 custom domain 기반 canonical URL을 반환한다. */
 export async function uploadPublicAsset({
   objectKey,
   body,

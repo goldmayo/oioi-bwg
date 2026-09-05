@@ -22,16 +22,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import type { AlbumFormValues } from "../model/schemas";
 
-import { AlbumFormDialog } from "./AlbumFormDialog";
+import { AlbumFormDialog, type UploadAlbumImage } from "./AlbumFormDialog";
 
 const PAGE_SIZE = 10;
 
 interface AlbumManagerClientProps {
   canManage: boolean;
+  onUploadImage: UploadAlbumImage;
   onMutationError?: (error: unknown) => void;
 }
 
-export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerClientProps) {
+export function AlbumManagerClient({
+  canManage,
+  onUploadImage,
+  onMutationError,
+}: AlbumManagerClientProps) {
   const queryClient = useQueryClient();
   const { data: albums } = useSuspenseQuery(albumQueries.adminList());
   const [search, setSearch] = useState("");
@@ -246,6 +251,7 @@ export function AlbumManagerClient({ canManage, onMutationError }: AlbumManagerC
           open={formOpen}
           onOpenChange={setFormOpen}
           album={editingAlbum}
+          onUploadImage={onUploadImage}
           onSubmit={handleSubmit}
         />
       )}
