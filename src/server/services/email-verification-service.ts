@@ -10,6 +10,7 @@ import {
 } from "../email/signup-verification-email";
 import { AppError } from "../errors/app-error";
 import {
+  acquireOtpRequestLock,
   findChallengeById,
   findLatestChallengeForUpdate,
   incrementFailedAttempts,
@@ -55,10 +56,12 @@ export async function requestOtp(emailInput: string, ipAddress: string) {
   const email = normalizeEmail(emailInput);
   if (!email || !ipAddress) throw new AppError("OTP_INVALID");
 
-  const now = new Date();
-  const nowIso = now.toISOString();
   const otp = createOtp();
   const result = await getDatabase().transaction(async (tx) => {
+    await acquireOtpRequestLock(tx, email);
+
+    const now = new Date();
+    const nowIso = now.toISOString();
     const previous = await findLatestChallengeForUpdate(tx, email);
     if (previous && now.getTime() - new Date(previous.lastSentAt).getTime() < RESEND_COOLDOWN_MS) {
       throw new AppError("OTP_COOLDOWN");
