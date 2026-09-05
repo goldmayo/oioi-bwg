@@ -131,6 +131,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "coverage/**",
     ".agents/**",
+    ".local/**",
     "docs/migration/harness/**",
     "next-env.d.ts",
   ]),
