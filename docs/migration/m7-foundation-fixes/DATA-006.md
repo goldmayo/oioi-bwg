@@ -2,7 +2,7 @@
 
 ## Status
 
-VERIFIED
+CLOSED
 
 ## PLAN
 
@@ -386,4 +386,45 @@ schema, migration, SQL, repository, service, transaction 또는 local applicatio
 
 ## REVIEW
 
-pending
+### Verdict
+
+APPROVE
+
+### Findings by Severity
+
+- Blocking/Critical: 없음.
+- Major: 없음.
+- Minor: 없음.
+
+원래 결함의 두 누락 경로가 모두 닫혔다. Album rename/delete는 Album 목록의 기존 invalidation을
+유지하면서 route-private callback으로 Song admin list를 invalidate하고, lyrics save는 성공 시에만 Song
+admin list를 invalidate한다. create/동일-name update/실패 경로의 불필요 invalidation은 추가되지 않았다.
+
+### Blocking Issues
+
+없음. 승인 계획, 구현 diff, required regression coverage, repository gate와 GitHub Actions 결과가 모두
+확인되었다. 이 finding은 DB 변경이 아니므로 신규 PostgreSQL 검증 비적용 판단도 타당하다.
+
+### Minor Issues
+
+없음. authorization/error 처리는 기존 403 ability invalidation을 보존하고, API/DTO 계약과 server/data
+access 경계는 변경하지 않았다. generic cache abstraction, broad key invalidation, optimistic write 또는
+다른 DATA finding의 변경도 없다.
+
+### Remaining Risks
+
+- browser navigation Playwright는 실행하지 않았지만 필수 검증 누락은 아니다. production
+  `QueryClient`를 사용한 focused tests가 active Album refetch, inactive Song stale, exact key 비영향,
+  failure와 editor local draft 보존을 직접 검증한다.
+- inactive Song query는 TanStack Query 기본 의미대로 즉시 fetch하지 않고 stale 상태로 남아 다음 active
+  consumer에서 수렴한다.
+- 레지스트리 REVIEW 권고는 `Sol Medium`이지만 실제 실행 모델/effort 메타데이터는 제공되지 않아
+  일치 여부를 추론하지 않는다.
+
+### Reviewer Recommendation
+
+- `APPROVE`: 추가 코드 수정 없이 PR #64를 squash and merge할 수 있다.
+- reviewer focused rerun: 3 files, 8 tests 통과.
+- GitHub Actions `verify`: 통과(1m57s).
+- required next action: PR 제목/본문을 현재 최종 diff 기준으로 유지한 뒤 `migration_develop`에 squash and
+  merge한다.
