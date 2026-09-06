@@ -234,6 +234,12 @@ Base UI → shadcn/ui → Tailwind CSS
 
 - production DB에 연결하거나 변경하지 않는다. 명시적인 사용자 승인 없이는 production credential을 사용하지 않는다.
 - 로컬 DB는 Docker Compose PostgreSQL만 사용한다.
+- repository의 `supabase-postgres-best-practices` 스킬은 PostgreSQL 자체의 query, schema, index,
+  transaction, lock, monitoring, performance 규칙에만 사용한다.
+- 위 스킬의 Supabase 플랫폼 전용 지침과 가정은 적용하지 않는다. 여기에는 Supabase Auth/RLS helper,
+  SDK/API, Dashboard, Supavisor/관리형 pooler, hosted database 설정이 포함된다.
+- 스킬 내용이 이 저장소의 architecture SSOT, Docker Compose PostgreSQL, Drizzle 구성 또는 PostgreSQL
+  공식 문서와 충돌하면 스킬이 아니라 저장소 규칙과 PostgreSQL 공식 문서를 따른다.
 - `db:migrate`, `db:pull`, `db:studio`는 local database guard를 통과해야 한다.
 - 로컬 데이터는 승인된 `.local` dump를 `pnpm db:restore-local`로 명시적으로 복원한다.
 - 임의의 seed 데이터나 `docker compose up` 자동 데이터 주입을 만들지 않는다.
