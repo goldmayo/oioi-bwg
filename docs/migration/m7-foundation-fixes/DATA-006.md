@@ -2,7 +2,7 @@
 
 ## Status
 
-PLANNED
+VERIFIED
 
 ## PLAN
 
@@ -259,11 +259,130 @@ consumer만 query key factory를 사용해 invalidate하고, Album feature와 So
 
 ## IMPLEMENTATION
 
-pending
+### Changed Files
+
+수정:
+
+- `src/features/manage-album/ui/AlbumManagerClient.tsx`
+- `src/app/(admin)/admin/albums/_ui/AdminAlbumManager.tsx`
+- `src/app/(admin)/admin/edit/[slug]/_ui/AdminLyricsEditor.tsx`
+
+추가:
+
+- `src/features/manage-album/ui/AlbumManagerClient.test.tsx`
+- `src/app/(admin)/admin/albums/_ui/AdminAlbumManager.test.tsx`
+- `src/app/(admin)/admin/edit/[slug]/_ui/AdminLyricsEditor.test.tsx`
+
+기록 갱신:
+
+- `docs/migration/m7-foundation-fixes/DATA-006.md`
+
+### Implemented Decision
+
+- `AlbumManagerClient`에 `onNameChangeOrDelete` callback을 추가했다.
+- Album update의 서버 응답 name과 기존 name이 실제로 달라진 경우에만 callback을 호출한다. create와
+  동일-name update는 Song cache에 영향을 주지 않는다.
+- Album delete 성공 시 callback을 호출한다. `AdminAlbumManager`가 이 의미 기반 callback을 정확히
+  `songQueryKeys.adminList()` invalidation에 연결한다.
+- lyrics save 성공 시 `AdminLyricsEditor`가 정확히 `songQueryKeys.adminList()`를 invalidate한다.
+- secondary invalidation은 `void`로 시작해 성공한 persistence를 refetch 대기/실패 UX로 바꾸지 않는다.
+- 기존 Album 목록 invalidation, 403 ability invalidation, RSC-only public read, editor local draft ownership은
+  유지했다.
+
+### Plan Deviations
+
+없음. 승인된 production file 3개와 test file 3개 범위 안에서 구현했으며 공통 QueryClient, entity API,
+server/DB, config, architecture 문서를 변경하지 않았다.
+
+### Tests Added
+
+- `AlbumManagerClient.test.tsx` 5개
+  - create와 동일-name update의 Song cache 비영향
+  - rename/delete의 active Album list refetch 및 inactive Song list stale 전환
+  - update failure 시 두 목록 모두 비무효화
+- `AdminAlbumManager.test.tsx` 1개
+  - route callback이 Song admin list만 invalidate하고 Album admin list와 Song detail은 건드리지 않음
+- `AdminLyricsEditor.test.tsx` 2개
+  - lyrics save 성공의 Song-only invalidation과 YouTube ID local draft 보존
+  - 실패 시 data list 비무효화와 기존 403 ability refresh/draft 보존
 
 ## VERIFICATION
 
-pending
+### Commands Run
+
+```bash
+pnpm exec vitest run 'src/features/manage-album/ui/AlbumManagerClient.test.tsx'
+pnpm exec vitest run 'src/app/(admin)/admin/albums/_ui/AdminAlbumManager.test.tsx'
+pnpm exec vitest run 'src/app/(admin)/admin/edit/[slug]/_ui/AdminLyricsEditor.test.tsx'
+pnpm exec vitest run \
+  'src/features/manage-album/ui/AlbumManagerClient.test.tsx' \
+  'src/app/(admin)/admin/albums/_ui/AdminAlbumManager.test.tsx' \
+  'src/app/(admin)/admin/edit/[slug]/_ui/AdminLyricsEditor.test.tsx'
+pnpm verify
+pnpm exec eslint --fix \
+  'src/features/manage-album/ui/AlbumManagerClient.test.tsx' \
+  'src/app/(admin)/admin/albums/_ui/AdminAlbumManager.test.tsx' \
+  'src/app/(admin)/admin/edit/[slug]/_ui/AdminLyricsEditor.test.tsx'
+pnpm format:check
+pnpm exec prettier --write \
+  'src/app/(admin)/admin/edit/[slug]/_ui/AdminLyricsEditor.test.tsx'
+pnpm build
+```
+
+수정 후 최종 상태에서 focused Vitest 묶음을 한 번 더 실행했다.
+
+### Results
+
+- focused Vitest 최종: 3 files passed, 8 tests passed.
+- `pnpm verify` 최종:
+  - type-check 통과
+  - harness 7 tests 통과
+  - ESLint 통과
+  - FSD/Steiger `No problems found`
+  - Vitest 44 files, 162 tests 통과
+- `pnpm format:check` 최종: 모든 파일 Prettier style 통과.
+- `pnpm build`: Next.js 16.3.3 production build, TypeScript, page data 수집, static page 23개 생성
+  모두 통과.
+
+### Actual PostgreSQL Evidence
+
+신규 PostgreSQL 검증은 해당 없음이다. 구현 diff는 client Query invalidation과 test/evidence만 변경했고
+schema, migration, SQL, repository, service, transaction 또는 local application DB를 변경하지 않았다.
+기존 `.local/M7-POSTGRES-VERIFICATION.md`의 Album→Song CASCADE 관찰은 전제 확인에만 사용했으며 cache
+검증 결과로 대체하지 않았다.
+
+### Failures and Resolutions
+
+1. 첫 `AdminAlbumManager` focused test는 Vitest가 auth feature barrel을 통해 들어온 NextAuth의
+   `next/server` entry를 해석하지 못해 suite import 단계에서 실패했다. 테스트 목적과 무관한 auth와
+   upload action을 test-local mock으로 격리했고 공통 config/production import는 바꾸지 않았다.
+2. 첫 `pnpm verify`는 `toHaveValue` matcher의 TypeScript declaration 부재 2건으로 type-check에서
+   실패했다. DOM input의 native `value` assertion으로 바꿨다.
+3. 다음 `pnpm verify`는 새 test 3개의 import sort 오류로 lint에서 실패했다. 지정된 세 test에만 ESLint
+   autofix를 적용했다.
+4. 첫 `pnpm format:check`는 `AdminLyricsEditor.test.tsx`의 줄바꿈을 지적했다. 해당 파일만 Prettier로
+   정리했고 최종 check가 통과했다.
+
+### Remaining Unknowns
+
+- browser navigation 자체를 Playwright로 실행하지는 않았다. 승인 계획의 검증 경계대로 production
+  `QueryClient`에서 active query refetch, inactive query invalidation/stale, exact target, local draft
+  보존을 검증했다.
+- 실제 실행 모델/effort 메타데이터는 제공되지 않아 레지스트리의 IMPLEMENT `Terra` 사용 여부를
+  추론하지 않는다.
+- review verdict는 아직 없으며 `REVIEW`는 `pending`으로 유지한다.
+
+### Diff Review Packet
+
+- finding: `M7-DATA-006 — Query invalidation gaps`
+- plan 핵심: Album rename/delete와 lyrics save가 실제로 변경하는 Song admin list만 명시적으로
+  invalidate하고 cross-resource 연결은 route-private callback으로 유지
+- changed files: production 3개 수정, focused test 3개 추가, canonical evidence 1개 갱신
+- git diff summary: 7 files, 528 insertions, 7 deletions — Album semantic callback 및 route 연결,
+  lyrics success invalidation, 8개 회귀 테스트, IMPLEMENTATION/VERIFICATION 기록
+- test results: focused 3 files/8 tests, 전체 44 files/162 tests, type-check/harness/lint/FSD/format/build 통과
+- known risks: inactive query는 즉시 fetch하지 않고 invalidated/stale로 남는 TanStack Query 의미를
+  유지하며, browser navigation E2E는 이번 승인 범위에 포함하지 않음
 
 ## REVIEW
 
