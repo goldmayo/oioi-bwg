@@ -2,7 +2,7 @@
 
 ## Status
 
-PLANNED
+VERIFIED
 
 ## PLAN
 
@@ -388,11 +388,137 @@ framework, or tracked .local files.
 
 ## IMPLEMENTATION
 
-pending
+### Changed Files
+
+- `tests/integration/m7-foundation.postgres.test.ts`
+- `vitest.postgres.config.ts`
+- `scripts/run-postgres-integration-tests.ts`
+- `package.json`
+- `.github/workflows/verify.yml`
+- `docs/migration/m7-foundation-fixes/DATA-008.md`
+
+Application source, schema, migration, unit coverage config와 `.local` 파일은 변경하지 않았다. 새 dependency와
+lockfile 변경도 없다.
+
+### Implemented Decision
+
+- 하나의 tracked PostgreSQL test file에 auth/signup/OTP와 content/authz/persistence 두 sequential
+  suite, 총 9 tests를 추가했다. DB/Repository/transaction/Service/requireUser/CASL은 실제 구현을
+  사용하고 외부 signup mail만 spy로 대체한다.
+- DATA-008 전용 runner가 명시적인 localhost PostgreSQL admin URL만 받고, PostgreSQL major 17을 확인한
+  뒤 안전한 `oioi_m7_test_*` 임시 DB를 생성한다. test DB URL은 child environment로만 전달하며 기존
+  `pnpm db:migrate`를 통해 local guard와 tracked migration을 재사용한다.
+- runner는 migration/test success와 failure 모두 `finally`에서 connection/advisory-lock 수를 확인하고
+  DB를 drop한다. 잔존 connection/lock 또는 drop/catalog/관리 connection 정리 실패를 최종 failure로
+  보존하며, 정확한 generated DB에만 best-effort force drop을 허용한다.
+- local command는 기존 `compose.dev.yml`의 PostgreSQL만 시작하고 임시 DB lifecycle을 실행한다. CI
+  command는 `M7_TEST_POSTGRES_ADMIN_URL`이 없으면 application `DATABASE_URL`이나 `.env`로 fallback하지
+  않는다.
+- GitHub Actions의 기존 verify job에 ephemeral `postgres:17` service와 password 없는 CI-only trust
+  auth를 추가했다. 기존 `pnpm verify` 다음에 `pnpm test:integration:postgres`, 이어서 format check를
+  실행한다.
+
+### Plan Deviations
+
+- Test file이 production Service를 import할 때 `request-context.ts`의 사용하지 않는 Auth.js import가
+  Node Vitest에서 `next/server` extension resolution 오류를 냈다. 기존 수동 PostgreSQL evidence와 같은
+  방식으로 test file 안에서 `@/auth`만 `auth() → null`로 stub했다. 실제 authorization assertion은
+  명시적인 RequestContext와 real `requireUser`/CASL/Service를 사용하며 Auth.js session/login을 integration
+  성공으로 주장하지 않는다. 허용 파일 범위, application behavior와 검증 invariant의 변경은 없다.
+- 그 외 PLAN deviation은 없다.
+
+### Tests Added
+
+`tests/integration/m7-foundation.postgres.test.ts`의 9 cases:
+
+1. `AUTH-T001` signup success, `PENDING → VERIFIED → CONSUMED`, ACTIVE identity 3종, replay 거부
+2. 실제 `profile_nickname_key` 23505의 409 mapping과 challenge/Account rollback
+3. 실제 `password_credential_email_key` 23505의 409 mapping과 challenge/Account/Profile rollback
+4. 동일 email 최초 OTP 동시 요청의 success 1/cooldown 1/mail 1/winner counter/PENDING 1
+5. cooldown 이후 재발급 동시 요청의 success 1/cooldown 1/mail 1/winner counter와
+   INVALIDATED/PENDING 상태
+6. PostgreSQL 17 및 migration `0000`~`0004` journal tag/SQL SHA-256 일치
+7. Album create/update와 Song global slug 실제 23505의 domain conflict/public 409, nullable Song slug 허용
+8. guest/USER/REVIEWER가 Album/Song privileged Service 10개에서 직접 거부되고 row count가 불변
+9. 실제 FK 23503의 앞선 insert rollback, Album cascade, public visibility, Song order, JSONB lyrics read
+
+### Commands Run
+
+```text
+pnpm exec prettier --write scripts/run-postgres-integration-tests.ts vitest.postgres.config.ts tests/integration/m7-foundation.postgres.test.ts package.json .github/workflows/verify.yml
+pnpm type-check
+pnpm test:integration:postgres:local
+docker compose -f compose.dev.yml exec -T postgres psql ... <temporary DB/advisory lock count>
+pnpm exec eslint scripts/run-postgres-integration-tests.ts tests/integration/m7-foundation.postgres.test.ts vitest.postgres.config.ts
+pnpm test:integration:postgres:local
+pnpm type-check && pnpm test:harness && pnpm lint && pnpm lint:fsd && pnpm test:unit:run && pnpm format:check && pnpm build && git diff --check
+PATH=/nonexistent /home/hsj95/.nvm/versions/node/v22.16.0/bin/node --import tsx scripts/run-postgres-integration-tests.ts --local
+docker compose -f compose.dev.yml exec -T postgres psql ... <temporary DB/advisory lock count>
+git push
+gh run watch 34047252005 --interval 10 --exit-status
+gh run view 34047252005 --job 101524404288 --log <filtered integration evidence>
+```
+
+Credential-bearing URL과 password는 명령/evidence에 기록하지 않았다.
+
+### Results
+
+- Local PostgreSQL: `17.11 (Debian 17.11-1.pgdg13+2)`.
+- 최종 local lifecycle: guard PASS, migration 0000~0004 PASS, 1 file / 9 tests PASS,
+  connection 0, advisory lock 0, 임시 DB drop 및 catalog 잔존 0.
+- 의도적 failure lifecycle: child `pnpm`만 찾을 수 없도록 `PATH=/nonexistent`를 사용해 DB 생성 직후
+  `spawn pnpm ENOENT`를 만들었다. command는 exit 1을 반환하면서 connection 0, advisory lock 0과 해당
+  임시 DB drop을 먼저 보고했고, 후속 catalog 조회도 DB 0/lock 0이었다.
+- Repository gates: type-check PASS, harness 7 tests PASS, lint PASS, FSD lint 문제 0,
+  unit 46 files / 182 tests PASS, format check PASS, Next.js 16.3.3 build 및 23/23 static pages PASS,
+  `git diff --check` PASS.
+- GitHub Actions run `34047252005`, job `101524404288`: PASS in 2m13s. Fresh checkout에서
+  PostgreSQL service major 17, local guard, migration, 1 file / 9 tests, connection 0/lock 0/drop,
+  기존 verify와 format check가 모두 통과했다.
+
+### Diagnostic Failures
+
+- 첫 local run은 migration 적용 뒤 test import에서 NextAuth가 extension 없는 `next/server`를 찾지 못해
+  0 tests로 실패했다. application regression이 아니며 위 Auth.js load-only stub으로 해소했다. runner는
+  이 실패에서도 임시 DB를 drop했고 후속 catalog DB/lock count는 각각 0이었다.
+- 이후 final code의 정상 local run, 의도적 child failure run과 CI run에는 실패가 없다.
+
+### Remaining Unknowns
+
+- Auth.js session/login과 browser E2E는 검증하지 않았다. direct Service security boundary만 DATA-008 P0로
+  검증했으며 browser와 coverage 정비는 계획대로 P2에 남는다.
+- Production schema/data/credential과 network mail/R2/Sentry는 사용하거나 검증하지 않았다.
+- GitHub Actions는 `postgres:17` major tag를 사용하며 runner도 major 17을 강제하지만 CI patch version은
+  evidence에 별도로 출력하지 않는다. local에서 17.11을 확인했다.
+- GitHub Actions는 checkout/setup action의 Node.js 20 deprecation annotation을 남겼다. test 결과와
+  무관하며 action major upgrade는 DATA-008 범위 밖이다.
+
+### Diff Review Packet
+
+```text
+finding: M7-DATA-008 — Real DB/security test coverage
+plan 핵심: ignored 수동 P0 검증을 한 tracked suite와 PostgreSQL 17 create/migrate/test/cleanup CI lifecycle로 전환
+changed files: integration test 1, Vitest config 1, lifecycle runner 1, package script 1, workflow 1, evidence 1
+git diff summary: implementation 5 files +762; canonical PLAN/evidence 포함 전체 branch 6 files
+test results: local PG17.11 1 file/9 PASS + cleanup PASS, intentional failure cleanup PASS, repository gates PASS, GitHub Actions run 34047252005 PASS
+known risks: Auth.js login 비범위, CI patch version 미기록, action Node 20 deprecation annotation, SIGKILL 시 local residual 가능성
+```
 
 ## VERIFICATION
 
-pending
+VERIFIED
+
+| Acceptance | Result |
+| --- | --- |
+| fresh checkout/CI에서 `.local` 없이 실행 | PASS — GitHub Actions run `34047252005` |
+| 빈 DB에 migration 0000~0004 적용 | PASS — guard/migrator 및 journal tag/hash assertion |
+| required P0 scenarios | PASS — tracked 1 file / 9 tests |
+| 정상/실패 cleanup | PASS — 두 경로 모두 connection 0, advisory lock 0, DB drop/catalog 0 |
+| repository standard gates/build | PASS |
+| production credential/application DB 미사용 | PASS |
+
+Implementation verification은 완료됐으며 독립 REVIEW만 남았다. 이 단계에서 self-approve하거나
+`CLOSED`로 표시하지 않는다.
 
 ## REVIEW
 
