@@ -3,15 +3,15 @@ import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/a
 import { createSong, listAdminSongs } from "@/server/services/song-service";
 
 import {
+  adminSongListSchema,
   adminSongMutationResultSchema,
-  adminSongSummarySchema,
   createAdminSongSchema,
 } from "@/shared/contracts/song";
 
 export async function GET() {
   try {
     const songs = await listAdminSongs(await getRequestContext());
-    return jsonResponse(adminSongSummarySchema.array(), songs);
+    return jsonResponse(adminSongListSchema, songs);
   } catch (error) {
     return toErrorResponse(error);
   }

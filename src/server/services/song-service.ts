@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  type AdminSongList,
   type CreateAdminSong,
   type LyricsData,
   lyricsDataSchema,
@@ -156,19 +157,22 @@ export async function listVisibleSongsForSitemap() {
   });
 }
 
-export async function listAdminSongs(ctx: RequestContext) {
+export async function listAdminSongs(ctx: RequestContext): Promise<AdminSongList> {
   requireAdmin(ctx);
   const rows = await findSongsWithAlbum(getDatabase());
 
-  return rows.map((song) => ({
-    ...song,
-    title: song.title ?? "",
-    slug: song.slug ?? "",
-    youtubeId: song.youtubeId ?? "",
-    order: song.order ?? 0,
-    updatedAt: song.updatedAt ?? "",
-    hasOfficialCheer: song.hasOfficialCheer ?? false,
-  }));
+  return {
+    items: rows.map((song) => ({
+      ...song,
+      title: song.title ?? "",
+      slug: song.slug ?? "",
+      youtubeId: song.youtubeId ?? "",
+      order: song.order ?? 0,
+      updatedAt: song.updatedAt ?? "",
+      hasOfficialCheer: song.hasOfficialCheer ?? false,
+    })),
+    nextCursor: null,
+  };
 }
 
 export function createSong(ctx: RequestContext, input: CreateAdminSong) {

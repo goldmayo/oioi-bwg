@@ -1,6 +1,7 @@
 import { http } from "@/shared/api/http-client";
 import { parseClientResponse } from "@/shared/api/http-errors";
 import {
+  adminAlbumListSchema,
   albumDetailSchema,
   albumSummarySchema,
   type SaveAdminAlbum,
@@ -15,7 +16,7 @@ export async function getAlbumDetail(slug: string, signal?: AbortSignal) {
 /** 관리자 앨범 목록을 조회하고 외부 응답 계약으로 검증한다. */
 export async function getAdminAlbums(signal?: AbortSignal) {
   const data = await http.get("/api/admin/albums", { signal });
-  return parseClientResponse(albumSummarySchema.array(), data);
+  return parseClientResponse(adminAlbumListSchema, data);
 }
 
 /** 관리자 앨범을 생성하고 검증된 응답 DTO를 반환한다. */

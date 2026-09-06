@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "@/server/errors/app-error";
 
-import { albumSummarySchema } from "@/shared/contracts/album";
+import { adminAlbumListSchema, albumSummarySchema } from "@/shared/contracts/album";
 import { apiErrorResponseSchema } from "@/shared/contracts/error";
 
 const getRequestContext = vi.hoisted(() => vi.fn());
@@ -35,12 +35,13 @@ describe("/api/admin/albums", () => {
   });
 
   it("returns the protected admin album list", async () => {
-    listAdminAlbums.mockResolvedValue([album]);
+    const list = { items: [album], nextCursor: null };
+    listAdminAlbums.mockResolvedValue(list);
 
     const response = await GET();
 
     expect(response.status).toBe(200);
-    expect(albumSummarySchema.array().parse(await response.json())).toEqual([album]);
+    expect(adminAlbumListSchema.parse(await response.json())).toEqual(list);
     expect(listAdminAlbums).toHaveBeenCalledWith(context);
   });
 

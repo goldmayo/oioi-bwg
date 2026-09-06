@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/server/errors/app-error";
 
 import { apiErrorResponseSchema } from "@/shared/contracts/error";
-import { adminSongSummarySchema } from "@/shared/contracts/song";
+import { adminSongListSchema } from "@/shared/contracts/song";
 
 const getRequestContext = vi.hoisted(() => vi.fn());
 const createSong = vi.hoisted(() => vi.fn());
@@ -43,12 +43,13 @@ describe("/api/admin/songs", () => {
   });
 
   it("returns the protected admin song list", async () => {
-    listAdminSongs.mockResolvedValue([song]);
+    const list = { items: [song], nextCursor: null };
+    listAdminSongs.mockResolvedValue(list);
 
     const response = await GET();
 
     expect(response.status).toBe(200);
-    expect(adminSongSummarySchema.array().parse(await response.json())).toEqual([song]);
+    expect(adminSongListSchema.parse(await response.json())).toEqual(list);
     expect(listAdminSongs).toHaveBeenCalledWith(context);
   });
 

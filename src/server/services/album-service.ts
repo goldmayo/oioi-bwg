@@ -1,6 +1,7 @@
 import "server-only";
 
 import type {
+  AdminAlbumList,
   AlbumDetail,
   AlbumSummary,
   RenderableAlbumSong,
@@ -86,10 +87,10 @@ function requireAdmin(ctx: RequestContext) {
   if (ctx.ability.cannot("manage", "all")) throw new AppError("FORBIDDEN");
 }
 
-export async function listAdminAlbums(ctx: RequestContext): Promise<AlbumSummary[]> {
+export async function listAdminAlbums(ctx: RequestContext): Promise<AdminAlbumList> {
   requireAdmin(ctx);
   const rows = await findAllAlbums(getDatabase());
-  return rows.map(mapAlbum);
+  return { items: rows.map(mapAlbum), nextCursor: null };
 }
 
 export async function createAlbum(

@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { adminSongListSchema } from "@/shared/contracts/song";
+
 import { AppError } from "../errors/app-error";
 
 const insertSong = vi.hoisted(() => vi.fn());
 const findAdminSongBySlug = vi.hoisted(() => vi.fn());
 const findSongBySlug = vi.hoisted(() => vi.fn());
+const findSongsWithAlbum = vi.hoisted(() => vi.fn());
 const updateSong = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
@@ -17,7 +20,7 @@ vi.mock("../db", () => ({ getDatabase: () => ({}) }));
 vi.mock("../repositories/song-repository", () => ({
   findAdminSongBySlug,
   findSongBySlug,
-  findSongsWithAlbum: vi.fn(),
+  findSongsWithAlbum,
   findVisibleSongs: vi.fn(),
   insertSong,
   removeSong: vi.fn(),
@@ -29,6 +32,7 @@ import {
   editSong,
   getAdminSongEditorBySlug,
   getSongDetailBySlug,
+  listAdminSongs,
   saveSongLyrics,
 } from "./song-service";
 
@@ -46,6 +50,39 @@ const input = {
   isVisible: true,
   order: 1,
 };
+
+describe("song-service admin list DTO", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("preserves nullable normalization inside the domain list contract", async () => {
+    findSongsWithAlbum.mockResolvedValue([
+      {
+        ...input,
+        album: { name: "Test Album" },
+        hasOfficialCheer: null,
+        id: 2,
+        order: null,
+        updatedAt: null,
+      },
+    ]);
+
+    const result = await listAdminSongs(context);
+
+    expect(adminSongListSchema.parse(result)).toEqual({
+      items: [
+        {
+          ...input,
+          album: { name: "Test Album" },
+          hasOfficialCheer: false,
+          id: 2,
+          order: 0,
+          updatedAt: "",
+        },
+      ],
+      nextCursor: null,
+    });
+  });
+});
 
 describe("song-service LRC boundary", () => {
   beforeEach(() => vi.clearAllMocks());
