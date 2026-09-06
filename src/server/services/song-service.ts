@@ -13,14 +13,17 @@ import {
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
+import { isPostgresUniqueViolation } from "../errors/postgres-error";
 import {
   findAdminSongBySlug,
   findSongBySlug,
+  findSongSlugById,
   findSongsWithAlbum,
   findVisibleSongs,
   insertSong,
   removeSong,
   updateSong,
+  updateSongWithSlugPolicy,
 } from "../repositories/song-repository";
 
 type PublicSongRow = NonNullable<Awaited<ReturnType<typeof findSongBySlug>>>;
@@ -165,7 +168,7 @@ export async function listAdminSongs(ctx: RequestContext): Promise<AdminSongList
     items: rows.map((song) => ({
       ...song,
       title: song.title ?? "",
-      slug: song.slug ?? "",
+      slug: song.slug,
       youtubeId: song.youtubeId ?? "",
       order: song.order ?? 0,
       updatedAt: song.updatedAt ?? "",
@@ -186,24 +189,42 @@ export function createSong(ctx: RequestContext, input: CreateAdminSong) {
     updatedAt: now,
   };
 
-  return insertSong(getDatabase(), row).then(([song]) => {
-    if (!song) throw new Error("Song was not created");
-    return song;
-  });
+  return insertSong(getDatabase(), row)
+    .then(([song]) => {
+      if (!song) throw new Error("Song was not created");
+      return song;
+    })
+    .catch((error: unknown) => {
+      if (isPostgresUniqueViolation(error, "Song_slug_key")) {
+        throw new AppError("SONG_SLUG_ALREADY_EXISTS");
+      }
+      throw error;
+    });
 }
 
 export async function editSong(ctx: RequestContext, id: number, input: UpdateAdminSong) {
   requireAdmin(ctx);
-  const { lrcText, ...fields } = input;
+  const { lrcText, slug, ...fields } = input;
   const row = {
     ...fields,
     ...(lrcText?.trim() ? { lyrics: parseSongLyrics(lrcText) } : {}),
     updatedAt: new Date().toISOString(),
   };
 
-  const [song] = await updateSong(getDatabase(), id, row);
-  if (!song) throw new AppError("SONG_NOT_FOUND");
-  return song;
+  try {
+    const database = getDatabase();
+    const [updated] = await updateSongWithSlugPolicy(database, id, slug, row);
+    if (updated) return updated;
+
+    const existing = await findSongSlugById(database, id);
+    if (existing) throw new AppError("SONG_SLUG_IMMUTABLE");
+    throw new AppError("SONG_NOT_FOUND");
+  } catch (error) {
+    if (isPostgresUniqueViolation(error, "Song_slug_key")) {
+      throw new AppError("SONG_SLUG_ALREADY_EXISTS");
+    }
+    throw error;
+  }
 }
 
 export async function saveSongLyrics(ctx: RequestContext, id: number, input: SaveAdminSongLyrics) {

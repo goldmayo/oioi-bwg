@@ -52,6 +52,42 @@ describe("/api/admin/songs/[id]", () => {
     expect(editSong).toHaveBeenCalledWith(context, 2, input);
   });
 
+  it("allows a legacy null slug to remain null", async () => {
+    editSong.mockResolvedValue({ id: 2 });
+    const legacyInput = { ...input, slug: null };
+
+    const response = await PATCH(
+      new Request("https://example.test/api/admin/songs/2", {
+        body: JSON.stringify(legacyInput),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      }),
+      routeContext,
+    );
+
+    expect(response.status).toBe(200);
+    expect(editSong).toHaveBeenCalledWith(context, 2, legacyInput);
+  });
+
+  it.each(["SONG_SLUG_ALREADY_EXISTS", "SONG_SLUG_IMMUTABLE"] as const)(
+    "maps %s to a safe conflict",
+    async (code) => {
+      editSong.mockRejectedValue(new AppError(code));
+
+      const response = await PATCH(
+        new Request("https://example.test/api/admin/songs/2", {
+          body: JSON.stringify(input),
+          headers: { "content-type": "application/json" },
+          method: "PATCH",
+        }),
+        routeContext,
+      );
+
+      expect(response.status).toBe(409);
+      expect(apiErrorResponseSchema.parse(await response.json())).toMatchObject({ code });
+    },
+  );
+
   it("returns 204 after deleting a song", async () => {
     deleteSong.mockResolvedValue(undefined);
 

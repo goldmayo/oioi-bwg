@@ -7,7 +7,7 @@ import { albumQueries } from "@/entities/album";
 import type { AdminSongSummary } from "@/entities/song";
 import { songMutations, songQueries, songQueryKeys } from "@/entities/song";
 
-import type { SongEditValues } from "../model/schemas";
+import { type SongEditValues, toAdminSongUpdate } from "../model/schemas";
 
 import { SongDeleteDialog } from "./SongDeleteDialog";
 import { SongFormDialog } from "./SongFormDialog";
@@ -43,7 +43,7 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
       (song) =>
         (albumFilter === "all" || song.albumId === Number(albumFilter)) &&
         (!query ||
-          [song.title, song.slug, song.album.name].some((value) =>
+          [song.title, song.slug ?? "", song.album.name].some((value) =>
             value.toLowerCase().includes(query),
           )),
     );
@@ -60,8 +60,9 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
   );
   const handleSubmit = useCallback(
     async (values: SongEditValues) => {
-      if (editingSong) await updateMutation.mutateAsync({ id: editingSong.id, input: values });
-      else await createMutation.mutateAsync({ ...values, lrcText: values.lrcText ?? "" });
+      if (editingSong) {
+        await updateMutation.mutateAsync({ id: editingSong.id, input: toAdminSongUpdate(values) });
+      } else await createMutation.mutateAsync({ ...values, lrcText: values.lrcText ?? "" });
       await invalidateSongs();
     },
     [createMutation, editingSong, invalidateSongs, updateMutation],

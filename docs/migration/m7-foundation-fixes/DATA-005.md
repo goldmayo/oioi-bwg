@@ -2,10 +2,10 @@
 
 ## Status
 
-PLANNED
+VERIFIED
 
-2026-09-06 사용자 정책 승인과 TECHNICAL PLAN 작성 완료.
-IMPLEMENT / REVIEW는 아직 시작하지 않았다. DATA-005 전체 완료 또는 VERIFIED를 뜻하지 않는다.
+2026-09-06 사용자 정책 승인, TECHNICAL PLAN, IMPLEMENT와 필수 검증 완료.
+REVIEW는 아직 시작하지 않았으므로 DATA-005가 CLOSED됐음을 뜻하지 않는다.
 
 ## PLAN
 
@@ -294,13 +294,142 @@ concurrency 실패, URL/lifecycle 정책 추가 결정이 필요하면 범위를
 
 ## IMPLEMENTATION
 
-pending
+### Changed Files
+
+- `docs/migration/DOMAIN_SPECIFICATION.md`: Song.id identity, nullable/global unique slug, 최초 지정과
+  non-null 불변성, id 기반 domain reference를 기록했다.
+- `src/server/db/schema.ts`, `src/server/db/schema.test.ts`: nullable slug에
+  `Song_slug_key` unique를 선언하고 metadata regression을 추가했다.
+- `drizzle/0004_violet_deadpool.sql`, `drizzle/meta/0004_snapshot.json`,
+  `drizzle/meta/_journal.json`: Drizzle generator가 새 unique migration과 metadata를 생성했다.
+- `src/shared/contracts/song.ts`: create slug는 non-null을 유지하고, update/admin summary는 nullable
+  slug를 명시한다.
+- `src/shared/contracts/error.ts`, `src/server/http/api-response.ts`: duplicate/immutable Song slug
+  AppError code와 409 mapping을 추가했다.
+- `src/server/repositories/song-repository.ts`: 일반 update에서 slug를 type 수준으로 제외하고,
+  null 유지/최초 지정/동일 값만 허용하는 단일 조건부 UPDATE와 실패 분류용 최소 조회를 추가했다.
+- `src/server/services/song-service.ts`, `src/server/services/song-service.test.ts`: create/update의
+  `Song_slug_key / 23505` mapping, immutable/not-found 분류, nullable admin DTO regression을 구현했다.
+- `src/app/api/admin/songs/route.test.ts`, `src/app/api/admin/songs/[id]/route.test.ts`: create non-null,
+  update nullable, duplicate/immutable 409 route regression을 추가했다.
+- `src/features/manage-song/model/schemas.ts`, `src/features/manage-song/model/schemas.test.ts`: edit의 빈
+  slug를 null update로 변환하고 create/edit form 규칙을 검증한다.
+- `src/features/manage-song/ui/SongFormDialog.tsx`,
+  `src/features/manage-song/ui/SongFormDialog.test.tsx`: non-null slug read-only, legacy null 입력/유지,
+  duplicate/immutable slug field error를 구현·검증했다.
+- `src/features/manage-song/ui/SongManagerClient.tsx`,
+  `src/features/manage-song/ui/SongManagerTable.tsx`: nullable slug 검색/전송/표시와 null editor link 차단을
+  반영했다.
+- `docs/migration/m7-foundation-fixes/DATA-005.md`: 이 구현 및 검증 evidence를 기록했다.
+
+### Selected Model / Effort
+
+Registry의 IMPLEMENT 권고는 정책 결정 후 Sol High/Terra이고 사용자는 Sol High handoff를 지정했다.
+이번 IMPLEMENT에서 실제 사용된 runtime model은 GPT-5다. Reasoning effort 값은 실행 환경에 표시되지 않아
+추정하지 않는다. 보조 agent는 사용하지 않았다.
+
+### Implemented Decision
+
+승인된 Option A를 그대로 구현했다. PostgreSQL 기본 UNIQUE로 모든 non-null Song.slug를 전역 고유하게
+하고 여러 NULL은 허용한다. `Song.id`는 내부/domain identity로 유지하며 공개 `/songs/{slug}` read path는
+변경하지 않았다.
+
+Admin edit는 `id AND (stored slug IS NULL OR stored slug = requested slug)` 조건의 단일 UPDATE다. PostgreSQL
+row lock 대기 후 predicate 재검사를 사용하므로 null 최초 지정 경쟁에서도 한 요청만 성공한다. UPDATE가
+0행이면 최소 id/slug 조회로 존재하는 Song은 `SONG_SLUG_IMMUTABLE`, 없는 Song은 `SONG_NOT_FOUND`로
+구분한다. Create/update의 정확한 `Song_slug_key / 23505`만 `SONG_SLUG_ALREADY_EXISTS`로 바꾸며 두 slug
+failure는 HTTP 409와 RHF slug field error로 전달한다.
+
+### Plan Deviations
+
+없음. 기존 migration 0000~0003, public route/read/query key, production/local application DB,
+future domain과 삭제/redirect/history 정책을 변경하지 않았다. Database trigger, transaction, 자동 suffix,
+generic abstraction을 추가하지 않았다. Generated migration/snapshot과 canonical evidence를 포함해 21 files가
+변경됐고, 생성 파일을 제외한 diff도 400 lines를 넘으므로 PR에는 constraint → service/contract → admin UX
+→ verification 순서와 결합 이유를 기록한다.
+
+### Tests Added or Changed
+
+- Schema metadata 1개, Service slug policy/nullable DTO 5개를 추가하고 기존 edit mock을 policy-aware
+  repository call로 갱신했다.
+- Admin POST/PATCH route에 create null 거부, update null 허용, duplicate/immutable 409 4개를 추가했다.
+- Form model 2개와 UI 5개로 null 변환, read-only, field error, null 표/link를 검증했다.
+- Disposable PostgreSQL test 6개는 `.local/m7-data-005-verification.{config,test}.ts`로 실행했다.
+  이 파일은 Git ignore된 검증 artifact이며 product diff에 포함하지 않았다.
+
+### Diff Review Packet
+
+```text
+finding: M7-DATA-005 — Song.slug global uniqueness와 non-null immutability
+plan 핵심: nullable Song_slug_key UNIQUE + atomic first-assignment UPDATE + 409 slug field UX
+changed files: domain spec, Drizzle schema/0004/meta, Song contract/error/repository/service/admin UI/tests, canonical evidence
+git diff summary: generated snapshot 제외 21 files; constraint → service/contract → admin UX → verification 순서로 검토
+test results: targeted 6 files/37 tests, full 46 files/182 tests, PostgreSQL 6 tests, all repository gates/build pass
+known risks: production duplicate/table lock 미검증; 삭제 후 slug lifecycle 미결; production/local application DB migration 미적용
+```
 
 ## VERIFICATION
 
-정책 문서 근거와 current code/migration/error/form 경계를 정적 대조했다.
-사용자 승인 정책과 Sol High TECHNICAL PLAN handoff를 기록했다.
-application test/build/DB 검증은 이번 PLAN 단계에서 실행하지 않았다.
+### Commands Run and Results
+
+- `docker compose -f compose.dev.yml ps --format json`: PostgreSQL 17 container healthy.
+- PostgreSQL `SHOW server_version`: `17.11 (Debian 17.11-1.pgdg13+2)`.
+- Current local application DB의 `BEGIN READ ONLY` duplicate 집계: `duplicate_groups=0`,
+  `duplicate_rows=0`. 검증 종료 후 같은 query를 재실행해 동일 결과를 확인했다.
+- `pnpm db:generate`: `drizzle/0004_violet_deadpool.sql` 생성 성공. SQL은
+  `ALTER TABLE "Song" ADD CONSTRAINT "Song_slug_key" UNIQUE("slug");` 한 문장이다.
+- 0000~0003 `sha256sum`과 `git diff --exit-code migration_develop -- <기존 SQL>`: 변경 없음.
+  0003/0004 snapshot을 id/prevId 제외 비교한 결과 추가 unique 외 변화 없음.
+- 첫 `pnpm type-check`: 새 UI test에서 프로젝트에 선언되지 않은 jest-dom matcher type 6건으로 실패.
+  표준 DOM attribute assertion으로 바꾼 뒤 통과했다.
+- 첫 focused suite: 5개 기존 target은 통과했으나 새 UI test 4개가 jsdom의 `ResizeObserver` 부재로 실패.
+  테스트에서 직접 관련 없는 Select/Switch primitive만 작은 대역으로 교체한 뒤 UI 5개가 통과했다.
+- 최종 focused command: 6 files, 37 tests 통과.
+- 최종 repository gates:
+  - `pnpm type-check`: 통과.
+  - `pnpm test:harness`: 7 tests 통과.
+  - `pnpm lint`: 통과.
+  - `pnpm lint:fsd`: 문제 없음.
+  - `pnpm test:unit:run`: 46 files, 182 tests 통과.
+  - `pnpm format:check`: 통과.
+  - `pnpm build`: Next.js 16.3.3 production build, TypeScript, 23 static page generation 통과.
+- `git diff --check`: 통과.
+
+### Actual PostgreSQL Evidence
+
+Production credential/DB에는 접근하지 않았다. Existing local application DB에는 위 read-only query만
+실행했고 migration, fixture, write를 실행하지 않았다.
+
+Duplicate fixture DB `m7_data_005_duplicate_20260906` 및 SQLSTATE 재확인용
+`m7_data_005_duplicate_code_20260906`에는 0000~0003을 적용하고 동일 non-null slug 두 행을 넣었다.
+Local guard 통과 후 0004 적용은 PostgreSQL `23505`, table `Song`, constraint `Song_slug_key`로 실패했다.
+Constraint가 남지 않은 것을 확인했다. 두 DB 모두 active connection 0 확인 후 drop했다.
+
+Clean DB `m7_data_005_verify_20260906`에는 local guard 통과 후 actual Drizzle migrator로 0000~0004를
+적용했다. `.local/m7-data-005-verification.test.ts` 6 tests가 다음을 실제 PostgreSQL/Drizzle/Service로
+검증했다.
+
+1. `pg_constraint`: name `Song_slug_key`, type `u`, definition `UNIQUE (slug)`; 5개 journal hash 일치;
+   NULL 두 행 insert 성공.
+2. 같은 앨범, 다른 앨범, 비공개 곡의 동일 slug 모두 raw `23505 / Song_slug_key`; Service/HTTP 409.
+3. null 유지, null → 최초 지정, 같은 slug의 title 변경과 album 이동 성공; non-null → 다른 slug/null은
+   immutable 409이고 저장 row 불변.
+4. 이미 사용 중인 slug의 최초 지정은 duplicate 409이며 기존 null 유지.
+5. 같은 slug 동시 create 5개는 성공 1/duplicate 4. 한 null row의 서로 다른 동시 최초 지정은
+   성공 1/immutable 1.
+6. `/songs/{slug}` Service DTO는 공개 곡을 동일 slug로 반환하고 hidden Song/Album은 계속 숨김.
+
+Clean DB도 active connection 0 확인 후 drop했다. 마지막 catalog query에서 `m7_data_005_%` DB가 0개임을
+확인했다. Docker Compose PostgreSQL service는 기존 실행 상태로 유지했다.
+
+### Remaining Unknowns
+
+- Production의 duplicate group, table size, `ALTER TABLE ... UNIQUE` lock 시간과 deployment window는
+  확인하지 않았다. Production 적용은 별도 승인과 read-only preflight가 필요하다.
+- 삭제 후 slug 재사용/영구 예약/redirect/history 정책은 승인대로 후속 decision이다.
+- Application Service를 우회하는 별도 writer는 현재 evidence에서 확인되지 않았다. 생기면 DB trigger 등
+  별도 architecture decision이 필요하다.
+- 이 IMPLEMENT는 production과 existing local application DB에 migration을 적용하지 않았다.
 
 ## REVIEW
 

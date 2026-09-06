@@ -45,19 +45,23 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
               <TableRow key={song.id} className="hover:bg-accent/30 transition-colors">
                 <TableCell className="text-muted-foreground text-xs">{song.id}</TableCell>
                 <TableCell className="font-medium">
-                  <Link
-                    href={`/admin/edit/${song.slug}`}
-                    className="text-primary hover:underline"
-                    prefetch={false}
-                  >
-                    {song.title}
-                  </Link>
+                  {song.slug === null ? (
+                    song.title
+                  ) : (
+                    <Link
+                      href={`/admin/edit/${song.slug}`}
+                      className="text-primary hover:underline"
+                      prefetch={false}
+                    >
+                      {song.title}
+                    </Link>
+                  )}
                 </TableCell>
                 <TableCell className="text-muted-foreground hidden text-sm sm:table-cell">
                   {song.album.name}
                 </TableCell>
                 <TableCell className="text-muted-foreground hidden text-sm lg:table-cell">
-                  {song.slug}
+                  {song.slug ?? "미지정"}
                 </TableCell>
                 <TableCell className="text-center">
                   <div className="flex flex-wrap justify-center gap-1">

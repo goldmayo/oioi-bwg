@@ -8,7 +8,16 @@ import {
   emailVerificationRateLimit,
   passwordCredential,
   profile,
+  song,
 } from "./schema";
+
+describe("M7 Song slug persistence policy", () => {
+  it("keeps slug nullable and globally unique with the canonical constraint name", () => {
+    expect(song.slug.notNull).toBe(false);
+    expect(song.slug.isUnique).toBe(true);
+    expect(song.slug.uniqueName).toBe("Song_slug_key");
+  });
+});
 
 describe("M5 identity persistence schema", () => {
   it("uses the canonical domain role and account status vocabulary", () => {
