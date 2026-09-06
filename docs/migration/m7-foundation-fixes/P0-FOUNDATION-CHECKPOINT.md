@@ -2,7 +2,133 @@
 
 ## Status
 
-FAIL
+PASS
+
+## Final Re-run — 2026-09-06 14:28 KST
+
+### Baseline
+
+- 브랜치: `migration_M7_P0_Foundation_Checkpoint_Rerun`
+- 통합 HEAD: `c371ce9a58cd6ee189604caa90ae3480be716eee`
+- 비교 기준: 실행 시점 local `migration_develop`과 `origin/migration_develop`이 동일한 HEAD
+- working tree: 검증 시작 시 clean
+- 검증 대상: 현재 통합 HEAD의 tracked source/test와 각 canonical finding evidence
+- PostgreSQL: Docker Compose PostgreSQL `17.11 (Debian 17.11-1.pgdg13+2)`의 finding별 격리 임시 DB
+- Production DB, production credential, 실제 R2 write는 사용하지 않았다.
+
+### Included Findings
+
+- DATA-001 — `CLOSED`
+- DATA-009 — `CLOSED`
+- DATA-004 — `CLOSED`
+- DATA-003 — `CLOSED`
+- DATA-002 — `CLOSED`
+
+다섯 canonical evidence가 모두 `CLOSED`이므로 integrated verification을 실행했다.
+
+### Integrated Verification
+
+#### Signup
+
+- full-flow: PASS — 실제 PostgreSQL에서 `requestOtp → verifyOtp → completeSignup` 성공,
+  `CONSUMED` challenge와 ACTIVE Account/Profile/PasswordCredential 생성 확인
+- rollback: PASS — 실제 PostgreSQL에서 Profile nickname 및 PasswordCredential email 충돌 각각에 대해
+  challenge가 `VERIFIED`로 복원되고 Account/Profile insert가 rollback됨
+- replay: PASS — 소비한 challenge의 재사용이 `OTP_NOT_VERIFIED`로 거부되고 identity row 수 불변
+
+#### OTP Concurrency
+
+- concurrent first request: PASS — 실제 PostgreSQL 동시 요청 2개 중 성공 1개,
+  `OTP_COOLDOWN` 1개, PENDING challenge 1행
+- cooldown: PASS — 최초/재발급 동시 요청의 loser는 EMAIL/IP counter를 소비하지 않음
+- mail count: PASS — 최초/재발급 동시 요청 pair별 1회, rollback 시 0회
+- concurrent reissue: PASS — 성공 1개, `OTP_COOLDOWN` 1개, 기존 challenge INVALIDATED 및 신규 PENDING
+- rate limits: PASS — email 5회 후 6번째, IP 20회 후 21번째가 `OTP_RATE_LIMITED`
+- rollback: PASS — challenge insert 실패 시 두 counter와 challenge가 rollback되고 advisory lock 해제
+
+#### Error Contract
+
+- known 23505 -> 409: PASS — 실제 PostgreSQL에서 Album create/update slug와 signup email/nickname
+  constraint가 각각 기존 conflict code 및 공개 409로 변환됨
+- unrelated DB error -> 500: PASS — unknown constraint/unrelated DB error는 expected conflict로 오분류되지
+  않고 원래 unexpected error와 generic 500 body를 유지함
+- conflict rollback: PASS — 실제 signup conflict 뒤 challenge와 identity row rollback 확인
+
+#### Sensitive Logging
+
+- SQL: PASS — 실제 credential 23505와 synthetic nested error의 SQL marker가 최종 payload에 없음
+- params: PASS — console/capture/tags/final event/HTTP body에서 제거됨
+- email: PASS — 실제 PostgreSQL Drizzle error의 marker가 관측 payload에 없음
+- password hash: PASS — 실제 PostgreSQL marker가 관측 payload에 없음
+- OTP hash: PASS — synthetic nested error marker가 관측 payload에 없음
+- IP: PASS — Sentry input의 private `user.ip_address`가 final allowlist event에서 제거됨
+- structured JSON stdout: PASS — `console.error()` 단일 인자가 줄바꿈 없는 JSON 문자열이며 parse 가능
+- safe stack frame: PASS — filename/function/line/column만 보존하고 context/vars/raw cause는 제거
+- safe event/source/type/code와 generic 500: PASS
+
+#### Upload Authorization
+
+- guest: PASS — `UNAUTHENTICATED`, invalid/valid file 모두 storage 호출 0회
+- USER: PASS — `FORBIDDEN`, invalid/valid file 모두 storage 호출 0회
+- REVIEWER: PASS — `FORBIDDEN`, invalid/valid file 모두 storage 호출 0회
+- ADMIN: PASS — validation 후 storage 호출 및 canonical URL 반환
+- invalid FormData/MIME/size: PASS — storage 호출 전에 거부, 5 MiB exact boundary와 허용 MIME 4종 확인
+- Action/storage boundary: PASS — RequestContext 위임, raw authorization/storage error 비노출,
+  R2 helper의 server/storage 배치와 payload 계약 확인
+- PostgreSQL: 해당 없음 — DATA-002는 schema/repository/transaction을 변경하지 않음
+
+### PostgreSQL Verification
+
+- local database guard: 4개 임시 DB 모두 `127.0.0.1`로 통과
+- migration: 각 임시 DB에 tracked migration 4개 적용
+- DATA-001: 1 file / 3 tests PASS
+- DATA-003: 1 file / 4 tests PASS
+- DATA-004: 1 file / 1 test PASS
+- DATA-009: 1 file / 4 tests PASS
+- 합계: 4 files / 12 tests PASS
+- 종료 확인: 네 DB 모두 connection 0, advisory lock 0
+- cleanup: 네 임시 DB를 명시적으로 drop했고 catalog 잔존 수 0 확인
+- 기존 local application DB에는 연결하거나 migration/fixture를 적용하지 않았다.
+
+### Focused Regression
+
+- 대상: 다섯 finding의 직접 관련 tracked test 12개 파일
+- 결과: 12 files / 53 tests PASS
+- 포함 범위: consume payload, OTP lock/cooldown, signup conflict, Album conflict, safe logger/API/Auth.js/
+  instrumentation, upload Service/Action/storage
+
+### Repository Gates
+
+- `pnpm type-check`: PASS
+- `pnpm test:harness`: PASS — 7 tests
+- `pnpm lint`: PASS
+- `pnpm lint:fsd`: PASS — 문제 0개
+- `pnpm test:unit:run`: PASS — 41 files / 154 tests
+- `pnpm format:check`: PASS
+- `pnpm build`: PASS — Next.js 16.3.3 production build, static pages 23개 생성
+
+### Remaining P0 Risks
+
+없음.
+
+다음은 checkpoint를 막지 않는 후속 위험이다.
+
+- PostgreSQL integration fixture의 영구 CI lifecycle 편입은 DATA-008 범위에 남아 있다.
+- constraint 이름과 Drizzle direct cause shape가 바뀌면 DATA-003 실제 PostgreSQL 검증을 다시 실행해야 한다.
+- 실제 Sentry 조직의 Relay processing, source-map 해석, grouping, retention과 접근 권한은 production
+  credential을 사용하지 않아 확인하지 않았다.
+
+### Verdict
+
+PASS
+
+---
+
+## Superseded Executions
+
+아래의 initial execution과 2026-09-06 06:43 KST re-run은 DATA-003/DATA-004 canonical status가
+아직 `CLOSED`가 아니던 통합 HEAD의 역사적 FAIL evidence다. 위 final re-run이 두 finding의 최종
+re-review와 현재 통합 HEAD를 반영해 이를 대체한다.
 
 ## Baseline
 
