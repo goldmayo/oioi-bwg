@@ -7,6 +7,8 @@ import { authAbilityQueryKeys, createClientAbility } from "@/features/auth";
 import { authAbilityQueries } from "@/features/auth";
 import { AlbumManagerClient } from "@/features/manage-album";
 
+import { songQueryKeys } from "@/entities/song";
+
 import { ApiError } from "@/shared/api/http-errors";
 
 import { uploadAlbumImageAction } from "../_lib/upload-album-image-action";
@@ -25,12 +27,16 @@ export function AdminAlbumManager() {
     },
     [queryClient],
   );
+  const handleNameChangeOrDelete = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() });
+  }, [queryClient]);
 
   return (
     <AlbumManagerClient
       canManage={ability.can("manage", "all")}
       onUploadImage={uploadAlbumImageAction}
       onMutationError={handleMutationError}
+      onNameChangeOrDelete={handleNameChangeOrDelete}
     />
   );
 }

@@ -30,12 +30,14 @@ interface AlbumManagerClientProps {
   canManage: boolean;
   onUploadImage: UploadAlbumImage;
   onMutationError?: (error: unknown) => void;
+  onNameChangeOrDelete?: () => void;
 }
 
 export function AlbumManagerClient({
   canManage,
   onUploadImage,
   onMutationError,
+  onNameChangeOrDelete,
 }: AlbumManagerClientProps) {
   const queryClient = useQueryClient();
   const { data: albums } = useSuspenseQuery(albumQueries.adminList());
@@ -99,13 +101,14 @@ export function AlbumManagerClient({
       const input = { ...values, releaseDate: values.releaseDate || null };
 
       if (editingAlbum) {
-        await updateMutation.mutateAsync({ id: editingAlbum.id, input });
+        const updatedAlbum = await updateMutation.mutateAsync({ id: editingAlbum.id, input });
+        if (updatedAlbum.name !== editingAlbum.name) onNameChangeOrDelete?.();
       } else {
         await createMutation.mutateAsync(input);
       }
       await invalidateAlbums();
     },
-    [createMutation, editingAlbum, invalidateAlbums, updateMutation],
+    [createMutation, editingAlbum, invalidateAlbums, onNameChangeOrDelete, updateMutation],
   );
 
   const handleDelete = useCallback(() => {
@@ -113,10 +116,11 @@ export function AlbumManagerClient({
     deleteMutation.mutate(deleteTarget.id, {
       onSuccess: () => {
         setDeleteTarget(null);
+        onNameChangeOrDelete?.();
         void invalidateAlbums();
       },
     });
-  }, [deleteMutation, deleteTarget, invalidateAlbums]);
+  }, [deleteMutation, deleteTarget, invalidateAlbums, onNameChangeOrDelete]);
 
   return (
     <div className="space-y-4">

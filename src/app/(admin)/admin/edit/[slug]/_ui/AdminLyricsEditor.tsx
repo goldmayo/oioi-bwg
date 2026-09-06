@@ -7,7 +7,7 @@ import { authAbilityQueryKeys, createClientAbility } from "@/features/auth";
 import { authAbilityQueries } from "@/features/auth";
 import { LazyLyricsEditor, type SongEditor } from "@/features/manage-lyrics";
 
-import { songMutations } from "@/entities/song";
+import { songMutations, songQueryKeys } from "@/entities/song";
 
 import { ApiError } from "@/shared/api/http-errors";
 import type { SaveAdminSongLyrics } from "@/shared/contracts/song";
@@ -19,6 +19,9 @@ export function AdminLyricsEditor({ song }: { song: SongEditor }) {
   const ability = useMemo(() => createClientAbility(data.rules), [data.rules]);
   const { mutateAsync: saveLyrics } = useMutation({
     ...songMutations.saveLyrics(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() });
+    },
     onError: (error) => {
       if (error instanceof ApiError && error.status === 403) {
         void queryClient.invalidateQueries({ queryKey: authAbilityQueryKeys.ability() });
