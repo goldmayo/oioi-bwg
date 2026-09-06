@@ -206,7 +206,7 @@ export const song = pgTable(
     order: bigint({ mode: "number" }),
     createdAt: timestamp({ precision: 3, withTimezone: true, mode: "string" }),
     updatedAt: timestamp({ precision: 3, withTimezone: true, mode: "string" }),
-    slug: text(),
+    slug: text().unique("Song_slug_key"),
   },
   (table) => [
     foreignKey({

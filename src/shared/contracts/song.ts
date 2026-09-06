@@ -25,13 +25,14 @@ export const lyricLineSchema = z.object({
 
 export const lyricsDataSchema = z.array(lyricLineSchema);
 
+const adminSongSlugSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-z0-9-]+$/);
+
 const adminSongFieldsSchema = z.object({
   albumId: z.number().int().positive(),
   title: z.string().trim().min(1),
-  slug: z
-    .string()
-    .trim()
-    .regex(/^[a-z0-9-]+$/),
   youtubeId: z.string().trim().min(1),
   hasOfficialCheer: z.boolean(),
   isTitle: z.boolean(),
@@ -40,10 +41,12 @@ const adminSongFieldsSchema = z.object({
 });
 
 export const createAdminSongSchema = adminSongFieldsSchema.extend({
+  slug: adminSongSlugSchema,
   lrcText: z.string().trim().min(1),
 });
 
 export const updateAdminSongSchema = adminSongFieldsSchema.extend({
+  slug: adminSongSlugSchema.nullable(),
   lrcText: z.string().optional(),
 });
 
@@ -54,6 +57,7 @@ export const saveAdminSongLyricsSchema = z.object({
 
 export const adminSongSummarySchema = adminSongFieldsSchema.extend({
   id: z.number().int().positive(),
+  slug: adminSongSlugSchema.nullable(),
   updatedAt: z.string(),
   album: z.object({ name: z.string() }),
 });

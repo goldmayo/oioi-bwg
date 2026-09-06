@@ -1,0 +1,1 @@
+ALTER TABLE "Song" ADD CONSTRAINT "Song_slug_key" UNIQUE("slug");

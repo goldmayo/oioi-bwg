@@ -1,3 +1,4 @@
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { adminSongListSchema } from "@/shared/contracts/song";
@@ -7,8 +8,10 @@ import { AppError } from "../errors/app-error";
 const insertSong = vi.hoisted(() => vi.fn());
 const findAdminSongBySlug = vi.hoisted(() => vi.fn());
 const findSongBySlug = vi.hoisted(() => vi.fn());
+const findSongSlugById = vi.hoisted(() => vi.fn());
 const findSongsWithAlbum = vi.hoisted(() => vi.fn());
 const updateSong = vi.hoisted(() => vi.fn());
+const updateSongWithSlugPolicy = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
 vi.mock("../auth/request-context", () => ({
@@ -20,11 +23,13 @@ vi.mock("../db", () => ({ getDatabase: () => ({}) }));
 vi.mock("../repositories/song-repository", () => ({
   findAdminSongBySlug,
   findSongBySlug,
+  findSongSlugById,
   findSongsWithAlbum,
   findVisibleSongs: vi.fn(),
   insertSong,
   removeSong: vi.fn(),
   updateSong,
+  updateSongWithSlugPolicy,
 }));
 
 import {
@@ -50,6 +55,14 @@ const input = {
   isVisible: true,
   order: 1,
 };
+
+function uniqueViolation(constraintName: string) {
+  const cause = Object.assign(new Error("duplicate key"), {
+    code: "23505",
+    constraint_name: constraintName,
+  });
+  return new DrizzleQueryError("insert into Song values ($1)", ["PRIVATE_VALUE"], cause);
+}
 
 describe("song-service admin list DTO", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -80,6 +93,22 @@ describe("song-service admin list DTO", () => {
         },
       ],
       nextCursor: null,
+    });
+  });
+
+  it("preserves a legacy null slug in the admin contract", async () => {
+    findSongsWithAlbum.mockResolvedValue([
+      {
+        ...input,
+        album: { name: "Test Album" },
+        id: 2,
+        slug: null,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+
+    await expect(listAdminSongs(context)).resolves.toMatchObject({
+      items: [{ id: 2, slug: null }],
     });
   });
 });
@@ -115,13 +144,14 @@ describe("song-service LRC boundary", () => {
   });
 
   it("preserves lyrics when an edit has an empty LRC input", async () => {
-    updateSong.mockResolvedValue([{ id: 2 }]);
+    updateSongWithSlugPolicy.mockResolvedValue([{ id: 2 }]);
 
     await editSong(context, 2, { ...input, lrcText: "" });
 
-    expect(updateSong).toHaveBeenCalledWith(
+    expect(updateSongWithSlugPolicy).toHaveBeenCalledWith(
       expect.anything(),
       2,
+      input.slug,
       expect.not.objectContaining({ lyrics: expect.anything() }),
     );
   });
@@ -131,6 +161,74 @@ describe("song-service LRC boundary", () => {
 
     await expect(
       saveSongLyrics(context, 404, { lyrics: [], youtubeId: "youtube-id" }),
+    ).rejects.toMatchObject({ code: "SONG_NOT_FOUND" });
+  });
+});
+
+describe("song-service slug policy", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("maps known create and update unique violations to a slug conflict", async () => {
+    insertSong.mockRejectedValueOnce(uniqueViolation("Song_slug_key"));
+    updateSongWithSlugPolicy.mockRejectedValueOnce(uniqueViolation("Song_slug_key"));
+
+    await expect(
+      createSong(context, { ...input, lrcText: "[00:01.00]가사" }),
+    ).rejects.toMatchObject({ code: "SONG_SLUG_ALREADY_EXISTS" });
+    await expect(editSong(context, 2, { ...input, slug: null, lrcText: "" })).rejects.toMatchObject(
+      { code: "SONG_SLUG_ALREADY_EXISTS" },
+    );
+  });
+
+  it("preserves an unknown unique violation as an unexpected error", async () => {
+    const error = uniqueViolation("another_constraint_key");
+    insertSong.mockRejectedValueOnce(error);
+
+    const caught = await createSong(context, {
+      ...input,
+      lrcText: "[00:01.00]가사",
+    }).catch((cause: unknown) => cause);
+
+    expect(caught).toBe(error);
+  });
+
+  it("allows null retention, first assignment, and edits with the same slug", async () => {
+    updateSongWithSlugPolicy.mockResolvedValue([{ id: 2 }]);
+
+    await expect(editSong(context, 2, { ...input, slug: null, lrcText: "" })).resolves.toEqual({
+      id: 2,
+    });
+    await expect(
+      editSong(context, 2, { ...input, slug: "first-slug", lrcText: "" }),
+    ).resolves.toEqual({ id: 2 });
+
+    expect(updateSongWithSlugPolicy).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      2,
+      null,
+      expect.objectContaining({ albumId: input.albumId, title: input.title }),
+    );
+    expect(updateSongWithSlugPolicy).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      2,
+      "first-slug",
+      expect.objectContaining({ albumId: input.albumId, title: input.title }),
+    );
+  });
+
+  it("distinguishes an immutable slug from a missing song", async () => {
+    updateSongWithSlugPolicy.mockResolvedValue([]);
+    findSongSlugById
+      .mockResolvedValueOnce({ id: 2, slug: "original-slug" })
+      .mockResolvedValueOnce(undefined);
+
+    await expect(
+      editSong(context, 2, { ...input, slug: "changed-slug", lrcText: "" }),
+    ).rejects.toMatchObject({ code: "SONG_SLUG_IMMUTABLE" });
+    await expect(
+      editSong(context, 404, { ...input, slug: "missing-slug", lrcText: "" }),
     ).rejects.toMatchObject({ code: "SONG_NOT_FOUND" });
   });
 });

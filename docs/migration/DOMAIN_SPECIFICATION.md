@@ -514,6 +514,12 @@ deletedAt 기록
 
 Song은 응원법과 Waveform, 공연 컨텍스트의 기준 엔티티다.
 
+Song의 내부 및 domain identity는 `id`다. `slug`는 공개 `/songs/{slug}` 주소에 사용하는 nullable
+식별자이며, non-null 값은 모든 Song에서 전역 고유하다. Legacy null은 유지할 수 있고 null에서 최초
+slug 지정은 허용하지만, 한 번 지정한 non-null slug는 변경할 수 없다. Title 변경과 Album 이동은 slug를
+바꾸지 않고 허용한다. 현재와 미래 domain은 Song을 `id`로 참조하며 slug를 FK 또는 domain identity로
+사용하지 않는다.
+
 주요 속성:
 - id
 - artistId

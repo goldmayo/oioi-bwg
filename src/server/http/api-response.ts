@@ -12,6 +12,8 @@ const appErrorDefinitions = {
   ALBUM_NOT_FOUND: { message: "앨범을 찾을 수 없습니다.", status: 404 },
   ALBUM_SLUG_ALREADY_EXISTS: { message: "이미 사용 중인 앨범 slug입니다.", status: 409 },
   SONG_NOT_FOUND: { message: "곡을 찾을 수 없습니다.", status: 404 },
+  SONG_SLUG_ALREADY_EXISTS: { message: "이미 사용 중인 곡 slug입니다.", status: 409 },
+  SONG_SLUG_IMMUTABLE: { message: "한 번 지정한 곡 slug는 변경할 수 없습니다.", status: 409 },
   SONG_LYRICS_INVALID: { message: "LRC에서 유효한 가사를 찾을 수 없습니다.", status: 400 },
   UNAUTHENTICATED: { message: "로그인이 필요합니다.", status: 401 },
   FORBIDDEN: { message: "접근 권한이 없습니다.", status: 403 },

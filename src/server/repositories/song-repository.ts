@@ -1,7 +1,9 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 
 import type { DbExecutor } from "../db";
 import { type InsertSongRow, song } from "../db/schema";
+
+type SongUpdateRow = Partial<Omit<InsertSongRow, "slug">>;
 
 export function findSongBySlug(executor: DbExecutor, slug: string) {
   return executor.query.song.findFirst({
@@ -26,6 +28,13 @@ export function findAdminSongBySlug(executor: DbExecutor, slug: string) {
       youtubeId: true,
       lyrics: true,
     },
+  });
+}
+
+export function findSongSlugById(executor: DbExecutor, id: number) {
+  return executor.query.song.findFirst({
+    where: (table, { eq: equals }) => equals(table.id, id),
+    columns: { id: true, slug: true },
   });
 }
 
@@ -74,8 +83,24 @@ export function insertSong(executor: DbExecutor, data: InsertSongRow) {
   return executor.insert(song).values(data).returning({ id: song.id });
 }
 
-export function updateSong(executor: DbExecutor, id: number, data: Partial<InsertSongRow>) {
+export function updateSong(executor: DbExecutor, id: number, data: SongUpdateRow) {
   return executor.update(song).set(data).where(eq(song.id, id)).returning({ id: song.id });
+}
+
+export function updateSongWithSlugPolicy(
+  executor: DbExecutor,
+  id: number,
+  slug: string | null,
+  data: SongUpdateRow,
+) {
+  const slugCanBeSet =
+    slug === null ? isNull(song.slug) : or(isNull(song.slug), eq(song.slug, slug));
+
+  return executor
+    .update(song)
+    .set({ ...data, slug })
+    .where(and(eq(song.id, id), slugCanBeSet))
+    .returning({ id: song.id });
 }
 
 export function removeSong(executor: DbExecutor, id: number) {

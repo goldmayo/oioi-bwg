@@ -18,7 +18,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Switch } from "@/shared/ui/switch";
@@ -55,15 +63,20 @@ function applySongFormError(
   setLrcError: (message: string) => void,
 ) {
   const fieldErrors = getValidationFieldErrors(error);
+  const isSlugConflict =
+    error instanceof ApiError &&
+    (error.code === "SONG_SLUG_ALREADY_EXISTS" || error.code === "SONG_SLUG_IMMUTABLE");
 
   for (const fieldName of songFormFieldNames) {
     const message = fieldErrors?.[fieldName]?.[0];
     if (message) form.setError(fieldName, { message });
   }
 
+  if (isSlugConflict) form.setError("slug", { message: error.message });
+
   if (error instanceof ApiError && error.code === "SONG_LYRICS_INVALID") {
     setLrcError(error.message);
-  } else if (!fieldErrors || Object.keys(fieldErrors).length === 0) {
+  } else if (!isSlugConflict && (!fieldErrors || Object.keys(fieldErrors).length === 0)) {
     form.setError("root.server", {
       message: error instanceof Error ? error.message : "곡 저장에 실패했습니다.",
     });
@@ -78,6 +91,7 @@ export function SongFormDialog({
   onSubmit,
 }: SongFormDialogProps) {
   const isEdit = !!song;
+  const hasImmutableSlug = song !== undefined && song.slug !== null;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lrcError, setLrcError] = useState<string | null>(null);
 
@@ -100,6 +114,10 @@ export function SongFormDialog({
 
   const handleSubmit = useCallback(
     async (values: SongEditValues) => {
+      if (!isEdit && values.slug === "") {
+        form.setError("slug", { message: "slug를 입력해주세요." });
+        return;
+      }
       // 생성 시 lrcText 필수 검증
       if (!isEdit && (!values.lrcText || values.lrcText.trim() === "")) {
         setLrcError("LRC 파일을 업로드해주세요.");
@@ -186,8 +204,20 @@ export function SongFormDialog({
                   <FormItem>
                     <FormLabel>Slug</FormLabel>
                     <FormControl>
-                      <Input placeholder="예: worry-addiction" {...field} />
+                      <Input
+                        placeholder="예: worry-addiction"
+                        readOnly={hasImmutableSlug}
+                        aria-readonly={hasImmutableSlug}
+                        {...field}
+                      />
                     </FormControl>
+                    {isEdit && (
+                      <FormDescription>
+                        {hasImmutableSlug
+                          ? "한 번 지정한 slug는 변경할 수 없습니다."
+                          : "비워두거나 최초 slug를 지정할 수 있습니다."}
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

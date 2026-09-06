@@ -69,6 +69,23 @@ describe("/api/admin/songs", () => {
     expect(createSong).toHaveBeenCalledWith(context, input);
   });
 
+  it("maps a duplicate song slug to a safe conflict", async () => {
+    createSong.mockRejectedValue(new AppError("SONG_SLUG_ALREADY_EXISTS"));
+
+    const response = await POST(
+      new Request("https://example.test/api/admin/songs", {
+        body: JSON.stringify(input),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(apiErrorResponseSchema.parse(await response.json())).toMatchObject({
+      code: "SONG_SLUG_ALREADY_EXISTS",
+    });
+  });
+
   it("maps authorization and request validation failures", async () => {
     listAdminSongs.mockRejectedValue(new AppError("UNAUTHENTICATED"));
     expect((await GET()).status).toBe(401);
@@ -83,5 +100,22 @@ describe("/api/admin/songs", () => {
 
     expect(response.status).toBe(400);
     expect(apiErrorResponseSchema.parse(await response.json()).code).toBe("VALIDATION_ERROR");
+  });
+
+  it("rejects a null slug when creating a song", async () => {
+    const response = await POST(
+      new Request("https://example.test/api/admin/songs", {
+        body: JSON.stringify({ ...input, slug: null }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(apiErrorResponseSchema.parse(await response.json())).toMatchObject({
+      code: "VALIDATION_ERROR",
+      details: { fieldErrors: { slug: expect.any(Array) } },
+    });
+    expect(createSong).not.toHaveBeenCalled();
   });
 });
