@@ -276,6 +276,8 @@ foundation source correctness의 증거로 추정하지 않는다.
 
 - P2 browser E2E fixture/spec lifecycle.
 - Coverage scope/gate 정비.
+- CI workflow의 build gate 추가 검토. 현재 local build는 PASS지만 CI에는 build step이 없다.
+- GitHub Actions v4 action의 Node.js 20 deprecation annotation 해소를 위한 compatible action 갱신.
 - 비어 있는 legacy `drizzle/relations.ts` artifact의 근거 기반 정리 여부.
 
 ### C. OPERATIONS / DEPLOYMENT
