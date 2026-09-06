@@ -2,7 +2,7 @@
 
 ## Status
 
-VERIFIED
+CLOSED
 
 ## PLAN
 
@@ -522,4 +522,58 @@ Implementation verification은 완료됐으며 독립 REVIEW만 남았다. 이 �
 
 ## REVIEW
 
-pending
+APPROVE
+
+### Findings by Severity
+
+- Critical: 없음.
+- High: 없음.
+- Medium: 없음.
+- Low: 없음.
+
+Root cause인 ignored/manual PostgreSQL verification은 tracked test, repository command와 required CI step으로
+대체됐다. 승인된 P0 scenario가 실제 PostgreSQL/Repository/Service/CASL 경로를 사용하고, application
+source/schema/migration 또는 P1/P2 범위 확장은 없다.
+
+### Blocking Issues
+
+없음.
+
+### Minor Issues
+
+없음.
+
+### Review Evidence
+
+- 검토 기준 HEAD: `8f035ddb89e59576526bfac1e7caa1a7dc7c2b2b`
+- 기준 branch: `migration_m7-data-008-plan`; `origin/migration_develop` baseline
+  `2e20edc1e163d91193b3cd92f0339b559c5a4cf1`
+- 실제 review model: Codex (GPT-5). Reasoning effort는 실행 환경에 노출되지 않아 추정하지 않았다.
+  Registry REVIEW recommendation은 `Sol / High`이다.
+- Diff scope: approved 6 files only. Production Service/Repository/schema/migration/contract/UI 변경 없음.
+- Reviewer PostgreSQL 재실행: `pnpm test:integration:postgres:local` PASS — PostgreSQL 17.11,
+  migration 0000~0004, 1 file / 9 tests, connection 0, advisory lock 0, temp DB drop.
+- 재실행 후 catalog: `oioi_m7_test_*` database 0, 해당 advisory lock 0.
+- Current-head GitHub Actions run `34047568118`: PASS — 기존 verify 46 files / 182 tests,
+  PostgreSQL integration 1 file / 9 tests, guard/migration/cleanup, format check 모두 통과.
+- Implementation에 기록된 의도적 child failure cleanup도 exit 1을 보존하면서 connection/lock/DB를
+  정리하므로 cleanup failure를 success로 숨기지 않는다.
+
+### Remaining Risks
+
+- Auth.js session/login, browser E2E와 coverage scope는 승인된 DATA-008 P0 밖의 P2 항목이다. Direct
+  privileged Service denial은 explicit RequestContext와 real `requireUser`/CASL로 검증됐다.
+- CI `postgres:17`은 major를 강제하고 local은 17.11이지만 CI patch version은 별도로 고정하지 않는다.
+- 비정상 SIGKILL 또는 runner host 자체 종료는 local temp DB cleanup을 실행하지 못할 수 있다. 정상
+  failure/SIGINT/SIGTERM은 cleanup 경로가 있고 CI service는 job 종료 시 폐기된다.
+- GitHub Actions의 action runtime Node.js 20 deprecation annotation은 현재 verification 결과와 무관한
+  후속 CI maintenance다.
+
+위 항목은 DATA-008 closure blocker가 아니다.
+
+### Reviewer Recommendation
+
+- Verdict: `APPROVE`.
+- Status: `CLOSED`.
+- PR #70을 `migration_develop`에 squash merge한 뒤, merge HEAD에서
+  `M7-FINAL-VERIFICATION.md`의 final verification을 다시 실행한다.
