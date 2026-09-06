@@ -55,14 +55,18 @@ describe("song browser API", () => {
 
   it("validates the admin song list response", async () => {
     const controller = new AbortController();
-    http.get.mockResolvedValue([song]);
+    const list = { items: [song], nextCursor: null };
+    http.get.mockResolvedValue(list);
 
-    await expect(getAdminSongs(controller.signal)).resolves.toEqual([song]);
+    await expect(getAdminSongs(controller.signal)).resolves.toEqual(list);
     expect(http.get).toHaveBeenCalledWith("/api/admin/songs", { signal: controller.signal });
   });
 
   it("rejects an invalid response contract", async () => {
-    http.get.mockResolvedValue([{ ...song, id: "2" }]);
+    http.get
+      .mockResolvedValueOnce([song])
+      .mockResolvedValueOnce({ items: [{ ...song, id: "2" }], nextCursor: null });
+    await expect(getAdminSongs()).rejects.toThrow("API response contract violation");
     await expect(getAdminSongs()).rejects.toThrow("API response contract violation");
   });
 

@@ -1,8 +1,8 @@
 import { http } from "@/shared/api/http-client";
 import { parseClientResponse } from "@/shared/api/http-errors";
 import {
+  adminSongListSchema,
   adminSongMutationResultSchema,
-  adminSongSummarySchema,
   type CreateAdminSong,
   type SaveAdminSongLyrics,
   songDetailSchema,
@@ -18,7 +18,7 @@ export async function getSongDetail(slug: string, signal?: AbortSignal) {
 /** 관리자 곡 목록을 조회하고 외부 응답 계약으로 검증한다. */
 export async function getAdminSongs(signal?: AbortSignal) {
   const data = await http.get("/api/admin/songs", { signal });
-  return parseClientResponse(adminSongSummarySchema.array(), data);
+  return parseClientResponse(adminSongListSchema, data);
 }
 
 /** 관리자 곡을 생성하고 생성된 식별자를 검증한다. */

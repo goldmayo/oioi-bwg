@@ -40,7 +40,9 @@ export function AlbumManagerClient({
   onNameChangeOrDelete,
 }: AlbumManagerClientProps) {
   const queryClient = useQueryClient();
-  const { data: albums } = useSuspenseQuery(albumQueries.adminList());
+  const {
+    data: { items: albums },
+  } = useSuspenseQuery(albumQueries.adminList());
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
 

@@ -76,8 +76,14 @@ function renderEditor() {
   queryClient.setQueryData(["auth", "ability"], {
     rules: [{ action: "manage", subject: "all" }],
   });
-  queryClient.setQueryData(albumQueryKeys.adminList(), [{ id: 1 }]);
-  queryClient.setQueryData(songQueryKeys.adminList(), [{ id: song.id }]);
+  queryClient.setQueryData(albumQueryKeys.adminList(), {
+    items: [{ id: 1 }],
+    nextCursor: null,
+  });
+  queryClient.setQueryData(songQueryKeys.adminList(), {
+    items: [{ id: song.id }],
+    nextCursor: null,
+  });
 
   render(
     <QueryClientProvider client={queryClient}>

@@ -46,17 +46,21 @@ describe("album browser API", () => {
 
   it("validates the admin album list response", async () => {
     const controller = new AbortController();
-    http.get.mockResolvedValue([album]);
+    const list = { items: [album], nextCursor: null };
+    http.get.mockResolvedValue(list);
 
-    await expect(getAdminAlbums(controller.signal)).resolves.toEqual([album]);
+    await expect(getAdminAlbums(controller.signal)).resolves.toEqual(list);
     expect(http.get).toHaveBeenCalledWith("/api/admin/albums", {
       signal: controller.signal,
     });
   });
 
   it("rejects an invalid response contract", async () => {
-    http.get.mockResolvedValue([{ ...album, id: "1" }]);
+    http.get
+      .mockResolvedValueOnce([album])
+      .mockResolvedValueOnce({ items: [{ ...album, id: "1" }], nextCursor: null });
 
+    await expect(getAdminAlbums()).rejects.toThrow("API response contract violation");
     await expect(getAdminAlbums()).rejects.toThrow("API response contract violation");
   });
 

@@ -64,7 +64,7 @@ const album: AdminAlbumSummary = {
   isVisible: true,
   createdAt: "2026-04-02T18:00:57.794Z",
 };
-const songCache = [{ id: 2, album: { name: album.name } }];
+const songCache = { items: [{ id: 2, album: { name: album.name } }], nextCursor: null };
 
 let queryClient: QueryClient;
 
@@ -72,7 +72,7 @@ function renderManager() {
   queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
-  queryClient.setQueryData(albumQueryKeys.adminList(), [album]);
+  queryClient.setQueryData(albumQueryKeys.adminList(), { items: [album], nextCursor: null });
   queryClient.setQueryData(songQueryKeys.adminList(), songCache);
   const onNameChangeOrDelete = vi.fn(() => {
     void queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() });
@@ -118,7 +118,7 @@ describe("AlbumManagerClient cache orchestration", () => {
   it("keeps the Song list fresh after create", async () => {
     const created = { ...album, id: 3, name: "NEW", slug: "new" };
     http.post.mockResolvedValue(created);
-    http.get.mockResolvedValue([album, created]);
+    http.get.mockResolvedValue({ items: [album, created], nextCursor: null });
     const onNameChangeOrDelete = renderManager();
 
     fireEvent.click(screen.getByRole("button", { name: /앨범 추가/ }));
@@ -131,7 +131,7 @@ describe("AlbumManagerClient cache orchestration", () => {
 
   it("keeps the Song list fresh when an update returns the same name", async () => {
     http.patch.mockResolvedValue(album);
-    http.get.mockResolvedValue([album]);
+    http.get.mockResolvedValue({ items: [album], nextCursor: null });
     const onNameChangeOrDelete = renderManager();
 
     await submitEdit();
@@ -145,20 +145,23 @@ describe("AlbumManagerClient cache orchestration", () => {
     const renamed = { ...album, name: "MANITO RENAMED" };
     formHarness.values.name = renamed.name;
     http.patch.mockResolvedValue(renamed);
-    http.get.mockResolvedValue([renamed]);
+    http.get.mockResolvedValue({ items: [renamed], nextCursor: null });
     const onNameChangeOrDelete = renderManager();
 
     await submitEdit();
     await waitFor(() => expect(http.get).toHaveBeenCalledOnce());
 
     expect(onNameChangeOrDelete).toHaveBeenCalledOnce();
-    expect(queryClient.getQueryData(albumQueryKeys.adminList())).toEqual([renamed]);
+    expect(queryClient.getQueryData(albumQueryKeys.adminList())).toEqual({
+      items: [renamed],
+      nextCursor: null,
+    });
     expect(queryClient.getQueryState(songQueryKeys.adminList())?.isInvalidated).toBe(true);
   });
 
   it("refetches the active Album list and stales the Song list after delete", async () => {
     http.delete.mockResolvedValue(undefined);
-    http.get.mockResolvedValue([]);
+    http.get.mockResolvedValue({ items: [], nextCursor: null });
     const onNameChangeOrDelete = renderManager();
 
     fireEvent.click(screen.getByTitle("삭제"));
@@ -168,7 +171,10 @@ describe("AlbumManagerClient cache orchestration", () => {
     await waitFor(() => expect(http.delete).toHaveBeenCalledWith("/api/admin/albums/1"));
     await waitFor(() => expect(http.get).toHaveBeenCalledOnce());
     expect(onNameChangeOrDelete).toHaveBeenCalledOnce();
-    expect(queryClient.getQueryData(albumQueryKeys.adminList())).toEqual([]);
+    expect(queryClient.getQueryData(albumQueryKeys.adminList())).toEqual({
+      items: [],
+      nextCursor: null,
+    });
     expect(queryClient.getQueryState(songQueryKeys.adminList())?.isInvalidated).toBe(true);
   });
 

@@ -58,6 +58,11 @@ export const adminSongSummarySchema = adminSongFieldsSchema.extend({
   album: z.object({ name: z.string() }),
 });
 
+export const adminSongListSchema = z.object({
+  items: z.array(adminSongSummarySchema),
+  nextCursor: z.null(),
+});
+
 export const adminSongMutationResultSchema = z.object({
   id: z.number().int().positive(),
 });
@@ -82,4 +87,5 @@ export type CreateAdminSong = z.infer<typeof createAdminSongSchema>;
 export type UpdateAdminSong = z.infer<typeof updateAdminSongSchema>;
 export type SaveAdminSongLyrics = z.infer<typeof saveAdminSongLyricsSchema>;
 export type AdminSongSummary = z.infer<typeof adminSongSummarySchema>;
+export type AdminSongList = z.infer<typeof adminSongListSchema>;
 export type AdminSongMutationResult = z.infer<typeof adminSongMutationResultSchema>;

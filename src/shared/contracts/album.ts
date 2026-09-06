@@ -40,11 +40,17 @@ export const albumSummarySchema = z.object({
   createdAt: z.string(),
 });
 
+export const adminAlbumListSchema = z.object({
+  items: z.array(albumSummarySchema),
+  nextCursor: z.null(),
+});
+
 export const albumDetailSchema = albumSummarySchema.extend({
   songs: z.array(renderableAlbumSongSchema),
 });
 
 export type RenderableAlbumSong = z.infer<typeof renderableAlbumSongSchema>;
 export type AlbumSummary = z.infer<typeof albumSummarySchema>;
+export type AdminAlbumList = z.infer<typeof adminAlbumListSchema>;
 export type AlbumDetail = z.infer<typeof albumDetailSchema>;
 export type SaveAdminAlbum = z.infer<typeof saveAdminAlbumSchema>;

@@ -22,8 +22,12 @@ interface SongManagerClientProps {
 
 export function SongManagerClient({ canManage, onMutationError }: SongManagerClientProps) {
   const queryClient = useQueryClient();
-  const { data: songs } = useSuspenseQuery(songQueries.adminList());
-  const { data: albums } = useSuspenseQuery(albumQueries.adminList());
+  const {
+    data: { items: songs },
+  } = useSuspenseQuery(songQueries.adminList());
+  const {
+    data: { items: albums },
+  } = useSuspenseQuery(albumQueries.adminList());
   const [search, setSearch] = useState("");
   const [albumFilter, setAlbumFilter] = useState("all");
   const [page, setPage] = useState(0);

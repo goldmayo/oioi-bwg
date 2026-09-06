@@ -1,9 +1,12 @@
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { adminAlbumListSchema } from "@/shared/contracts/album";
+
 import { AppError } from "../errors/app-error";
 import { toErrorResponse } from "../http/api-response";
 
+const findAllAlbums = vi.hoisted(() => vi.fn());
 const insertAlbum = vi.hoisted(() => vi.fn());
 const updateAlbum = vi.hoisted(() => vi.fn());
 
@@ -17,14 +20,14 @@ vi.mock("../db", () => ({ getDatabase: () => ({}) }));
 vi.mock("../observability/server-logger", () => ({ reportServerError: vi.fn() }));
 vi.mock("../repositories/album-repository", () => ({
   findAlbumBySlug: vi.fn(),
-  findAllAlbums: vi.fn(),
+  findAllAlbums,
   findVisibleAlbumsWithSongs: vi.fn(),
   insertAlbum,
   removeAlbum: vi.fn(),
   updateAlbum,
 }));
 
-import { createAlbum, editAlbum } from "./album-service";
+import { createAlbum, editAlbum, listAdminAlbums } from "./album-service";
 
 const context = {
   user: { id: "1" },
@@ -46,6 +49,26 @@ function uniqueViolation(constraintName: string) {
   });
   return new DrizzleQueryError("insert into Album values ($1)", ["PRIVATE_VALUE"], cause);
 }
+
+describe("album-service admin list DTO", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("maps the full admin result to the domain list contract", async () => {
+    const album = {
+      ...input,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      id: 1,
+    };
+    findAllAlbums.mockResolvedValue([album]);
+
+    const result = await listAdminAlbums(context);
+
+    expect(adminAlbumListSchema.parse(result)).toEqual({
+      items: [album],
+      nextCursor: null,
+    });
+  });
+});
 
 describe("album-service unique conflicts", () => {
   beforeEach(() => vi.clearAllMocks());
