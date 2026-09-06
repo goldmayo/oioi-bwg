@@ -2,10 +2,10 @@
 
 ## Status
 
-VERIFIED
+CLOSED
 
-2026-09-06 사용자 정책 승인, TECHNICAL PLAN, IMPLEMENT와 필수 검증 완료.
-REVIEW는 아직 시작하지 않았으므로 DATA-005가 CLOSED됐음을 뜻하지 않는다.
+2026-09-06 사용자 정책 승인, TECHNICAL PLAN, IMPLEMENT, 필수 검증과 최종 REVIEW 완료.
+Review verdict는 APPROVE이며 DATA-005를 CLOSED한다.
 
 ## PLAN
 
@@ -433,4 +433,52 @@ Clean DB도 active connection 0 확인 후 drop했다. 마지막 catalog query�
 
 ## REVIEW
 
-pending
+### Verdict
+
+APPROVE
+
+### Selected Model / Effort
+
+Registry의 FINAL REVIEW 권고는 Astra 또는 Sol High다. 이번 REVIEW의 실제 runtime model은 GPT-6다.
+Reasoning effort 값은 실행 환경에 표시되지 않아 추정하지 않는다. 보조 agent는 사용하지 않았다.
+
+### Findings by Severity
+
+- Critical: 없음.
+- High: 없음.
+- Medium: 없음.
+- Low: 없음.
+
+Blocking issue와 minor issue 모두 없다.
+
+### Review Evidence
+
+- 원래 finding의 모호한 slug-only `findFirst` identity는 nullable `Song_slug_key UNIQUE (slug)`로
+  해소됐다. PostgreSQL 기본 UNIQUE가 여러 NULL을 허용하므로 승인된 legacy nullable 정책도 유지된다.
+- 새 `0004_violet_deadpool.sql`은 명명된 UNIQUE 한 문장만 포함하며 기존 0000~0003은 변경되지 않았다.
+  Schema metadata, snapshot, journal과 disposable PostgreSQL catalog가 같은 제약을 가리킨다.
+- Admin update는 `id`와 현재 slug 조건을 함께 검사하는 단일 UPDATE다. null 유지, 최초 지정과 동일 slug
+  update만 허용하고, 실패 후 최소 projection으로 immutable/not-found를 구분한다. 실제 PostgreSQL에서
+  서로 다른 동시 최초 지정은 성공 1/immutable 1로 확인됐다.
+- 정확한 `23505 / Song_slug_key`만 duplicate AppError로 정규화된다. Create/update conflict와 immutable은
+  HTTP 409 및 관리자 slug field error로 연결되고 unrelated error는 원형 전파된다.
+- Service의 `requireAdmin`, Repository `DbExecutor`, Route Handler Zod/HTTP mapper 경계는 유지됐다.
+  Public `/songs/{slug}` 형식, Song/Album visibility, query/cache ownership에는 변경이 없다.
+- 원본 SQL/params/row, credential 또는 민감 정보가 새 log/capture payload로 전달되는 변경은 없다.
+  자동 suffix, trigger, transaction/generic abstraction, future domain 또는 lifecycle 정책도 추가되지 않았다.
+- 구현 evidence의 focused 6 files/37 tests, 전체 46 files/182 tests, PostgreSQL 6 tests와 repository
+  gate/build 성공을 대조했다. REVIEW에서 focused 6 files/37 tests와 `git diff --check`, 기존 migration
+  무변경을 재확인했고 GitHub `verify` check도 통과 상태였다.
+
+### Remaining Risks
+
+- Production의 현재 duplicate, table size와 UNIQUE 생성 lock 시간은 검증하지 않았다. Production 적용 전
+  별도 승인, read-only duplicate preflight와 deployment window 검토가 필요하다.
+- 삭제 후 slug 재사용, 영구 예약, redirect/history는 승인된 후속 URL/deletion lifecycle decision이다.
+- 향후 Service를 우회하는 별도 writer가 도입되면 database-level immutability 여부를 별도 결정해야 한다.
+
+위 항목은 승인 계획에 명시된 운영 또는 후속 정책 범위이며 DATA-005 merge를 막지 않는다.
+
+### Reviewer Recommendation
+
+승인된 Option A와 필수 검증을 충족했으므로 DATA-005를 CLOSED하고 PR을 merge 대상으로 진행한다.
