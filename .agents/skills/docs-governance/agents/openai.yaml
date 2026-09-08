@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docs Governance"
+  short_description: "Govern oioi-bwg documentation lifecycle"
+  default_prompt: "Use $docs-governance to classify this repository document, find its canonical home, and update it without duplicating facts."
