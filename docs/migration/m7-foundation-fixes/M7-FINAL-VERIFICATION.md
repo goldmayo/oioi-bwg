@@ -2,14 +2,14 @@
 
 ## Status
 
-FAIL
+PASS
 
-- 검증 일시: 2026-09-07 01:25 KST
+- 검증 일시: 2026-09-07 02:27 KST
 - 실제 실행 모델: Codex (GPT-5)
 - reasoning effort: 실행 환경에 노출되지 않아 추정하지 않음
-- 결론: 현재 통합 코드의 기능·보안·데이터 정합성 회귀는 발견되지 않았지만,
-  `M7-DATA-008`의 지속 가능한 실제 PostgreSQL 회귀 coverage와 canonical 종료 기록이 없어 M7을
-  형식적으로 닫을 수 없다.
+- 결론: DATA-001~009가 모두 `CLOSED`이고, 현재 통합 HEAD에서 architecture/security/data
+  consistency regression이 발견되지 않았다. PostgreSQL 17 actual integration과 repository gate도 모두
+  통과했으므로 M7 foundation을 형식적으로 닫을 수 있다.
 
 ## Baseline
 
@@ -17,97 +17,99 @@ FAIL
 
 | 항목 | 결과 |
 | --- | --- |
-| 현재 branch | `migration_develop` |
-| current HEAD | `2e20edc1e163d91193b3cd92f0339b559c5a4cf1` |
-| `origin/migration_develop` HEAD | `2e20edc1e163d91193b3cd92f0339b559c5a4cf1` |
+| 시작 branch | `migration_develop` |
+| integrated HEAD | `c0f7754956a4b10a0be35c756baa4e0f140e2741` |
+| `origin/migration_develop` HEAD | `c0f7754956a4b10a0be35c756baa4e0f140e2741` |
 | local/origin 일치 | PASS — `git fetch origin migration_develop --prune` 후 동일 |
 | working tree | clean |
 | PostgreSQL | `17.11 (Debian 17.11-1.pgdg13+2)`, Docker Compose localhost |
 | production credential/DB | 사용하지 않음 |
 | 기존 local application DB write | 없음. catalog와 duplicate 집계만 `BEGIN READ ONLY`로 조회 |
-| 검증용 DB | finding별 격리 임시 DB 6개; 검증 후 전부 drop |
+| 검증용 DB | tracked lifecycle 1개와 finding별 보조 DB 5개; 검증 후 모두 drop |
 
-Canonical 보고서 작성은 검증한 HEAD에서 분기한 `migration_m7-final-verification`에서 수행했다.
-보고서 추가 전까지 tracked tree는 위 통합 HEAD와 동일했다.
+Canonical 보고서는 위 integrated HEAD에서 분기한 `migration_m7-final-verification-v2`에서 작성했다.
+보고서 추가 전까지 tracked tree는 `migration_develop` merge HEAD와 동일했다.
 
 ## Finding Status
 
-| Finding | Canonical status | 최종 판정 | 근거 |
+| Finding | Canonical status | 최종 판정 | 현재 HEAD 재검증 근거 |
 | --- | --- | --- | --- |
-| DATA-001 | `CLOSED` | accepted | 정상 signup, replay 거부, nickname/email 후반 실패 rollback을 현재 HEAD와 실제 PostgreSQL에서 재검증 |
-| DATA-002 | `CLOSED` | accepted | ADMIN-only Service 경계, validation-before-storage, 안전한 Action/storage contract를 unit suite에서 재검증 |
-| DATA-003 | `CLOSED` | accepted | Album create/update, signup email/nickname known 23505 → 409와 unknown actual constraint → generic 500을 실제 PostgreSQL에서 재검증 |
-| DATA-004 | `CLOSED` | accepted | 실제 Drizzle credential 오류와 synthetic marker의 logger/Sentry/public body 비노출을 재검증 |
-| DATA-005 | `CLOSED` | accepted | 승인된 global nullable unique/immutability 정책, migration, concurrency와 public read를 실제 PostgreSQL에서 재검증 |
-| DATA-006 | `CLOSED` | accepted | 정확한 Query key invalidation과 editor draft 보존을 현재 tracked tests에서 재검증 |
-| DATA-007 | `CLOSED` | accepted | Route/Service/parser/hydration/cache의 명시적 list DTO 일치를 현재 tracked tests와 source에서 재검증 |
-| DATA-008 | canonical finding 문서 없음 | **implementation incomplete** | `P0-FOUNDATION-CHECKPOINT.md`는 `PASS`지만 실제 PostgreSQL fixture의 영구 CI lifecycle을 DATA-008에 남겼다. 현재 DB suites는 `.local` ignore 파일이며 CI가 실행하지 않는다. PLAN→IMPLEMENT→REVIEW/CLOSED evidence도 없다. |
-| DATA-009 | `CLOSED` | accepted | 최초/재발급 동시성, cooldown loser counter, email/IP limit, rollback/mail/lock을 현재 HEAD와 실제 PostgreSQL에서 재검증 |
+| DATA-001 | `CLOSED` | accepted | signup 성공/replay/두 late rollback을 actual PostgreSQL에서 재검증 |
+| DATA-002 | `CLOSED` | accepted | guest/USER/REVIEWER denial, validation-before-storage와 safe Action contract 재검증 |
+| DATA-003 | `CLOSED` | accepted | known Album/signup/Song 23505와 unknown actual constraint의 500 경로 재검증 |
+| DATA-004 | `CLOSED` | accepted | actual Drizzle credential 오류와 synthetic marker의 logger/Sentry/public body 비노출 재검증 |
+| DATA-005 | `CLOSED` | accepted | nullable global unique, immutability, concurrency와 public visibility를 actual PostgreSQL에서 재검증 |
+| DATA-006 | `CLOSED` | accepted | 정확한 TanStack Query invalidation과 editor draft 보존 재검증 |
+| DATA-007 | `CLOSED` | accepted | Service/Route/parser/hydration/cache의 explicit list DTO 일치 재검증 |
+| DATA-008 | `CLOSED` | accepted | tracked 9-test PostgreSQL lifecycle, required CI step와 merge HEAD CI PASS 확인 |
+| DATA-009 | `CLOSED` | accepted | 최초/재발급 동시성, email/IP limit, rollback/mail/lock을 actual PostgreSQL에서 재검증 |
 
-DATA-008은 문서 상태 bookkeeping만의 문제가 아니다. M7이 고친 signup transaction, unique conflict,
-OTP concurrency가 이후 PR에서 깨져도 현재 `.github/workflows/verify.yml`은 이를 실제 PostgreSQL에서
-검출하지 못한다. 따라서 finding registry의 completion rule을 충족하지 않는다.
+미완료, verification-only, policy-unresolved 또는 bookkeeping-only 상태의 finding은 없다. Closed finding을
+다시 여는 새로운 evidence도 발견되지 않았다.
 
 ## Integrated Verification
 
-현재 HEAD에서 다음 실제 경로를 검증했다.
+현재 integrated HEAD에서 다음 실제 경로를 검증했다.
 
-- signup: `requestOtp → verifyOtp → completeSignup` 성공, challenge `CONSUMED`, ACTIVE Account와
-  Profile/PasswordCredential 생성, credential email verified timestamp 확인.
-- replay: 소비된 challenge 재사용은 `OTP_NOT_VERIFIED`, 추가 identity row 없음.
-- rollback: nickname 및 credential email 충돌 모두 challenge가 `VERIFIED`로 복원되고
-  `consumed_at`과 중간 identity row가 남지 않음.
-- OTP: 동일 email 최초/재발급 동시 요청은 success 1 / `OTP_COOLDOWN` 1 / mail 1,
-  winner counter만 남고 현재 PENDING challenge는 1개.
-- rate limit: email 5회 후 6번째, IP 20회 후 21번째가 `OTP_RATE_LIMITED`.
-- transaction failure: 잘못된 `inet` insert는 challenge/counter를 rollback하고 mail 0회;
-  후속 정상 요청으로 advisory lock 해제 확인.
-- persistence: migration hash/journal, 7개 table/52개 column, Album→Song cascade,
-  public visibility, Song order와 JSONB lyrics round-trip, FK failure rollback 확인.
-- authorization: guest/USER/REVIEWER가 Album/Song privileged Service 10개에서 직접 거부됨.
-
-검증 과정의 진단 실패도 숨기지 않는다.
-
-1. 최초 임시 DB 이름 `m7_final_*`은 local suite의 이름 안전 가드가 거부했다. 모든 suite가 import 또는
-   assertion 단계에서 끝나 migration/fixture가 적용되지 않았다. 빈 DB를 drop하고 허용 prefix로 다시
-   생성했다.
-2. DATA-003의 local suite는 DATA-005 전 migration count `4`를 고정해 현재 정상 journal `5`를 실패로
-   처리했다. 실제 conflict/rollback 3개는 같은 실행에서 통과했다. 비추적 `.local` assertion을 `5`로
-   갱신하고 새 DB에서 전체 suite를 재실행해 5/5 통과했다.
-3. 요청된 unknown actual constraint 검증이 없어서 임시 DB에만 `Album.name` test UNIQUE를 추가했다.
-   실제 `23505 / Album_name_verification_key`는 known conflict로 오분류되지 않았고 generic 500을 반환했다.
-   application schema와 migration은 변경하지 않았다.
+- signup: `requestOtp -> verifyOtp -> completeSignup` 성공, challenge `CONSUMED`, ACTIVE Account와
+  Profile/PasswordCredential 생성, credential email verification timestamp 확인.
+- replay: 소비된 challenge 재사용은 `OTP_NOT_VERIFIED`; 추가 identity row 없음.
+- rollback: nickname/credential email 충돌은 각각 공개 409 domain error로 변환되고 challenge는
+  `VERIFIED`, `consumed_at`은 null, 중간 identity row는 rollback.
+- OTP: 같은 email의 최초/재발급 동시 요청은 success 1 / `OTP_COOLDOWN` 1 / mail 1. 재발급은 이전
+  challenge `INVALIDATED`, 신규 현재 challenge `PENDING` 1개.
+- rate limit: email 5회 후 6번째와 IP 20회 후 21번째가 `OTP_RATE_LIMITED`; loser/거부 transaction은
+  counter를 남기지 않음.
+- transaction failure: 잘못된 `inet` insert는 challenge/counter rollback 및 mail 0회. 후속 정상 요청
+  성공으로 transaction advisory lock 해제 확인.
+- persistence: migration 0000~0004 hash/journal, Song nullable global unique, FK rollback, Album->Song
+  cascade, public visibility, Song order와 JSONB lyrics round-trip 확인.
+- authorization: guest/USER/REVIEWER는 Album/Song privileged Service 10개에서 직접 거부됨.
+- upload: guest/USER/REVIEWER는 validation/storage 전에 거부되고 storage call 0. ADMIN만 validation 후
+  허용됨.
+- contract/cache: explicit list DTO와 Query cache/refetch shape가 일치하고 정확한 list key만
+  invalidate하며 editor draft는 유지됨.
 
 ## PostgreSQL Verification
 
-모든 DB suite는 명시적인 `127.0.0.1` 임시 URL로 `scripts/assert-local-database.ts` guard를 통과했고,
-tracked migration 0000~0004 다섯 개를 실제 Drizzle migrator로 적용했다.
+### Durable tracked lifecycle
 
-| Suite | 최종 결과 |
+`pnpm test:integration:postgres:local`은 현재 repository의 tracked lifecycle을 그대로 실행했다.
+
+- Docker Compose PostgreSQL 17 health 확인.
+- `oioi_m7_test_<unique suffix>` 임시 DB 생성.
+- `scripts/assert-local-database.ts` local guard 통과.
+- Drizzle migration 0000~0004를 빈 DB에 적용.
+- `tests/integration/m7-foundation.postgres.test.ts` 1 file / 9 tests PASS.
+- 종료 시 connection 0, advisory lock 0 확인 후 DB drop.
+- maintenance catalog에서 최종 임시 DB 0개와 cluster advisory lock 0개 확인.
+
+같은 integrated HEAD의 GitHub Actions push run `34048259905`도 PostgreSQL 17 service에서 같은 tracked
+suite 9개, migration, guard와 cleanup을 모두 통과했다. CI URL/로그에는 database password 또는 production
+credential이 없다.
+
+### Supplementary final verification
+
+최종 요청의 세부 finding 항목은 기존 `.local` 진단 suite를 보조 evidence로만 재실행했다. 이 파일들은
+durable coverage로 계산하지 않으며, durable M7 P0 gate는 위 tracked suite와 CI다. 각 보조 suite에는
+별도 localhost 임시 DB를 만들고 guard와 migration 0000~0004를 적용했다.
+
+| Suite | 결과 |
 | --- | --- |
+| tracked M7 foundation | 1 file / 9 tests PASS |
 | DATA-001 | 1 file / 3 tests PASS |
 | DATA-003 | 1 file / 5 tests PASS |
 | DATA-004 | 1 file / 1 test PASS |
 | DATA-005 | 1 file / 6 tests PASS |
 | DATA-009 | 1 file / 4 tests PASS |
-| core persistence/authz/public read | 1 file / 4 selected tests PASS |
-| 합계 | 6 files / 23 executed tests PASS |
+| 합계 | 6 files / 28 executed tests PASS |
 
-핵심 실행 명령은 다음과 같다. URL의 password 부분은 보고서에 기록하지 않는다.
+DATA-003의 unknown constraint 검증은 해당 임시 DB에만 `Album.name` UNIQUE를 추가했다. 실제
+`23505 / Album_name_verification_key`는 known conflict로 오분류되지 않고 safe generic 500을 반환했다.
+Application schema/migration은 변경하지 않았고 임시 DB와 함께 제거했다.
 
-```text
-docker compose -f compose.dev.yml up -d --wait postgres
-DATABASE_URL=<explicit 127.0.0.1 temporary database URL> node --import tsx scripts/assert-local-database.ts
-M7_DATA_001_DATABASE_URL=<temporary URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-001-verification.config.ts --reporter=verbose
-M7_DATA_003_DATABASE_URL=<temporary URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-003-verification.config.ts --reporter=verbose
-M7_DATA_004_DATABASE_URL=<temporary URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-004-verification.config.ts --reporter=verbose
-DATABASE_URL=<temporary URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-005-verification.config.ts --reporter=verbose
-M7_DATA_009_DATABASE_URL=<temporary URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-009-verification.config.ts --reporter=verbose
-node node_modules/vitest/vitest.mjs run --config .local/m7-verification.config.ts --reporter=verbose -t 'fresh migrations|real public reads|repository tx executor|guest / USER / REVIEWER'
-```
-
-종료 시 여섯 DB 모두 active connection 0, cluster advisory lock 0을 확인한 뒤 명시적으로 drop했다.
-최종 catalog에서 대상 임시 DB 0개와 advisory lock 0을 재확인했다.
+보조 DB 5개도 각각 종료 시 `connections=0`, `locks=0`, `remaining=0`을 확인했다. 모든 DB 검증 후
+maintenance catalog의 M7 대상 임시 DB는 0개이고 cluster advisory lock도 0개다.
 
 ## Architecture Boundary
 
@@ -120,142 +122,175 @@ Auth.js -> RequestContext -> requireUser / CASL -> Service security boundary
 Zod input/output -> Route Handler -> jsonResponse / toErrorResponse
 ```
 
-Repository/schema import는 `src/server`의 DB/repository/service/auth 경계와 test에 한정된다. RSC와 Route
-Handler의 직접 DB/repository 접근, Client의 persistence row import, Route Handler의 direct repository
-호출은 발견되지 않았다. Service가 transaction을 소유하고 Repository는 전달된 `DbExecutor`를 사용한다.
+Repository-wide import/usage scan 결과:
 
-Repository-wide scan에서 다음 runtime regression은 발견되지 않았다.
+- DB/schema/repository import는 `src/server`의 DB/repository/service/auth 경계와 tests에 한정된다.
+- RSC와 Route Handler의 direct DB/repository 접근은 발견되지 않았다.
+- `$inferSelect`/`$inferInsert`는 server DB/schema/repository 안에만 있고 client/shared contract로 새지 않는다.
+- Route Handler는 Service와 Zod/http mapper를 사용하고 direct repository를 호출하지 않는다.
+- `use server` 파일은 upload delivery adapter, Auth.js sign-in/out adapter, feature flag helper다. Privileged DB
+  mutation을 직접 수행하는 Server Action은 없다.
+- Upload Action은 safe synthetic error만 client-oriented logger에 전달하고 실제 authorization/storage는
+  Service boundary 뒤에 있다.
+- generic success envelope는 HTTP API convention에 없다. 제한적 upload Server Action의 local result는
+  승인된 form adapter contract이며 HTTP convention이 아니다.
+
+다음 runtime regression도 발견되지 않았다.
 
 - Supabase Auth runtime/client/server 사용
 - Vinext runtime, Cloudflare Worker entry 또는 Hyperdrive binding
 - Query-owned state의 `window.location.reload`, `location.reload`, `router.refresh`
-- `use cache`, `unstable_cache`, `updateTag`, `revalidatePath` 기반 이중 consistency ownership
-- privileged Server Action의 DB 직접 mutation
-- generic success envelope를 HTTP API convention으로 사용
+- `use cache`, `unstable_cache`, `updateTag`, `revalidateTag`, `revalidatePath` 기반 이중 consistency ownership
 - raw Drizzle row type의 client/shared external contract 유출
 
-`pnpm-lock.yaml`의 `@cloudflare/workers-types`와 `pg-cloudflare`는 Drizzle dependency graph의 optional
-peer/transitive 항목이며 application runtime import나 binding이 아니다. R2는 승인된 storage provider로
-의도적으로 유지한다.
+`pnpm-lock.yaml`의 Cloudflare 관련 optional peer/transitive dependency와 승인된 R2 provider는 runtime
+regression으로 분류하지 않는다.
 
 ## Security
 
 - Album/Song privileged Service는 `requireUser`와 CASL `manage/all`을 최종 경계로 사용한다.
-- upload는 `RequestContext → uploadAlbumImage Service → requireUser/CASL → Zod file validation →
+- Actual PostgreSQL suite에서 guest/USER/REVIEWER가 10개 privileged Service entry를 모두 직접 거부했다.
+- Upload 흐름은 `RequestContext -> uploadAlbumImage Service -> requireUser/CASL -> Zod validation ->
   server/storage` 순서다.
-- guest/USER/REVIEWER는 valid/invalid input 모두 storage call 0; ADMIN만 validation 후 허용된다.
-- 5 MiB exact boundary와 AVIF/JPEG/PNG/WebP allowlist가 test로 고정돼 있다.
-- 실제 R2 network write와 production credential은 사용하지 않았다.
-- UI/layout 가시성은 authorization evidence로 사용하지 않았다.
+- Invalid FormData/string, unsupported MIME, oversized file은 storage 전에 거부된다.
+- 5 MiB exact boundary와 AVIF/JPEG/PNG/WebP allowlist가 focused tests로 고정돼 있다.
+- Storage raw error는 Action 응답에 노출되지 않는다. 실제 R2 network write/credential은 사용하지 않았다.
+- UI/layout visibility는 authorization evidence로 사용하지 않았다.
+
+DATA-004 actual Drizzle failure와 focused observability tests에서 SQL/params, email, password/password hash,
+OTP/OTP hash, token, cookie, Authorization header, private IP와 raw nested cause marker가 logger line, console
+payload, Sentry capture/event, instrumentation metadata와 HTTP body에 남지 않음을 확인했다. Logger는 object가
+아닌 단일 serialized JSON string을 출력하고 CR/LF가 없는 one-line JSON을 유지한다. Event/source, safe
+error type/code, 안전한 stack filename/function/line/column과 trace identifier는 보존된다. Unexpected failure의
+HTTP contract는 generic 500을 유지한다.
 
 ## Contracts
 
-- known `23505`만 service allowlist constraint에 따라 domain `AppError`로 변환되고 공개 409를 반환한다.
-- Album slug create/update, signup email/nickname, Song slug duplicate를 실제 PostgreSQL에서 확인했다.
-- 검증 전용 unknown Album constraint는 예상 conflict로 바뀌지 않고 safe generic 500을 반환했다.
-- Album/Song 관리자 목록은 모두 `{ items, nextCursor: null }`의 domain-specific DTO를 사용한다.
-- Service output, Route output schema, client parser, RSC `setQueryData`, Query cache/refetch consumer가 같은
+- Known `23505`만 Service allowlist constraint에 따라 domain `AppError`로 변환되고 공개 409를 반환한다.
+- Album slug create/update, signup email/nickname, Song slug duplicate를 actual PostgreSQL에서 확인했다.
+- Test-only unknown Album constraint는 expected conflict로 바뀌지 않고 safe generic 500을 반환했다.
+- 실패한 signup/slug mutation은 원래 row/challenge/identity 상태를 보존한다.
+- Album/Song 관리자 목록은 각각 `{ items, nextCursor: null }`의 domain-specific DTO를 사용한다.
+- Service output, Route output schema, browser parser, RSC `setQueryData`, Query cache/refetch consumer가 같은
   DTO를 사용하며 bare-array 또는 generic `{ success, data }` drift가 없다.
-- 전체 조회와 client pagination/filter를 유지하며 server pagination을 추가하지 않았다.
+- 전체 조회와 client pagination/filter를 유지하고 server pagination을 추가하지 않았다.
+
+DATA-005 승인 정책도 현재 code/schema/migration/DB test에서 유지된다.
+
+- `Song.id`는 stable internal identity다.
+- `Song.slug`는 nullable이며 non-null 값만 global unique다. 여러 null은 허용된다.
+- null에서 최초 지정은 허용되고 기존 non-null slug는 Service boundary에서 immutable하다.
+- title 변경과 slug를 유지한 album move는 허용된다.
+- same/cross album 및 hidden Song의 같은 slug는 409로 거부된다.
+- concurrent create/first assignment에는 winner 하나만 남고 failure는 데이터를 보존한다.
+- public `/songs/{slug}`는 Song과 Album visibility를 모두 적용한다.
+- suffix 생성, 새 UUID/public id 또는 slug 기반 future domain identity를 도입하지 않았다.
 
 ## Cache
 
-- lyrics save 성공은 `songQueryKeys.adminList()`만 invalidate한다.
+Production `QueryClient`를 사용하는 focused 3 files / 8 scenarios가 모두 통과했다.
+
+- Lyrics save 성공은 `songQueryKeys.adminList()`만 invalidate한다.
 - Album rename/delete는 Album list와 route-composed Song admin list를 invalidate한다.
-- Album create/동일-name update와 unrelated detail key는 불필요하게 invalidate하지 않는다.
-- mutation failure는 secondary invalidation을 실행하지 않는다.
-- editor local draft와 RSC-only public view ownership은 유지된다.
-- Next Data Cache와 TanStack Query의 동일 mutable state 이중 ownership은 발견되지 않았다.
+- Album create와 동일-name update는 Song list를 불필요하게 invalidate하지 않는다.
+- Mutation failure는 secondary data-list invalidation을 실행하지 않는다.
+- Unrelated query key와 editor local draft는 보존된다.
+- RSC-only public view를 Query ownership으로 전환하지 않았다.
+- Next Data Cache와 TanStack Query의 동일 mutable server state 이중 ownership은 발견되지 않았다.
 
 ## Testing
 
 ### P0
 
-현재 HEAD의 수동 final verification에서는 모두 PASS했다.
+현재 tracked repository/CI coverage는 다음 closure-critical 실제 PostgreSQL 경로를 보호한다.
 
-- signup success/replay/two late rollback: actual PostgreSQL
-- OTP verification state와 concurrency/rate-limit/rollback: actual PostgreSQL
-- known/unknown DB conflict mapping: actual PostgreSQL + tracked wrapper unit
-- privileged Album/Song Service denial: actual Service/CASL + PostgreSQL-backed run
-- upload denial: tracked Service/Action tests with real CASL and mocked external storage
-- migration/constraint/FK/order/cascade/public visibility/read: actual PostgreSQL
-- critical Album/Song create/update/delete: actual Service/PostgreSQL 및 tracked Route/Service tests
+- signup success, replay, nickname/email late rollback
+- OTP verification/consumption state와 최초/재발급 concurrency
+- known Album/Song/signup DB conflict mapping
+- guest/USER/REVIEWER privileged Album/Song Service denial
+- migration journal/hash와 0000~0004 scratch migration
+- critical FK rollback, unique constraint, order, JSONB lyrics, cascade와 public visibility/read
+- critical Album/Song Service mutation과 constraint/data preservation
 
-그러나 actual PostgreSQL P0 test/config는 모두 `.local` ignore 상태이고 CI PostgreSQL job이 없다. 따라서
-현재 snapshot이 맞다는 검증과 이후 변경을 보호하는 repository coverage를 구분해야 한다. 후자가
-DATA-008 blocker다.
+Email/IP rate limit, failed transaction/mail/lock, unknown constraint와 DATA-005 상세 concurrency는 이번 final
+verification의 supplementary actual PostgreSQL suites로도 통과했다. DATA-008의 tracked suite와 CI는 fresh
+checkout에서 `.local` 없이 실행된다.
 
 ### P1
 
-- Route validation/error mapping: tracked Route와 `api-response` tests
-- cache invalidation consumers: production `QueryClient` 기반 3 files / 8 focused scenarios가 full unit에 포함
-- form/field error: Song slug duplicate/immutable 및 Album mutation UI tests
-- DTO hydration/refetch consistency: Service/Route/entity API/Query consumer tests
-- full unit gate: 46 files / 182 tests PASS
+- Route validation/error mapping: tracked Route 및 `api-response` tests.
+- Cache invalidation: production QueryClient 기반 3 files / 8 focused scenarios.
+- Form/field errors: Song duplicate/immutable와 Album mutation UI tests.
+- DTO consistency: Service/Route/entity parser/RSC seed/Query consumer tests.
+- Focused security/contract/cache run: 14 files / 62 tests PASS.
+- Full unit gate: 46 files / 182 tests PASS.
 
 ### P2
 
-- Browser E2E: Playwright package만 있고 config/test suite가 없어 미구현.
-- Coverage: Vitest V8 설정과 `test:coverage` script는 있으나 include가 일부 과거
-  `shared/hooks`/`shared/utils` 및 feature `use*`로 좁아 foundation coverage gate가 아니다.
-- Load continuity: `tests/k6/{load,stress,spike}.js`가 존재하지만 이번 검증에서는 staging을 호출하지 않았다.
+- Browser E2E: Playwright package는 있으나 config/spec/fixture lifecycle은 아직 없다.
+- Coverage: Vitest V8 설정/script는 있으나 include가 일부 legacy shared hooks/utils와 feature `use*`로 좁다.
+- Load continuity: `tests/k6/{load,stress,spike}.js`가 존재하나 이번 검증에서는 staging을 호출하지 않았다.
 
-P2 항목은 현재 M7 P0 closure blocker로 분류하지 않는다. DATA-008 REWORK는 먼저 P0 actual PostgreSQL
-coverage를 작은 tracked lifecycle로 착지시키는 데 한정해야 한다.
+P2는 승인된 DATA-008 closure 범위와 M7 P0 closure blocker가 아니다. 이번 verification에서 새 framework,
+browser suite 또는 coverage redesign을 추가하지 않았다.
 
 ## Runtime / Deployment
 
 | 항목 | 분류 | 현재 repository evidence |
 | --- | --- | --- |
-| Next standalone | complete | `next.config.ts`의 `output: "standalone"`, `pnpm build` PASS |
+| Next standalone | complete | `next.config.ts`의 `output: "standalone"`, local `pnpm build` PASS |
 | Docker development | complete | `Dockerfile.dev`, `compose.dev.yml`, PostgreSQL healthcheck |
 | Docker production | out-of-scope-for-M7 | production Dockerfile/Compose artifact 없음; M9 대상 |
-| Caddy | out-of-scope-for-M7 | artifact 없음; runbook의 M9 대상 |
-| CI verify | complete | install + `pnpm verify` + format check workflow 존재 |
-| CI build/DB integration | partial | workflow에 build와 PostgreSQL integration job 없음 |
-| Cloudflare runtime remnants | complete | application runtime entry/binding 없음; R2와 optional lockfile entries만 존재 |
-| R2 storage | partial | server/storage adapter와 mock test 존재; 실제 credential/network/bucket policy 미검증 |
-| image optimization | partial | remote pattern은 있으나 `images.unoptimized: true`; M8/runtime 후속 |
-| production deployment completeness | out-of-scope-for-M7 | M9 Docker/Caddy/health/backup/rollback/HTTPS 작업 미완료 |
+| Caddy | out-of-scope-for-M7 | artifact 없음; active runbook의 M9 대상 |
+| CI verify | complete | install, `pnpm verify`, PostgreSQL 17 integration, format check |
+| CI build | partial | workflow에 build step 없음; local build는 PASS |
+| Cloudflare runtime remnants | complete | application Worker/Hyperdrive runtime entry/binding 없음 |
+| R2 storage | partial | server storage adapter/mock tests 존재; real credential/network/bucket policy 미검증 |
+| image optimization | partial | remote pattern은 있으나 `images.unoptimized: true`; M8 후속 |
+| production deployment completeness | out-of-scope-for-M7 | M9 Docker/Caddy/health/backup/rollback/HTTPS 작업 |
 
-배포 항목은 active runbook이 M8/M9로 명시하므로 그 자체로 M7 FAIL을 만들지 않는다.
+후속 phase로 명시된 배포 항목은 M7 closure blocker로 사용하지 않는다.
 
 ## Remaining Unknowns
 
-- 기존 local application DB는 migration journal 2개만 적용됐고 tracked journal은 5개다.
-- local application DB에는 repository에 없는 nullable `profile.bio`가 있으며 기원은 확인되지 않았다.
-- local application DB에는 `Song_slug_key`가 아직 없지만 read-only 집계의 non-null duplicate group은 0이다.
-- production schema/journal, production Song.slug duplicate, table size와 UNIQUE lock window는 확인하지 않았다.
-- production RLS/storage bucket policy와 R2 network/credential 동작은 확인하지 않았다.
-- 실제 Sentry 조직의 Relay 처리, source-map, grouping, retention/access control은 확인하지 않았다.
-- 저장소 밖의 비공개 admin API consumer 존재 여부는 확인할 수 없다.
+| ID | 관찰값/unknown | 분류 |
+| --- | --- | --- |
+| U1 | local application DB는 migration journal 2개이며 tracked journal은 5개 | C. Operations / Deployment |
+| U2 | local application DB의 nullable `profile.bio` 기원은 repository에서 확인되지 않음 | C. Operations / Deployment |
+| U3 | local application DB에는 `Song_slug_key`가 없고 현재 non-null duplicate group은 0 | C. Operations / Deployment |
+| U4 | production schema/journal/Song.slug duplicate/table size/lock window | F. Environment Unknown |
+| U5 | production RLS/storage bucket/R2 credential 동작 | F. Environment Unknown |
+| U6 | 실제 Sentry Relay/source-map/grouping/retention/access control | F. Environment Unknown |
+| U7 | repository 밖 private admin API consumer | F. Environment Unknown |
 
-이 unknown은 foundation source correctness와 production reconciliation/rollout을 구분해 유지한다. 이를
-해소하려고 local application DB나 production DB에 migration/fixture를 적용하지 않았다.
+U1~U3은 기존 local application DB에 migration/fixture를 적용하지 않고 read-only로 관찰했다. U4~U7을
+foundation source correctness의 증거로 추정하지 않는다.
 
 ## Remaining Debt Classification
 
 ### A. M7 BLOCKER
 
-- DATA-008: actual PostgreSQL P0 regression tests가 `.local`에만 있어 repository/CI가 보호하지 못한다.
-- DATA-008: canonical PLAN/IMPLEMENT/VERIFICATION/REVIEW와 accepted final status가 없다.
+- 없음.
 
 ### B. FOLLOW-UP MIGRATION DEBT
 
-- P2 browser E2E suite와 coverage scope 정비.
+- P2 browser E2E fixture/spec lifecycle.
+- Coverage scope/gate 정비.
+- CI workflow의 build gate 추가 검토. 현재 local build는 PASS지만 CI에는 build step이 없다.
+- GitHub Actions v4 action의 Node.js 20 deprecation annotation 해소를 위한 compatible action 갱신.
 - 비어 있는 legacy `drizzle/relations.ts` artifact의 근거 기반 정리 여부.
 
 ### C. OPERATIONS / DEPLOYMENT
 
-- local application DB의 0002~0004 적용 또는 재생성/복원 절차.
-- production migration preflight, Song duplicate 확인, UNIQUE lock/deployment window.
-- production Docker/Caddy/health/backup/restore/rollback/HTTPS 및 R2/Sentry 운영 검증.
-- image optimization/runtime asset cleanup.
+- U1~U3: local application DB 0002~0004 적용 또는 재생성/복원 절차와 drift reconciliation.
+- Production migration preflight/deployment window와 backup/restore/rollback runbook 실행.
+- Production Docker/Caddy/health/HTTPS artifact 및 운영 검증.
+- R2 network/credential/bucket policy와 image optimization/runtime asset cleanup.
 
 ### D. PRODUCT DECISION
 
-- Song slug 삭제 후 재사용, 영구 예약, redirect/history 정책.
-- upload magic-byte 검증, orphan object cleanup, audit/rate-limit 요구 여부.
+- Song slug 삭제 후 재사용, 영구 예약 또는 redirect/history 정책.
+- Upload magic-byte 검사, orphan object cleanup, audit/rate-limit 요구.
 
 ### E. FUTURE DOMAIN
 
@@ -263,12 +298,15 @@ coverage를 작은 tracked lifecycle로 착지시키는 데 한정해야 한다.
 
 ### F. ENVIRONMENT UNKNOWN
 
-- production schema/data/RLS/storage policy의 실제 상태.
-- 실제 Sentry 수신/가공 결과와 저장소 외 private API consumer.
+- U4~U7: production DB/data/security policy, 실제 Sentry 처리와 repository 외 private consumer.
 
 ## Repository Gates
 
-현재 integrated HEAD에서 실제 실행했다.
+Integrated HEAD에서 다음 명령을 실제 연속 실행했다.
+
+```text
+pnpm type-check && pnpm test:harness && pnpm lint && pnpm lint:fsd && pnpm test:unit:run && pnpm format:check && pnpm build && git diff --check
+```
 
 | Command | Result |
 | --- | --- |
@@ -280,33 +318,40 @@ coverage를 작은 tracked lifecycle로 착지시키는 데 한정해야 한다.
 | `pnpm format:check` | PASS |
 | `pnpm build` | PASS — Next.js 16.3.3, 23/23 static pages |
 | `git diff --check` | PASS |
+| `pnpm test:integration:postgres:local` | PASS — PostgreSQL 17, 1 file / 9 tests, cleanup PASS |
 
-연속 실행 command:
+추가 actual PostgreSQL 명령은 각 격리 DB에서 아래 형태로 실행했다. URL password는 기록하지 않는다.
 
 ```text
-pnpm type-check && pnpm test:harness && pnpm lint && pnpm lint:fsd && pnpm test:unit:run && pnpm format:check && pnpm build && git diff --check
+DATABASE_URL=<explicit 127.0.0.1 temporary database URL> node --import tsx scripts/assert-local-database.ts
+M7_DATA_001_DATABASE_URL=<temporary URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-001-verification.config.ts --reporter=verbose
+M7_DATA_003_DATABASE_URL=<temporary URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-003-verification.config.ts --reporter=verbose
+M7_DATA_004_DATABASE_URL=<temporary URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-004-verification.config.ts --reporter=verbose
+DATABASE_URL=<temporary URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-005-verification.config.ts --reporter=verbose
+M7_DATA_009_DATABASE_URL=<temporary URL> node node_modules/vitest/vitest.mjs run --config .local/m7-data-009-verification.config.ts --reporter=verbose
 ```
+
+Merge HEAD의 GitHub Actions `Verify` push run `34048259905`도 `pnpm verify`, PostgreSQL integration과
+format check를 통과했다.
 
 ## Final Verdict
 
-FAIL
+PASS
 
-현재 integrated HEAD의 M7 기능 결과에는 재현된 regression이 없지만, `M7-DATA-008`이 completion rule을
-충족하지 않는다. 기존 architecture와 policy 안에서 해결 가능한 test-lifecycle 구현 누락이므로
-`ESCALATE`가 아니라 `FAIL`이다.
-
-정확한 REWORK 대상:
-
-1. DATA-008 canonical plan을 현재 0000~0004 migration과 P0 risk에 맞춰 확정한다.
-2. signup success/late rollback, OTP concurrency, known conflict, privileged Service denial,
-   critical constraint/FK/order/public read 중 M7 closure에 필요한 실제 PostgreSQL regression을 작은 tracked
-   suite로 둔다.
-3. PostgreSQL 17 격리 DB create/migrate/test/cleanup lifecycle을 repository command와 CI에 연결한다.
-4. required gates와 actual PostgreSQL run을 통과시킨 뒤 DATA-008 review를 `APPROVE`하고 `CLOSED`로 기록한다.
-5. 그 merge HEAD에서 이 final verification을 다시 실행한다.
+모든 M7 finding은 accepted final state인 `CLOSED`다. 현재 integrated HEAD에서 unresolved
+P0/security/data consistency blocker, architecture regression 또는 test lifecycle 누락은 발견되지 않았다.
+Actual PostgreSQL verification, durable CI integration과 repository gates가 모두 통과했고 remaining debt와
+environment unknown은 M7 blocker가 아닌 후속 범주로 명시됐다.
 
 ## Next Phase
 
-M7 close, Product Delivery Roadmap, 첫 Feature Implementation Spec 및 신규 제품 개발로 아직 이동하지 않는다.
-DATA-008만 REWORK한 뒤 final verification을 재실행한다. 새 product feature나 architecture redesign은
-필요하지 않다.
+M7 foundation verified and may be closed.
+
+1. 이 보고서와 M7 completion evidence를 freeze/update한다.
+2. Repository workflow에 따라 verification checkpoint를 `migration_develop`에 병합한다.
+3. Product Delivery Roadmap을 작성한다.
+4. 첫 product vertical slice를 선택한다.
+5. 해당 slice의 첫 Feature Implementation Spec을 작성하고 승인한다.
+6. 승인된 slice에서만 신규 product development를 시작한다.
+
+이번 final verification에서는 Product Delivery Roadmap 작성이나 feature 구현을 시작하지 않았다.
