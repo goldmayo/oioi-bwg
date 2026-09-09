@@ -1,0 +1,11 @@
+[Unit]
+Description=Publish oioi-bwg filesystem usage every five minutes
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=5m
+Persistent=true
+Unit=oioi-filesystem-metric.service
+
+[Install]
+WantedBy=timers.target

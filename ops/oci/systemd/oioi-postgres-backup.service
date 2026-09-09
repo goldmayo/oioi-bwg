@@ -1,0 +1,14 @@
+[Unit]
+Description=oioi-bwg PostgreSQL backup to OCI Object Storage
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/srv/oioibawige/scripts/backup-postgres.sh
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
