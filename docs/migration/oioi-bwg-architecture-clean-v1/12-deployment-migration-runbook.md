@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.1"
+version: "1.2"
 status: "active"
 authority: "runbook"
-updated_at: "2026-08-29"
+updated_at: "2026-09-10"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.1
+# oioi-bwg Deployment / Migration Runbook v1.2
 
 ## 1. 목적
 
@@ -225,24 +225,32 @@ standalone runtime 확인
 ## 13. Phase M9 — Deployment
 
 ```text
-Docker image build
-Docker Compose
-Caddy reverse proxy
-HTTPS
-health check
-PostgreSQL connectivity
-application startup
+GitHub quality gate
+→ OCIR immutable image digest
+→ OCI DevOps deployment
+→ Shell Stage / Compute Run Command
+→ Docker Compose
+→ health / readiness / smoke
+→ release state update
 ```
+
+OCI Resource Manager는 새 OCI infrastructure의 Terraform plan/apply/state를 소유한다. 기존
+Compute, VCN, subnet, boot volume, PostgreSQL data는 data source/input으로 참조하고 별도 import
+결정 없이 ownership을 가져오지 않는다.
 
 ---
 
 ## 14. Docker
 
-Docker/GHCR image portability는 11 §12.1의 `NEXT_PUBLIC_*` 원칙을 따른다.
+Docker/OCIR image portability는 11 §12.1의 `NEXT_PUBLIC_*` 원칙을 따른다.
 
 Next standalone output을 기준으로 최소 runtime image를 구성한다.
 
 container 안에 development toolchain 전체를 넣지 않는다.
+
+Image는 `git-<full-commit-sha>` tag로 traceability를 남기되 release identity는 OCIR
+manifest digest로 고정한다. `latest`, `development` 같은 mutable tag를 deployment input으로
+사용하지 않는다.
 
 ---
 
@@ -262,6 +270,11 @@ health
 ```
 
 data copy를 다시 수행하지 않는다.
+
+Production PostgreSQL identity는 bootstrap/admin, migrator/owner, application runtime으로
+분리한다. Next.js `DATABASE_URL`은 DDL/role management 권한이 없는 application user만
+사용하고, production migration은 migrator를 사용하는 명시적 privileged operation으로
+유지한다.
 
 ---
 
@@ -298,21 +311,24 @@ application business logic을 proxy config에 넣지 않는다.
 
 ## 17. Health Check
 
-최소 health endpoint 또는 container health mechanism을 둔다.
+최소 health endpoint과 container health mechanism을 둔다.
 
 검증 후보:
 
 ```text
-process alive
-HTTP response
-DB availability
+/healthz = process/application liveness
+/readyz = PostgreSQL basic availability를 포함한 request readiness
 ```
 
 모든 external dependency를 deep-check해서 health endpoint 자체를 불안정하게 만들지 않는다.
+Response에 secret, connection string, raw DB error를 노출하지 않는다.
 
 ---
 
 ## 18. Backup / Restore
+
+PostgreSQL backup은 `pg_dump`로 생성해 같은 VM disk가 아닌 OCI Object Storage에
+저장한다. Compute는 static Object Storage credential 대신 Instance Principal을 사용한다.
 
 deployment 전에 PostgreSQL backup/restore 절차를 실제로 검증한다.
 
@@ -322,7 +338,9 @@ backup 존재만 확인하고 restore를 검증하지 않는 운영을 피한다
 
 ## 19. Rollback
 
-rollback 단위를 명시한다.
+Application rollback 단위는 OCIR image digest다. Host에 secret이 아닌 `current`/
+`previous` digest를 atomic하게 관리하고 candidate health/readiness/smoke 실패 시 previous
+digest를 복구한다.
 
 후보:
 
@@ -332,7 +350,8 @@ previous env/config
 DB migration compatibility
 ```
 
-destructive DB migration은 rollback 전략 없이 배포하지 않는다.
+DB를 application rollback과 함께 자동 rollback하지 않는다. destructive DB migration은
+compatibility/restore 전략 없이 배포하지 않는다.
 
 ---
 
@@ -386,20 +405,26 @@ Production DB를 test target으로 사용하지 않는다.
 
 ## 21. CI/CD
 
-최소 pipeline 후보:
+기본 pipeline:
 
 ```text
 install
 typecheck
 lint
-test
+unit / PostgreSQL integration test
+format
 build
 image build
-deploy
-health verification
+OCIR push
+OCI DevOps manual release gate
+Compute Run Command deploy
+health / readiness / smoke
 ```
 
-구체 자동화는 실제 GitHub Actions/OCI 운영 방식에 맞춰 확정한다.
+GitHub Actions는 Compute SSH, Run Command, runtime Vault secret, production DB, production
+filesystem 권한을 가지지 않는다. PR은 verify만 수행하고 `migration_develop` push의
+image publish job은 verify에 의존한다. 초기 CD trigger는 OCI DevOps Console에서 digest를
+명시하는 manual release gate로 둔다.
 
 ### Quality gate ordering
 
@@ -424,6 +449,10 @@ startup failure visibility
 
 를 확보한다.
 
+Application exception은 Sentry, structured stdout은 OCI Logging, infrastructure metric/alarm은 OCI
+Monitoring, deployment history/status는 OCI DevOps가 소유한다. Deploy script가 Slack webhook을
+직접 호출하지 않고 OCI Notifications topic/subscription을 사용한다.
+
 ---
 
 ## 23. Security
@@ -438,7 +467,13 @@ DB external exposure check
 auth cookie
 container user
 dependency audit
+Instance Principal least privilege
+Terraform state secret absence
 ```
+
+Runtime secret은 11을 따라 OCI Secret Management에서 protected env file로 materialize한다.
+Terraform은 Vault/key infrastructure만 관리하고 actual secret value나 Slack webhook endpoint를
+configuration/state에 넣지 않는다.
 
 ---
 
@@ -461,6 +496,12 @@ Docker restart 정상
 Caddy HTTPS 정상
 backup/restore 검증
 rollback 방법 존재
+OCIR digest release
+OCI DevOps / Run Command deployment
+DB application user least privilege
+Instance Principal secret/image/backup access
+OCI Monitoring/Logging/Notifications
+Object Storage backup의 restore proof
 
 배포 DoD에는 애플리케이션 health 확인, 핵심 익명·인증 사용자 smoke test, 이전 이미지로의
 rollback 절차 확인을 포함한다. DB 변경이 있는 경우 backup 존재만 확인하지 않고 restore 또는
@@ -480,6 +521,11 @@ deploy 전에 restore 미검증
 Cloudflare runtime 잔재 방치
 Next dev server를 production으로 사용
 architecture docs와 다른 임시 shortcut을 설명 없이 영구화
+GitHub Actions의 Compute SSH/직접 배포
+mutable image tag를 release identity로 사용
+runtime secret/Slack webhook을 Terraform state에 저장
+Next.js에 DB admin/migrator credential 주입
+rollback 검증 없이 production cutover
 ```
 
 ---
@@ -493,8 +539,11 @@ architecture docs와 다른 임시 shortcut을 설명 없이 영구화
 5. Next standalone production runtime을 기준으로 한다.
 6. Service/Repository/API/Auth boundary를 순서대로 연결한다.
 7. Test/observability 없이 production migration을 완료로 보지 않는다.
-8. Docker + Caddy + OCI를 deployment baseline으로 한다.
+8. GitHub CI + OCIR + OCI DevOps + Docker/Caddy/OCI Compute를 deployment baseline으로 한다.
 9. Backup뿐 아니라 restore를 검증한다.
 10. Rollback 가능한 deployment를 만든다.
 11. Temporary adapter는 삭제 계획을 가진다.
 12. Runbook을 architecture를 우회하는 excuse로 사용하지 않는다.
+13. Resource Manager가 새 OCI resource의 Terraform plan/apply/state를 소유한다.
+14. Runtime secret과 OCI access는 static credential 대신 Secret Management와 Instance Principal을
+    기본으로 한다.

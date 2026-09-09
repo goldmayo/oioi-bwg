@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.6"
+version: "2.7"
 status: "active"
 authority: "constitution"
-updated_at: "2026-09-01"
+updated_at: "2026-09-10"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.5
+# oioi-bwg Architecture Constitution v2.7
 
 ## 1. 목적
 
@@ -74,13 +74,18 @@ tags:
 
 ### Deployment
 
+- GitHub Actions CI
+- OCI Container Registry(OCIR) immutable image
+- OCI DevOps deployment pipeline
+- OCI Resource Manager 기반 Terraform state/plan/apply
+- OCI Secret Management runtime secret SSOT
+- OCI Monitoring / Logging / Notifications
 - OCI Compute Instance
 - 2 OCPU / 12 GB RAM / 100 GB disk
 - Next.js `output: 'standalone'`
 - Docker Compose
 - Caddy
 - PostgreSQL
-- GHCR 기반 이미지 배포
 
 ### Runtime compatibility contract
 
@@ -125,8 +130,13 @@ Browser
                                            `-> Drizzle -> PostgreSQL
 
 Infrastructure
-Caddy -> Next standalone -> PostgreSQL
+GitHub CI -> OCIR -> OCI DevOps -> OCI Compute
+Internet -> Caddy -> Next standalone -> PostgreSQL
 ```
+
+GitHub Actions는 검증과 immutable image publish까지 담당하고 Compute를 직접
+제어하지 않는다. OCI DevOps가 release digest, approval, deployment history, Compute Run
+Command 조정을 소유한다. 구체 CI/CD, secret, rollback, backup 규칙은 11과 12를 따른다.
 
 Next.js는 화면 렌더링과 HTTP delivery를 담당한다.
 
