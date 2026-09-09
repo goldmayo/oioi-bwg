@@ -2,6 +2,8 @@ import { MetadataRoute } from "next";
 
 import { listVisibleSongsForSitemap } from "@/server/services/song-service";
 
+export const dynamic = "force-dynamic";
+
 /**
  * 동적 사이트맵 생성
  * 모든 곡 상세 페이지를 검색 엔진에 노출시킵니다.

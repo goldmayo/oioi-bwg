@@ -1,6 +1,7 @@
 {
   "name": "cheer-rock-crab",
   "version": "0.7.1",
+  "packageManager": "pnpm@10.15.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
