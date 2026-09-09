@@ -3,6 +3,8 @@ import { spawn, type ChildProcess } from "node:child_process";
 
 import postgres from "postgres";
 
+import { configurePostgresRuntimeRoles } from "./configure-postgres-runtime-roles";
+
 const ADMIN_URL_ENV = "M7_TEST_POSTGRES_ADMIN_URL";
 const DATABASE_PREFIX = "oioi_m7_test_";
 const LOCAL_ADMIN_URL = "postgresql://oioibawige:oioibawige_dev_only@127.0.0.1:5432/postgres";
@@ -98,6 +100,8 @@ async function main() {
   const databaseIdentifier = quoteIdentifier(databaseName);
   let databaseCreated = false;
   let executionError: unknown;
+  let runtimeAppRole: string | undefined;
+  let runtimeMigratorRole: string | undefined;
   const cleanupErrors: string[] = [];
 
   const handleSignal = (signal: NodeJS.Signals) => {
@@ -131,6 +135,26 @@ async function main() {
 
     const packageManager = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
     await runCommand(packageManager, ["db:migrate"], childEnvironment);
+
+    const roleSuffix = databaseName.replace(DATABASE_PREFIX, "").slice(-24);
+    runtimeAppRole = `m9_app_${roleSuffix}`;
+    runtimeMigratorRole = `m9_migrator_${roleSuffix}`;
+    const runtimePassword = `M9-local-${roleSuffix}`;
+    await configurePostgresRuntimeRoles({
+      adminUrl: databaseUrl.toString(),
+      appPassword: runtimePassword,
+      appRole: runtimeAppRole,
+      migratorPassword: `${runtimePassword}-migrator`,
+      migratorRole: runtimeMigratorRole,
+    });
+
+    const runtimeUrl = new URL(databaseUrl);
+    runtimeUrl.username = runtimeAppRole;
+    runtimeUrl.password = runtimePassword;
+    Object.assign(childEnvironment, {
+      DATABASE_URL: runtimeUrl.toString(),
+      M7_TEST_POSTGRES_VERIFICATION_URL: databaseUrl.toString(),
+    });
     await runCommand(
       packageManager,
       ["exec", "vitest", "run", "--config", "vitest.postgres.config.ts", "--reporter=verbose"],
@@ -184,6 +208,15 @@ async function main() {
         } catch {
           cleanupErrors.push("temporary database best-effort force drop failed");
         }
+      }
+    }
+
+    for (const role of [runtimeAppRole, runtimeMigratorRole]) {
+      if (!role) continue;
+      try {
+        await admin`drop role if exists ${admin(role)}`;
+      } catch {
+        cleanupErrors.push(`temporary PostgreSQL role cleanup failed: ${role}`);
       }
     }
 

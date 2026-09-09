@@ -28,6 +28,8 @@ vi.mock("../../src/server/email/signup-verification-email", () => ({
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
+const verificationUrl = process.env.M7_TEST_POSTGRES_VERIFICATION_URL;
+if (!verificationUrl) throw new Error("M7_TEST_POSTGRES_VERIFICATION_URL is required");
 
 const parsedDatabaseUrl = new URL(databaseUrl);
 if (
@@ -40,6 +42,10 @@ if (
 const database = getDatabase();
 const sql = postgres(databaseUrl, {
   max: 6,
+  connection: { statement_timeout: 10_000 },
+});
+const verificationSql = postgres(verificationUrl, {
+  max: 1,
   connection: { statement_timeout: 10_000 },
 });
 const admin: RequestContext = {
@@ -187,6 +193,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sql.end();
+  await verificationSql.end();
   await database.$client.end();
 });
 
@@ -344,7 +351,7 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
     const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as {
       entries: { tag: string }[];
     };
-    const rows = await sql<{ hash: string }[]>`
+    const rows = await verificationSql<{ hash: string }[]>`
       select hash from drizzle.__drizzle_migrations order by id
     `;
 
