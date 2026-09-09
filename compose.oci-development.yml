@@ -6,7 +6,9 @@ services:
     restart: unless-stopped
     init: true
     env_file:
-      - ${APP_ENV_FILE:-/srv/oioibawige/app.env}
+      - path: ${APP_ENV_FILE:-/srv/oioibawige/app.env}
+        required: true
+        format: raw
     environment:
       HOSTNAME: 0.0.0.0
       NODE_ENV: production
