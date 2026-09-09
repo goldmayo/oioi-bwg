@@ -5,7 +5,7 @@ resource "oci_devops_project" "application" {
   freeform_tags  = var.freeform_tags
 
   notification_config {
-    topic_id = oci_ons_notification_topic.operations.id
+    topic_id = oci_ons_notification_topic.deployment.id
   }
 }
 

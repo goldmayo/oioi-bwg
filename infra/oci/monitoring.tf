@@ -1,7 +1,7 @@
 locals {
   alarm_common = {
     compartment_id        = var.compartment_ocid
-    destinations          = [oci_ons_notification_topic.operations.id]
+    destinations          = [oci_ons_notification_topic.alerts.id]
     is_enabled            = true
     metric_compartment_id = var.compute_compartment_ocid
   }

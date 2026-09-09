@@ -9,7 +9,8 @@ VCN, subnet, boot volume, PostgreSQL data는 OCID로 조회하며 생성·수정
 2. Resource Manager에서 Plan을 실행하고 **기존 Compute/VCN 변경이나 destroy가 없는지** 검토한 뒤 Apply한다.
 3. 생성된 Vault/key에 runtime secret 값을 별도 secure bootstrap으로 등록한다. Terraform에는 값이 없다.
 4. runtime secret OCID만 `runtime_secret_ocids`에 넣어 다시 Plan/Apply한다. admin/migrator DB secret은 제외한다.
-5. Notification topic의 Slack subscription은 Console에서 수동 생성한다. endpoint token은 state에 넣지 않는다.
+5. deployment/alert Notification Topic의 Slack subscription은 Console에서 각각 수동 생성한다. endpoint
+   token은 state에 넣지 않는다.
 6. host preflight와 실제 Ubuntu Run Command probe가 통과한 뒤 DevOps Console에서 `IMAGE_DIGEST`를 입력해
    deployment pipeline을 시작한다.
 

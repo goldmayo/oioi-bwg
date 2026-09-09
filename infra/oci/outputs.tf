@@ -13,9 +13,14 @@ output "vault_key_id" {
   description = "KMS key for runtime secrets and the backup bucket."
 }
 
-output "notification_topic_id" {
-  value       = oci_ons_notification_topic.operations.id
-  description = "Attach Slack subscriptions manually so webhook tokens never enter Terraform state."
+output "deployment_notification_topic_id" {
+  value       = oci_ons_notification_topic.deployment.id
+  description = "Attach the deployment Slack subscription manually so its token never enters Terraform state."
+}
+
+output "alert_notification_topic_id" {
+  value       = oci_ons_notification_topic.alerts.id
+  description = "Attach the infrastructure-alert Slack subscription manually so its token never enters Terraform state."
 }
 
 output "deployment_pipeline_id" {
