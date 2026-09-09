@@ -93,8 +93,20 @@ jobs:
           username: ${{ secrets.OCIR_USERNAME }}
           password: ${{ secrets.OCIR_AUTH_TOKEN }}
 
+      - name: Check immutable tag
+        id: existing
+        run: |
+          image="${OCIR_REGISTRY}/${OCIR_NAMESPACE}/${OCIR_REPOSITORY}:git-${GITHUB_SHA}"
+          if digest="$(docker buildx imagetools inspect "${image}" --format '{{.Manifest.Digest}}' 2>/dev/null)" && [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+            echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Build and publish immutable image
         id: image
+        if: steps.existing.outputs.exists != 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -114,7 +126,7 @@ jobs:
 
       - name: Record release identity
         env:
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.existing.outputs.digest }}
         run: |
           image="${OCIR_REGISTRY}/${OCIR_NAMESPACE}/${OCIR_REPOSITORY}"
           {
