@@ -96,7 +96,7 @@ export async function configurePostgresRuntimeRoles({
                relation.relkind as relation_kind
         from pg_class relation
         join pg_namespace namespace on namespace.oid = relation.relnamespace
-        where namespace.nspname = 'public'
+        where namespace.nspname in ('public', 'drizzle')
           and relation.relkind in ('r', 'p', 'S', 'v', 'm', 'f')
           and (
             relation.relkind <> 'S'
@@ -130,7 +130,7 @@ export async function configurePostgresRuntimeRoles({
         select namespace.nspname as schema_name, type.typname as name
         from pg_type type
         join pg_namespace namespace on namespace.oid = type.typnamespace
-        where namespace.nspname = 'public' and type.typtype = 'e'
+        where namespace.nspname in ('public', 'drizzle') and type.typtype = 'e'
       `;
       for (const enumType of enums) {
         await sql`
@@ -139,6 +139,12 @@ export async function configurePostgresRuntimeRoles({
       }
 
       await sql`alter schema public owner to ${sql(migratorRole)}`;
+      const [drizzleSchema] = await sql<{ exists: boolean }[]>`
+        select exists(select 1 from pg_namespace where nspname = 'drizzle')
+      `;
+      if (drizzleSchema?.exists) {
+        await sql`alter schema drizzle owner to ${sql(migratorRole)}`;
+      }
       await sql`revoke all on all tables in schema public from public`;
       await sql`revoke all on all sequences in schema public from public`;
       await sql`
