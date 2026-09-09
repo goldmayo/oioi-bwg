@@ -1,10 +1,10 @@
-import { DrizzleQueryError } from "drizzle-orm/errors";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { adminAlbumListSchema } from "@/shared/contracts/album";
 
 import { AppError } from "../errors/app-error";
 import { toErrorResponse } from "../http/api-response";
+import { AlbumSlugConflictError } from "../repositories/repository-error";
 
 const findAllAlbums = vi.hoisted(() => vi.fn());
 const insertAlbum = vi.hoisted(() => vi.fn());
@@ -42,14 +42,6 @@ const input = {
   slug: "test-album",
 };
 
-function uniqueViolation(constraintName: string) {
-  const cause = Object.assign(new Error("duplicate key"), {
-    code: "23505",
-    constraint_name: constraintName,
-  });
-  return new DrizzleQueryError("insert into Album values ($1)", ["PRIVATE_VALUE"], cause);
-}
-
 describe("album-service admin list DTO", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -73,9 +65,9 @@ describe("album-service admin list DTO", () => {
 describe("album-service unique conflicts", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("maps create and edit slug violations to the album conflict", async () => {
-    insertAlbum.mockRejectedValueOnce(uniqueViolation("Album_slug_key"));
-    updateAlbum.mockRejectedValueOnce(uniqueViolation("Album_slug_key"));
+  it("maps create and edit repository slug conflicts to the album AppError", async () => {
+    insertAlbum.mockRejectedValueOnce(new AlbumSlugConflictError());
+    updateAlbum.mockRejectedValueOnce(new AlbumSlugConflictError());
 
     await expect(createAlbum(context, input)).rejects.toMatchObject({
       code: "ALBUM_SLUG_ALREADY_EXISTS",
@@ -85,8 +77,8 @@ describe("album-service unique conflicts", () => {
     });
   });
 
-  it("preserves an unknown unique violation as an unexpected error", async () => {
-    const error = uniqueViolation("another_constraint_key");
+  it("preserves an unrelated repository failure as an unexpected error", async () => {
+    const error = new Error("unexpected repository failure");
     insertAlbum.mockRejectedValueOnce(error);
 
     const caught = await createAlbum(context, input).catch((cause: unknown) => cause);

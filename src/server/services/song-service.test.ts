@@ -1,9 +1,9 @@
-import { DrizzleQueryError } from "drizzle-orm/errors";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { adminSongListSchema } from "@/shared/contracts/song";
 
 import { AppError } from "../errors/app-error";
+import { SongSlugConflictError } from "../repositories/repository-error";
 
 const insertSong = vi.hoisted(() => vi.fn());
 const findAdminSongBySlug = vi.hoisted(() => vi.fn());
@@ -55,14 +55,6 @@ const input = {
   isVisible: true,
   order: 1,
 };
-
-function uniqueViolation(constraintName: string) {
-  const cause = Object.assign(new Error("duplicate key"), {
-    code: "23505",
-    constraint_name: constraintName,
-  });
-  return new DrizzleQueryError("insert into Song values ($1)", ["PRIVATE_VALUE"], cause);
-}
 
 describe("song-service admin list DTO", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -168,9 +160,9 @@ describe("song-service LRC boundary", () => {
 describe("song-service slug policy", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("maps known create and update unique violations to a slug conflict", async () => {
-    insertSong.mockRejectedValueOnce(uniqueViolation("Song_slug_key"));
-    updateSongWithSlugPolicy.mockRejectedValueOnce(uniqueViolation("Song_slug_key"));
+  it("maps create and update repository slug conflicts to the song AppError", async () => {
+    insertSong.mockRejectedValueOnce(new SongSlugConflictError());
+    updateSongWithSlugPolicy.mockRejectedValueOnce(new SongSlugConflictError());
 
     await expect(
       createSong(context, { ...input, lrcText: "[00:01.00]가사" }),
@@ -180,8 +172,8 @@ describe("song-service slug policy", () => {
     );
   });
 
-  it("preserves an unknown unique violation as an unexpected error", async () => {
-    const error = uniqueViolation("another_constraint_key");
+  it("preserves an unrelated repository failure as an unexpected error", async () => {
+    const error = new Error("unexpected repository failure");
     insertSong.mockRejectedValueOnce(error);
 
     const caught = await createSong(context, {

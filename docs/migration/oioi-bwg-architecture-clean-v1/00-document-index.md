@@ -1,10 +1,10 @@
 ---
 title: "Architecture Document Index"
 document_id: "00"
-version: "1.7"
+version: "1.8"
 status: "active"
 authority: "index"
-updated_at: "2026-09-01"
+updated_at: "2026-09-09"
 tags:
   - "architecture"
   - "documentation"
@@ -57,7 +57,7 @@ migration / implementation plan
 | 03 | API / Error Architecture | 1.3 | active | HTTP / AppError / ApiError / error mapping |
 | 04 | Auth / Authz Architecture | 1.2 | active | Auth.js, RequestContext, CASL |
 | 05 | Contract / Validation Architecture | 1.6 | active | Zod contract / DTO / boundary validation |
-| 06 | Server / Data Access Architecture | 1.0 | active | Service, Repository, Drizzle, transaction |
+| 06 | Server / Data Access Architecture | 1.1 | active | Service, Repository, Drizzle, transaction |
 | 07 | Rendering / Query / Cache Architecture | 1.2 | active | RSC / Query / hydration / cache / retry 전략 |
 | 08 | Form / Client State Architecture | 1.0 | active | form / URL / local client state ownership |
 | 09 | Error UX / Observability Architecture | 1.1 | active | query/mutation error UX / logging / Sentry |

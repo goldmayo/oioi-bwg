@@ -1,10 +1,10 @@
 ---
 title: "Server / Data Access Architecture"
 document_id: "06"
-version: "1.0"
+version: "1.1"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-26"
+updated_at: "2026-09-09"
 depends_on:
   - "01"
   - "03"
@@ -617,10 +617,35 @@ Service에서 AppError
 Unexpected DB failure:
 
 ```text
-원래 exception 전파
+알 수 없는 exception은 원래 identity로 전파
 ```
 
 Repository가 에러를 UI 문구로 변환하지 않는다.
+
+## 19.1. Persistence error translation boundary
+
+Repository는 자신이 소유한 write에서 실제로 확인된 physical constraint와 DB error를
+DB-neutral semantic persistence error로 번역할 수 있다.
+
+```text
+PostgreSQL/Drizzle error
+  -> DB-specific adapter의 exact match
+  -> Repository semantic error
+  -> Service의 AppError
+```
+
+이 번역은 다음 조건을 모두 만족해야 한다.
+
+- SQLSTATE, physical constraint name, ORM error shape 판별은 Repository/DB adapter 아래에만 둔다.
+- Service는 DB vendor, ORM, SQLSTATE, physical constraint name을 import하거나 판별하지 않는다.
+- Repository semantic error는 DB vendor, HTTP status, `AppError`, UI 문구를 노출하지 않는다.
+- 명시적으로 허용한 known constraint만 번역하고, unknown constraint와 unrelated DB error는
+  원래 error identity를 그대로 전파한다.
+- Repository가 application error code를 결정하지 않고 Service가 semantic persistence error를
+  `AppError`로 번역한다.
+
+이 규칙은 Repository가 임의의 DB exception을 generic user message로 바꾸는 근거가 아니다.
+known conflict 외의 실패는 기존 unexpected error 정책을 따른다.
 
 ---
 
@@ -1427,6 +1452,10 @@ Repository → Next cache
 Repository → UI
 Repository → TanStack Query
 
+Service → PostgreSQL/Drizzle package
+Service → DB vendor-specific error adapter
+Service → SQLSTATE/physical constraint name
+
 shared → server
 client → server/db
 client → repository
@@ -1471,8 +1500,10 @@ client → repository
 33. Generic CRUD Repository를 만들지 않는다.
 34. 필요한 domain-specific query를 명시적으로 만든다.
 35. Service passthrough를 architecture ceremony로 강제하지 않는다.
-36. Unexpected DB error는 원래 exception을 유지한다.
-37. Expected application failure는 Service에서 AppError로 표현한다.
-38. DB client는 OCI standalone runtime에 맞게 재구성한다.
-39. Cloudflare/Hyperdrive 전제는 migration 시 제거한다.
-40. 단단함은 abstraction 수가 아니라 transaction ownership과 dependency direction의 명확성에서 얻는다.
+36. Repository는 exact known DB constraint를 DB-neutral semantic persistence error로 번역할 수 있다.
+37. Unknown constraint와 unrelated DB error는 원래 exception identity를 유지한다.
+38. Service는 DB vendor, ORM, SQLSTATE, physical constraint name을 모른다.
+39. Expected application failure는 Service에서 AppError로 표현한다.
+40. DB client는 OCI standalone runtime에 맞게 재구성한다.
+41. Cloudflare/Hyperdrive 전제는 migration 시 제거한다.
+42. 단단함은 abstraction 수가 아니라 transaction ownership과 dependency direction의 명확성에서 얻는다.

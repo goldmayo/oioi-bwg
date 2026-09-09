@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 
 import type { DbExecutor } from "../db";
+import { isPostgresUniqueViolation } from "../db/postgres-error";
 import { album, type InsertAlbumRow } from "../db/schema";
+
+import { AlbumSlugConflictError } from "./repository-error";
 
 export function findVisibleAlbumsWithSongs(executor: DbExecutor) {
   return executor.query.album.findMany({
@@ -51,12 +54,26 @@ export function findAllAlbums(executor: DbExecutor) {
   });
 }
 
-export function insertAlbum(executor: DbExecutor, data: InsertAlbumRow) {
-  return executor.insert(album).values(data).returning();
+export async function insertAlbum(executor: DbExecutor, data: InsertAlbumRow) {
+  try {
+    return await executor.insert(album).values(data).returning();
+  } catch (error) {
+    if (isPostgresUniqueViolation(error, "Album_slug_key")) {
+      throw new AlbumSlugConflictError();
+    }
+    throw error;
+  }
 }
 
-export function updateAlbum(executor: DbExecutor, id: number, data: Partial<InsertAlbumRow>) {
-  return executor.update(album).set(data).where(eq(album.id, id)).returning();
+export async function updateAlbum(executor: DbExecutor, id: number, data: Partial<InsertAlbumRow>) {
+  try {
+    return await executor.update(album).set(data).where(eq(album.id, id)).returning();
+  } catch (error) {
+    if (isPostgresUniqueViolation(error, "Album_slug_key")) {
+      throw new AlbumSlugConflictError();
+    }
+    throw error;
+  }
 }
 
 export function removeAlbum(executor: DbExecutor, id: number) {

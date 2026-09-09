@@ -11,7 +11,6 @@ import type {
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
-import { isPostgresUniqueViolation } from "../errors/postgres-error";
 import {
   findAlbumBySlug,
   findAllAlbums,
@@ -20,6 +19,7 @@ import {
   removeAlbum,
   updateAlbum,
 } from "../repositories/album-repository";
+import { AlbumSlugConflictError } from "../repositories/repository-error";
 
 type AlbumPersistenceRow = Awaited<ReturnType<typeof findAllAlbums>>[number];
 type AlbumWithSongsPersistenceRow = Awaited<ReturnType<typeof findVisibleAlbumsWithSongs>>[number];
@@ -103,7 +103,7 @@ export async function createAlbum(
     if (!album) throw new Error("Album was not created");
     return mapAlbum(album);
   } catch (error) {
-    if (isPostgresUniqueViolation(error, "Album_slug_key")) {
+    if (error instanceof AlbumSlugConflictError) {
       throw new AppError("ALBUM_SLUG_ALREADY_EXISTS");
     }
     throw error;
@@ -121,7 +121,7 @@ export async function editAlbum(
     if (!album) throw new AppError("ALBUM_NOT_FOUND");
     return mapAlbum(album);
   } catch (error) {
-    if (isPostgresUniqueViolation(error, "Album_slug_key")) {
+    if (error instanceof AlbumSlugConflictError) {
       throw new AppError("ALBUM_SLUG_ALREADY_EXISTS");
     }
     throw error;

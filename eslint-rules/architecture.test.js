@@ -81,3 +81,35 @@ test("keeps route-private imports inside their owning route", () => {
   ]);
   assert.deepEqual(lint("src/app/(user)/page.js", 'import x from "./_ui/x";'), []);
 });
+
+test("keeps database-specific dependencies below the Service boundary", () => {
+  assert.deepEqual(
+    lint(
+      "src/server/services/song-service.js",
+      [
+        'import { eq } from "drizzle-orm";',
+        'import postgres from "postgres";',
+        'import { isPostgresUniqueViolation } from "../db/postgres-error";',
+      ].join("\n"),
+    ),
+    [
+      "servicePersistenceDependency",
+      "servicePersistenceDependency",
+      "servicePersistenceDependency",
+    ],
+  );
+  assert.deepEqual(
+    lint(
+      "src/server/services/song-service.js",
+      'import { SongSlugConflictError } from "../repositories/repository-error";',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    lint(
+      "src/server/repositories/song-repository.js",
+      'import { isPostgresUniqueViolation } from "../db/postgres-error";',
+    ),
+    [],
+  );
+});
