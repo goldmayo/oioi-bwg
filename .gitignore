@@ -36,7 +36,15 @@ yarn-error.log*
 .env*
 !.env.example
 !.env.oci-development.example
+!.env.oci-secrets.example
 /app.env.oci-development
+
+# terraform local state/cache (Resource Manager is the production state owner)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
 
 # local database dumps and developer-only files
 /.local/

@@ -1,0 +1,35 @@
+version: 0.1
+component: command
+timeoutInSeconds: 2100
+shell: bash
+failImmediatelyOnError: true
+
+steps:
+  - type: Command
+    name: Deploy immutable OCIR digest through Compute Run Command
+    timeoutInSeconds: 2000
+    command: |
+      set -Eeuo pipefail
+      image_digest="$${IMAGE_DIGEST}"
+      if [[ ! "$${image_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+        echo "IMAGE_DIGEST must be an immutable sha256 manifest digest" >&2
+        exit 1
+      fi
+
+      target='{"instanceId":"${compute_instance_ocid}"}'
+      content="{\"source\":{\"sourceType\":\"TEXT\",\"text\":\"sudo /srv/oioibawige/scripts/deploy-release.sh $${image_digest}\"},\"output\":{\"outputType\":\"TEXT\"}}"
+      command_id="$(
+        oci instance-agent command create \
+          --compartment-id "${compute_compartment_ocid}" \
+          --display-name "oioi-bwg-$${OCI_DEPLOYMENT_ID}" \
+          --execution-timeout-in-seconds 1800 \
+          --target "$${target}" \
+          --content "$${content}" \
+          --query 'data.id' \
+          --raw-output
+      )"
+
+      oci instance-agent command wait-for-state \
+        --instance-agent-command-id "$${command_id}" \
+        --wait-for-state SUCCEEDED \
+        --max-wait-seconds 1900
