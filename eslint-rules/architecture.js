@@ -68,6 +68,8 @@ export const architectureRule = {
         "다른 route의 private segment를 import하지 마세요. 재사용이 필요하면 widgets/features/entities/shared로 승격하세요.",
       routePrivateAlias:
         "route private segment는 @/app alias로 import하지 말고 소유 route 안에서 상대 경로로만 사용하세요.",
+      servicePersistenceDependency:
+        "Service에서 DB/ORM-specific dependency '{{dependency}}'를 import하지 마세요. Repository semantic error boundary를 사용하세요.",
     },
   },
   create(context) {
@@ -89,6 +91,18 @@ export const architectureRule = {
 
       const importedParts = resolveImportedParts(parts, source);
       const [importedLayer, importedSlice] = importedParts ?? [];
+
+      const isService = layer === "server" && slice === "services";
+      const isDatabasePackage = /^(?:drizzle-orm|postgres)(?:\/|$)/.test(source);
+      const isVendorErrorAdapter = importedParts?.join("/") === "server/db/postgres-error";
+
+      if (isService && (isDatabasePackage || isVendorErrorAdapter)) {
+        context.report({
+          node: sourceNode,
+          messageId: "servicePersistenceDependency",
+          data: { dependency: source },
+        });
+      }
 
       if (layer && slice && SLICED_LAYERS.has(layer) && importedLayer === layer && importedSlice) {
         if (importedSlice !== slice) {

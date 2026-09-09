@@ -13,7 +13,7 @@ import {
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
-import { isPostgresUniqueViolation } from "../errors/postgres-error";
+import { SongSlugConflictError } from "../repositories/repository-error";
 import {
   findAdminSongBySlug,
   findSongBySlug,
@@ -195,7 +195,7 @@ export function createSong(ctx: RequestContext, input: CreateAdminSong) {
       return song;
     })
     .catch((error: unknown) => {
-      if (isPostgresUniqueViolation(error, "Song_slug_key")) {
+      if (error instanceof SongSlugConflictError) {
         throw new AppError("SONG_SLUG_ALREADY_EXISTS");
       }
       throw error;
@@ -220,7 +220,7 @@ export async function editSong(ctx: RequestContext, id: number, input: UpdateAdm
     if (existing) throw new AppError("SONG_SLUG_IMMUTABLE");
     throw new AppError("SONG_NOT_FOUND");
   } catch (error) {
-    if (isPostgresUniqueViolation(error, "Song_slug_key")) {
+    if (error instanceof SongSlugConflictError) {
       throw new AppError("SONG_SLUG_ALREADY_EXISTS");
     }
     throw error;

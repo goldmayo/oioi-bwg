@@ -1,5 +1,11 @@
 import type { DbExecutor } from "../db";
+import { isPostgresUniqueViolation } from "../db/postgres-error";
 import { account, passwordCredential, profile } from "../db/schema";
+
+import {
+  PasswordCredentialEmailConflictError,
+  ProfileNicknameConflictError,
+} from "./repository-error";
 
 export function insertAccount(executor: DbExecutor) {
   return executor
@@ -8,15 +14,29 @@ export function insertAccount(executor: DbExecutor) {
     .returning({ id: account.id });
 }
 
-export function insertProfile(executor: DbExecutor, accountId: bigint, nickname: string) {
-  return executor.insert(profile).values({ accountId, nickname });
+export async function insertProfile(executor: DbExecutor, accountId: bigint, nickname: string) {
+  try {
+    return await executor.insert(profile).values({ accountId, nickname });
+  } catch (error) {
+    if (isPostgresUniqueViolation(error, "profile_nickname_key")) {
+      throw new ProfileNicknameConflictError();
+    }
+    throw error;
+  }
 }
 
-export function insertPasswordCredential(
+export async function insertPasswordCredential(
   executor: DbExecutor,
   data: typeof passwordCredential.$inferInsert,
 ) {
-  return executor.insert(passwordCredential).values(data);
+  try {
+    return await executor.insert(passwordCredential).values(data);
+  } catch (error) {
+    if (isPostgresUniqueViolation(error, "password_credential_email_key")) {
+      throw new PasswordCredentialEmailConflictError();
+    }
+    throw error;
+  }
 }
 
 export function findPasswordCredentialByEmail(executor: DbExecutor, email: string) {

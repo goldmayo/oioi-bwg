@@ -1,7 +1,10 @@
 import { and, eq, isNull, or } from "drizzle-orm";
 
 import type { DbExecutor } from "../db";
+import { isPostgresUniqueViolation } from "../db/postgres-error";
 import { type InsertSongRow, song } from "../db/schema";
+
+import { SongSlugConflictError } from "./repository-error";
 
 type SongUpdateRow = Partial<Omit<InsertSongRow, "slug">>;
 
@@ -79,15 +82,22 @@ export function findSongsWithAlbum(executor: DbExecutor) {
   });
 }
 
-export function insertSong(executor: DbExecutor, data: InsertSongRow) {
-  return executor.insert(song).values(data).returning({ id: song.id });
+export async function insertSong(executor: DbExecutor, data: InsertSongRow) {
+  try {
+    return await executor.insert(song).values(data).returning({ id: song.id });
+  } catch (error) {
+    if (isPostgresUniqueViolation(error, "Song_slug_key")) {
+      throw new SongSlugConflictError();
+    }
+    throw error;
+  }
 }
 
 export function updateSong(executor: DbExecutor, id: number, data: SongUpdateRow) {
   return executor.update(song).set(data).where(eq(song.id, id)).returning({ id: song.id });
 }
 
-export function updateSongWithSlugPolicy(
+export async function updateSongWithSlugPolicy(
   executor: DbExecutor,
   id: number,
   slug: string | null,
@@ -96,11 +106,18 @@ export function updateSongWithSlugPolicy(
   const slugCanBeSet =
     slug === null ? isNull(song.slug) : or(isNull(song.slug), eq(song.slug, slug));
 
-  return executor
-    .update(song)
-    .set({ ...data, slug })
-    .where(and(eq(song.id, id), slugCanBeSet))
-    .returning({ id: song.id });
+  try {
+    return await executor
+      .update(song)
+      .set({ ...data, slug })
+      .where(and(eq(song.id, id), slugCanBeSet))
+      .returning({ id: song.id });
+  } catch (error) {
+    if (isPostgresUniqueViolation(error, "Song_slug_key")) {
+      throw new SongSlugConflictError();
+    }
+    throw error;
+  }
 }
 
 export function removeSong(executor: DbExecutor, id: number) {

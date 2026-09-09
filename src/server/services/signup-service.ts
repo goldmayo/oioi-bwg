@@ -4,13 +4,16 @@ import argon2 from "argon2";
 
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
-import { isPostgresUniqueViolation } from "../errors/postgres-error";
 import {
   insertAccount,
   insertPasswordCredential,
   insertProfile,
 } from "../repositories/auth-repository";
 import { consumeVerifiedChallenge } from "../repositories/email-verification-repository";
+import {
+  PasswordCredentialEmailConflictError,
+  ProfileNicknameConflictError,
+} from "../repositories/repository-error";
 
 /** VERIFIED challenge를 소비하고 USER Account/Profile/PasswordCredential을 원자적으로 생성한다. */
 export async function completeSignup(challengeId: string, password: string, nickname: string) {
@@ -37,10 +40,10 @@ export async function completeSignup(challengeId: string, password: string, nick
     });
     return { accountId: accountId.toString() };
   } catch (error) {
-    if (isPostgresUniqueViolation(error, "password_credential_email_key")) {
+    if (error instanceof PasswordCredentialEmailConflictError) {
       throw new AppError("EMAIL_ALREADY_REGISTERED");
     }
-    if (isPostgresUniqueViolation(error, "profile_nickname_key")) {
+    if (error instanceof ProfileNicknameConflictError) {
       throw new AppError("NICKNAME_ALREADY_REGISTERED");
     }
     throw error;
