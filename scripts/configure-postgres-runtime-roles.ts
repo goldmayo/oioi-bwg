@@ -164,7 +164,10 @@ export async function configurePostgresRuntimeRoles({
       `;
 
       await sql.unsafe(
-        `grant connect on database ${quoteIdentifier(context.database_name)} to ${quoteIdentifier(migratorRole)}, ${quoteIdentifier(appRole)}`,
+        `grant connect, create on database ${quoteIdentifier(context.database_name)} to ${quoteIdentifier(migratorRole)}`,
+      );
+      await sql.unsafe(
+        `grant connect on database ${quoteIdentifier(context.database_name)} to ${quoteIdentifier(appRole)}`,
       );
       await sql`alter role ${sql(appRole)} set statement_timeout = '30s'`;
       await sql`alter role ${sql(appRole)} set lock_timeout = '5s'`;
