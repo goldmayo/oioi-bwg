@@ -186,6 +186,7 @@ async function main() {
       DATABASE_URL: runtimeUrl.toString(),
       M9_TEST_ADMIN_ROLE: adminUrl.username,
       M9_TEST_DRIZZLE_SCHEMA_OWNER: drizzleSchemaOwner,
+      M9_TEST_POSTGRES_MIGRATOR_URL: migratorUrl.toString(),
       M9_TEST_PUBLIC_SCHEMA_OWNER: publicSchemaOwner,
       M9_TEST_RUNTIME_APP_ROLE: runtimeAppRole,
       M9_TEST_RUNTIME_MIGRATOR_ROLE: runtimeMigratorRole,

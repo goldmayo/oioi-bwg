@@ -164,7 +164,10 @@ export async function configurePostgresRuntimeRoles({
       `;
 
       await sql.unsafe(
-        `grant connect, create on database ${quoteIdentifier(context.database_name)} to ${quoteIdentifier(migratorRole)}`,
+        `revoke create on database ${quoteIdentifier(context.database_name)} from ${quoteIdentifier(migratorRole)}`,
+      );
+      await sql.unsafe(
+        `grant connect on database ${quoteIdentifier(context.database_name)} to ${quoteIdentifier(migratorRole)}`,
       );
       await sql.unsafe(
         `grant connect on database ${quoteIdentifier(context.database_name)} to ${quoteIdentifier(appRole)}`,

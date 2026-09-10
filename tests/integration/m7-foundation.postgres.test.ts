@@ -32,12 +32,14 @@ const verificationUrl = process.env.M7_TEST_POSTGRES_VERIFICATION_URL;
 if (!verificationUrl) throw new Error("M7_TEST_POSTGRES_VERIFICATION_URL is required");
 const adminRole = process.env.M9_TEST_ADMIN_ROLE;
 const drizzleSchemaOwner = process.env.M9_TEST_DRIZZLE_SCHEMA_OWNER;
+const migratorUrl = process.env.M9_TEST_POSTGRES_MIGRATOR_URL;
 const publicSchemaOwner = process.env.M9_TEST_PUBLIC_SCHEMA_OWNER;
 const runtimeAppRole = process.env.M9_TEST_RUNTIME_APP_ROLE;
 const runtimeMigratorRole = process.env.M9_TEST_RUNTIME_MIGRATOR_ROLE;
 if (
   !adminRole ||
   !drizzleSchemaOwner ||
+  !migratorUrl ||
   !publicSchemaOwner ||
   !runtimeAppRole ||
   !runtimeMigratorRole
@@ -59,6 +61,10 @@ const sql = postgres(databaseUrl, {
   connection: { statement_timeout: 10_000 },
 });
 const verificationSql = postgres(verificationUrl, {
+  max: 1,
+  connection: { statement_timeout: 10_000 },
+});
+const migratorSql = postgres(migratorUrl, {
   max: 1,
   connection: { statement_timeout: 10_000 },
 });
@@ -207,6 +213,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sql.end();
+  await migratorSql.end();
   await verificationSql.end();
   await database.$client.end();
 });
@@ -361,6 +368,51 @@ describe.sequential("M7 auth, signup, and OTP PostgreSQL regressions", () => {
 });
 
 describe.sequential("M7 content, authorization, and persistence PostgreSQL regressions", () => {
+  test("limits migrator DDL to the approved application schemas", async () => {
+    const [privileges] = await migratorSql<
+      {
+        can_connect: boolean;
+        can_create_database_objects: boolean;
+        can_create_drizzle_objects: boolean;
+        can_create_public_objects: boolean;
+      }[]
+    >`
+      select
+        has_database_privilege(current_user, current_database(), 'connect') as can_connect,
+        has_database_privilege(current_user, current_database(), 'create') as can_create_database_objects,
+        has_schema_privilege(current_user, 'public', 'create') as can_create_public_objects,
+        has_schema_privilege(current_user, 'drizzle', 'create') as can_create_drizzle_objects
+    `;
+    expect(privileges).toEqual({
+      can_connect: true,
+      can_create_database_objects: false,
+      can_create_drizzle_objects: true,
+      can_create_public_objects: true,
+    });
+
+    await expect(migratorSql`create schema __m9_migrator_must_not_create`).rejects.toMatchObject({
+      code: "42501",
+    });
+    await expect(sql`create schema __m9_app_must_not_create`).rejects.toMatchObject({
+      code: "42501",
+    });
+
+    await migratorSql`create table public.__m9_migrator_ddl_fixture (id bigint)`;
+    await migratorSql`alter table public.__m9_migrator_ddl_fixture add column note text`;
+    await migratorSql`create table drizzle.__m9_migrator_metadata_fixture (id bigint)`;
+    expect(
+      await verificationSql`
+        select table_schema, table_name
+        from information_schema.tables
+        where table_name in ('__m9_migrator_ddl_fixture', '__m9_migrator_metadata_fixture')
+        order by table_schema
+      `,
+    ).toEqual([
+      { table_name: "__m9_migrator_metadata_fixture", table_schema: "drizzle" },
+      { table_name: "__m9_migrator_ddl_fixture", table_schema: "public" },
+    ]);
+  });
+
   test("limits ownership transfer to tracked application and Drizzle objects", async () => {
     const applicationObjects = [
       "Album",

@@ -15,7 +15,7 @@
     "verify": "pnpm type-check && pnpm test:harness && pnpm lint && pnpm lint:fsd && pnpm test:unit:run && pnpm test:ops",
     "prepare": "husky",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/assert-local-database.ts && drizzle-kit migrate",
+    "db:migrate": "tsx scripts/assert-local-database.ts && tsx scripts/run-drizzle-migrations.ts",
     "db:restore-local": "sh scripts/restore-local-dump.sh",
     "db:configure-runtime-roles": "tsx scripts/configure-postgres-runtime-roles.ts",
     "db:pull": "tsx scripts/assert-local-database.ts && drizzle-kit pull",
