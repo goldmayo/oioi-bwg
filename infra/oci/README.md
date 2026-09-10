@@ -25,8 +25,12 @@ region = ap-osaka-1
 
 ```text
 COMMAND_SPEC argument_substitution_mode = SUBSTITUTE_PLACEHOLDERS 거부
-OCI Container Registry isImmutable 설정 미지원
+OCIR provider/schema에는 isImmutable이 노출되어 있으나 ap-osaka-1 실제 Apply에서 Setting isImmutable is not currently supported로 거부
 ```
+
+`isImmutable`은 OCI 기능 자체가 존재하지 않는다고 단정하지 않는다. Provider/SDK contract와 실제 backend
+동작 사이의 차이로 취급하고, M9에서는 해당 옵션에 의존하지 않으며 manifest digest를 release identity로
+사용한다.
 
 Logging group/log/agent configuration, 두 Notification Topic, CPU/memory/instance/filesystem alarm,
 DevOps project/pipeline, Compute/DevOps dynamic group, runtime/deployment IAM policy, Vault와 KMS key는 이미
