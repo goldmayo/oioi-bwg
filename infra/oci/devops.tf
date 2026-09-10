@@ -36,6 +36,7 @@ resource "oci_devops_deploy_artifact" "command_spec" {
     base64encoded_content = base64encode(templatefile("${path.module}/command-spec.yaml.tftpl", {
       compute_compartment_ocid = var.compute_compartment_ocid
       compute_instance_ocid    = var.compute_instance_ocid
+      alert_topic_id           = oci_ons_notification_topic.alerts.id
     }))
   }
 }
