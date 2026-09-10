@@ -28,7 +28,7 @@ resource "oci_devops_deploy_artifact" "command_spec" {
   display_name               = "${var.resource_prefix}-run-command"
   description                = "Secret-free Shell stage command specification"
   deploy_artifact_type       = "COMMAND_SPEC"
-  argument_substitution_mode = "SUBSTITUTE_PLACEHOLDERS"
+  argument_substitution_mode = "NONE"
   freeform_tags              = var.freeform_tags
 
   deploy_artifact_source {

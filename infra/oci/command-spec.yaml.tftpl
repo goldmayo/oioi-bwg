@@ -4,6 +4,10 @@ timeoutInSeconds: 2100
 shell: bash
 failImmediatelyOnError: true
 
+env:
+  variables:
+    IMAGE_DIGEST: "$${IMAGE_DIGEST}"
+
 steps:
   - type: Command
     name: Deploy immutable OCIR digest through Compute Run Command

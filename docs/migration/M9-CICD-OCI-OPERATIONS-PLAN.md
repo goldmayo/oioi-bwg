@@ -1,7 +1,7 @@
 ---
 title: "M9 OCI CI/CD & Operations Architecture Plan"
 document_id: "M9-CICD-OCI-OPERATIONS-PLAN"
-version: "1.2"
+version: "1.3"
 status: "active"
 authority: "plan"
 updated_at: "2026-09-11"
@@ -26,7 +26,20 @@ sources:
 
 ## 0. Revision addenda
 
-### 0.1. v1.2 least-privilege 및 backup inventory 반영
+### 0.1. v1.3 OCIR release identity 정정
+
+실제 OCI API 확인 결과 repository의 `isImmutable` 설정은 지원되지 않는다. 따라서 OCIR repository는
+private으로 유지하되 repository/tag 자체의 OCI-level immutability는 가정하지 않는다.
+
+```text
+git-<full-commit-sha> = traceability tag
+<repository>@sha256:<digest> = immutable release identity
+```
+
+GitHub workflow는 같은 commit tag가 있으면 overwrite하지 않고 기존 digest를 재사용한다. 배포와 rollback은
+계속 manifest digest만 사용한다. 이 addendum가 아래의 “immutable repository/tag” 표현을 대체한다.
+
+### 0.2. v1.2 least-privilege 및 backup inventory 반영
 
 이 절은 `migration_m9-oci-dev-runtime`
 `165a8570d223690fb78f293ba54c8a008bb6ba10` 이후의 보정 계획이다. 아래 운영 사실은 사용자가
@@ -94,7 +107,7 @@ gate로 적용한다. GitHub 설정은 이 PR에서 변경하지 않는다.
 현재 증거는 archive validation과 upload 성공까지다. `backup verified != restore verified`이며 production
 dump를 이번 작업에서 받지 않는다. Restore proof는 별도 empty PostgreSQL 17 database에서 수행한다.
 
-### 0.2. v1.1 운영 기준 정정
+### 0.3. v1.1 운영 기준 정정
 
 이 절은 PR 73 구현 후 당시 확인된 운영 사실을 반영한 2026-09-10 addendum다. v1.2 inventory가
 이 절의 unknown 항목을 대체한다. 아래 기존 계획 중
@@ -156,7 +169,7 @@ GitHub
 = source / review / CI / image build
 
 OCIR
-= immutable container image registry
+= private container image registry / digest-addressed release source
 
 OCI DevOps
 = CD orchestration
@@ -207,7 +220,7 @@ GHCR 기반 이미지 배포
 
 ```text
 GitHub Actions CI
-→ OCIR immutable image
+→ private OCIR image와 manifest digest
 → OCI DevOps CD
 → OCI Compute
 ```
@@ -1614,8 +1627,8 @@ GHCR
 direct/manual deploy assumptions
 → OCI DevOps / Run Command deploy
 
-mutable tag assumption
-→ immutable digest release
+mutable tag deployment assumption
+→ manifest digest release
 ```
 
 PR 74가 merge된 최신 `migration_develop`을 먼저 반영한다.
@@ -1759,7 +1772,7 @@ GitHub가 Compute에 직접 배포하지 않음
 
 CI failure 시 image publish 안 됨
 
-OCIR immutable digest release
+OCIR manifest digest release
 
 OCI DevOps가 CD 소유
 
@@ -1895,7 +1908,7 @@ GitHub
 = 이 코드가 배포 가능한가?
 
 OCIR
-= 어떤 immutable artifact를 배포할 것인가?
+= 어떤 digest-addressed artifact를 배포할 것인가?
 
 OCI DevOps
 = 언제 어떤 release를 배포할 것인가?

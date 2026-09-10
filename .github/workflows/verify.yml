@@ -44,6 +44,17 @@ jobs:
           node-version: 22.16.0
           cache: pnpm
 
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Validate Terraform
+        run: |
+          terraform version
+          terraform -chdir=infra/oci fmt -check -diff
+          terraform -chdir=infra/oci init -backend=false
+          terraform -chdir=infra/oci validate
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
       - name: PostgreSQL integration
@@ -93,7 +104,7 @@ jobs:
           username: ${{ secrets.OCIR_USERNAME }}
           password: ${{ secrets.OCIR_AUTH_TOKEN }}
 
-      - name: Check immutable tag
+      - name: Check existing traceability tag
         id: existing
         run: |
           image="${OCIR_REGISTRY}/${OCIR_NAMESPACE}/${OCIR_REPOSITORY}:git-${GITHUB_SHA}"
@@ -104,7 +115,7 @@ jobs:
             echo "exists=false" >> "${GITHUB_OUTPUT}"
           fi
 
-      - name: Build and publish immutable image
+      - name: Build and publish image
         id: image
         if: steps.existing.outputs.exists != 'true'
         uses: docker/build-push-action@v6

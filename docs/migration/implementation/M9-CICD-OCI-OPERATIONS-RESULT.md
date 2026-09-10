@@ -1,14 +1,14 @@
 ---
 title: "M9 OCI CI/CD 및 운영 기반 구현 결과"
 document_id: "M9-CICD-OCI-OPERATIONS-RESULT"
-version: "1.2"
+version: "1.3"
 status: "active"
 authority: "result"
 updated_at: "2026-09-11"
 source:
   repository: "goldmayo/oioi-bwg"
-  branch: "migration_m9-oci-dev-runtime"
-  commit: "49d8d178d9e14c8493b223b24c19b7ffd79c9ce3"
+  branch: "fix/m9-oci-resource-manager-apply"
+  commit: "94637b0fe9988c438a1561df1e1238404671133f"
 verified_at: "2026-09-11"
 depends_on:
   - "M9-CICD-OCI-OPERATIONS-PLAN"
@@ -29,6 +29,40 @@ backup/restore 증적까지 요구하므로 이 문서는 M9를 운영 완료로
 
 Production credential, OCI resource, 기존 Compute/VCN, 운영 PostgreSQL에는 접근하거나 변경하지 않았다.
 
+## v1.3 Resource Manager initial execution과 호환성 보정
+
+다음 runtime evidence는 2026-09-11 operator가 OCI Resource Manager에서 실행해 제공한 결과다. Codex는
+production OCI/VM/PostgreSQL에 접근하지 않았다.
+
+```text
+stack = oioi-bwg-m9
+source = goldmayo/oioi-bwg / migration_develop
+working directory = infra/oci
+Terraform = 1.5.x (CLI 1.5.7)
+region = ap-osaka-1
+
+Initial Plan = 20 add / 0 change / 0 destroy
+data lookup = existing Compute/Subnet/oioibawige-db-backup 성공
+
+Initial Apply = partial success 후 failed
+failure 1 = COMMAND_SPEC는 argument_substitution_mode=NONE 필요
+failure 2 = OCI Container Registry는 isImmutable 설정 미지원
+```
+
+Apply가 완료된 것으로 판정하지 않는다. 실패 전 Logging log group/log와 unified agent configuration,
+deployment/alert Notification Topic, CPU/memory/instance-health/filesystem warning·critical alarm, DevOps
+project/pipeline, Compute/DevOps dynamic group, runtime/deployment IAM policy, Vault, KMS key가 생성되어 같은
+Stack state에 존재한다.
+
+호환성 수정 후 clean-slate가 아니라 동일 `oioi-bwg-m9` Stack/state에서 새 Plan으로 reconcile한다. 새
+Plan은 이미 생성된 resource의 destroy와 예상하지 않은 replace가 없고, 실패했거나 생성되지 않은
+resource만 create하며, 기존 production Compute/Subnet/backup bucket은 계속 data/read-only여야 한다.
+남은 create 수는 하드코딩하지 않고 새 Plan을 source of truth로 사용한다.
+
+OCIR repository는 private으로 유지한다. `git-<full-commit-sha>`는 traceability tag이고 GitHub workflow가
+기존 tag를 overwrite하지 않고 digest를 재사용한다. OCI-level repository/tag immutability는 가정하지
+않으며 배포와 rollback의 immutable release identity는 `<repository>@sha256:<digest>`다.
+
 ## 기준과 재구성 provenance
 
 - authority plan: [`M9-CICD-OCI-OPERATIONS-PLAN.md`](../M9-CICD-OCI-OPERATIONS-PLAN.md)
@@ -37,6 +71,8 @@ Production credential, OCI resource, 기존 Compute/VCN, 운영 PostgreSQL에는
 - 재구성 전 PR 73 head: `9e04ce22d636f7dc66df57218371144c06c8292f`
 - repository/CI 검증 source: `migration_m9-oci-dev-runtime`
   `87a06374cf3019b8b506382b4480246feb2d6d5b`
+- v1.3 compatibility correction source: `fix/m9-oci-resource-manager-apply`
+  `94637b0fe9988c438a1561df1e1238404671133f`
 - PR: [#73](https://github.com/goldmayo/oioi-bwg/pull/73)
 
 ## v1.1 운영 기준 보정
@@ -143,8 +179,8 @@ credential은 3-role cutover의 별도 migration concern이다. 이번 PR은 요
 - PR 73의 standalone multi-stage image, non-root runtime, external PostgreSQL network,
   `/healthz`, `/readyz`, multi-architecture build 요소는 최신 base 위에 다시 구성했다.
 - 기존 GHCR publish와 GitHub 직접 배포 가정은 제거했다. `migration_develop` push의 Verify가 성공한
-  뒤에만 OCIR immutable SHA tag를 publish하며 release identity는 manifest digest다. 동일 commit의
-  workflow 재실행은 기존 immutable tag의 digest를 재사용한다.
+  뒤에만 OCIR `git-<full-commit-sha>` traceability tag를 publish하며 release identity는 manifest
+  digest다. 동일 commit의 workflow 재실행은 기존 tag의 digest를 재사용한다.
 
 ### PostgreSQL 권한 경계
 
@@ -161,7 +197,7 @@ credential은 3-role cutover의 별도 migration concern이다. 이번 PR은 요
 
 ### OCI infrastructure와 host operation
 
-- `infra/oci` 단일 Resource Manager root stack에 private immutable OCIR, Vault/key infrastructure,
+- `infra/oci` 단일 Resource Manager root stack에 private OCIR, Vault/key infrastructure,
   exact Compute/DevOps dynamic group과 policy, DevOps Shell Stage, 두 Notification Topic, Monitoring alarm,
   OCI Logging을 정의하고 기존 Object Storage backup bucket은 data source로만 조회한다.
 - 기존 Compute, VCN, subnet은 data source/input으로만 참조한다. 실제 secret value와 Slack webhook은
@@ -180,7 +216,7 @@ credential은 3-role cutover의 별도 migration concern이다. 이번 PR은 요
 2. `b8fbd78c07cefe121a2ecd914717712db0e76de1` — PR 73 OCI runtime image 재구성
 3. `77a2c268744b73f6c93d93726a1413ea81301ad9` — PostgreSQL runtime role 경계
 4. `7ab9e13e6b67329ca6e7432347f56ef21f930df8` — OCI Resource Manager stack
-5. `a0c5ce416ea5c953e808a1a493454e5b341dbdd1` — OCIR immutable tag 재실행 보호
+5. `a0c5ce416ea5c953e808a1a493454e5b341dbdd1` — OCIR traceability tag 재실행 보호
 6. `ff2d6a7ab07252e3d7f1753f2ae38911a6a6591a` — Drizzle metadata ownership
 7. `2ac2399ce852d27d4fe0f76b44222ddc9c87fff2` — deploy/alert Notification Topic 분리
 8. `db2797ccc8ade4c7ff872fec7add6bf4cbca8a9c` — digest deploy와 rollback
@@ -191,6 +227,7 @@ credential은 3-role cutover의 별도 migration concern이다. 이번 PR은 요
 13. `161e1ea85813923d8f58a3f2537a19f052dfce9a` — Drizzle schema 생성용 database CREATE
 14. `87a06374cf3019b8b506382b4480246feb2d6d5b` — pre-bootstrap schema ownership regression baseline
 15. `49d8d178d9e14c8493b223b24c19b7ffd79c9ce3` — migrator database CREATE 제거와 migration entrypoint
+16. `94637b0fe9988c438a1561df1e1238404671133f` — Resource Manager Apply 호환성 오류 수정
 
 ## 실제 검증
 
@@ -198,7 +235,7 @@ credential은 3-role cutover의 별도 migration concern이다. 이번 PR은 요
   - type-check, ESLint, Steiger 통과
   - architecture harness 8 tests 통과
   - unit 49 files / 198 tests 통과
-  - operation 2 files / 6 tests 통과
+  - operation 2 files / 8 tests 통과
 - GitHub Actions Verify run `34499124308`
   - PostgreSQL 17 service에서 admin migration 후 migrator migration 재실행 성공
   - admin 최초 migration 5건, database CREATE 없는 migrator 재실행 0건 성공
@@ -211,11 +248,16 @@ credential은 3-role cutover의 별도 migration concern이다. 이번 PR은 요
 - `pnpm format:check` 통과
 - `NEXT_PUBLIC_APP_ENV=staging pnpm build` 통과
   - `/healthz`, `/readyz`, `/sitemap.xml`이 dynamic route임을 확인
-- Terraform 1.13.5, OCI provider 8.29.0
+- Terraform 1.5.7, OCI provider 8.29.0
+  - HashiCorp 공식 SHA256SUMS와 local CLI archive checksum 일치 확인
+  - `terraform version`에서 `Terraform v1.5.7` / `linux_arm64` 확인
   - backend 없는 local init은 provider/schema 정적 검증 목적으로만 수행
   - `terraform -chdir=infra/oci fmt -check -diff` 통과
   - `terraform -chdir=infra/oci validate` 통과
+  - provider lock selection 변경 없음
   - Plan/Apply는 실행하지 않음
+- Terraform template render 후 Command Spec YAML parse, `IMAGE_DIGEST` env contract와 command step 추출,
+  추출 command의 `bash -n` 통과
 - `bash -n ops/oci/*.sh` 통과
 - 임시 Docker CLI 28.5.1 / Compose 2.39.4에서 실제 Compose 파일의
   `docker compose ... config --quiet` 통과
@@ -249,7 +291,8 @@ evidence를 대체하지 않는다.
 
 다음 항목은 repository code나 mock으로 완료 처리할 수 없다.
 
-1. Resource Manager Stack 생성, Plan review, Apply job OCID와 기존 Compute/VCN 변경 0건 증적
+1. 동일 Resource Manager Stack의 reconciliation Plan review, Apply 완료 job OCID와 기존
+   Compute/Subnet/backup bucket mutation 0건 증적
 2. Vault runtime secret secure bootstrap, exact secret OCID 반영, IAM propagation 확인
 3. GitHub `oci-development-image` environment 설정과 실제 multi-architecture OCIR publish/digest 기록
 4. 대상 Ubuntu의 secret-free Compute Run Command probe와 command OCID/output

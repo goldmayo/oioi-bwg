@@ -61,7 +61,7 @@ variable "iam_identity_domain_name" {
 }
 
 variable "ocir_repository_name" {
-  description = "Private immutable OCIR repository name."
+  description = "Private OCIR repository name. Releases are identified by manifest digest."
   type        = string
   default     = "oioi-bwg"
 }

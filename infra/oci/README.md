@@ -4,6 +4,48 @@
 VCN, subnet, boot volume, PostgreSQL data와 PostgreSQL backup bucket은 조회만 하며 생성·수정·import하지
 않는다. 서비스 리전은 `ap-osaka-1`이고 OCIR host는 `${region}.ocir.io`에서 유도한다.
 
+OCIR repository는 private이다. `git-<full-commit-sha>`는 traceability tag이며 GitHub workflow는 이미
+존재하는 tag를 overwrite하지 않고 그 digest를 재사용한다. OCI-level repository/tag immutability는
+가정하지 않는다. 배포와 rollback의 immutable identity는 `<repository>@sha256:<digest>`다.
+
+## Current Resource Manager state
+
+2026-09-11 operator가 다음 Stack으로 첫 실행을 수행했다.
+
+```text
+stack = oioi-bwg-m9
+source = goldmayo/oioi-bwg / migration_develop
+working directory = infra/oci
+Terraform = 1.5.x (CLI 1.5.7)
+region = ap-osaka-1
+```
+
+첫 Plan은 `20 add / 0 change / 0 destroy`였고 기존 Compute/Subnet/`oioibawige-db-backup` data lookup이
+성공했다. 첫 Apply는 일부 resource를 생성한 뒤 다음 OCI API 호환성 오류로 실패했다.
+
+```text
+COMMAND_SPEC argument_substitution_mode = SUBSTITUTE_PLACEHOLDERS 거부
+OCIR provider/schema에는 isImmutable이 노출되어 있으나 ap-osaka-1 실제 Apply에서 Setting isImmutable is not currently supported로 거부
+```
+
+`isImmutable`은 OCI 기능 자체가 존재하지 않는다고 단정하지 않는다. Provider/SDK contract와 실제 backend
+동작 사이의 차이로 취급하고, M9에서는 해당 옵션에 의존하지 않으며 manifest digest를 release identity로
+사용한다.
+
+Logging group/log/agent configuration, 두 Notification Topic, CPU/memory/instance/filesystem alarm,
+DevOps project/pipeline, Compute/DevOps dynamic group, runtime/deployment IAM policy, Vault와 KMS key는 이미
+생성되어 같은 Resource Manager state에 존재한다. 이 resource를 수동 삭제하거나 다시 만들지 않는다.
+
+수정 반영 후 동일 Stack/state에서 새 Plan을 실행하고 다음을 확인한다.
+
+```text
+이미 생성된 resource -> destroy 없음, 예상하지 않은 replace 없음
+실패했거나 아직 생성되지 않은 resource -> create
+기존 production Compute/Subnet/backup bucket -> data/read-only 유지
+```
+
+남은 create 수는 추정값으로 고정하지 않는다. 새 Resource Manager Plan 결과가 source of truth다.
+
 ## Activation order
 
 1. `terraform.tfvars.example`의 non-secret 값을 Resource Manager Stack variables로 옮긴다. 현재 기존

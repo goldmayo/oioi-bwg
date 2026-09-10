@@ -1,7 +1,7 @@
 ---
 title: "Architecture Document Index"
 document_id: "00"
-version: "1.11"
+version: "1.12"
 status: "active"
 authority: "index"
 updated_at: "2026-09-11"
@@ -51,8 +51,8 @@ migration / implementation plan
 
 | ID | 문서 | 버전 | 상태 | 책임 |
 |---|---|---:|---|---|
-| 00 | Document Index | 1.11 | active | 문서 상태 / 버전 / 책임 SSOT |
-| 01 | Architecture Constitution | 2.7 | active | 전체 시스템 헌법 |
+| 00 | Document Index | 1.12 | active | 문서 상태 / 버전 / 책임 SSOT |
+| 01 | Architecture Constitution | 2.8 | active | 전체 시스템 헌법 |
 | 02 | Frontend Architecture | 1.8 | active | FSD, UI/model/lib, Query 사용 원칙 |
 | 03 | API / Error Architecture | 1.4 | active | HTTP / AppError / ApiError / error mapping |
 | 04 | Auth / Authz Architecture | 1.2 | active | Auth.js, RequestContext, CASL |
@@ -63,7 +63,7 @@ migration / implementation plan
 | 09 | Error UX / Observability Architecture | 1.2 | active | query/mutation error UX / logging / Sentry |
 | 10 | Testing Architecture | 1.1 | active | unit / integration / component / E2E strategy |
 | 11 | Content / i18n / Assets / Runtime Architecture | 1.1 | active | locale / content / assets / env / runtime |
-| 12 | Deployment / Migration Runbook | 1.4 | active | migration phases / test infra / Docker / OCI / rollback |
+| 12 | Deployment / Migration Runbook | 1.5 | active | migration phases / test infra / Docker / OCI / rollback |
 
 ---
 
