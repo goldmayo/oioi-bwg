@@ -1,7 +1,7 @@
 ---
 title: "M9 OCI CI/CD & Operations Architecture Plan"
 document_id: "M9-CICD-OCI-OPERATIONS-PLAN"
-version: "1.0"
+version: "1.1"
 status: "active"
 authority: "plan"
 updated_at: "2026-09-10"
@@ -23,6 +23,58 @@ sources:
 ---
 
 # M9 OCI CI/CD & Operations Architecture Plan
+
+## 0. v1.1 운영 기준 정정
+
+이 절은 PR 73 구현 후 확인된 운영 사실을 반영한 2026-09-10 addendum다. 아래 기존 계획 중
+신규 PostgreSQL backup 구축, 광범위한 database ownership 이관, 리전 예시는 이 절이 대체한다.
+기존 M9 CI/CD 책임 경계와 배포 구조는 유지한다.
+
+정정 전 repository baseline은 `migration_m9-oci-dev-runtime`
+`c96bef6e0a8e554fd89c689fcdea8522846e8f53`이며, 기존 운영 backup은 사용자가 2026-09-10에 확인한
+host 구성 사실이다. Production OCI/VM에는 접근하지 않았으므로 세부 script/timer/bucket/retention/auth는
+아직 unknown으로 유지한다.
+
+확정 리전은 다음 하나다.
+
+```text
+OCI region = ap-osaka-1
+OCIR = ap-osaka-1.ocir.io
+```
+
+OCIR host는 별도 입력하지 않고 `${region}.ocir.io`로 유도한다.
+
+PostgreSQL 역할은 `admin -> oioi_migrator -> oioi_app`을 유지하되 ownership bootstrap은 tracked
+Drizzle schema/migration으로 식별한 application table/sequence와 migration metadata만 대상으로 한다.
+`public`/`drizzle` 전체 relation, extension-owned object, host-owned object, schema ownership, database
+전체 `PUBLIC CONNECT`는 변경하지 않는다. Migrator에는 필요한 schema `USAGE`/`CREATE`, application
+object ownership과 default privilege만 주고 app에는 application DML/sequence usage만 준다.
+
+운영 Ubuntu VM에는 이미 PostgreSQL dump를 OCI Object Storage로 보내는 host-managed backup이 있다.
+PR 73은 이를 대체하거나 병렬 구축하지 않는다.
+
+```text
+유지: existing VM -> existing PostgreSQL backup -> existing Object Storage bucket
+Terraform: existing bucket lookup/input only
+제거: 신규 bucket, repository backup/restore script와 timer, 신규 backup custom metric/alarm
+후속: 실제 VM의 script/timer/bucket/retention/auth inventory와 안전한 Resource Manager import 판단
+검증: restore proof는 별도 activation evidence
+```
+
+Application Compose의 `json-file` log는 `10m` × `5`로 회전한다. 기존 PostgreSQL container는 이
+repository가 소유하지 않으므로 activation 시 log rotation만 확인한다. `restart: unless-stopped`는
+유지하지만 Docker healthcheck가 unhealthy container를 자동 restart하지는 않는다. Runtime health
+failure는 external monitoring -> alert -> operator investigation으로 다루며 자동 restart loop나
+destructive prune을 추가하지 않는다.
+
+Run Command 종료 후 execution의 lifecycle, remote exit code, output과 deployment result를 DevOps log에
+남긴다. Exit `21`은 기존 alert Notification Topic으로 CRITICAL message를 보내며 별도 metric system을
+만들지 않는다. Secret marker가 포함된 remote output은 출력하지 않는다.
+
+12 GB VM의 application container memory limit은 실제 activation baseline 전에는 정하지 않는다.
+Terraform/Logging configuration 존재는 운영 완료 증거가 아니며, external HTTPS health monitoring과
+OCI Logging Search에서의 application test log 확인은 Caddy/production endpoint activation 이후의
+별도 evidence gate로 남긴다.
 
 ## 1. 목적
 
@@ -835,7 +887,7 @@ infra/
 └ oci/
    ├ versions.tf
    ├ variables.tf
-   ├ data.tf
+   ├ data.tf             # existing resources와 backup bucket lookup
    ├ ocir.tf
    ├ iam.tf
    ├ vault.tf
@@ -843,7 +895,6 @@ infra/
    ├ notifications.tf
    ├ monitoring.tf
    ├ logging.tf
-   ├ backup.tf
    ├ outputs.tf
    └ terraform.tfvars.example
 ```
@@ -870,7 +921,7 @@ Shell Stage
 Notification topic
 Monitoring alarms
 Logging resources
-Object Storage backup bucket
+existing Object Storage backup bucket lookup
 ```
 
 이미 정상 운영 중인 다음 리소스는 처음부터 억지로 Terraform ownership으로 가져오지 않는다.
@@ -1117,7 +1168,6 @@ instance unhealthy
 sustained high CPU
 sustained high memory
 filesystem warning/critical
-backup failure
 critical application/Sentry error
 ```
 
@@ -1194,21 +1244,17 @@ pg_dump
 Object Storage
 ```
 
-Object Storage bucket은 Terraform 관리 대상이다.
-
-backup 실행은 host systemd timer 또는 동등하게 단순한 scheduler를 사용한다.
-
-Kubernetes/CronJob 같은 별도 scheduler를 도입하지 않는다.
+기존 운영 bucket과 host schedule은 유지하며 이 PR에서 생성하거나 교체하지 않는다. Terraform은
+bucket을 data source/input으로만 조회한다. 실제 host 구성을 inventory한 뒤 Resource Manager import와
+repository ownership 전환 필요성을 별도 결정한다.
 
 ---
 
 # 35. Backup Credential
 
-Compute는 Instance Principal을 사용해 지정 backup bucket에 object를 작성한다.
-
-Object Storage static credential을 VM에 저장하지 않는다.
-
-권한은 해당 bucket 작업에 필요한 수준으로 제한한다.
+현재 운영 backup의 인증 방식은 inventory 전까지 unknown이다. 이 PR에서 새로운 bucket write IAM이나
+static credential을 추가하지 않는다. 추후 repository/IaC ownership으로 편입할 때 Instance Principal과
+bucket-scoped 최소 권한을 우선 검토한다.
 
 ---
 
@@ -1222,11 +1268,12 @@ backup file exists
 restore 가능
 ```
 
-production cutover 전에 실제 restore test를 수행한다.
+운영 backup inventory 후 별도 단계에서 실제 restore test를 수행한다.
 
 정기적으로 restore smoke를 반복할 수 있는 절차를 문서화한다.
 
-backup failure는 Slack alert 대상이다.
+현재 운영 backup의 failure signal과 notification 경로는 inventory에서 확인한다. 확인 전 신규 custom
+metric/alarm을 병렬로 만들지 않는다.
 
 ---
 
@@ -1526,7 +1573,7 @@ DevOps
 Notifications topic
 Monitoring
 Logging
-Object Storage backup bucket
+existing Object Storage backup bucket lookup
 ```
 
 기존 Compute/VCN을 수정하거나 import하지 않는다.
@@ -1542,7 +1589,6 @@ Compute identity에 필요한 최소 권한을 부여한다.
 ```text
 OCIR read
 runtime Vault secret-bundle read
-backup bucket write
 Monitoring custom metric publish if used
 Logging related permissions if required
 ```
@@ -1612,15 +1658,16 @@ startup failure visibility
 
 ---
 
-## M9-J — Backup / Restore
+## M9-J — Existing Backup Inventory / Restore
 
 ```text
-pg_dump
-→ Object Storage
-→ restore test
+existing host script/timer/auth/retention inventory
+→ existing Object Storage bucket 확인
+→ safe import/ownership decision
+→ separate restore proof
 ```
 
-까지 성공해야 한다.
+신규 backup system을 만들지 않는다.
 
 ---
 
@@ -1661,7 +1708,7 @@ Slack deploy notification 정상
 
 Slack infrastructure alert 정상
 
-backup externalized to Object Storage
+existing VM backup remains externalized to existing Object Storage
 
 restore 실제 검증
 
