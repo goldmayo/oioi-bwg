@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.4"
+version: "1.5"
 status: "active"
 authority: "runbook"
 updated_at: "2026-09-11"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.4
+# oioi-bwg Deployment / Migration Runbook v1.5
 
 ## 1. 목적
 
@@ -226,7 +226,7 @@ standalone runtime 확인
 
 ```text
 GitHub quality gate
-→ OCIR immutable image digest
+→ private OCIR의 manifest digest release identity
 → OCI DevOps deployment
 → Shell Stage / Compute Run Command
 → Docker Compose
@@ -239,6 +239,25 @@ Compute, VCN, subnet, boot volume, PostgreSQL data는 data source/input으로 �
 결정 없이 ownership을 가져오지 않는다.
 
 서비스 리전은 `ap-osaka-1`, OCIR endpoint는 region에서 유도한 `ap-osaka-1.ocir.io`로 고정한다.
+OCIR의 `git-<full-commit-sha>`는 traceability tag이며 repository나 tag 자체의 OCI-level immutability를
+가정하지 않는다. 배포와 rollback의 immutable identity는 `<repository>@sha256:<digest>`다.
+
+### 13.1. Initial Resource Manager reconciliation
+
+2026-09-11 operator가 실행한 `oioi-bwg-m9` Stack의 첫 Plan은 `20 add / 0 change / 0 destroy`였고 기존
+Compute/Subnet/`oioibawige-db-backup` data lookup이 성공했다. 첫 Apply는 일부 resource를 생성한 뒤
+COMMAND_SPEC의 잘못된 argument substitution mode와 지원되지 않는 OCIR `isImmutable` 때문에 실패했다.
+
+동일 Stack/state를 유지한 채 호환성 수정이 반영된 source로 다시 Plan한다. 성공 생성된 resource를
+수동 삭제하거나 clean-slate Apply를 유도하지 않는다. 다음 Plan은 다음 기준을 모두 만족해야 한다.
+
+```text
+이미 state에 생성된 resource -> destroy 없음, 예상하지 않은 replace 없음
+실패했거나 아직 생성되지 않은 resource -> create
+기존 production Compute/Subnet/backup bucket -> data/read-only 유지
+```
+
+남은 create 수는 이전 로그에서 추정하지 않고 새 Resource Manager Plan을 source of truth로 삼는다.
 
 ---
 
