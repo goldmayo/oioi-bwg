@@ -136,6 +136,19 @@ async function main() {
     const packageManager = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
     await runCommand(packageManager, ["db:migrate"], childEnvironment);
 
+    const bootstrapFixture = postgres(databaseUrl.toString(), {
+      max: 1,
+      connection: { statement_timeout: 15_000 },
+    });
+    try {
+      await bootstrapFixture`create extension if not exists pg_stat_statements`;
+      await bootstrapFixture`
+        create table public.m9_host_owned_fixture (id bigserial primary key, note text)
+      `;
+    } finally {
+      await bootstrapFixture.end();
+    }
+
     const roleSuffix = databaseName.replace(DATABASE_PREFIX, "").slice(-24);
     runtimeAppRole = `m9_app_${roleSuffix}`;
     runtimeMigratorRole = `m9_migrator_${roleSuffix}`;
@@ -148,11 +161,20 @@ async function main() {
       migratorRole: runtimeMigratorRole,
     });
 
+    const migratorUrl = new URL(databaseUrl);
+    migratorUrl.username = runtimeMigratorRole;
+    migratorUrl.password = `${runtimePassword}-migrator`;
+    Object.assign(childEnvironment, { DATABASE_URL: migratorUrl.toString() });
+    await runCommand(packageManager, ["db:migrate"], childEnvironment);
+
     const runtimeUrl = new URL(databaseUrl);
     runtimeUrl.username = runtimeAppRole;
     runtimeUrl.password = runtimePassword;
     Object.assign(childEnvironment, {
       DATABASE_URL: runtimeUrl.toString(),
+      M9_TEST_ADMIN_ROLE: adminUrl.username,
+      M9_TEST_RUNTIME_APP_ROLE: runtimeAppRole,
+      M9_TEST_RUNTIME_MIGRATOR_ROLE: runtimeMigratorRole,
       M7_TEST_POSTGRES_VERIFICATION_URL: databaseUrl.toString(),
     });
     await runCommand(

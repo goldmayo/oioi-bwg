@@ -30,6 +30,12 @@ const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
 const verificationUrl = process.env.M7_TEST_POSTGRES_VERIFICATION_URL;
 if (!verificationUrl) throw new Error("M7_TEST_POSTGRES_VERIFICATION_URL is required");
+const adminRole = process.env.M9_TEST_ADMIN_ROLE;
+const runtimeAppRole = process.env.M9_TEST_RUNTIME_APP_ROLE;
+const runtimeMigratorRole = process.env.M9_TEST_RUNTIME_MIGRATOR_ROLE;
+if (!adminRole || !runtimeAppRole || !runtimeMigratorRole) {
+  throw new Error("M9 PostgreSQL role verification environment is required");
+}
 
 const parsedDatabaseUrl = new URL(databaseUrl);
 if (
@@ -347,6 +353,88 @@ describe.sequential("M7 auth, signup, and OTP PostgreSQL regressions", () => {
 });
 
 describe.sequential("M7 content, authorization, and persistence PostgreSQL regressions", () => {
+  test("limits ownership transfer to tracked application and Drizzle objects", async () => {
+    const applicationObjects = [
+      "Album",
+      "Song",
+      "account",
+      "profile",
+      "password_credential",
+      "email_verification_challenge",
+      "email_verification_rate_limit",
+      "Album_id_seq",
+      "Song_id_seq",
+      "account_id_seq",
+    ];
+    const owners = await verificationSql<{ name: string; owner: string }[]>`
+      select relation.relname as name, pg_get_userbyid(relation.relowner) as owner
+      from pg_class relation
+      join pg_namespace namespace on namespace.oid = relation.relnamespace
+      where namespace.nspname = 'public'
+        and relation.relname = any(${applicationObjects})
+      order by relation.relname
+    `;
+    expect(owners).toHaveLength(applicationObjects.length);
+    expect(new Set(owners.map(({ owner }) => owner))).toEqual(new Set([runtimeMigratorRole]));
+
+    const [drizzleOwnership] = await verificationSql<
+      { schema_owner: string; sequence_owner: string; table_owner: string }[]
+    >`
+      select
+        pg_get_userbyid(namespace.nspowner) as schema_owner,
+        pg_get_userbyid(sequence.relowner) as sequence_owner,
+        pg_get_userbyid(metadata.relowner) as table_owner
+      from pg_namespace namespace
+      join pg_class metadata
+        on metadata.relnamespace = namespace.oid and metadata.relname = '__drizzle_migrations'
+      join pg_class sequence
+        on sequence.relnamespace = namespace.oid and sequence.relname = '__drizzle_migrations_id_seq'
+      where namespace.nspname = 'drizzle'
+    `;
+    expect(drizzleOwnership).toEqual({
+      schema_owner: adminRole,
+      sequence_owner: runtimeMigratorRole,
+      table_owner: runtimeMigratorRole,
+    });
+
+    const unrelatedOwners = await verificationSql<{ name: string; owner: string }[]>`
+      select relation.relname as name, pg_get_userbyid(relation.relowner) as owner
+      from pg_class relation
+      join pg_namespace namespace on namespace.oid = relation.relnamespace
+      where namespace.nspname = 'public'
+        and relation.relname in (
+          'm9_host_owned_fixture',
+          'm9_host_owned_fixture_id_seq',
+          'pg_stat_statements',
+          'pg_stat_statements_info'
+        )
+      order by relation.relname
+    `;
+    expect(unrelatedOwners.map(({ name }) => name)).toEqual(
+      expect.arrayContaining([
+        "m9_host_owned_fixture",
+        "m9_host_owned_fixture_id_seq",
+        "pg_stat_statements",
+        "pg_stat_statements_info",
+      ]),
+    );
+    expect(new Set(unrelatedOwners.map(({ owner }) => owner))).toEqual(new Set([adminRole]));
+
+    const [unrelatedPrivileges] = await verificationSql<
+      { app_can_write: boolean; public_schema_owner: string }[]
+    >`
+      select
+        has_table_privilege(${runtimeAppRole}, 'public.m9_host_owned_fixture', 'insert') as app_can_write,
+        pg_get_userbyid(namespace.nspowner) as public_schema_owner
+      from pg_namespace namespace
+      where namespace.nspname = 'public'
+    `;
+    expect(unrelatedPrivileges).toEqual({
+      app_can_write: false,
+      public_schema_owner: adminRole,
+    });
+  });
+
   test("applies tracked migrations 0000 through 0004 with exact hashes", async () => {
     const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as {
       entries: { tag: string }[];

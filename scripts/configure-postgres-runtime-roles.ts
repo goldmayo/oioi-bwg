@@ -4,6 +4,18 @@ import postgres, { type Sql } from "postgres";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const PRODUCTION_ACK = "I_UNDERSTAND_THIS_CHANGES_DATABASE_ROLES";
+const APPLICATION_TABLES = [
+  "Album",
+  "Song",
+  "account",
+  "profile",
+  "password_credential",
+  "email_verification_challenge",
+  "email_verification_rate_limit",
+] as const;
+const APPLICATION_SEQUENCES = ["Album_id_seq", "Song_id_seq", "account_id_seq"] as const;
+const DRIZZLE_TABLE = "__drizzle_migrations";
+const DRIZZLE_SEQUENCE = "__drizzle_migrations_id_seq";
 
 type RoleConfiguration = {
   adminUrl: string;
@@ -21,6 +33,30 @@ function assertRoleName(value: string) {
 
 function quoteIdentifier(value: string) {
   return `"${value.replaceAll('"', '""')}"`;
+}
+
+async function requireRelation(sql: Sql, schema: string, name: string, kinds: string[]) {
+  const [relation] = await sql<{ kind: string }[]>`
+    select relation.relkind as kind
+    from pg_class relation
+    join pg_namespace namespace on namespace.oid = relation.relnamespace
+    where namespace.nspname = ${schema} and relation.relname = ${name}
+  `;
+  if (!relation || !kinds.includes(relation.kind)) {
+    throw new Error(
+      `Required PostgreSQL relation is missing or has the wrong kind: ${schema}.${name}`,
+    );
+  }
+}
+
+async function transferTable(sql: Sql, schema: string, name: string, owner: string) {
+  await requireRelation(sql, schema, name, ["r", "p"]);
+  await sql`alter table ${sql(schema)}.${sql(name)} owner to ${sql(owner)}`;
+}
+
+async function transferSequence(sql: Sql, schema: string, name: string, owner: string) {
+  await requireRelation(sql, schema, name, ["S"]);
+  await sql`alter sequence ${sql(schema)}.${sql(name)} owner to ${sql(owner)}`;
 }
 
 async function setLoginPassword(sql: Sql, role: string, password: string) {
@@ -86,80 +122,38 @@ export async function configurePostgresRuntimeRoles({
         await sql`revoke ${sql(grantedRole)} from ${sql(appRole)}`;
       }
 
-      await sql`revoke all on schema public from public`;
       await sql`revoke create on schema public from ${sql(appRole)}`;
       await sql`grant usage on schema public to ${sql(appRole)}`;
+      await sql`grant usage, create on schema public to ${sql(migratorRole)}`;
 
-      const relations = await sql<{ name: string; relation_kind: string; schema_name: string }[]>`
-        select namespace.nspname as schema_name,
-               relation.relname as name,
-               relation.relkind as relation_kind
-        from pg_class relation
-        join pg_namespace namespace on namespace.oid = relation.relnamespace
-        where namespace.nspname in ('public', 'drizzle')
-          and relation.relkind in ('r', 'p', 'S', 'v', 'm', 'f')
-          and (
-            relation.relkind <> 'S'
-            or not exists (
-              select 1
-              from pg_depend dependency
-              where dependency.classid = 'pg_class'::regclass
-                and dependency.objid = relation.oid
-                and dependency.deptype in ('a', 'i')
-            )
-          )
-        order by relation.relkind = 'S', relation.oid
-      `;
-      for (const relation of relations) {
-        const objectType =
-          relation.relation_kind === "S"
-            ? "sequence"
-            : relation.relation_kind === "v"
-              ? "view"
-              : relation.relation_kind === "m"
-                ? "materialized view"
-                : relation.relation_kind === "f"
-                  ? "foreign table"
-                  : "table";
-        await sql.unsafe(
-          `alter ${objectType} ${quoteIdentifier(relation.schema_name)}.${quoteIdentifier(relation.name)} owner to ${quoteIdentifier(migratorRole)}`,
-        );
+      // This allowlist mirrors the tracked Drizzle schema/migrations. Do not broaden it to all
+      // public relations: the production database also contains extension- and host-owned objects.
+      for (const table of APPLICATION_TABLES) {
+        await transferTable(sql, "public", table, migratorRole);
+      }
+      for (const sequence of APPLICATION_SEQUENCES) {
+        await transferSequence(sql, "public", sequence, migratorRole);
       }
 
-      const enums = await sql<{ name: string; schema_name: string }[]>`
-        select namespace.nspname as schema_name, type.typname as name
-        from pg_type type
-        join pg_namespace namespace on namespace.oid = type.typnamespace
-        where namespace.nspname in ('public', 'drizzle') and type.typtype = 'e'
-      `;
-      for (const enumType of enums) {
-        await sql`
-          alter type ${sql(enumType.schema_name)}.${sql(enumType.name)} owner to ${sql(migratorRole)}
-        `;
-      }
-
-      await sql`alter schema public owner to ${sql(migratorRole)}`;
       const [drizzleSchema] = await sql<{ exists: boolean }[]>`
         select exists(select 1 from pg_namespace where nspname = 'drizzle')
       `;
-      if (drizzleSchema?.exists) {
-        await sql`alter schema drizzle owner to ${sql(migratorRole)}`;
-      }
-      await sql`revoke all on all tables in schema public from public`;
-      await sql`revoke all on all sequences in schema public from public`;
-      await sql`
-        grant select, insert, update, delete on all tables in schema public to ${sql(appRole)}
-      `;
-      await sql`grant usage, select on all sequences in schema public to ${sql(appRole)}`;
+      if (!drizzleSchema?.exists) throw new Error("Required PostgreSQL schema is missing: drizzle");
+      await sql`grant usage, create on schema drizzle to ${sql(migratorRole)}`;
+      await transferTable(sql, "drizzle", DRIZZLE_TABLE, migratorRole);
+      await transferSequence(sql, "drizzle", DRIZZLE_SEQUENCE, migratorRole);
 
-      await sql`
-        alter default privileges for role ${sql(migratorRole)} in schema public
-        revoke all on tables from public
-      `;
-      await sql`
-        alter default privileges for role ${sql(migratorRole)} in schema public
-        revoke all on sequences from public
-      `;
+      for (const table of APPLICATION_TABLES) {
+        await sql`
+          grant select, insert, update, delete on table ${sql("public")}.${sql(table)} to ${sql(appRole)}
+        `;
+      }
+      for (const sequence of APPLICATION_SEQUENCES) {
+        await sql`
+          grant usage, select on sequence ${sql("public")}.${sql(sequence)} to ${sql(appRole)}
+        `;
+      }
+
       await sql`
         alter default privileges for role ${sql(migratorRole)} in schema public
         grant select, insert, update, delete on tables to ${sql(appRole)}
@@ -169,9 +163,6 @@ export async function configurePostgresRuntimeRoles({
         grant usage, select on sequences to ${sql(appRole)}
       `;
 
-      await sql.unsafe(
-        `revoke connect on database ${quoteIdentifier(context.database_name)} from public`,
-      );
       await sql.unsafe(
         `grant connect on database ${quoteIdentifier(context.database_name)} to ${quoteIdentifier(migratorRole)}, ${quoteIdentifier(appRole)}`,
       );
@@ -191,8 +182,6 @@ export async function configurePostgresRuntimeRoles({
         {
           application_objects_owned: number;
           can_create_schema_objects: boolean;
-          missing_sequence_privileges: number;
-          missing_table_privileges: number;
           restricted_role: boolean;
         }[]
       >`
@@ -208,27 +197,6 @@ export async function configurePostgresRuntimeRoles({
             from pg_class relation
             join pg_namespace namespace on namespace.oid = relation.relnamespace
             where namespace.nspname = 'public'
-              and relation.relkind in ('r', 'p', 'v', 'm', 'f')
-              and not (
-                has_table_privilege(current_user, relation.oid, 'select')
-                and has_table_privilege(current_user, relation.oid, 'insert')
-                and has_table_privilege(current_user, relation.oid, 'update')
-                and has_table_privilege(current_user, relation.oid, 'delete')
-              )
-          ) as missing_table_privileges,
-          (
-            select count(*)::int
-            from pg_class relation
-            join pg_namespace namespace on namespace.oid = relation.relnamespace
-            where namespace.nspname = 'public'
-              and relation.relkind = 'S'
-              and not has_sequence_privilege(current_user, relation.oid, 'usage')
-          ) as missing_sequence_privileges,
-          (
-            select count(*)::int
-            from pg_class relation
-            join pg_namespace namespace on namespace.oid = relation.relnamespace
-            where namespace.nspname = 'public'
               and pg_get_userbyid(relation.relowner) = current_user
           ) as application_objects_owned
         from pg_roles role
@@ -237,11 +205,41 @@ export async function configurePostgresRuntimeRoles({
       if (
         !checks?.restricted_role ||
         checks.can_create_schema_objects ||
-        checks.missing_table_privileges !== 0 ||
-        checks.missing_sequence_privileges !== 0 ||
         checks.application_objects_owned !== 0
       ) {
         throw new Error("PostgreSQL runtime role verification failed");
+      }
+
+      for (const table of APPLICATION_TABLES) {
+        const qualifiedName = `public.${quoteIdentifier(table)}`;
+        const [privileges] = await application<
+          { can_delete: boolean; can_insert: boolean; can_select: boolean; can_update: boolean }[]
+        >`
+          select
+            has_table_privilege(current_user, ${qualifiedName}, 'select') as can_select,
+            has_table_privilege(current_user, ${qualifiedName}, 'insert') as can_insert,
+            has_table_privilege(current_user, ${qualifiedName}, 'update') as can_update,
+            has_table_privilege(current_user, ${qualifiedName}, 'delete') as can_delete
+        `;
+        if (
+          !privileges?.can_select ||
+          !privileges.can_insert ||
+          !privileges.can_update ||
+          !privileges.can_delete
+        ) {
+          throw new Error(`Application role privileges are incomplete: ${qualifiedName}`);
+        }
+      }
+      for (const sequence of APPLICATION_SEQUENCES) {
+        const qualifiedName = `public.${quoteIdentifier(sequence)}`;
+        const [privileges] = await application<{ can_select: boolean; can_use: boolean }[]>`
+          select
+            has_sequence_privilege(current_user, ${qualifiedName}, 'usage') as can_use,
+            has_sequence_privilege(current_user, ${qualifiedName}, 'select') as can_select
+        `;
+        if (!privileges?.can_use || !privileges.can_select) {
+          throw new Error(`Application role privileges are incomplete: ${qualifiedName}`);
+        }
       }
 
       try {
