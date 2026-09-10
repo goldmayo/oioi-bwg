@@ -2,6 +2,11 @@ data "oci_objectstorage_namespace" "tenancy" {
   compartment_id = var.tenancy_ocid
 }
 
+data "oci_objectstorage_bucket" "postgres_backup" {
+  name      = var.backup_bucket_name
+  namespace = data.oci_objectstorage_namespace.tenancy.namespace
+}
+
 data "oci_core_instance" "application" {
   instance_id = var.compute_instance_ocid
 }

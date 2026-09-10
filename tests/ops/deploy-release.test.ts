@@ -32,7 +32,7 @@ async function fixture() {
   await writeFile(
     join(config, "deploy.conf"),
     [
-      "IMAGE_REPOSITORY=icn.ocir.io/example/oioi-bwg",
+      "IMAGE_REPOSITORY=registry.test.invalid/example/oioi-bwg",
       "POSTGRES_NETWORK=postgres-network",
       "DATABASE_HOST=postgres",
       "DATABASE_PORT=5432",
@@ -151,7 +151,7 @@ describe("OCI release deployment", () => {
     expect(await readFile(join(paths.runtime, "deploy", "current"), "utf8")).toBe(`${current}\n`);
     expect(await readFile(join(paths.runtime, "app.env"), "utf8")).toBe("AUTH_SECRET=previous\n");
     expect(await readFile(join(paths.root, "docker.log"), "utf8")).toContain(
-      `icn.ocir.io/example/oioi-bwg@${current}`,
+      `registry.test.invalid/example/oioi-bwg@${current}`,
     );
   });
 

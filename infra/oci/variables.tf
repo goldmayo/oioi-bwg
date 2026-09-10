@@ -1,6 +1,11 @@
 variable "region" {
-  description = "OCI region identifier, for example ap-chuncheon-1."
+  description = "OCI service region. M9 production uses ap-osaka-1."
   type        = string
+
+  validation {
+    condition     = var.region == "ap-osaka-1"
+    error_message = "M9 OCI resources must use the ap-osaka-1 service region."
+  }
 }
 
 variable "tenancy_ocid" {
@@ -61,18 +66,8 @@ variable "ocir_repository_name" {
   default     = "oioi-bwg"
 }
 
-variable "ocir_registry_host" {
-  description = "Regional OCIR endpoint, for example icn.ocir.io."
-  type        = string
-
-  validation {
-    condition     = can(regex("^[a-z0-9-]+\\.ocir\\.io$", var.ocir_registry_host))
-    error_message = "ocir_registry_host must be a regional *.ocir.io endpoint."
-  }
-}
-
 variable "backup_bucket_name" {
-  description = "Object Storage bucket name for external PostgreSQL backups."
+  description = "Existing Object Storage bucket used by the host-managed PostgreSQL backup. This stack only looks it up."
   type        = string
 }
 

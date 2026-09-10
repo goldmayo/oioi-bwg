@@ -1,5 +1,5 @@
 output "ocir_repository" {
-  value       = "${var.ocir_registry_host}/${oci_artifacts_container_repository.application.namespace}/${oci_artifacts_container_repository.application.display_name}"
+  value       = "${local.ocir_registry_host}/${oci_artifacts_container_repository.application.namespace}/${oci_artifacts_container_repository.application.display_name}"
   description = "Set GitHub environment variables from this repository path; deployments add @sha256:digest."
 }
 
@@ -10,7 +10,7 @@ output "vault_id" {
 
 output "vault_key_id" {
   value       = oci_kms_key.runtime.id
-  description = "KMS key for runtime secrets and the backup bucket."
+  description = "KMS key for runtime secrets."
 }
 
 output "deployment_notification_topic_id" {
@@ -30,7 +30,8 @@ output "deployment_pipeline_id" {
 
 output "backup_bucket" {
   value = {
-    name      = oci_objectstorage_bucket.postgres_backup.name
-    namespace = oci_objectstorage_bucket.postgres_backup.namespace
+    name      = data.oci_objectstorage_bucket.postgres_backup.name
+    namespace = data.oci_objectstorage_bucket.postgres_backup.namespace
   }
+  description = "Existing host-managed PostgreSQL backup bucket referenced without Terraform ownership."
 }

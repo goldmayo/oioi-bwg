@@ -10,7 +10,7 @@ config_root="/etc/oioibawige"
 
 install -d -m 0750 "${runtime_root}" "${runtime_root}/deploy" "${runtime_root}/scripts" "${config_root}"
 install -m 0644 "${repository_root}/compose.oci-development.yml" "${runtime_root}/compose.oci-development.yml"
-for script in deploy-release.sh backup-postgres.sh restore-postgres.sh publish-filesystem-metric.sh run-command-probe.sh preflight-host.sh; do
+for script in deploy-release.sh publish-filesystem-metric.sh run-command-probe.sh preflight-host.sh; do
   install -m 0755 "${repository_root}/ops/oci/${script}" "${runtime_root}/scripts/${script}"
 done
 

@@ -76,32 +76,3 @@ resource "oci_monitoring_alarm" "filesystem_critical" {
   body                  = "Filesystem usage is critical. Stop nonessential writes and follow the M9 incident runbook; never auto-prune."
   freeform_tags         = var.freeform_tags
 }
-
-resource "oci_monitoring_alarm" "backup_failure" {
-  compartment_id        = local.alarm_common.compartment_id
-  destinations          = local.alarm_common.destinations
-  is_enabled            = local.alarm_common.is_enabled
-  metric_compartment_id = local.alarm_common.metric_compartment_id
-  display_name          = "${var.resource_prefix}-backup-failed"
-  namespace             = "oioi_operations"
-  query                 = "backup_failure[5m]{resourceId = \"${var.compute_instance_ocid}\"}.sum() > 0"
-  severity              = "CRITICAL"
-  pending_duration      = "PT1M"
-  body                  = "PostgreSQL backup upload or local validation failed. Inspect the backup systemd unit and Object Storage."
-  freeform_tags         = var.freeform_tags
-}
-
-
-resource "oci_monitoring_alarm" "backup_missing" {
-  compartment_id        = local.alarm_common.compartment_id
-  destinations          = local.alarm_common.destinations
-  is_enabled            = local.alarm_common.is_enabled
-  metric_compartment_id = local.alarm_common.metric_compartment_id
-  display_name          = "${var.resource_prefix}-backup-missing"
-  namespace             = "oioi_operations"
-  query                 = "backup_success[1h]{resourceId = \"${var.compute_instance_ocid}\"}.absent(26h)"
-  severity              = "CRITICAL"
-  pending_duration      = "PT1M"
-  body                  = "No successful PostgreSQL backup metric was received for 26 hours. Inspect the timer and Object Storage."
-  freeform_tags         = var.freeform_tags
-}

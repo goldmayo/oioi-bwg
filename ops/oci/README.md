@@ -52,7 +52,9 @@ lock → Vault fetch → complete env validation → OCIR pull → Compose apply
 
 후보 실패 시 이전 env와 `current` digest를 복구한다. exit `20`은 candidate failure + rollback success,
 exit `21`은 candidate failure + rollback failure(CRITICAL)다. DB migration/rollback은 이 script가 실행하지
-않는다.
+않는다. Shell Stage는 Run Command execution의 lifecycle, remote exit code와 output을 조회해 OCI DevOps
+log에 남기고 exit code를 그대로 반환한다. Exit `21`은 기존 alert Notification Topic에 CRITICAL
+message도 게시한다. Secret marker를 포함한 remote output은 전체를 redaction한다.
 
 ## 4. PostgreSQL role cutover
 
@@ -70,27 +72,35 @@ pnpm db:configure-runtime-roles -- --allow-production
 완료 후 application Vault secret을 `DB_APP_PASSWORD`의 새 version으로 교체하고 deployment를 별도로
 실행한다. `DATABASE_URL`에는 `oioi_app`만 사용한다.
 
-## 5. Backup, metric, and restore proof
+## 5. Filesystem metric and existing backup boundary
 
-config와 Instance Principal policy를 확인하고 `oioi-bwg-deploy`, `oioi-bwg-alerts` Topic에 각각
-`#oioi-deploy`, `#oioi-alerts` Slack subscription을 수동 연결한 뒤 timer를 명시적으로 활성화한다.
-
-```bash
-sudo systemctl enable --now oioi-filesystem-metric.timer oioi-postgres-backup.timer
-sudo systemctl start oioi-postgres-backup.service
-sudo journalctl -u oioi-postgres-backup.service --since today
-```
-
-restore proof는 production DB가 아닌 새 빈 PostgreSQL 17 database를 대상으로 수행한다.
+`oioi-bwg-deploy`, `oioi-bwg-alerts` Topic에 각각 `#oioi-deploy`, `#oioi-alerts` Slack subscription을
+수동 연결한 뒤 filesystem metric timer만 명시적으로 활성화한다. 80% WARNING/90% CRITICAL alarm과
+application Docker log rotation을 함께 사용하며 자동 prune은 하지 않는다.
 
 ```bash
-M9_RESTORE_TARGET_URL='postgresql://...@127.0.0.1:5432/oioi_restore_test' \
-  sudo --preserve-env=M9_RESTORE_TARGET_URL \
-  /srv/oioibawige/scripts/restore-postgres.sh 'postgres/YYYY/MM/DD/oioibawige-....dump'
+sudo systemctl enable --now oioi-filesystem-metric.timer
+sudo systemctl status oioi-filesystem-metric.timer
 ```
 
-Object 존재만으로 완료 처리하지 않는다. `pg_restore --list`, empty-target guard, restore 후 public table
-검증이 모두 성공해야 한다.
+Production Ubuntu VM에는 repository 밖에서 관리 중인 기존 PostgreSQL -> OCI Object Storage backup이
+있다. 이 repository의 host installer는 backup script/timer를 설치하거나 기존 설정을 덮어쓰지 않는다.
+다음을 실제 VM에서 inventory하기 전에는 신규 schedule, bucket, IAM, metric/alarm을 추가하지 않는다.
+
+```text
+existing script와 systemd unit/timer
+existing bucket name과 retention/versioning/encryption
+backup authentication과 최소 권한
+failure notification과 최근 성공 evidence
+```
+
+기존 bucket은 Terraform input/data source로만 조회한다. 삭제·재생성·이름 변경·import는 이 단계에서
+하지 않는다. Restore proof는 inventory 후 production DB가 아닌 별도 PostgreSQL 17 target에서 검증한다.
+
+Application `restart: unless-stopped`는 유지한다. Healthcheck의 `unhealthy`만으로 Docker가 container를
+자동 restart하지는 않는다. Runtime health failure는 external monitoring -> alert -> operator
+investigation으로 처리하며 외부 HTTPS monitor는 Caddy/production endpoint activation 이후 구성한다.
+Application memory limit은 activation baseline 전에는 정하지 않는다.
 
 ## Evidence checklist
 
@@ -100,7 +110,9 @@ Object 존재만으로 완료 처리하지 않는다. `pg_restore --list`, empty
 - OCI DevOps deployment OCID, input digest, result
 - candidate failure와 rollback recovery evidence
 - app role runtime smoke 및 admin credential 부재 확인
-- alarm test와 Slack delivery timestamp
-- backup object name, restore target, restored table count
+- filesystem alarm test와 Slack delivery timestamp
+- application test log의 OCI Logging Search 결과
+- existing PostgreSQL container log rotation 확인
+- existing backup inventory와 별도 restore proof
 
 secret value, auth token, webhook URL, full `DATABASE_URL`은 evidence에 기록하지 않는다.

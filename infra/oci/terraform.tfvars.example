@@ -1,21 +1,20 @@
-region                   = "ap-chuncheon-1"
-ocir_registry_host       = "icn.ocir.io"
+region                   = "ap-osaka-1"
 tenancy_ocid             = "ocid1.tenancy.oc1..<unique-id>"
 compartment_ocid         = "ocid1.compartment.oc1..<m9-resource-compartment>"
 compute_compartment_ocid = "ocid1.compartment.oc1..<existing-compute-compartment>"
 network_compartment_ocid = "ocid1.compartment.oc1..<existing-network-compartment>"
 secret_compartment_ocid  = "ocid1.compartment.oc1..<runtime-secret-compartment>"
-compute_instance_ocid    = "ocid1.instance.oc1.ap-chuncheon-1.<unique-id>"
-shell_subnet_ocid        = "ocid1.subnet.oc1.ap-chuncheon-1.<unique-id>"
-shell_availability_domain = "xxxx:AP-CHUNCHEON-1-AD-1"
+compute_instance_ocid    = "ocid1.instance.oc1.ap-osaka-1.<unique-id>"
+shell_subnet_ocid        = "ocid1.subnet.oc1.ap-osaka-1.<unique-id>"
+shell_availability_domain = "xxxx:AP-OSAKA-1-AD-1"
 
 backup_bucket_name = "oioi-bwg-postgres-backup-<tenancy-unique-suffix>"
 
 # Populate only after the actual runtime secrets have been created outside Terraform.
 # Never add DB admin/migrator passwords here.
 runtime_secret_ocids = [
-  "ocid1.vaultsecret.oc1.ap-chuncheon-1.<db-app-password>",
-  "ocid1.vaultsecret.oc1.ap-chuncheon-1.<auth-secret>",
-  "ocid1.vaultsecret.oc1.ap-chuncheon-1.<r2-access-key>",
-  "ocid1.vaultsecret.oc1.ap-chuncheon-1.<r2-secret-key>",
+  "ocid1.vaultsecret.oc1.ap-osaka-1.<db-app-password>",
+  "ocid1.vaultsecret.oc1.ap-osaka-1.<auth-secret>",
+  "ocid1.vaultsecret.oc1.ap-osaka-1.<r2-access-key>",
+  "ocid1.vaultsecret.oc1.ap-osaka-1.<r2-secret-key>",
 ]

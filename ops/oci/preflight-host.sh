@@ -24,7 +24,7 @@ require_command() {
   fi
 }
 
-for command in base64 cmp curl docker flock oci pg_dump pg_restore psql python3 sort systemctl tr; do
+for command in base64 cmp curl docker flock oci python3 sort systemctl tr; do
   require_command "${command}"
 done
 
@@ -39,13 +39,6 @@ if [[ -n "${compose_version}" ]] && [[ "$(printf '%s\n' 2.30.0 "${compose_versio
   pass "docker-compose:${compose_version}"
 else
   fail "docker-compose>=2.30.0:${compose_version:-missing}"
-fi
-
-postgres_version="$(pg_dump --version 2>/dev/null || true)"
-if [[ "${postgres_version}" =~ PostgreSQL\)[[:space:]]17\. ]]; then
-  pass postgresql-client-17
-else
-  fail "postgresql-client-17:${postgres_version:-missing}"
 fi
 
 agent_active=0
@@ -73,8 +66,6 @@ fi
 runtime_files=(
   "${runtime_root}/compose.oci-development.yml" \
   "${runtime_root}/scripts/deploy-release.sh" \
-  "${runtime_root}/scripts/backup-postgres.sh" \
-  "${runtime_root}/scripts/restore-postgres.sh" \
   "${runtime_root}/scripts/publish-filesystem-metric.sh" \
   "${runtime_root}/scripts/run-command-probe.sh"
 )

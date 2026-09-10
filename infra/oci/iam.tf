@@ -19,7 +19,6 @@ locals {
   compute_policy_statements = concat(
     [
       "Allow dynamic-group ${local.compute_principal} to read repos in compartment id ${var.compartment_ocid} where target.repo.name='${var.ocir_repository_name}'",
-      "Allow dynamic-group ${local.compute_principal} to manage objects in compartment id ${var.compartment_ocid} where target.bucket.name='${var.backup_bucket_name}'",
       "Allow dynamic-group ${local.compute_principal} to use metrics in compartment id ${var.compute_compartment_ocid}",
       "Allow dynamic-group ${local.compute_principal} to use log-content in compartment id ${var.compartment_ocid}",
       "Allow dynamic-group ${local.compute_principal} to use instance-agent-command-execution-family in compartment id ${var.compute_compartment_ocid} where request.instance.id=target.instance.id",
@@ -41,9 +40,6 @@ locals {
     "Allow dynamic-group ${local.devops_principal} to use ons-topics in compartment id ${var.compartment_ocid}",
   ]
 
-  service_policy_statements = [
-    "Allow service objectstorage-${var.region} to use keys in compartment id ${var.compartment_ocid} where target.key.id='${oci_kms_key.runtime.id}'",
-  ]
 }
 
 resource "oci_identity_policy" "runtime_and_deployment" {
@@ -53,7 +49,6 @@ resource "oci_identity_policy" "runtime_and_deployment" {
   statements = concat(
     local.compute_policy_statements,
     local.devops_policy_statements,
-    local.service_policy_statements,
   )
   freeform_tags = var.freeform_tags
 }
