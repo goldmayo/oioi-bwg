@@ -3,6 +3,8 @@ import { spawn, type ChildProcess } from "node:child_process";
 
 import postgres from "postgres";
 
+import { configurePostgresRuntimeRoles } from "./configure-postgres-runtime-roles";
+
 const ADMIN_URL_ENV = "M7_TEST_POSTGRES_ADMIN_URL";
 const DATABASE_PREFIX = "oioi_m7_test_";
 const LOCAL_ADMIN_URL = "postgresql://oioibawige:oioibawige_dev_only@127.0.0.1:5432/postgres";
@@ -98,6 +100,8 @@ async function main() {
   const databaseIdentifier = quoteIdentifier(databaseName);
   let databaseCreated = false;
   let executionError: unknown;
+  let runtimeAppRole: string | undefined;
+  let runtimeMigratorRole: string | undefined;
   const cleanupErrors: string[] = [];
 
   const handleSignal = (signal: NodeJS.Signals) => {
@@ -131,6 +135,63 @@ async function main() {
 
     const packageManager = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
     await runCommand(packageManager, ["db:migrate"], childEnvironment);
+
+    const bootstrapFixture = postgres(databaseUrl.toString(), {
+      max: 1,
+      connection: { statement_timeout: 15_000 },
+    });
+    let drizzleSchemaOwner = "";
+    let publicSchemaOwner = "";
+    try {
+      await bootstrapFixture`create extension if not exists pg_stat_statements`;
+      await bootstrapFixture`
+        create table public.m9_host_owned_fixture (id bigserial primary key, note text)
+      `;
+      const schemaOwners = await bootstrapFixture<{ name: string; owner: string }[]>`
+        select namespace.nspname as name, pg_get_userbyid(namespace.nspowner) as owner
+        from pg_namespace namespace
+        where namespace.nspname in ('public', 'drizzle')
+      `;
+      publicSchemaOwner = schemaOwners.find(({ name }) => name === "public")?.owner ?? "";
+      drizzleSchemaOwner = schemaOwners.find(({ name }) => name === "drizzle")?.owner ?? "";
+      if (!publicSchemaOwner || !drizzleSchemaOwner) {
+        throw new Error("Could not capture PostgreSQL schema ownership before role bootstrap");
+      }
+    } finally {
+      await bootstrapFixture.end();
+    }
+
+    const roleSuffix = databaseName.replace(DATABASE_PREFIX, "").slice(-24);
+    runtimeAppRole = `m9_app_${roleSuffix}`;
+    runtimeMigratorRole = `m9_migrator_${roleSuffix}`;
+    const runtimePassword = `M9-local-${roleSuffix}`;
+    await configurePostgresRuntimeRoles({
+      adminUrl: databaseUrl.toString(),
+      appPassword: runtimePassword,
+      appRole: runtimeAppRole,
+      migratorPassword: `${runtimePassword}-migrator`,
+      migratorRole: runtimeMigratorRole,
+    });
+
+    const migratorUrl = new URL(databaseUrl);
+    migratorUrl.username = runtimeMigratorRole;
+    migratorUrl.password = `${runtimePassword}-migrator`;
+    Object.assign(childEnvironment, { DATABASE_URL: migratorUrl.toString() });
+    await runCommand(packageManager, ["db:migrate"], childEnvironment);
+
+    const runtimeUrl = new URL(databaseUrl);
+    runtimeUrl.username = runtimeAppRole;
+    runtimeUrl.password = runtimePassword;
+    Object.assign(childEnvironment, {
+      DATABASE_URL: runtimeUrl.toString(),
+      M9_TEST_ADMIN_ROLE: adminUrl.username,
+      M9_TEST_DRIZZLE_SCHEMA_OWNER: drizzleSchemaOwner,
+      M9_TEST_POSTGRES_MIGRATOR_URL: migratorUrl.toString(),
+      M9_TEST_PUBLIC_SCHEMA_OWNER: publicSchemaOwner,
+      M9_TEST_RUNTIME_APP_ROLE: runtimeAppRole,
+      M9_TEST_RUNTIME_MIGRATOR_ROLE: runtimeMigratorRole,
+      M7_TEST_POSTGRES_VERIFICATION_URL: databaseUrl.toString(),
+    });
     await runCommand(
       packageManager,
       ["exec", "vitest", "run", "--config", "vitest.postgres.config.ts", "--reporter=verbose"],
@@ -184,6 +245,15 @@ async function main() {
         } catch {
           cleanupErrors.push("temporary database best-effort force drop failed");
         }
+      }
+    }
+
+    for (const role of [runtimeAppRole, runtimeMigratorRole]) {
+      if (!role) continue;
+      try {
+        await admin`drop role if exists ${admin(role)}`;
+      } catch {
+        cleanupErrors.push(`temporary PostgreSQL role cleanup failed: ${role}`);
       }
     }
 

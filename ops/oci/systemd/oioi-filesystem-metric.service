@@ -1,0 +1,11 @@
+[Unit]
+Description=Publish oioi-bwg filesystem usage metric to OCI Monitoring
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/srv/oioibawige/scripts/publish-filesystem-metric.sh
+PrivateTmp=true
+NoNewPrivileges=true

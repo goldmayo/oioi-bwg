@@ -28,6 +28,24 @@ vi.mock("../../src/server/email/signup-verification-email", () => ({
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
+const verificationUrl = process.env.M7_TEST_POSTGRES_VERIFICATION_URL;
+if (!verificationUrl) throw new Error("M7_TEST_POSTGRES_VERIFICATION_URL is required");
+const adminRole = process.env.M9_TEST_ADMIN_ROLE;
+const drizzleSchemaOwner = process.env.M9_TEST_DRIZZLE_SCHEMA_OWNER;
+const migratorUrl = process.env.M9_TEST_POSTGRES_MIGRATOR_URL;
+const publicSchemaOwner = process.env.M9_TEST_PUBLIC_SCHEMA_OWNER;
+const runtimeAppRole = process.env.M9_TEST_RUNTIME_APP_ROLE;
+const runtimeMigratorRole = process.env.M9_TEST_RUNTIME_MIGRATOR_ROLE;
+if (
+  !adminRole ||
+  !drizzleSchemaOwner ||
+  !migratorUrl ||
+  !publicSchemaOwner ||
+  !runtimeAppRole ||
+  !runtimeMigratorRole
+) {
+  throw new Error("M9 PostgreSQL role verification environment is required");
+}
 
 const parsedDatabaseUrl = new URL(databaseUrl);
 if (
@@ -40,6 +58,14 @@ if (
 const database = getDatabase();
 const sql = postgres(databaseUrl, {
   max: 6,
+  connection: { statement_timeout: 10_000 },
+});
+const verificationSql = postgres(verificationUrl, {
+  max: 1,
+  connection: { statement_timeout: 10_000 },
+});
+const migratorSql = postgres(migratorUrl, {
+  max: 1,
   connection: { statement_timeout: 10_000 },
 });
 const admin: RequestContext = {
@@ -187,6 +213,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sql.end();
+  await migratorSql.end();
+  await verificationSql.end();
   await database.$client.end();
 });
 
@@ -340,11 +368,138 @@ describe.sequential("M7 auth, signup, and OTP PostgreSQL regressions", () => {
 });
 
 describe.sequential("M7 content, authorization, and persistence PostgreSQL regressions", () => {
+  test("limits migrator DDL to the approved application schemas", async () => {
+    const [privileges] = await migratorSql<
+      {
+        can_connect: boolean;
+        can_create_database_objects: boolean;
+        can_create_drizzle_objects: boolean;
+        can_create_public_objects: boolean;
+      }[]
+    >`
+      select
+        has_database_privilege(current_user, current_database(), 'connect') as can_connect,
+        has_database_privilege(current_user, current_database(), 'create') as can_create_database_objects,
+        has_schema_privilege(current_user, 'public', 'create') as can_create_public_objects,
+        has_schema_privilege(current_user, 'drizzle', 'create') as can_create_drizzle_objects
+    `;
+    expect(privileges).toEqual({
+      can_connect: true,
+      can_create_database_objects: false,
+      can_create_drizzle_objects: true,
+      can_create_public_objects: true,
+    });
+
+    await expect(migratorSql`create schema __m9_migrator_must_not_create`).rejects.toMatchObject({
+      code: "42501",
+    });
+    await expect(sql`create schema __m9_app_must_not_create`).rejects.toMatchObject({
+      code: "42501",
+    });
+
+    await migratorSql`create table public.__m9_migrator_ddl_fixture (id bigint)`;
+    await migratorSql`alter table public.__m9_migrator_ddl_fixture add column note text`;
+    await migratorSql`create table drizzle.__m9_migrator_metadata_fixture (id bigint)`;
+    expect(
+      await verificationSql`
+        select table_schema, table_name
+        from information_schema.tables
+        where table_name in ('__m9_migrator_ddl_fixture', '__m9_migrator_metadata_fixture')
+        order by table_schema
+      `,
+    ).toEqual([
+      { table_name: "__m9_migrator_metadata_fixture", table_schema: "drizzle" },
+      { table_name: "__m9_migrator_ddl_fixture", table_schema: "public" },
+    ]);
+  });
+
+  test("limits ownership transfer to tracked application and Drizzle objects", async () => {
+    const applicationObjects = [
+      "Album",
+      "Song",
+      "account",
+      "profile",
+      "password_credential",
+      "email_verification_challenge",
+      "email_verification_rate_limit",
+      "Album_id_seq",
+      "Song_id_seq",
+      "account_id_seq",
+    ];
+    const owners = await verificationSql<{ name: string; owner: string }[]>`
+      select relation.relname as name, pg_get_userbyid(relation.relowner) as owner
+      from pg_class relation
+      join pg_namespace namespace on namespace.oid = relation.relnamespace
+      where namespace.nspname = 'public'
+        and relation.relname = any(${applicationObjects})
+      order by relation.relname
+    `;
+    expect(owners).toHaveLength(applicationObjects.length);
+    expect(new Set(owners.map(({ owner }) => owner))).toEqual(new Set([runtimeMigratorRole]));
+
+    const [drizzleOwnership] = await verificationSql<
+      { schema_owner: string; sequence_owner: string; table_owner: string }[]
+    >`
+      select
+        pg_get_userbyid(namespace.nspowner) as schema_owner,
+        pg_get_userbyid(sequence.relowner) as sequence_owner,
+        pg_get_userbyid(metadata.relowner) as table_owner
+      from pg_namespace namespace
+      join pg_class metadata
+        on metadata.relnamespace = namespace.oid and metadata.relname = '__drizzle_migrations'
+      join pg_class sequence
+        on sequence.relnamespace = namespace.oid and sequence.relname = '__drizzle_migrations_id_seq'
+      where namespace.nspname = 'drizzle'
+    `;
+    expect(drizzleOwnership).toEqual({
+      schema_owner: drizzleSchemaOwner,
+      sequence_owner: runtimeMigratorRole,
+      table_owner: runtimeMigratorRole,
+    });
+
+    const unrelatedOwners = await verificationSql<{ name: string; owner: string }[]>`
+      select relation.relname as name, pg_get_userbyid(relation.relowner) as owner
+      from pg_class relation
+      join pg_namespace namespace on namespace.oid = relation.relnamespace
+      where namespace.nspname = 'public'
+        and relation.relname in (
+          'm9_host_owned_fixture',
+          'm9_host_owned_fixture_id_seq',
+          'pg_stat_statements',
+          'pg_stat_statements_info'
+        )
+      order by relation.relname
+    `;
+    expect(unrelatedOwners.map(({ name }) => name)).toEqual(
+      expect.arrayContaining([
+        "m9_host_owned_fixture",
+        "m9_host_owned_fixture_id_seq",
+        "pg_stat_statements",
+        "pg_stat_statements_info",
+      ]),
+    );
+    expect(new Set(unrelatedOwners.map(({ owner }) => owner))).toEqual(new Set([adminRole]));
+
+    const [unrelatedPrivileges] = await verificationSql<
+      { app_can_write: boolean; public_schema_owner: string }[]
+    >`
+      select
+        has_table_privilege(${runtimeAppRole}, 'public.m9_host_owned_fixture', 'insert') as app_can_write,
+        pg_get_userbyid(namespace.nspowner) as public_schema_owner
+      from pg_namespace namespace
+      where namespace.nspname = 'public'
+    `;
+    expect(unrelatedPrivileges).toEqual({
+      app_can_write: false,
+      public_schema_owner: publicSchemaOwner,
+    });
+  });
+
   test("applies tracked migrations 0000 through 0004 with exact hashes", async () => {
     const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as {
       entries: { tag: string }[];
     };
-    const rows = await sql<{ hash: string }[]>`
+    const rows = await verificationSql<{ hash: string }[]>`
       select hash from drizzle.__drizzle_migrations order by id
     `;
 

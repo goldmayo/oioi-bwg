@@ -1,0 +1,114 @@
+version: 0.1
+component: command
+timeoutInSeconds: 2100
+shell: bash
+failImmediatelyOnError: true
+
+steps:
+  - type: Command
+    name: Deploy immutable OCIR digest through Compute Run Command
+    timeoutInSeconds: 2000
+    command: |
+      set -Eeuo pipefail
+      image_digest="$${IMAGE_DIGEST}"
+      if [[ ! "$${image_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+        echo "IMAGE_DIGEST must be an immutable sha256 manifest digest" >&2
+        exit 1
+      fi
+
+      target='{"instanceId":"${compute_instance_ocid}"}'
+      content="{\"source\":{\"sourceType\":\"TEXT\",\"text\":\"sudo /srv/oioibawige/scripts/deploy-release.sh $${image_digest}\"},\"output\":{\"outputType\":\"TEXT\"}}"
+      command_id="$(
+        oci instance-agent command create \
+          --compartment-id "${compute_compartment_ocid}" \
+          --display-name "oioi-bwg-$${OCI_DEPLOYMENT_ID}" \
+          --execution-timeout-in-seconds 1800 \
+          --target "$${target}" \
+          --content "$${content}" \
+          --query 'data.id' \
+          --raw-output
+      )"
+
+      execution_file="$(mktemp)"
+      trap 'rm -f -- "$${execution_file}"' EXIT
+      deadline=$((SECONDS + 1900))
+      execution_state=""
+      while (( SECONDS < deadline )); do
+        if oci instance-agent command-execution get \
+          --command-id "$${command_id}" \
+          --instance-id "${compute_instance_ocid}" \
+          >"$${execution_file}"; then
+          execution_state="$(
+            python3 - "$${execution_file}" <<'PY'
+      import json
+      import sys
+
+      with open(sys.argv[1], encoding="utf-8") as source:
+          print(json.load(source)["data"]["lifecycle-state"])
+      PY
+          )"
+          case "$${execution_state}" in
+            SUCCEEDED|FAILED|TIMED_OUT|CANCELED) break ;;
+          esac
+        fi
+        sleep 10
+      done
+      case "$${execution_state}" in
+        SUCCEEDED|FAILED|TIMED_OUT|CANCELED) ;;
+        *) echo "Run Command execution result was not available before timeout" >&2; exit 1 ;;
+      esac
+
+      python3 - "$${execution_file}" <<'PY'
+      import json
+      import sys
+
+      with open(sys.argv[1], encoding="utf-8") as source:
+          execution = json.load(source)["data"]
+      content = execution.get("content") or {}
+      output = content.get("text") or "<empty>"
+      sensitive_markers = (
+          "DATABASE_URL=",
+          "DB_APP_PASSWORD=",
+          "AUTH_SECRET=",
+          "R2_ACCESS_KEY_ID=",
+          "R2_SECRET_ACCESS_KEY=",
+          "postgresql://",
+          "postgres://",
+      )
+      if any(marker in output for marker in sensitive_markers):
+          output = "<redacted: remote output contained a sensitive marker>"
+      print(f"Run Command lifecycle: {execution.get('lifecycle-state', 'UNKNOWN')}")
+      print(f"Remote exit code: {content.get('exit-code', 'UNKNOWN')}")
+      print(f"Agent message: {content.get('message') or 'none'}")
+      print("Remote output:")
+      print(output)
+      PY
+
+      remote_exit_code="$(
+        python3 - "$${execution_file}" <<'PY'
+      import json
+      import sys
+
+      with open(sys.argv[1], encoding="utf-8") as source:
+          print(json.load(source)["data"]["content"]["exit-code"])
+      PY
+      )"
+
+      case "$${remote_exit_code}" in
+        0) echo "Deployment result: deployment succeeded" ;;
+        20) echo "Deployment result: candidate failed; rollback succeeded" >&2 ;;
+        21) echo "Deployment result: candidate failed; rollback failed" >&2 ;;
+        *) echo "Deployment result: host deployment failed with exit $${remote_exit_code}" >&2 ;;
+      esac
+
+      if [[ "$${remote_exit_code}" == "21" ]]; then
+        if ! oci ons message publish \
+          --topic-id "${alert_topic_id}" \
+          --title "CRITICAL: oioi-bwg rollback failed" \
+          --body "Deployment $${OCI_DEPLOYMENT_ID} failed and the previous release could not be restored. Inspect OCI DevOps and Run Command logs."; then
+          echo "CRITICAL notification publish failed; the deployment still exits with remote status 21" >&2
+        fi
+      fi
+
+      [[ "$${remote_exit_code}" =~ ^[0-9]+$ ]] || exit 1
+      exit "$${remote_exit_code}"

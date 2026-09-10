@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.0"
+version: "1.1"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-30"
+updated_at: "2026-09-10"
 depends_on:
   - "01"
   - "05"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.0
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.1
 
 ## 1. 목적
 
@@ -210,7 +210,7 @@ runtime
 
 `NEXT_PUBLIC_*` 값은 client bundle에 포함되는 build-time configuration으로 취급한다.
 
-동일 Docker/GHCR image를 여러 environment에서 runtime env만 바꿔 재사용해야 하는 값은
+동일 Docker/OCIR image를 여러 environment에서 runtime env만 바꿔 재사용해야 하는 값은
 가능하면 `NEXT_PUBLIC_*`에 의존하지 않는다.
 
 Secret은 어떤 경우에도 이 메커니즘으로 전달하지 않는다.
@@ -241,6 +241,12 @@ AUTH_SECRET
 storage credentials
 Sentry server secret
 ```
+
+OCI runtime secret의 SSOT는 OCI Secret Management다. Application request path가 Vault를
+직접 조회하지 않고, deploy process가 Compute Instance Principal로 필요한 secret을
+읽어 완전한 temporary env를 검증한 뒤 mode `0600`의 runtime env file을 atomic하게
+교체한다. GitHub CI, Terraform configuration/state, container image, Run Command plain-text
+payload에 runtime secret을 넣지 않는다.
 
 ---
 
@@ -303,3 +309,5 @@ asset provider detail이 전체 schema에 침투
 10. Secret을 client bundle에 노출하지 않는다.
 11. Env validation을 명시적 boundary에서 수행한다.
 12. Content cache policy는 07을 따른다.
+13. Runtime secret은 OCI Secret Management에 두고 deploy process가 Instance Principal로
+    protected env file을 materialize한다.

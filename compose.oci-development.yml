@@ -1,0 +1,45 @@
+name: oioi-bwg-development
+
+services:
+  app:
+    image: ${APP_IMAGE:?APP_IMAGE must pin an OCIR manifest digest}
+    restart: unless-stopped
+    init: true
+    env_file:
+      - path: ${APP_ENV_FILE:-/srv/oioibawige/app.env}
+        required: true
+        format: raw
+    environment:
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3000}:3000"
+    networks:
+      - database
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/readyz').then((response) => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      start_period: 20s
+      retries: 6
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  database:
+    name: ${POSTGRES_NETWORK:?POSTGRES_NETWORK must name the existing PostgreSQL Docker network}
+    external: true
