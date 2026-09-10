@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.3"
+version: "1.4"
 status: "active"
 authority: "runbook"
-updated_at: "2026-09-10"
+updated_at: "2026-09-11"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.3
+# oioi-bwg Deployment / Migration Runbook v1.4
 
 ## 1. 목적
 
@@ -285,7 +285,8 @@ Production PostgreSQL identity는 bootstrap/admin, migrator/owner, application r
 초기 ownership bootstrap은 tracked application table/sequence와 Drizzle migration metadata만
 이관한다. `public`/`drizzle` 전체 relation, extension-owned object, host-owned object, schema
 ownership, database 전체 `PUBLIC CONNECT`는 변경하지 않는다. Migrator에는 필요한 schema
-`USAGE`/`CREATE`를, app에는 application DML과 required sequence usage만 부여한다.
+`USAGE`/`CREATE`와 database `CONNECT`만 부여하고 database `CREATE`는 명시적으로 회수한다. App에는
+application DML과 required sequence usage만 부여한다.
 
 ---
 
@@ -309,6 +310,11 @@ destructive migration과 application deploy를 하나의 irreversible step으로
 migration 실패 시 application deploy를 진행하지 않는다.
 
 Migration 실행 주체는 CI 자동 단계 또는 수동 승인 단계 중 하나로 구현할 수 있다. 초기 운영에서는 production schema 변경에 수동 승인 gate를 두는 방식을 우선 고려한다.
+
+Drizzle PostgreSQL 기본 migrator의 무조건적인 `CREATE SCHEMA IF NOT EXISTS drizzle`은 기존 schema에도
+database `CREATE`를 요구한다. Repository migration entrypoint는 schema 존재를 먼저 확인하고 최초
+bootstrap에서만 schema를 생성한다. 정상 migrator는 기존 `public`/`drizzle` 내부 DDL만 수행하며 임의
+schema를 생성할 수 없어야 한다.
 
 ---
 
@@ -343,14 +349,20 @@ external health monitoring -> alert -> operator investigation으로 처리하고
 
 ## 18. Backup / Restore
 
-현재 production Ubuntu VM의 host-managed PostgreSQL backup이 dump를 기존 OCI Object Storage
-bucket에 저장한다. M9 activation 전까지 이 경로를 유지하며 신규 bucket, schedule, script 또는
-parallel alarm을 만들지 않는다. Terraform은 기존 bucket을 data source/input으로만 조회하고 삭제,
-재생성, 이름 변경 또는 import를 수행하지 않는다.
+현재 production Ubuntu VM의 host-managed PostgreSQL backup은 매일 03:00 systemd timer로 Docker
+Compose PostgreSQL의 `pg_dump -Fc --no-owner --no-privileges` archive를 만들고 `pg_restore -l` 검증 후
+Instance Principal로 `oioibawige-db-backup`에 업로드한다. Bucket은 NoPublicAccess, Standard tier,
+versioning disabled, custom KMS key 없음이며 prefix `oioibawige_` object를 30일 후 삭제한다. M9 activation
+전까지 이 경로를 유지하며 신규 bucket, schedule, script 또는 parallel alarm을 만들지 않는다.
 
-실제 host의 script, timer, bucket, retention, auth, failure notification을 inventory한 뒤 별도 변경에서
-repository/IaC ownership 및 안전한 Resource Manager import 여부를 결정한다. Restore proof도 별도
-검증으로 남기며 backup 존재만으로 완료 처리하지 않는다.
+Terraform은 기존 bucket을 data source/input으로만 조회한다. 실제 설정과 declaration의 config parity를
+검토한 후 bucket, backup dynamic group, backup IAM policy, 필요 시 lifecycle policy를 별도 import하고,
+Resource Manager Plan에서 destroy/replace가 없고 ideally No changes임을 확인한 뒤에만 ownership을
+전환한다. Host script/service/timer는 Terraform resource로 관리하지 않는다.
+
+현재 증거는 archive validation과 Object Storage upload까지며 restore proof는 없다. Backup이 사용하는
+bootstrap/admin role의 최소권한 전환과 별도 empty PostgreSQL 17 database restore는 독립 migration
+concern으로 남긴다.
 
 ---
 
@@ -444,6 +456,10 @@ filesystem 권한을 가지지 않는다. PR은 verify만 수행하고 `migratio
 image publish job은 verify에 의존한다. 초기 CD trigger는 OCI DevOps Console에서 digest를
 명시하는 manual release gate로 둔다.
 
+실제 OCIR credential을 GitHub Environment에 등록하기 전에 `migration_develop`에 PR required, Verify
+required status check, direct push 제한을 활성화한다. Branch protection은 repository code로 완료 처리하지
+않으며 GitHub 설정 evidence를 별도로 남긴다.
+
 ### Quality gate ordering
 
 CI의 필수 게이트는 결정적이고 외부 서비스에 의존하지 않으며 로컬에서 같은 명령으로 재현
@@ -519,7 +535,7 @@ critical mutations 정상 동작
 Sentry/logging 정상
 Docker restart 정책과 application log rotation 정상
 Caddy HTTPS 정상
-existing PostgreSQL backup inventory와 별도 restore proof
+existing PostgreSQL backup archive/upload 증거와 별도 restore proof
 rollback 방법 존재
 OCIR digest release
 OCI DevOps / Run Command deployment
@@ -527,6 +543,7 @@ DB application user least privilege
 Instance Principal secret/image access
 OCI Monitoring/Logging/Notifications
 기존 Object Storage backup resource 비재생성과 추후 safe import 가능성
+`migration_develop` branch protection과 Verify required status check
 
 배포 DoD에는 애플리케이션 health 확인, 핵심 익명·인증 사용자 smoke test, 이전 이미지로의
 rollback 절차 확인을 포함한다. DB 변경이 있는 경우 backup 존재만 확인하지 않고 restore 또는
@@ -572,5 +589,6 @@ rollback 검증 없이 production cutover
 13. Resource Manager가 새 OCI resource의 Terraform plan/apply/state를 소유한다.
 14. Runtime secret과 OCI access는 static credential 대신 Secret Management와 Instance Principal을
     기본으로 한다.
-15. 기존 host-managed PostgreSQL backup은 inventory와 별도 승인 전까지 재구축하거나 Terraform
-    ownership으로 가져오지 않는다.
+15. 기존 host-managed PostgreSQL backup은 declaration parity와 별도 승인 전까지 재구축하거나
+    Terraform ownership으로 가져오지 않는다.
+16. Migrator는 database `CONNECT`와 승인된 schema 내부 DDL만 사용하고 database `CREATE`를 갖지 않는다.

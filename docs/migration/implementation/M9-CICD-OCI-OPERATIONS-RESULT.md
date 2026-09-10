@@ -1,15 +1,15 @@
 ---
 title: "M9 OCI CI/CD 및 운영 기반 구현 결과"
 document_id: "M9-CICD-OCI-OPERATIONS-RESULT"
-version: "1.1"
+version: "1.2"
 status: "active"
 authority: "result"
-updated_at: "2026-09-10"
+updated_at: "2026-09-11"
 source:
   repository: "goldmayo/oioi-bwg"
   branch: "migration_m9-oci-dev-runtime"
-  commit: "87a06374cf3019b8b506382b4480246feb2d6d5b"
-verified_at: "2026-09-10"
+  commit: "49d8d178d9e14c8493b223b24c19b7ffd79c9ce3"
+verified_at: "2026-09-11"
 depends_on:
   - "M9-CICD-OCI-OPERATIONS-PLAN"
 related:
@@ -57,6 +57,82 @@ Production credential, OCI resource, 기존 Compute/VCN, 운영 PostgreSQL에는
 - Healthcheck는 자동 unhealthy restart가 아니며 external monitoring -> alert -> operator investigation을
   사용한다고 명시했다. External HTTPS monitoring과 memory limit은 activation 이후 별도 결정이다.
 
+## v1.2 migrator 최소권한 및 production backup inventory
+
+### Migrator database CREATE 제거
+
+- 기존 bootstrap이 부여했을 수 있는 database `CREATE`를 명시적으로 revoke하고 database `CONNECT`만
+  부여한다. `public`/`drizzle` schema의 `USAGE`/`CREATE`와 tracked object ownership은 유지한다.
+- Drizzle ORM 0.45.1 기본 PostgreSQL migrator는 schema가 이미 있어도
+  `CREATE SCHEMA IF NOT EXISTS drizzle`를 실행해 database `CREATE`가 없으면 실패한다. Repository
+  migration entrypoint는 Drizzle의 migration reader/hash/metadata 형식을 유지하면서 schema가 실제로
+  없을 때만 생성한다.
+- PostgreSQL 17 CI에서 admin 최초 migration 5건과 제한 migrator 재실행 0건이 성공했다. Migrator는
+  `public`/`drizzle` object 생성·변경이 가능하고 임의 `CREATE SCHEMA`는 SQLSTATE `42501`로 거부됐다.
+  App role의 임의 schema 생성도 같은 방식으로 거부됐다.
+
+### 사용자가 확인한 production backup 사실
+
+다음은 사용자가 2026-09-11에 실제 Ubuntu VM과 OCI Console에서 확인해 제공한 inventory다. Codex는
+production OCI credential, VM 또는 PostgreSQL에 접근하지 않았고 production dump도 내려받지 않았다.
+
+```text
+region = ap-osaka-1
+bucket = oioibawige-db-backup
+bucket = NoPublicAccess / Standard / versioning Disabled / custom KMS key 없음
+
+timer = 매일 03:00 / RandomizedDelaySec=300 / Persistent=true / enabled
+service = oioibawige-postgres-backup.service
+service identity = User=oioi / SupplementaryGroups=docker
+script = /srv/oioibawige/scripts/backup-postgres.sh
+flow = Docker Compose PostgreSQL -> pg_dump -Fc --no-owner --no-privileges
+       -> temporary file -> pg_restore -l -> verified rename -> Object Storage upload
+authentication = Instance Principal / static OCI API key 없음
+local retention = find -mtime +7 / 관찰상 daily dump 약 8~9개
+Object Storage lifecycle = prefix oioibawige_ / DELETE after 30 DAYS
+actual evidence = 2026-08-25~2026-09-10 dump / 최근 daily upload 성공 journal
+restore automation/proof = 없음
+duplicate cron = 없음
+failure notification = 확인되지 않음
+```
+
+Dynamic group `oioibawige-backup-instance`의 matching rule은 다음 production Compute 하나만 매칭한다.
+
+```text
+ALL {
+  instance.id =
+  'ocid1.instance.oc1.ap-osaka-1.anvwsljrhcgbyoacqa6id2hr257tlu26cfjd7x7yywnai7hh37kkytix57cq'
+}
+```
+
+Policy는 known `oioibawige-db-backup` bucket의 `read buckets`와 `manage objects`로 제한된다. Instance
+Principal은 bucket 접근/업로드는 가능하지만 compartment bucket list와 IAM policy list는 불가능하다.
+Object Storage lifecycle에는 다음 service policy가 존재한다.
+
+```text
+Allow service objectstorage-ap-osaka-1
+to manage object-family
+in compartment oioi-bawige-prod
+```
+
+Backup script는 superuser/createdb/createrole인 bootstrap/admin role `oioibawige`를 사용한다. 이
+credential은 3-role cutover의 별도 migration concern이다. 이번 PR은 요구사항과 restore strategy 없이
+`oioi_backup`을 만들지 않는다.
+
+### IaC adoption과 repository 밖 blocker
+
+- 현재 Terraform은 existing bucket data source/input만 사용하며 zero mutation을 유지한다.
+- 향후 import 대상은 existing bucket, backup dynamic group, backup IAM policy, 필요 시 Object Storage
+  lifecycle policy다. 실제 설정과 declaration의 parity를 맞춘 뒤 Resource Manager import와
+  no-destroy/no-replace, ideally `No changes` Plan을 거쳐 ownership을 전환한다.
+- Host script/service/timer는 Terraform 대상이 아니다. 실제 파일을 확보·검토한 후에만 `ops/oci`
+  configuration-as-code 편입을 별도 결정한다.
+- GitHub API로 2026-09-11 확인한 결과 `migration_develop`은 branch protection이 비활성이다. 실제 OCIR
+  CI credential 등록 전에 PR required, Verify required status check, direct push 제한이 필요하다. 이
+  PR은 GitHub 설정을 변경하지 않았다.
+- Archive validation/upload 성공은 restore 성공이 아니다. Restore proof는 별도 empty PostgreSQL 17
+  database에서 수행한다.
+
 ## 실제 변경
 
 ### Architecture와 기존 PR 정상화
@@ -78,6 +154,8 @@ Production credential, OCI resource, 기존 Compute/VCN, 운영 PostgreSQL에는
 - tracked application table/sequence와 Drizzle metadata relation의 ownership만 migrator로 이관하고,
   migrator가 이후 생성하는 public table/sequence의 default privilege를 app role에 설정한다. Schema
   ownership과 extension/host-owned object는 변경하지 않는다.
+- Migrator의 database `CREATE`를 명시적으로 회수하고 `CONNECT`만 유지한다. 기존 schema에 대한
+  Drizzle migration을 지원하기 위해 schema가 없을 때만 bootstrap하는 migration entrypoint를 추가했다.
 - production 실행은 `--allow-production`과 별도 acknowledgement가 모두 있어야 하는 explicit
   privileged operation으로 남겼다. 일반 application deploy는 DB migration을 실행하지 않는다.
 
@@ -91,8 +169,8 @@ Production credential, OCI resource, 기존 Compute/VCN, 운영 PostgreSQL에는
 - DevOps command spec은 `IMAGE_DIGEST`만 받아 Compute Run Command로 host deploy script를 호출한다.
 - host deploy는 lock, digest와 protected file 검증, Instance Principal Vault fetch, atomic env 교체,
   OCIR pull, health/readiness/smoke, current/previous state 전환, 실패 시 이전 digest/env rollback을 수행한다.
-- Repository가 중복 구축했던 backup/restore script와 timer/alarm은 제거했다. 실제 운영 backup의
-  script/timer/bucket/retention/auth inventory 및 restore proof는 별도 단계다.
+- Repository가 중복 구축했던 backup/restore script와 timer/alarm은 제거했다. 이후 확인된 실제 운영
+  backup inventory는 v1.2에 기록했고 restore proof와 IaC adoption은 별도 단계다.
 - Ubuntu Run Command는 문서만으로 지원을 가정하지 않고 실제 secret-free probe marker가 있어야
   host preflight가 통과하도록 했다.
 
@@ -112,6 +190,7 @@ Production credential, OCI resource, 기존 Compute/VCN, 운영 PostgreSQL에는
 12. `d8bd042daa9154ba31e8c4c2cb4dcf82777c21b2` — Run Command execution result와 exit 21 alert
 13. `161e1ea85813923d8f58a3f2537a19f052dfce9a` — Drizzle schema 생성용 database CREATE
 14. `87a06374cf3019b8b506382b4480246feb2d6d5b` — pre-bootstrap schema ownership regression baseline
+15. `49d8d178d9e14c8493b223b24c19b7ffd79c9ce3` — migrator database CREATE 제거와 migration entrypoint
 
 ## 실제 검증
 
@@ -120,9 +199,11 @@ Production credential, OCI resource, 기존 Compute/VCN, 운영 PostgreSQL에는
   - architecture harness 8 tests 통과
   - unit 49 files / 198 tests 통과
   - operation 2 files / 6 tests 통과
-- GitHub Actions Verify run `34488527092`
+- GitHub Actions Verify run `34499124308`
   - PostgreSQL 17 service에서 admin migration 후 migrator migration 재실행 성공
-  - 제한된 임시 app role로 1 file / 10 tests 통과
+  - admin 최초 migration 5건, database CREATE 없는 migrator 재실행 0건 성공
+  - 제한된 임시 app/migrator role로 1 file / 11 tests 통과
+  - migrator의 `public`/`drizzle` DDL 성공과 arbitrary schema CREATE 거부 확인
   - `pg_stat_statements`, host-owned relation, `public`/`drizzle` schema owner 보존 확인
   - 임시 DB connection/advisory lock 0건 확인 후 DB와 임시 role 삭제
 - `pnpm test:integration:postgres:local`은 현재 WSL의 Docker Desktop integration이 비활성이라 local에서
@@ -151,8 +232,9 @@ evidence를 대체하지 않는다.
 
 ## 계획 대비 차이와 이유
 
-- Existing PostgreSQL backup은 repository 밖의 host configuration으로 유지했다. 신규 bucket/schedule을
-  만들지 않았으며 실제 inventory 후 safe Resource Manager import 가능성을 별도 판단한다.
+- Existing PostgreSQL backup은 repository 밖의 host configuration으로 유지했다. 확인된
+  script/timer/bucket/retention/auth/IAM/evidence를 문서화했지만 신규 bucket/schedule을 만들지 않았고,
+  선언 parity와 no-destructive-change Plan 전에는 Resource Manager ownership으로 가져오지 않는다.
 - OCI Dashboard는 plan이 허용한 manual Console 구성으로 남겼다. 실제 metric/log가 수집된 뒤 layout을
   확정해야 빈 dashboard를 코드로 고정하지 않을 수 있다.
 - Slack subscription endpoint는 token이 Terraform state에 들어가지 않도록 deploy/alert Topic 생성과
@@ -177,8 +259,11 @@ evidence를 대체하지 않는다.
 8. deploy/alert Slack subscription 전달, alarm test, application test log의 OCI Logging Search 확인,
    staging Sentry event
 9. 기존 PostgreSQL container log rotation 확인과 external HTTPS health monitoring 활성화
-10. 기존 backup script/timer/bucket/retention/auth/failure notification inventory, safe import 판단,
-    별도 빈 PostgreSQL 17 database restore proof
-11. PostgreSQL/application memory baseline 측정 후 container memory isolation 별도 결정
+10. 기존 bucket/dynamic group/IAM policy/(필요 시 lifecycle)의 Terraform declaration parity, Resource
+    Manager import와 no-destroy/no-replace Plan
+11. Backup admin credential의 실제 요구사항과 최소권한 role migration 결정, 별도 empty PostgreSQL 17
+    database restore proof
+12. `migration_develop` PR required, Verify required status check, direct push 제한 활성화
+13. PostgreSQL/application memory baseline 측정 후 container memory isolation 별도 결정
 
 이 증적이 모두 연결되기 전에는 M9 status를 `completed`로 변경하지 않는다.

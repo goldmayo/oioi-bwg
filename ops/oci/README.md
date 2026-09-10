@@ -84,18 +84,44 @@ sudo systemctl status oioi-filesystem-metric.timer
 ```
 
 Production Ubuntu VM에는 repository 밖에서 관리 중인 기존 PostgreSQL -> OCI Object Storage backup이
-있다. 이 repository의 host installer는 backup script/timer를 설치하거나 기존 설정을 덮어쓰지 않는다.
-다음을 실제 VM에서 inventory하기 전에는 신규 schedule, bucket, IAM, metric/alarm을 추가하지 않는다.
+있다. 다음 inventory는 사용자가 2026-09-11에 실제 VM과 OCI Console에서 확인했으며, repository
+automation이 production에 접속해 수집한 값이 아니다.
 
 ```text
-existing script와 systemd unit/timer
-existing bucket name과 retention/versioning/encryption
-backup authentication과 최소 권한
-failure notification과 최근 성공 evidence
+bucket = oioibawige-db-backup
+access/tier = NoPublicAccess / Standard
+versioning/custom KMS = Disabled / 없음
+
+timer = 매일 03:00, RandomizedDelaySec=300, Persistent=true, enabled
+service = oioibawige-postgres-backup.service
+identity = User=oioi, SupplementaryGroups=docker
+script = /srv/oioibawige/scripts/backup-postgres.sh
+
+flow = Docker Compose PostgreSQL -> pg_dump -Fc --no-owner --no-privileges
+       -> temporary file -> pg_restore -l -> verified rename -> Object Storage upload
+auth = Instance Principal, static OCI API key 없음
+local retention = find -mtime +7, 실제 daily dump 약 8~9개
+Object Storage lifecycle = prefix oioibawige_, DELETE after 30 DAYS
+evidence = 2026-08-25~2026-09-10 dump와 최근 daily upload 성공 journal
+restore automation/proof = 없음
+duplicate cron = 없음
 ```
 
+Instance Principal은 exact production Compute 하나를 매칭하는 `oioibawige-backup-instance` dynamic
+group과 known bucket에 한정된 `read buckets`/`manage objects` policy를 사용한다. Bucket 접근/업로드는
+가능하지만 compartment bucket list와 IAM policy list는 불가능하다. Object lifecycle에는
+`objectstorage-ap-osaka-1` service policy가 사용된다.
+
+Backup script는 bootstrap/admin role `oioibawige`를 사용하며 이 role은 현재
+superuser/createdb/createrole이다. 3-role cutover 전에 별도 migration concern으로 backup/restore 요구사항과
+전용 최소권한 role 필요성을 결정한다. 이 PR에서 `oioi_backup`을 만들지 않는다.
+
+이 repository의 host installer는 backup script/timer를 설치하거나 기존 설정을 덮어쓰지 않는다.
+
 기존 bucket은 Terraform input/data source로만 조회한다. 삭제·재생성·이름 변경·import는 이 단계에서
-하지 않는다. Restore proof는 inventory 후 production DB가 아닌 별도 PostgreSQL 17 target에서 검증한다.
+하지 않는다. 확인된 것은 archive validation과 upload 성공이며 restore 성공이 아니다. Restore proof는
+production dump를 이번 작업에서 다운로드하지 않고, 별도 승인된 단계에서 empty PostgreSQL 17 target으로
+검증한다.
 
 Application `restart: unless-stopped`는 유지한다. Healthcheck의 `unhealthy`만으로 Docker가 container를
 자동 restart하지는 않는다. Runtime health failure는 external monitoring -> alert -> operator
@@ -113,6 +139,7 @@ Application memory limit은 activation baseline 전에는 정하지 않는다.
 - filesystem alarm test와 Slack delivery timestamp
 - application test log의 OCI Logging Search 결과
 - existing PostgreSQL container log rotation 확인
-- existing backup inventory와 별도 restore proof
+- existing backup archive/upload evidence와 별도 restore proof
+- backup admin credential 최소권한 migration 결정
 
 secret value, auth token, webhook URL, full `DATABASE_URL`은 evidence에 기록하지 않는다.

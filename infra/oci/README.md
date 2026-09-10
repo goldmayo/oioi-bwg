@@ -6,8 +6,9 @@ VCN, subnet, boot volume, PostgreSQL data와 PostgreSQL backup bucket은 조회�
 
 ## Activation order
 
-1. `terraform.tfvars.example`의 non-secret 값을 Resource Manager Stack variables로 옮기고 기존 backup
-   bucket 이름을 `backup_bucket_name`으로 제공한다. 별도 OCIR host 변수는 입력하지 않는다.
+1. `terraform.tfvars.example`의 non-secret 값을 Resource Manager Stack variables로 옮긴다. 현재 기존
+   backup bucket 이름은 `oioibawige-db-backup`이며 `backup_bucket_name`으로 제공한다. 별도 OCIR host
+   변수는 입력하지 않는다.
 2. Resource Manager에서 Plan을 실행하고 **기존 Compute/VCN 변경이나 destroy가 없는지** 검토한 뒤 Apply한다.
 3. 생성된 Vault/key에 runtime secret 값을 별도 secure bootstrap으로 등록한다. Terraform에는 값이 없다.
 4. runtime secret OCID만 `runtime_secret_ocids`에 넣어 다시 Plan/Apply한다. admin/migrator DB secret은 제외한다.
@@ -16,8 +17,25 @@ VCN, subnet, boot volume, PostgreSQL data와 PostgreSQL backup bucket은 조회�
 6. host preflight와 실제 Ubuntu Run Command probe가 통과한 뒤 DevOps Console에서 `IMAGE_DIGEST`를 입력해
    deployment pipeline을 시작한다.
 
-기존 backup의 script/timer/retention/auth/failure notification은 실제 VM inventory 후 별도 단계에서
-다룬다. 이 stack은 신규 backup bucket, bucket write IAM 또는 backup metric/alarm을 만들지 않는다.
+기존 backup은 exact Compute를 매칭하는 `oioibawige-backup-instance` dynamic group, known bucket에
+한정된 `read buckets`/`manage objects` policy, `objectstorage-ap-osaka-1` lifecycle service policy를
+사용한다. 이 stack은 이 기존 IAM/lifecycle resource, 신규 backup bucket, bucket write IAM 또는 backup
+metric/alarm을 만들지 않는다.
+
+## Existing backup IaC adoption
+
+현재 단계는 bucket data source/input만 사용하는 zero-mutation Phase 1이다.
+
+1. 실제 bucket, backup dynamic group, backup IAM policy와 lifecycle 설정을 Terraform resource
+   declaration과 비교해 config parity를 확인한다.
+2. 별도 승인된 변경에서 기존 bucket, dynamic group, IAM policy, 필요 시 lifecycle policy를 Resource
+   Manager state로 import한다.
+3. Resource Manager Plan에서 기존 resource destroy/replace가 0건이고 ideally `No changes`인지 검토한다.
+4. 검증 후에만 Terraform/Resource Manager ownership으로 전환한다.
+
+기존 resource를 delete/recreate하거나 이름을 바꾸지 않는다. Host의
+`/srv/oioibawige/scripts/backup-postgres.sh`, `oioibawige-postgres-backup.service`와 timer는 Terraform
+resource가 아니다. 실제 파일을 확보·검토하기 전에는 repository asset으로 재작성하지 않는다.
 
 production infrastructure의 기본 실행 경로는 Resource Manager Plan → human review → Apply다. 로컬
 `terraform apply`와 actual secret value가 포함된 tfvars commit은 금지한다.
@@ -30,6 +48,10 @@ production infrastructure의 기본 실행 경로는 Resource Manager Plan → h
 - secrets: non-human CI user의 `OCIR_USERNAME`, `OCIR_AUTH_TOKEN`
 
 이 CI principal에는 Compute, Run Command, Vault, production DB 권한을 부여하지 않는다.
+
+`oci-development-image` credential 등록 전 `migration_develop`에 PR required, Verify required status
+check, direct push 제한을 활성화하고 GitHub 설정 evidence를 남긴다. 2026-09-11 확인 시 branch
+protection은 아직 비활성이다.
 
 ## Ubuntu activation gate
 

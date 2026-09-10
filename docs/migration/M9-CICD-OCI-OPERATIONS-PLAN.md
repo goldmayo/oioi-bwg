@@ -1,10 +1,10 @@
 ---
 title: "M9 OCI CI/CD & Operations Architecture Plan"
 document_id: "M9-CICD-OCI-OPERATIONS-PLAN"
-version: "1.1"
+version: "1.2"
 status: "active"
 authority: "plan"
-updated_at: "2026-09-10"
+updated_at: "2026-09-11"
 depends_on:
   - "01"
   - "09"
@@ -24,9 +24,80 @@ sources:
 
 # M9 OCI CI/CD & Operations Architecture Plan
 
-## 0. v1.1 운영 기준 정정
+## 0. Revision addenda
 
-이 절은 PR 73 구현 후 확인된 운영 사실을 반영한 2026-09-10 addendum다. 아래 기존 계획 중
+### 0.1. v1.2 least-privilege 및 backup inventory 반영
+
+이 절은 `migration_m9-oci-dev-runtime`
+`165a8570d223690fb78f293ba54c8a008bb6ba10` 이후의 보정 계획이다. 아래 운영 사실은 사용자가
+2026-09-11에 production Ubuntu VM과 OCI Console에서 확인해 제공한 inventory이며, Codex가 production
+OCI/VM/PostgreSQL에 접속해 독립 관찰한 결과가 아니다.
+
+Migrator는 database `CONNECT`만 갖고 database `CREATE`는 갖지 않는다. `public`과 `drizzle`에는
+각각 필요한 `USAGE`/`CREATE`를 유지한다. Drizzle 기본 migrator가 기존 schema에도
+`CREATE SCHEMA IF NOT EXISTS`를 실행하는 제약을 피하기 위해 repository migration entrypoint는
+`drizzle` schema가 실제로 없을 때만 초기 생성하고, 정상 migration에서는 기존 schema와 metadata를
+사용한다. 따라서 임의 schema 생성은 거부하면서 application/Drizzle object DDL은 계속 수행한다.
+
+확인된 backup inventory는 다음과 같다.
+
+```text
+region = ap-osaka-1
+bucket = oioibawige-db-backup
+bucket access = NoPublicAccess
+tier = Standard
+versioning = Disabled
+custom KMS key = 없음
+
+systemd timer = 매일 03:00, RandomizedDelaySec=300, Persistent=true, enabled
+service = oioibawige-postgres-backup.service
+service identity = User=oioi, SupplementaryGroups=docker
+script = /srv/oioibawige/scripts/backup-postgres.sh
+
+flow = Docker Compose PostgreSQL -> pg_dump -Fc --no-owner --no-privileges
+       -> temporary archive -> pg_restore -l -> verified rename -> Object Storage upload
+authentication = Instance Principal, static OCI API key 없음
+local retention = find -mtime +7, 관찰상 daily dump 약 8~9개
+Object Storage lifecycle = prefix oioibawige_, DELETE after 30 DAYS
+backup evidence = 2026-08-25~2026-09-10 dump와 최근 daily upload 성공 journal
+restore automation/proof = 없음
+duplicate cron = 없음
+```
+
+Backup은 bootstrap/admin role `oioibawige`를 사용하며 현재 superuser/createdb/createrole이다. 3-role
+cutover에서 이 credential을 그대로 정상 상태로 간주하지 않는다. 실제 backup/restore requirement를
+정한 뒤 별도 migration concern에서 전용 최소권한 role 여부를 결정하며, 이번 PR은 `oioi_backup`을
+만들지 않는다.
+
+기존 IAM은 exact production Compute 하나를 매칭하는 dynamic group
+`oioibawige-backup-instance`와 bucket-scoped `read buckets`/`manage objects` policy다. Instance Principal은
+known bucket 접근/업로드는 가능하지만 compartment bucket list와 IAM policy list는 불가능하다.
+`objectstorage-ap-osaka-1` lifecycle service policy도 유지한다.
+
+Backup IaC adoption은 다음 별도 단계로 진행한다.
+
+```text
+Phase 1: existing resources를 data/input으로만 조회, zero mutation
+Phase 2: 실제 OCI 설정과 Terraform declaration의 config parity 검토
+Phase 3: bucket, backup dynamic group, backup IAM policy, 필요 시 lifecycle policy import
+Phase 4: Resource Manager Plan에서 destroy/replace 0건, ideally No changes 확인
+Phase 5: 검증 후에만 Resource Manager ownership 전환
+```
+
+기존 resource의 delete/recreate는 금지한다. Host script/service/timer는 Terraform resource가 아니며,
+실제 파일을 확보·검토하기 전에는 repository `ops/oci` asset으로 재작성하지 않는다.
+
+`migration_develop` branch protection은 아직 비활성이다. 실제 OCIR CI credential을 GitHub Environment에
+등록하기 전에 PR required, Verify required status check, direct push 제한을 repository 밖 activation
+gate로 적용한다. GitHub 설정은 이 PR에서 변경하지 않는다.
+
+현재 증거는 archive validation과 upload 성공까지다. `backup verified != restore verified`이며 production
+dump를 이번 작업에서 받지 않는다. Restore proof는 별도 empty PostgreSQL 17 database에서 수행한다.
+
+### 0.2. v1.1 운영 기준 정정
+
+이 절은 PR 73 구현 후 당시 확인된 운영 사실을 반영한 2026-09-10 addendum다. v1.2 inventory가
+이 절의 unknown 항목을 대체한다. 아래 기존 계획 중
 신규 PostgreSQL backup 구축, 광범위한 database ownership 이관, 리전 예시는 이 절이 대체한다.
 기존 M9 CI/CD 책임 경계와 배포 구조는 유지한다.
 
@@ -702,8 +773,11 @@ application object ownership
 권한:
 
 ```text
-CREATE / ALTER / DROP required for application schema
+database CONNECT
+public/drizzle schema USAGE / CREATE
+CREATE / ALTER / DROP required for application objects
 table / sequence ownership
+database CREATE 없음
 ```
 
 현재 application schema object가 admin 소유라면 migration 전에 ownership strategy를 명시적으로 정리한다.
@@ -1245,16 +1319,18 @@ Object Storage
 ```
 
 기존 운영 bucket과 host schedule은 유지하며 이 PR에서 생성하거나 교체하지 않는다. Terraform은
-bucket을 data source/input으로만 조회한다. 실제 host 구성을 inventory한 뒤 Resource Manager import와
-repository ownership 전환 필요성을 별도 결정한다.
+`oioibawige-db-backup` bucket을 data source/input으로만 조회한다. Bucket은 NoPublicAccess, Standard tier,
+versioning disabled, custom KMS key 없음으로 확인됐다. Host는 매일 03:00 systemd timer로
+`pg_dump -Fc --no-owner --no-privileges` archive를 만들고 `pg_restore -l` 검증 후 Instance Principal로
+업로드한다. 상세 operational inventory의 canonical record는 RESULT와 `ops/oci/README.md`다.
 
 ---
 
 # 35. Backup Credential
 
-현재 운영 backup의 인증 방식은 inventory 전까지 unknown이다. 이 PR에서 새로운 bucket write IAM이나
-static credential을 추가하지 않는다. 추후 repository/IaC ownership으로 편입할 때 Instance Principal과
-bucket-scoped 최소 권한을 우선 검토한다.
+현재 운영 backup은 static OCI API key 없이 Instance Principal을 사용한다. Exact-instance dynamic group과
+known bucket에 한정된 read/manage policy를 유지하고 이 PR에서 새로운 bucket write IAM을 추가하지 않는다.
+Compartment bucket list와 IAM policy list 권한은 부여하지 않는다.
 
 ---
 
@@ -1268,12 +1344,13 @@ backup file exists
 restore 가능
 ```
 
-운영 backup inventory 후 별도 단계에서 실제 restore test를 수행한다.
+Archive 목록 검증과 2026-08-25~2026-09-10 Object Storage upload는 확인됐지만 restore proof는 없다.
+별도 empty PostgreSQL 17 database에서 실제 restore test를 수행한다.
 
 정기적으로 restore smoke를 반복할 수 있는 절차를 문서화한다.
 
-현재 운영 backup의 failure signal과 notification 경로는 inventory에서 확인한다. 확인 전 신규 custom
-metric/alarm을 병렬로 만들지 않는다.
+최근 daily upload 성공은 systemd journal에서 확인됐다. 별도 restore automation은 없고 failure
+notification은 확인된 범위에 포함되지 않는다. 신규 custom metric/alarm을 병렬로 만들지 않는다.
 
 ---
 
@@ -1658,13 +1735,15 @@ startup failure visibility
 
 ---
 
-## M9-J — Existing Backup Inventory / Restore
+## M9-J — Existing Backup IaC Adoption / Restore
 
 ```text
-existing host script/timer/auth/retention inventory
-→ existing Object Storage bucket 확인
-→ safe import/ownership decision
-→ separate restore proof
+confirmed host/OCI inventory
+→ Terraform declaration config parity
+→ bucket/dynamic group/policy/(필요 시 lifecycle) import
+→ Resource Manager no-destroy/no-replace Plan
+→ ownership 전환
+→ separate PostgreSQL 17 restore proof
 ```
 
 신규 backup system을 만들지 않는다.
