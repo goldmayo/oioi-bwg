@@ -140,11 +140,23 @@ async function main() {
       max: 1,
       connection: { statement_timeout: 15_000 },
     });
+    let drizzleSchemaOwner = "";
+    let publicSchemaOwner = "";
     try {
       await bootstrapFixture`create extension if not exists pg_stat_statements`;
       await bootstrapFixture`
         create table public.m9_host_owned_fixture (id bigserial primary key, note text)
       `;
+      const schemaOwners = await bootstrapFixture<{ name: string; owner: string }[]>`
+        select namespace.nspname as name, pg_get_userbyid(namespace.nspowner) as owner
+        from pg_namespace namespace
+        where namespace.nspname in ('public', 'drizzle')
+      `;
+      publicSchemaOwner = schemaOwners.find(({ name }) => name === "public")?.owner ?? "";
+      drizzleSchemaOwner = schemaOwners.find(({ name }) => name === "drizzle")?.owner ?? "";
+      if (!publicSchemaOwner || !drizzleSchemaOwner) {
+        throw new Error("Could not capture PostgreSQL schema ownership before role bootstrap");
+      }
     } finally {
       await bootstrapFixture.end();
     }
@@ -173,6 +185,8 @@ async function main() {
     Object.assign(childEnvironment, {
       DATABASE_URL: runtimeUrl.toString(),
       M9_TEST_ADMIN_ROLE: adminUrl.username,
+      M9_TEST_DRIZZLE_SCHEMA_OWNER: drizzleSchemaOwner,
+      M9_TEST_PUBLIC_SCHEMA_OWNER: publicSchemaOwner,
       M9_TEST_RUNTIME_APP_ROLE: runtimeAppRole,
       M9_TEST_RUNTIME_MIGRATOR_ROLE: runtimeMigratorRole,
       M7_TEST_POSTGRES_VERIFICATION_URL: databaseUrl.toString(),

@@ -31,9 +31,17 @@ if (!databaseUrl) throw new Error("DATABASE_URL is required");
 const verificationUrl = process.env.M7_TEST_POSTGRES_VERIFICATION_URL;
 if (!verificationUrl) throw new Error("M7_TEST_POSTGRES_VERIFICATION_URL is required");
 const adminRole = process.env.M9_TEST_ADMIN_ROLE;
+const drizzleSchemaOwner = process.env.M9_TEST_DRIZZLE_SCHEMA_OWNER;
+const publicSchemaOwner = process.env.M9_TEST_PUBLIC_SCHEMA_OWNER;
 const runtimeAppRole = process.env.M9_TEST_RUNTIME_APP_ROLE;
 const runtimeMigratorRole = process.env.M9_TEST_RUNTIME_MIGRATOR_ROLE;
-if (!adminRole || !runtimeAppRole || !runtimeMigratorRole) {
+if (
+  !adminRole ||
+  !drizzleSchemaOwner ||
+  !publicSchemaOwner ||
+  !runtimeAppRole ||
+  !runtimeMigratorRole
+) {
   throw new Error("M9 PostgreSQL role verification environment is required");
 }
 
@@ -392,7 +400,7 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
       where namespace.nspname = 'drizzle'
     `;
     expect(drizzleOwnership).toEqual({
-      schema_owner: adminRole,
+      schema_owner: drizzleSchemaOwner,
       sequence_owner: runtimeMigratorRole,
       table_owner: runtimeMigratorRole,
     });
@@ -431,7 +439,7 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
     `;
     expect(unrelatedPrivileges).toEqual({
       app_can_write: false,
-      public_schema_owner: adminRole,
+      public_schema_owner: publicSchemaOwner,
     });
   });
 
