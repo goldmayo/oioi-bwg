@@ -69,7 +69,7 @@ jobs:
   publish-image:
     if: github.event_name == 'push' && github.ref == 'refs/heads/migration_develop'
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     environment: oci-development-image
     permissions:
@@ -92,8 +92,6 @@ jobs:
               exit 1
             fi
           done
-
-      - uses: docker/setup-qemu-action@v3
 
       - uses: docker/setup-buildx-action@v3
 
@@ -121,7 +119,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           push: true
           tags: ${{ env.OCIR_REGISTRY }}/${{ env.OCIR_NAMESPACE }}/${{ env.OCIR_REPOSITORY }}:git-${{ github.sha }}
           build-args: |
