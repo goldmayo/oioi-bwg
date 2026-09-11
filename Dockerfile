@@ -16,7 +16,7 @@ FROM base AS dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
-FROM base AS builder
+FROM dependencies AS builder
 
 ARG NEXT_PUBLIC_APP_ENV=staging
 ARG NEXT_PUBLIC_GTM_ID
@@ -29,7 +29,6 @@ ENV NODE_ENV=production \
     NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
     NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT}
 
-COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build
 
