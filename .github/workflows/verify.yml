@@ -13,9 +13,84 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  infra:
+    name: infra
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Validate Terraform
+        run: |
+          terraform version
+          terraform -chdir=infra/oci fmt -check -diff
+          terraform -chdir=infra/oci init -backend=false
+          terraform -chdir=infra/oci validate
+
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Architecture harness
+        run: pnpm test:harness
+
+      - name: ESLint
+        run: pnpm lint
+
+      - name: FSD architecture lint
+        run: pnpm lint:fsd
+
+      - name: Format check
+        run: pnpm format:check
+
+  unit:
+    name: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:unit:run
+      - run: pnpm test:ops
+
+  postgres_integration:
+    name: PostgreSQL integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     services:
       postgres:
@@ -44,27 +119,69 @@ jobs:
           node-version: 22.16.0
           cache: pnpm
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.7
-
-      - name: Validate Terraform
-        run: |
-          terraform version
-          terraform -chdir=infra/oci fmt -check -diff
-          terraform -chdir=infra/oci init -backend=false
-          terraform -chdir=infra/oci validate
-
       - run: pnpm install --frozen-lockfile
-      - run: pnpm verify
+
       - name: PostgreSQL integration
         run: pnpm test:integration:postgres
         env:
           M7_TEST_POSTGRES_ADMIN_URL: postgresql://postgres@127.0.0.1:5432/postgres
-      - run: pnpm format:check
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
       - run: pnpm build
         env:
           NEXT_PUBLIC_APP_ENV: staging
+
+  verify:
+    name: verify
+    if: always()
+    needs:
+      - infra
+      - quality
+      - unit
+      - postgres_integration
+      - build
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Require all verification jobs
+        env:
+          INFRA_RESULT: ${{ needs.infra.result }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          UNIT_RESULT: ${{ needs.unit.result }}
+          POSTGRES_RESULT: ${{ needs.postgres_integration.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: |
+          set -euo pipefail
+          for result in \
+            "${INFRA_RESULT}" \
+            "${QUALITY_RESULT}" \
+            "${UNIT_RESULT}" \
+            "${POSTGRES_RESULT}" \
+            "${BUILD_RESULT}"; do
+            if [[ "${result}" != "success" ]]; then
+              echo "Verification dependency did not succeed: ${result}" >&2
+              exit 1
+            fi
+          done
 
   publish-image:
     if: github.event_name == 'push' && github.ref == 'refs/heads/migration_develop'
