@@ -119,6 +119,17 @@ jobs:
           node-version: 22.16.0
           cache: pnpm
 
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Validate Terraform
+        run: |
+          terraform version
+          terraform -chdir=infra/oci fmt -check -diff
+          terraform -chdir=infra/oci init -backend=false
+          terraform -chdir=infra/oci validate
+
       - run: pnpm install --frozen-lockfile
 
       - name: PostgreSQL integration

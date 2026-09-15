@@ -26,7 +26,7 @@ steps:
         oci instance-agent command create \
           --compartment-id "${compute_compartment_ocid}" \
           --display-name "oioi-bwg-$${OCI_DEPLOYMENT_ID}" \
-          --execution-timeout-in-seconds 1800 \
+          --timeout-in-seconds 1800 \
           --target "$${target}" \
           --content "$${content}" \
           --query 'data.id' \
