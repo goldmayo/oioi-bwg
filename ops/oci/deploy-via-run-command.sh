@@ -47,7 +47,7 @@ error_file="$(mktemp)"
 trap 'rm -f -- "${execution_file}" "${error_file}"' EXIT
 
 start_epoch="$(date +%s)"
-lookup_grace_deadline=$((start_epoch + 300))
+lookup_grace_deadline=$((start_epoch + 120))
 overall_deadline=$((start_epoch + 900))
 execution_state=""
 
