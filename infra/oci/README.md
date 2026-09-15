@@ -25,9 +25,6 @@ region = ap-osaka-1
 
 ```text
 COMMAND_SPEC argument_substitution_mode = SUBSTITUTE_PLACEHOLDERS 거부
-OCI Container Registry isImmutable 설정 미지원
-```
-
 OCIR provider/schema에는 isImmutable이 노출되어 있으나 ap-osaka-1 실제 Apply에서 Setting isImmutable is not currently supported로 거부
 ```
 
