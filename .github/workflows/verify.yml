@@ -279,5 +279,5 @@ jobs:
             echo
             echo "\`${image}@${IMAGE_DIGEST}\`"
             echo
-            echo "Deploy this digest through the OCI DevOps manual release gate."
+            echo "The OCI development deployment workflow deploys this digest automatically."
           } >> "${GITHUB_STEP_SUMMARY}"
