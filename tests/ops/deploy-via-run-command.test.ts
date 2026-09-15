@@ -1,0 +1,46 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+import { describe, expect, test } from "vitest";
+
+describe("GitHub Actions OCI Run Command deployment", () => {
+  test("deploys only an immutable OCIR manifest digest", async () => {
+    const source = await readFile(resolve("ops/oci/deploy-via-run-command.sh"), "utf8");
+
+    expect(source).toContain("^sha256:[0-9a-f]{64}$");
+    expect(source).toContain("instance-agent command create");
+    expect(source).toContain("deploy-release.sh ${IMAGE_DIGEST}");
+    expect(source).not.toMatch(/:(?:latest|development)\b/);
+  });
+
+  test("waits for Run Command directly without a billable DevOps Shell stage", async () => {
+    const source = await readFile(resolve("ops/oci/deploy-via-run-command.sh"), "utf8");
+    const devops = await readFile(resolve("infra/oci/devops.tf"), "utf8");
+
+    expect(source).toContain("instance-agent command-execution get");
+    expect(source).toContain("lookup_grace_deadline");
+    expect(source).toContain("overall_deadline");
+    expect(devops).not.toContain('deploy_stage_type               = "SHELL"');
+    expect(devops).not.toContain("CONTAINER_INSTANCE_CONFIG");
+  });
+
+  test("runs automatically after the verified migration_develop workflow", async () => {
+    const workflow = await readFile(resolve(".github/workflows/deploy-oci-development.yml"), "utf8");
+
+    expect(workflow).toContain("workflow_run:");
+    expect(workflow).toContain("- migration_develop");
+    expect(workflow).toContain("github.event.workflow_run.conclusion == 'success'");
+    expect(workflow).toContain(":git-${SOURCE_SHA}");
+    expect(workflow).toContain("oracle-actions/run-oci-cli-command@v1.3.2");
+    expect(workflow).toContain('bash ops/oci/deploy-via-run-command.sh "${IMAGE_DIGEST}"');
+  });
+
+  test("redacts sensitive remote output and preserves deployment exit semantics", async () => {
+    const source = await readFile(resolve("ops/oci/deploy-via-run-command.sh"), "utf8");
+
+    expect(source).toContain("<redacted: remote output contained a sensitive marker>");
+    expect(source).toContain("candidate failed; rollback succeeded");
+    expect(source).toContain("candidate failed; rollback failed");
+    expect(source).toContain('exit "${remote_exit_code}"');
+  });
+});
