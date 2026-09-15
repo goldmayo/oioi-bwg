@@ -37,6 +37,7 @@ locals {
     "Allow dynamic-group ${local.devops_principal} to use dhcp-options in compartment id ${var.network_compartment_ocid}",
     "Allow dynamic-group ${local.devops_principal} to read instance-family in compartment id ${var.compute_compartment_ocid}",
     "Allow dynamic-group ${local.devops_principal} to use instance-agent-command-family in compartment id ${var.compute_compartment_ocid}",
+    "Allow dynamic-group ${local.devops_principal} to use instance-agent-command-execution-family in compartment id ${var.compute_compartment_ocid}",
     "Allow dynamic-group ${local.devops_principal} to use ons-topics in compartment id ${var.compartment_ocid}",
   ]
 
