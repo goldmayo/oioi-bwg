@@ -335,13 +335,13 @@ jobs:
           done
           [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
 
-      - name: Verify OCI API authentication
+      - name: Verify OCI Run Command authentication
         uses: oracle-actions/run-oci-cli-command@v1.3.2
         with:
           command: >-
-            compute instance get
-            --instance-id ${{ env.OCI_COMPUTE_INSTANCE_OCID }}
-          query: data.id
+            instance-agent command list
+            --compartment-id ${{ env.OCI_COMPUTE_COMPARTMENT_OCID }}
+            --limit 1
 
       - name: Deploy immutable digest with OCI Run Command
         run: |
