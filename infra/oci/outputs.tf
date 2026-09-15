@@ -28,6 +28,14 @@ output "deployment_pipeline_id" {
   description = "Retained for deployment history only; active CD runs directly from GitHub Actions through OCI Run Command."
 }
 
+output "github_deploy_group" {
+  value = {
+    id   = oci_identity_group.github_deploy.id
+    name = oci_identity_group.github_deploy.name
+  }
+  description = "Add the non-human GitHub deployment principal to this group before activating direct Run Command CD."
+}
+
 output "backup_bucket" {
   value = {
     name      = data.oci_objectstorage_bucket.postgres_backup.name
