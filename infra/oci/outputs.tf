@@ -25,7 +25,7 @@ output "alert_notification_topic_id" {
 
 output "deployment_pipeline_id" {
   value       = oci_devops_deploy_pipeline.application.id
-  description = "Start this pipeline manually with the required IMAGE_DIGEST parameter."
+  description = "Retained for deployment history only; active CD runs directly from GitHub Actions through OCI Run Command."
 }
 
 output "backup_bucket" {
