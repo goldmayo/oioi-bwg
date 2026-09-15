@@ -24,13 +24,13 @@ describe("GitHub Actions OCI Run Command deployment", () => {
     expect(devops).not.toContain("CONTAINER_INSTANCE_CONFIG");
   });
 
-  test("runs automatically after the verified migration_develop workflow", async () => {
-    const workflow = await readFile(resolve(".github/workflows/deploy-oci-development.yml"), "utf8");
+  test("deploys automatically after verified migration_develop image publish", async () => {
+    const workflow = await readFile(resolve(".github/workflows/verify.yml"), "utf8");
 
-    expect(workflow).toContain("workflow_run:");
-    expect(workflow).toContain("- migration_develop");
-    expect(workflow).toContain("github.event.workflow_run.conclusion == 'success'");
-    expect(workflow).toContain(":git-${SOURCE_SHA}");
+    expect(workflow).toContain("publish-image:");
+    expect(workflow).toContain("image_digest: ${{ steps.release.outputs.digest }}");
+    expect(workflow).toContain("deploy:\n    name: deploy");
+    expect(workflow).toContain("needs: publish-image");
     expect(workflow).toContain("oracle-actions/run-oci-cli-command@v1.3.2");
     expect(workflow).toContain('bash ops/oci/deploy-via-run-command.sh "${IMAGE_DIGEST}"');
   });
