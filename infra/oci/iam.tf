@@ -29,6 +29,7 @@ locals {
   )
 
   github_deploy_policy_statements = [
+    "Allow group ${local.github_deploy_principal} to read instances in compartment id ${var.compute_compartment_ocid}",
     "Allow group ${local.github_deploy_principal} to manage instance-agent-command-family in compartment id ${var.compute_compartment_ocid}",
   ]
 }
