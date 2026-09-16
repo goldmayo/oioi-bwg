@@ -51,6 +51,16 @@ for unit in oracle-cloud-agent.service snap.oracle-cloud-agent.oracle-cloud-agen
 done
 [[ "${agent_active}" == "1" ]] || fail oracle-cloud-agent
 
+agent_snap_version=""
+if command -v snap >/dev/null 2>&1; then
+  agent_snap_version="$(snap list oracle-cloud-agent 2>/dev/null | awk 'NR == 2 {print $2}')"
+fi
+if [[ -n "${agent_snap_version}" ]] && [[ "$(printf '%s\n' 1.61.0 "${agent_snap_version}" | sort -V | head -n1)" == "1.61.0" ]]; then
+  pass "oracle-cloud-agent-snap:${agent_snap_version}"
+else
+  fail "oracle-cloud-agent-snap>=1.61.0:${agent_snap_version:-missing}"
+fi
+
 if command -v docker-credential-ocir >/dev/null 2>&1; then
   pass docker-credential-ocir
 else
@@ -94,8 +104,8 @@ for root_file in "${runtime_files[@]}" "${config_files[@]}"; do
   fi
 done
 
-# Oracle's documented Run Command platform-image list does not include Ubuntu.
-# Only a real, secret-free command delivered through the target instance can create this marker.
+# Oracle Cloud Agent 1.61.0 added Ubuntu snap support for Compute Run Command.
+# Keep a real, secret-free probe as runtime evidence in addition to the version gate.
 if [[ -f "${config_root}/run-command-probe.passed" ]]; then
   pass ubuntu-run-command-probe
 else

@@ -1,111 +1,122 @@
 # M9 OCI Resource Manager stack
 
-이 root stack은 `M9-CICD-OCI-OPERATIONS-PLAN`에 따라 새 M9 resource만 관리한다. 기존 Compute,
-VCN, subnet, boot volume, PostgreSQL data와 PostgreSQL backup bucket은 조회만 하며 생성·수정·import하지
-않는다. 서비스 리전은 `ap-osaka-1`이고 OCIR host는 `${region}.ocir.io`에서 유도한다.
+이 root stack은 기존 Ubuntu Compute를 직접 소유하지 않고 M9에 필요한 OCI 주변 리소스와 최소 IAM만 관리한다.
+기존 Compute, VCN, boot volume, PostgreSQL data와 PostgreSQL backup bucket은 조회만 하며 생성·수정·import하지 않는다.
+서비스 리전은 `ap-osaka-1`이다.
 
-OCIR repository는 private이다. `git-<full-commit-sha>`는 traceability tag이며 GitHub workflow는 이미
-존재하는 tag를 overwrite하지 않고 그 digest를 재사용한다. OCI-level repository/tag immutability는
-가정하지 않는다. 배포와 rollback의 immutable identity는 `<repository>@sha256:<digest>`다.
+OCIR repository는 private이다. `git-<full-commit-sha>`는 traceability tag이며 실제 immutable release identity는
+`<repository>@sha256:<manifest-digest>`다.
 
-## Current Resource Manager state
-
-2026-09-11 operator가 다음 Stack으로 첫 실행을 수행했다.
+## Active CI/CD ownership
 
 ```text
-stack = oioi-bwg-m9
-source = goldmayo/oioi-bwg / migration_develop
-working directory = infra/oci
-Terraform = 1.5.x (CLI 1.5.7)
-region = ap-osaka-1
+GitHub Actions
+  → verify
+  → linux/arm64 image build
+  → OCIR push
+  → manifest digest resolve
+  → OCI Run Command API
+  → existing Ubuntu Compute
+  → /srv/oioibawige/scripts/deploy-release.sh <digest>
 ```
 
-첫 Plan은 `20 add / 0 change / 0 destroy`였고 기존 Compute/Subnet/`oioibawige-db-backup` data lookup이
-성공했다. 첫 Apply는 일부 resource를 생성한 뒤 다음 OCI API 호환성 오류로 실패했다.
+OCI DevOps Managed Build와 Shell Stage는 사용하지 않는다. Shell Stage는 실행 시 별도 Container Instance를
+생성하므로 추가 deployment compute 비용과 cold start가 발생한다. M9는 기존 Compute의 Oracle Cloud Agent와
+Run Command를 직접 사용한다.
+
+## Current Resource Manager state transition
+
+기존 state에는 과거 실험에서 생성한 OCI DevOps project/pipeline, command-spec artifact, Shell Stage,
+DevOps dynamic group과 관련 IAM이 들어 있다. 이 변경을 Apply하면 해당 리소스는 제거 대상이다.
+
+Plan에서 허용되는 CD 관련 변경은 다음뿐이다.
 
 ```text
-COMMAND_SPEC argument_substitution_mode = SUBSTITUTE_PLACEHOLDERS 거부
-OCIR provider/schema에는 isImmutable이 노출되어 있으나 ap-osaka-1 실제 Apply에서 Setting isImmutable is not currently supported로 거부
+- OCI DevOps Shell Stage / command-spec artifact / pipeline / project 제거
+- DevOps dynamic group 및 Shell Stage 전용 IAM 제거
+- Shell 전용 subnet/AD input과 data lookup 제거
+- GitHub deployment용 IAM group 및 Run Command policy 추가
+- DevOps 전용 deployment Notification Topic 제거
 ```
 
-`isImmutable`은 OCI 기능 자체가 존재하지 않는다고 단정하지 않는다. Provider/SDK contract와 실제 backend
-동작 사이의 차이로 취급하고, M9에서는 해당 옵션에 의존하지 않으며 manifest digest를 release identity로
-사용한다.
-
-Logging group/log/agent configuration, 두 Notification Topic, CPU/memory/instance/filesystem alarm,
-DevOps project/pipeline, Compute/DevOps dynamic group, runtime/deployment IAM policy, Vault와 KMS key는 이미
-생성되어 같은 Resource Manager state에 존재한다. 이 resource를 수동 삭제하거나 다시 만들지 않는다.
-
-수정 반영 후 동일 Stack/state에서 새 Plan을 실행하고 다음을 확인한다.
+다음 리소스는 destroy/replace되면 안 된다.
 
 ```text
-이미 생성된 resource -> destroy 없음, 예상하지 않은 replace 없음
-실패했거나 아직 생성되지 않은 resource -> create
-기존 production Compute/Subnet/backup bucket -> data/read-only 유지
+existing Ubuntu Compute
+OCIR repository
+Vault / KMS
+runtime secrets
+application Logging configuration
+Monitoring alarms
+alert Notification Topic
+existing PostgreSQL backup bucket
 ```
-
-남은 create 수는 추정값으로 고정하지 않는다. 새 Resource Manager Plan 결과가 source of truth다.
-
-## Activation order
-
-1. `terraform.tfvars.example`의 non-secret 값을 Resource Manager Stack variables로 옮긴다. 현재 기존
-   backup bucket 이름은 `oioibawige-db-backup`이며 `backup_bucket_name`으로 제공한다. 별도 OCIR host
-   변수는 입력하지 않는다.
-2. Resource Manager에서 Plan을 실행하고 **기존 Compute/VCN 변경이나 destroy가 없는지** 검토한 뒤 Apply한다.
-3. 생성된 Vault/key에 runtime secret 값을 별도 secure bootstrap으로 등록한다. Terraform에는 값이 없다.
-4. runtime secret OCID만 `runtime_secret_ocids`에 넣어 다시 Plan/Apply한다. admin/migrator DB secret은 제외한다.
-5. deployment/alert Notification Topic의 Slack subscription은 Console에서 각각 수동 생성한다. endpoint
-   token은 state에 넣지 않는다.
-6. host preflight와 실제 Ubuntu Run Command probe가 통과한 뒤 DevOps Console에서 `IMAGE_DIGEST`를 입력해
-   deployment pipeline을 시작한다.
-
-기존 backup은 exact Compute를 매칭하는 `oioibawige-backup-instance` dynamic group, known bucket에
-한정된 `read buckets`/`manage objects` policy, `objectstorage-ap-osaka-1` lifecycle service policy를
-사용한다. 이 stack은 이 기존 IAM/lifecycle resource, 신규 backup bucket, bucket write IAM 또는 backup
-metric/alarm을 만들지 않는다.
-
-## Existing backup IaC adoption
-
-현재 단계는 bucket data source/input만 사용하는 zero-mutation Phase 1이다.
-
-1. 실제 bucket, backup dynamic group, backup IAM policy와 lifecycle 설정을 Terraform resource
-   declaration과 비교해 config parity를 확인한다.
-2. 별도 승인된 변경에서 기존 bucket, dynamic group, IAM policy, 필요 시 lifecycle policy를 Resource
-   Manager state로 import한다.
-3. Resource Manager Plan에서 기존 resource destroy/replace가 0건이고 ideally `No changes`인지 검토한다.
-4. 검증 후에만 Terraform/Resource Manager ownership으로 전환한다.
-
-기존 resource를 delete/recreate하거나 이름을 바꾸지 않는다. Host의
-`/srv/oioibawige/scripts/backup-postgres.sh`, `oioibawige-postgres-backup.service`와 timer는 Terraform
-resource가 아니다. 실제 파일을 확보·검토하기 전에는 repository asset으로 재작성하지 않는다.
 
 production infrastructure의 기본 실행 경로는 Resource Manager Plan → human review → Apply다. 로컬
 `terraform apply`와 actual secret value가 포함된 tfvars commit은 금지한다.
 
-## GitHub image environment
+## IAM boundary
 
-`oci-development-image` GitHub Environment에는 다음만 둔다.
+Compute dynamic group은 유지한다. 해당 instance는 다음 책임만 가진다.
 
-- variables: `OCIR_REGISTRY`, `OCIR_NAMESPACE`, `OCIR_REPOSITORY`, public build values
-- secrets: non-human CI user의 `OCIR_USERNAME`, `OCIR_AUTH_TOKEN`
+- exact OCIR repository pull
+- runtime Vault secret bundle read
+- metrics/log-content publish
+- Run Command execution
 
-이 CI principal에는 Compute, Run Command, Vault, production DB 권한을 부여하지 않는다.
+GitHub deployment principal은 별도 `oioi_bwg_github_deploy` group에 넣고 다음 권한만 부여한다.
 
-`oci-development-image` credential 등록 전 `migration_develop`에 PR required, Verify required status
-check, direct push 제한을 활성화하고 GitHub 설정 evidence를 남긴다. 2026-09-11 확인 시 branch
-protection은 아직 비활성이다.
+```text
+use instance-agent-command-family on the Compute compartment
+```
+
+GitHub principal에는 Vault read, database, runtime secret, SSH, OCIR admin 권한을 주지 않는다.
+API signing private key는 Terraform state에 넣지 않는다.
+
+## GitHub environment
+
+`oci-development-image` Environment에는 다음을 둔다.
+
+```text
+variables
+- OCIR_REGISTRY
+- OCIR_NAMESPACE
+- OCIR_REPOSITORY
+- public build values
+
+secrets
+- OCIR_USERNAME
+- OCIR_AUTH_TOKEN
+- OCI_CLI_USER
+- OCI_CLI_TENANCY
+- OCI_CLI_FINGERPRINT
+- OCI_CLI_KEY_CONTENT
+```
+
+OCI API signing credential은 Run Command 전용 non-human user에 발급하고 Terraform이 만드는
+`oioi_bwg_github_deploy` group에만 가입시킨다.
 
 ## Ubuntu activation gate
 
-Oracle의 Run Command 지원 이미지 목록은 Ubuntu를 명시하지 않는다. 따라서 Oracle Cloud Agent가
-설치되었다는 사실만으로 지원을 가정하지 않는다. 대상 인스턴스에서 plugin 상태를 확인하고 secret 없는
-probe command를 실제 실행해 성공 evidence를 남기기 전에는 CD를 활성화하거나 M9-G 완료로 기록하지 않는다.
+Oracle Cloud Agent 1.61.0부터 Ubuntu snap package에 Compute Run Command 지원이 추가됐다. M9는 Ubuntu
+24.04 host에서 snap 기반 agent 1.61.0 이상과 secret-free Run Command probe 성공을 모두 요구한다.
+
+```bash
+sudo /srv/oioibawige/scripts/preflight-host.sh
+```
+
+실제 probe 성공 evidence와 agent version을 남기기 전에는 automatic deploy를 활성화하지 않는다.
+
+## Existing backup IaC adoption
+
+기존 PostgreSQL backup bucket과 backup IAM/lifecycle은 이번 변경의 소유권 전환 대상이 아니다. 현재 stack은
+bucket data source/input만 사용한다. bucket delete/recreate, 이름 변경, import는 별도 승인된 migration에서만 한다.
 
 ## Runtime evidence gates
 
-- Application Compose의 `json-file` log rotation이 `10m` × `5`인지 확인한다.
-- 기존 PostgreSQL container log rotation은 repository 밖의 activation checklist로 확인한다.
-- Application test log가 OCI Logging Search에 실제 수집됐는지 확인한다.
-- `restart: unless-stopped`와 healthcheck를 자동 unhealthy restart로 해석하지 않는다.
-- Caddy/production endpoint 활성화 전에는 external HTTPS health monitoring을 완료로 표시하지 않는다.
-- PostgreSQL과 application의 실제 memory baseline 전에는 container memory limit을 정하지 않는다.
+- Application Compose의 Docker log rotation 확인
+- Application test log의 OCI Logging Search 수집 확인
+- Caddy/HTTPS endpoint health 확인
+- Run Command deploy 결과와 exact digest 확인
+- candidate failure/rollback recovery 확인
+- filesystem warning/critical alarm과 Slack delivery 확인

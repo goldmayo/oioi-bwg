@@ -210,6 +210,8 @@ jobs:
     environment: oci-development-image
     permissions:
       contents: read
+    outputs:
+      image_digest: ${{ steps.release.outputs.digest }}
 
     env:
       OCIR_REGISTRY: ${{ vars.OCIR_REGISTRY }}
@@ -270,14 +272,89 @@ jobs:
           cache-to: type=gha,mode=min
 
       - name: Record release identity
+        id: release
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.existing.outputs.digest }}
         run: |
+          set -euo pipefail
+          if [[ ! "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Invalid release digest: ${IMAGE_DIGEST}" >&2
+            exit 1
+          fi
+          echo "digest=${IMAGE_DIGEST}" >> "${GITHUB_OUTPUT}"
           image="${OCIR_REGISTRY}/${OCIR_NAMESPACE}/${OCIR_REPOSITORY}"
           {
             echo "### Published OCI development image"
             echo
             echo "\`${image}@${IMAGE_DIGEST}\`"
             echo
-            echo "Deploy this digest through the OCI DevOps manual release gate."
+            echo "This digest is deployed automatically after publish succeeds."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  deploy:
+    name: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/migration_develop'
+    needs: publish-image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: oci-development-image
+    permissions:
+      contents: read
+
+    env:
+      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+      OCI_CLI_REGION: ap-osaka-1
+      OCI_COMPUTE_COMPARTMENT_OCID: ocid1.compartment.oc1..aaaaaaaavs5y44txsstgn5px5zfwynupw3m4mvlgndaje6q3lyi3hi65ucbq
+      OCI_COMPUTE_INSTANCE_OCID: ocid1.instance.oc1.ap-osaka-1.anvwsljrhcgbyoacqa6id2hr257tlu26cfjd7x7yywnai7hh37kkytix57cq
+      IMAGE_DIGEST: ${{ needs.publish-image.outputs.image_digest }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        run: |
+          set -euo pipefail
+          required=(
+            OCI_CLI_USER
+            OCI_CLI_TENANCY
+            OCI_CLI_FINGERPRINT
+            OCI_CLI_KEY_CONTENT
+            OCI_CLI_REGION
+            OCI_COMPUTE_COMPARTMENT_OCID
+            OCI_COMPUTE_INSTANCE_OCID
+            IMAGE_DIGEST
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing deployment configuration: ${name}" >&2
+              exit 1
+            fi
+          done
+          [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+      - name: Verify OCI Run Command authentication
+        uses: oracle-actions/run-oci-cli-command@v1.3.2
+        with:
+          command: >-
+            instance-agent command list
+            --compartment-id ${{ env.OCI_COMPUTE_COMPARTMENT_OCID }}
+            --limit 1
+
+      - name: Deploy immutable digest with OCI Run Command
+        run: |
+          set -euo pipefail
+          bash ops/oci/deploy-via-run-command.sh "${IMAGE_DIGEST}"
+
+      - name: Record deployment result
+        if: success()
+        run: |
+          {
+            echo "### OCI development deployment succeeded"
+            echo
+            echo "Commit: \`${GITHUB_SHA}\`"
+            echo
+            echo "Digest: \`${IMAGE_DIGEST}\`"
           } >> "${GITHUB_STEP_SUMMARY}"

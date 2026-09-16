@@ -13,19 +13,17 @@ output "vault_key_id" {
   description = "KMS key for runtime secrets."
 }
 
-output "deployment_notification_topic_id" {
-  value       = oci_ons_notification_topic.deployment.id
-  description = "Attach the deployment Slack subscription manually so its token never enters Terraform state."
-}
-
 output "alert_notification_topic_id" {
   value       = oci_ons_notification_topic.alerts.id
   description = "Attach the infrastructure-alert Slack subscription manually so its token never enters Terraform state."
 }
 
-output "deployment_pipeline_id" {
-  value       = oci_devops_deploy_pipeline.application.id
-  description = "Start this pipeline manually with the required IMAGE_DIGEST parameter."
+output "github_deploy_group" {
+  value = {
+    id   = oci_identity_group.github_deploy.id
+    name = oci_identity_group.github_deploy.name
+  }
+  description = "Add the dedicated GitHub deployment user to this group before activating direct Run Command CD."
 }
 
 output "backup_bucket" {

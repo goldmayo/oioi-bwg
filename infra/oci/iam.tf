@@ -5,16 +5,15 @@ resource "oci_identity_dynamic_group" "compute" {
   matching_rule  = "ALL {instance.id = '${var.compute_instance_ocid}'}"
 }
 
-resource "oci_identity_dynamic_group" "devops" {
+resource "oci_identity_group" "github_deploy" {
   compartment_id = var.tenancy_ocid
-  name           = "${replace(var.resource_prefix, "-", "_")}_devops"
-  description    = "Exact OCI DevOps deployment pipeline resource principal"
-  matching_rule  = "ALL {resource.type = 'devopsdeploypipeline', resource.id = '${oci_devops_deploy_pipeline.application.id}'}"
+  name           = "${replace(var.resource_prefix, "-", "_")}_github_deploy"
+  description    = "Least-privilege GitHub Actions group for issuing and reading OCI Run Commands"
 }
 
 locals {
-  compute_principal = var.iam_identity_domain_name == "" ? oci_identity_dynamic_group.compute.name : "${var.iam_identity_domain_name}/${oci_identity_dynamic_group.compute.name}"
-  devops_principal  = var.iam_identity_domain_name == "" ? oci_identity_dynamic_group.devops.name : "${var.iam_identity_domain_name}/${oci_identity_dynamic_group.devops.name}"
+  compute_principal       = var.iam_identity_domain_name == "" ? oci_identity_dynamic_group.compute.name : "${var.iam_identity_domain_name}/${oci_identity_dynamic_group.compute.name}"
+  github_deploy_principal = var.iam_identity_domain_name == "" ? oci_identity_group.github_deploy.name : "${var.iam_identity_domain_name}/${oci_identity_group.github_deploy.name}"
 
   compute_policy_statements = concat(
     [
@@ -29,27 +28,18 @@ locals {
     ],
   )
 
-  devops_policy_statements = [
-    "Allow dynamic-group ${local.devops_principal} to manage compute-container-instances in compartment id ${var.compartment_ocid}",
-    "Allow dynamic-group ${local.devops_principal} to manage compute-containers in compartment id ${var.compartment_ocid}",
-    "Allow dynamic-group ${local.devops_principal} to use vnics in compartment id ${var.network_compartment_ocid}",
-    "Allow dynamic-group ${local.devops_principal} to use subnets in compartment id ${var.network_compartment_ocid}",
-    "Allow dynamic-group ${local.devops_principal} to use dhcp-options in compartment id ${var.network_compartment_ocid}",
-    "Allow dynamic-group ${local.devops_principal} to read instance-family in compartment id ${var.compute_compartment_ocid}",
-    "Allow dynamic-group ${local.devops_principal} to use instance-agent-command-family in compartment id ${var.compute_compartment_ocid}",
-    "Allow dynamic-group ${local.devops_principal} to use instance-agent-command-execution-family in compartment id ${var.compute_compartment_ocid}",
-    "Allow dynamic-group ${local.devops_principal} to use ons-topics in compartment id ${var.compartment_ocid}",
+  github_deploy_policy_statements = [
+    "Allow group ${local.github_deploy_principal} to use instance-agent-command-family in compartment id ${var.compute_compartment_ocid}",
   ]
-
 }
 
 resource "oci_identity_policy" "runtime_and_deployment" {
   compartment_id = var.tenancy_ocid
   name           = "${replace(var.resource_prefix, "-", "_")}_runtime_deployment"
-  description    = "Least-privilege Compute and OCI DevOps permissions for M9"
+  description    = "Least-privilege Compute runtime and GitHub Run Command permissions for M9"
   statements = concat(
     local.compute_policy_statements,
-    local.devops_policy_statements,
+    local.github_deploy_policy_statements,
   )
   freeform_tags = var.freeform_tags
 }
