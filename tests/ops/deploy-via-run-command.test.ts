@@ -13,12 +13,21 @@ describe("GitHub Actions OCI Run Command deployment", () => {
     expect(source).not.toMatch(/:(?:latest|development)\b/);
   });
 
-  test("waits for Run Command directly without a DevOps Shell stage", async () => {
+  test("waits for delayed Run Command execution materialization without a DevOps Shell stage", async () => {
     const source = await readFile(resolve("ops/oci/deploy-via-run-command.sh"), "utf8");
 
     expect(source).toContain("instance-agent command-execution get");
-    expect(source).toContain("lookup_grace_deadline");
+    expect(source).toContain("NotAuthorizedOrNotFound");
     expect(source).toContain("overall_deadline");
+    expect(source).not.toContain("lookup_grace_deadline");
+  });
+
+  test("grants the deploy principal only the reads needed around Run Command", async () => {
+    const iam = await readFile(resolve("infra/oci/iam.tf"), "utf8");
+
+    expect(iam).toContain("to read instances in compartment id");
+    expect(iam).toContain("to manage instance-agent-command-family in compartment id");
+    expect(iam).toContain("to use instance-agent-command-execution-family in compartment id");
   });
 
   test("deploys automatically after verified migration_develop image publish", async () => {
