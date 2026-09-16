@@ -46,9 +46,7 @@ execution_file="$(mktemp)"
 error_file="$(mktemp)"
 trap 'rm -f -- "${execution_file}" "${error_file}"' EXIT
 
-start_epoch="$(date +%s)"
-lookup_grace_deadline=$((start_epoch + 120))
-overall_deadline=$((start_epoch + 900))
+overall_deadline=$(($(date +%s) + 900))
 execution_state=""
 
 while (( $(date +%s) < overall_deadline )); do
@@ -63,8 +61,11 @@ while (( $(date +%s) < overall_deadline )); do
         ;;
     esac
   else
-    now_epoch="$(date +%s)"
-    if grep -q 'NotAuthorizedOrNotFound' "${error_file}" && (( now_epoch < lookup_grace_deadline )); then
+    # The agent polls asynchronously and the execution resource does not exist until
+    # the target instance has accepted the command. OCI reports both that race and
+    # authorization failures as NotAuthorizedOrNotFound, so keep retrying within the
+    # command's overall timeout. IAM grants execution-family inspect separately.
+    if grep -q 'NotAuthorizedOrNotFound' "${error_file}"; then
       sleep 10
       continue
     fi
@@ -82,6 +83,9 @@ case "${execution_state}" in
     ;;
   *)
     echo "Run Command did not reach a terminal state before timeout" >&2
+    if [[ -s "${error_file}" ]]; then
+      sed -E 's/(DATABASE_URL|DB_APP_PASSWORD|AUTH_SECRET|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY)=([^[:space:]]+)/\1=<redacted>/g' "${error_file}" >&2
+    fi
     exit 1
     ;;
 esac
