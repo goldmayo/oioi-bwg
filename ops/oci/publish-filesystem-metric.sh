@@ -22,9 +22,15 @@ usage="$(df --output=pcent / | tail -n1 | tr -dc '0-9')"
 metric_file="$(mktemp)"
 trap 'rm -f -- "${metric_file}"' EXIT
 printf '[{"namespace":"oioi_operations","compartmentId":"%s","name":"filesystem_usage_percent","dimensions":{"resourceId":"%s"},"datapoints":[{"timestamp":"%s","value":%s}]}]\n' \
-  "${OCI_METRIC_COMPARTMENT_OCID}" "${OCI_COMPUTE_INSTANCE_OCID}" "$(date --utc +%Y-%m-%dT%H:%M:%SZ)" "${usage}" \
+  "${OCI_METRIC_COMPARTMENT_OCID}" \
+  "${OCI_COMPUTE_INSTANCE_OCID}" \
+  "$(date --utc +%Y-%m-%dT%H:%M:%SZ)" \
+  "${usage}" \
   >"${metric_file}"
+
 oci monitoring metric-data post \
   --auth instance_principal \
   --region "${OCI_REGION}" \
-  --metric-data "file://${metric_file}" >/dev/null
+  --endpoint "https://telemetry-ingestion.${OCI_REGION}.oraclecloud.com" \
+  --metric-data "file://${metric_file}" \
+  >/dev/null
