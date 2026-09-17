@@ -300,6 +300,8 @@ jobs:
     environment: oci-development-image
     permissions:
       contents: read
+    outputs:
+      exit_code: ${{ steps.deploy-release.outputs.exit_code }}
 
     env:
       OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
@@ -344,9 +346,14 @@ jobs:
             --limit 1
 
       - name: Deploy immutable digest with OCI Run Command
+        id: deploy-release
         run: |
-          set -euo pipefail
+          set +e
           bash ops/oci/deploy-via-run-command.sh "${IMAGE_DIGEST}"
+          exit_code=$?
+          set -e
+          echo "exit_code=${exit_code}" >> "${GITHUB_OUTPUT}"
+          exit "${exit_code}"
 
       - name: Record deployment result
         if: success()
@@ -358,3 +365,66 @@ jobs:
             echo
             echo "Digest: \`${IMAGE_DIGEST}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
+
+  notify-deploy:
+    name: notify deploy
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/migration_develop'
+    needs:
+      - publish-image
+      - deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+
+    env:
+      SLACK_DEPLOY_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK_URL }}
+      PUBLISH_RESULT: ${{ needs.publish-image.result }}
+      DEPLOY_RESULT: ${{ needs.deploy.result }}
+      DEPLOY_EXIT_CODE: ${{ needs.deploy.outputs.exit_code }}
+      IMAGE_DIGEST: ${{ needs.publish-image.outputs.image_digest }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
+      - name: Notify Slack
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          short_sha="${GITHUB_SHA:0:7}"
+          digest="${IMAGE_DIGEST:-unknown}"
+
+          if [[ "${PUBLISH_RESULT}" != "success" ]]; then
+            title="❌ OCI 개발 배포 실패"
+            detail="이미지 게시 단계가 성공하지 못했습니다."
+          elif [[ "${DEPLOY_RESULT}" == "success" && "${DEPLOY_EXIT_CODE}" == "0" ]]; then
+            title="✅ OCI 개발 배포 완료"
+            detail="새 이미지가 정상 배포되고 health/readiness/smoke 검증을 통과했습니다."
+          elif [[ "${DEPLOY_EXIT_CODE}" == "20" ]]; then
+            title="↩️ OCI 개발 배포 롤백 완료"
+            detail="새 배포 검증에 실패하여 직전 릴리즈로 자동 롤백했습니다."
+          elif [[ "${DEPLOY_EXIT_CODE}" == "21" ]]; then
+            title="🚨 OCI 개발 배포 롤백 실패"
+            detail="새 배포 검증 실패 후 직전 릴리즈 복구에도 실패했습니다. 즉시 확인이 필요합니다."
+          else
+            title="❌ OCI 개발 배포 실패"
+            detail="OCI 배포 파이프라인이 실패했습니다. GitHub Actions 로그를 확인해 주세요."
+          fi
+
+          text="${title}\n${detail}\n브랜치: migration_develop\n커밋: ${short_sha}\n이미지: ${digest}\n실행: ${RUN_URL}"
+          payload="$(TEXT="${text}" python3 - <<'PY'
+          import json
+          import os
+
+          print(json.dumps({"text": os.environ["TEXT"]}, ensure_ascii=False))
+          PY
+          )"
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --data "${payload}" \
+            "${SLACK_DEPLOY_WEBHOOK_URL}"
