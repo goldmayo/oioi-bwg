@@ -374,6 +374,7 @@ jobs:
       - deploy
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    environment: oci-development-image
     permissions:
       contents: read
 
@@ -390,6 +391,11 @@ jobs:
         continue-on-error: true
         run: |
           set -euo pipefail
+
+          if [[ -z "${SLACK_DEPLOY_WEBHOOK_URL}" ]]; then
+            echo "SLACK_DEPLOY_WEBHOOK_URL is unavailable in oci-development-image" >&2
+            exit 1
+          fi
 
           short_sha="${GITHUB_SHA:0:7}"
           digest="${IMAGE_DIGEST:-unknown}"
