@@ -23,6 +23,7 @@ depends_on:
   - `b5c3a601b108c7e89c6869afb1520af02bed08de`: server JSON 오류 출력과 Sentry 활성화 정책 분리,
     image publish DSN gate
   - `21803b9f2f3b83838f99b8e2e9eba997d6c0866f`: privacy 경계를 유지한 client error message 진단 개선
+  - `013fcc247978c1222e487731110ff8b20d344776`: 동적으로 생성될 수 있는 runtime identifier 제거
 - PR: [#92](https://github.com/goldmayo/oioi-bwg/pull/92)
 - 적용 규범: `09-error-ux-observability.md`의 unexpected error capture, structured context,
   sensitive data 금지와 `11-content-i18n-assets-runtime-architecture.md`의 `NEXT_PUBLIC_*` build-time 규칙
@@ -169,7 +170,7 @@ hydration 뒤로 지연하지 않았다. 이는 초기 client exception도 수�
 ## 검증
 
 최신 `origin/migration_develop` commit `b410c1e4898482ad79298703b298b2eae51277a8`을 merge한 뒤 review
-수정 commit `21803b9f2f3b83838f99b8e2e9eba997d6c0866f` 기준으로 production credential과 실제 Sentry 전송
+client 정책 commit `013fcc247978c1222e487731110ff8b20d344776` 기준으로 production credential과 실제 Sentry 전송
 없이 수행했다.
 
 - instrumentation/server config 집중 Vitest: 3 files, 21 tests 통과
