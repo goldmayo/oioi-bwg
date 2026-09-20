@@ -39,6 +39,9 @@ source map 업로드는 image manifest digest가 생성되기 전 build 내부�
 `org.opencontainers.image.revision=<full-sha>` label이 Sentry release와 image digest를 연결한다. OCI의
 배포·rollback identity가 manifest digest라는 기존 계약은 변경하지 않았다.
 
+- 구현 commit: `88f5be408374a8e9f56873dc27572852a1d50aea`
+- PR: [#94](https://github.com/goldmayo/oioi-bwg/pull/94)
+
 ## 2. Build와 secret 경계
 
 일반 local/PR `pnpm build`는 source map upload를 실행하지 않는다. `SENTRY_SOURCE_MAPS_ENABLED=true`를
@@ -132,6 +135,8 @@ repository variable, `.env`, Docker build argument, OCI Vault/runtime env에 복
 - 가짜 token/org/project와 형식에 맞는 release로 `next.config.ts`를 로드해 Sentry build config와
   `_sentryRelease` injection이 구성되는 것 확인. 외부 업로드는 실행하지 않음
 - `git diff --check`: 성공
+- GitHub Verify #249: infra, quality, unit, PostgreSQL integration, build, aggregate verify 성공. PR에서는
+  image publish/deploy가 의도대로 실행되지 않음
 
 현재 WSL 환경에는 Docker CLI가 없어 변경한 Dockerfile의 실제 BuildKit build는 실행하지 못했다.
 Dockerfile/workflow 경계는 ops test와 정적 검토로 확인했으며 실제 BuildKit secret mount, Sentry artifact
