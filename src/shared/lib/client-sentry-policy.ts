@@ -35,6 +35,30 @@ const SAFE_BROWSER_NAMES = [
   "Safari",
 ] as const;
 const SAFE_OS_NAMES = ["Android", "Chrome OS", "iOS", "Linux", "Mac OS X", "Windows"] as const;
+const SAFE_RUNTIME_MEMBER_NAMES = new Set([
+  "filter",
+  "find",
+  "forEach",
+  "id",
+  "length",
+  "map",
+  "reduce",
+  "then",
+  "toString",
+  "trim",
+  "value",
+]);
+const SAFE_TYPE_ERROR_MESSAGES = new Set([
+  "Cannot convert undefined or null to object",
+  "Failed to fetch",
+  "Load failed",
+  "NetworkError when attempting to fetch resource.",
+]);
+const SAFE_RANGE_ERROR_MESSAGES = new Set([
+  "Invalid array length",
+  "Invalid string length",
+  "Maximum call stack size exceeded",
+]);
 
 export type SentryErrorSource = (typeof SENTRY_ERROR_SOURCES)[number];
 export type ClientErrorType = (typeof CLIENT_ERROR_TYPES)[number];
@@ -146,6 +170,53 @@ function safeTag(event: ErrorEvent, key: string): unknown {
   return readProperty(event.tags, key);
 }
 
+function safeTypeErrorMessage(message: string): string | undefined {
+  if (SAFE_TYPE_ERROR_MESSAGES.has(message)) return message;
+
+  const propertyAccess = message.match(
+    /^(Cannot (?:read|set) properties of (?:undefined|null)) \((reading|setting) '([^']+)'\)$/,
+  );
+  if (propertyAccess) {
+    const [, prefix, operation, memberName] = propertyAccess;
+    return memberName && SAFE_RUNTIME_MEMBER_NAMES.has(memberName)
+      ? message
+      : `${prefix} (${operation} a property)`;
+  }
+
+  if (/^.+ is not a function$/.test(message)) return "Value is not a function";
+  if (/^.+ is not iterable$/.test(message)) return "Value is not iterable";
+
+  return undefined;
+}
+
+/** 자유형 Error message는 버리고 알려진 JavaScript engine 진단만 제한적으로 보존한다. */
+function safeRuntimeErrorMessage(exceptionType: string, value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length === 0 || value.length > 200 || /[\r\n]/.test(value))
+    return undefined;
+
+  if (exceptionType === "TypeError") return safeTypeErrorMessage(value);
+  if (exceptionType === "RangeError" && SAFE_RANGE_ERROR_MESSAGES.has(value)) return value;
+  if (exceptionType === "URIError" && value === "URI malformed") return value;
+  if (exceptionType === "ReferenceError") {
+    if (/^[A-Za-z_$][A-Za-z0-9_$]{0,63} is not defined$/.test(value)) return value;
+    if (/^Cannot access '[A-Za-z_$][A-Za-z0-9_$]{0,63}' before initialization$/.test(value))
+      return value;
+  }
+
+  return undefined;
+}
+
+function safeExceptionMessage(
+  errorType: ClientErrorType,
+  exceptionType: string,
+  value: unknown,
+): string {
+  if (errorType === "client-contract") return "Client response contract violation";
+  if (errorType === "client-transport") return "Client transport error";
+
+  return safeRuntimeErrorMessage(exceptionType, value) ?? "Unexpected client error";
+}
+
 export function toSafeSentryErrorContext(value: unknown): SentryErrorContext {
   const sourceValue = readProperty(value, "source");
   const digest = safeDigest(readProperty(value, "digest"));
@@ -194,6 +265,11 @@ export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
   const exceptionType = isOneOf(rawExceptionType, SAFE_EXCEPTION_TYPES)
     ? rawExceptionType
     : "Error";
+  const exceptionValue = safeExceptionMessage(
+    errorType,
+    exceptionType,
+    readProperty(lastException, "value"),
+  );
   const stacktrace = safeStacktrace(event);
   const browser = safeContext(readProperty(event.contexts, "browser"), SAFE_BROWSER_NAMES);
   const os = safeContext(readProperty(event.contexts, "os"), SAFE_OS_NAMES);
@@ -217,7 +293,7 @@ export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
       values: [
         {
           type: exceptionType,
-          value: "Unexpected client error",
+          value: exceptionValue,
           ...(stacktrace ? { stacktrace } : {}),
         },
       ],

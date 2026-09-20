@@ -73,6 +73,54 @@ describe("client Sentry privacy policy", () => {
     ).toBeNull();
   });
 
+  it.each([
+    ["TypeError", "Cannot read properties of undefined (reading 'map')"],
+    ["TypeError", "Failed to fetch"],
+    ["ReferenceError", "album is not defined"],
+    ["RangeError", "Maximum call stack size exceeded"],
+  ])("keeps an allowlisted %s engine diagnostic", (type, value) => {
+    const safeEvent = sanitizeClientSentryEvent({
+      exception: { values: [{ type, value }] },
+    } as unknown as ErrorEvent);
+
+    expect(safeEvent.exception?.values?.[0]?.value).toBe(value);
+  });
+
+  it("redacts free-form runtime messages and dynamic property names", () => {
+    const freeForm = sanitizeClientSentryEvent({
+      exception: { values: [{ type: "TypeError", value: MARKERS.token }] },
+    } as unknown as ErrorEvent);
+    const dynamicProperty = sanitizeClientSentryEvent({
+      exception: {
+        values: [
+          {
+            type: "TypeError",
+            value: `Cannot read properties of undefined (reading '${MARKERS.token}')`,
+          },
+        ],
+      },
+    } as unknown as ErrorEvent);
+
+    expect(freeForm.exception?.values?.[0]?.value).toBe("Unexpected client error");
+    expect(dynamicProperty.exception?.values?.[0]?.value).toBe(
+      "Cannot read properties of undefined (reading a property)",
+    );
+    expect(serialized([freeForm, dynamicProperty])).not.toContain(MARKERS.token);
+  });
+
+  it.each([
+    ["ClientContractError", "client-contract", "Client response contract violation"],
+    ["ClientTransportError", "client-transport", "Client transport error"],
+  ])("uses a diagnostic category for %s", (type, errorType, expected) => {
+    const safeEvent = sanitizeClientSentryEvent({
+      exception: { values: [{ type, value: MARKERS.zod }] },
+      tags: { "error.type": errorType },
+    } as unknown as ErrorEvent);
+
+    expect(safeEvent.exception?.values?.[0]?.value).toBe(expected);
+    expect(serialized(safeEvent)).not.toContain(MARKERS.zod);
+  });
+
   it("drops URL details, raw errors, causes, user data and network metadata", () => {
     const event = {
       type: undefined,
@@ -149,7 +197,7 @@ describe("client Sentry privacy policy", () => {
         values: [
           {
             type: "ClientContractError",
-            value: "Unexpected client error",
+            value: "Client response contract violation",
             stacktrace: {
               frames: [
                 {
