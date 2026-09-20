@@ -1,0 +1,10 @@
+name = "oioi-bwg-sentry-slack-relay"
+main = "src/index.mts"
+compatibility_date = "2026-09-20"
+workers_dev = true
+
+[secrets]
+required = [
+  "SENTRY_WEBHOOK_SECRET",
+  "SLACK_SENTRY_WEBHOOK_URL",
+]

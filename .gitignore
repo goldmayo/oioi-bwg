@@ -39,6 +39,10 @@ yarn-error.log*
 !.env.oci-secrets.example
 /app.env.oci-development
 
+# independent Cloudflare Worker local state and secrets
+**/.dev.vars*
+**/.wrangler/
+
 # terraform local state/cache (Resource Manager is the production state owner)
 **/.terraform/*
 *.tfstate
