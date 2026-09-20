@@ -1,7 +1,7 @@
 ---
 title: "Sentry release·source map 연결 결과"
 document_id: "OBSERVABILITY-SENTRY-SOURCEMAPS-RESULT"
-version: "1.2"
+version: "1.3"
 status: "completed"
 authority: "result"
 updated_at: "2026-09-20"
@@ -182,8 +182,8 @@ PR [#95](https://github.com/goldmayo/oioi-bwg/pull/95) merge commit
 이어 PR [#96](https://github.com/goldmayo/oioi-bwg/pull/96) merge commit
 `41ad6c61bfe6f436af4a1507a79d9322bf54f3f7`의 GitHub Verify
 [#35512328970](https://github.com/goldmayo/oioi-bwg/actions/runs/35512328970)에서도 같은 release 생성과 client/server
-source map upload가 다시 성공했고, OCI 배포와 배포 Slack 알림까지 완료됐다. 따라서 CI build에서 Sentry
-artifact를 업로드하는 경계와 업로드 실패 시 image publish를 중단하는 경계는 검증 완료로 판정한다.
+source map upload가 다시 성공했고, OCI 배포와 배포 Slack 알림까지 완료됐다. 이 시점에는 CI build에서
+Sentry artifact를 업로드하는 동작과 업로드 실패 시 image publish를 중단하는 경계를 검증했다고 판정했다.
 
 다음 항목은 Sentry 외부 화면 또는 실제 application bundle event가 필요하므로 아직 검증 완료로 판정하지
 않는다.
@@ -195,3 +195,28 @@ artifact를 업로드하는 경계와 업로드 실패 시 image publish를 중�
 
 브라우저 개발자 도구 콘솔에서 직접 던진 Error는 `eval` frame을 사용하므로 source map 해석 여부를
 판정하는 검증 입력으로 사용하지 않는다.
+
+## 10. 대상 Sentry project 설정 보정
+
+위 publish 결과를 실제 Sentry project와 대조하는 과정에서 GitHub environment
+`oci-development-image`의 `SENTRY_PROJECT`가 repository의 과거 이름인 `cheer-rock-crab`으로 설정돼
+있고, application DSN이 사용하는 현재 project slug는 `oioi-bwg`임을 확인했다. 따라서 9절의 두
+workflow는 source map upload 동작 자체는 성공했지만 application event가 수집되는 project에 artifact를
+연결한 검증은 아니었다.
+
+GitHub environment variable을 다음과 같이 보정했다.
+
+```text
+SENTRY_PROJECT=oioi-bwg
+```
+
+`SENTRY_ORG=oioibawige`, application DSN, source map 전용 `SENTRY_AUTH_TOKEN`은 변경하지 않았다. 변수
+보정만으로 기존 image가 바뀌지 않으며 workflow의 동일 commit tag 재사용 경계도 있으므로, 새 commit
+SHA의 `migration_develop` publish에서 image를 다시 빌드해야 한다. 해당 publish가 다음을 모두 만족해야
+대상 project artifact 연결을 검증 완료로 판정한다.
+
+- build log의 target project가 `oioi-bwg`
+- 새 release의 client/server source map upload 성공
+- 새 image의 OCI 배포 성공
+- `oioi-bwg` Sentry project에서 같은 release와 artifact 조회
+- 새 application bundle event의 release 일치와 원본 frame 해석
