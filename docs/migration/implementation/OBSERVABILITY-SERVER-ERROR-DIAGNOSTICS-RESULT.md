@@ -1,7 +1,7 @@
 ---
 title: "Server error 진단 개선 결과"
 document_id: "OBSERVABILITY-SERVER-ERROR-DIAGNOSTICS-RESULT"
-version: "1.0"
+version: "1.1"
 status: "completed"
 authority: "result"
 updated_at: "2026-09-20"
@@ -115,7 +115,16 @@ unexpected failure에는 다음 고정 분류만 붙인다.
   - unit test 55 files / 234 tests
   - ops test 3 files / 21 tests
 - `pnpm build`: Next.js 16.3.3 Turbopack production build 성공, static page 22개 생성
-- PR CI 결과는 PR에 기록한다.
+- PR [#96](https://github.com/goldmayo/oioi-bwg/pull/96) Verify
+  [#35512231485](https://github.com/goldmayo/oioi-bwg/actions/runs/35512231485): infra, quality, unit,
+  PostgreSQL integration, build, aggregate verify 성공
+- merge commit `41ad6c61bfe6f436af4a1507a79d9322bf54f3f7`의 Verify
+  [#35512328970](https://github.com/goldmayo/oioi-bwg/actions/runs/35512328970): image publish, Sentry
+  client/server source map upload, OCI 배포, 배포 Slack 알림 성공
+
+실제 unexpected server error를 staging에서 발생시켜 원본 application frame과 고정 operation 분류가 Sentry
+화면에 함께 나타나는지는 아직 확인하지 않았다. production data나 쓰기 작업을 이용한 인위적 실패는 이
+검증에 사용하지 않는다.
 
 ## 7. 보류
 
