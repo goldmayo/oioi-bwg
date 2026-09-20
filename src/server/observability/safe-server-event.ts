@@ -3,6 +3,11 @@ import "server-only";
 import type { ErrorEvent } from "@sentry/nextjs";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 
+import {
+  toSafeSentryBuildMetadata,
+  toSafeSentryBuildPath,
+} from "@/shared/lib/sentry-build-metadata";
+
 export const SERVER_ERROR_EVENTS = [
   "api.unexpected_error",
   "api.output_contract_violation",
@@ -184,6 +189,9 @@ function safeStacktrace(event: ErrorEvent) {
 
   const safeFrames = frames.flatMap((frame) => {
     const filename = safeStackText(readProperty(frame, "filename"));
+    const absPath =
+      toSafeSentryBuildPath(readProperty(frame, "abs_path")) ??
+      toSafeSentryBuildPath(readProperty(frame, "filename"));
     const functionName = safeStackText(readProperty(frame, "function"));
     const lineno = safeStackNumber(readProperty(frame, "lineno"));
     const colno = safeStackNumber(readProperty(frame, "colno"));
@@ -193,6 +201,7 @@ function safeStacktrace(event: ErrorEvent) {
     return [
       {
         ...(filename ? { filename } : {}),
+        ...(absPath ? { abs_path: absPath } : {}),
         ...(functionName ? { function: functionName } : {}),
         ...(lineno !== undefined ? { lineno } : {}),
         ...(colno !== undefined ? { colno } : {}),
@@ -238,6 +247,7 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
     ...(isOneOf(event.level, SAFE_LEVELS) ? { level: event.level } : { level: "error" }),
     platform: "node",
     ...(isOneOf(event.environment, SAFE_ENVIRONMENTS) ? { environment: event.environment } : {}),
+    ...toSafeSentryBuildMetadata(event),
     exception: {
       values: [
         {

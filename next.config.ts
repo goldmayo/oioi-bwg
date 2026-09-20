@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
+
+import { getSentryBuildConfig } from "./src/shared/config/sentry-build";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -23,4 +26,23 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["postgres"],
 };
 
-export default nextConfig;
+const sentryBuildConfig = getSentryBuildConfig();
+
+export default sentryBuildConfig.enabled
+  ? withSentryConfig(nextConfig, {
+      authToken: sentryBuildConfig.authToken,
+      org: sentryBuildConfig.org,
+      project: sentryBuildConfig.project,
+      telemetry: false,
+      routeManifestInjection: false,
+      suppressOnRouterTransitionStartWarning: true,
+      release: {
+        name: sentryBuildConfig.release,
+        create: true,
+        finalize: true,
+      },
+      sourcemaps: {
+        filesToDeleteAfterUpload: [".next/**/*.map"],
+      },
+    })
+  : nextConfig;

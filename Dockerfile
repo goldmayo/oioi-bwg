@@ -21,6 +21,10 @@ FROM dependencies AS builder
 ARG NEXT_PUBLIC_APP_ENV=staging
 ARG NEXT_PUBLIC_GTM_ID
 ARG NEXT_PUBLIC_SENTRY_DSN
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
+ARG SENTRY_RELEASE
+ARG SENTRY_SOURCE_MAPS_ENABLED=false
 
 ENV NODE_ENV=production \
     NEXT_PUBLIC_APP_ENV=${NEXT_PUBLIC_APP_ENV} \
@@ -28,7 +32,18 @@ ENV NODE_ENV=production \
     NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
 COPY . .
-RUN pnpm build
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
+    if [ "${SENTRY_SOURCE_MAPS_ENABLED}" = "true" ]; then \
+      test -s /run/secrets/SENTRY_AUTH_TOKEN || { echo "Missing SENTRY_AUTH_TOKEN build secret" >&2; exit 1; }; \
+      SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN)" \
+      SENTRY_ORG="${SENTRY_ORG}" \
+      SENTRY_PROJECT="${SENTRY_PROJECT}" \
+      SENTRY_RELEASE="${SENTRY_RELEASE}" \
+      SENTRY_SOURCE_MAPS_ENABLED=true \
+      pnpm build; \
+    else \
+      pnpm build; \
+    fi
 
 FROM node:${NODE_VERSION} AS runner
 

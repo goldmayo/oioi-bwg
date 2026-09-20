@@ -218,16 +218,20 @@ jobs:
       OCIR_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
       OCIR_REPOSITORY: ${{ vars.OCIR_REPOSITORY }}
       NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate OCIR configuration
+      - name: Validate image build configuration
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
-          required=(OCIR_REGISTRY OCIR_NAMESPACE OCIR_REPOSITORY NEXT_PUBLIC_SENTRY_DSN)
+          required=(OCIR_REGISTRY OCIR_NAMESPACE OCIR_REPOSITORY NEXT_PUBLIC_SENTRY_DSN SENTRY_ORG SENTRY_PROJECT SENTRY_AUTH_TOKEN)
           for name in "${required[@]}"; do
             if [[ -z "${!name}" ]]; then
-              echo "Missing GitHub environment variable: ${name}" >&2
+              echo "Missing GitHub environment configuration: ${name}" >&2
               exit 1
             fi
           done
@@ -265,6 +269,12 @@ jobs:
             NEXT_PUBLIC_APP_ENV=staging
             NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
+            SENTRY_ORG=${{ env.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ env.SENTRY_PROJECT }}
+            SENTRY_RELEASE=oioi-bwg@${{ github.sha }}
+            SENTRY_SOURCE_MAPS_ENABLED=true
+          secrets: |
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}

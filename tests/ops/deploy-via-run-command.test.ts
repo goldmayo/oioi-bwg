@@ -37,13 +37,31 @@ describe("GitHub Actions OCI Run Command deployment", () => {
     expect(workflow).toContain("image_digest: ${{ steps.release.outputs.digest }}");
     expect(workflow).toContain("NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}");
     expect(workflow).toContain(
-      "required=(OCIR_REGISTRY OCIR_NAMESPACE OCIR_REPOSITORY NEXT_PUBLIC_SENTRY_DSN)",
+      "required=(OCIR_REGISTRY OCIR_NAMESPACE OCIR_REPOSITORY NEXT_PUBLIC_SENTRY_DSN SENTRY_ORG SENTRY_PROJECT SENTRY_AUTH_TOKEN)",
     );
     expect(workflow).toContain("NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}");
     expect(workflow).toContain("deploy:\n    name: deploy");
     expect(workflow).toContain("needs: publish-image");
     expect(workflow).toContain("oracle-actions/run-oci-cli-command@v1.3.2");
     expect(workflow).toContain('bash ops/oci/deploy-via-run-command.sh "${IMAGE_DIGEST}"');
+  });
+
+  test("uploads Sentry source maps with commit correlation and a BuildKit secret", async () => {
+    const [workflow, dockerfile, nextConfig] = await Promise.all([
+      readFile(resolve(".github/workflows/verify.yml"), "utf8"),
+      readFile(resolve("Dockerfile"), "utf8"),
+      readFile(resolve("next.config.ts"), "utf8"),
+    ]);
+
+    expect(workflow).toContain("SENTRY_ORG: ${{ vars.SENTRY_ORG }}");
+    expect(workflow).toContain("SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}");
+    expect(workflow).toContain("SENTRY_RELEASE=oioi-bwg@${{ github.sha }}");
+    expect(workflow).toContain("SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}");
+    expect(dockerfile).toContain("RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN");
+    expect(dockerfile).not.toContain("ARG SENTRY_AUTH_TOKEN");
+    expect(dockerfile).not.toMatch(/^ENV .*SENTRY_AUTH_TOKEN/m);
+    expect(nextConfig).toContain('filesToDeleteAfterUpload: [".next/**/*.map"]');
+    expect(nextConfig).toContain("routeManifestInjection: false");
   });
 
   test("redacts sensitive remote output and preserves deployment exit semantics", async () => {
