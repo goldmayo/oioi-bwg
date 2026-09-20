@@ -2,6 +2,8 @@ import "server-only";
 
 import * as Sentry from "@sentry/nextjs";
 
+import { getSentryRuntimeConfig } from "@/shared/config/sentry";
+
 import {
   describeServerError,
   type SafeErrorDescriptor,
@@ -18,14 +20,6 @@ interface ReportServerErrorContext {
   source: ServerErrorSource;
   error?: Partial<SafeErrorDescriptor>;
   request?: SafeRequestMetadata;
-}
-
-function shouldCaptureSentry() {
-  return (
-    process.env.NODE_ENV === "production" ||
-    process.env.NEXT_PUBLIC_APP_ENV === "production" ||
-    process.env.NEXT_PUBLIC_APP_ENV === "staging"
-  );
 }
 
 /** 원본 오류를 직렬화하지 않고 운영에 필요한 안전한 분류만 기록한다. */
@@ -58,7 +52,7 @@ export function reportServerError(
     }),
   );
 
-  if (!shouldCaptureSentry()) return null;
+  if (!getSentryRuntimeConfig().enabled) return null;
 
   const safeError = new Error("Unexpected server error");
   safeError.name =

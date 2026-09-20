@@ -11,7 +11,8 @@ const mockedReportServerError = vi.mocked(reportServerError);
 describe("onRequestError", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
   });
 
   it("forwards only allowlisted request metadata to the safe reporter", async () => {
@@ -60,7 +61,7 @@ describe("onRequestError", () => {
       request: { method: undefined, routerKind: undefined, routeType: undefined },
     });
 
-    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "local");
     await onRequestError(new Error("marker"), { method: "POST" }, {});
     expect(mockedReportServerError).toHaveBeenCalledTimes(1);
   });

@@ -5,13 +5,13 @@ import {
 } from "@/server/observability/safe-server-event";
 import { reportServerError } from "@/server/observability/server-logger";
 
+import { getSentryRuntimeConfig } from "@/shared/config/sentry";
+
 /**
  * Next.js instrumentation hook for the Node runtime.
  */
 export async function register() {
-  if (process.env.NODE_ENV === "development") {
-    return;
-  }
+  if (!getSentryRuntimeConfig().enabled) return;
 
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("../sentry.server.config");
@@ -37,7 +37,7 @@ export async function onRequestError(
   request: Readonly<{ method: string; [key: string]: unknown }>,
   context: unknown,
 ) {
-  if (process.env.NODE_ENV === "development") return;
+  if (!getSentryRuntimeConfig().enabled) return;
 
   reportServerError(error, {
     event: "next.request_error",
