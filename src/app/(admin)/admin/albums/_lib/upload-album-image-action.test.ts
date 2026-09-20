@@ -4,12 +4,12 @@ import { z } from "zod";
 import { AppError } from "@/server/errors/app-error";
 
 const getRequestContext = vi.hoisted(() => vi.fn());
-const loggerError = vi.hoisted(() => vi.fn());
+const reportServerError = vi.hoisted(() => vi.fn());
 const uploadAlbumImage = vi.hoisted(() => vi.fn());
 
 vi.mock("@/server/auth/request-context", () => ({ getRequestContext }));
+vi.mock("@/server/observability/server-logger", () => ({ reportServerError }));
 vi.mock("@/server/services/album-image-service", () => ({ uploadAlbumImage }));
-vi.mock("@/shared/lib/sentry", () => ({ logger: { error: loggerError } }));
 
 import { uploadAlbumImageAction } from "./upload-album-image-action";
 
@@ -46,26 +46,32 @@ describe("uploadAlbumImageAction", () => {
       error: "파일이 없습니다.",
     });
     expect(uploadAlbumImage).toHaveBeenCalledWith(context, null);
-    expect(loggerError).not.toHaveBeenCalled();
+    expect(reportServerError).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ["authorization", new AppError("FORBIDDEN")],
-    ["storage", new Error("R2_SECRET_ACCESS_KEY=PRIVATE_MARKER")],
-  ])("does not expose the raw %s error", async (_label, rawError) => {
+  it("returns an expected authorization failure without error monitoring", async () => {
+    uploadAlbumImage.mockRejectedValue(new AppError("FORBIDDEN"));
+
+    await expect(uploadAlbumImageAction(new FormData())).resolves.toEqual({
+      success: false,
+      error: "이미지 업로드에 실패했습니다.",
+    });
+    expect(reportServerError).not.toHaveBeenCalled();
+  });
+
+  it("reports an unexpected upload failure through the server observability boundary", async () => {
+    const rawError = new Error("R2_SECRET_ACCESS_KEY=PRIVATE_MARKER");
     uploadAlbumImage.mockRejectedValue(rawError);
 
     const result = await uploadAlbumImageAction(new FormData());
 
     expect(result).toEqual({ success: false, error: "이미지 업로드에 실패했습니다." });
     expect(JSON.stringify(result)).not.toContain(rawError.message);
-    expect(loggerError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: "Album image upload failed",
-        name: "AlbumImageUploadError",
-      }),
-      { source: "upload-album-image-action" },
-    );
-    expect(loggerError.mock.calls[0]?.[0]).not.toBe(rawError);
+    expect(reportServerError).toHaveBeenCalledWith(rawError, {
+      event: "upload.failure",
+      source: "upload-album-image-action",
+      operation: "album-image-upload",
+      request: { routerKind: "App Router", routeType: "action" },
+    });
   });
 });

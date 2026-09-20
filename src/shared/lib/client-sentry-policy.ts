@@ -9,7 +9,6 @@ export const SENTRY_ERROR_SOURCES = [
   "mutation-cache",
   "query-cache",
   "sentry-auto-capture",
-  "upload-album-image-action",
 ] as const;
 
 const CLIENT_ERROR_TYPES = ["client-contract", "client-transport", "runtime"] as const;
