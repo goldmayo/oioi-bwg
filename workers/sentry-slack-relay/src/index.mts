@@ -105,7 +105,7 @@ const readOccurredAt = (event: Record<string, unknown>): string | null => {
   return null;
 };
 
-const readSentryIssueUrl = (value: unknown, issueId: string): string | null => {
+const readSentryIssueUrl = (value: unknown, issueId: string, projectId: string): string | null => {
   if (typeof value !== "string") return null;
   try {
     const url = new URL(value);
@@ -123,6 +123,7 @@ const readSentryIssueUrl = (value: unknown, issueId: string): string | null => {
     url.password = "";
     url.pathname = `/${pathParts.slice(0, issueIndex + 2).join("/")}/`;
     url.search = "";
+    url.searchParams.set("project", projectId);
     url.hash = "";
     return url.toString();
   } catch {
@@ -143,7 +144,8 @@ const parseRelayEvent = (rawBody: string): RelayEvent | null => {
   const event = payload.data.event;
   const issueId = asBoundedIdentifier(event.issue_id);
   const projectId = asBoundedIdentifier(event.project);
-  const issueUrl = issueId ? readSentryIssueUrl(event.web_url, issueId) : null;
+  const issueUrl =
+    issueId && projectId ? readSentryIssueUrl(event.web_url, issueId, projectId) : null;
   const occurredAt = readOccurredAt(event);
   if (!issueId || !projectId || !issueUrl || !occurredAt || typeof event.title !== "string")
     return null;
@@ -173,7 +175,11 @@ const decodeHex = (value: string): Uint8Array<ArrayBuffer> | null => {
   return bytes;
 };
 
-const verifySignature = async (rawBody: string, signature: string | null, secret: string) => {
+const verifySignature = async (
+  rawBody: Uint8Array<ArrayBuffer>,
+  signature: string | null,
+  secret: string,
+) => {
   const signatureBytes = signature ? decodeHex(signature) : null;
   if (!signatureBytes || !secret) return false;
   const key = await crypto.subtle.importKey(
@@ -183,7 +189,7 @@ const verifySignature = async (rawBody: string, signature: string | null, secret
     false,
     ["verify"],
   );
-  return crypto.subtle.verify("HMAC", key, signatureBytes, textEncoder.encode(rawBody));
+  return crypto.subtle.verify("HMAC", key, signatureBytes, rawBody);
 };
 
 const buildSlackPayload = (event: RelayEvent) => {
@@ -244,6 +250,34 @@ const readSlackWebhookUrl = (value: string): string | null => {
   }
 };
 
+// Count bytes before retaining chunks; Content-Length is only an early rejection hint.
+const readBoundedBody = async (request: Request): Promise<Uint8Array<ArrayBuffer> | Response> => {
+  if (Number(request.headers.get("content-length")) > MAX_BODY_BYTES) {
+    await request.body?.cancel().catch(() => undefined);
+    return textResponse(413, "Payload too large");
+  }
+  if (!request.body) return new Uint8Array(0);
+  const reader = request.body.getReader();
+  const bytes = new Uint8Array(MAX_BODY_BYTES);
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return bytes.subarray(0, size);
+      if (value.byteLength > MAX_BODY_BYTES - size) {
+        await reader.cancel().catch(() => undefined);
+        return textResponse(413, "Payload too large");
+      }
+      bytes.set(value, size);
+      size += value.byteLength;
+    }
+  } catch {
+    return textResponse(400, "Invalid request body");
+  } finally {
+    reader.releaseLock();
+  }
+};
+
 export const handleSentryWebhook = async (
   request: Request,
   env: Env,
@@ -257,9 +291,8 @@ export const handleSentryWebhook = async (
     return textResponse(500, "Relay configuration error");
   }
 
-  const rawBody = await request.text();
-  if (textEncoder.encode(rawBody).byteLength > MAX_BODY_BYTES)
-    return textResponse(413, "Payload too large");
+  const rawBody = await readBoundedBody(request);
+  if (rawBody instanceof Response) return rawBody;
 
   const authenticated = await verifySignature(
     rawBody,
@@ -271,7 +304,7 @@ export const handleSentryWebhook = async (
     return textResponse(400, "Unsupported Sentry resource");
   }
 
-  const event = parseRelayEvent(rawBody);
+  const event = parseRelayEvent(new TextDecoder().decode(rawBody));
   if (!event) return textResponse(400, "Invalid Sentry payload");
   const slackWebhookUrl = readSlackWebhookUrl(env.SLACK_SENTRY_WEBHOOK_URL);
   if (!slackWebhookUrl) {

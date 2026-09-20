@@ -116,7 +116,7 @@ describe("Sentry Slack relay", () => {
     expect(serialized).toContain("[redacted-url]");
     expect(serialized).toContain("&lt;@U123&gt;");
     expect(serialized).toContain(
-      "https://oioi-bwg.sentry.io/organizations/oioi-bwg/issues/123456789/",
+      "https://oioi-bwg.sentry.io/organizations/oioi-bwg/issues/123456789/?project=42",
     );
     expect(serialized).not.toContain("events/abcdef");
     for (const forbidden of [
@@ -170,6 +170,60 @@ describe("Sentry Slack relay", () => {
       JSON.stringify({ event: "sentry_slack_relay.delivery_failed", status: 400 }),
     );
     expect(JSON.stringify(consoleError.mock.calls)).not.toContain("raw Slack detail");
+  });
+
+  it.each([undefined, "12", "1000001"])(
+    "bounds streamed bytes with Content-Length %s",
+    async (length) => {
+      const cancel = vi.fn();
+      let pulls = 0;
+      const body = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            pulls += 1;
+            controller.enqueue(new Uint8Array(500_001));
+          },
+          cancel,
+        },
+        { highWaterMark: 0 },
+      );
+      const headers: Record<string, string> = {};
+      if (length) headers["content-length"] = length;
+      const request = new Request(ENDPOINT_URL, {
+        method: "POST",
+        body,
+        headers,
+        duplex: "half",
+      } as RequestInit);
+      const slackFetch = vi.fn();
+      const response = await handleSentryWebhook(request, env, slackFetch);
+      expect(response.status).toBe(413);
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(pulls).toBe(length === "1000001" ? 0 : 2);
+      expect(slackFetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("accepts exactly one million signed bytes including multibyte text", async () => {
+    const json = JSON.stringify({ ...baseEvent, ignored: "한글" });
+    const body = json + " ".repeat(1_000_000 - new TextEncoder().encode(json).byteLength);
+    const slackFetch = vi.fn(async () => new Response("ok"));
+    expect((await handleSentryWebhook(await makeRequest(body), env, slackFetch)).status).toBe(204);
+  });
+
+  it("returns 400 for a broken body stream without forwarding raw error", async () => {
+    const request = new Request(ENDPOINT_URL, {
+      method: "POST",
+      body: new ReadableStream({
+        start(controller) {
+          controller.error(new Error("secret"));
+        },
+      }),
+      duplex: "half",
+    } as RequestInit);
+    const response = await handleSentryWebhook(request, env, vi.fn());
+    expect(response.status).toBe(400);
+    expect(await response.text()).toBe("Invalid request body");
   });
 
   it("allows POST only and does not add CORS handling", async () => {

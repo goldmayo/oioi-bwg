@@ -21,7 +21,7 @@ Slack에는 다음 값만 새 객체로 구성해 전달한다.
 - level: Sentry의 고정 level 값
 - 240자로 제한하고 email, URL, credential 표식을 제거한 issue title/message
 - issue ID와 project ID
-- event 경로와 query/hash를 제거한 `https://*.sentry.io/.../issues/<issue-id>/` 링크
+- event 경로와 query/hash를 제거한 `https://*.sentry.io/.../issues/<issue-id>/?project=<validated-project-id>` 링크
 - ISO 8601 발생 시각
 
 Sentry payload의 user/email, request, headers, body, cookie/token, raw cause, arbitrary extras,
@@ -44,31 +44,65 @@ exception/전체 stack trace는 읽어서 Slack payload로 복사하지 않는�
 
 Slack Incoming Webhook은 성공 시 HTTP 200을 반환한다. Worker는 Slack의 non-2xx 또는 800ms 내
 응답 실패를 Sentry에 502로 돌려주며 Slack 응답 본문은 기록하지 않는다.
+[Sentry webhook 규격](https://docs.sentry.io/organization/integrations/integration-platform/webhooks/)의
+1초 응답 요구 때문에 800ms를 유지한다. 전체 요청의 1초 완료를 보장하는 것은 아니다.
+Slack 지연/timeout에는 전달 여부가 불명확하거나 재시도 중복이 생길 수 있다.
+3~5초를 기다리려면 durable queue와 별도 재시도 정책을 함께 설계해야 하므로 이번 범위에서 보류한다.
+
+body는 Content-Length 사전 검사와 실제 stream byte 누적 제한(1,000,000 bytes)을 모두 적용한다.
+길이 헤더가 없거나 작게 기재돼도 초과 chunk에서 읽기를 취소하며 HMAC은 수신 원본 bytes를 검증한다.
 
 ## 2. Worker secrets 등록
 
-Cloudflare 계정에 Wrangler로 로그인한 뒤 이 디렉터리에서 대화형 입력을 사용한다.
+최초 배포는 4단계에서 Client Secret을 확보한 뒤 두 secret을 함께 업로드한다.
+`secret put`으로 빈 Worker를 bootstrap하는 동작에 의존하지 않는다.
+
+- `SLACK_SENTRY_WEBHOOK_URL`: Slack Incoming Webhook URL
+- `SENTRY_WEBHOOK_SECRET`: Sentry Internal Integration **Client Secret**
+
+## 3. Worker deploy
+
+이 디렉터리에서 로그인한 뒤 아래 Python 예제를 실행한다. Python 3가 필요하다.
+저장소 밖 `/tmp`에 mode 600 임시 JSON 파일을 만들고, 숨김 입력으로 값을 받은 뒤
+첫 deploy에 `--secrets-file`로 전달한다. 성공·실패·일반적인 중단 시 파일은 제거된다.
+강제 종료/호스트 장애 시 남은 `/tmp/sentry-relay-*` 디렉터리는 직접 삭제한다.
+secret 값은 명령 인자, shell history, GitHub, Wrangler vars에 기록하지 않는다.
 
 ```bash
 cd workers/sentry-slack-relay
 pnpm dlx wrangler@4.135.0 login
+python3 - <<'PYTHON'
+import getpass
+import json
+import os
+import subprocess
+import tempfile
+
+with tempfile.TemporaryDirectory(prefix="sentry-relay-", dir="/tmp") as directory:
+    path = os.path.join(directory, "secrets.json")
+    with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as file:
+        secrets = {
+            name: getpass.getpass(name + ": ")
+            for name in ("SLACK_SENTRY_WEBHOOK_URL", "SENTRY_WEBHOOK_SECRET")
+        }
+        if not all(secrets.values()):
+            raise SystemExit("Both secrets are required")
+        json.dump(secrets, file)
+    subprocess.run([
+        "pnpm", "dlx", "wrangler@4.135.0", "deploy", "--secrets-file", path
+    ], check=True)
+PYTHON
+```
+
+이후 코드 배포는 `pnpm dlx wrangler@4.135.0 deploy`를 사용한다.
+이미 배포한 Worker의 secret 회전은 대화형 입력으로 수행한다.
+
+```bash
 pnpm dlx wrangler@4.135.0 secret put SLACK_SENTRY_WEBHOOK_URL
 pnpm dlx wrangler@4.135.0 secret put SENTRY_WEBHOOK_SECRET
 ```
 
-- `SLACK_SENTRY_WEBHOOK_URL`: 1단계에서 발급한 Incoming Webhook URL
-- `SENTRY_WEBHOOK_SECRET`: 4단계에서 확인하는 Sentry Internal Integration **Client Secret**
-
-실제 값을 `.dev.vars`, `.env`, Wrangler vars에 복사하지 않는다. 두 이름은 `wrangler.toml`의 required
-secret 선언에만 있고 값은 Cloudflare에만 저장한다. 테스트의 값은 외부 서비스에서 사용할 수 없는 fixture다.
-
-## 3. Worker deploy
-
-이 디렉터리에서 고정한 Wrangler 버전으로 배포한다.
-
-```bash
-pnpm dlx wrangler@4.135.0 deploy
-```
+required secret 선언은 그대로 유지한다. 실제 `.dev.vars`, `.env`나 repository 파일에 값을 저장하지 않는다.
 
 출력된 `https://<worker>.<subdomain>.workers.dev` URL 뒤에 `/webhooks/sentry`를 붙인다. 배포 후
 `GET`, `OPTIONS`, 잘못된 path가 각각 정상 메시지를 전달하는 endpoint로 동작해서는 안 된다.

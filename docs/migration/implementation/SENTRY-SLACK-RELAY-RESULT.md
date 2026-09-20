@@ -1,7 +1,7 @@
 ---
 title: "Sentry 오류 알림 Slack relay 구현 결과"
 document_id: "SENTRY-SLACK-RELAY-RESULT"
-version: "1.0"
+version: "1.1"
 status: "completed"
 authority: "result"
 updated_at: "2026-09-20"
@@ -96,3 +96,24 @@ KV/Durable Object 기반 deduplication, Slack interactive action, 모든 occurre
 
 실제 Cloudflare 배포와 Sentry→Worker→Slack E2E는 실행하지 않았다. 외부 계정 secret과 alert rule이
 필요한 수동 검증이며 README 1~6단계에 절차를 분리했다.
+
+## 7. PR #93 리뷰 후 보완
+
+초기 head `507095d` 리뷰에 따라 최초 배포를 임시 mode 600 secrets JSON과
+`wrangler deploy --secrets-file`로 안내하도록 수정했다. 상세 운영 절차는 Worker README가 소유한다.
+README 예제는 가짜 숨김 입력과 subprocess mock으로 권한·인자·임시 파일 제거를 확인했다.
+실제 fresh account 배포 성공을 의미하지는 않는다.
+
+Sentry issue URL은 기존 query/hash/event 경로를 제거한 뒤 검증된 project ID 하나만
+`?project=...`로 추가한다. body 제한은 전체 text 로딩 후 검사에서 stream 읽기 중 byte 제한으로
+변경했다. Content-Length는 사전 거부에만 사용하며 실제 길이를 신뢰하지 않는다.
+HMAC은 decode/re-encode 없이 원본 bytes를 검증한다.
+
+Slack timeout 800ms는 유지했다. Sentry 공식 webhook 문서의 1초 응답 요구와 충돌하므로
+동기 handler에서 단순히 3~5초로 늘리지 않았다. queue 및 전달 재시도 정책은 별도 설계 사항이다.
+
+회귀 테스트는 project scope, 길이 헤더 없음/허위/초과, stream cancel, 정확한 1 MB 경계와
+멀티바이트 body, stream 읽기 실패를 포함한다.
+
+보완 후 `pnpm verify`(unit 223개, ops 20개 중 relay 11개), `pnpm format:check`,
+`pnpm build`, Worker Wrangler dry-run이 모두 성공했다. 실제 배포/E2E는 미실행이다.
