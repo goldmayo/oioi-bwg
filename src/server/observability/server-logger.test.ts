@@ -82,7 +82,30 @@ describe("reportServerError", () => {
     expect(sentryMocks.captureException).not.toHaveBeenCalled();
   });
 
-  it("captures a newly-created safe exception and typed metadata", () => {
+  it("logs a fixed server operation without serializing the original error", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    reportServerError(new Error(MARKERS.token), {
+      event: "upload.failure",
+      source: "upload-album-image-action",
+      operation: "album-image-upload",
+      request: { routerKind: "App Router", routeType: "action" },
+    });
+
+    const output = consoleError.mock.calls[0]?.[0];
+    expect(output).toEqual(expect.any(String));
+    expect(output).not.toContain(MARKERS.token);
+    expect(JSON.parse(output as string)).toMatchObject({
+      event: "upload.failure",
+      source: "upload-album-image-action",
+      operation: "album-image-upload",
+      error: { type: "unknown" },
+      request: { routerKind: "App Router", routeType: "action" },
+    });
+  });
+
+  it("captures the original Error for its frames and sends only typed metadata", () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
     vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -99,16 +122,9 @@ describe("reportServerError", () => {
       }),
     ).toBe("safe-event-id");
 
-    const capturePayload = serialized([
-      sentryMocks.captureException.mock.calls,
-      sentryMocks.setTags.mock.calls,
-    ]);
-    for (const marker of Object.values(MARKERS)) expect(capturePayload).not.toContain(marker);
-    expect(sentryMocks.captureException).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "OutputContractError",
-        message: "Unexpected server error",
-      }),
+    expect(sentryMocks.captureException).toHaveBeenCalledWith(rawError);
+    expect(serialized(sentryMocks.setTags.mock.calls)).not.toMatch(
+      /SELECT_SECRET_MARKER|private-email-marker|PASSWORD_HASH_MARKER|OTP_HASH_MARKER|RAW_CAUSE_MARKER|TOKEN_MARKER/,
     );
     expect(sentryMocks.setTags).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -356,7 +372,7 @@ describe("sanitizeServerSentryEvent", () => {
     });
   });
 
-  it("retains the fixed upload source without retaining storage error details", () => {
+  it("retains typed upload classification without retaining storage error details", () => {
     const safeEvent = sanitizeServerSentryEvent({
       type: undefined,
       exception: {
@@ -367,13 +383,20 @@ describe("sanitizeServerSentryEvent", () => {
           },
         ],
       },
-      extra: { source: "upload-album-image-action", params: [MARKERS.passwordHash] },
+      extra: { params: [MARKERS.passwordHash] },
+      tags: {
+        event: "upload.failure",
+        source: "upload-album-image-action",
+        operation: "album-image-upload",
+        "error.type": "unknown",
+      },
     });
 
     expect(serialized(safeEvent)).not.toMatch(/TOKEN_MARKER|PASSWORD_HASH_MARKER/);
     expect(safeEvent.tags).toEqual({
       event: "upload.failure",
       source: "upload-album-image-action",
+      operation: "album-image-upload",
       "error.type": "unknown",
     });
   });

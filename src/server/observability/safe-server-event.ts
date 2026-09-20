@@ -25,6 +25,8 @@ export const SERVER_ERROR_SOURCES = [
   "upload-album-image-action",
 ] as const;
 
+export const SERVER_OPERATIONS = ["album-image-upload"] as const;
+
 export const SAFE_ERROR_TYPES = ["auth", "database", "output-contract", "unknown"] as const;
 
 const SAFE_LEVELS = ["fatal", "error", "warning", "log", "info", "debug"] as const;
@@ -35,6 +37,7 @@ const SAFE_ROUTE_TYPES = ["action", "proxy", "render", "route"] as const;
 
 export type ServerErrorEvent = (typeof SERVER_ERROR_EVENTS)[number];
 export type ServerErrorSource = (typeof SERVER_ERROR_SOURCES)[number];
+export type ServerOperation = (typeof SERVER_OPERATIONS)[number];
 export type SafeErrorType = (typeof SAFE_ERROR_TYPES)[number];
 export type SafeMethod = (typeof SAFE_METHODS)[number];
 export type SafeRouterKind = (typeof SAFE_ROUTER_KINDS)[number];
@@ -115,6 +118,10 @@ export function toSafeServerErrorSource(value: unknown): ServerErrorSource {
   return isOneOf(value, SERVER_ERROR_SOURCES) ? value : "sentry-auto-capture";
 }
 
+export function toSafeServerOperation(value: unknown): ServerOperation | undefined {
+  return isOneOf(value, SERVER_OPERATIONS) ? value : undefined;
+}
+
 export function toSafeRequestMetadata(value: unknown): SafeRequestMetadata | undefined {
   const method = toSafeMethod(readProperty(value, "method"));
   const routerKind = toSafeRouterKind(readProperty(value, "routerKind"));
@@ -133,13 +140,6 @@ export function toSafeRouteType(value: unknown): SafeRouteType | undefined {
 
 function safeTag(event: ErrorEvent, key: string): unknown {
   return readProperty(event.tags, key);
-}
-
-function isAlbumImageUploadError(event: ErrorEvent) {
-  const values = readProperty(event.exception, "values");
-  if (!Array.isArray(values)) return false;
-
-  return values.some((value) => readProperty(value, "type") === "AlbumImageUploadError");
 }
 
 function safeTraceContext(event: ErrorEvent) {
@@ -217,9 +217,9 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
   const eventTag = safeTag(event, "event");
   const sourceTag = safeTag(event, "source");
   const errorTypeTag = safeTag(event, "error.type");
-  const isUploadError = isAlbumImageUploadError(event);
-  const eventName = isUploadError ? "upload.failure" : toSafeServerErrorEvent(eventTag);
-  const source = isUploadError ? "upload-album-image-action" : toSafeServerErrorSource(sourceTag);
+  const eventName = toSafeServerErrorEvent(eventTag);
+  const source = toSafeServerErrorSource(sourceTag);
+  const operation = toSafeServerOperation(safeTag(event, "operation"));
   const errorType = isOneOf(errorTypeTag, SAFE_ERROR_TYPES) ? errorTypeTag : "unknown";
   const errorCode = safeTag(event, "error.code");
   const method = safeTag(event, "request.method");
@@ -231,6 +231,7 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
   const tags = {
     event: eventName,
     source,
+    ...(operation ? { operation } : {}),
     "error.type": errorType,
     ...(isSafeCode(errorCode) ? { "error.code": errorCode } : {}),
     ...(isOneOf(method, SAFE_METHODS) ? { "request.method": method } : {}),
