@@ -198,9 +198,10 @@ function safeRuntimeErrorMessage(exceptionType: string, value: unknown): string 
   if (exceptionType === "RangeError" && SAFE_RANGE_ERROR_MESSAGES.has(value)) return value;
   if (exceptionType === "URIError" && value === "URI malformed") return value;
   if (exceptionType === "ReferenceError") {
-    if (/^[A-Za-z_$][A-Za-z0-9_$]{0,63} is not defined$/.test(value)) return value;
+    if (/^[A-Za-z_$][A-Za-z0-9_$]{0,63} is not defined$/.test(value))
+      return "Identifier is not defined";
     if (/^Cannot access '[A-Za-z_$][A-Za-z0-9_$]{0,63}' before initialization$/.test(value))
-      return value;
+      return "Cannot access identifier before initialization";
   }
 
   return undefined;

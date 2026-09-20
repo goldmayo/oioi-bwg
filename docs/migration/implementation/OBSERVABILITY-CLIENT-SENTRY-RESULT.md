@@ -99,8 +99,8 @@ tag/extra/context를 버린다. `ClientContractError`와 `ClientTransportError`�
 일반 runtime error도 class만 보고 원문을 허용하지 않는다. 알려진 JavaScript engine message pattern과
 고정 문구만 최대 200자로 보존한다. 예를 들어 `Cannot read properties of undefined (reading 'map')`,
 `Failed to fetch`, `Maximum call stack size exceeded`는 유지한다. 동적으로 결정될 수 있는 property 이름은
-고정 allowlist 밖이면 `reading a property`처럼 축약하고 자유형 `new TypeError(secret)`는
-`Unexpected client error`로 정규화한다.
+고정 allowlist 밖이면 `reading a property`처럼 축약한다. `ReferenceError`의 identifier도 고정 문구로
+바꾸고 자유형 `new TypeError(secret)`는 `Unexpected client error`로 정규화한다.
 
 stack은 최종 exception의 안전한 filename/function/line/column만 남기며 HTTP filename은 `/_next/`
 asset path만 허용한다. browser/OS는 고정 name allowlist와 숫자 version만 남긴다.

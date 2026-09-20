@@ -74,16 +74,20 @@ describe("client Sentry privacy policy", () => {
   });
 
   it.each([
-    ["TypeError", "Cannot read properties of undefined (reading 'map')"],
-    ["TypeError", "Failed to fetch"],
-    ["ReferenceError", "album is not defined"],
-    ["RangeError", "Maximum call stack size exceeded"],
-  ])("keeps an allowlisted %s engine diagnostic", (type, value) => {
+    [
+      "TypeError",
+      "Cannot read properties of undefined (reading 'map')",
+      "Cannot read properties of undefined (reading 'map')",
+    ],
+    ["TypeError", "Failed to fetch", "Failed to fetch"],
+    ["ReferenceError", "album is not defined", "Identifier is not defined"],
+    ["RangeError", "Maximum call stack size exceeded", "Maximum call stack size exceeded"],
+  ])("keeps a safe %s engine diagnostic", (type, value, expected) => {
     const safeEvent = sanitizeClientSentryEvent({
       exception: { values: [{ type, value }] },
     } as unknown as ErrorEvent);
 
-    expect(safeEvent.exception?.values?.[0]?.value).toBe(value);
+    expect(safeEvent.exception?.values?.[0]?.value).toBe(expected);
   });
 
   it("redacts free-form runtime messages and dynamic property names", () => {
@@ -100,12 +104,18 @@ describe("client Sentry privacy policy", () => {
         ],
       },
     } as unknown as ErrorEvent);
+    const dynamicIdentifier = sanitizeClientSentryEvent({
+      exception: {
+        values: [{ type: "ReferenceError", value: `${MARKERS.token} is not defined` }],
+      },
+    } as unknown as ErrorEvent);
 
     expect(freeForm.exception?.values?.[0]?.value).toBe("Unexpected client error");
     expect(dynamicProperty.exception?.values?.[0]?.value).toBe(
       "Cannot read properties of undefined (reading a property)",
     );
-    expect(serialized([freeForm, dynamicProperty])).not.toContain(MARKERS.token);
+    expect(dynamicIdentifier.exception?.values?.[0]?.value).toBe("Identifier is not defined");
+    expect(serialized([freeForm, dynamicProperty, dynamicIdentifier])).not.toContain(MARKERS.token);
   });
 
   it.each([
