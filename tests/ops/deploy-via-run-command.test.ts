@@ -35,6 +35,11 @@ describe("GitHub Actions OCI Run Command deployment", () => {
 
     expect(workflow).toContain("publish-image:");
     expect(workflow).toContain("image_digest: ${{ steps.release.outputs.digest }}");
+    expect(workflow).toContain("NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}");
+    expect(workflow).toContain(
+      "required=(OCIR_REGISTRY OCIR_NAMESPACE OCIR_REPOSITORY NEXT_PUBLIC_SENTRY_DSN)",
+    );
+    expect(workflow).toContain("NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}");
     expect(workflow).toContain("deploy:\n    name: deploy");
     expect(workflow).toContain("needs: publish-image");
     expect(workflow).toContain("oracle-actions/run-oci-cli-command@v1.3.2");

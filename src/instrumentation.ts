@@ -37,8 +37,6 @@ export async function onRequestError(
   request: Readonly<{ method: string; [key: string]: unknown }>,
   context: unknown,
 ) {
-  if (!getSentryRuntimeConfig().enabled) return;
-
   reportServerError(error, {
     event: "next.request_error",
     source: "next-instrumentation",
