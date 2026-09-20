@@ -3,7 +3,7 @@ import {
   toSafeRouterKind,
   toSafeRouteType,
 } from "@/server/observability/safe-server-event";
-import { reportServerError } from "@/server/observability/server-logger";
+import { reportServerError } from "@/server/observability/server-error-reporter";
 
 import { getSentryRuntimeConfig } from "@/shared/config/sentry";
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 
+import { clientLogger } from "@/shared/lib/client-logger";
 import { YouTubePlayerInstance } from "@/shared/model/youtube";
 
 /**
@@ -52,9 +53,9 @@ export const useAdWatcher = (player: YouTubePlayerInstance | null, targetId: str
           setIsAdPlaying(adDetected);
 
           if (adDetected) {
-            console.log("[useAdWatcher] 광고 감지됨: 동기화 일시정지");
+            clientLogger.debug("ad detected; sync paused");
           } else {
-            console.log("[useAdWatcher] 광고 종료됨: 동기화 재개");
+            clientLogger.debug("ad ended; sync resumed");
           }
         }
       } catch (_e) {

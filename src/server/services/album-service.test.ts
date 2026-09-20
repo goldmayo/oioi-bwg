@@ -17,7 +17,7 @@ vi.mock("../auth/request-context", () => ({
   },
 }));
 vi.mock("../db", () => ({ getDatabase: () => ({}) }));
-vi.mock("../observability/server-logger", () => ({ reportServerError: vi.fn() }));
+vi.mock("../observability/server-error-reporter", () => ({ reportServerError: vi.fn() }));
 vi.mock("../repositories/album-repository", () => ({
   findAlbumBySlug: vi.fn(),
   findAllAlbums,

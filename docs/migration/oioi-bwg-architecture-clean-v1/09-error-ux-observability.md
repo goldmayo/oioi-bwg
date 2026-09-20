@@ -1,10 +1,10 @@
 ---
 title: "Error UX / Observability Architecture"
 document_id: "09"
-version: "1.2"
+version: "1.3"
 status: "active"
 authority: "architecture"
-updated_at: "2026-09-03"
+updated_at: "2026-09-21"
 depends_on:
   - "03"
   - "04"
@@ -21,7 +21,7 @@ tags:
   - "observability"
 ---
 
-# oioi-bwg Error UX / Observability Architecture v1.2
+# oioi-bwg Error UX / Observability Architecture v1.3
 
 ## 1. 목적
 
@@ -235,32 +235,58 @@ unexpected client runtime failure
 
 ## 13. Logging
 
-Structured logger 도입을 기본으로 한다.
+Logging과 Sentry error tracking은 독립된 concern으로 유지한다.
 
-목표:
+runtime별 기본 경계는 다음과 같다.
+
+```text
+Browser application logging
+→ clientLogger
+→ local console only
+
+Server application logging
+→ typed structured event
+→ JSON stdout/stderr
+→ Docker / OCI Logging
+
+Unexpected error tracking
+→ explicit Sentry reporter
+→ Sentry
+
+Script / CLI progress
+→ script-owned console stdout/stderr
+```
+
+`clientLogger`는 `NEXT_PUBLIC_APP_ENV=local`에서만 `debug/info/warn/error`를 browser console에
+출력한다. staging과 production에서는 기본적으로 출력하지 않으며 Sentry API, breadcrumb 또는 message
+capture를 호출하지 않는다.
+
+server log는 자유형 객체 전체를 직렬화하는 범용 API보다 다음과 같은 고정 schema와 allowlist를 사용한다.
 
 ```text
 timestamp
 level
 event
-request context
-error
-relevant identifiers
+source
+typed operation
+safe error descriptor
+allowlisted request metadata
 ```
 
-`console.log`를 application logging 표준으로 삼지 않는다.
-
-Logger architecture의 소유 위치는 server infrastructure에 둔다.
+server logger는 Sentry를 호출하지 않고 Sentry reporter는 server logger를 호출하지 않는다. 하나의 unexpected
+error에 운영 log와 error tracking이 모두 필요하면 상위 error reporting coordinator가 두 sink를 각각
+명시적으로 호출한다.
 
 ```text
-server
-→ structured logger + Sentry
-
-client
-→ Sentry + 최소 dev diagnostics
+unexpected server error
+→ error reporting coordinator
+  ├─ server logger → JSON stderr
+  └─ Sentry reporter → Sentry
 ```
 
-선정 기준은 structured JSON, low overhead, error serialization, Docker/stdout 친화성이다.
+`console.log`를 browser/server application logging 표준으로 삼지 않는다. migration, DB guard, integration
+test runner 같은 사람이 직접 실행하는 script의 진행 상태 출력은 각 CLI가 `console.log/error`를 직접
+사용할 수 있다. 모든 runtime을 하나의 logger interface로 통합하지 않는다.
 
 ---
 

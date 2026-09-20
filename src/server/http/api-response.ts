@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 
-import { reportServerError } from "@/server/observability/server-logger";
+import { reportServerError } from "@/server/observability/server-error-reporter";
 
 import { apiErrorResponseSchema } from "@/shared/contracts/error";
 

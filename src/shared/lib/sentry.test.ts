@@ -14,7 +14,7 @@ vi.mock("@sentry/nextjs", () => ({
   },
 }));
 
-import { logger } from "./sentry";
+import { captureClientException } from "./sentry";
 
 describe("Sentry error reporter", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -24,24 +24,19 @@ describe("Sentry error reporter", () => {
     vi.unstubAllEnvs();
   });
 
-  it("uses only safe diagnostics locally and does not capture", () => {
+  it("stays silent locally and does not capture", () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "local");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     expect(
-      logger.error(new Error("TOKEN_MARKER", { cause: "PASSWORD_MARKER" }), {
+      captureClientException(new Error("TOKEN_MARKER", { cause: "PASSWORD_MARKER" }), {
         source: "admin-login-form",
       }),
     ).toBeNull();
 
     expect(sentryMocks.captureException).not.toHaveBeenCalled();
-    expect(consoleError).toHaveBeenCalledWith("[Sentry Dev Error]", {
-      name: "Error",
-      source: "admin-login-form",
-      errorType: "runtime",
-    });
-    expect(JSON.stringify(consoleError.mock.calls)).not.toMatch(/TOKEN_MARKER|PASSWORD_MARKER/);
+    expect(consoleError).not.toHaveBeenCalled();
   });
 
   it.each(["staging", "production"])("captures an allowlisted error in %s", (environment) => {
@@ -50,7 +45,7 @@ describe("Sentry error reporter", () => {
     const error = Object.assign(new Error("private response"), { name: "ClientContractError" });
 
     expect(
-      logger.error(error, {
+      captureClientException(error, {
         source: "admin-error-boundary",
         digest: "safe_digest-123",
       }),

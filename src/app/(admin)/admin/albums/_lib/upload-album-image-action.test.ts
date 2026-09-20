@@ -8,7 +8,7 @@ const reportServerError = vi.hoisted(() => vi.fn());
 const uploadAlbumImage = vi.hoisted(() => vi.fn());
 
 vi.mock("@/server/auth/request-context", () => ({ getRequestContext }));
-vi.mock("@/server/observability/server-logger", () => ({ reportServerError }));
+vi.mock("@/server/observability/server-error-reporter", () => ({ reportServerError }));
 vi.mock("@/server/services/album-image-service", () => ({ uploadAlbumImage }));
 
 import { uploadAlbumImageAction } from "./upload-album-image-action";

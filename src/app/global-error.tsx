@@ -2,11 +2,11 @@
 
 import { useEffect } from "react";
 
-import { logger } from "@/shared/lib/sentry";
+import { captureClientException } from "@/shared/lib/sentry";
 
 /**
  * 전역 에러 핸들러 (App Router 전용)
- * 추상화된 logger 유틸리티를 사용하여 Sentry로 에러를 전송합니다.
+ * 전역 unexpected client error를 Sentry로 전송합니다.
  */
 export default function GlobalError({
   error,
@@ -16,8 +16,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // 전문가 피드백이 반영된 logger 유틸리티 사용
-    logger.error(error, { source: "global-error-boundary", digest: error.digest });
+    captureClientException(error, { source: "global-error-boundary", digest: error.digest });
   }, [error]);
 
   return (
