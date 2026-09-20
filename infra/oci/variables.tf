@@ -23,11 +23,6 @@ variable "compute_compartment_ocid" {
   type        = string
 }
 
-variable "network_compartment_ocid" {
-  description = "Compartment containing the existing subnet used by the Shell stage."
-  type        = string
-}
-
 variable "secret_compartment_ocid" {
   description = "Compartment containing manually bootstrapped runtime secrets."
   type        = string
@@ -35,16 +30,6 @@ variable "secret_compartment_ocid" {
 
 variable "compute_instance_ocid" {
   description = "Existing Ubuntu Compute instance OCID; this stack never creates or imports it."
-  type        = string
-}
-
-variable "shell_subnet_ocid" {
-  description = "Existing subnet OCID for the ephemeral OCI DevOps Shell stage container."
-  type        = string
-}
-
-variable "shell_availability_domain" {
-  description = "Availability domain for the Shell stage container instance."
   type        = string
 }
 

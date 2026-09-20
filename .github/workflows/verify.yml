@@ -119,6 +119,17 @@ jobs:
           node-version: 22.16.0
           cache: pnpm
 
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Validate Terraform
+        run: |
+          terraform version
+          terraform -chdir=infra/oci fmt -check -diff
+          terraform -chdir=infra/oci init -backend=false
+          terraform -chdir=infra/oci validate
+
       - run: pnpm install --frozen-lockfile
 
       - name: PostgreSQL integration
@@ -199,6 +210,8 @@ jobs:
     environment: oci-development-image
     permissions:
       contents: read
+    outputs:
+      image_digest: ${{ steps.release.outputs.digest }}
 
     env:
       OCIR_REGISTRY: ${{ vars.OCIR_REGISTRY }}
@@ -258,14 +271,236 @@ jobs:
           cache-to: type=gha,mode=min
 
       - name: Record release identity
+        id: release
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.existing.outputs.digest }}
         run: |
+          set -euo pipefail
+          if [[ ! "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Invalid release digest: ${IMAGE_DIGEST}" >&2
+            exit 1
+          fi
+          echo "digest=${IMAGE_DIGEST}" >> "${GITHUB_OUTPUT}"
           image="${OCIR_REGISTRY}/${OCIR_NAMESPACE}/${OCIR_REPOSITORY}"
           {
             echo "### Published OCI development image"
             echo
             echo "\`${image}@${IMAGE_DIGEST}\`"
             echo
-            echo "Deploy this digest through the OCI DevOps manual release gate."
+            echo "This digest is deployed automatically after publish succeeds."
           } >> "${GITHUB_STEP_SUMMARY}"
+
+  deploy:
+    name: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/migration_develop'
+    needs: publish-image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: oci-development-image
+    permissions:
+      contents: read
+    outputs:
+      exit_code: ${{ steps.deploy-release.outputs.exit_code }}
+
+    env:
+      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+      OCI_CLI_REGION: ap-osaka-1
+      OCI_COMPUTE_COMPARTMENT_OCID: ocid1.compartment.oc1..aaaaaaaavs5y44txsstgn5px5zfwynupw3m4mvlgndaje6q3lyi3hi65ucbq
+      OCI_COMPUTE_INSTANCE_OCID: ocid1.instance.oc1.ap-osaka-1.anvwsljrhcgbyoacqa6id2hr257tlu26cfjd7x7yywnai7hh37kkytix57cq
+      IMAGE_DIGEST: ${{ needs.publish-image.outputs.image_digest }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        run: |
+          set -euo pipefail
+          required=(
+            OCI_CLI_USER
+            OCI_CLI_TENANCY
+            OCI_CLI_FINGERPRINT
+            OCI_CLI_KEY_CONTENT
+            OCI_CLI_REGION
+            OCI_COMPUTE_COMPARTMENT_OCID
+            OCI_COMPUTE_INSTANCE_OCID
+            IMAGE_DIGEST
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing deployment configuration: ${name}" >&2
+              exit 1
+            fi
+          done
+          [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+      - name: Verify OCI Run Command authentication
+        uses: oracle-actions/run-oci-cli-command@v1.3.2
+        with:
+          command: >-
+            instance-agent command list
+            --compartment-id ${{ env.OCI_COMPUTE_COMPARTMENT_OCID }}
+            --limit 1
+
+      - name: Deploy immutable digest with OCI Run Command
+        id: deploy-release
+        run: |
+          set +e
+          bash ops/oci/deploy-via-run-command.sh "${IMAGE_DIGEST}"
+          exit_code=$?
+          set -e
+          echo "exit_code=${exit_code}" >> "${GITHUB_OUTPUT}"
+          exit "${exit_code}"
+
+      - name: Record deployment result
+        if: success()
+        run: |
+          {
+            echo "### OCI development deployment succeeded"
+            echo
+            echo "Commit: \`${GITHUB_SHA}\`"
+            echo
+            echo "Digest: \`${IMAGE_DIGEST}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  notify-deploy:
+    name: notify deploy
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/migration_develop'
+    needs:
+      - publish-image
+      - deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    environment: oci-development-image
+    permissions:
+      contents: read
+
+    env:
+      SLACK_DEPLOY_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK_URL }}
+      PUBLISH_RESULT: ${{ needs.publish-image.result }}
+      DEPLOY_RESULT: ${{ needs.deploy.result }}
+      DEPLOY_EXIT_CODE: ${{ needs.deploy.outputs.exit_code }}
+      IMAGE_DIGEST: ${{ needs.publish-image.outputs.image_digest }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
+      - name: Notify Slack
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${SLACK_DEPLOY_WEBHOOK_URL}" ]]; then
+            echo "SLACK_DEPLOY_WEBHOOK_URL is unavailable in oci-development-image" >&2
+            exit 1
+          fi
+
+          python3 - <<'PY' > /tmp/slack-payload.json
+          import json
+          import os
+
+          publish_result = os.environ.get("PUBLISH_RESULT", "")
+          deploy_result = os.environ.get("DEPLOY_RESULT", "")
+          exit_code = os.environ.get("DEPLOY_EXIT_CODE", "")
+          digest = os.environ.get("IMAGE_DIGEST", "")
+          run_url = os.environ["RUN_URL"]
+          sha = os.environ["GITHUB_SHA"]
+          short_sha = sha[:7]
+
+          if digest.startswith("sha256:") and len(digest) >= 24:
+              short_digest = f"sha256:{digest[7:19]}…{digest[-8:]}"
+          else:
+              short_digest = "unknown"
+
+          if publish_result != "success":
+              title = "❌ OCI 개발 배포 실패"
+              detail = "이미지 게시 단계가 성공하지 못했습니다."
+              color = "#E01E5A"
+              result_lines = "❌ 이미지 게시 실패"
+              stage = "Image publish"
+          elif deploy_result == "success" and exit_code == "0":
+              title = "✅ OCI 개발 배포 완료"
+              detail = "새 릴리즈가 정상 배포되었습니다."
+              color = "#2EB67D"
+              result_lines = "✅ Health   ✅ Readiness   ✅ Smoke"
+              stage = "Complete"
+          elif exit_code == "20":
+              title = "↩️ OCI 개발 배포 롤백 완료"
+              detail = "새 릴리즈 검증에 실패하여 직전 릴리즈로 자동 복구했습니다."
+              color = "#ECB22E"
+              result_lines = "⚠️ 새 릴리즈 검증 실패   ✅ 이전 릴리즈 복구 완료"
+              stage = "Rollback"
+          elif exit_code == "21":
+              title = "🚨 OCI 개발 배포 롤백 실패"
+              detail = "새 릴리즈 배포와 이전 릴리즈 복구가 모두 실패했습니다. 즉시 확인이 필요합니다."
+              color = "#A30200"
+              result_lines = "❌ 새 릴리즈 실패   ❌ 자동 롤백 실패"
+              stage = "Rollback"
+          else:
+              title = "❌ OCI 개발 배포 실패"
+              detail = "OCI 배포 파이프라인을 완료하지 못했습니다."
+              color = "#E01E5A"
+              result_lines = "❌ 배포 실패"
+              stage = "Deploy"
+
+          fields = [
+              {"type": "mrkdwn", "text": "*환경*\nOCI Development"},
+              {"type": "mrkdwn", "text": "*브랜치*\n`migration_develop`"},
+              {"type": "mrkdwn", "text": f"*커밋*\n`{short_sha}`"},
+              {"type": "mrkdwn", "text": f"*이미지*\n`{short_digest}`"},
+          ]
+
+          if stage != "Complete":
+              fields.append({"type": "mrkdwn", "text": f"*단계*\n{stage}"})
+
+          payload = {
+              "text": title,
+              "attachments": [
+                  {
+                      "color": color,
+                      "blocks": [
+                          {
+                              "type": "header",
+                              "text": {"type": "plain_text", "text": title, "emoji": True},
+                          },
+                          {
+                              "type": "section",
+                              "text": {"type": "mrkdwn", "text": detail},
+                          },
+                          {
+                              "type": "section",
+                              "fields": fields,
+                          },
+                          {"type": "divider"},
+                          {
+                              "type": "section",
+                              "text": {"type": "mrkdwn", "text": f"*결과*\n{result_lines}"},
+                          },
+                          {
+                              "type": "actions",
+                              "elements": [
+                                  {
+                                      "type": "button",
+                                      "text": {"type": "plain_text", "text": "GitHub Actions에서 보기", "emoji": True},
+                                      "url": run_url,
+                                      "action_id": "open_github_actions",
+                                  }
+                              ],
+                          },
+                      ],
+                  }
+              ],
+          }
+
+          print(json.dumps(payload, ensure_ascii=False))
+          PY
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --data-binary @/tmp/slack-payload.json \
+            "${SLACK_DEPLOY_WEBHOOK_URL}"
