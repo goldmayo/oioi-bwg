@@ -1,7 +1,7 @@
 ---
 title: "Sentry release·source map 연결 결과"
 document_id: "OBSERVABILITY-SENTRY-SOURCEMAPS-RESULT"
-version: "1.1"
+version: "1.2"
 status: "completed"
 authority: "result"
 updated_at: "2026-09-20"
@@ -165,3 +165,33 @@ Turbopack production compile hook이 해당 recoverable error를 로그만 남�
 
 따라서 위 최초 run은 **application 배포 성공 / source map upload 실패**로 판정한다. 후속 publish에서
 release와 artifact upload 성공을 확인하기 전까지 staging deminification은 검증 완료로 간주하지 않는다.
+
+## 9. 후속 publish 검증 결과
+
+PR [#95](https://github.com/goldmayo/oioi-bwg/pull/95) merge commit
+`6b6da240c509668dccbc7735cc8662a8a4b78b35`의 GitHub Verify
+[#35511561417](https://github.com/goldmayo/oioi-bwg/actions/runs/35511561417)에서 보정된 image publish를
+재검증했다. publish log에 다음 결과가 모두 기록됐다.
+
+- release `oioi-bwg@6b6da240c509668dccbc7735cc8662a8a4b78b35` 생성
+- client와 server build의 source map reference 추가
+- client와 server source map upload report 생성
+- `Successfully uploaded source maps to Sentry` 완료 메시지
+- image publish 이후 OCI 배포와 배포 Slack 알림 성공
+
+이어 PR [#96](https://github.com/goldmayo/oioi-bwg/pull/96) merge commit
+`41ad6c61bfe6f436af4a1507a79d9322bf54f3f7`의 GitHub Verify
+[#35512328970](https://github.com/goldmayo/oioi-bwg/actions/runs/35512328970)에서도 같은 release 생성과 client/server
+source map upload가 다시 성공했고, OCI 배포와 배포 Slack 알림까지 완료됐다. 따라서 CI build에서 Sentry
+artifact를 업로드하는 경계와 업로드 실패 시 image publish를 중단하는 경계는 검증 완료로 판정한다.
+
+다음 항목은 Sentry 외부 화면 또는 실제 application bundle event가 필요하므로 아직 검증 완료로 판정하지
+않는다.
+
+- Sentry Project Settings에서 두 release의 debug artifact 조회
+- 배포된 application bundle에서 새로 발생한 event의 release 일치
+- minified frame이 원본 TypeScript/TSX 파일과 line/column으로 해석되는지 확인
+- 실제 event JSON에서 user/request/cause/extras가 제거되고 release/debug metadata만 보존되는지 확인
+
+브라우저 개발자 도구 콘솔에서 직접 던진 Error는 `eval` frame을 사용하므로 source map 해석 여부를
+판정하는 검증 입력으로 사용하지 않는다.
