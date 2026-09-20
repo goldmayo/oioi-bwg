@@ -1,7 +1,7 @@
 ---
 title: "Sentry 오류 알림 Slack relay 구현 결과"
 document_id: "SENTRY-SLACK-RELAY-RESULT"
-version: "1.1"
+version: "1.2"
 status: "completed"
 authority: "result"
 updated_at: "2026-09-20"
@@ -65,8 +65,8 @@ Sentry issue alert(new issue)
 ## 4. 운영 경계와 보류 사항
 
 Worker 배포, Cloudflare secret 등록, Slack App 생성, Sentry Internal Integration 및 alert rule 생성은
-외부 계정 권한이 필요한 수동 작업이다. 실제 값과 배포 상태는 코드베이스에서 확인할 수 없다. 실행
-절차와 E2E 판정 기준은 Worker README에 기록했다.
+외부 계정 권한이 필요한 수동 작업이다. 실제 secret 값과 외부 계정 설정은 코드베이스에서 확인할 수
+없으며 저장소에도 기록하지 않는다. 실행 절차와 E2E 판정 기준은 Worker README에 기록했다.
 
 KV/Durable Object 기반 deduplication, Slack interactive action, 모든 occurrence 전달, Sentry raw payload
 보관은 도입하지 않았다. Sentry의 전송 재시도 때문에 드문 중복은 가능하며 이는 정확히 한 번 전달을
@@ -94,8 +94,15 @@ KV/Durable Object 기반 deduplication, Slack interactive action, 모든 occurre
   `pnpm dlx wrangler@4.135.0 deploy --dry-run --outdir /tmp/oioi-sentry-slack-relay-dry-run`:
   Worker bundle 생성 성공
 
-실제 Cloudflare 배포와 Sentry→Worker→Slack E2E는 실행하지 않았다. 외부 계정 secret과 alert rule이
-필요한 수동 검증이며 README 1~6단계에 절차를 분리했다.
+PR #93 구현·리뷰 검증 뒤 사용자가 README 1~6단계를 따라 Cloudflare Worker 배포, 두 Worker Secret,
+Sentry Internal Integration과 staging new-issue alert rule을 설정했다. Sentry의 test notification이
+Slack에 도착했고, staging browser에서 privacy-safe `ReferenceError`를 발생시켜 새 Sentry issue가
+생성된 뒤 Worker를 거쳐 Slack 알림이 도착하는 E2E를 확인했다. 관찰된 전달 지연은 약 1분이었다.
+
+같은 issue를 다시 발생시켰을 때 Sentry event 수는 증가했지만 Slack 알림은 반복되지 않았다. 이는 모든
+occurrence가 아니라 new-issue alert를 전달하도록 한 설계와 일치한다. 이 외부 검증은 사용자가 실제
+Sentry와 Slack 화면에서 확인한 결과이며 secret 값, webhook URL 원문, 원본 event payload는 저장소에
+기록하지 않았다.
 
 ## 7. PR #93 리뷰 후 보완
 
@@ -116,4 +123,4 @@ Slack timeout 800ms는 유지했다. Sentry 공식 webhook 문서의 1초 응답
 멀티바이트 body, stream 읽기 실패를 포함한다.
 
 보완 후 `pnpm verify`(unit 223개, ops 20개 중 relay 11개), `pnpm format:check`,
-`pnpm build`, Worker Wrangler dry-run이 모두 성공했다. 실제 배포/E2E는 미실행이다.
+`pnpm build`, Worker Wrangler dry-run이 모두 성공했다. 이후 위 6절의 실제 배포와 E2E도 완료했다.
