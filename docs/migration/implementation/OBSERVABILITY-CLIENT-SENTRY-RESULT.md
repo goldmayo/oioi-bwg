@@ -1,7 +1,7 @@
 ---
 title: "Client Sentry 초기화·환경 정책·privacy 경계 개선 결과"
 document_id: "OBSERVABILITY-CLIENT-SENTRY-RESULT"
-version: "1.0"
+version: "1.1"
 status: "completed"
 authority: "result"
 updated_at: "2026-09-20"
@@ -20,6 +20,8 @@ depends_on:
 - 구현:
   - `9cc20272cf70fa5c38aeb58b33467b9480bee3be`: client 초기화와 공통 환경 정책
   - `115369a1fd610aba54be3ba14be4690953ed73f1`: client privacy 경계
+  - `b5c3a601b108c7e89c6869afb1520af02bed08de`: server JSON 오류 출력과 Sentry 활성화 정책 분리,
+    image publish DSN gate
 - PR: [#92](https://github.com/goldmayo/oioi-bwg/pull/92)
 - 적용 규범: `09-error-ux-observability.md`의 unexpected error capture, structured context,
   sensitive data 금지와 `11-content-i18n-assets-runtime-architecture.md`의 `NEXT_PUBLIC_*` build-time 규칙
@@ -72,9 +74,13 @@ APP_ENV가 이미 배포 환경의 SSOT이고, DSN 존재 여부까지 확인하
 | Browser Sentry | OFF | DSN이 있으면 ON | DSN이 있으면 ON |
 | Server Sentry | OFF | DSN이 있으면 ON | DSN이 있으면 ON |
 
-`NODE_ENV=production`인 local smoke도 APP_ENV가 local이면 OFF다. staging/production에서도 DSN이
-없으면 fail-closed로 OFF다. 환경변수는 public client bundle에 필요하므로 기존대로 build-time 값이며,
-환경별 이미지는 이에 맞는 APP_ENV/DSN으로 빌드해야 한다.
+`NODE_ENV=production`인 local smoke도 APP_ENV가 local이면 OFF다. application은 staging/production에서
+DSN이 없을 때 Sentry만 fail-closed로 비활성화한다. OCI staging image publish job은 DSN을 필수 GitHub
+environment variable로 검증하므로 운영 배포 경로에서는 누락된 설정으로 image를 게시하지 않는다.
+
+`NEXT_PUBLIC_*` 환경변수는 public client bundle에 필요하므로 build-time 값이다. staging build 산출물의
+client, server, SSR, edge chunk에서 APP_ENV와 DSN이 상수로 포함되는 것을 확인했다. 따라서 GitHub
+environment에서 image build input으로 관리하고 OCI host의 `runtime-public.env`에는 중복하지 않는다.
 
 ### Client privacy 경계
 
@@ -119,6 +125,10 @@ sanitized Sentry error event
 자동 global handler에서 들어오는 browser exception도 reporter context가 없을 뿐 같은 `beforeSend`
 경계를 통과하며 `sentry-auto-capture/runtime`으로 분류된다.
 
+Next server request error는 Sentry 활성화 여부와 무관하게 `reportServerError`를 호출한다. reporter가 먼저
+민감정보를 제거한 JSON error event를 stderr에 출력한 뒤 APP_ENV와 DSN을 확인해 Sentry capture만
+선택적으로 실행한다. 따라서 local 환경이나 DSN 설정 누락이 container log까지 끄지 않는다.
+
 ## 조사 대비 보정한 판단
 
 조사의 client 초기화 누락 판단은 실제 설치 코드와 build 결과에 부합했다. 추가 확인에서 SDK 10.42.0
@@ -138,21 +148,25 @@ hydration 뒤로 지연하지 않았다. 이는 초기 client exception도 수�
 - `src/shared/lib/client-sentry-policy.ts`: event/context/breadcrumb allowlist와 sanitizer
 - `src/shared/lib/sentry.ts`: arbitrary extras와 미사용 범용 API 제거, error reporter 책임으로 축소
 - `capture-client-error.ts`, Query client, global error boundary: typed source/digest 전달
-- Dockerfile, CI workflow, `.env.example`, OCI env example: 중복 Sentry environment 변수 제거 및 실제 build-time 입력 문서화
+- Dockerfile, CI workflow, `.env.example`, OCI env example: 중복 Sentry environment 변수 제거, 실제
+  build-time 입력 문서화, staging image publish 전 DSN 검증
 - 관련 `*.test.ts`: local/staging/production 정책, SDK init, integration 제외, capture, privacy 회귀 검증
 
 ## 검증
 
-구현 commit `115369a1fd610aba54be3ba14be4690953ed73f1` 기준으로 production credential과 실제 Sentry
-전송 없이 수행했다.
+최신 `origin/migration_develop` commit `b410c1e4898482ad79298703b298b2eae51277a8`을 merge한 뒤 review
+수정 commit `b5c3a601b108c7e89c6869afb1520af02bed08de` 기준으로 production credential과 실제 Sentry 전송
+없이 수행했다.
 
-- 집중 Vitest: 6 files, 31 tests 통과
+- instrumentation/server config 집중 Vitest: 3 files, 21 tests 통과
+- OCI ops 집중 Vitest: 2 files, 9 tests 통과
 - `pnpm verify`: type-check, architecture harness 8 tests, ESLint, Steiger, unit 53 files/216 tests,
-  ops 2 files/8 tests 통과
+  ops 2 files/9 tests 통과
 - `pnpm format:check`: 통과
 - `NEXT_PUBLIC_APP_ENV=staging NEXT_PUBLIC_SENTRY_DSN=https://public@example.test/1 pnpm build`:
   Next 16.3.3 Turbopack production build 통과, 22개 static page 생성 완료
-- build artifact 검색: client/server chunk에 새 sanitizer와 error source 포함 확인
+- build artifact 검색: client/server/SSR/edge chunk에 APP_ENV와 DSN 상수 포함, edge instrumentation이
+  환경 gate 없이 safe server reporter를 호출하는 것 확인
 - `git diff --check`: 통과
 
 실제 staging Sentry 수신, Sentry 조직 측 scrubbing/alert/quota, production 배포는 확인하지 않았다.
