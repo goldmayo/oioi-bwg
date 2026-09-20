@@ -1,7 +1,7 @@
 ---
 title: "Client Sentry 초기화·환경 정책·privacy 경계 개선 결과"
 document_id: "OBSERVABILITY-CLIENT-SENTRY-RESULT"
-version: "1.1"
+version: "1.2"
 status: "completed"
 authority: "result"
 updated_at: "2026-09-20"
@@ -22,6 +22,7 @@ depends_on:
   - `115369a1fd610aba54be3ba14be4690953ed73f1`: client privacy 경계
   - `b5c3a601b108c7e89c6869afb1520af02bed08de`: server JSON 오류 출력과 Sentry 활성화 정책 분리,
     image publish DSN gate
+  - `21803b9f2f3b83838f99b8e2e9eba997d6c0866f`: privacy 경계를 유지한 client error message 진단 개선
 - PR: [#92](https://github.com/goldmayo/oioi-bwg/pull/92)
 - 적용 규범: `09-error-ux-observability.md`의 unexpected error capture, structured context,
   sensitive data 금지와 `11-content-i18n-assets-runtime-architecture.md`의 `NEXT_PUBLIC_*` build-time 규칙
@@ -91,10 +92,18 @@ environment에서 image build input으로 관리하고 OCI host의 `runtime-publ
 - error name에서 유도한 `client-contract | client-transport | runtime`
 
 arbitrary extras는 제거하고 위 값을 Sentry tag로만 전달한다. 전송 직전 `beforeSend`가 event를 새로
-구성해 원문 error message와 cause chain, Zod issue/input, Ky request/response, request URL/query,
-user, arbitrary tag/extra/context를 버린다. stack은 최종 exception의 안전한 filename/function/line/column만
-남기며 HTTP filename은 `/_next/` asset path만 허용한다. browser/OS는 고정 name allowlist와 숫자
-version만 남긴다.
+구성해 cause chain, Zod issue/input, Ky request/response, request URL/query, user, arbitrary
+tag/extra/context를 버린다. `ClientContractError`와 `ClientTransportError`의 자유형 message는 각각
+`Client response contract violation`, `Client transport error`로 정규화한다.
+
+일반 runtime error도 class만 보고 원문을 허용하지 않는다. 알려진 JavaScript engine message pattern과
+고정 문구만 최대 200자로 보존한다. 예를 들어 `Cannot read properties of undefined (reading 'map')`,
+`Failed to fetch`, `Maximum call stack size exceeded`는 유지한다. 동적으로 결정될 수 있는 property 이름은
+고정 allowlist 밖이면 `reading a property`처럼 축약하고 자유형 `new TypeError(secret)`는
+`Unexpected client error`로 정규화한다.
+
+stack은 최종 exception의 안전한 filename/function/line/column만 남기며 HTTP filename은 `/_next/`
+asset path만 허용한다. browser/OS는 고정 name allowlist와 숫자 version만 남긴다.
 
 SDK가 기본으로 수집하는 console, DOM click, fetch/XHR breadcrumb는 버린다. navigation breadcrumb만
 query/hash를 제거해 보존하며 `beforeSend`에서 다시 같은 정책을 적용한다. `sendDefaultPii=false`도
@@ -140,6 +149,11 @@ Next server request error는 Sentry 활성화 여부와 무관하게 `reportServ
 `instrumentation-client.ts`는 framework가 hydration 전에 읽는 오류 수집 진입점이므로 일반 analytics처럼
 hydration 뒤로 지연하지 않았다. 이는 초기 client exception도 수집해야 하는 이 경계의 책임 때문이다.
 
+초기 구현은 모든 exception value를 `Unexpected client error`로 바꿔 privacy에는 안전했지만 운영 진단
+정보가 부족했다. error class 자체도 application에서 자유형 message로 생성할 수 있으므로 `TypeError` 등의
+원문을 일괄 허용하지 않고 engine pattern allowlist와 안전한 축약을 적용했다. cause, raw request, user 식별
+정보를 구조화해 추가하는 일은 이번 보정에 포함하지 않았다.
+
 ## 변경 파일별 이유
 
 - `src/instrumentation-client.ts`, legacy client config 삭제: Next 16 client init 경로와 error-only SDK 옵션
@@ -155,18 +169,19 @@ hydration 뒤로 지연하지 않았다. 이는 초기 client exception도 수�
 ## 검증
 
 최신 `origin/migration_develop` commit `b410c1e4898482ad79298703b298b2eae51277a8`을 merge한 뒤 review
-수정 commit `b5c3a601b108c7e89c6869afb1520af02bed08de` 기준으로 production credential과 실제 Sentry 전송
+수정 commit `21803b9f2f3b83838f99b8e2e9eba997d6c0866f` 기준으로 production credential과 실제 Sentry 전송
 없이 수행했다.
 
 - instrumentation/server config 집중 Vitest: 3 files, 21 tests 통과
+- client message/privacy 집중 Vitest: 3 files, 17 tests 통과
 - OCI ops 집중 Vitest: 2 files, 9 tests 통과
-- `pnpm verify`: type-check, architecture harness 8 tests, ESLint, Steiger, unit 53 files/216 tests,
+- `pnpm verify`: type-check, architecture harness 8 tests, ESLint, Steiger, unit 53 files/223 tests,
   ops 2 files/9 tests 통과
 - `pnpm format:check`: 통과
 - `NEXT_PUBLIC_APP_ENV=staging NEXT_PUBLIC_SENTRY_DSN=https://public@example.test/1 pnpm build`:
   Next 16.3.3 Turbopack production build 통과, 22개 static page 생성 완료
 - build artifact 검색: client/server/SSR/edge chunk에 APP_ENV와 DSN 상수 포함, edge instrumentation이
-  환경 gate 없이 safe server reporter를 호출하는 것 확인
+  환경 gate 없이 safe server reporter를 호출하고 client chunk에 message sanitizer가 포함된 것 확인
 - `git diff --check`: 통과
 
 실제 staging Sentry 수신, Sentry 조직 측 scrubbing/alert/quota, production 배포는 확인하지 않았다.
@@ -177,6 +192,7 @@ hydration 뒤로 지연하지 않았다. 이는 초기 client exception도 수�
 - Replay
 - source map upload와 release 연결
 - OCI Logging 변경
+- safe cause/request context와 opaque user ID 도입 판단
 - server application logging 확대 또는 server reporter 구조 변경
 - Pino 등 structured logging library
 - 범용 logger abstraction
