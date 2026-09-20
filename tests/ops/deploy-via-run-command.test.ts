@@ -58,10 +58,12 @@ describe("GitHub Actions OCI Run Command deployment", () => {
     expect(workflow).toContain("SENTRY_RELEASE=oioi-bwg@${{ github.sha }}");
     expect(workflow).toContain("SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}");
     expect(dockerfile).toContain("RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN");
+    expect(dockerfile).toContain("apt-get install -y --no-install-recommends ca-certificates");
     expect(dockerfile).not.toContain("ARG SENTRY_AUTH_TOKEN");
     expect(dockerfile).not.toMatch(/^ENV .*SENTRY_AUTH_TOKEN/m);
     expect(nextConfig).toContain('filesToDeleteAfterUpload: [".next/**/*.map"]');
     expect(nextConfig).toContain("routeManifestInjection: false");
+    expect(nextConfig).toMatch(/errorHandler\(error\) \{\s*throw error;\s*\}/);
   });
 
   test("redacts sensitive remote output and preserves deployment exit semantics", async () => {

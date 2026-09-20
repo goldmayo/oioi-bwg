@@ -1,7 +1,7 @@
 ---
 title: "Sentry release·source map 연결 결과"
 document_id: "OBSERVABILITY-SENTRY-SOURCEMAPS-RESULT"
-version: "1.0"
+version: "1.1"
 status: "completed"
 authority: "result"
 updated_at: "2026-09-20"
@@ -53,8 +53,10 @@ source map 업로드는 image manifest digest가 생성되기 전 build 내부�
 - `SENTRY_AUTH_TOKEN`: GitHub environment secret → Docker BuildKit secret
 
 token은 Docker build argument나 `ENV`, OCI runtime env, image layer에 넣지 않는다. BuildKit secret mount의
-`/run/secrets/SENTRY_AUTH_TOKEN`을 `pnpm build` process에만 전달한다. source map 업로드나 release 생성이
-실패하면 별도 `errorHandler`로 무시하지 않고 image build를 실패시킨다.
+`/run/secrets/SENTRY_AUTH_TOKEN`을 `pnpm build` process에만 전달한다. Sentry build plugin에는 오류를 다시
+throw하는 `errorHandler`를 명시해 source map 업로드나 release 생성 실패가 image build를 실패시키게 한다.
+builder에는 native Sentry CLI가 Sentry SaaS의 TLS certificate chain을 검증할 수 있도록 Debian
+`ca-certificates`를 명시적으로 설치한다.
 
 `withSentryConfig`는 활성화된 publish build에서만 적용한다. Sentry SDK 10.42.0과 Next 16.3.3의
 Turbopack `runAfterProductionCompile` 경로가 build 완료 후 debug ID를 주입하고 artifact를 업로드한다.
@@ -110,8 +112,8 @@ repository variable, `.env`, Docker build argument, OCI Vault/runtime env에 복
    확인한다. 이미 수집된 과거 event는 source map을 나중에 올려도 다시 처리되지 않으므로 새 event를 쓴다.
 6. event JSON에 user/request/cause/extras가 없고 release/debug metadata만 새로 보존됐는지 확인한다.
 
-실제 Sentry token, GitHub environment 설정, artifact upload 및 deminified event 결과는 외부 계정 상태라
-현재 코드베이스에서 확인할 수 없다. PR 검증과 merge 뒤 위 절차로 확인해야 한다.
+실제 Sentry artifact와 deminified event 화면은 외부 계정 상태라 코드베이스만으로 확인할 수 없다. PR
+검증과 merge 뒤 위 절차로 확인해야 한다.
 
 ## 6. 근거
 
@@ -141,3 +143,25 @@ repository variable, `.env`, Docker build argument, OCI Vault/runtime env에 복
 현재 WSL 환경에는 Docker CLI가 없어 변경한 Dockerfile의 실제 BuildKit build는 실행하지 못했다.
 Dockerfile/workflow 경계는 ops test와 정적 검토로 확인했으며 실제 BuildKit secret mount, Sentry artifact
 upload, staging deminification은 5절의 GitHub image publish에서 확인해야 한다.
+
+## 8. 최초 publish에서 발견한 build 경계 보정
+
+PR #94 merge commit `3ac14355aa2c1fb3ea1db2a2825417666843d722`의 GitHub Verify
+[#35510856671](https://github.com/goldmayo/oioi-bwg/actions/runs/35510856671)에서 image publish, OCI 배포,
+배포 Slack 알림은 성공했다. 그러나 publish log를 별도로 확인한 결과 Sentry CLI의 release 생성과 source
+map upload가 다음 TLS 오류로 실패한 뒤 Next.js build가 계속된 사실을 확인했다.
+
+```text
+SSL certificate problem: unable to get local issuer certificate
+```
+
+원인은 builder에서 native Sentry CLI가 사용할 CA bundle을 명시적으로 보장하지 않은 점과 Next.js
+Turbopack production compile hook이 해당 recoverable error를 로그만 남기고 완료할 수 있는 점이다. 이를
+다음 후속 보정에 반영한다.
+
+- builder base에 `ca-certificates`를 명시 설치한다.
+- Sentry build plugin의 `errorHandler`가 받은 오류를 다시 throw한다.
+- ops test가 두 fail-closed 조건과 기존 BuildKit secret 경계를 함께 고정한다.
+
+따라서 위 최초 run은 **application 배포 성공 / source map upload 실패**로 판정한다. 후속 publish에서
+release와 artifact upload 성공을 확인하기 전까지 staging deminification은 검증 완료로 간주하지 않는다.
