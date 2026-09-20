@@ -213,6 +213,21 @@ describe("sanitizeServerSentryEvent", () => {
       timestamp: 123,
       level: "error",
       environment: "staging",
+      release: `oioi-bwg@${"b".repeat(40)}`,
+      debug_meta: {
+        images: [
+          {
+            type: "sourcemap",
+            code_file: "file:///app/.next/server/chunks/app.js",
+            debug_id: "12345678-1234-4abc-8def-1234567890ab",
+          },
+          {
+            type: "sourcemap",
+            code_file: `/private/${MARKERS.email}`,
+            debug_id: MARKERS.token,
+          },
+        ],
+      },
       message: MARKERS.sql,
       logentry: { message: MARKERS.passwordHash, params: [MARKERS.otpHash] },
       exception: {
@@ -281,6 +296,16 @@ describe("sanitizeServerSentryEvent", () => {
       level: "error",
       platform: "node",
       environment: "staging",
+      release: `oioi-bwg@${"b".repeat(40)}`,
+      debug_meta: {
+        images: [
+          {
+            type: "sourcemap",
+            code_file: ".next/server/chunks/app.js",
+            debug_id: "12345678-1234-4abc-8def-1234567890ab",
+          },
+        ],
+      },
       exception: {
         values: [
           {

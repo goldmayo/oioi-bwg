@@ -1,5 +1,7 @@
 import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
 
+import { toSafeSentryBuildMetadata, toSafeSentryBuildPath } from "./sentry-build-metadata";
+
 export const SENTRY_ERROR_SOURCES = [
   "admin-error-boundary",
   "admin-login-form",
@@ -137,6 +139,9 @@ function safeStacktrace(event: ErrorEvent) {
 
   const safeFrames = frames.flatMap((frame) => {
     const filename = safeStackFilename(readProperty(frame, "filename"));
+    const absPath =
+      toSafeSentryBuildPath(readProperty(frame, "abs_path")) ??
+      toSafeSentryBuildPath(readProperty(frame, "filename"));
     const functionName = safeStackText(readProperty(frame, "function"));
     const lineno = safeStackNumber(readProperty(frame, "lineno"));
     const colno = safeStackNumber(readProperty(frame, "colno"));
@@ -146,6 +151,7 @@ function safeStacktrace(event: ErrorEvent) {
     return [
       {
         ...(filename ? { filename } : {}),
+        ...(absPath ? { abs_path: absPath } : {}),
         ...(functionName ? { function: functionName } : {}),
         ...(lineno !== undefined ? { lineno } : {}),
         ...(colno !== undefined ? { colno } : {}),
@@ -290,6 +296,7 @@ export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
     ...(isOneOf(event.level, SAFE_LEVELS) ? { level: event.level } : { level: "error" }),
     platform: "javascript",
     ...(isOneOf(event.environment, SAFE_ENVIRONMENTS) ? { environment: event.environment } : {}),
+    ...toSafeSentryBuildMetadata(event),
     exception: {
       values: [
         {

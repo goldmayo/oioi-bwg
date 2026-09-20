@@ -154,6 +154,7 @@ describe("client Sentry privacy policy", () => {
               frames: [
                 {
                   filename: `https://example.test/_next/chunk.js?token=${MARKERS.token}`,
+                  abs_path: `https://example.test/_next/chunk.js?token=${MARKERS.token}`,
                   function: "parseClientResponse",
                   lineno: 42,
                   colno: 9,
@@ -182,6 +183,21 @@ describe("client Sentry privacy policy", () => {
         os: { name: "Linux", version: "6", unsafe: MARKERS.auth },
         response: { body: MARKERS.zod },
       },
+      release: `oioi-bwg@${"a".repeat(40)}`,
+      debug_meta: {
+        images: [
+          {
+            type: "sourcemap",
+            code_file: `https://example.test/_next/chunk.js?token=${MARKERS.token}`,
+            debug_id: "12345678-1234-4abc-8def-1234567890ab",
+          },
+          {
+            type: "sourcemap",
+            code_file: `/private/${MARKERS.email}`,
+            debug_id: MARKERS.token,
+          },
+        ],
+      },
       breadcrumbs: [
         { category: "fetch", data: { url: `/api?token=${MARKERS.token}` } },
         {
@@ -203,6 +219,16 @@ describe("client Sentry privacy policy", () => {
       level: "error",
       platform: "javascript",
       environment: "staging",
+      release: `oioi-bwg@${"a".repeat(40)}`,
+      debug_meta: {
+        images: [
+          {
+            type: "sourcemap",
+            code_file: "/_next/chunk.js",
+            debug_id: "12345678-1234-4abc-8def-1234567890ab",
+          },
+        ],
+      },
       exception: {
         values: [
           {
@@ -212,6 +238,7 @@ describe("client Sentry privacy policy", () => {
               frames: [
                 {
                   filename: "/_next/chunk.js",
+                  abs_path: "/_next/chunk.js",
                   function: "parseClientResponse",
                   lineno: 42,
                   colno: 9,
