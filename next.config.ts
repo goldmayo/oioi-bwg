@@ -36,6 +36,9 @@ export default sentryBuildConfig.enabled
       telemetry: false,
       routeManifestInjection: false,
       suppressOnRouterTransitionStartWarning: true,
+      errorHandler(error) {
+        throw error;
+      },
       release: {
         name: sentryBuildConfig.release,
         create: true,

@@ -7,6 +7,10 @@ FROM node:${NODE_VERSION} AS base
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NPM_CONFIG_STORE_DIR=/pnpm/store
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
 WORKDIR /app
