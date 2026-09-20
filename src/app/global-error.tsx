@@ -17,7 +17,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     // 전문가 피드백이 반영된 logger 유틸리티 사용
-    logger.error(error, { digest: error.digest });
+    logger.error(error, { source: "global-error-boundary", digest: error.digest });
   }, [error]);
 
   return (
