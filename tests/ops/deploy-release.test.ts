@@ -24,7 +24,7 @@ async function fixture() {
   ]);
 
   await writeFile(join(runtime, "compose.yml"), "services:\n  app:\n    image: ${APP_IMAGE}\n");
-  await writeFile(join(config, "runtime-public.env"), "NEXT_PUBLIC_APP_ENV=staging\n");
+  await writeFile(join(config, "runtime-public.env"), "EMAIL_DELIVERY_MODE=dev\n");
   await writeFile(
     join(config, "runtime-secrets.env"),
     "DB_APP_PASSWORD=ocid1.vaultsecret.test.db-secret\nAUTH_SECRET=ocid1.vaultsecret.test.auth-secret\n",

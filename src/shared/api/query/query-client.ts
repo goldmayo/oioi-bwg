@@ -1,5 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 
+import type { SentryErrorSource } from "../../lib/client-sentry-policy";
 import { captureClientErrorOnce } from "../capture-client-error";
 import { ApiError, ClientContractError, ClientTransportError } from "../http-errors";
 
@@ -40,7 +41,10 @@ interface CreateQueryClientOptions {
   onMutationError?: (message: string) => void;
 }
 
-function captureClientBoundaryError(error: unknown, source: string) {
+function captureClientBoundaryError(
+  error: unknown,
+  source: Extract<SentryErrorSource, "mutation-cache" | "query-cache">,
+) {
   if (
     error instanceof ClientContractError ||
     (error instanceof ClientTransportError && error.code === "HTTP_ERROR")

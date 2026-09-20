@@ -32,6 +32,9 @@ installer는 기존 protected config를 덮어쓰지 않는다. secret map에는
 OCID만 기록한다. `DB_APP_PASSWORD`는 `oioi_app` credential이어야 하며 admin/migrator credential을 넣지
 않는다.
 
+`runtime-public.env`에는 server runtime 값을 기록한다. `NEXT_PUBLIC_*` 값은 GitHub environment에서 image
+build input으로 주입되고 client와 server bundle에 포함되므로 host runtime 파일에 중복하지 않는다.
+
 Docker credential은 `docker-credential-ocir` Instance Principal 방식으로 구성한다. static OCIR password나
 Docker login token을 host에 저장하지 않는다.
 

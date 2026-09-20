@@ -84,6 +84,7 @@ describe("reportServerError", () => {
 
   it("captures a newly-created safe exception and typed metadata", () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const rawError = new Error(MARKERS.passwordHash, {
       cause: { params: Object.values(MARKERS) },
