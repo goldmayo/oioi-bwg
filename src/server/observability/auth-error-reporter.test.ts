@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { reportAuthError } from "./auth-error-reporter";
-import { reportServerError } from "./server-logger";
+import { reportServerError } from "./server-error-reporter";
 
-vi.mock("./server-logger", () => ({ reportServerError: vi.fn() }));
+vi.mock("./server-error-reporter", () => ({ reportServerError: vi.fn() }));
 
 const mockedReportServerError = vi.mocked(reportServerError);
 

@@ -3,7 +3,7 @@ import { DrizzleQueryError } from "drizzle-orm/errors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sentryMocks = vi.hoisted(() => ({
-  captureException: vi.fn(() => "safe-event-id"),
+  captureException: vi.fn<(error: unknown) => string>(() => "safe-event-id"),
   init: vi.fn(),
   setTags: vi.fn(),
   withScope: vi.fn(),
@@ -19,7 +19,8 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 import { sanitizeServerSentryEvent } from "./safe-server-event";
-import { reportServerError } from "./server-logger";
+import { logServerError } from "./server-logger";
+import { captureServerException } from "./server-sentry-reporter";
 
 const MARKERS = {
   sql: "SELECT_SECRET_MARKER",
@@ -35,7 +36,7 @@ function serialized(value: unknown) {
   return JSON.stringify(value);
 }
 
-describe("reportServerError", () => {
+describe("independent server logging and Sentry sinks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -58,11 +59,11 @@ describe("reportServerError", () => {
     );
 
     expect(
-      reportServerError(databaseError, {
+      logServerError(databaseError, {
         event: "api.unexpected_error",
         source: "api-route-handler",
       }),
-    ).toBeNull();
+    ).toBeUndefined();
 
     expect(consoleError).toHaveBeenCalledTimes(1);
     const call = consoleError.mock.calls[0];
@@ -86,7 +87,7 @@ describe("reportServerError", () => {
     vi.stubEnv("NODE_ENV", "development");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    reportServerError(new Error(MARKERS.token), {
+    logServerError(new Error(MARKERS.token), {
       event: "upload.failure",
       source: "upload-album-image-action",
       operation: "album-image-upload",
@@ -108,13 +109,13 @@ describe("reportServerError", () => {
   it("captures the original Error for its frames and sends only typed metadata", () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const rawError = new Error(MARKERS.passwordHash, {
       cause: { params: Object.values(MARKERS) },
     });
 
     expect(
-      reportServerError(rawError, {
+      captureServerException(rawError, {
         event: "api.output_contract_violation",
         source: "api-route-handler",
         error: { type: "output-contract", code: "OUTPUT_CONTRACT_VIOLATION" },
@@ -123,6 +124,7 @@ describe("reportServerError", () => {
     ).toBe("safe-event-id");
 
     expect(sentryMocks.captureException).toHaveBeenCalledWith(rawError);
+    expect(consoleError).not.toHaveBeenCalled();
     expect(serialized(sentryMocks.setTags.mock.calls)).not.toMatch(
       /SELECT_SECRET_MARKER|private-email-marker|PASSWORD_HASH_MARKER|OTP_HASH_MARKER|RAW_CAUSE_MARKER|TOKEN_MARKER/,
     );
@@ -154,7 +156,7 @@ describe("reportServerError", () => {
     );
 
     expect(() =>
-      reportServerError(hostile, {
+      logServerError(hostile, {
         event: "server.unhandled_error",
         source: "sentry-auto-capture",
       }),
@@ -172,7 +174,7 @@ describe("reportServerError", () => {
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       expect(() =>
-        reportServerError(value, {
+        logServerError(value, {
           event: "server.unhandled_error",
           source: "sentry-auto-capture",
         }),
@@ -188,7 +190,7 @@ describe("reportServerError", () => {
     vi.stubEnv("NODE_ENV", "development");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    reportServerError(new Error("ERROR_MARKER"), {
+    logServerError(new Error("ERROR_MARKER"), {
       event: "EVENT_MARKER",
       source: "SOURCE_MARKER",
       request: {
@@ -207,6 +209,20 @@ describe("reportServerError", () => {
       event: "server.unhandled_error",
       source: "sentry-auto-capture",
     });
+  });
+
+  it("normalizes a non-Error throw before Sentry capture", () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
+
+    captureServerException("STRING_SECRET_MARKER", {
+      event: "server.unhandled_error",
+      source: "sentry-auto-capture",
+    });
+
+    const captured = sentryMocks.captureException.mock.calls[0]?.[0];
+    expect(captured).toBeInstanceOf(Error);
+    expect((captured as Error).message).toBe("Unexpected server error");
   });
 });
 

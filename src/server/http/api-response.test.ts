@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { reportServerError } from "@/server/observability/server-logger";
+import { reportServerError } from "@/server/observability/server-error-reporter";
 
 import { apiErrorResponseSchema } from "@/shared/contracts/error";
 
@@ -9,7 +9,7 @@ import { AppError } from "../errors/app-error";
 
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "./api-response";
 
-vi.mock("@/server/observability/server-logger", () => ({ reportServerError: vi.fn() }));
+vi.mock("@/server/observability/server-error-reporter", () => ({ reportServerError: vi.fn() }));
 
 const mockedReportServerError = vi.mocked(reportServerError);
 

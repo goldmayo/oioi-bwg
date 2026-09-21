@@ -54,6 +54,14 @@ export interface SafeErrorDescriptor {
   code?: string;
 }
 
+export interface ServerErrorContext {
+  event: ServerErrorEvent;
+  source: ServerErrorSource;
+  operation?: ServerOperation;
+  error?: Partial<SafeErrorDescriptor>;
+  request?: SafeRequestMetadata;
+}
+
 function isOneOf<const T extends readonly string[]>(value: unknown, values: T): value is T[number] {
   return typeof value === "string" && values.some((candidate) => candidate === value);
 }

@@ -1,5 +1,5 @@
 import type { SentryErrorContext } from "@/shared/lib/client-sentry-policy";
-import { logger } from "@/shared/lib/sentry";
+import { captureClientException } from "@/shared/lib/sentry";
 
 const capturedErrors = new WeakSet<object>();
 
@@ -10,5 +10,5 @@ export function captureClientErrorOnce(error: unknown, context: SentryErrorConte
     capturedErrors.add(error);
   }
 
-  logger.error(error, context);
+  captureClientException(error, context);
 }

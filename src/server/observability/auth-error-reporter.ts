@@ -1,6 +1,6 @@
 import "server-only";
 
-import { reportServerError } from "./server-logger";
+import { reportServerError } from "./server-error-reporter";
 
 function isCredentialsSignin(error: Error) {
   try {
