@@ -30,6 +30,21 @@ resource "oci_logging_unified_agent_configuration" "application" {
 
     destination {
       log_object_id = oci_logging_log.application.id
+
+      operational_metrics_configuration {
+        destination {
+          compartment_id = var.compute_compartment_ocid
+        }
+
+        source {
+          type    = "UMA_METRICS"
+          metrics = ["EmitRecords", "RollbackCount", "RetryCount"]
+
+          record_input {
+            namespace = "oioi_operations"
+          }
+        }
+      }
     }
 
     sources {
