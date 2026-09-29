@@ -41,7 +41,8 @@ resource "oci_logging_unified_agent_configuration" "application" {
           metrics = ["EmitRecords", "RollbackCount", "RetryCount"]
 
           record_input {
-            namespace = "oioi_operations"
+            namespace      = "oioi_operations"
+            resource_group = "defaultGroup"
           }
         }
       }
