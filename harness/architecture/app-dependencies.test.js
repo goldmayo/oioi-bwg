@@ -3,7 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-const dependencyFields = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
+const dependencyFields = [
+  "dependencies",
+  "devDependencies",
+  "optionalDependencies",
+  "peerDependencies",
+];
 
 function readAppManifests(root = process.cwd()) {
   const appsDirectory = path.join(root, "apps");
