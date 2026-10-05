@@ -1,11 +1,14 @@
 import { defineConfig, globalIgnores } from "eslint/config";
+import type { Linter } from "eslint";
 
 import webPolicy from "./apps/web/eslint/policy.mjs";
 import nextConfig from "./config/eslint/next.mjs";
 
+const typedWebPolicy = webPolicy as unknown as Linter.Config[];
+
 export default defineConfig([
   ...nextConfig,
-  ...webPolicy,
+  ...typedWebPolicy,
   globalIgnores([
     "**/.next/**",
     "out/**",
