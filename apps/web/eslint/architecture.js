@@ -1,6 +1,5 @@
 import {
   getSourceParts,
-  relativeImportEscapesSource,
   resolveImportedParts,
 } from "../../../harness/architecture/import-path.js";
 
@@ -30,8 +29,6 @@ export const architectureRule = {
     },
     schema: [],
     messages: {
-      workspaceSourceEscape:
-        "workspace src 밖의 파일을 상대 경로로 import하지 마세요. 공용 코드는 명시적인 workspace/package 경계를 사용하세요.",
       unknownLayer:
         "허용되지 않은 src 최상위 폴더 '{{layer}}'입니다. app/widgets/features/entities/shared/server 중 하나를 사용하세요.",
       invalidSliceRoot:
@@ -76,11 +73,6 @@ export const architectureRule = {
       const source = sourceNode?.value;
 
       if (typeof source !== "string") return;
-
-      if (relativeImportEscapesSource(parts, source)) {
-        context.report({ node: sourceNode, messageId: "workspaceSourceEscape" });
-        return;
-      }
 
       const importedParts = resolveImportedParts(parts, source);
       const [importedLayer, importedSlice] = importedParts ?? [];
