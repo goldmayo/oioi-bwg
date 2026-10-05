@@ -5,7 +5,12 @@ import test from "node:test";
 
 import { getSourceParts, resolveImportedParts } from "./import-path.js";
 
-const dependencyFields = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
+const dependencyFields = [
+  "dependencies",
+  "devDependencies",
+  "optionalDependencies",
+  "peerDependencies",
+];
 
 function readAppManifests(root = process.cwd()) {
   const appsDirectory = path.join(root, "apps");
