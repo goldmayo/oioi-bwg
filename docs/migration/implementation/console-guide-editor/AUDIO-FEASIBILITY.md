@@ -5,7 +5,7 @@ status: recorded
 observed_at: "2026-10-05"
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 updated_at: "2026-10-05"
-revision: 2
+revision: 3
 ---
 
 # 파형 JSON 생성 기술 검토
@@ -24,7 +24,7 @@ revision: 2
 | [Peaks.js](https://github.com/bbc/peaks.js/blob/master/doc/API.md)               | 사전 생성 JSON·overview/zoom·point/segment 편집                                      | 해당 JSON을 표시하고 기존 가사 행을 point marker로 연결한다.                                             |
 
 기본 image는 yt-dlp 실행에 필요한 Python과 위 CLI만 포함한다. librosa/NumPy/모델 서버는 넣지 않는다.
-audiowaveform의 build dependency는 build stage에서만 사용한다. OCI ARM64용 실제 image 검증은 P07의 첫 작업이다.
+audiowaveform의 build dependency는 build stage에서만 사용한다. OCI ARM64용 실제 image 검증은 P08의 첫 작업이다.
 현재 문서만으로 최신 조합의 추출 성공이나 streaming 호환을 보장하지 않는다.
 
 ## 2. 처리 경로와 음원 수명
@@ -34,7 +34,7 @@ canonical YouTube videoId
   → yt-dlp audio stdout
   → ffmpeg decode / mono / 24kHz PCM WAV pipe
   → audiowaveform min/max JSON stdout
-  → 작은 결과 wrapper → Console에 JSON만 전달 → PostgreSQL jsonb
+  → VM runner가 JSON 수집/검증 → Console 내부 결과 API → PostgreSQL jsonb
 ```
 
 audiowaveform의 공식 ffmpeg pipe 예제처럼 WAV stdin을 쓰고 input/output format을 명시한다.
@@ -45,16 +45,15 @@ JSON 반환 전에 모든 pipeline exit code·형식·길이를 확인한다. �
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 입력      | Console에서 URL을 videoId로 정규화하고 canonical YouTube URL만 worker에 전달. playlist/live·임의 URL·shell 옵션은 허용하지 않는다.                                       |
 | 파일      | read-only root + tmpfs `/tmp`. TMPDIR/cache 위치도 tmpfs로 고정하며 yt-dlp disk cache를 끈다. audio host volume/bind mount/R2/DB 저장은 없다.                            |
-| 자원/종료 | 한 작업, 길이·출력 byte·CPU/RAM 제한, host timeout/trap으로 하위 프로세스와 named container 제거. restart policy 없음, `--rm` 사용.                                      |
+| 자원/종료 | Runner concurrency 1, 길이·출력 byte·CPU/RAM/pids 제한, cap-drop·no-new-privileges, timeout/종료 시 하위 프로세스와 named container 제거. restart 없음, `--rm` 사용.     |
 | 비영속성  | [Docker tmpfs](https://docs.docker.com/engine/storage/tmpfs/)도 swap될 수 있다. swap/core dump를 차단·확인한다. 삭제 함수 성공만으로 보관 금지를 검증했다고 하지 않는다. |
 | 로그/결과 | raw audio는 container 내부 pipe에만 흐른다. Docker/OCI/오류 수집에는 음원·PCM·입력/출력 본문을 기록하지 않고 상태/오류 코드만 남긴다.                                    |
 
-실행은 기존 GitHub Actions → OCI Run Command → 고정 host script 경로를 재사용하는 제안이다.
-[workflow_dispatch](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event) 입력은 videoId/jobId로 제한한다.
-Console에 OCI host 관리 credential/Docker socket을 제공하지 않으며 workflow 권한과 host script 인자를 검증한다.
-[Run Command](https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/runningcommands.htm)의 plain-text 출력은 마지막 1KB로 제한된다.
-host script가 worker JSON을 전용 token으로 Console 결과 API에 보내고 Run Command에는 짧은 상태만 출력한다.
-token은 host 보호 환경에 두고, callback은 현재 jobId/source에 대해서만 결과를 수락한다. Queue/상주 runner는 새로 만들지 않는다.
+실행은 Console Job API → OCI Queue → VM-local runner → one-shot worker로 한다.
+Runner는 long poll·job 검증·고정 container 실행·결과 반영·message delete만 맡고 분석하지 않는다.
+worker에는 DB/Auth/R2/OCI credential을 주지 않는다. 임의 image/command/env/volume을 message로 받지 않는다.
+결과를 DB에 저장한 뒤에만 delete하며 재전달·visibility 연장·DLQ·SSE는 [설계 §6](DESIGN.md#6-waveform-worker)가 소유한다.
+Queue 비교나 별도 실행/알림 framework를 이 문서에 추가하지 않는다.
 
 ## 3. JSON 계약
 
@@ -96,6 +95,11 @@ YouTube acquisition은 [이용약관](https://www.youtube.com/static?template=te
 분석 후 삭제만으로 다운로드 이용 조건까지 충족하는 것은 아니다.
 현행 [Domain §20](../../DOMAIN_SPECIFICATION.md)의 YouTube source 규칙도 이 임시 분석 경로에 맞게 해당 구현 PR에서 개정한다.
 
-P07~P08은 짧은/긴 곡에서 JSON·시간축·ARM64 자원 사용을 확인하고, 추출/분석/callback 실패·timeout·강제 종료 뒤
+P08~P09는 짧은/긴 곡에서 JSON·ARM64 자원 사용을 확인하고, 추출/분석/결과 API 실패·timeout·강제 종료 뒤
 container/host/volume/log에 음원이 남지 않는지 검사한다. worker가 끝난 뒤 새 탭에서 JSON만 조회해 waveform을 표시한다.
+동일 videoId의 초반·중간·후반에서 최소 3개 anchor를 골라 waveform timestamp와 YouTube IFrame currentTime을 비교한다.
+광고/seek 과도 구간은 구분하고 영상 길이만 같다는 이유로 통과시키지 않는다. anchor별 차이와 측정 조건을 기록한다.
+일정 offset이면 명시적 보정 가능 여부와 검증된 보정값의 적용 위치를 정하고 Cue 시각을 조용히 이동하지 않는다.
+후반으로 갈수록 drift가 누적되면 decode/timebase/영상 편집 원인을 확인하기 전에는 P09 integration 완료로 보지 않는다.
+이 시간축 검증을 통과한 JSON만 실제 Cue timing reference로 사용한다. 허용 오차는 구현 prototype에서 고정하고 실측으로 확인한다.
 자동 BPM/onset, Forced Alignment, Whisper, Demucs, stem, 응원 텍스트 자동 배치와 GPU/ML infrastructure는 이번 검토·로드맵에서 제외한다.

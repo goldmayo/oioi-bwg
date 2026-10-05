@@ -6,14 +6,14 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-05"
-revision: 2
+revision: 3
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
 
-**구현 전 검토용 초안이다.** 코드 근거는 [CURRENT-STATE](CURRENT-STATE.md), 파형 기술 근거는
+**사용자가 전체 방향을 승인한 구현 전 설계다.** 코드 근거는 [CURRENT-STATE](CURRENT-STATE.md), 파형 기술 근거는
 [AUDIO-FEASIBILITY](AUDIO-FEASIBILITY.md), 구현 순서는 [ROADMAP](ROADMAP.md)이 소유한다.
-이 개정은 최초 설계 커밋 `9c15838f9c4cb23a0f8f16c37313ef4fe95b2a48`의 제안을 대체한다.
+이 개정은 `ef0ac77cd81cf7312df32139c44909fbf2166a09`의 runtime 실행·공용 설정·직렬 로드맵을 수정한다.
 애플리케이션·DB·배포 코드는 이번 문서 변경에 포함하지 않는다.
 
 ## 1. 목표
@@ -39,15 +39,20 @@ flowchart LR
   C --> CS[공유 server 코드 + Console MFA guard]
   WS --> DB[(기존 PostgreSQL)]
   CS --> DB
-  C -->|파형 생성 요청| O[기존 GitHub Actions / OCI Run Command]
-  O --> J[one-shot waveform container]
-  J -->|파형 JSON만 결과 API로 전달| C
+  C -->|job 생성 / enqueue| Q[OCI Queue]
+  Q -->|long poll| R[VM waveform-runner]
+  R -->|docker run --rm| J[one-shot waveform-worker]
+  J -->|파형 JSON만| R
+  R -->|상태 / 결과 API| C
+  R -->|결과 저장 후 delete| Q
+  C -->|SSE: jobId| A
 ```
 
 공유 server는 두 Next 프로세스에서 실행하는 소스 패키지다. 별도 API 서버는 만들지 않는다.
 RSC → Service와 Client → Query → Ky → Route → Service 흐름 및 기존 FSD 규칙을 유지한다.
 각 앱은 자기 origin의 API를 호출하며 Console 세션을 web과 공유하지 않는다.
 현재 배포의 digest·health·smoke·rollback 절차를 두 앱에 적용한다. release manifest framework는 추가하지 않는다.
+GitHub Actions / OCI Run Command는 배포·운영 자동화에만 사용하고 runtime job을 실행하지 않는다.
 DB runtime role 분리는 후속 hardening으로 남기고 기존 service 인가를 유지한다.
 
 ## 3. Monorepo 구조와 검증
@@ -59,12 +64,13 @@ apps/
 packages/
   contracts/               함께 쓰는 Zod DTO·request/response·enum
   server/                  함께 쓰는 schema/DB·repository·service·인가·error
-tooling/
-  typescript-config/       base.json, next.json, node.json
-  eslint-config/           base.mjs, next.mjs, node.mjs
-  harness/                 기존 FSD·파일/import boundary 검사와 테스트
+config/                    공유하는 정적 설정
+  typescript/              base.json, next.json, node.json
+  eslint/                  base.mjs, next.mjs, node.mjs
+harness/
+  architecture/            기존 공통 검사 primitive / workspace 간 경계 검사
 workers/
-  waveform/                CLI entrypoint + Containerfile, 상주 서비스 없음
+  waveform/                VM-local runner + one-shot 분석 worker / Containerfile
 drizzle/                   기존 migration 이력의 단일 소유자
 pnpm-workspace.yaml        workspace/dependency 관리
 turbo.json                 task graph·병렬 실행·로컬 cache
@@ -72,19 +78,37 @@ turbo.json                 task graph·병렬 실행·로컬 cache
 ```
 
 `packages/ui`, `domain`, `api-client`는 초기 생성하지 않는다. server 추출도 기존 코드를 가능한 그대로 옮긴다.
-앱 간 직접 import와 client → server package import를 검사한다. 필요한 `server-only` 경계는 유지한다.
 Next/TS/ESLint 자동 탐색 진입점은 각 프로젝트 root의 얇은 wrapper로 두고 공유 설정을 extends/import한다.
 web/console은 Next 설정, server는 Node 설정, contracts는 base 설정을 사용한다. 앱별 alias·include만 각 진입점에 둔다.
+현재 React.cache/Auth.js를 사용하는 request-context 같은 framework adapter는 앱에 남기고 실제 공통 server 코드만 추출한다.
+
+공용 harness는 기존 import/filesystem 검사와 assertion/helper를 재사용하는 기반이다.
+**검사 경로·허용/금지 dependency·FSD·고유 제약은 각 workspace가 소유한다.**
+필요한 정책은 workspace root의 얇은 `architecture.config.*` 또는 기존 ESLint/Steiger 설정으로 표현한다.
+별도 configuration DSL을 만들거나 ESLint/Steiger가 처리하는 규칙을 다시 구현하지 않는다.
+
+| workspace          | 자체 lint/architecture 정책                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| apps/web           | public/user route·Web FSD·feature/entity 경계, client → server 및 Console 직접 import 금지 |
+| apps/console       | 관리/editor route·Console FSD/auth 경계, client → server 및 Web 직접 import 금지           |
+| packages/server    | server-only·repository/service 방향·DB/delivery 경계, React/client·apps 의존 금지          |
+| packages/contracts | serializable Zod 계약만, DB·Node-only·apps·server implementation 의존 금지                 |
+
+두 앱은 `steiger apps/web/src`, `steiger apps/console/src`로 각각 독립된 FSD root를 검사한다.
+공통 plugin/config는 공유할 수 있지만 실제 slice 구조와 정책이 같을 필요는 없다.
 
 JS/TS workspace의 실제 작업에 `lint`, `type-check`, `test`, `build` 이름을 사용한다.
 Next 앱만 `next build`를 실행하고, TS 소스 패키지는 앱의 `transpilePackages`로 소비해 불필요한 library build를 만들지 않는다.
 Node 설정의 module resolution과 package exports가 앱 소비 방식에 맞는지는 두 앱 build로 검증한다.
 worker는 JS workspace로 억지 포장하지 않고 CLI/container 검증을 별도로 연결한다.
+같은 task 이름도 검사 내용은 위 workspace 정책에 따라 다르다. Turbo는 실행 순서와 cache를 소유한다.
 
 ```text
 pnpm verify
-├─ tooling/harness: 기존 test:harness + lint:fsd
-├─ turbo run lint type-check test build --cache=local:rw
+├─ turbo run type-check lint test build --cache=local:rw
+│  └─ lint: workspace별 ESLint / 앱별 Steiger / 자체 architecture 정책
+├─ repo-level architecture harness + harness 자체 테스트
+│  └─ 앱 간 직접 import / client → server / workspace dependency 방향
 ├─ 기존 운영 스크립트 테스트
 └─ format:check
 ```
@@ -92,14 +116,14 @@ pnpm verify
 [Turbo](https://github.com/vercel/turborepo/blob/main/apps/docs/content/docs/crafting-your-repository/configuring-tasks.mdx)의
 task graph를 쓰고 직접 변경 감지·cache 도구를 만들지 않는다. TS를 직접 소비하는 패키지도
 상위 앱의 검사 hash에 dependency 변경이 반영되도록 transit task를 연결한다.
-Next build outputs는 `.next/**`에서 `.next/cache/**`를 제외하고, 공유 tooling·테스트 설정·build 환경값을 hash 입력에 포함한다.
+Next build outputs는 `.next/**`에서 `.next/cache/**`를 제외하고, config/·harness/·workspace 정책·테스트 설정·build 환경값을 hash 입력에 포함한다.
 비결정적 작업과 DB/worker 실행 결과는 cache하지 않는다. Remote Cache는 초기 도입하지 않는다.
 
 pre-commit은 root lint-staged의 ESLint/Prettier만 실행한다. 전체 type-check/build는 넣지 않는다.
 pre-push는 필요하면 `turbo run lint type-check test --affected`를 사용한다.
 [`--affected`](https://github.com/vercel/turborepo/blob/main/apps/docs/content/docs/reference/run.mdx)의 기준은
 `migration_develop` merge-base로 설정하고 필요한 Git 이력을 확보한다.
-중앙 harness와 root 설정 변경은 항상 검사하며, 초기 CI는 전체 `pnpm verify`로 두 앱을 검증한다.
+공유 config/harness 및 root 경계 규칙 변경은 affected 검사에서 빠지지 않게 하며, 초기 CI는 전체 `pnpm verify`를 실행한다.
 
 ## 4. Console / Auth
 
@@ -151,7 +175,8 @@ Song 하나에 타입별 최대 한 개만 둔다. Cue/Variant/Event 테이블�
 가사 행·segments·isCheer/isEcho/isExtra·startTimeOffset을 보존하고 기존 초 단위 JSON을 그대로 소비한다.
 편집기의 ms 계산만 저장 경계에서 초로 변환한다. 행의 안정 ID는 우선 편집 draft에만 두어 데이터 변환을 줄인다.
 version은 동시 저장 방지용이며 과거 내용을 저장하는 revision 이력은 아니다.
-BPM/beatOffset 같은 편집 설정은 해당 기능을 추가할 때 작은 guide JSON 필드로 저장한다.
+모든 guide가 같은 Song.youtubeId를 쓰므로 BPM/beatOffset은 P10에서 Song의 작은 편집 설정 JSON으로 저장한다.
+CheerGuide 구현 전에 기존 Song.lyrics로도 Grid 편집이 가능하다.
 
 **Revision History는 기존 Domain 요구로 유지한다.** 이번 단계는 관리자만 편집하는 현재 콘텐츠 모델을 제안하며
 이를 APPROVED revision이라고 부르지 않는다. 구현 PR에서 Domain에 이 초기 단계의 적용 범위를 명시하고
@@ -172,24 +197,69 @@ LRC create/update·lyrics 저장·삭제 경로를 함께 점검하고 shadow �
 ## 6. Waveform Worker
 
 ```text
-Console: YouTube URL 검증 → videoId 정규화 → 생성 요청
-  → 기존 GitHub Actions workflow_dispatch → OCI Run Command의 고정 host script
-  → docker run --rm: yt-dlp → ffmpeg pipe → audiowaveform → JSON
-  → host script가 JSON만 Console 결과 API로 전달 → DB jsonb 저장 → 종료
+POST /api/admin/waveform-jobs
+  → MFA/ADMIN + 입력 검증 → PostgreSQL Job(QUEUED) → OCI Queue enqueue
+  → 202 Accepted { jobId }
+
+OCI Queue → VM runner long poll → Job(RUNNING)
+  → docker run --rm → yt-dlp → ffmpeg pipe → audiowaveform → JSON
+  → JSON 검증 → 결과와 Job(SUCCEEDED) 저장 → message delete
 ```
 
-다운로드는 worker 안에서만 수행한다. 기본은 pipe이고 필요 파일·cache는 컨테이너 tmpfs에만 둔다.
-read-only root, audio volume/bind mount 없음, swap/core dump 제한, 성공·실패·timeout 모두 제거를 적용한다.
-worker에 HTTP 서버·DB credential은 없고 Console에 Docker socket/host 관리 credential을 주지 않는다.
-기존 배포 workflow와 별개의 고정 작업을 요청하는 얇은 연결만 추가한다. 인증된 JSON 결과 경로와 resource 제한을 검증한다.
-Run Command stdout은 크기 제한이 있으므로 JSON 전달 통로로 쓰지 않고 짧은 상태만 남긴다.
-결과 API의 전용 service token은 host의 보호된 환경에서 읽고 command 내용·로그에 넣지 않는다.
+| 요소              | 책임                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| PostgreSQL        | WaveformJob 상태와 Waveform JSON 결과의 SSOT                                           |
+| OCI Queue         | 전달·재전달/retry·visibility timeout·delivery count·DLQ                                |
+| waveform-runner   | Queue consume → job 검증 → 고정 one-shot container 실행 → 결과 반영 → receipt로 delete |
+| waveform-worker   | audio → JSON만. HTTP 서버·DB 쓰기·job 관리 없음                                        |
+| SSE               | 열린 Console에 상태 변경만 알림. 데이터 조회는 Query/API                               |
+| OCI Notifications | 선택적 운영 장애 알림만. job 성공 여부와 결합하지 않음                                 |
 
-Waveform은 songId, 현재 jobId/status, data JSON만 갖는 작은 저장 단위다. JSON의 source가 현재 youtubeId와 맞아야 한다.
-동시 작업은 host의 파일 잠금으로 하나로 제한하고 진행 중 요청은 거절한다. 새 Queue나 자동 재시도 시스템은 만들지 않는다.
-실패 시 원인을 보여주고 관리자 재시도를 제공한다. timeout 후 상태를 실패로 정리하고 오래된 job의 결과는 거절한다.
-재생성 실패는 직전 정상 JSON을 지우지 않는다. 오디오는 DB/R2/host volume/log/다른 서비스에 남기지 않는다.
+Queue payload는 `{ jobId, songId, videoId }`만 받는다. image/command/argument/volume/env를 받지 않는다.
+Runner는 message의 songId/videoId를 DB job과 대조한 뒤 실행한다.
+Runner는 기존 OCI SDK의 [long polling/visibility 연장](https://docs.oracle.com/en-us/iaas/Content/queue/consume-messages.htm)을 사용한다.
+VM-local 프로세스 하나가 한 건씩 수신하고 worker 하나만 실행한다. 다음 요청은 Queue에 대기하며 scheduler/Redis/분산 잠금은 추가하지 않는다.
+runner는 분석하지 않으며 image·argument·자원 한도는 배포된 고정 설정에서 결정한다.
+
+```text
+WaveformJob
+  id, songId, videoId, status: QUEUED | RUNNING | SUCCEEDED | FAILED
+  errorCode nullable, createdAt, startedAt nullable, finishedAt nullable
+  enqueuedAt nullable        전달 확인 기록, 정상 Queue 대기와 미전달 구분
+  attemptId nullable         재전달 시 오래된 실행 결과를 거절하는 식별자
+
+Waveform                    job lifecycle과 분리한 song/source별 정상 JSON
+```
+
+Runner는 Queue 소비 권한과 좁은 내부 job API의 service token만 사용한다. worker에는 videoId·자원 한도·outbound network만 제공한다.
+worker에 DATABASE_URL/AUTH_SECRET/R2/OCI credential을 주지 않고 VM metadata·DB·내부 API 접근도 막는다.
+Console의 내부 API → 기존 Service/Repository가 상태·결과를 저장하고 Runner/worker에 DB 연결을 주지 않는다.
+token은 Runner의 보호된 환경에 보관하며 Queue·command·로그에 넣지 않는다.
+
+jobId로 중복 반영을 막는다. 이미 SUCCEEDED인 message는 재분석하지 않고 delete하며 FAILED도 terminal로 취급한다.
+실행 중에는 visibility를 연장하고, 만료/Runner 종료 후 재전달 시 기존 RUNNING 작업의 잔존 container를 정리한 뒤 다시 처리한다.
+visibility 소유권을 잃으면 기존 실행을 중단한다. 현재 처리 시도·source에 맞는 결과만 조건부 반영한다.
+**결과 저장과 SUCCEEDED 갱신을 같은 transaction으로 끝낸 뒤** delete한다. delete 실패는 DB 성공을 되돌리지 않는다.
+일시 실패는 message를 지우지 않고 Queue 재전달에 맡긴다. 반복 실패는 [DLQ](https://docs.oracle.com/en-us/iaas/Content/queue/deadletterqueues.htm)로 보내지며
+Runner가 DLQ의 미완료 job을 FAILED로 반영한 뒤 해당 message를 정리한다. DB에 retry queue를 구현하지 않는다.
+DB job 생성과 enqueue는 원자적이지 않다. enqueue 실패는 FAILED로 기록하되 이미 진행된 상태를 역전하지 않는다.
+전달 확인을 기록한 뒤 202를 반환한다. Runner의 작은 상태 점검은 미확인 QUEUED/retention 초과 job만 기한에 따라 FAILED로 정리하고 정상 Queue 대기는 유지한다.
+DB 대기열 조회로 작업을 실행/재전송하지 않는다. 중복 전달·늦은 응답·기한 경계는 구현에서 검증한다.
+
+Worker는 `--rm --read-only --tmpfs /tmp`, CPU/memory/pids limit, cap-drop, no-new-privileges, restart 없음으로 실행한다.
+pipe가 기본이고 필요 파일/cache만 tmpfs에 둔다. swap/core dump를 막고 성공·실패·timeout 모두 container와 하위 프로세스를 제거한다.
+음원/PCM은 host filesystem/volume·Docker volume·PostgreSQL·R2/S3·로그·Sentry에 남기지 않는다.
+재생성 실패는 직전 정상 JSON을 지우지 않으며 Waveform을 갱신해도 Cue 시각은 자동 변경하지 않는다.
 JSON 형식·도구 선택·삭제 검증은 [파형 기술 검토](AUDIO-FEASIBILITY.md)를 따른다.
+
+열린 Console은 `GET /api/admin/waveform-jobs/{jobId}/events`에 native EventSource로 연결한다(endpoint는 구현 시 고정).
+`event: waveform-job-updated`, `data: {"jobId":"..."}`만 보내고 Waveform JSON 전체를 전송하지 않는다.
+브라우저는 이벤트 수신 → 관련 Query invalidate → Job/Waveform refetch한다. 연결·재연결·focus 때도 현재 DB 상태를 확인한다.
+상태 commit 후 [PostgreSQL LISTEN/NOTIFY](https://www.postgresql.org/docs/17/sql-notify.html)와 기존 postgres.js로 jobId를 전달하는 작은 연결을 사용한다.
+SSE/NOTIFY는 영속 event log가 아니며 알림 실패로 SUCCEEDED를 FAILED로 바꾸지 않는다. listener 재연결 후에도 snapshot을 다시 읽는다.
+SSE는 MFA/ADMIN guard·job 검증을 거치고, 만료/회수·연결 종료 시 stream/listener를 정리한다. heartbeat와 Caddy 경유 전달을 확인한다.
+FCM/Web Push는 닫힌 탭·서비스 전체 push 요구가 생길 때 후속으로 검토한다. OCI Notifications는 DLQ/Runner 장애 등 운영 알림 후보만 둔다.
+Queue abstraction·Notification framework·Worker platform은 추가하지 않는다.
 
 ## 7. Audio Editor
 
@@ -214,15 +284,15 @@ server DTO는 Query, 편집 draft는 RHF, 선택/zoom/loop/drag preview는 local
 
 ## 8. 주요 Trade-off
 
-| 선택                                | 남는 한계 / 확인 사항                                                                                    |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 같은 OCI host에서 일회성 worker     | 새 인프라는 줄지만 분석이 web 자원을 경쟁하므로 CPU/RAM/timeout을 측정·제한한다.                         |
-| YouTube → 파형 JSON                 | iframe은 PCM을 제공하지 않는다. yt-dlp 성공·동일 영상의 시간축·이용 허용을 실제 입력으로 확인한다.       |
-| 단일 프로세스 limiter와 MFA version | 재시작 시 limiter 상태는 사라지고 세션별 회수는 없다. 복제 운영 시에만 분산 저장을 재검토한다.           |
-| 타입별 한 guide + 현재 JSON         | 공연별 다수 항목과 revision 이력은 초기 범위 밖이며 Domain의 단계 적용을 명시해야 한다.                  |
-| 공유 DB·별도 앱                     | 같은 host/DB까지 격리되지는 않는다. pool 합계와 한쪽 rollback을 검증하고 DB role 세분화는 후속으로 둔다. |
+| 선택                                       | 남는 한계 / 확인 사항                                                                                             |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| OCI Queue + 작은 VM runner + 일회성 worker | Queue의 전달/재시도 기능을 사용하고 동시 분석은 하나로 제한한다. 같은 host의 자원 경쟁과 전달/DB 경계를 검증한다. |
+| YouTube → 파형 JSON                        | iframe은 PCM을 제공하지 않는다. yt-dlp 성공·동일 영상의 시간축·이용 허용을 실제 입력으로 확인한다.                |
+| 단일 프로세스 limiter와 MFA version        | 재시작 시 limiter 상태는 사라지고 세션별 회수는 없다. 복제 운영 시에만 분산 저장을 재검토한다.                    |
+| 타입별 한 guide + 현재 JSON                | 공연별 다수 항목과 revision 이력은 초기 범위 밖이며 Domain의 단계 적용을 명시해야 한다.                           |
+| 공유 DB·별도 앱                            | 같은 host/DB까지 격리되지는 않는다. pool 합계와 한쪽 rollback을 검증하고 DB role 세분화는 후속으로 둔다.          |
 
 상위 기준은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md),
 [Auth](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md), [Deployment](../../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md),
 [Domain](../../DOMAIN_SPECIFICATION.md)이다. 앱 분리·MFA claims/회수·FAN 분류/Revision 단계·YouTube 임시 분석·실제 CD 경로의
-변경은 해당 구현 PR에서 관련 active 문서와 같은 단위로 반영한다. 이 draft가 상위 문서를 자동 대체하지 않는다.
+변경은 해당 구현 PR에서 관련 active 문서와 같은 단위로 반영한다. Queue/runner/job/SSE의 lifecycle도 해당 문서에 반영하며 이 계획이 상위 문서를 자동 대체하지 않는다.
