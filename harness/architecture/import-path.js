@@ -17,11 +17,3 @@ export function resolveImportedParts(sourceParts, importPath) {
 
   return path.posix.normalize(path.posix.join(...sourceParts.slice(0, -1), importPath)).split("/");
 }
-
-export function relativeImportEscapesSource(sourceParts, importPath) {
-  if (!importPath.startsWith(".")) return false;
-
-  const resolved = path.posix.normalize(path.posix.join(...sourceParts.slice(0, -1), importPath));
-
-  return resolved === ".." || resolved.startsWith("../");
-}
