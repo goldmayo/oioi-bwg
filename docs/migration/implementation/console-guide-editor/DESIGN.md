@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-05"
-revision: 3
+revision: 4
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -14,6 +14,7 @@ revision: 3
 **사용자가 전체 방향을 승인한 구현 전 설계다.** 코드 근거는 [CURRENT-STATE](CURRENT-STATE.md), 파형 기술 근거는
 [AUDIO-FEASIBILITY](AUDIO-FEASIBILITY.md), 구현 순서는 [ROADMAP](ROADMAP.md)이 소유한다.
 이 개정은 `ef0ac77cd81cf7312df32139c44909fbf2166a09`의 runtime 실행·공용 설정·직렬 로드맵을 수정한다.
+`8882b71c0bf6bfa71f3295d6b5f34de0b16d1dce` 이후 피드백으로 SSE 전달·Queue 인증 주체·active Job 중복 생성 규칙을 보완했다.
 애플리케이션·DB·배포 코드는 이번 문서 변경에 포함하지 않는다.
 
 ## 1. 목표
@@ -39,13 +40,14 @@ flowchart LR
   C --> CS[공유 server 코드 + Console MFA guard]
   WS --> DB[(기존 PostgreSQL)]
   CS --> DB
-  C -->|job 생성 / enqueue| Q[OCI Queue]
-  Q -->|long poll| R[VM waveform-runner]
+  C -->|job 생성 후 Unix socket enqueue| R[VM waveform-runner]
+  R -->|enqueue| Q[OCI Queue]
+  Q -->|long poll| R
   R -->|docker run --rm| J[one-shot waveform-worker]
   J -->|파형 JSON만| R
   R -->|상태 / 결과 API| C
   R -->|결과 저장 후 delete| Q
-  C -->|SSE: jobId| A
+  C -->|EventEmitter / SSE: jobId| A
 ```
 
 공유 server는 두 Next 프로세스에서 실행하는 소스 패키지다. 별도 API 서버는 만들지 않는다.
@@ -198,7 +200,8 @@ LRC create/update·lyrics 저장·삭제 경로를 함께 점검하고 shadow �
 
 ```text
 POST /api/admin/waveform-jobs
-  → MFA/ADMIN + 입력 검증 → PostgreSQL Job(QUEUED) → OCI Queue enqueue
+  → MFA/ADMIN + 입력 검증 → active Job 재사용 또는 PostgreSQL Job(QUEUED) 생성
+  → 새 Job만 Unix socket → VM runner → OCI Queue enqueue
   → 202 Accepted { jobId }
 
 OCI Queue → VM runner long poll → Job(RUNNING)
@@ -206,14 +209,36 @@ OCI Queue → VM runner long poll → Job(RUNNING)
   → JSON 검증 → 결과와 Job(SUCCEEDED) 저장 → message delete
 ```
 
-| 요소              | 책임                                                                                   |
-| ----------------- | -------------------------------------------------------------------------------------- |
-| PostgreSQL        | WaveformJob 상태와 Waveform JSON 결과의 SSOT                                           |
-| OCI Queue         | 전달·재전달/retry·visibility timeout·delivery count·DLQ                                |
-| waveform-runner   | Queue consume → job 검증 → 고정 one-shot container 실행 → 결과 반영 → receipt로 delete |
-| waveform-worker   | audio → JSON만. HTTP 서버·DB 쓰기·job 관리 없음                                        |
-| SSE               | 열린 Console에 상태 변경만 알림. 데이터 조회는 Query/API                               |
-| OCI Notifications | 선택적 운영 장애 알림만. job 성공 여부와 결합하지 않음                                 |
+| 요소              | 책임                                                                               |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| PostgreSQL        | WaveformJob 상태와 Waveform JSON 결과의 SSOT                                       |
+| OCI Queue         | 전달·재전달/retry·visibility timeout·delivery count·DLQ                            |
+| waveform-runner   | 제한된 enqueue 호출·Queue consume → job 검증 → 고정 container → 결과 반영 → delete |
+| waveform-worker   | audio → JSON만. HTTP 서버·DB 쓰기·job 관리 없음                                    |
+| SSE               | 열린 Console에 상태 변경만 알림. 데이터 조회는 Query/API                           |
+| OCI Notifications | 선택적 운영 장애 알림만. job 성공 여부와 결합하지 않음                             |
+
+**동일 `(songId, videoId)`의 active Job(`QUEUED | RUNNING`)은 최대 한 개다.**
+연속 클릭·응답 유실 후 재요청·동시 POST에 기존 active Job이 있으면 `202 { jobId }`로 그 Job을 반환하고
+새 Job/message는 만들지 않는다. 새 Job 생성 경로만 enqueue 확인 뒤 202를 반환한다.
+이는 active 작업 재사용 규칙이며 terminal(`SUCCEEDED | FAILED`) 이후의 새 요청은 재생성으로 처리한다.
+UI의 버튼 비활성화에만 의존하지 않고 DB에서 조회/생성을 원자적으로 보장한다.
+partial unique index 또는 기존 Song 행 잠금 등 구체적인 DB 수단은 P08에서 선택하고 동시 요청으로 검증한다.
+
+**OCI Queue 호출은 VM-local Runner 하나가 push + pull을 모두 소유한다.**
+Console은 Job을 저장한 뒤 제한된 Unix socket enqueue 호출만 한다. socket은 Console에만 연결하고
+소유자/그룹 권한으로 접근을 제한하며 Caddy/public TCP endpoint로 공개하지 않는다.
+Runner는 고정 Queue에 세 식별자만 enqueue하고 OCI 응답을 반환한다. 분석 완료를 기다리지 않는다.
+SDK의 long poll 대기 중에도 enqueue 호출을 받을 수 있지만 분석 worker 동시 실행은 한 개를 유지한다.
+
+Runner의 OCI SDK는 [Compute Instance Principal](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm)로 인증한다.
+해당 VM을 dynamic group에 포함하고 [Queue IAM](https://docs.oracle.com/en-us/iaas/Content/queue/policy-reference.htm)의
+`use queue-push`(PutMessages)와 `use queue-pull`(GetMessages/UpdateMessage/DeleteMessage)을 waveform Queue/DLQ 처리 범위로 제한한다.
+Queue OCID/message endpoint는 배포 설정으로 고정하며 runtime에 Queue 생성·삭제·변경 권한을 주지 않는다.
+Console은 OCI SDK/credential을 사용하지 않고 Runner가 내부 결과 API에 쓰는 service token과 OCI 인증은 별개다.
+**IAM 주체는 container/process가 아니라 VM이며 이 VM을 OCI trust boundary로 본다.**
+Runner로 호출을 모아도 IAM 차원의 process별 권한 분리가 생기지는 않는다. Console/Web/worker의
+metadata 접근을 차단하고 host root 권한은 이 경계 안에 둔다. 실제 IAM/socket/metadata 제한은 P08에서 확인한다.
 
 Queue payload는 `{ jobId, songId, videoId }`만 받는다. image/command/argument/volume/env를 받지 않는다.
 Runner는 message의 songId/videoId를 DB job과 대조한 뒤 실행한다.
@@ -231,7 +256,7 @@ WaveformJob
 Waveform                    job lifecycle과 분리한 song/source별 정상 JSON
 ```
 
-Runner는 Queue 소비 권한과 좁은 내부 job API의 service token만 사용한다. worker에는 videoId·자원 한도·outbound network만 제공한다.
+Runner는 위 Queue push/pull 권한과 좁은 내부 job API의 service token만 사용한다. worker에는 videoId·자원 한도·outbound network만 제공한다.
 worker에 DATABASE_URL/AUTH_SECRET/R2/OCI credential을 주지 않고 VM metadata·DB·내부 API 접근도 막는다.
 Console의 내부 API → 기존 Service/Repository가 상태·결과를 저장하고 Runner/worker에 DB 연결을 주지 않는다.
 token은 Runner의 보호된 환경에 보관하며 Queue·command·로그에 넣지 않는다.
@@ -255,8 +280,11 @@ JSON 형식·도구 선택·삭제 검증은 [파형 기술 검토](AUDIO-FEASIB
 열린 Console은 `GET /api/admin/waveform-jobs/{jobId}/events`에 native EventSource로 연결한다(endpoint는 구현 시 고정).
 `event: waveform-job-updated`, `data: {"jobId":"..."}`만 보내고 Waveform JSON 전체를 전송하지 않는다.
 브라우저는 이벤트 수신 → 관련 Query invalidate → Job/Waveform refetch한다. 연결·재연결·focus 때도 현재 DB 상태를 확인한다.
-상태 commit 후 [PostgreSQL LISTEN/NOTIFY](https://www.postgresql.org/docs/17/sql-notify.html)와 기존 postgres.js로 jobId를 전달하는 작은 연결을 사용한다.
-SSE/NOTIFY는 영속 event log가 아니며 알림 실패로 SUCCEEDED를 FAILED로 바꾸지 않는다. listener 재연결 후에도 snapshot을 다시 읽는다.
+초기 Console은 단일 container·단일 Node process로 운영한다. 상태/결과 Service가 DB commit을 끝낸 뒤 Console 서버 adapter에서
+process-local [Node EventEmitter](https://nodejs.org/api/events.html#class-eventemitter)로 jobId를 emit하고 SSE에 전달한다.
+결과 API와 SSE route가 같은 process의 EventEmitter 한 개를 공유한다. 범용 event bus나 별도 알림 저장소는 만들지 않는다.
+EventEmitter/SSE는 영속 event log가 아니며 알림 실패로 commit된 성공을 되돌리거나 결과 API/Queue 처리를 실패시키지 않는다.
+PostgreSQL LISTEN/NOTIFY는 지금 도입하지 않는다. Console process/container가 두 개 이상이 될 때 process 간 전달 수단으로 검토한다.
 SSE는 MFA/ADMIN guard·job 검증을 거치고, 만료/회수·연결 종료 시 stream/listener를 정리한다. heartbeat와 Caddy 경유 전달을 확인한다.
 FCM/Web Push는 닫힌 탭·서비스 전체 push 요구가 생길 때 후속으로 검토한다. OCI Notifications는 DLQ/Runner 장애 등 운영 알림 후보만 둔다.
 Queue abstraction·Notification framework·Worker platform은 추가하지 않는다.

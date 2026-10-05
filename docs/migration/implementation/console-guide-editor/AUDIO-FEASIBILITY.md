@@ -5,7 +5,7 @@ status: recorded
 observed_at: "2026-10-05"
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 updated_at: "2026-10-05"
-revision: 3
+revision: 4
 ---
 
 # 파형 JSON 생성 기술 검토
@@ -49,10 +49,10 @@ JSON 반환 전에 모든 pipeline exit code·형식·길이를 확인한다. �
 | 비영속성  | [Docker tmpfs](https://docs.docker.com/engine/storage/tmpfs/)도 swap될 수 있다. swap/core dump를 차단·확인한다. 삭제 함수 성공만으로 보관 금지를 검증했다고 하지 않는다. |
 | 로그/결과 | raw audio는 container 내부 pipe에만 흐른다. Docker/OCI/오류 수집에는 음원·PCM·입력/출력 본문을 기록하지 않고 상태/오류 코드만 남긴다.                                    |
 
-실행은 Console Job API → OCI Queue → VM-local runner → one-shot worker로 한다.
-Runner는 long poll·job 검증·고정 container 실행·결과 반영·message delete만 맡고 분석하지 않는다.
+실행은 Console Job API → Unix socket enqueue → VM-local runner → OCI Queue → runner → one-shot worker로 한다.
+Runner는 제한된 enqueue·long poll·job 검증·고정 container 실행·결과 반영·message delete만 맡고 분석하지 않는다.
 worker에는 DB/Auth/R2/OCI credential을 주지 않는다. 임의 image/command/env/volume을 message로 받지 않는다.
-결과를 DB에 저장한 뒤에만 delete하며 재전달·visibility 연장·DLQ·SSE는 [설계 §6](DESIGN.md#6-waveform-worker)가 소유한다.
+결과를 DB에 저장한 뒤에만 delete한다. OCI 인증·active Job 재사용·재전달/visibility/DLQ·EventEmitter/SSE는 [설계 §6](DESIGN.md#6-waveform-worker)가 소유한다.
 Queue 비교나 별도 실행/알림 framework를 이 문서에 추가하지 않는다.
 
 ## 3. JSON 계약
