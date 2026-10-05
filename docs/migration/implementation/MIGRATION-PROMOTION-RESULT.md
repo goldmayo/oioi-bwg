@@ -62,3 +62,13 @@ ops 검증은 fixture/API mock으로 stale head·source/tree·PR/run/attempt·ar
 첫 Promotion acceptance는 ARM64 candidate publish → 동일 digest pull/smoke → merge → artifact 조회/identity 대조 →
 동일 digest Run Command 배포와 health/readiness/smoke/Slack 확인이다. head 변경 후 재검증과 runtime rollback도 확인한다.
 이 실제 환경 검증은 미실행이다.
+
+## 첫 Promotion 준비 중 실제 API 보강 (2026-10-06)
+
+#106 병합 후 실제 workflow run `37331644493`을 조회했을 때 `event=pull_request`,
+head `fb0115a`와 repository는 유지됐지만 `pull_requests=[]`였다.
+이 연결 목록만으로 PR 일치를 강제하면 병합 후 정상 candidate 조회도 실패한다.
+목록이 있는 경우 다른 PR을 계속 거부하고, 비어 있는 경우에는 조회한 artifact의
+`candidate.json`에서 PR/source/tree/run/attempt/repository/digest를 엄격히 대조한 뒤에만 배포한다.
+빈 연결 목록으로 정상 artifact를 조회하는 회귀 테스트와 다른 candidate PR을 거부하는 검사를 추가했다.
+기존 identity contract와 OCI 호출 전 검증 경계는 유지한다.

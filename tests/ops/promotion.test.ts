@@ -150,6 +150,18 @@ describe("migration promotion identity", () => {
     );
   });
 
+  test("resolves cleared post-merge associations while retaining exact candidate PR validation", async () => {
+    const f = fixture();
+    f.github.rest.actions.listWorkflowRuns.mockResolvedValue({
+      data: { workflow_runs: [{ ...run, pull_requests: [] }] },
+    });
+    await resolvePromotion(f);
+    expect(f.core.setOutput).toHaveBeenCalledWith("artifact_id", 99);
+    expect(() => assertCandidate({ ...candidate, prNumber: 999 }, candidate)).toThrow(
+      "Candidate prNumber mismatch",
+    );
+  });
+
   test.each([
     "unmerged",
     "head",
