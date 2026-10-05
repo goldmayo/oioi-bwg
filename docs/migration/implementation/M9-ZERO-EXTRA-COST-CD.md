@@ -1,31 +1,27 @@
 ---
 title: "M9 Zero-extra-compute CD"
 document_id: "M9-ZERO-EXTRA-COST-CD"
-version: "1.2"
+version: "1.3"
 status: "review"
 authority: "implementation"
-updated_at: "2026-09-16"
+updated_at: "2026-10-05"
 ---
 
 # M9 Zero-extra-compute CD
 
 ## 결정
 
-CI는 GitHub Actions가 계속 소유하고 CD도 같은 workflow에서 OCI Run Command를 직접 호출한다.
+CI와 CD는 GitHub Actions가 소유하며 verification/candidate workflow와 merge 후 deploy workflow를 분리한다.
+CD는 기존 OCI Run Command를 직접 호출한다.
 OCI DevOps Managed Build, Managed Shell, Events, Functions, SSH deployment는 active 경로에 두지 않는다.
 
 ```text
-migration_develop merge
-→ GitHub Actions verify
-→ linux/arm64 image build
-→ OCIR push
-→ sha256 manifest digest 확정
-→ GitHub Actions deploy job
-→ OCI Run Command API
-→ Ubuntu 24.04 Oracle Cloud Agent / ocarun
-→ /srv/oioibawige/scripts/deploy-release.sh <digest>
-→ health / smoke / rollback
-→ GitHub Actions success / failure
+feature PR → migration_main 통합 (배포 없음)
+migration_main → migration_develop Promotion PR
+→ GitHub Actions verify → ARM64 candidate publish → 동일 digest smoke/기록
+→ Promotion squash merge → source/merge tree·검증 artifact 확인
+→ 동일 digest의 OCI Run Command 배포 (재build 없음)
+→ 기존 health/readiness/smoke/rollback 및 Slack 결과
 ```
 
 배포 로직과 secret materialization은 기존 host script가 계속 소유한다. GitHub는 exact digest와 Run Command를
@@ -66,7 +62,8 @@ host deployment script만으로 요구사항을 충족한다.
 <ocir-repository>@sha256:<64hex>
 ```
 
-GitHub `publish-image` job이 manifest digest를 확정하고 `deploy` job에 output으로 전달한다.
+GitHub Promotion candidate job의 검증 artifact가 source SHA/tree와 manifest digest를 연결한다.
+merge 후 별도 deploy workflow가 이 기록을 확인한다. 현재 branch/CI 계약은 active 배포 runbook §21을 따른다.
 
 ## 인증과 권한 경계
 
@@ -170,7 +167,7 @@ repository는 public이며 workflow는 GitHub standard hosted runner만 사용�
 5. GitHub `oci-development-image` Environment에 OCI CLI credential을 등록한다.
 6. Ubuntu host에서 Oracle Cloud Agent snap >= 1.61.0과 Run Command probe를 다시 확인한다.
 7. known-good digest로 GitHub → Run Command → host deploy를 검증한다.
-8. 실제 `migration_develop` merge에서 verify → publish → deploy 자동 경로를 검증한다.
+8. 실제 Promotion PR에서 verify → candidate publish/smoke → merge → 동일 digest deploy를 검증한다.
 9. 수동으로 생성했던 DevOps service log와 사용하지 않는 Console 잔재를 정리한다.
 
 API signing credential bootstrap은 코드와 분리된 one-time account operation이다. private key material은 repository나
