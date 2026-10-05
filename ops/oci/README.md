@@ -4,15 +4,14 @@
 최초 bootstrap과 긴급 복구는 operator SSH가 가능하지만 정상 release 경로는 SSH를 사용하지 않는다.
 
 ```text
-migration_develop merge
-→ GitHub Actions verify
-→ linux/arm64 image build
-→ OCIR push
-→ sha256 manifest digest 확정
-→ GitHub Actions에서 OCI Run Command API 호출
-→ Ubuntu Oracle Cloud Agent / ocarun
-→ sudo /srv/oioibawige/scripts/deploy-release.sh <digest>
-→ health / smoke / rollback
+feature/* → PR → migration_main (verify, 배포 없음)
+migration_main → Promotion PR → migration_develop
+  → full verify → ARM64 candidate publish → 동일 digest pull/container smoke → 검증 artifact
+Promotion squash merge
+  → source SHA/tree·merged tree·성공한 run/artifact 대조
+  → 새 build/publish 없이 검증한 동일 digest 선택
+  → OCI Run Command API → Oracle Cloud Agent / ocarun
+  → deploy-release.sh <digest> → health/readiness/smoke → rollback 또는 release 상태 갱신
 ```
 
 OCI DevOps Managed Build, Managed Shell, Events, Functions는 active CD 경로에 두지 않는다. 배포 때마다 별도
@@ -54,7 +53,8 @@ sudo /srv/oioibawige/scripts/preflight-host.sh
 
 ## 3. Release and rollback
 
-GitHub Actions는 OCIR `git-<full-sha>` tag에서 manifest digest를 확정한 뒤 그 digest만 Run Command에 전달한다.
+GitHub Actions는 Promotion PR의 `candidate-<source SHA>-<run id>-<attempt>` tag로 이미지를 추적한다.
+검증한 run artifact의 digest만 Run Command에 전달하며 tag를 다시 resolve하거나 merge 후 재build하지 않는다.
 실제 release identity는 tag가 아니라 `<repository>@sha256:<digest>`다.
 
 host의 `deploy-release.sh`는 다음을 수행한다.
@@ -118,3 +118,28 @@ sudo systemctl status oioi-filesystem-metric.timer
 - application test log의 OCI Logging Search 결과
 
 secret value, auth token, API signing private key, webhook URL, full `DATABASE_URL`은 evidence에 기록하지 않는다.
+
+## 6. Migration branch 및 GitHub 수동 설정
+
+정책 SSOT는 [active 배포 runbook §21](../../docs/migration/oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md#21-cicd)이다.
+일반 작업은 최신 `migration_main`에서 분기하여 PR/squash로 통합한다. 배포는 별도 `migration_main → migration_develop`
+Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollback 경계는 변경하지 않는다.
+
+- `migration_main`: PR required, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
+- `migration_develop`: 기존 PR/force-push/verify ruleset에 required `promotion`과 최신 base 포함 검증(strict)·stale approval 재검토를 추가한다.
+- `oci-development-image` Environment: 기존 `migration_develop`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
+  credential을 사용하는 PR job은 동일 저장소 `migration_main → migration_develop`에서만 실행된다.
+- 후보 기록은 GitHub Actions artifact `promotion-<source SHA>-<attempt>`의 `candidate.json`이다.
+  보관 90일 안에 merge하며, 삭제/만료/미완료 run/다른 tree는 배포 실패로 처리한다.
+- repository의 squash-only 전략을 유지한다. 테스트 merge tree와 실제 squash tree 모두 source tree와 같아야 한다.
+  일치하지 않으면 source를 먼저 갱신하고 PR 검증을 다시 수행한다.
+- base를 바꾼 PR은 새 synchronize/reopen 실행에서 검증한다. 제목·본문 수정만으로 candidate를 다시 build하지 않는다.
+- `Deploy promotion` run summary에 source/tree·merge SHA·candidate run/attempt·exact digest가 남는다.
+  실제 배포 상태는 host current digest와 성공한 health/readiness/smoke가 기준이다. merge만으로 성공을 간주하지 않는다.
+
+2026-10-05 관찰: `migration_develop`에는 활성 ruleset의 PR required/verify/force-push 금지가 있다.
+기존 strict 검사는 꺼져 있고 `allow_update_branch=false`다. 신규 `migration_main` protection,
+두 브랜치의 strict 검사, `promotion` required check와 Environment의 PR ref 허용은 수동 설정 항목이다.
+#106은 배포 head `10ebc91`에서 생성한 `migration_main`으로 재지정했다. 이 전환은 P01을 merge하거나 OCI 배포하지 않는다.
+#107 병합과 보호 설정 적용 후 #106 작업 브랜치에 최신 `migration_main`을 merge/rebase하여 push한다.
+충돌을 해결하고 새 CI가 모두 성공한 뒤 #106을 병합한다. #107을 포함하지 않은 기존 성공 CI로 바로 병합하지 않는다.
