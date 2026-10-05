@@ -9,7 +9,7 @@
     "start": "node .next/standalone/apps/web/server.js",
     "lint": "pnpm --dir ../.. exec eslint apps/web && pnpm lint:fsd",
     "lint:fsd": "pnpm --dir ../.. exec steiger apps/web/src",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit --incremental false",
     "test": "pnpm --dir ../.. exec vitest run"
   },
   "dependencies": {
