@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.1"
+version: "1.2"
 status: "active"
 authority: "architecture"
-updated_at: "2026-09-10"
+updated_at: "2026-10-05"
 depends_on:
   - "01"
   - "05"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.1
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.2
 
 ## 1. 목적
 
@@ -174,6 +174,10 @@ provider migration이 domain schema에 과도하게 스며들지 않게 한다.
 ---
 
 ## 11. Runtime Environment
+
+Next 자동 탐색 설정과 `public/`, 로컬 `.env*` 파일은 앱 루트인 `apps/web`이 소유한다.
+정적 자산의 공개 URL과 환경변수 이름·build/runtime 해석은 앱 이동으로 변경하지 않는다.
+OCI container에 주입하는 env 파일과 운영 도구는 기존 저장소 루트 경계를 유지한다.
 
 목표 runtime:
 

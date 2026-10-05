@@ -68,16 +68,18 @@ cheer-rock-crab/
 ├── data/lyrics/        # 원본 가사 파일 (.lrc)
 ├── docs/               # 문서 (.md)
 ├── drizzle/            # SQL 마이그레이션 이력
-├── src/
-│   ├── app/            # App Router와 route-local private segment
-│   ├── widgets/        # 화면 구획 단위 조합
-│   ├── features/       # 사용자 행동과 유스케이스
-│   ├── entities/       # 도메인 모델과 표현
-│   ├── shared/         # 도메인 비종속 공용 코드
-│   └── server/         # 서버 전용 조합과 인프라 경계
+├── apps/web/           # 기존 단일 Next 앱 (/admin 포함)
+│   ├── public/         # 공개 정적 자산
+│   ├── next.config.ts  # Next.js 자동 탐색 설정
+│   ├── proxy.ts        # Next.js proxy
+│   └── src/
+│       ├── app/            # App Router와 route-local private segment
+│       ├── widgets/        # 화면 구획 단위 조합
+│       ├── features/       # 사용자 행동과 유스케이스
+│       ├── entities/       # 도메인 모델과 표현
+│       ├── shared/         # 도메인 비종속 공용 코드
+│       └── server/         # 서버 전용 조합과 인프라 경계
 ├── tests/              # stress, load, spike 테스트 스크립트
-├── proxy.ts            # Next.js proxy
-├── next.config.ts      # Next.js 설정
 └── package.json        # 의존성 및 스크립트
 
 ```
@@ -102,10 +104,13 @@ cheer-rock-crab/
 pnpm install --frozen-lockfile
 ```
 
+`pnpm dev`, `pnpm build`, `pnpm start`는 루트에서 web workspace를 실행합니다.
+검증·DB 명령은 기존과 같이 저장소 루트에서 실행합니다.
+
 ### 로컬 Docker 개발환경
 
 ```bash
-cp .env.example .env.local
+cp apps/web/.env.example apps/web/.env.local
 docker compose -f compose.dev.yml up -d postgres
 docker compose -f compose.dev.yml up -d next
 docker compose -f compose.dev.yml exec next pnpm db:migrate

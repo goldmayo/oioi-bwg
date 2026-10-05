@@ -143,3 +143,8 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
 #106은 배포 head `10ebc91`에서 생성한 `migration_main`으로 재지정했다. 이 전환은 P01을 merge하거나 OCI 배포하지 않는다.
 #107 병합과 보호 설정 적용 후 #106 작업 브랜치에 최신 `migration_main`을 merge/rebase하여 push한다.
 충돌을 해결하고 새 CI가 모두 성공한 뒤 #106을 병합한다. #107을 포함하지 않은 기존 성공 CI로 바로 병합하지 않는다.
+
+2026-10-06 적용: #107을 `440d9ed`로 병합하고 `migration_main` ruleset `24512028`을 생성했다.
+기존 `migration_develop` ruleset `22798840`에도 strict 검사와 required `promotion`을 적용했다.
+두 ruleset은 PR/필수 검사/force-push 금지와 stale approval 재검토를 적용하며 bypass actor가 없다.
+Environment에는 기존 development branch를 유지하면서 `refs/pull/*/merge` 정책 `62037752`를 추가했다.

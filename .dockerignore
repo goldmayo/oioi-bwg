@@ -1,9 +1,9 @@
 .git
-.next
-node_modules
+**/.next
+**/node_modules
 .pnpm-store
-.env
-.env.*
+**/.env
+**/.env.*
 *.env
 *.env.*
 coverage

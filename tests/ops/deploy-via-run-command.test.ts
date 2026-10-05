@@ -51,7 +51,7 @@ describe("GitHub Actions OCI Run Command deployment", () => {
     const [workflow, dockerfile, nextConfig] = await Promise.all([
       readFile(resolve(".github/workflows/verify.yml"), "utf8"),
       readFile(resolve("Dockerfile"), "utf8"),
-      readFile(resolve("next.config.ts"), "utf8"),
+      readFile(resolve("apps/web/next.config.ts"), "utf8"),
     ]);
 
     expect(workflow).toContain("SENTRY_ORG: ${{ vars.SENTRY_ORG }}");
