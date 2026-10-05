@@ -53,7 +53,9 @@ export function selectCandidateRun(runs, pr) {
         item.head_sha === pr.head.sha &&
         item.head_branch === "migration_main" &&
         item.head_repository?.full_name === pr.head.repo.full_name &&
-        item.pull_requests.some((pull) => pull.number === pr.number) &&
+        // GitHub can clear associations after merge; candidate.json still binds the exact PR.
+        (item.pull_requests.length === 0 ||
+          item.pull_requests.some((pull) => pull.number === pr.number)) &&
         Date.parse(item.created_at) <= Date.parse(pr.merged_at),
     )
     .sort((left, right) => right.id - left.id)[0];
