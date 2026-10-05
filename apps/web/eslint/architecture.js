@@ -1,7 +1,4 @@
-import {
-  getSourceParts,
-  resolveImportedParts,
-} from "../../../harness/architecture/import-path.js";
+import { getSourceParts, resolveImportedParts } from "../../../harness/architecture/import-path.js";
 
 const PROJECT_LAYERS = new Set(["app", "widgets", "features", "entities", "shared", "server"]);
 const SLICED_LAYERS = new Set(["widgets", "features", "entities"]);
