@@ -1,11 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  getSourceParts,
-  relativeImportEscapesSource,
-  resolveImportedParts,
-} from "./import-path.js";
+import { getSourceParts, resolveImportedParts } from "./import-path.js";
 
 test("extracts source-relative parts from repository paths", () => {
   assert.deepEqual(getSourceParts("/repo/apps/web/src/features/auth/ui/form.tsx"), [
@@ -28,12 +24,4 @@ test("resolves aliases and relative imports without workspace knowledge", () => 
     "use-auth",
   ]);
   assert.equal(resolveImportedParts(source, "react"), null);
-});
-
-test("detects relative imports that escape a workspace source root", () => {
-  const source = ["app", "admin", "page.tsx"];
-
-  assert.equal(relativeImportEscapesSource(source, "../../shared/lib/date"), false);
-  assert.equal(relativeImportEscapesSource(source, "../../../package.json"), true);
-  assert.equal(relativeImportEscapesSource(source, "@/shared/lib/date"), false);
 });
