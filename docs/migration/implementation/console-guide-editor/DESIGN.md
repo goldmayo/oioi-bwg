@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-05"
-revision: 4
+revision: 5
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -15,6 +15,7 @@ revision: 4
 [AUDIO-FEASIBILITY](AUDIO-FEASIBILITY.md), 구현 순서는 [ROADMAP](ROADMAP.md)이 소유한다.
 이 개정은 `ef0ac77cd81cf7312df32139c44909fbf2166a09`의 runtime 실행·공용 설정·직렬 로드맵을 수정한다.
 `8882b71c0bf6bfa71f3295d6b5f34de0b16d1dce` 이후 피드백으로 SSE 전달·Queue 인증 주체·active Job 중복 생성 규칙을 보완했다.
+이번 추가 개정은 `dfcf9182c42efa9ee48899c55495746797c2cb4f`의 enqueue/socket 응답 불확실성 처리에만 한정한다.
 애플리케이션·DB·배포 코드는 이번 문서 변경에 포함하지 않는다.
 
 ## 1. 목표
@@ -228,7 +229,7 @@ partial unique index 또는 기존 Song 행 잠금 등 구체적인 DB 수단은
 **OCI Queue 호출은 VM-local Runner 하나가 push + pull을 모두 소유한다.**
 Console은 Job을 저장한 뒤 제한된 Unix socket enqueue 호출만 한다. socket은 Console에만 연결하고
 소유자/그룹 권한으로 접근을 제한하며 Caddy/public TCP endpoint로 공개하지 않는다.
-Runner는 고정 Queue에 세 식별자만 enqueue하고 OCI 응답을 반환한다. 분석 완료를 기다리지 않는다.
+Runner는 고정 Queue에 세 식별자만 enqueue하고 성공 확인을 내부 Job API에 기록한 뒤 socket 응답을 반환한다. 분석 완료를 기다리지 않는다.
 SDK의 long poll 대기 중에도 enqueue 호출을 받을 수 있지만 분석 worker 동시 실행은 한 개를 유지한다.
 
 Runner의 OCI SDK는 [Compute Instance Principal](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm)로 인증한다.
@@ -250,7 +251,7 @@ runner는 분석하지 않으며 image·argument·자원 한도는 배포된 고
 WaveformJob
   id, songId, videoId, status: QUEUED | RUNNING | SUCCEEDED | FAILED
   errorCode nullable, createdAt, startedAt nullable, finishedAt nullable
-  enqueuedAt nullable        전달 확인 기록, 정상 Queue 대기와 미전달 구분
+  enqueuedAt nullable        Runner의 PutMessages 성공 확인 시각, null은 성공 미확인
   attemptId nullable         재전달 시 오래된 실행 결과를 거절하는 식별자
 
 Waveform                    job lifecycle과 분리한 song/source별 정상 JSON
@@ -267,9 +268,24 @@ visibility 소유권을 잃으면 기존 실행을 중단한다. 현재 처리 �
 **결과 저장과 SUCCEEDED 갱신을 같은 transaction으로 끝낸 뒤** delete한다. delete 실패는 DB 성공을 되돌리지 않는다.
 일시 실패는 message를 지우지 않고 Queue 재전달에 맡긴다. 반복 실패는 [DLQ](https://docs.oracle.com/en-us/iaas/Content/queue/deadletterqueues.htm)로 보내지며
 Runner가 DLQ의 미완료 job을 FAILED로 반영한 뒤 해당 message를 정리한다. DB에 retry queue를 구현하지 않는다.
-DB job 생성과 enqueue는 원자적이지 않다. enqueue 실패는 FAILED로 기록하되 이미 진행된 상태를 역전하지 않는다.
-전달 확인을 기록한 뒤 202를 반환한다. Runner의 작은 상태 점검은 미확인 QUEUED/retention 초과 job만 기한에 따라 FAILED로 정리하고 정상 Queue 대기는 유지한다.
-DB 대기열 조회로 작업을 실행/재전송하지 않는다. 중복 전달·늦은 응답·기한 경계는 구현에서 검증한다.
+DB Job 생성과 enqueue는 원자적이지 않으며 **socket error는 Queue enqueue 실패의 증거가 아니다.**
+`QUEUED`는 전달 성공 또는 전달 결과 확인 중인 Job을 포함한다. 상태는 `QUEUED/RUNNING/SUCCEEDED/FAILED`를 유지한다.
+
+| enqueue 결과 | 처리                                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| 명확한 실패  | Runner의 호출 실패와 message 미생성이 확정된 경우만 FAILED로 전환할 수 있다. 이미 진행된 상태는 역전하지 않는다.  |
+| 성공         | Runner가 PutMessages 성공 확인 → Console 내부 Job API로 enqueuedAt 기록 → socket 성공 응답 → 202 반환.            |
+| 불확실       | socket/PutMessages 응답 유실 등으로 전달 여부를 확정할 수 없으면 QUEUED를 유지하고 즉시 FAILED로 전환하지 않는다. |
+
+`enqueuedAt`은 Console의 socket 응답 수신 시각이 아니라 Runner의 PutMessages 성공 확인 기록이다.
+PutMessages 성공 뒤 내부 API 기록 실패/응답 유실도 Queue 실패로 간주하지 않는다. `enqueuedAt = null`만으로 message가 없다고 판단하지 않는다.
+Runner consume은 enqueuedAt이 null이어도 기존 Job을 RUNNING → SUCCEEDED로 처리할 수 있다.
+결과 불확실로 Console이 즉시 재enqueue하지 않으며 재요청은 기존 active Job의 jobId를 반환한다.
+
+Runner의 작은 stale-job 점검은 `status = QUEUED AND enqueuedAt IS NULL`이 일정 timeout 이상 지속될 때만
+조건부로 FAILED를 반영한다. 이미 전달 확인/진행된 상태는 역전하지 않고 정상 Queue 대기 및 기존 retention 점검은 유지한다.
+Console의 주기적 Queue 조회/재enqueue, DB retry queue, Outbox framework, 별도 retry scheduler·분산 transaction·범용 reconciliation은 만들지 않는다.
+중복 전달·늦은 응답·timeout 경계는 P08에서 검증한다.
 
 Worker는 `--rm --read-only --tmpfs /tmp`, CPU/memory/pids limit, cap-drop, no-new-privileges, restart 없음으로 실행한다.
 pipe가 기본이고 필요 파일/cache만 tmpfs에 둔다. swap/core dump를 막고 성공·실패·timeout 모두 container와 하위 프로세스를 제거한다.

@@ -6,13 +6,13 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-05"
-revision: 4
+revision: 5
 ---
 
 # 구현 순서와 PR 단위
 
 [설계](DESIGN.md)를 구현하는 **10개 checkpoint**다. 전체 방향 승인 후 runtime/검증 구조 수정 지시를 반영했다.
-Console 배포를 P06으로 앞당긴 독립 기능 작업선을 유지하고, 이번 개정은 P08의 인증·중복 생성·SSE 전달 조건을 보완한다.
+Console 배포를 P06으로 앞당긴 독립 기능 작업선을 유지하고, 이번 개정은 P08의 enqueue 응답 불확실성 완료 조건만 보완한다.
 아직 구현하지 않았으며 이 문서 PR에 앱·DB·인증·runner/worker 코드는 포함하지 않는다.
 
 ## 1. 코드 의존성과 운영 순서
@@ -67,6 +67,21 @@ P09~P10도 기존 가사 JSON을 입력으로 사용한다. BPM/beatOffset은 So
 - Worker의 성공/실패/timeout/강제 종료 후 host/container/volume/log/Sentry에 음원·PCM이 남지 않아야 한다. 같은 videoId의 3개 이상 anchor로 일정 offset과 누적 drift를 구분하며 기준·측정값을 기록한다.
 - SSE는 단일 Console process의 DB commit → EventEmitter → stream으로 연결한다. 이벤트 누락/중복·재연결·서버 재시작·listener 오류 후에도 DB를 Query로 다시 읽으면 같은 job/결과를 보아야 한다. LISTEN/NOTIFY는 Console process/container가 둘 이상일 때 후속으로 검토한다.
 - 문서 작업은 내용·링크·format만 검사한다. push hook 검증은 hook 실행 결과로 별도 보고한다.
+
+P08의 필수 enqueue 응답 유실 검증은 다음 순서로 수행한다.
+
+1. DB Job 생성에 성공한다.
+2. Runner의 OCI Queue PutMessages에 성공한다.
+3. Unix socket 성공 응답만 의도적으로 유실시킨다.
+4. Console이 socket 실패를 이유로 기존 Job을 즉시 FAILED로 전환하지 않는지 확인한다.
+5. Queue message가 Runner에 전달되는지 확인한다.
+6. 같은 jobId가 RUNNING → SUCCEEDED로 정상 수렴하는지 확인한다.
+7. 전체 시나리오에서 추가 Job/중복 Queue message가 생성되지 않았는지 확인한다.
+
+Runner의 내부 API 기록 후 socket 응답만 유실된 경우와, 기록도 못 해 enqueuedAt이 null인 채 consume되는 경우를 확인한다.
+반대로 PutMessages 실패와 message 미생성이 확정된 경우에는 FAILED로 수렴해야 한다.
+미확인 QUEUED가 timeout을 넘으면 기존 stale-job 점검으로만 정리하며, 늦은 전달 확인/consume과 경합해 진행된 상태를 역전하지 않아야 한다.
+이 검증에 Outbox/DB queue/retry scheduler/분산 transaction/범용 reconciliation·broker abstraction을 추가하지 않는다.
 
 P06 전환 순서는 **두 image/routing 준비 → 비공개 Console smoke/MFA 등록 → Web 관리 경로 제거 → 두 앱 배포 검증 → Console 공개**다.
 P04/P05의 기존 기능과 인가 확인 전에는 기존 경로를 지우지 않는다. rollback도 password-only 관리 경로를 다시 공개하지 않는다.
