@@ -47,9 +47,9 @@ migration implementation plan/result
 
 ## 2. 브랜치와 변경 절차
 
-- migration 작업은 `migration_*` 브랜치에서 수행한다.
-- 새 단계 브랜치는 최신 `migration_develop` merge head에서 만든다. 분기 전 local과
-  `origin/migration_develop`의 기준 커밋을 확인해 stale local branch에서 분기하지 않는다.
+- migration 구현·수정은 `feature/*` 브랜치에서 수행한다. 기존 열린 `migration_*` 작업 브랜치는 그대로 사용할 수 있다.
+- 새 단계 브랜치는 최신 `migration_main` merge head에서 만든다. 분기 전 local과
+  `origin/migration_main`의 기준 커밋을 확인해 stale local branch에서 분기하지 않는다.
 - 작업 중에는 해당 단계 브랜치만 수정한다.
 - 단계 전체를 한 PR에 몰아넣지 않는다. 하나의 PR은 하나의 reviewable concern 또는 하나의
   migration checkpoint만 다룬다.
@@ -63,12 +63,15 @@ migration implementation plan/result
 - Git 커밋 제목은 Conventional Commit의 `type(scope): 한글 요약` 형식을 유지한다. 규격상
   `type`과 선택적 `scope`만 영어로 쓰고, 모든 개별 커밋의 제목 요약과 본문은 반드시 한글로 작성한다.
 - 사용자가 보류를 요청하지 않은 단계 완료 작업은 commit → push → PR 생성까지 진행하고 링크를 보고한다.
-- PR 대상은 `migration_develop`이며, merge 방식은 squash and merge를 전제로 한다. 작업 브랜치의
+- 일반 feature PR 대상은 `migration_main`이며, merge 방식은 squash and merge를 전제로 한다. 작업 브랜치의
   upstream은 PR 대상이 아니라 같은 이름의 원격 작업 브랜치로만 설정한다.
 - squash 커밋 제목은 PR 제목, 본문은 PR 본문을 사용한다. 병합 전에 PR 제목이
   `type(scope): 한글 요약`인지, PR 본문이 최종 변경 사항과 검증 결과를 한글로 설명하는지 갱신한다.
 - PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 형식을 따른다.
 - PR 리뷰 중에는 같은 브랜치에 추가 커밋을 push해 기존 PR에 반영한다.
+- OCI Development 배포는 별도의 `migration_main → migration_develop` Promotion PR로만 진행한다.
+  source/merge tree가 같은 squash 결과에 검증한 동일 candidate digest를 배포한다. 통합 merge만으로 배포하지 않는다.
+  세부 검증·보호 설정은 active 배포 runbook §21을 따른다.
 
 현재 단계가 끝났다는 보고에는 변경 범위, 보류 항목, 검증 결과, 커밋을 포함한다.
 

@@ -56,3 +56,18 @@ OCI ARM64 runtime 및 실제 Sentry 업로드는 운영 배포 시 확인할 범
 
 P02의 Turborepo, `config/typescript`, `config/eslint`, `harness/architecture` 및 검증 공용화는 수행하지 않았다.
 console/Admin 분리, packages 추출과 이후 기능 checkpoint도 구현하지 않았다.
+
+## #107 통합 후 재검증 (2026-10-06)
+
+병합된 #107의 `440d9edb8ed0c80bd7d0edf1a91cae90370ec63f`를 P01 작업 브랜치에 반영했다.
+`verify.yml`의 Promotion candidate/gate와 별도 deploy workflow를 유지하면서 P01의
+`apps/web/.next/cache`, workspace build와 standalone container/Playwright smoke를 함께 보존했다.
+기존 migration_develop push 기반 publish/deploy는 복구하지 않았다.
+문서 버전 충돌은 두 변경의 내용을 모두 유지하고 index와 버전을 맞춰 해결했다.
+P01 기존 head `e813bbf`와 비교해 `apps/web` 파일에는 추가 변경이 없다.
+
+통합 상태에서 frozen/offline install, `pnpm verify`(harness 8개, unit 240개, ops 50개),
+`pnpm format:check`와 환경 파일을 제외한 복사본의 `pnpm build`가 성공했다.
+WSL Docker 접근이 없어 container/PostgreSQL 검증은 갱신된 #106 CI에서 확인한다.
+기존 #106의 성공 CI를 통합 결과의 검증으로 재사용하지 않는다.
+보호 규칙과 Environment의 실제 적용 기록은 [ops 가이드](../../../../ops/oci/README.md#6-migration-branch-및-github-수동-설정)를 따른다.

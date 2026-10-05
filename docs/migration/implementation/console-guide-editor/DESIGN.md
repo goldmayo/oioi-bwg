@@ -125,7 +125,7 @@ Next build outputs는 `.next/**`에서 `.next/cache/**`를 제외하고, config/
 pre-commit은 root lint-staged의 ESLint/Prettier만 실행한다. 전체 type-check/build는 넣지 않는다.
 pre-push는 필요하면 `turbo run lint type-check test --affected`를 사용한다.
 [`--affected`](https://github.com/vercel/turborepo/blob/main/apps/docs/content/docs/reference/run.mdx)의 기준은
-`migration_develop` merge-base로 설정하고 필요한 Git 이력을 확보한다.
+`migration_main` merge-base로 설정하고 필요한 Git 이력을 확보한다.
 공유 config/harness 및 root 경계 규칙 변경은 affected 검사에서 빠지지 않게 하며, 초기 CI는 전체 `pnpm verify`를 실행한다.
 
 ## 4. Console / Auth

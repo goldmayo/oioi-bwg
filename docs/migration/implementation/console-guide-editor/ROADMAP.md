@@ -89,6 +89,7 @@ P06 전환 순서는 **두 image/routing 준비 → 비공개 Console smoke/MFA 
 P04/P05의 기존 기능과 인가 확인 전에는 기존 경로를 지우지 않는다. rollback도 password-only 관리 경로를 다시 공개하지 않는다.
 Guide writer 전환 뒤 rollback은 새 guide를 읽는 호환 앱으로 제한하고 Song.lyrics의 파괴적 정리는 후속으로 둔다.
 
-각 PR은 repository template과 한글 Conventional Commit → push → PR 절차를 따른다.
+각 구현 PR은 `migration_main`을 대상으로 repository template과 한글 Conventional Commit → push → PR 절차를 따른다.
+OCI Development 배포는 별도 `migration_main → migration_develop` Promotion PR로 진행하며 active 배포 runbook §21을 따른다.
 후속 보류는 Revision 이력/승인, 공연별 다수 variant, DB role hardening, 닫힌 탭/서비스 전체 Web Push다.
 자동 BPM/Alignment/GPU/ML, 자체 Queue/Notification framework는 로드맵에 넣지 않는다.

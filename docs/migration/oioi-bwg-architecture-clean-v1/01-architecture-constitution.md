@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.9"
+version: "2.11"
 status: "active"
 authority: "constitution"
-updated_at: "2026-10-05"
+updated_at: "2026-10-06"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.9
+# oioi-bwg Architecture Constitution v2.11
 
 ## 1. 목적
 
@@ -76,7 +76,7 @@ tags:
 
 - GitHub Actions CI
 - private OCI Container Registry(OCIR)와 manifest digest release identity
-- OCI DevOps deployment pipeline
+- GitHub Actions Promotion PR candidate와 OCI Compute Run Command 배포
 - OCI Resource Manager 기반 Terraform state/plan/apply
 - OCI Secret Management runtime secret SSOT
 - OCI Monitoring / Logging / Notifications
@@ -130,14 +130,15 @@ Browser
                                            `-> Drizzle -> PostgreSQL
 
 Infrastructure
-GitHub CI -> OCIR -> OCI DevOps -> OCI Compute
+feature PR -> migration_main -> Promotion PR -> OCIR candidate -> migration_develop -> OCI Run Command -> OCI Compute
 Internet -> Caddy -> Next standalone -> PostgreSQL
 ```
 
-GitHub Actions는 검증과 `git-<full-commit-sha>` traceability tag publish까지 담당하고 Compute를 직접
-제어하지 않는다. OCIR repository/tag 자체의 immutability를 가정하지 않으며 OCI DevOps가 immutable
-manifest digest release identity, approval, deployment history, Compute Run
-Command 조정을 소유한다. 구체 CI/CD, secret, rollback, backup 규칙은 11과 12를 따른다.
+`migration_main`은 migration 통합선이고 `migration_develop`은 OCI Development promotion/deployment 선이다.
+일반 feature PR은 `migration_main`에서 검증하며 배포하지 않는다. Promotion PR은 현재 source head의
+ARM64 candidate를 게시·검증하고, merge 후 같은 immutable digest만 OCI Run Command로 배포한다.
+GitHub는 최소 Run Command credential만 사용하며 runtime Vault secret/DB/SSH에는 접근하지 않는다.
+OCIR tag immutability를 가정하지 않는다. source/merge tree 일치, 기록·권한·rollback은 12를 따른다.
 
 Next.js는 화면 렌더링과 HTTP delivery를 담당한다.
 
