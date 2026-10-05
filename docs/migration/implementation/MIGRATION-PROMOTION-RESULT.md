@@ -49,12 +49,16 @@ ops 검증은 fixture/API mock으로 stale head·source/tree·PR/run/attempt·ar
 
 관찰한 기존 migration_develop ruleset에는 PR required, verify, force-push 금지가 있다.
 새 migration_main에는 보호 규칙이 없으며 Environment는 migration_develop만 허용한다.
+기존 strict 검사는 꺼져 있고 저장소의 `allow_update_branch=false`도 확인했다.
 다음 설정은 코드에서 자동 변경하지 않았다.
 
-1. migration_main: PR required / verify / direct·force push 금지 / stale approval 재검토.
-2. migration_develop: required promotion 추가 / 최신 head/base 검사 / stale approval 재검토.
+1. migration_main: PR required / verify / 최신 base 포함 검증(strict) / direct·force push 금지 / stale approval 재검토.
+2. migration_develop: required promotion 추가 / 최신 base 포함 검증(strict) / stale approval 재검토.
 3. oci-development-image: `refs/pull/*/merge` 허용. 기존 migration_develop 허용은 유지.
 
 상세 운영 경계는 [ops 가이드](../../../ops/oci/README.md#6-migration-branch-및-github-수동-설정)를 따른다.
-보호 설정과 정책 PR 통합 후 실제 Promotion에서 ARM64 candidate publish/pull/smoke, head 변경 후 재검증,
-merge 후 동일 digest Run Command/Slack 및 runtime rollback을 확인해야 한다. 이 실제 환경 검증은 미실행이다.
+적용 순서는 #107 병합 → 보호/Environment 설정 → #106에 최신 migration_main merge/rebase 및 push →
+새 CI 전체 성공 → #106 병합 → 첫 Promotion PR이다. #106의 기존 성공 CI를 그대로 재사용하지 않는다.
+첫 Promotion acceptance는 ARM64 candidate publish → 동일 digest pull/smoke → merge → artifact 조회/identity 대조 →
+동일 digest Run Command 배포와 health/readiness/smoke/Slack 확인이다. head 변경 후 재검증과 runtime rollback도 확인한다.
+이 실제 환경 검증은 미실행이다.

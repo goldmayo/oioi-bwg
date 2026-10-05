@@ -125,8 +125,8 @@ secret value, auth token, API signing private key, webhook URL, full `DATABASE_U
 일반 작업은 최신 `migration_main`에서 분기하여 PR/squash로 통합한다. 배포는 별도 `migration_main → migration_develop`
 Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollback 경계는 변경하지 않는다.
 
-- `migration_main`: PR required, required `verify`, direct/force push 금지, stale approval 재검토.
-- `migration_develop`: 기존 PR/force-push/verify ruleset에 required `promotion`과 최신 head/base 검사·stale approval 재검토를 추가한다.
+- `migration_main`: PR required, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
+- `migration_develop`: 기존 PR/force-push/verify ruleset에 required `promotion`과 최신 base 포함 검증(strict)·stale approval 재검토를 추가한다.
 - `oci-development-image` Environment: 기존 `migration_develop`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
   credential을 사용하는 PR job은 동일 저장소 `migration_main → migration_develop`에서만 실행된다.
 - 후보 기록은 GitHub Actions artifact `promotion-<source SHA>-<attempt>`의 `candidate.json`이다.
@@ -138,5 +138,8 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
   실제 배포 상태는 host current digest와 성공한 health/readiness/smoke가 기준이다. merge만으로 성공을 간주하지 않는다.
 
 2026-10-05 관찰: `migration_develop`에는 활성 ruleset의 PR required/verify/force-push 금지가 있다.
-신규 `migration_main` protection, `promotion` required check와 Environment의 PR ref 허용은 수동 설정 항목이다.
+기존 strict 검사는 꺼져 있고 `allow_update_branch=false`다. 신규 `migration_main` protection,
+두 브랜치의 strict 검사, `promotion` required check와 Environment의 PR ref 허용은 수동 설정 항목이다.
 #106은 배포 head `10ebc91`에서 생성한 `migration_main`으로 재지정했다. 이 전환은 P01을 merge하거나 OCI 배포하지 않는다.
+#107 병합과 보호 설정 적용 후 #106 작업 브랜치에 최신 `migration_main`을 merge/rebase하여 push한다.
+충돌을 해결하고 새 CI가 모두 성공한 뒤 #106을 병합한다. #107을 포함하지 않은 기존 성공 CI로 바로 병합하지 않는다.

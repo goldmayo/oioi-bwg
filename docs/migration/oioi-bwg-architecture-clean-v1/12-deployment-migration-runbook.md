@@ -484,12 +484,18 @@ GitHub에는 Run Command credential만 주고 SSH/runtime Vault/DB 권한은 주
 
 Branch protection/ruleset은 수동 설정이며 코드로 완료 처리하지 않는다.
 
-- `migration_main`: PR 필수, required `verify`, direct/force push 금지, stale approval 재검토.
+- `migration_main`: PR 필수, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
 - `migration_develop`: PR 필수, required `verify`와 `promotion`, direct/force push 금지,
-  최신 head/base 검증 및 stale approval 재검토. 정상 source는 동일 저장소 `migration_main`뿐이다.
+  최신 base 포함 검증(strict) 및 stale approval 재검토. 정상 source는 동일 저장소 `migration_main`뿐이다.
 - 기존 `oci-development-image` Environment는 `migration_develop` 및 `refs/pull/*/merge` 실행을 허용해야 한다.
   PR secret job은 동일 저장소의 `migration_main → migration_develop` 조건으로만 실행한다.
 - artifact 보관은 90일이다. 만료 전에 검증·merge하며 만료/삭제 시 digest 추측이나 merge 후 재build를 하지 않는다.
+
+두 브랜치 모두 GitHub의 `Require branches to be up to date before merging`을 활성화한다.
+PR head와 최신 base의 merge ref에서 required checks를 통과해야 하며, base 갱신 전의 성공만으로 병합하지 않는다.
+설정 의미는 [GitHub의 strict required status checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging)를 따른다.
+`allow_update_branch=false`인 현재 저장소에서는 Update branch 버튼에 의존하지 않는다.
+필요하면 작업 브랜치에 최신 base를 merge/rebase하여 push하고 새 CI를 통과시킨다.
 
 상세 운영 명령과 현재 수동 설정 확인은 `ops/oci/README.md` 및 구현 결과를 따른다.
 
