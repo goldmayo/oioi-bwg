@@ -21,7 +21,7 @@ import type { CreateAdminSong } from "@/shared/contracts/song";
 const external = vi.hoisted(() => ({ mail: vi.fn() }));
 
 vi.mock("@/auth", () => ({ auth: async () => null }));
-vi.mock("../../src/server/email/signup-verification-email", () => ({
+vi.mock("../../apps/web/src/server/email/signup-verification-email", () => ({
   sendSignupVerificationEmail: external.mail,
   SignupEmailSuppressedError: class extends Error {},
 }));

@@ -2,15 +2,20 @@ name: Verify
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
   push:
     branches:
       - main
       - develop
-      - migration_develop
 
 concurrency:
   group: verify-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
 
 jobs:
   infra:
@@ -159,7 +164,7 @@ jobs:
       - name: Restore Next.js build cache
         uses: actions/cache@v4
         with:
-          path: .next/cache
+          path: apps/web/.next/cache
           key: ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-
@@ -167,6 +172,27 @@ jobs:
       - run: pnpm build
         env:
           NEXT_PUBLIC_APP_ENV: staging
+
+      - name: Build standalone container
+        run: docker build --tag oioi-bwg:workspace-check .
+
+      - name: Install smoke test browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Smoke test standalone container
+        run: |
+          set -euo pipefail
+          docker run --detach --name web-workspace-check \
+            --publish 127.0.0.1:3000:3000 \
+            --env AUTH_SECRET=workspace-smoke-local-only-secret \
+            --env AUTH_TRUST_HOST=true \
+            oioi-bwg:workspace-check
+          trap 'docker logs web-workspace-check; docker rm --force web-workspace-check' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/healthz; then break; fi
+            sleep 1
+          done
+          node tests/ops/web-standalone-smoke.mjs http://127.0.0.1:3000
 
   verify:
     name: verify
@@ -202,17 +228,29 @@ jobs:
             fi
           done
 
-  publish-image:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/migration_develop'
+  promotion-candidate:
+    name: promotion candidate
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.base.ref == 'migration_develop' &&
+      github.event.pull_request.head.ref == 'migration_main' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     needs: verify
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     environment: oci-development-image
-    permissions:
-      contents: read
-    outputs:
-      image_digest: ${{ steps.release.outputs.digest }}
-
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: promotion_smoke
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d promotion_smoke"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       OCIR_REGISTRY: ${{ vars.OCIR_REGISTRY }}
       OCIR_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
@@ -220,10 +258,18 @@ jobs:
       NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
-
+      IMAGE_REPOSITORY: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ vars.OCIR_REPOSITORY }}
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Validate promotion source and verification tree
+        id: source
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
+            await promotion.prepare({ github, context, core });
       - name: Validate image build configuration
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -235,283 +281,108 @@ jobs:
               exit 1
             fi
           done
-
       - uses: docker/setup-buildx-action@v3
-
       - name: Log in to OCIR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.OCIR_REGISTRY }}
           username: ${{ secrets.OCIR_USERNAME }}
           password: ${{ secrets.OCIR_AUTH_TOKEN }}
-
-      - name: Check existing traceability tag
-        id: existing
-        run: |
-          image="${OCIR_REGISTRY}/${OCIR_NAMESPACE}/${OCIR_REPOSITORY}:git-${GITHUB_SHA}"
-          if digest="$(docker buildx imagetools inspect "${image}" --format '{{.Manifest.Digest}}' 2>/dev/null)" && [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            echo "exists=true" >> "${GITHUB_OUTPUT}"
-            echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
-          else
-            echo "exists=false" >> "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Build and publish image
+      - name: Build and publish ARM64 candidate
         id: image
-        if: steps.existing.outputs.exists != 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/arm64
           push: true
-          tags: ${{ env.OCIR_REGISTRY }}/${{ env.OCIR_NAMESPACE }}/${{ env.OCIR_REPOSITORY }}:git-${{ github.sha }}
+          tags: ${{ env.IMAGE_REPOSITORY }}:candidate-${{ steps.source.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: |
             NEXT_PUBLIC_APP_ENV=staging
             NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
             SENTRY_ORG=${{ env.SENTRY_ORG }}
             SENTRY_PROJECT=${{ env.SENTRY_PROJECT }}
-            SENTRY_RELEASE=oioi-bwg@${{ github.sha }}
+            SENTRY_RELEASE=oioi-bwg@${{ steps.source.outputs.source_sha }}
             SENTRY_SOURCE_MAPS_ENABLED=true
           secrets: |
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.source.outputs.source_sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=min
-
-      - name: Record release identity
-        id: release
-        env:
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.existing.outputs.digest }}
-        run: |
-          set -euo pipefail
-          if [[ ! "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            echo "Invalid release digest: ${IMAGE_DIGEST}" >&2
-            exit 1
-          fi
-          echo "digest=${IMAGE_DIGEST}" >> "${GITHUB_OUTPUT}"
-          image="${OCIR_REGISTRY}/${OCIR_NAMESPACE}/${OCIR_REPOSITORY}"
-          {
-            echo "### Published OCI development image"
-            echo
-            echo "\`${image}@${IMAGE_DIGEST}\`"
-            echo
-            echo "This digest is deployed automatically after publish succeeds."
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-  deploy:
-    name: deploy
-    if: github.event_name == 'push' && github.ref == 'refs/heads/migration_develop'
-    needs: publish-image
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: oci-development-image
-    permissions:
-      contents: read
-    outputs:
-      exit_code: ${{ steps.deploy-release.outputs.exit_code }}
-
-    env:
-      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
-      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
-      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
-      OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
-      OCI_CLI_REGION: ap-osaka-1
-      OCI_COMPUTE_COMPARTMENT_OCID: ocid1.compartment.oc1..aaaaaaaavs5y44txsstgn5px5zfwynupw3m4mvlgndaje6q3lyi3hi65ucbq
-      OCI_COMPUTE_INSTANCE_OCID: ocid1.instance.oc1.ap-osaka-1.anvwsljrhcgbyoacqa6id2hr257tlu26cfjd7x7yywnai7hh37kkytix57cq
-      IMAGE_DIGEST: ${{ needs.publish-image.outputs.image_digest }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate deployment configuration
-        run: |
-          set -euo pipefail
-          required=(
-            OCI_CLI_USER
-            OCI_CLI_TENANCY
-            OCI_CLI_FINGERPRINT
-            OCI_CLI_KEY_CONTENT
-            OCI_CLI_REGION
-            OCI_COMPUTE_COMPARTMENT_OCID
-            OCI_COMPUTE_INSTANCE_OCID
-            IMAGE_DIGEST
-          )
-          for name in "${required[@]}"; do
-            if [[ -z "${!name}" ]]; then
-              echo "Missing deployment configuration: ${name}" >&2
-              exit 1
-            fi
-          done
-          [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
-
-      - name: Verify OCI Run Command authentication
-        uses: oracle-actions/run-oci-cli-command@v1.3.2
+      - uses: pnpm/action-setup@v4
         with:
-          command: >-
-            instance-agent command list
-            --compartment-id ${{ env.OCI_COMPUTE_COMPARTMENT_OCID }}
-            --limit 1
-
-      - name: Deploy immutable digest with OCI Run Command
-        id: deploy-release
-        run: |
-          set +e
-          bash ops/oci/deploy-via-run-command.sh "${IMAGE_DIGEST}"
-          exit_code=$?
-          set -e
-          echo "exit_code=${exit_code}" >> "${GITHUB_OUTPUT}"
-          exit "${exit_code}"
-
-      - name: Record deployment result
-        if: success()
-        run: |
-          {
-            echo "### OCI development deployment succeeded"
-            echo
-            echo "Commit: \`${GITHUB_SHA}\`"
-            echo
-            echo "Digest: \`${IMAGE_DIGEST}\`"
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-  notify-deploy:
-    name: notify deploy
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/migration_develop'
-    needs:
-      - publish-image
-      - deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    environment: oci-development-image
-    permissions:
-      contents: read
-
-    env:
-      SLACK_DEPLOY_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK_URL }}
-      PUBLISH_RESULT: ${{ needs.publish-image.result }}
-      DEPLOY_RESULT: ${{ needs.deploy.result }}
-      DEPLOY_EXIT_CODE: ${{ needs.deploy.outputs.exit_code }}
-      IMAGE_DIGEST: ${{ needs.publish-image.outputs.image_digest }}
-      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-    steps:
-      - name: Notify Slack
-        continue-on-error: true
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Migrate isolated smoke database
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres@127.0.0.1:5432/promotion_smoke
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Pull and smoke the published digest
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
         run: |
           set -euo pipefail
+          [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
+          image="${IMAGE_REPOSITORY}@${IMAGE_DIGEST}"
+          docker pull --platform linux/arm64 "${image}"
+          [[ "$(docker image inspect "${image}" --format '{{.Architecture}}')" == 'arm64' ]]
+          docker run --detach --name promotion-smoke --network host \
+            --env DATABASE_URL=postgresql://postgres@127.0.0.1:5432/promotion_smoke \
+            --env AUTH_SECRET=promotion-smoke-local-only-secret --env AUTH_TRUST_HOST=true "${image}"
+          trap 'docker logs promotion-smoke; docker rm --force promotion-smoke' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --output /dev/null http://127.0.0.1:3000/readyz; then break; fi
+            sleep 1
+          done
+          curl --fail --silent --output /dev/null http://127.0.0.1:3000/readyz
+          curl --fail --silent --output /dev/null http://127.0.0.1:3000/
+          node tests/ops/web-standalone-smoke.mjs http://127.0.0.1:3000
+      - name: Record verified candidate and recheck head
+        uses: actions/github-script@v7
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        with:
+          script: |
+            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
+            await promotion.record({ github, context, core });
+      - uses: actions/upload-artifact@v4
+        with:
+          name: promotion-${{ steps.source.outputs.source_sha }}-${{ github.run_attempt }}
+          path: candidate.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Notify candidate result
+        if: always()
+        continue-on-error: true
+        env:
+          SLACK_DEPLOY_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK_URL }}
+          PHASE: candidate
+          PUBLISH_RESULT: ${{ steps.image.outcome }}
+          CANDIDATE_RESULT: ${{ job.status }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 ops/oci/slack-deploy-payload.py > /tmp/slack-payload.json
+          curl --fail-with-body --silent --show-error --request POST \
+            --header 'Content-Type: application/json' --data-binary @/tmp/slack-payload.json "${SLACK_DEPLOY_WEBHOOK_URL}"
 
-          if [[ -z "${SLACK_DEPLOY_WEBHOOK_URL}" ]]; then
-            echo "SLACK_DEPLOY_WEBHOOK_URL is unavailable in oci-development-image" >&2
-            exit 1
-          fi
-
-          python3 - <<'PY' > /tmp/slack-payload.json
-          import json
-          import os
-
-          publish_result = os.environ.get("PUBLISH_RESULT", "")
-          deploy_result = os.environ.get("DEPLOY_RESULT", "")
-          exit_code = os.environ.get("DEPLOY_EXIT_CODE", "")
-          digest = os.environ.get("IMAGE_DIGEST", "")
-          run_url = os.environ["RUN_URL"]
-          sha = os.environ["GITHUB_SHA"]
-          short_sha = sha[:7]
-
-          if digest.startswith("sha256:") and len(digest) >= 24:
-              short_digest = f"sha256:{digest[7:19]}…{digest[-8:]}"
-          else:
-              short_digest = "unknown"
-
-          if publish_result != "success":
-              title = "❌ OCI 개발 배포 실패"
-              detail = "이미지 게시 단계가 성공하지 못했습니다."
-              color = "#E01E5A"
-              result_lines = "❌ 이미지 게시 실패"
-              stage = "Image publish"
-          elif deploy_result == "success" and exit_code == "0":
-              title = "✅ OCI 개발 배포 완료"
-              detail = "새 릴리즈가 정상 배포되었습니다."
-              color = "#2EB67D"
-              result_lines = "✅ Health   ✅ Readiness   ✅ Smoke"
-              stage = "Complete"
-          elif exit_code == "20":
-              title = "↩️ OCI 개발 배포 롤백 완료"
-              detail = "새 릴리즈 검증에 실패하여 직전 릴리즈로 자동 복구했습니다."
-              color = "#ECB22E"
-              result_lines = "⚠️ 새 릴리즈 검증 실패   ✅ 이전 릴리즈 복구 완료"
-              stage = "Rollback"
-          elif exit_code == "21":
-              title = "🚨 OCI 개발 배포 롤백 실패"
-              detail = "새 릴리즈 배포와 이전 릴리즈 복구가 모두 실패했습니다. 즉시 확인이 필요합니다."
-              color = "#A30200"
-              result_lines = "❌ 새 릴리즈 실패   ❌ 자동 롤백 실패"
-              stage = "Rollback"
-          else:
-              title = "❌ OCI 개발 배포 실패"
-              detail = "OCI 배포 파이프라인을 완료하지 못했습니다."
-              color = "#E01E5A"
-              result_lines = "❌ 배포 실패"
-              stage = "Deploy"
-
-          fields = [
-              {"type": "mrkdwn", "text": "*환경*\nOCI Development"},
-              {"type": "mrkdwn", "text": "*브랜치*\n`migration_develop`"},
-              {"type": "mrkdwn", "text": f"*커밋*\n`{short_sha}`"},
-              {"type": "mrkdwn", "text": f"*이미지*\n`{short_digest}`"},
-          ]
-
-          if stage != "Complete":
-              fields.append({"type": "mrkdwn", "text": f"*단계*\n{stage}"})
-
-          payload = {
-              "text": title,
-              "attachments": [
-                  {
-                      "color": color,
-                      "blocks": [
-                          {
-                              "type": "header",
-                              "text": {"type": "plain_text", "text": title, "emoji": True},
-                          },
-                          {
-                              "type": "section",
-                              "text": {"type": "mrkdwn", "text": detail},
-                          },
-                          {
-                              "type": "section",
-                              "fields": fields,
-                          },
-                          {"type": "divider"},
-                          {
-                              "type": "section",
-                              "text": {"type": "mrkdwn", "text": f"*결과*\n{result_lines}"},
-                          },
-                          {
-                              "type": "actions",
-                              "elements": [
-                                  {
-                                      "type": "button",
-                                      "text": {"type": "plain_text", "text": "GitHub Actions에서 보기", "emoji": True},
-                                      "url": run_url,
-                                      "action_id": "open_github_actions",
-                                  }
-                              ],
-                          },
-                      ],
-                  }
-              ],
-          }
-
-          print(json.dumps(payload, ensure_ascii=False))
-          PY
-
-          curl \
-            --fail-with-body \
-            --silent \
-            --show-error \
-            --request POST \
-            --header 'Content-Type: application/json' \
-            --data-binary @/tmp/slack-payload.json \
-            "${SLACK_DEPLOY_WEBHOOK_URL}"
+  promotion:
+    name: promotion
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'migration_develop'
+    needs: [verify, promotion-candidate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require full verification and verified candidate
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          CANDIDATE_RESULT: ${{ needs.promotion-candidate.result }}
+        run: |
+          [[ "${VERIFY_RESULT}" == 'success' && "${CANDIDATE_RESULT}" == 'success' ]]

@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.5"
+version: "1.8"
 status: "active"
 authority: "runbook"
-updated_at: "2026-09-11"
+updated_at: "2026-10-06"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.5
+# oioi-bwg Deployment / Migration Runbook v1.8
 
 ## 1. 목적
 
@@ -227,8 +227,8 @@ standalone runtime 확인
 ```text
 GitHub quality gate
 → private OCIR의 manifest digest release identity
-→ OCI DevOps deployment
-→ Shell Stage / Compute Run Command
+→ 검증한 Promotion candidate의 동일 digest
+→ GitHub Actions / Compute Run Command
 → Docker Compose
 → health / readiness / smoke
 → release state update
@@ -239,7 +239,7 @@ Compute, VCN, subnet, boot volume, PostgreSQL data는 data source/input으로 �
 결정 없이 ownership을 가져오지 않는다.
 
 서비스 리전은 `ap-osaka-1`, OCIR endpoint는 region에서 유도한 `ap-osaka-1.ocir.io`로 고정한다.
-OCIR의 `git-<full-commit-sha>`는 traceability tag이며 repository나 tag 자체의 OCI-level immutability를
+OCIR의 source SHA를 포함한 candidate tag(§21)는 traceability 용도이며 repository나 tag 자체의 OCI-level immutability를
 가정하지 않는다. 배포와 rollback의 immutable identity는 `<repository>@sha256:<digest>`다.
 
 ### 13.1. Initial Resource Manager reconciliation
@@ -267,9 +267,13 @@ Docker/OCIR image portability는 11 §12.1의 `NEXT_PUBLIC_*` 원칙을 따른�
 
 Next standalone output을 기준으로 최소 runtime image를 구성한다.
 
+현재 앱의 tracing root는 저장소 루트이며, `apps/web/.next/standalone` 전체를 runtime image로 복사한다.
+진입점은 `apps/web/server.js`이고, `public`과 `.next/static`도 runtime의 `apps/web` 아래에 배치한다.
+단일 web container의 port, health/readiness, 환경변수 주입과 배포 topology는 유지한다.
+
 container 안에 development toolchain 전체를 넣지 않는다.
 
-Image는 `git-<full-commit-sha>` tag로 traceability를 남기되 release identity는 OCIR
+Image는 §21의 source SHA를 포함한 candidate tag로 traceability를 남기되 release identity는 OCIR
 manifest digest로 고정한다. `latest`, `development` 같은 mutable tag를 deployment input으로
 사용하지 않는다.
 
@@ -454,38 +458,59 @@ Production DB를 test target으로 사용하지 않는다.
 
 ## 21. CI/CD
 
-기본 pipeline:
+현재 migration 브랜치와 CI/CD 계약:
 
 ```text
-install
-typecheck
-lint
-unit / PostgreSQL integration test
-format
-build
-image build
-OCIR push
-OCI DevOps manual release gate
-Compute Run Command deploy
-health / readiness / smoke
+feature/* → PR → migration_main (통합, 배포 없음)
+migration_main → Promotion PR → migration_develop (OCI Development 배포 대상)
 ```
 
-GitHub Actions는 Compute SSH, Run Command, runtime Vault secret, production DB, production
-filesystem 권한을 가지지 않는다. PR은 verify만 수행하고 `migration_develop` push의
-image publish job은 verify에 의존한다. 초기 CD trigger는 OCI DevOps Console에서 digest를
-명시하는 manual release gate로 둔다.
+일반 feature PR은 기존 verify(정적 검사·unit/ops/PostgreSQL·Next build)를 수행한다.
+`migration_main` merge push와 `migration_develop` push에서는 무거운 검증·image build를 반복하지 않는다.
+기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
+`promotion` check가 실패한다.
 
-실제 OCIR credential을 GitHub Environment에 등록하기 전에 `migration_develop`에 PR required, Verify
-required status check, direct push 제한을 활성화한다. Branch protection은 repository code로 완료 처리하지
-않으며 GitHub 설정 evidence를 별도로 남긴다.
+Promotion PR은 full verify 후 현재 `migration_main` head로 linux/arm64 candidate를 한 번 build/publish한다.
+`candidate-<source SHA>-<run id>-<attempt>` tag는 추적용이며 release identity는 immutable manifest digest다.
+OCI 배포 없이 해당 digest를 pull하여 container smoke를 수행한다. 성공한 run의 GitHub Actions artifact에
+PR/source SHA/tree, image repository/digest, run/attempt를 기록한다. PR head 변경 시 verify와 candidate 검증을 다시 수행한다.
+
+현재 squash merge 전략을 유지한다. PR의 검증용 merge tree가 source tree와 같아야 candidate를 만들고,
+실제 squash merge 결과 tree도 같은 source tree여야 배포한다. 이 전제가 깨지면 새 image를 우회 build하지 않고 실패한다.
+Promotion PR의 merged/closed event만 배포를 시작한다. 현재 head의 최신 검증 run과 그 artifact를 대조하며,
+merge 전에 성공하지 않은 run, 다른 PR/head/tree/registry, 만료·누락된 artifact는 배포하지 않는다.
+병합 커밋/tree·source SHA·candidate run·digest는 Actions summary로 추적한다.
+
+배포 workflow는 image를 다시 build/publish하지 않고 검증된 digest를 기존 OCI Run Command와
+`deploy-release.sh`에 전달한다. health/readiness/smoke 및 직전 정상 digest/env rollback, exit 0/20/21은 유지한다.
+Slack은 candidate 게시·검증 결과와 실제 배포/rollback 결과를 구별한다.
+GitHub에는 Run Command credential만 주고 SSH/runtime Vault/DB 권한은 주지 않는다.
+
+Branch protection/ruleset은 수동 설정이며 코드로 완료 처리하지 않는다.
+
+- `migration_main`: PR 필수, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
+- `migration_develop`: PR 필수, required `verify`와 `promotion`, direct/force push 금지,
+  최신 base 포함 검증(strict) 및 stale approval 재검토. 정상 source는 동일 저장소 `migration_main`뿐이다.
+- 기존 `oci-development-image` Environment는 `migration_develop` 및 `refs/pull/*/merge` 실행을 허용해야 한다.
+  PR secret job은 동일 저장소의 `migration_main → migration_develop` 조건으로만 실행한다.
+- artifact 보관은 90일이다. 만료 전에 검증·merge하며 만료/삭제 시 digest 추측이나 merge 후 재build를 하지 않는다.
+
+두 브랜치 모두 GitHub의 `Require branches to be up to date before merging`을 활성화한다.
+PR head와 최신 base의 merge ref에서 required checks를 통과해야 하며, base 갱신 전의 성공만으로 병합하지 않는다.
+설정 의미는 [GitHub의 strict required status checks](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging)를 따른다.
+`allow_update_branch=false`인 현재 저장소에서는 Update branch 버튼에 의존하지 않는다.
+필요하면 작업 브랜치에 최신 base를 merge/rebase하여 push하고 새 CI를 통과시킨다.
+
+상세 운영 명령과 현재 수동 설정 확인은 `ops/oci/README.md` 및 구현 결과를 따른다.
 
 ### Quality gate ordering
 
-CI의 필수 게이트는 결정적이고 외부 서비스에 의존하지 않으며 로컬에서 같은 명령으로 재현
+일반 `verify` 게이트는 결정적이고 외부 서비스에 의존하지 않으며 로컬에서 같은 명령으로 재현
 가능해야 한다. 기본 순서는 install → typecheck → lint/structure → unit/integration test →
 format check → build로 고정하고, 한 단계가 실패하면 이후 단계를 성공으로 간주하지 않는다.
 라이브 API drift, staging smoke test, 성능 측정처럼 네트워크나 환경 상태에 의존하는 검사는
-필수 merge gate와 분리해 별도 job 또는 일정 실행으로 둔다.
+일반 verify와 분리해 별도 job 또는 일정 실행으로 둔다. Promotion candidate 게시·pull·smoke는
+OCIR에 의존하는 별도 필수 release gate(`promotion`)이며 일반 feature PR에는 적용하지 않는다.
 
 ---
 
@@ -503,8 +528,8 @@ startup failure visibility
 를 확보한다.
 
 Application exception은 Sentry, structured stdout은 OCI Logging, infrastructure metric/alarm은 OCI
-Monitoring, deployment history/status는 OCI DevOps가 소유한다. Deploy script가 Slack webhook을
-직접 호출하지 않고 OCI Notifications topic/subscription을 사용한다.
+Monitoring이 infrastructure metric/alarm을 소유하며 deployment history/status와 Slack 배포 알림은 GitHub Actions가 소유한다.
+Host deploy script는 Slack webhook을 직접 호출하지 않는다. 기존 OCI Notifications infrastructure 알림은 유지한다.
 
 Application Docker log rotation과 filesystem 80% WARNING/90% CRITICAL metric/alarm을 함께 유지한다.
 Terraform Logging configuration만으로 수집 완료를 판정하지 않고 application test log를 OCI Logging
@@ -557,12 +582,12 @@ Caddy HTTPS 정상
 existing PostgreSQL backup archive/upload 증거와 별도 restore proof
 rollback 방법 존재
 OCIR digest release
-OCI DevOps / Run Command deployment
+GitHub Actions Promotion / Run Command deployment
 DB application user least privilege
 Instance Principal secret/image access
 OCI Monitoring/Logging/Notifications
 기존 Object Storage backup resource 비재생성과 추후 safe import 가능성
-`migration_develop` branch protection과 Verify required status check
+`migration_main` / `migration_develop` branch protection과 verify/promotion required checks
 
 배포 DoD에는 애플리케이션 health 확인, 핵심 익명·인증 사용자 smoke test, 이전 이미지로의
 rollback 절차 확인을 포함한다. DB 변경이 있는 경우 backup 존재만 확인하지 않고 restore 또는
@@ -582,7 +607,7 @@ deploy 전에 restore 미검증
 Cloudflare runtime 잔재 방치
 Next dev server를 production으로 사용
 architecture docs와 다른 임시 shortcut을 설명 없이 영구화
-GitHub Actions의 Compute SSH/직접 배포
+GitHub Actions의 Compute SSH 또는 검증한 candidate digest를 거치지 않은 배포
 mutable image tag를 release identity로 사용
 runtime secret/Slack webhook을 Terraform state에 저장
 Next.js에 DB admin/migrator credential 주입
@@ -600,7 +625,7 @@ rollback 검증 없이 production cutover
 5. Next standalone production runtime을 기준으로 한다.
 6. Service/Repository/API/Auth boundary를 순서대로 연결한다.
 7. Test/observability 없이 production migration을 완료로 보지 않는다.
-8. GitHub CI + OCIR + OCI DevOps + Docker/Caddy/OCI Compute를 deployment baseline으로 한다.
+8. GitHub CI + OCIR + OCI Run Command + Docker/Caddy/OCI Compute를 deployment baseline으로 한다.
 9. Backup뿐 아니라 restore를 검증한다.
 10. Rollback 가능한 deployment를 만든다.
 11. Temporary adapter는 삭제 계획을 가진다.

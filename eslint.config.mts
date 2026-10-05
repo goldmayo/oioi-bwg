@@ -18,8 +18,9 @@ const projectPlugin = {
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  { settings: { next: { rootDir: "apps/web/" } } },
   {
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["apps/web/src/**/*.{ts,tsx}"],
     languageOptions: {
       parserOptions: {
         project: "./tsconfig.json",
@@ -33,14 +34,24 @@ const eslintConfig = defineConfig([
       project: projectPlugin,
     },
     settings: {
-      "boundaries/include": ["src/**/*"],
+      "boundaries/include": ["apps/web/src/**/*"],
       "boundaries/elements": [
-        { type: "app", pattern: "src/app", mode: "folder" },
-        { type: "widgets", pattern: "src/widgets/*", mode: "folder", capture: ["slice"] },
-        { type: "features", pattern: "src/features/*", mode: "folder", capture: ["slice"] },
-        { type: "entities", pattern: "src/entities/*", mode: "folder", capture: ["slice"] },
-        { type: "shared", pattern: "src/shared", mode: "folder" },
-        { type: "server", pattern: "src/server", mode: "folder" },
+        { type: "app", pattern: "apps/web/src/app", mode: "folder" },
+        { type: "widgets", pattern: "apps/web/src/widgets/*", mode: "folder", capture: ["slice"] },
+        {
+          type: "features",
+          pattern: "apps/web/src/features/*",
+          mode: "folder",
+          capture: ["slice"],
+        },
+        {
+          type: "entities",
+          pattern: "apps/web/src/entities/*",
+          mode: "folder",
+          capture: ["slice"],
+        },
+        { type: "shared", pattern: "apps/web/src/shared", mode: "folder" },
+        { type: "server", pattern: "apps/web/src/server", mode: "folder" },
       ],
       "import/resolver": {
         typescript: {
@@ -126,14 +137,14 @@ const eslintConfig = defineConfig([
     },
   },
   globalIgnores([
-    ".next/**",
+    "**/.next/**",
     "out/**",
     "build/**",
     "coverage/**",
     ".agents/**",
     ".local/**",
     "docs/migration/harness/**",
-    "next-env.d.ts",
+    "**/next-env.d.ts",
   ]),
   prettierConfig,
 ]);

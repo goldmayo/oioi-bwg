@@ -1,0 +1,168 @@
+name: Deploy promotion
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [migration_develop]
+
+concurrency:
+  group: oci-development-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'migration_main' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: oci-development-image
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      exit_code: ${{ steps.deploy-release.outputs.exit_code }}
+      image_digest: ${{ steps.candidate.outputs.image_digest }}
+      candidate_result: ${{ steps.candidate.outcome }}
+
+    env:
+      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+      OCI_CLI_REGION: ap-osaka-1
+      OCI_COMPUTE_COMPARTMENT_OCID: ocid1.compartment.oc1..aaaaaaaavs5y44txsstgn5px5zfwynupw3m4mvlgndaje6q3lyi3hi65ucbq
+      OCI_COMPUTE_INSTANCE_OCID: ocid1.instance.oc1.ap-osaka-1.anvwsljrhcgbyoacqa6id2hr257tlu26cfjd7x7yywnai7hh37kkytix57cq
+      IMAGE_REPOSITORY: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ vars.OCIR_REPOSITORY }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+      - name: Find verified promotion artifact
+        id: proof
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
+            await promotion.resolve({ github, context, core });
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ steps.proof.outputs.artifact_id }}
+          run-id: ${{ steps.proof.outputs.run_id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/promotion-candidate
+      - name: Validate candidate identity
+        id: candidate
+        uses: actions/github-script@v7
+        env:
+          CANDIDATE_FILE: ${{ runner.temp }}/promotion-candidate/candidate.json
+          SOURCE_SHA: ${{ steps.proof.outputs.source_sha }}
+          SOURCE_TREE: ${{ steps.proof.outputs.source_tree }}
+          CANDIDATE_RUN_ID: ${{ steps.proof.outputs.run_id }}
+          CANDIDATE_RUN_ATTEMPT: ${{ steps.proof.outputs.run_attempt }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
+            const candidate = JSON.parse(fs.readFileSync(process.env.CANDIDATE_FILE, 'utf8'));
+            promotion.assertCandidate(candidate, {
+              prNumber: context.payload.pull_request.number,
+              sourceSha: process.env.SOURCE_SHA, sourceTree: process.env.SOURCE_TREE,
+              runId: Number(process.env.CANDIDATE_RUN_ID), runAttempt: Number(process.env.CANDIDATE_RUN_ATTEMPT),
+              imageRepository: process.env.IMAGE_REPOSITORY,
+            });
+            core.setOutput('image_digest', candidate.imageDigest);
+            core.exportVariable('IMAGE_DIGEST', candidate.imageDigest);
+            await core.summary.addHeading('Verified promotion deployment').addTable([
+              ['Source SHA', candidate.sourceSha], ['Source/merge tree', candidate.sourceTree],
+              ['Merged SHA', context.payload.pull_request.merge_commit_sha],
+              ['Candidate run/attempt', `${candidate.runId}/${candidate.runAttempt}`],
+              ['Image', `${candidate.imageRepository}@${candidate.imageDigest}`],
+            ]).write();
+
+      - name: Validate deployment configuration
+        run: |
+          set -euo pipefail
+          required=(
+            OCI_CLI_USER
+            OCI_CLI_TENANCY
+            OCI_CLI_FINGERPRINT
+            OCI_CLI_KEY_CONTENT
+            OCI_CLI_REGION
+            OCI_COMPUTE_COMPARTMENT_OCID
+            OCI_COMPUTE_INSTANCE_OCID
+            IMAGE_DIGEST
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing deployment configuration: ${name}" >&2
+              exit 1
+            fi
+          done
+          [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+      - name: Verify OCI Run Command authentication
+        uses: oracle-actions/run-oci-cli-command@v1.3.2
+        with:
+          command: >-
+            instance-agent command list
+            --compartment-id ${{ env.OCI_COMPUTE_COMPARTMENT_OCID }}
+            --limit 1
+
+      - name: Deploy immutable digest with OCI Run Command
+        id: deploy-release
+        run: |
+          set +e
+          bash ops/oci/deploy-via-run-command.sh "${IMAGE_DIGEST}"
+          exit_code=$?
+          set -e
+          echo "exit_code=${exit_code}" >> "${GITHUB_OUTPUT}"
+          exit "${exit_code}"
+
+      - name: Record deployment result
+        if: success()
+        run: |
+          {
+            echo "### OCI development deployment succeeded"
+            echo
+            echo "Commit: \`${GITHUB_SHA}\`"
+            echo
+            echo "Digest: \`${IMAGE_DIGEST}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  notify-deploy:
+    name: notify deploy
+    if: >-
+      always() && github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'migration_main' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    environment: oci-development-image
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+      - name: Notify Slack
+        continue-on-error: true
+        env:
+          SLACK_DEPLOY_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK_URL }}
+          PHASE: deploy
+          CANDIDATE_RESULT: ${{ needs.deploy.outputs.candidate_result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          DEPLOY_EXIT_CODE: ${{ needs.deploy.outputs.exit_code }}
+          IMAGE_DIGEST: ${{ needs.deploy.outputs.image_digest }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 ops/oci/slack-deploy-payload.py > /tmp/slack-payload.json
+          curl --fail-with-body --silent --show-error --request POST \
+            --header 'Content-Type: application/json' --data-binary @/tmp/slack-payload.json "${SLACK_DEPLOY_WEBHOOK_URL}"

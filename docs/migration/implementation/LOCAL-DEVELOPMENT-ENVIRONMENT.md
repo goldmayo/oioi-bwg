@@ -68,13 +68,13 @@ postgres
 
 ### 최초 실행
 
-기존 `.env.local`이 있으면 덮어쓰지 않는다. 처음 만드는 경우:
+기존 `apps/web/.env.local`이 있으면 덮어쓰지 않는다. 처음 만드는 경우:
 
 ```bash
-cp .env.example .env.local
+cp apps/web/.env.example apps/web/.env.local
 ```
 
-`.env.local`에 Supabase Auth 공개 환경변수를 채운 뒤 실행한다.
+`apps/web/.env.local`에 Supabase Auth 공개 환경변수를 채운 뒤 실행한다.
 
 ```bash
 docker compose -f compose.dev.yml up -d postgres
@@ -123,7 +123,7 @@ docker compose -f compose.dev.yml logs -f next
 root 소유 파일을 만들 수 있다. 의존성 변경은 host에서 수행하고 lockfile을 검토한다.
 
 ```bash
-pnpm add <package>
+pnpm --filter @oioi-bwg/web add <package>
 pnpm install --frozen-lockfile
 ```
 
