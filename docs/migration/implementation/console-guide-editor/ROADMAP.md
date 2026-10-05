@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-05"
-revision: 5
+revision: 6
 ---
 
 # 구현 순서와 PR 단위
@@ -80,7 +80,9 @@ P08의 필수 enqueue 응답 유실 검증은 다음 순서로 수행한다.
 
 Runner의 내부 API 기록 후 socket 응답만 유실된 경우와, 기록도 못 해 enqueuedAt이 null인 채 consume되는 경우를 확인한다.
 반대로 PutMessages 실패와 message 미생성이 확정된 경우에는 FAILED로 수렴해야 한다.
-미확인 QUEUED가 timeout을 넘으면 기존 stale-job 점검으로만 정리하며, 늦은 전달 확인/consume과 경합해 진행된 상태를 역전하지 않아야 한다.
+미확인 QUEUED의 stale 기한은 가장 늦은 enqueue 가능 시점부터 실제 Queue 최대 message retention과 충분한 안전 여유를 포함해 보수적으로 정한다.
+기한 이전에는 enqueue 불확실성만으로 FAILED 처리하지 않고 정상 지연 전달을 허용하는지 검증한다.
+그 이후에만 기존 stale-job 점검으로 정리하며, 늦은 전달 확인/consume과 경합해 진행된 상태를 역전하지 않아야 한다.
 이 검증에 Outbox/DB queue/retry scheduler/분산 transaction/범용 reconciliation·broker abstraction을 추가하지 않는다.
 
 P06 전환 순서는 **두 image/routing 준비 → 비공개 Console smoke/MFA 등록 → Web 관리 경로 제거 → 두 앱 배포 검증 → Console 공개**다.
