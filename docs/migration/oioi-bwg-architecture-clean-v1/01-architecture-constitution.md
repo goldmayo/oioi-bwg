@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.8"
+version: "2.9"
 status: "active"
 authority: "constitution"
-updated_at: "2026-09-11"
+updated_at: "2026-10-05"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.8
+# oioi-bwg Architecture Constitution v2.9
 
 ## 1. 목적
 
@@ -148,6 +148,10 @@ RSC는 같은 프로세스 안의 service를 직접 호출한다. 서버 내부�
 ---
 
 ## 5. 최상위 디렉터리
+
+현재 Next 앱의 루트는 `apps/web`이다. 아래 구조와 active 문서의 `src/...` 경로는
+별도 명시가 없으면 이 앱 루트를 기준으로 한다. `/admin`을 포함한 기존 route와 서버 boundary는 유지한다.
+저장소 루트에는 workspace 진입점, 기존 검증 도구, 운영 스크립트와 migration 이력을 유지한다.
 
 ```text
 src/

@@ -159,7 +159,7 @@ jobs:
       - name: Restore Next.js build cache
         uses: actions/cache@v4
         with:
-          path: .next/cache
+          path: apps/web/.next/cache
           key: ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-
@@ -167,6 +167,27 @@ jobs:
       - run: pnpm build
         env:
           NEXT_PUBLIC_APP_ENV: staging
+
+      - name: Build standalone container
+        run: docker build --tag oioi-bwg:workspace-check .
+
+      - name: Install smoke test browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Smoke test standalone container
+        run: |
+          set -euo pipefail
+          docker run --detach --name web-workspace-check \
+            --publish 127.0.0.1:3000:3000 \
+            --env AUTH_SECRET=workspace-smoke-local-only-secret \
+            --env AUTH_TRUST_HOST=true \
+            oioi-bwg:workspace-check
+          trap 'docker logs web-workspace-check; docker rm --force web-workspace-check' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/healthz; then break; fi
+            sleep 1
+          done
+          node tests/ops/web-standalone-smoke.mjs http://127.0.0.1:3000
 
   verify:
     name: verify

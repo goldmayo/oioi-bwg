@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.5"
+version: "1.6"
 status: "active"
 authority: "runbook"
-updated_at: "2026-09-11"
+updated_at: "2026-10-05"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.5
+# oioi-bwg Deployment / Migration Runbook v1.6
 
 ## 1. 목적
 
@@ -266,6 +266,10 @@ COMMAND_SPEC의 잘못된 argument substitution mode와 지원되지 않는 OCIR
 Docker/OCIR image portability는 11 §12.1의 `NEXT_PUBLIC_*` 원칙을 따른다.
 
 Next standalone output을 기준으로 최소 runtime image를 구성한다.
+
+현재 앱의 tracing root는 저장소 루트이며, `apps/web/.next/standalone` 전체를 runtime image로 복사한다.
+진입점은 `apps/web/server.js`이고, `public`과 `.next/static`도 runtime의 `apps/web` 아래에 배치한다.
+단일 web container의 port, health/readiness, 환경변수 주입과 배포 topology는 유지한다.
 
 container 안에 development toolchain 전체를 넣지 않는다.
 

@@ -4,7 +4,7 @@ import { defineConfig } from "steiger";
 export default defineConfig([
   ...fsd.configs.recommended,
   {
-    files: ["./src/app/**", "./src/shared/**"],
+    files: ["./apps/web/src/app/**", "./apps/web/src/shared/**"],
     rules: {
       "fsd/public-api": "off",
     },

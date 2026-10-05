@@ -1,0 +1,59 @@
+{
+  "name": "@oioi-bwg/web",
+  "version": "0.7.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && cp -R public .next/standalone/apps/web/ && cp -R .next/static .next/standalone/apps/web/.next/",
+    "start": "node .next/standalone/apps/web/server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1121.0",
+    "@casl/ability": "^7.0.1",
+    "@gsap/react": "^2.1.2",
+    "@hookform/resolvers": "^5.2.2",
+    "@lukemorales/query-key-factory": "1.3.4",
+    "@next/third-parties": "16.3.3",
+    "@sentry/nextjs": "^10.42.0",
+    "@tanstack/react-query": "^5.102.8",
+    "argon2": "^0.45.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.1",
+    "gsap": "^3.14.2",
+    "ky": "^2.1.0",
+    "lucide-react": "^0.575.0",
+    "next": "16.3.3",
+    "next-auth": "5.0.0-beta.32",
+    "next-themes": "^0.4.6",
+    "nuqs": "^2.8.8",
+    "oci-sdk": "^2.140.0",
+    "postgres": "^3.4.8",
+    "radix-ui": "^1.4.3",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "react-hook-form": "^7.71.2",
+    "react-resizable-panels": "^4.7.1",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "tailwindcss": "^4",
+    "tw-animate-css": "^1.4.0",
+    "typescript": "^5",
+    "vitest": "^4.1.2",
+    "shadcn": "^3.8.5"
+  },
+  "postcss": {
+    "plugins": {
+      "@tailwindcss/postcss": {}
+    }
+  }
+}
