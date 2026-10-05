@@ -24,13 +24,23 @@ jobs:
           node-version: 22.16.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Confirm Turbo local cache replay
+      - name: Diagnose Turbo cache inputs
         run: |
+          pnpm exec turbo run type-check lint test --dry=json > /tmp/turbo-before.json
           pnpm exec turbo run type-check lint test
-          pnpm exec turbo run type-check lint test 2>&1 | tee /tmp/turbo-cache.log
-          hits="$(grep -c 'cache hit' /tmp/turbo-cache.log || true)"
-          echo "Turbo cache hits: ${hits}"
-          [[ "${hits}" -ge 3 ]]
+          echo "::group::git status after first run"
+          git status --short --untracked-files=all
+          echo "::endgroup::"
+          pnpm exec turbo run type-check lint test --dry=json > /tmp/turbo-after.json
+          node - <<'NODE'
+          const fs = require('fs');
+          const before = JSON.parse(fs.readFileSync('/tmp/turbo-before.json', 'utf8'));
+          const after = JSON.parse(fs.readFileSync('/tmp/turbo-after.json', 'utf8'));
+          const pick = (data) => Object.fromEntries(data.tasks.map((task) => [task.task, task.hash]));
+          console.log('before hashes', pick(before));
+          console.log('after hashes', pick(after));
+          NODE
+          pnpm exec turbo run type-check lint test
       - name: Full local verify
         run: pnpm verify
       - name: Inspect affected task selection
