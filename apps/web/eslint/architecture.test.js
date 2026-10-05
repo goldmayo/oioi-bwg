@@ -121,3 +121,10 @@ test("keeps database-specific dependencies below the Service boundary", () => {
     [],
   );
 });
+
+test("blocks relative imports that escape the workspace source root", () => {
+  assert.deepEqual(
+    lint("apps/web/src/app/admin/page.js", 'import data from "../../../package.json";'),
+    ["workspaceSourceEscape"],
+  );
+});

@@ -1,1 +1,11 @@
-pnpm verify
+if git rev-parse --verify --quiet origin/migration_main >/dev/null; then
+  TURBO_SCM_BASE=origin/migration_main pnpm exec turbo run type-check lint test --affected
+else
+  pnpm exec turbo run type-check lint test
+fi
+
+pnpm type-check:repo
+pnpm lint:repo
+pnpm test:harness
+pnpm test:ops
+pnpm format:check

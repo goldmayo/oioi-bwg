@@ -1,0 +1,77 @@
+name: P02 Bootstrap Validation
+
+on:
+  push:
+    branches:
+      - feature/p02-shared-config-turbo
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+      - name: Install and update lockfile
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
+      - name: Format P02 files
+        run: >-
+          pnpm exec prettier --write
+          package.json
+          apps/web/package.json
+          tsconfig.json
+          apps/web/tsconfig.json
+          turbo.json
+          config/typescript
+          config/eslint
+          eslint.config.mts
+          apps/web/eslint
+          harness/architecture
+      - name: Commit generated lockfile and formatting
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml package.json apps/web/package.json tsconfig.json apps/web/tsconfig.json turbo.json config eslint.config.mts apps/web/eslint harness/architecture
+          git commit -m "chore(config): P02 lockfile과 포맷 갱신"
+          git push origin "HEAD:feature/p02-shared-config-turbo"
+
+  validate:
+    if: github.actor == 'github-actions[bot]'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Full local verify
+        run: pnpm verify
+      - name: Confirm Turbo local cache replay
+        run: pnpm exec turbo run type-check lint test build
+      - name: Inspect affected task selection
+        env:
+          TURBO_SCM_BASE: origin/migration_main
+        run: pnpm exec turbo run type-check lint test --affected --dry=json

@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && cp -R public .next/standalone/apps/web/ && cp -R .next/static .next/standalone/apps/web/.next/",
-    "start": "node .next/standalone/apps/web/server.js"
+    "start": "node .next/standalone/apps/web/server.js",
+    "lint": "pnpm --dir ../.. exec eslint apps/web && pnpm lint:fsd",
+    "lint:fsd": "pnpm --dir ../.. exec steiger apps/web/src",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run --config ../../vitest.config.ts --root ../.."
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1121.0",

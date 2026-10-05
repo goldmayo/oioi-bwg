@@ -5,14 +5,14 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --filter @oioi-bwg/web dev",
-    "build": "pnpm --filter @oioi-bwg/web build",
+    "build": "turbo run build",
     "start": "pnpm --filter @oioi-bwg/web start",
-    "lint": "eslint",
-    "lint:fsd": "steiger ./apps/web/src",
-    "type-check": "tsc --noEmit",
+    "lint": "turbo run lint && pnpm lint:repo",
+    "lint:fsd": "pnpm --filter @oioi-bwg/web lint:fsd",
+    "type-check": "turbo run type-check && pnpm type-check:repo",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "pnpm type-check && pnpm test:harness && pnpm lint && pnpm lint:fsd && pnpm test:unit:run && pnpm test:ops",
+    "verify": "turbo run type-check lint test && pnpm type-check:repo && pnpm lint:repo && pnpm test:harness && pnpm test:ops && pnpm format:check && turbo run build",
     "prepare": "husky",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/assert-local-database.ts && tsx scripts/run-drizzle-migrations.ts",
@@ -26,11 +26,13 @@
     "test:load": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/load.js",
     "test:ops": "vitest run --config vitest.ops.config.ts",
     "test:unit": "vitest",
-    "test:unit:run": "vitest run",
-    "test:harness": "node --test eslint-rules/*.test.js",
+    "test:unit:run": "turbo run test",
+    "test:harness": "node --test harness/architecture/*.test.js apps/web/eslint/*.test.js",
     "test:stress": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/stress.js",
     "test:spike": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/spike.js",
-    "release": "release-it"
+    "release": "release-it",
+    "lint:repo": "eslint . --config config/eslint/node.mjs --ignore-pattern \"apps/web/**\"",
+    "type-check:repo": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
@@ -68,7 +70,9 @@
     "typescript": "^5",
     "vitest": "^4.1.2",
     "react": "19.2.5",
-    "react-dom": "19.2.5"
+    "react-dom": "19.2.5",
+    "globals": "^16.4.0",
+    "turbo": "^2.11.2"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,tsx,mts,cts}": [

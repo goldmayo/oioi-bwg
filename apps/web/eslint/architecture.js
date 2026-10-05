@@ -1,4 +1,8 @@
-import path from "node:path";
+import {
+  getSourceParts,
+  relativeImportEscapesSource,
+  resolveImportedParts,
+} from "../../../harness/architecture/import-path.js";
 
 const PROJECT_LAYERS = new Set(["app", "widgets", "features", "entities", "shared", "server"]);
 const SLICED_LAYERS = new Set(["widgets", "features", "entities"]);
@@ -6,26 +10,8 @@ const SLICE_SEGMENTS = new Set(["ui", "model", "api", "lib", "config"]);
 const SHARED_SEGMENTS = new Set(["ui", "model", "api", "lib", "config", "contracts"]);
 const ROUTE_SEGMENTS = new Set(["_ui", "_model", "_lib", "_config"]);
 
-function getSourceParts(filename) {
-  const normalized = filename.split(path.sep).join("/");
-  const marker = "/src/";
-  const index = normalized.lastIndexOf(marker);
-
-  return index === -1 ? null : normalized.slice(index + marker.length).split("/");
-}
-
 function isHookFile(filename) {
   return /^use(?:-|[A-Z]).*\.[jt]sx?$/.test(filename);
-}
-
-function resolveImportedParts(sourceParts, importPath) {
-  if (importPath.startsWith("@/")) {
-    return importPath.slice(2).split("/");
-  }
-
-  if (!importPath.startsWith(".")) return null;
-
-  return path.posix.normalize(path.posix.join(...sourceParts.slice(0, -1), importPath)).split("/");
 }
 
 function getPrivateRouteOwner(parts) {
@@ -44,6 +30,8 @@ export const architectureRule = {
     },
     schema: [],
     messages: {
+      workspaceSourceEscape:
+        "workspace src 밖의 파일을 상대 경로로 import하지 마세요. 공용 코드는 명시적인 workspace/package 경계를 사용하세요.",
       unknownLayer:
         "허용되지 않은 src 최상위 폴더 '{{layer}}'입니다. app/widgets/features/entities/shared/server 중 하나를 사용하세요.",
       invalidSliceRoot:
@@ -88,6 +76,11 @@ export const architectureRule = {
       const source = sourceNode?.value;
 
       if (typeof source !== "string") return;
+
+      if (relativeImportEscapesSource(parts, source)) {
+        context.report({ node: sourceNode, messageId: "workspaceSourceEscape" });
+        return;
+      }
 
       const importedParts = resolveImportedParts(parts, source);
       const [importedLayer, importedSlice] = importedParts ?? [];

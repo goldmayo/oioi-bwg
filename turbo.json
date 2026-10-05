@@ -1,0 +1,37 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "cacheDir": "node_modules/.cache/turbo",
+  "globalDependencies": [
+    "config/**",
+    "harness/architecture/**",
+    "eslint.config.mts",
+    "steiger.config.ts",
+    "vitest.config.ts",
+    "vitest.setup.ts"
+  ],
+  "tasks": {
+    "type-check": {
+      "outputs": []
+    },
+    "lint": {
+      "outputs": []
+    },
+    "test": {
+      "outputs": []
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "NODE_ENV",
+        "NEXT_PUBLIC_APP_ENV",
+        "NEXT_PUBLIC_GTM_ID",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT",
+        "SENTRY_RELEASE",
+        "SENTRY_SOURCE_MAPS_ENABLED"
+      ]
+    }
+  }
+}

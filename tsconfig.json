@@ -1,12 +1,5 @@
 {
-  "extends": "./apps/web/tsconfig.json",
-  "include": [
-    "apps/web/src",
-    "apps/web/types/**/*.d.ts",
-    "apps/web/next-env.d.ts",
-    "**/*.mts",
-    "apps/web/.next/types/**/*.ts",
-    "apps/web/.next/dev/types/**/*.ts"
-  ],
-  "exclude": ["**/node_modules"]
+  "extends": "./config/typescript/node.json",
+  "include": ["**/*.mts"],
+  "exclude": ["**/node_modules", "apps/web/.next/**"]
 }
