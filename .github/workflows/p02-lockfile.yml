@@ -24,10 +24,15 @@ jobs:
           node-version: 22.16.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Confirm Turbo local cache replay
+        run: |
+          pnpm exec turbo run type-check lint test
+          pnpm exec turbo run type-check lint test 2>&1 | tee /tmp/turbo-cache.log
+          hits="$(grep -c 'cache hit' /tmp/turbo-cache.log || true)"
+          echo "Turbo cache hits: ${hits}"
+          [[ "${hits}" -ge 3 ]]
       - name: Full local verify
         run: pnpm verify
-      - name: Confirm Turbo local cache replay
-        run: pnpm exec turbo run type-check lint test build
       - name: Inspect affected task selection
         env:
           TURBO_SCM_BASE: origin/migration_main

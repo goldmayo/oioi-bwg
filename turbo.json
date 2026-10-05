@@ -11,16 +11,20 @@
   ],
   "tasks": {
     "type-check": {
+      "inputs": ["$TURBO_DEFAULT$", "!**/.next/**", "!**/*.tsbuildinfo", "!next-env.d.ts"],
       "outputs": []
     },
     "lint": {
+      "inputs": ["$TURBO_DEFAULT$", "!**/.next/**", "!**/*.tsbuildinfo", "!next-env.d.ts"],
       "outputs": []
     },
     "test": {
+      "inputs": ["$TURBO_DEFAULT$", "!**/.next/**", "!**/*.tsbuildinfo", "!next-env.d.ts"],
       "outputs": []
     },
     "build": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/.next/**", "!**/*.tsbuildinfo", "!next-env.d.ts"],
       "outputs": [".next/**", "!.next/cache/**"],
       "env": [
         "NODE_ENV",
