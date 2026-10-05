@@ -55,7 +55,7 @@ host deployment script만으로 요구사항을 충족한다.
 
 ## Release identity
 
-`git-<full-sha>` tag는 traceability 용도다. tag는 mutable할 수 있으므로 실제 release identity로 사용하지 않는다.
+`candidate-<source SHA>-<run id>-<attempt>` tag는 traceability 용도다. tag 자체를 실제 release identity로 사용하지 않는다.
 배포와 rollback은 항상 다음 manifest digest로 식별한다.
 
 ```text

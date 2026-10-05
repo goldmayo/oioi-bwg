@@ -239,7 +239,7 @@ Compute, VCN, subnet, boot volume, PostgreSQL data는 data source/input으로 �
 결정 없이 ownership을 가져오지 않는다.
 
 서비스 리전은 `ap-osaka-1`, OCIR endpoint는 region에서 유도한 `ap-osaka-1.ocir.io`로 고정한다.
-OCIR의 `git-<full-commit-sha>`는 traceability tag이며 repository나 tag 자체의 OCI-level immutability를
+OCIR의 source SHA를 포함한 candidate tag(§21)는 traceability 용도이며 repository나 tag 자체의 OCI-level immutability를
 가정하지 않는다. 배포와 rollback의 immutable identity는 `<repository>@sha256:<digest>`다.
 
 ### 13.1. Initial Resource Manager reconciliation
@@ -269,7 +269,7 @@ Next standalone output을 기준으로 최소 runtime image를 구성한다.
 
 container 안에 development toolchain 전체를 넣지 않는다.
 
-Image는 `git-<full-commit-sha>` tag로 traceability를 남기되 release identity는 OCIR
+Image는 §21의 source SHA를 포함한 candidate tag로 traceability를 남기되 release identity는 OCIR
 manifest digest로 고정한다. `latest`, `development` 같은 mutable tag를 deployment input으로
 사용하지 않는다.
 
