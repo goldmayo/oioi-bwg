@@ -5,7 +5,7 @@ status: "active"
 verified_source:
   repository: "goldmayo/oioi-bwg"
   branch: "feature/p02-shared-config-turbo"
-  commit: "4153bea5e724a551c61ff2e0e8e58dcd8b917bf9"
+  commit: "97a6aec1337857efcdc55ada0ff3aa12f674cf17"
 verified_at: "2026-10-06"
 ---
 
@@ -134,6 +134,12 @@ task 이름, Husky 흐름, CI gate는 유지했다.
 다른 변경 없이 mock만 수정한다. 변경 전 affected task가 없고, 변경 후 Web test가 선택되며
 test hash가 바뀌는지 검증한다. 수정 전에는 해당 검사만 실행해 실패를 확인했고 수정 후에는 통과했다.
 
+pre-push에서는 Git hook의 저장소 환경변수가 fixture 명령에 상속되는 문제도 발견했다.
+[검사 격리 보완](https://github.com/goldmayo/oioi-bwg/commit/97a6aec1337857efcdc55ada0ff3aa12f674cf17)에서
+fixture의 Git/Turbo subprocess에 전달하는 환경에서 `GIT_*`를 제거해 임시 저장소만 사용하도록 했다.
+실제 저장소를 가리키는 `GIT_DIR`·`GIT_WORK_TREE`·`GIT_INDEX_FILE`을 주입한 별도 실행에서도
+회귀 검사 통과 후 원래 저장소의 HEAD와 index가 보존되는 것을 확인했다.
+
 Node 22.16.0 / pnpm 10.15.1에서 실행한 검증:
 
 - `node --test --test-name-pattern='mock-only' harness/architecture/app-dependencies.test.js`: 통과.
@@ -141,6 +147,8 @@ Node 22.16.0 / pnpm 10.15.1에서 실행한 검증:
   architecture harness 13개, ops 4개 파일 / 51개 테스트, format check와 Next production build 모두 통과.
 - `pnpm exec turbo run type-check lint test` 재실행: 3/3 local cache hit.
 - `git diff --check`: 통과.
+
+위 `pnpm verify` 전체 검증과 3/3 cache hit는 Git 환경 격리 보완 후에도 다시 통과했다.
 
 PostgreSQL integration, Docker standalone/container smoke와 실제 Sentry 업로드는 이번 로컬 검증에서
 실행하지 않았다. 해당 CI 및 Promotion 검증 범위는 유지한다.
