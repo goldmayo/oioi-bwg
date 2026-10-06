@@ -1,8 +1,14 @@
+import path from "node:path";
+
 import boundariesPlugin from "eslint-plugin-boundaries";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import unusedImports from "eslint-plugin-unused-imports";
 
 import { architectureRule } from "./architecture.js";
+
+const repositoryRoot = path.resolve(import.meta.dirname, "../../..");
+const webRoot = path.join(repositoryRoot, "apps/web");
+const tsconfigPath = path.join(webRoot, "tsconfig.json");
 
 const projectPlugin = {
   rules: {
@@ -11,13 +17,13 @@ const projectPlugin = {
 };
 
 export const webPolicy = [
-  { settings: { next: { rootDir: "apps/web/" } } },
+  { settings: { next: { rootDir: webRoot } } },
   {
     files: ["apps/web/src/**/*.{ts,tsx}"],
     languageOptions: {
       parserOptions: {
-        project: "./apps/web/tsconfig.json",
-        tsconfigRootDir: process.cwd(),
+        project: tsconfigPath,
+        tsconfigRootDir: repositoryRoot,
       },
     },
     plugins: {
@@ -27,6 +33,7 @@ export const webPolicy = [
       project: projectPlugin,
     },
     settings: {
+      "boundaries/root-path": repositoryRoot,
       "boundaries/include": ["apps/web/src/**/*"],
       "boundaries/elements": [
         { type: "app", pattern: "apps/web/src/app", mode: "folder" },
@@ -48,7 +55,7 @@ export const webPolicy = [
       ],
       "import/resolver": {
         typescript: {
-          project: "./apps/web/tsconfig.json",
+          project: tsconfigPath,
           alwaysTryTypes: true,
         },
       },

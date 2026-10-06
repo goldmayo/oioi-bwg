@@ -35,6 +35,7 @@
     "test": {
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tests/mocks/**",
         "!**/.next/**",
         "!**/.turbo/**",
         "!*.tsbuildinfo",
@@ -47,6 +48,7 @@
       "dependsOn": ["^build"],
       "inputs": [
         "$TURBO_DEFAULT$",
+        ".env*",
         "!**/.next/**",
         "!**/.turbo/**",
         "!*.tsbuildinfo",
@@ -54,6 +56,7 @@
         "!next-env.d.ts"
       ],
       "outputs": [".next/**", "!.next/cache/**"],
+      "passThroughEnv": ["SENTRY_AUTH_TOKEN"],
       "env": [
         "NODE_ENV",
         "NEXT_PUBLIC_APP_ENV",
