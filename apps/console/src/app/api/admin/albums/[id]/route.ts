@@ -1,0 +1,34 @@
+import {
+  adminAlbumIdParamsSchema,
+  albumSummarySchema,
+  saveAdminAlbumSchema,
+} from "@oioi-bwg/contracts/album";
+import { deleteAlbum, editAlbum } from "@oioi-bwg/server/services/album-service";
+
+import { getRequestContext } from "@/server/auth/request-context";
+import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
+
+interface AlbumRouteContext {
+  params: Promise<{ id: string }>;
+}
+
+export async function PATCH(request: Request, context: AlbumRouteContext) {
+  try {
+    const { id } = adminAlbumIdParamsSchema.parse(await context.params);
+    const input = await parseJsonRequest(request, saveAdminAlbumSchema);
+    const album = await editAlbum(await getRequestContext(), id, input);
+    return jsonResponse(albumSummarySchema, album);
+  } catch (error) {
+    return toErrorResponse(error);
+  }
+}
+
+export async function DELETE(_request: Request, context: AlbumRouteContext) {
+  try {
+    const { id } = adminAlbumIdParamsSchema.parse(await context.params);
+    await deleteAlbum(await getRequestContext(), id);
+    return new Response(null, { status: 204 });
+  } catch (error) {
+    return toErrorResponse(error);
+  }
+}
