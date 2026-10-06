@@ -1,10 +1,10 @@
 ---
 title: "Frontend Architecture & Refactoring Rules"
 document_id: "02"
-version: "1.8"
+version: "1.9"
 status: "active"
 authority: "architecture"
-updated_at: "2026-09-01"
+updated_at: "2026-10-07"
 depends_on:
   - "01"
 supersedes:
@@ -17,7 +17,7 @@ tags:
   - "refactoring"
 ---
 
-# oioi-bwg Frontend Architecture & Refactoring Rules v1.7
+# oioi-bwg Frontend Architecture & Refactoring Rules v1.9
 
 ## 1. 목적
 
@@ -45,6 +45,10 @@ src/
 ```
 
 `src/server`는 별도 서버 boundary이며 이 문서의 FSD 계층에 포함하지 않는다.
+
+client/server 공통 HTTP 계약은 `packages/contracts`의 명시적 package export를 소비한다.
+이 package는 기존 `shared/contracts`와 동일한 Zod schema/DTO-only 예외이며 도메인 UI나
+use-case slice를 공용 package로 옮기는 근거가 아니다.
 
 ---
 

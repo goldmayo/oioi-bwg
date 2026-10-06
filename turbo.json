@@ -20,7 +20,8 @@
         "!**/*.tsbuildinfo",
         "!next-env.d.ts"
       ],
-      "outputs": []
+      "outputs": [],
+      "dependsOn": ["^transit"]
     },
     "lint": {
       "inputs": [
@@ -31,7 +32,8 @@
         "!**/*.tsbuildinfo",
         "!next-env.d.ts"
       ],
-      "outputs": []
+      "outputs": [],
+      "dependsOn": ["^transit"]
     },
     "test": {
       "inputs": [
@@ -42,10 +44,11 @@
         "!**/*.tsbuildinfo",
         "!next-env.d.ts"
       ],
-      "outputs": []
+      "outputs": [],
+      "dependsOn": ["^transit"]
     },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^transit"],
       "inputs": [
         "$TURBO_DEFAULT$",
         ".env*",
@@ -67,6 +70,18 @@
         "SENTRY_RELEASE",
         "SENTRY_SOURCE_MAPS_ENABLED"
       ]
+    },
+    "transit": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts"
+      ],
+      "outputs": []
     }
   }
 }

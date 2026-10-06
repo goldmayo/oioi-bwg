@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import type { SaveAdminSongLyrics } from "@oioi-bwg/contracts/song";
 import { toast } from "sonner";
 
 import type { LyricSegment } from "@/entities/cheer-guide";
 import { parseLrc } from "@/entities/cheer-guide";
 
-import type { SaveAdminSongLyrics } from "@/shared/contracts/song";
 import { useAdWatcher } from "@/shared/model/useAdWatcher";
 import { YouTubePlayerInstance } from "@/shared/model/youtube";
 

@@ -1,9 +1,8 @@
+import { albumDetailSchema } from "@oioi-bwg/contracts/album";
+import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "@/server/errors/app-error";
-
-import { albumDetailSchema } from "@/shared/contracts/album";
-import { apiErrorResponseSchema } from "@/shared/contracts/error";
 
 const requireAlbumDetailBySlug = vi.hoisted(() => vi.fn());
 

@@ -1,3 +1,4 @@
+import { serializedAbilityResponseSchema } from "@oioi-bwg/contracts/authorization";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
 
@@ -7,7 +8,6 @@ import { getRequestContext } from "@/server/auth/request-context";
 import { getAdminSongEditorBySlug } from "@/server/services/song-service";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
-import { serializedAbilityResponseSchema } from "@/shared/contracts/authorization";
 
 import { AdminLyricsEditor } from "./_ui/AdminLyricsEditor";
 

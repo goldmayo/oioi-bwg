@@ -1,0 +1,25 @@
+{
+  "name": "@oioi-bwg/contracts",
+  "version": "0.7.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./album": "./src/album.ts",
+    "./authorization": "./src/authorization.ts",
+    "./error": "./src/error.ts",
+    "./signup": "./src/signup.ts",
+    "./song": "./src/song.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^4.1.2"
+  }
+}

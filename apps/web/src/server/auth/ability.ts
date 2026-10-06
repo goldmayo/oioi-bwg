@@ -4,12 +4,11 @@ import {
   type MongoAbility,
   type RawRuleOf,
 } from "@casl/ability";
-
-import { APP_ACTIONS, APP_SUBJECTS } from "@/shared/contracts/authorization";
+import { APP_ACTIONS, APP_SUBJECTS } from "@oioi-bwg/contracts/authorization";
 
 import type { AccountRole } from "../db/schema";
 
-export { APP_ACTIONS, APP_SUBJECTS } from "@/shared/contracts/authorization";
+export { APP_ACTIONS, APP_SUBJECTS } from "@oioi-bwg/contracts/authorization";
 
 export type AppAction = (typeof APP_ACTIONS)[number];
 export type AppSubjectName = (typeof APP_SUBJECTS)[number];

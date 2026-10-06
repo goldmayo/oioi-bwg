@@ -15,8 +15,8 @@ import * as albums from "@/server/services/album-service";
 import { requestOtp, verifyOtp } from "@/server/services/email-verification-service";
 import { completeSignup } from "@/server/services/signup-service";
 import * as songs from "@/server/services/song-service";
-import type { SaveAdminAlbum } from "@/shared/contracts/album";
-import type { CreateAdminSong } from "@/shared/contracts/song";
+import type { SaveAdminAlbum } from "@oioi-bwg/contracts/album";
+import type { CreateAdminSong } from "@oioi-bwg/contracts/song";
 
 const external = vi.hoisted(() => ({ mail: vi.fn() }));
 

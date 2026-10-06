@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { serializedAbilityResponseSchema } from "@oioi-bwg/contracts/authorization";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
 import { authAbilityQueryKeys } from "@/features/auth";
@@ -11,7 +12,6 @@ import { listAdminAlbums } from "@/server/services/album-service";
 import { listAdminSongs } from "@/server/services/song-service";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
-import { serializedAbilityResponseSchema } from "@/shared/contracts/authorization";
 
 import { AdminSongManager } from "./_ui/AdminSongManager";
 

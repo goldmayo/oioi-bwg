@@ -1,6 +1,5 @@
+import type { UpdateAdminSong } from "@oioi-bwg/contracts/song";
 import { z } from "zod";
-
-import type { UpdateAdminSong } from "@/shared/contracts/song";
 
 const songSlugSchema = z
   .string()

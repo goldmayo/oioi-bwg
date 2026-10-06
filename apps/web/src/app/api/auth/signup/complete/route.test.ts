@@ -1,9 +1,8 @@
+import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
+import { completeSignupResponseSchema } from "@oioi-bwg/contracts/signup";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "@/server/errors/app-error";
-
-import { apiErrorResponseSchema } from "@/shared/contracts/error";
-import { completeSignupResponseSchema } from "@/shared/contracts/signup";
 
 const completeSignup = vi.hoisted(() => vi.fn());
 

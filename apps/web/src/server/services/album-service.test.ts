@@ -1,6 +1,5 @@
+import { adminAlbumListSchema } from "@oioi-bwg/contracts/album";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { adminAlbumListSchema } from "@/shared/contracts/album";
 
 import { AppError } from "../errors/app-error";
 import { toErrorResponse } from "../http/api-response";

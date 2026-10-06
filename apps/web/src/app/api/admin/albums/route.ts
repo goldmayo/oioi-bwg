@@ -1,12 +1,12 @@
-import { getRequestContext } from "@/server/auth/request-context";
-import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
-import { createAlbum, listAdminAlbums } from "@/server/services/album-service";
-
 import {
   adminAlbumListSchema,
   albumSummarySchema,
   saveAdminAlbumSchema,
-} from "@/shared/contracts/album";
+} from "@oioi-bwg/contracts/album";
+
+import { getRequestContext } from "@/server/auth/request-context";
+import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
+import { createAlbum, listAdminAlbums } from "@/server/services/album-service";
 
 export async function GET() {
   try {

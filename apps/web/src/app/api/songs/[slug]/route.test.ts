@@ -1,9 +1,8 @@
+import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
+import { songDetailSchema } from "@oioi-bwg/contracts/song";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "@/server/errors/app-error";
-
-import { apiErrorResponseSchema } from "@/shared/contracts/error";
-import { songDetailSchema } from "@/shared/contracts/song";
 
 const requireSongDetailBySlug = vi.hoisted(() => vi.fn());
 

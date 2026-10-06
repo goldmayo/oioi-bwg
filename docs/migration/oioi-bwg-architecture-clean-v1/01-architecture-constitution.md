@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.11"
+version: "2.12"
 status: "active"
 authority: "constitution"
-updated_at: "2026-10-06"
+updated_at: "2026-10-07"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.11
+# oioi-bwg Architecture Constitution v2.12
 
 ## 1. 목적
 
@@ -153,6 +153,11 @@ RSC는 같은 프로세스 안의 service를 직접 호출한다. 서버 내부�
 현재 Next 앱의 루트는 `apps/web`이다. 아래 구조와 active 문서의 `src/...` 경로는
 별도 명시가 없으면 이 앱 루트를 기준으로 한다. `/admin`을 포함한 기존 route와 서버 boundary는 유지한다.
 저장소 루트에는 workspace 진입점, 기존 검증 도구, 운영 스크립트와 migration 이력을 유지한다.
+
+클라이언트와 서버가 함께 소비하는 serializable HTTP contract는 `packages/contracts`가 소유한다.
+`@oioi-bwg/contracts/<domain>`의 명시적 export로 소비하며 Zod schema/DTO/enum만 둔다.
+기존 `shared/contracts`와 같은 경계 예외이며 FSD UI, persistence, Node/Next/React dependency를
+포함하지 않는다. 각 workspace의 검사 정책과 source package dependency는 해당 workspace가 소유한다.
 
 ```text
 src/

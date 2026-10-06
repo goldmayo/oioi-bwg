@@ -1,9 +1,8 @@
+import { albumSummarySchema } from "@oioi-bwg/contracts/album";
+import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "@/server/errors/app-error";
-
-import { albumSummarySchema } from "@/shared/contracts/album";
-import { apiErrorResponseSchema } from "@/shared/contracts/error";
 
 const getRequestContext = vi.hoisted(() => vi.fn());
 const deleteAlbum = vi.hoisted(() => vi.fn());
