@@ -17,7 +17,10 @@ const projectPlugin = {
 };
 
 export const consolePolicy = [
-  { settings: { next: { rootDir: consoleRoot } } },
+  {
+    files: ["apps/console/**/*.{js,mjs,cjs,ts,mts,tsx}"],
+    settings: { next: { rootDir: consoleRoot } },
+  },
   {
     files: ["apps/console/src/**/*.{ts,tsx}"],
     languageOptions: {

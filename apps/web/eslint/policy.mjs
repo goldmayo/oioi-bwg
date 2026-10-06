@@ -17,7 +17,7 @@ const projectPlugin = {
 };
 
 export const webPolicy = [
-  { settings: { next: { rootDir: webRoot } } },
+  { files: ["apps/web/**/*.{js,mjs,cjs,ts,mts,tsx}"], settings: { next: { rootDir: webRoot } } },
   {
     files: ["apps/web/src/**/*.{ts,tsx}"],
     languageOptions: {
