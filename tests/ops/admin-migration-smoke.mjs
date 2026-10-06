@@ -203,7 +203,7 @@ async function journey(origin, label) {
 
   // 공개 Web reader도 같은 commit된 가사 DTO를 읽는지 확인한다.
   const publicSong = await fetch(`${origins.web}/api/songs/p04-${label}-song`);
-  assert.ok(publicSong.ok());
+  assert.ok(publicSong.ok, `public song: HTTP ${publicSong.status}`);
   const detail = await publicSong.json();
   assert.equal(detail.lyrics[0].startTime, 3.25);
   assert.equal(detail.lyrics[0].segments[0].text, "이관 검증 가사");
