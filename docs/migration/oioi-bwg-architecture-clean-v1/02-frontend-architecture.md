@@ -1,7 +1,7 @@
 ---
 title: "Frontend Architecture & Refactoring Rules"
 document_id: "02"
-version: "1.9"
+version: "1.10"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-07"
@@ -17,7 +17,7 @@ tags:
   - "refactoring"
 ---
 
-# oioi-bwg Frontend Architecture & Refactoring Rules v1.9
+# oioi-bwg Frontend Architecture & Refactoring Rules v1.10
 
 ## 1. 목적
 
@@ -49,6 +49,10 @@ src/
 client/server 공통 HTTP 계약은 `packages/contracts`의 명시적 package export를 소비한다.
 이 package는 기존 `shared/contracts`와 동일한 Zod schema/DTO-only 예외이며 도메인 UI나
 use-case slice를 공용 package로 옮기는 근거가 아니다.
+
+공통 서버 구현 `@oioi-bwg/server/*`는 `src/server`와 app의 server delivery에서만 소비한다.
+widgets/features/entities/shared에서는 type-only를 포함한 server package 참조를 금지한다.
+공통 core와 앱 request/HTTP adapter 배치는 [Server §2.1](06-server-data-access-architecture.md#21-monorepo의-공통-core와-앱-adapter)을 따른다.
 
 ---
 

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const execute = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/server/db", () => ({ getDatabase: () => ({ execute }) }));
+vi.mock("@oioi-bwg/server/db", () => ({ getDatabase: () => ({ execute }) }));
 
 import { GET } from "./route";
 

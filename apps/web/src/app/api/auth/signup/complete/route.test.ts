@@ -1,13 +1,12 @@
 import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { completeSignupResponseSchema } from "@oioi-bwg/contracts/signup";
+import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { AppError } from "@/server/errors/app-error";
 
 const completeSignup = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/server/services/signup-service", () => ({ completeSignup }));
+vi.mock("@oioi-bwg/server/services/signup-service", () => ({ completeSignup }));
 vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
 import { POST } from "./route";

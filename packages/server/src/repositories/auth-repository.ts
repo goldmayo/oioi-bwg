@@ -1,3 +1,5 @@
+import "server-only";
+
 import type { DbExecutor } from "../db";
 import { isPostgresUniqueViolation } from "../db/postgres-error";
 import { account, passwordCredential, profile } from "../db/schema";

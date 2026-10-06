@@ -145,7 +145,11 @@ test("shared mocks and source packages select and invalidate Web verification", 
   const baseline = dryRun().filter(({ taskId }) => taskId.startsWith("@oioi-bwg/web#"));
   assert.deepEqual(dryRun(true), []);
 
-  for (const filename of ["tests/mocks/server-only.ts", "packages/contracts/src/song.ts"]) {
+  for (const filename of [
+    "tests/mocks/server-only.ts",
+    "packages/contracts/src/song.ts",
+    "packages/server/src/services/song-service.ts",
+  ]) {
     const changedFile = path.join(fixtureRoot, filename);
     const original = fs.readFileSync(changedFile);
     fs.appendFileSync(changedFile, "\n// shared input change\n");

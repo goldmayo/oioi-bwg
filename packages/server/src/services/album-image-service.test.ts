@@ -5,7 +5,6 @@ import { AppError } from "../errors/app-error";
 
 const uploadPublicAsset = vi.hoisted(() => vi.fn());
 
-vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("../storage/upload-public-asset", () => ({ uploadPublicAsset }));
 
 import { buildAbility } from "../auth/ability";

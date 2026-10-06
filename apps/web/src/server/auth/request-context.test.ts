@@ -1,16 +1,15 @@
+import { getDatabase } from "@oioi-bwg/server/db";
+import { AppError } from "@oioi-bwg/server/errors/app-error";
+import { findAuthorizationFactsByAccountId } from "@oioi-bwg/server/repositories/auth-repository";
 import { describe, expect, it, vi } from "vitest";
-
-import { getDatabase } from "../db";
-import { AppError } from "../errors/app-error";
-import { findAuthorizationFactsByAccountId } from "../repositories/auth-repository";
 
 import { getRequestContext, requireUser } from "./request-context";
 
 import { auth } from "@/auth";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
-vi.mock("../db", () => ({ getDatabase: vi.fn() }));
-vi.mock("../repositories/auth-repository", () => ({
+vi.mock("@oioi-bwg/server/db", () => ({ getDatabase: vi.fn() }));
+vi.mock("@oioi-bwg/server/repositories/auth-repository", () => ({
   findAuthorizationFactsByAccountId: vi.fn(),
 }));
 

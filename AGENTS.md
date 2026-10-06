@@ -95,10 +95,10 @@ app → pages/widgets/features/entities → shared
 - 도메인 이름이 있다는 이유만으로 UI를 `shared`에 두지 않는다.
 - 같은 레이어의 다른 slice를 직접 import하지 않는다.
 - promoted slice는 public `index.ts`를 통해서만 외부에 공개한다.
-- `src/server`는 FSD 계층 밖의 server boundary다. client feature/entity/shared가 직접 import하지 않는다.
+- `src/server`와 `packages/server`는 FSD 계층 밖의 server boundary다. client feature/entity/shared가 직접 import하지 않는다.
 - `shared/api`는 domain-independent HTTP transport만 둔다. domain browser API와
   `queryOptions`/`mutationOptions`는 `entities/*/api`가 소유한다.
-- `shared/contracts`는 client/server 양쪽이 소비하는 serializable HTTP boundary contract의
+- `packages/contracts`는 client/server 양쪽이 소비하는 serializable HTTP boundary contract의
   명시적 예외다. 도메인 UI·행동·persistence dependency를 두지 않으며 Zod schema와 DTO type만 둔다.
 
 구현 순서는 bottom-up 공용 기반 구축 후 실제 consumer에서 top-down 승격을 검토한다. 중복이
@@ -123,9 +123,10 @@ DbExecutor (Database | Transaction)
 Drizzle → PostgreSQL
 ```
 
-- `src/server/db`: DB singleton과 persistence schema
-- `src/server/repositories`: executor를 첫 인자로 받는 plain persistence 함수
-- `src/server/services`: use case, application/domain rule, authorization, transaction boundary, DTO projection
+- `packages/server/src/db`: DB singleton과 persistence schema
+- `packages/server/src/repositories`: executor를 첫 인자로 받는 plain persistence 함수
+- `packages/server/src/services`: use case, application/domain rule, authorization, transaction boundary, DTO projection
+- 앱의 `src/server`: React/Auth.js request context 획득, HTTP/Next/Sentry adapter. 공통 core를 참조하며 역방향 의존은 금지한다.
 - Repository는 DB connection을 직접 획득하지 않고 transaction을 시작하지 않는다.
 - Service는 HTTP `Response`, status code, Next.js API vocabulary를 알지 않는다.
 - 단일 SQL mutation에는 transaction을 억지로 추가하지 않는다.

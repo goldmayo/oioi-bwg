@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { serializedAbilityResponseSchema } from "@oioi-bwg/contracts/authorization";
+import { listAdminAlbums } from "@oioi-bwg/server/services/album-service";
+import { listAdminSongs } from "@oioi-bwg/server/services/song-service";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
 import { authAbilityQueryKeys } from "@/features/auth";
@@ -8,8 +10,6 @@ import { albumQueryKeys } from "@/entities/album";
 import { songQueryKeys } from "@/entities/song";
 
 import { getRequestContext } from "@/server/auth/request-context";
-import { listAdminAlbums } from "@/server/services/album-service";
-import { listAdminSongs } from "@/server/services/song-service";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
 

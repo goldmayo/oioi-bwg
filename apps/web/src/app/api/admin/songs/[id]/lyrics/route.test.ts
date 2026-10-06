@@ -1,14 +1,13 @@
 import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
+import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { AppError } from "@/server/errors/app-error";
 
 const getRequestContext = vi.hoisted(() => vi.fn());
 const saveSongLyrics = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/server/auth/request-context", () => ({ getRequestContext }));
-vi.mock("@/server/services/song-service", () => ({ saveSongLyrics }));
+vi.mock("@oioi-bwg/server/services/song-service", () => ({ saveSongLyrics }));
 vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
 import { PATCH } from "./route";

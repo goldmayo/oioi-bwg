@@ -1,8 +1,8 @@
 import { requestSignupOtpSchema, signupOtpResponseSchema } from "@oioi-bwg/contracts/signup";
+import { requestOtp } from "@oioi-bwg/server/services/email-verification-service";
 import { headers } from "next/headers";
 
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
-import { requestOtp } from "@/server/services/email-verification-service";
 
 function requestIp(value: string | null) {
   return value?.split(",", 1)[0]?.trim() || "0.0.0.0";

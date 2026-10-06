@@ -31,8 +31,9 @@ test("keeps typed lint and alias dependency boundaries from both repository and 
     `src/shared/config/eslint-policy-regression-${process.pid}.ts`,
   );
   const source = [
-    'import { SongSlugConflictError } from "@/server/repositories/repository-error";',
-    "export const error = SongSlugConflictError;",
+    'import { toErrorResponse } from "@/server/http/api-response";',
+    'export { AppError } from "@oioi-bwg/server/errors/app-error";',
+    "export const response = toErrorResponse;",
     "Promise.resolve();",
   ].join("\n");
 
@@ -51,6 +52,7 @@ test("keeps typed lint and alias dependency boundaries from both repository and 
       const rules = messages.map(({ ruleId }) => ruleId);
       assert.ok(rules.includes("@typescript-eslint/no-floating-promises"), result.stdout);
       assert.ok(rules.includes("boundaries/dependencies"), result.stdout);
+      assert.ok(rules.includes("project/architecture"), result.stdout);
       assert.ok(!rules.includes(null), result.stdout);
     }
   } finally {
@@ -60,6 +62,36 @@ test("keeps typed lint and alias dependency boundaries from both repository and 
 
 test("rejects files outside the constitutional src layers", () => {
   assert.deepEqual(lint("apps/web/src/containers/card.js"), ["unknownLayer"]);
+});
+
+test("rejects shared server package imports in client layers", () => {
+  for (const layer of [
+    "widgets/card/model",
+    "features/auth/model",
+    "entities/song/model",
+    "shared/config",
+  ]) {
+    for (const source of [
+      'export { getDatabase } from "@oioi-bwg/server/db";',
+      'import("@oioi-bwg/server/services/song-service");',
+    ]) {
+      assert.deepEqual(lint(`apps/web/src/${layer}/probe.js`, source), ["clientServerPackage"]);
+    }
+  }
+  assert.deepEqual(
+    lint(
+      "apps/web/src/app/page.js",
+      'import { listSongs } from "@oioi-bwg/server/services/song-service";',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    lint(
+      "apps/web/src/app/(user)/_ui/probe.js",
+      '"use client"; export { AppError } from "@oioi-bwg/server/errors/app-error";',
+    ),
+    ["clientServerPackage"],
+  );
 });
 
 test("rejects invalid promoted slice placement", () => {

@@ -1,24 +1,19 @@
+import "server-only";
+
 import { cache } from "react";
+import type { GuestRequestContext, RequestContext } from "@oioi-bwg/server/auth/request-context";
+export type {
+  AuthenticatedRequestContext,
+  GuestRequestContext,
+  RequestContext,
+} from "@oioi-bwg/server/auth/request-context";
+export { requireUser } from "@oioi-bwg/server/auth/request-context";
 
-import { getDatabase } from "../db";
-import { AppError } from "../errors/app-error";
-import { findAuthorizationFactsByAccountId } from "../repositories/auth-repository";
-
-import { type AppAbility, type AuthorizationFacts, buildAbility } from "./ability";
+import { type AuthorizationFacts, buildAbility } from "@oioi-bwg/server/auth/ability";
+import { getDatabase } from "@oioi-bwg/server/db";
+import { findAuthorizationFactsByAccountId } from "@oioi-bwg/server/repositories/auth-repository";
 
 import { auth } from "@/auth";
-
-export type AuthenticatedRequestContext = {
-  user: { id: string };
-  ability: AppAbility;
-};
-
-export type GuestRequestContext = {
-  user: null;
-  ability: AppAbility;
-};
-
-export type RequestContext = AuthenticatedRequestContext | GuestRequestContext;
 
 function guestContext(): GuestRequestContext {
   return { user: null, ability: buildAbility({ accountId: null, role: null }) };
@@ -56,10 +51,3 @@ async function loadRequestContext(): Promise<RequestContext> {
 
 /** 현재 요청의 활성 Account와 CASL ability를 반환한다. 인증되지 않은 요청도 guest context로 표현한다. */
 export const getRequestContext = cache(loadRequestContext);
-
-/** 인증이 필요한 service 경계에서 guest context를 거부한다. */
-export function requireUser(ctx: RequestContext): asserts ctx is AuthenticatedRequestContext {
-  if (!ctx.user) {
-    throw new AppError("UNAUTHENTICATED");
-  }
-}

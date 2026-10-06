@@ -1,11 +1,10 @@
 import "server-only";
 
 import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
+import { AppError, type AppErrorCode } from "@oioi-bwg/server/errors/app-error";
 import { z } from "zod";
 
 import { reportServerError } from "@/server/observability/server-error-reporter";
-
-import { AppError, type AppErrorCode } from "../errors/app-error";
 
 const appErrorDefinitions = {
   ALBUM_NOT_FOUND: { message: "앨범을 찾을 수 없습니다.", status: 404 },

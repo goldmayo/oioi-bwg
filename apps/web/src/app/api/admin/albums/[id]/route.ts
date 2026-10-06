@@ -3,10 +3,10 @@ import {
   albumSummarySchema,
   saveAdminAlbumSchema,
 } from "@oioi-bwg/contracts/album";
+import { deleteAlbum, editAlbum } from "@oioi-bwg/server/services/album-service";
 
 import { getRequestContext } from "@/server/auth/request-context";
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
-import { deleteAlbum, editAlbum } from "@/server/services/album-service";
 
 interface AlbumRouteContext {
   params: Promise<{ id: string }>;

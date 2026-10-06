@@ -1,3 +1,5 @@
+import "server-only";
+
 import { and, eq, isNull, or } from "drizzle-orm";
 
 import type { DbExecutor } from "../db";
