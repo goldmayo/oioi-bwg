@@ -5,7 +5,7 @@ status: "active"
 verified_source:
   repository: "goldmayo/oioi-bwg"
   branch: "feature/p03-shared-server"
-  commit: "830a2eeb9204aea96152b69b5fbc8791f25caac0"
+  commit: "76e937c819f7ec7762b6a16ca43df7964271570a"
 verified_at: "2026-10-07"
 ---
 
@@ -38,7 +38,7 @@ Next/Docker workspace manifest와 owning architecture, AGENTS 요약 경로를 �
 ## 실행한 검증
 
 사용자 앱 환경 파일이 없는 별도 worktree에서 검증했다. 검증 snapshot과 최종 코드 커밋의
-91개 변경 파일이 일치한다. 외부 DB나 운영 credential은 사용하지 않았다.
+92개 변경 파일이 일치한다. 외부 DB나 운영 credential은 사용하지 않았다.
 
 | 명령/검사 | 결과 |
 | --- | --- |
@@ -64,6 +64,17 @@ Web 160개로 유지했다.
 기준으로 확인한다. 선행 계약 PR의 CI는 [run 37486285118](https://github.com/goldmayo/oioi-bwg/actions/runs/37486285118)에서
 quality/unit/infra/PostgreSQL integration/build/verify가 성공했다. 이 결과는 서버 PR 자체의
 PostgreSQL/container 검증을 대신하지 않는다.
+
+## 첫 서버 CI 검토 후 보완
+
+`58244da`의 [run 37487960002](https://github.com/goldmayo/oioi-bwg/actions/runs/37487960002)에서
+quality/unit/infra/Docker build와 container smoke는 성공했지만 PostgreSQL integration의 suite
+로딩이 `@oioi-bwg/server/auth/ability`를 찾지 못했다. 루트가 직접 실행하는 테스트의 workspace
+package 의존성 선언이 빠져 있었다. `76e937c`에서 root devDependencies에 contracts/server를
+명시했고 frozen install과 전체 verify를 다시 통과했다. Node boundary harness도 source 절대
+경로 대신 실제 package export를 import해 root resolution 및 server-only를 함께 검사한다.
+위 검증 표와 source ref는 이 보완 이후의 최종 코드 기준이다. CI의 실제 PostgreSQL 결과는
+수정된 PR head의 checks로 확인한다.
 
 ## 완료 범위와 보류
 
