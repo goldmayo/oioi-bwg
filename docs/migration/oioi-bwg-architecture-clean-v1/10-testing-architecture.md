@@ -1,10 +1,10 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.1"
+version: "1.2"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-29"
+updated_at: "2026-10-07"
 depends_on:
   - "01"
   - "02"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.1
+# oioi-bwg Testing Architecture v1.2
 
 ## 1. 목적
 
@@ -303,6 +303,12 @@ fixture가 반복될 때 작은 builder를 사용할 수 있다.
 ---
 
 ## 17. CI Gate
+
+Web과 Console은 독립 FSD root에서 lint/type-check/unit/build를 실행한다.
+각 앱의 alias와 테스트 include는 다른 앱의 소스·테스트를 읽지 않도록 해당 workspace가 소유한다.
+repo harness는 직접 앱 import, source package 및 공통 설정 변경의 두 앱 task 선택/hash를 검사한다.
+P04 회귀는 두 standalone origin에서 로그인·기존 앨범/곡/LRC/가사 저장·권한 거부·세션 격리를
+검증한다. CI의 PostgreSQL fixture는 격리된 test DB에만 만들고 정리한다.
 
 최소 후보:
 

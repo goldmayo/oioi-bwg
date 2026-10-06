@@ -25,38 +25,49 @@ function lint(relativeFilename, code = "export {};") {
 
 test("keeps typed lint and alias dependency boundaries from both repository and app roots", () => {
   const repositoryRoot = path.resolve(import.meta.dirname, "../../..");
-  const webRoot = path.join(repositoryRoot, "apps/web");
-  const filename = path.join(
-    webRoot,
-    `src/shared/config/eslint-policy-regression-${process.pid}.ts`,
-  );
-  const source = [
-    'import { toErrorResponse } from "@/server/http/api-response";',
-    'export { AppError } from "@oioi-bwg/server/errors/app-error";',
-    "export const response = toErrorResponse;",
-    "Promise.resolve();",
-  ].join("\n");
+  for (const app of ["web", "console"]) {
+    const webRoot = path.join(repositoryRoot, "apps", app);
+    const filename = path.join(
+      webRoot,
+      `src/shared/config/eslint-policy-regression-${process.pid}.ts`,
+    );
+    const source = [
+      'import { toErrorResponse } from "@/server/http/api-response";',
+      'export { AppError } from "@oioi-bwg/server/errors/app-error";',
+      `export { default as foreignPage } from "../../../../${app === "web" ? "console" : "web"}/src/app/page";`,
+      "export const response = toErrorResponse;",
+      "Promise.resolve();",
+    ].join("\n");
 
-  fs.writeFileSync(filename, source, { flag: "wx" });
-  try {
-    for (const cwd of [repositoryRoot, webRoot]) {
-      const result = spawnSync(
-        process.execPath,
-        [path.join(repositoryRoot, "node_modules/eslint/bin/eslint.js"), filename, "--format=json"],
-        { cwd, encoding: "utf8" },
-      );
+    fs.writeFileSync(filename, source, { flag: "wx" });
+    try {
+      for (const cwd of [repositoryRoot, webRoot]) {
+        const result = spawnSync(
+          process.execPath,
+          [
+            path.join(repositoryRoot, "node_modules/eslint/bin/eslint.js"),
+            filename,
+            "--format=json",
+          ],
+          { cwd, encoding: "utf8" },
+        );
 
-      assert.equal(result.error, undefined);
-      assert.equal(result.status, 1, result.stderr || result.stdout);
-      const [{ messages }] = JSON.parse(result.stdout);
-      const rules = messages.map(({ ruleId }) => ruleId);
-      assert.ok(rules.includes("@typescript-eslint/no-floating-promises"), result.stdout);
-      assert.ok(rules.includes("boundaries/dependencies"), result.stdout);
-      assert.ok(rules.includes("project/architecture"), result.stdout);
-      assert.ok(!rules.includes(null), result.stdout);
+        assert.equal(result.error, undefined);
+        assert.equal(result.status, 1, result.stderr || result.stdout);
+        const [{ messages }] = JSON.parse(result.stdout);
+        const rules = messages.map(({ ruleId }) => ruleId);
+        assert.ok(rules.includes("@typescript-eslint/no-floating-promises"), result.stdout);
+        assert.ok(rules.includes("boundaries/dependencies"), result.stdout);
+        assert.ok(rules.includes("project/architecture"), result.stdout);
+        assert.ok(
+          messages.some(({ messageId }) => messageId === "crossAppImport"),
+          result.stdout,
+        );
+        assert.ok(!rules.includes(null), result.stdout);
+      }
+    } finally {
+      fs.unlinkSync(filename);
     }
-  } finally {
-    fs.unlinkSync(filename);
   }
 });
 
@@ -190,4 +201,16 @@ test("keeps database-specific dependencies below the Service boundary", () => {
     ),
     [],
   );
+});
+
+test("rejects relative, package and dynamic imports between apps", () => {
+  for (const app of ["web", "console"]) {
+    const other = app === "web" ? "console" : "web";
+    for (const source of [
+      `export { default } from "../../../${other}/src/app/page";`,
+      `import("@oioi-bwg/${other}");`,
+    ]) {
+      assert.deepEqual(lint(`apps/${app}/src/app/probe.js`, source), ["crossAppImport"]);
+    }
+  }
 });

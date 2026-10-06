@@ -70,7 +70,7 @@ test("app workspaces do not depend directly on other app workspaces", () => {
   }
 });
 
-test("shared mocks and source packages select and invalidate Web verification", (context) => {
+test("shared mocks and source packages select and invalidate both apps verification", (context) => {
   const repositoryRoot = path.resolve(import.meta.dirname, "../..");
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "oioi-turbo-affected-"));
   context.after(() => fs.rmSync(fixtureRoot, { recursive: true, force: true }));
@@ -82,6 +82,7 @@ test("shared mocks and source packages select and invalidate Web verification", 
     "turbo.json",
     ".gitignore",
     "apps/web/package.json",
+    "apps/console/package.json",
     "tests/mocks/server-only.ts",
   ]) {
     const destination = path.join(fixtureRoot, filename);
@@ -142,7 +143,7 @@ test("shared mocks and source packages select and invalidate Web verification", 
     return JSON.parse(output).tasks;
   }
 
-  const baseline = dryRun().filter(({ taskId }) => taskId.startsWith("@oioi-bwg/web#"));
+  const baseline = dryRun().filter(({ taskId }) => /^@oioi-bwg\/(web|console)#/.test(taskId));
   assert.deepEqual(dryRun(true), []);
 
   for (const filename of [

@@ -1,10 +1,10 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.2"
+version: "1.3"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-30"
+updated_at: "2026-10-07"
 depends_on:
   - "01"
   - "03"
@@ -21,11 +21,11 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.2
+# oioi-bwg Authentication / Authorization Architecture v1.3
 
 ## 1. 목적
 
-oioi-bwg는 Next.js 16 단일 애플리케이션으로 구성한다.
+oioi-bwg는 Next.js 16 Web과 Console 앱이 공통 서버 코드를 소비하는 구조로 구성한다.
 
 인증과 인가는 API/Error Architecture와 밀접하게 연결되지만 책임은 분리한다.
 
@@ -187,7 +187,25 @@ CASL rules
 
 ---
 
+## 4.1. Console의 단계적 전환
+
+P04는 접근이 제한된 loopback 실행 환경에서 기존 관리 흐름을 이관하는 단계다.
+이 단계에서만 기존 password Credentials를 사용하며, ACTIVE ADMIN만 Console identity로
+반환한다. 다음 요청마다 DB status/role을 다시 검사하고 기존 CASL/service 인가를 유지한다.
+Console에는 별도 `CONSOLE_AUTH_SECRET`과 전용 host-only cookie 이름을 사용한다.
+Web 세션을 Console 세션으로 받아들이거나 같은 secret을 기본값으로 대체하지 않는다.
+P04의 HTTP loopback cookie는 HttpOnly/SameSite=Lax를 유지하며 Secure는 HTTPS 전환 시 적용한다.
+
+공개 Console 인증은 P05의 TOTP 완료를 전제로 한다. 비밀번호·ACTIVE·ADMIN·TOTP를
+모두 확인한 뒤에만 identity를 발급하며, MFA 증명/version과 DB의 현재 상태를 공통 Console
+guard에서 검사한다. 회수 규칙은 P05에서 Domain과 함께 개정한다. 공개 hostname·Secure cookie와
+배포 전환은 P06에서 검증한다. P04에서 공개 배포하거나 Web 관리 경로를 제거하지 않는다.
+
+---
+
 # 5. Authorization facts의 SSOT는 DB다
+
+
 
 v1에서 mutable authorization fact는 Account의 단일 role이다.
 

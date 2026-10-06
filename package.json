@@ -8,7 +8,7 @@
     "build": "turbo run build",
     "start": "pnpm --filter @oioi-bwg/web start",
     "lint": "turbo run lint && pnpm lint:repo",
-    "lint:fsd": "pnpm --filter @oioi-bwg/web lint:fsd",
+    "lint:fsd": "pnpm --filter @oioi-bwg/web --filter @oioi-bwg/console lint:fsd",
     "type-check": "turbo run type-check && pnpm type-check:repo",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -31,8 +31,9 @@
     "test:stress": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/stress.js",
     "test:spike": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/spike.js",
     "release": "release-it",
-    "lint:repo": "eslint . --config config/eslint/node.mjs --ignore-pattern \"apps/web/**\"",
-    "type-check:repo": "tsc --noEmit -p tsconfig.json"
+    "lint:repo": "eslint . --config config/eslint/node.mjs --ignore-pattern \"apps/**\"",
+    "type-check:repo": "tsc --noEmit -p tsconfig.json",
+    "dev:console": "pnpm --filter @oioi-bwg/console dev"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
