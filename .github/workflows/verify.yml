@@ -194,6 +194,21 @@ jobs:
           done
           node tests/ops/web-standalone-smoke.mjs http://127.0.0.1:3000
 
+      - name: Smoke test private Console standalone
+        run: |
+          set -euo pipefail
+          HOSTNAME=127.0.0.1 PORT=3001 \
+            CONSOLE_AUTH_SECRET=console-workspace-smoke-local-only-secret \
+            CONSOLE_ORIGIN=http://127.0.0.1:3001 \
+            node apps/console/.next/standalone/apps/console/server.js > /tmp/console-smoke.log 2>&1 &
+          console_pid=$!
+          trap 'kill "${console_pid}"; cat /tmp/console-smoke.log' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3001/healthz; then break; fi
+            sleep 1
+          done
+          node tests/ops/console-standalone-smoke.mjs http://127.0.0.1:3001
+
   verify:
     name: verify
     if: always()

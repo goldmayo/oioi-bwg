@@ -1,7 +1,7 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.13"
+version: "2.14"
 status: "active"
 authority: "constitution"
 updated_at: "2026-10-07"
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.13
+# oioi-bwg Architecture Constitution v2.14
 
 ## 1. 목적
 
@@ -149,6 +149,12 @@ RSC는 같은 프로세스 안의 service를 직접 호출한다. 서버 내부�
 ---
 
 ## 5. 최상위 디렉터리
+
+P04부터 `apps/console`은 별도의 Next 프로세스인 관리자 앱이다. Web과 Console은
+동일한 contracts/server 소스를 소비하지만 다른 앱의 파일을 직접 import하지 않는다.
+각 앱의 FSD root와 request/session/HTTP adapter, 자동 탐색 설정은 해당 앱이 소유한다.
+Web 관리 경로는 P06 전환 전까지 유지하며, Console의 비공개 단계 인증은 04 §4.1을 따른다.
+공용 UI/domain/api-client package를 선생성하지 않고 실제 이관에 필요한 UI만 앱 내부에 둔다.
 
 현재 Next 앱의 루트는 `apps/web`이다. 아래 구조와 active 문서의 `src/...` 경로는
 별도 명시가 없으면 이 앱 루트를 기준으로 한다. `/admin`을 포함한 기존 route와 서버 boundary는 유지한다.

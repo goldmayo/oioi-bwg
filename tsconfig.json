@@ -1,5 +1,5 @@
 {
   "extends": "./config/typescript/node.json",
   "include": ["**/*.mts"],
-  "exclude": ["**/node_modules", "apps/web/.next/**"]
+  "exclude": ["**/node_modules", "**/.next/**"]
 }
