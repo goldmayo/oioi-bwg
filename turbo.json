@@ -7,7 +7,8 @@
     "eslint.config.mts",
     "steiger.config.ts",
     "vitest.config.ts",
-    "vitest.setup.ts"
+    "vitest.setup.ts",
+    "tests/mocks/**"
   ],
   "tasks": {
     "type-check": {
@@ -35,7 +36,6 @@
     "test": {
       "inputs": [
         "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/tests/mocks/**",
         "!**/.next/**",
         "!**/.turbo/**",
         "!*.tsbuildinfo",
