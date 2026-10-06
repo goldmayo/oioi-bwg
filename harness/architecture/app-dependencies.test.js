@@ -89,7 +89,16 @@ test("mock-only changes select Web tests in affected verification", (context) =>
     fs.copyFileSync(path.join(repositoryRoot, filename), destination);
   }
 
-  const commandOptions = { cwd: fixtureRoot, encoding: "utf8", stdio: "pipe" };
+  // Git hooks export repository paths; fixture commands must discover their own repository.
+  const fixtureEnvironment = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !name.startsWith("GIT_")),
+  );
+  const commandOptions = {
+    cwd: fixtureRoot,
+    encoding: "utf8",
+    stdio: "pipe",
+    env: fixtureEnvironment,
+  };
   execFileSync("git", ["init", "--quiet"], commandOptions);
   execFileSync("git", ["add", "."], commandOptions);
   execFileSync(
@@ -114,7 +123,7 @@ test("mock-only changes select Web tests in affected verification", (context) =>
       ["run", "type-check", "lint", "test", "--dry=json", ...(affected ? ["--affected"] : [])],
       {
         ...commandOptions,
-        env: { ...process.env, TURBO_SCM_BASE: "HEAD", TURBO_SCM_HEAD: "HEAD" },
+        env: { ...fixtureEnvironment, TURBO_SCM_BASE: "HEAD", TURBO_SCM_HEAD: "HEAD" },
       },
     );
     return JSON.parse(output).tasks;
