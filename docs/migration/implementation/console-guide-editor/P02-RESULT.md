@@ -5,7 +5,7 @@ status: "active"
 verified_source:
   repository: "goldmayo/oioi-bwg"
   branch: "feature/p02-shared-config-turbo"
-  commit: "a76d800ccaba50a29094dc2e5b3992c1a7fbcb5e"
+  commit: "4153bea5e724a551c61ff2e0e8e58dcd8b917bf9"
 verified_at: "2026-10-06"
 ---
 
@@ -117,3 +117,30 @@ P02에서 해당 gate를 삭제하거나 약화하지 않았고 `.github/workflo
 로컬 `pnpm verify` 전체 결과는 실패다. 마지막 production build가 Google Fonts의 Geist/Geist Mono
 연결 실패로 중단됐다. 수정된 source의 production build, PostgreSQL integration과 Docker smoke는
 갱신된 정식 PR CI에서 확인한다. 실제 소스맵 업로드는 Promotion 검증 범위로 남긴다.
+
+## 공용 mock의 affected 검사 누락 보완 (2026-10-06)
+
+검토 기준 `baf545a99606aadeb241a2f2b934d3aa01a8d326`에서 root `tests/mocks/**`만 변경하면
+test hash는 바뀌지만 pre-push의 `--affected`가 Web test task를 선택하지 않는 것을 확인했다.
+P02 병합 후 mock만 수정하는 후속 변경에서 로컬 검사가 생략되는 문제다.
+
+[수정 커밋](https://github.com/goldmayo/oioi-bwg/commit/4153bea5e724a551c61ff2e0e8e58dcd8b917bf9)에서
+`tests/mocks/**`를 test 전용 input에서 `globalDependencies`로 옮겼다. mock 변경이 캐시 무효화와
+affected 선택에 모두 반영된다. 이 보수적인 설정은 mock 변경 시 다른 workspace task도 재검사한다.
+task 이름, Husky 흐름, CI gate는 유지했다.
+
+`harness/architecture/app-dependencies.test.js`에 실제 Turbo CLI 회귀 검사를 추가했다.
+현재 manifest·lockfile·Turbo 설정을 격리된 임시 Git 저장소에 복사하고 기준 커밋을 만든 뒤,
+다른 변경 없이 mock만 수정한다. 변경 전 affected task가 없고, 변경 후 Web test가 선택되며
+test hash가 바뀌는지 검증한다. 수정 전에는 해당 검사만 실행해 실패를 확인했고 수정 후에는 통과했다.
+
+Node 22.16.0 / pnpm 10.15.1에서 실행한 검증:
+
+- `node --test --test-name-pattern='mock-only' harness/architecture/app-dependencies.test.js`: 통과.
+- `pnpm verify`: Web/root type-check·ESLint, Steiger, unit 57개 파일 / 240개 테스트,
+  architecture harness 13개, ops 4개 파일 / 51개 테스트, format check와 Next production build 모두 통과.
+- `pnpm exec turbo run type-check lint test` 재실행: 3/3 local cache hit.
+- `git diff --check`: 통과.
+
+PostgreSQL integration, Docker standalone/container smoke와 실제 Sentry 업로드는 이번 로컬 검증에서
+실행하지 않았다. 해당 CI 및 Promotion 검증 범위는 유지한다.
