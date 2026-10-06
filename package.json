@@ -33,7 +33,9 @@
     "release": "release-it",
     "lint:repo": "eslint . --config config/eslint/node.mjs --ignore-pattern \"apps/**\"",
     "type-check:repo": "tsc --noEmit -p tsconfig.json",
-    "dev:console": "pnpm --filter @oioi-bwg/console dev"
+    "dev:console": "pnpm --filter @oioi-bwg/console dev",
+    "test:integration:admin": "tsx scripts/run-postgres-integration-tests.ts --admin-smoke",
+    "test:integration:admin:local": "docker compose -f compose.dev.yml up -d --wait postgres && tsx scripts/run-postgres-integration-tests.ts --local --admin-smoke"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",

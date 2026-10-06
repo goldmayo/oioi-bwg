@@ -209,6 +209,50 @@ jobs:
           done
           node tests/ops/console-standalone-smoke.mjs http://127.0.0.1:3001
 
+  admin_integration:
+    name: Admin migration integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_APP_ENV: staging
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Complete existing admin flows on both private standalone origins
+        run: pnpm test:integration:admin
+        env:
+          M7_TEST_POSTGRES_ADMIN_URL: postgresql://postgres@127.0.0.1:5432/postgres
+          P04_ARTIFACT_DIR: .local/p04-admin-smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p04-admin-smoke
+          path: .local/p04-admin-smoke
+          if-no-files-found: ignore
+
   verify:
     name: verify
     if: always()
@@ -217,6 +261,7 @@ jobs:
       - quality
       - unit
       - postgres_integration
+      - admin_integration
       - build
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -227,6 +272,7 @@ jobs:
           INFRA_RESULT: ${{ needs.infra.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
           UNIT_RESULT: ${{ needs.unit.result }}
+          ADMIN_INTEGRATION_RESULT: ${{ needs.admin_integration.result }}
           POSTGRES_RESULT: ${{ needs.postgres_integration.result }}
           BUILD_RESULT: ${{ needs.build.result }}
         run: |
@@ -236,6 +282,7 @@ jobs:
             "${QUALITY_RESULT}" \
             "${UNIT_RESULT}" \
             "${POSTGRES_RESULT}" \
+            "${ADMIN_INTEGRATION_RESULT}" \
             "${BUILD_RESULT}"; do
             if [[ "${result}" != "success" ]]; then
               echo "Verification dependency did not succeed: ${result}" >&2
