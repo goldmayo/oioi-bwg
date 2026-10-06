@@ -7,7 +7,7 @@ import { getSentryBuildConfig } from "./src/shared/config/sentry-build";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  transpilePackages: ["@oioi-bwg/contracts"],
+  transpilePackages: ["@oioi-bwg/contracts", "@oioi-bwg/server"],
   outputFileTracingRoot: path.resolve(import.meta.dirname, "../.."),
   reactCompiler: true,
   allowedDevOrigins: ["localhost", "127.0.0.1"],

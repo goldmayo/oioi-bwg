@@ -3,10 +3,10 @@ import {
   adminSongMutationResultSchema,
   saveAdminSongLyricsSchema,
 } from "@oioi-bwg/contracts/song";
+import { saveSongLyrics } from "@oioi-bwg/server/services/song-service";
 
 import { getRequestContext } from "@/server/auth/request-context";
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
-import { saveSongLyrics } from "@/server/services/song-service";
 
 interface SongLyricsRouteContext {
   params: Promise<{ id: string }>;

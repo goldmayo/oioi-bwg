@@ -1,9 +1,8 @@
 import { cache } from "react";
+import { getAlbumDetailBySlug } from "@oioi-bwg/server/services/album-service";
 import { notFound } from "next/navigation";
 
 import { toAlbumViewModel } from "@/entities/album";
-
-import { getAlbumDetailBySlug } from "@/server/services/album-service";
 
 import { constructMetadata } from "@/shared/lib/metadata";
 

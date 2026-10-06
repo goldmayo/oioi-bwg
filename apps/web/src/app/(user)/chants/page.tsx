@@ -1,8 +1,7 @@
 import { Suspense } from "react";
+import { listVisibleAlbumsWithSongs } from "@oioi-bwg/server/services/album-service";
 
 import { AlbumListSkeleton } from "@/entities/album";
-
-import { listVisibleAlbumsWithSongs } from "@/server/services/album-service";
 
 import { FilteredChantList } from "./_ui/filtered-chant-list";
 

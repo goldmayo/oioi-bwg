@@ -4,24 +4,23 @@ import { readFileSync } from "node:fs";
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type { RequestContext } from "@/server/auth/request-context";
-import { buildAbility } from "@/server/auth/ability";
-import { getDatabase } from "@/server/db";
-import { emailVerificationChallenge, song } from "@/server/db/schema";
+import type { RequestContext } from "@oioi-bwg/server/auth/request-context";
+import { buildAbility } from "@oioi-bwg/server/auth/ability";
+import { getDatabase } from "@oioi-bwg/server/db";
+import { emailVerificationChallenge, song } from "@oioi-bwg/server/db/schema";
 import { toErrorResponse } from "@/server/http/api-response";
-import * as identity from "@/server/repositories/auth-repository";
-import { findChallengeById } from "@/server/repositories/email-verification-repository";
-import * as albums from "@/server/services/album-service";
-import { requestOtp, verifyOtp } from "@/server/services/email-verification-service";
-import { completeSignup } from "@/server/services/signup-service";
-import * as songs from "@/server/services/song-service";
+import * as identity from "@oioi-bwg/server/repositories/auth-repository";
+import { findChallengeById } from "@oioi-bwg/server/repositories/email-verification-repository";
+import * as albums from "@oioi-bwg/server/services/album-service";
+import { requestOtp, verifyOtp } from "@oioi-bwg/server/services/email-verification-service";
+import { completeSignup } from "@oioi-bwg/server/services/signup-service";
+import * as songs from "@oioi-bwg/server/services/song-service";
 import type { SaveAdminAlbum } from "@oioi-bwg/contracts/album";
 import type { CreateAdminSong } from "@oioi-bwg/contracts/song";
 
 const external = vi.hoisted(() => ({ mail: vi.fn() }));
 
-vi.mock("@/auth", () => ({ auth: async () => null }));
-vi.mock("../../apps/web/src/server/email/signup-verification-email", () => ({
+vi.mock("@oioi-bwg/server/email/signup-verification-email", () => ({
   sendSignupVerificationEmail: external.mail,
   SignupEmailSuppressedError: class extends Error {},
 }));

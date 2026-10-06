@@ -52,6 +52,8 @@ export const architectureRule = {
         "route private segment는 @/app alias로 import하지 말고 소유 route 안에서 상대 경로로만 사용하세요.",
       servicePersistenceDependency:
         "Service에서 DB/ORM-specific dependency '{{dependency}}'를 import하지 마세요. Repository semantic error boundary를 사용하세요.",
+      clientServerPackage:
+        "Client/FSD 레이어에서 공통 서버 패키지 '{{dependency}}'를 import하지 마세요.",
     },
   },
   create(context) {
@@ -61,6 +63,9 @@ export const architectureRule = {
 
     const [layer, slice, segment] = parts;
     const fileName = parts.at(-1) ?? "";
+    const isClient = context.sourceCode.ast.body.some(
+      (node) => node.type === "ExpressionStatement" && node.directive === "use client",
+    );
 
     const reportAtProgram = (messageId, data) => {
       context.report({ loc: { line: 1, column: 0 }, messageId, data });
@@ -70,6 +75,17 @@ export const architectureRule = {
       const source = sourceNode?.value;
 
       if (typeof source !== "string") return;
+
+      if (
+        (isClient || ["widgets", "features", "entities", "shared"].includes(layer)) &&
+        /^@oioi-bwg\/server(?:\/|$)/.test(source)
+      ) {
+        context.report({
+          node: sourceNode,
+          messageId: "clientServerPackage",
+          data: { dependency: source },
+        });
+      }
 
       const importedParts = resolveImportedParts(parts, source);
       const [importedLayer, importedSlice] = importedParts ?? [];

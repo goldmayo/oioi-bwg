@@ -1,7 +1,7 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.12"
+version: "2.13"
 status: "active"
 authority: "constitution"
 updated_at: "2026-10-07"
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.12
+# oioi-bwg Architecture Constitution v2.13
 
 ## 1. 목적
 
@@ -142,7 +142,7 @@ OCIR tag immutability를 가정하지 않는다. source/merge tree 일치, 기�
 
 Next.js는 화면 렌더링과 HTTP delivery를 담당한다.
 
-서버 application logic은 Next.js Route Handler 자체에 작성하지 않고 `src/server`에 격리한다.
+서버 application logic은 Next.js Route Handler 자체에 작성하지 않고 공통 `packages/server/src` core에 격리한다.
 
 RSC는 같은 프로세스 안의 service를 직접 호출한다. 서버 내부에서 자신의 `/api/*` endpoint를 HTTP로 다시 호출하지 않는다.
 
@@ -186,6 +186,12 @@ FSD 레이어가 아니다.
 서버 application/persistence boundary를 표현하는 별도의 축이다.
 
 `server`를 FSD slice 내부로 분산시키지 않는다.
+
+공통 서버 core는 `packages/server/src`가 소유한다. DB/schema·repository·service·CASL rule·
+context type/guard·application error·email/storage를 명시적인 package export로 제공한다.
+`React.cache`/Auth.js 요청 세션 획득과 HTTP/Next/Sentry adapter는 각 앱의 `src/server`에 둔다.
+공통 서버는 앱·React·Next·UI를 참조하지 않으며 client/FSD 레이어는 server package를 참조하지 않는다.
+DB 및 migration 의미는 유지하며 root Drizzle 진입점이 공통 schema를 읽는다.
 
 ---
 

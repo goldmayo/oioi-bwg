@@ -1,3 +1,5 @@
+import "server-only";
+
 export class AlbumSlugConflictError extends Error {
   constructor() {
     super("Album slug conflicts with an existing album");

@@ -1,3 +1,5 @@
+import "server-only";
+
 import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
 
 import type { DbExecutor, Transaction } from "../db";

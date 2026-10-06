@@ -1,7 +1,7 @@
 import { completeSignupResponseSchema, completeSignupSchema } from "@oioi-bwg/contracts/signup";
+import { completeSignup } from "@oioi-bwg/server/services/signup-service";
 
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
-import { completeSignup } from "@/server/services/signup-service";
 
 export async function POST(request: Request) {
   try {

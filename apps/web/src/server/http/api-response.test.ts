@@ -1,10 +1,9 @@
 import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
+import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { reportServerError } from "@/server/observability/server-error-reporter";
-
-import { AppError } from "../errors/app-error";
 
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "./api-response";
 

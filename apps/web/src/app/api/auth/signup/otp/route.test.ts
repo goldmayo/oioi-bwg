@@ -1,15 +1,14 @@
 import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { signupOtpResponseSchema } from "@oioi-bwg/contracts/signup";
+import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { AppError } from "@/server/errors/app-error";
 
 const requestOtp = vi.hoisted(() => vi.fn());
 const headers = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({ headers }));
-vi.mock("@/server/services/email-verification-service", () => ({ requestOtp }));
+vi.mock("@oioi-bwg/server/services/email-verification-service", () => ({ requestOtp }));
 vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
 import { POST } from "./route";

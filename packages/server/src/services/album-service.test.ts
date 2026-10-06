@@ -2,7 +2,6 @@ import { adminAlbumListSchema } from "@oioi-bwg/contracts/album";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "../errors/app-error";
-import { toErrorResponse } from "../http/api-response";
 import { AlbumSlugConflictError } from "../repositories/repository-error";
 
 const findAllAlbums = vi.hoisted(() => vi.fn());
@@ -16,7 +15,6 @@ vi.mock("../auth/request-context", () => ({
   },
 }));
 vi.mock("../db", () => ({ getDatabase: () => ({}) }));
-vi.mock("../observability/server-error-reporter", () => ({ reportServerError: vi.fn() }));
 vi.mock("../repositories/album-repository", () => ({
   findAlbumBySlug: vi.fn(),
   findAllAlbums,
@@ -83,6 +81,5 @@ describe("album-service unique conflicts", () => {
     const caught = await createAlbum(context, input).catch((cause: unknown) => cause);
 
     expect(caught).toBe(error);
-    expect(toErrorResponse(caught).status).toBe(500);
   });
 });

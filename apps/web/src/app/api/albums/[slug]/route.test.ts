@@ -1,13 +1,12 @@
 import { albumDetailSchema } from "@oioi-bwg/contracts/album";
 import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
+import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { AppError } from "@/server/errors/app-error";
 
 const requireAlbumDetailBySlug = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/server/services/album-service", () => ({ requireAlbumDetailBySlug }));
+vi.mock("@oioi-bwg/server/services/album-service", () => ({ requireAlbumDetailBySlug }));
 vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
 import { GET } from "./route";

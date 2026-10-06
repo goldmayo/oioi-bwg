@@ -1,0 +1,50 @@
+{
+  "name": "@oioi-bwg/server",
+  "version": "0.7.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./auth/ability": "./src/auth/ability.ts",
+    "./auth/request-context": "./src/auth/request-context.ts",
+    "./db": "./src/db/index.ts",
+    "./db/postgres-error": "./src/db/postgres-error.ts",
+    "./db/schema": "./src/db/schema.ts",
+    "./email/oci-email-delivery": "./src/email/oci-email-delivery.ts",
+    "./email/signup-verification-email": "./src/email/signup-verification-email.ts",
+    "./email/templates/signup-verification-email": "./src/email/templates/signup-verification-email.ts",
+    "./errors/app-error": "./src/errors/app-error.ts",
+    "./repositories/album-repository": "./src/repositories/album-repository.ts",
+    "./repositories/auth-repository": "./src/repositories/auth-repository.ts",
+    "./repositories/email-verification-repository": "./src/repositories/email-verification-repository.ts",
+    "./repositories/repository-error": "./src/repositories/repository-error.ts",
+    "./repositories/song-repository": "./src/repositories/song-repository.ts",
+    "./services/album-image-service": "./src/services/album-image-service.ts",
+    "./services/album-service": "./src/services/album-service.ts",
+    "./services/authentication-service": "./src/services/authentication-service.ts",
+    "./services/email-verification-service": "./src/services/email-verification-service.ts",
+    "./services/signup-service": "./src/services/signup-service.ts",
+    "./services/song-service": "./src/services/song-service.ts",
+    "./storage/upload-public-asset": "./src/storage/upload-public-asset.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@oioi-bwg/contracts": "workspace:*",
+    "@aws-sdk/client-s3": "^3.1121.0",
+    "@casl/ability": "^7.0.1",
+    "argon2": "^0.45.1",
+    "drizzle-orm": "^0.45.1",
+    "oci-sdk": "^2.140.0",
+    "postgres": "^3.4.8",
+    "zod": "^4.3.6",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5",
+    "vitest": "^4.1.2"
+  }
+}
