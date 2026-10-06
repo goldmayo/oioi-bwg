@@ -29,7 +29,7 @@ test("contracts lint rejects platform and implementation dependencies", async ()
 
 test("server database entry rejects client conditions and loads without connecting under server conditions", () => {
   const repositoryRoot = path.resolve(import.meta.dirname, "../..");
-  const entry = path.join(repositoryRoot, "packages/server/src/db/index.ts");
+  const entry = "@oioi-bwg/server/db";
   const code = `import(${JSON.stringify(entry)})`;
   const env = { ...process.env };
   delete env.DATABASE_URL;

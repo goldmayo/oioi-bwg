@@ -24,6 +24,12 @@ importers:
       '@feature-sliced/steiger-plugin':
         specifier: 0.7.0
         version: 0.7.0(typescript@5.9.3)
+      '@oioi-bwg/contracts':
+        specifier: workspace:*
+        version: link:packages/contracts
+      '@oioi-bwg/server':
+        specifier: workspace:*
+        version: link:packages/server
       '@release-it/conventional-changelog':
         specifier: ^10.0.5
         version: 10.0.5(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.3.0)(release-it@19.2.4(@types/node@20.19.37)(magicast@0.5.2))

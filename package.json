@@ -39,6 +39,8 @@
     "postgres": "^3.4.8"
   },
   "devDependencies": {
+    "@oioi-bwg/contracts": "workspace:*",
+    "@oioi-bwg/server": "workspace:*",
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^20.4.3",
     "@feature-sliced/steiger-plugin": "0.7.0",
