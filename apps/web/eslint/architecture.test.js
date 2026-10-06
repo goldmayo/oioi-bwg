@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-import { Linter } from "eslint";
+import { ESLint, Linter } from "eslint";
 
 import { architectureRule } from "./architecture.js";
 
@@ -23,10 +23,14 @@ function lint(relativeFilename, code = "export {};") {
   return linter.verify(code, config, filename).map(({ messageId }) => messageId);
 }
 
-test("keeps typed lint and alias dependency boundaries from both repository and app roots", () => {
+test("keeps typed lint and alias dependency boundaries from both repository and app roots", async () => {
   const repositoryRoot = path.resolve(import.meta.dirname, "../../..");
   for (const app of ["web", "console"]) {
     const webRoot = path.join(repositoryRoot, "apps", app);
+    const effective = await new ESLint({ cwd: repositoryRoot }).calculateConfigForFile(
+      path.join(webRoot, "src/app/admin-login/page.tsx"),
+    );
+    assert.equal(effective.settings.next.rootDir, webRoot, `${app} must own its Next lint root`);
     const filename = path.join(
       webRoot,
       `src/shared/config/eslint-policy-regression-${process.pid}.ts`,
