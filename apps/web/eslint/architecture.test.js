@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import test from "node:test";
 
 import { Linter } from "eslint";
@@ -19,6 +22,41 @@ function lint(relativeFilename, code = "export {};") {
 
   return linter.verify(code, config, filename).map(({ messageId }) => messageId);
 }
+
+test("keeps typed lint and alias dependency boundaries from both repository and app roots", () => {
+  const repositoryRoot = path.resolve(import.meta.dirname, "../../..");
+  const webRoot = path.join(repositoryRoot, "apps/web");
+  const filename = path.join(
+    webRoot,
+    `src/shared/config/eslint-policy-regression-${process.pid}.ts`,
+  );
+  const source = [
+    'import { SongSlugConflictError } from "@/server/repositories/repository-error";',
+    "export const error = SongSlugConflictError;",
+    "Promise.resolve();",
+  ].join("\n");
+
+  fs.writeFileSync(filename, source, { flag: "wx" });
+  try {
+    for (const cwd of [repositoryRoot, webRoot]) {
+      const result = spawnSync(
+        process.execPath,
+        [path.join(repositoryRoot, "node_modules/eslint/bin/eslint.js"), filename, "--format=json"],
+        { cwd, encoding: "utf8" },
+      );
+
+      assert.equal(result.error, undefined);
+      assert.equal(result.status, 1, result.stderr || result.stdout);
+      const [{ messages }] = JSON.parse(result.stdout);
+      const rules = messages.map(({ ruleId }) => ruleId);
+      assert.ok(rules.includes("@typescript-eslint/no-floating-promises"), result.stdout);
+      assert.ok(rules.includes("boundaries/dependencies"), result.stdout);
+      assert.ok(!rules.includes(null), result.stdout);
+    }
+  } finally {
+    fs.unlinkSync(filename);
+  }
+});
 
 test("rejects files outside the constitutional src layers", () => {
   assert.deepEqual(lint("apps/web/src/containers/card.js"), ["unknownLayer"]);

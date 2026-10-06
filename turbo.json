@@ -1,0 +1,72 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "cacheDir": "node_modules/.cache/turbo",
+  "globalDependencies": [
+    "config/**",
+    "harness/architecture/**",
+    "eslint.config.mts",
+    "steiger.config.ts",
+    "vitest.config.ts",
+    "vitest.setup.ts",
+    "tests/mocks/**"
+  ],
+  "tasks": {
+    "type-check": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts"
+      ],
+      "outputs": []
+    },
+    "lint": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts"
+      ],
+      "outputs": []
+    },
+    "test": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts"
+      ],
+      "outputs": []
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts"
+      ],
+      "outputs": [".next/**", "!.next/cache/**"],
+      "passThroughEnv": ["SENTRY_AUTH_TOKEN"],
+      "env": [
+        "NODE_ENV",
+        "NEXT_PUBLIC_APP_ENV",
+        "NEXT_PUBLIC_GTM_ID",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT",
+        "SENTRY_RELEASE",
+        "SENTRY_SOURCE_MAPS_ENABLED"
+      ]
+    }
+  }
+}
