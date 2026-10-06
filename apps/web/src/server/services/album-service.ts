@@ -6,7 +6,7 @@ import type {
   AlbumSummary,
   RenderableAlbumSong,
   SaveAdminAlbum,
-} from "@/shared/contracts/album";
+} from "@oioi-bwg/contracts/album";
 
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";

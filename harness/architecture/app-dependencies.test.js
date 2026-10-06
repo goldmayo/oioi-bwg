@@ -70,7 +70,7 @@ test("app workspaces do not depend directly on other app workspaces", () => {
   }
 });
 
-test("mock-only changes select Web tests in affected verification", (context) => {
+test("shared mocks and source packages select and invalidate Web verification", (context) => {
   const repositoryRoot = path.resolve(import.meta.dirname, "../..");
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "oioi-turbo-affected-"));
   context.after(() => fs.rmSync(fixtureRoot, { recursive: true, force: true }));
@@ -88,6 +88,11 @@ test("mock-only changes select Web tests in affected verification", (context) =>
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     fs.copyFileSync(path.join(repositoryRoot, filename), destination);
   }
+  fs.cpSync(path.join(repositoryRoot, "packages"), path.join(fixtureRoot, "packages"), {
+    recursive: true,
+    filter: (filename) =>
+      !filename.split(path.sep).some((part) => ["node_modules", ".turbo"].includes(part)),
+  });
 
   // Git hooks export repository paths; fixture commands must discover their own repository.
   const fixtureEnvironment = Object.fromEntries(
@@ -120,7 +125,15 @@ test("mock-only changes select Web tests in affected verification", (context) =>
   function dryRun(affected = false) {
     const output = execFileSync(
       path.join(repositoryRoot, "node_modules/.bin/turbo"),
-      ["run", "type-check", "lint", "test", "--dry=json", ...(affected ? ["--affected"] : [])],
+      [
+        "run",
+        "type-check",
+        "lint",
+        "test",
+        "build",
+        "--dry=json",
+        ...(affected ? ["--affected"] : []),
+      ],
       {
         ...commandOptions,
         env: { ...fixtureEnvironment, TURBO_SCM_BASE: "HEAD", TURBO_SCM_HEAD: "HEAD" },
@@ -129,15 +142,20 @@ test("mock-only changes select Web tests in affected verification", (context) =>
     return JSON.parse(output).tasks;
   }
 
-  const testTaskId = "@oioi-bwg/web#test";
-  const baselineHash = dryRun().find(({ taskId }) => taskId === testTaskId).hash;
+  const baseline = dryRun().filter(({ taskId }) => taskId.startsWith("@oioi-bwg/web#"));
   assert.deepEqual(dryRun(true), []);
 
-  fs.appendFileSync(
-    path.join(fixtureRoot, "tests/mocks/server-only.ts"),
-    "\n// mock-only change\n",
-  );
-  const affectedTest = dryRun(true).find(({ taskId }) => taskId === testTaskId);
-  assert.ok(affectedTest, "mock-only changes must select the Web test task");
-  assert.notEqual(affectedTest.hash, baselineHash, "mock changes must also invalidate test cache");
+  for (const filename of ["tests/mocks/server-only.ts", "packages/contracts/src/song.ts"]) {
+    const changedFile = path.join(fixtureRoot, filename);
+    const original = fs.readFileSync(changedFile);
+    fs.appendFileSync(changedFile, "\n// shared input change\n");
+    const affected = dryRun(true);
+    for (const { taskId, hash } of baseline) {
+      const selected = affected.find((task) => task.taskId === taskId);
+      assert.ok(selected, `${filename} must select ${taskId}`);
+      assert.notEqual(selected.hash, hash, `${filename} must invalidate ${taskId}`);
+    }
+    fs.writeFileSync(changedFile, original);
+    assert.deepEqual(dryRun(true), []);
+  }
 });

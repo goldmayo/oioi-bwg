@@ -1,10 +1,10 @@
 ---
 title: "Contract / Validation Architecture"
 document_id: "05"
-version: "1.6"
+version: "1.7"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-26"
+updated_at: "2026-10-07"
 depends_on:
   - "01"
 related:
@@ -20,7 +20,7 @@ tags:
   - "pagination"
 ---
 
-# oioi-bwg Contract / Validation Architecture v1.6
+# oioi-bwg Contract / Validation Architecture v1.7
 
 ## 1. 목적
 
@@ -182,17 +182,22 @@ export type SongDto = z.infer<typeof songDtoSchema>;
 
 ## 6. 공통 Contract 위치
 
-초기 기준:
+P03 이후 client/server 공통 HTTP contract의 canonical 위치:
 
 ```text
-src/shared/contracts/
+packages/contracts/src/
 ├─ error.ts
 ├─ song.ts
 ├─ album.ts
-└─ translation.ts
+├─ authorization.ts
+└─ signup.ts
 ```
 
 규모가 커지면 도메인별 하위 폴더로 분리한다.
+
+consumer는 `@oioi-bwg/contracts/album` 같은 명시적 package export를 사용한다.
+기존 `src/shared/contracts`의 Zod/DTO-only 제약은 그대로 적용하며 별도 library build 없이
+앱이 TS source를 소비한다. `packages/contracts`는 앱이나 공통 서버 구현을 참조하지 않는다.
 
 빈 폴더나 과도한 파일 분리는 미리 만들지 않는다.
 

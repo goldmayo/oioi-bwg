@@ -1,8 +1,7 @@
+import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "@/server/errors/app-error";
-
-import { apiErrorResponseSchema } from "@/shared/contracts/error";
 
 const getRequestContext = vi.hoisted(() => vi.fn());
 const saveSongLyrics = vi.hoisted(() => vi.fn());

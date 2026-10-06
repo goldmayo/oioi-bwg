@@ -1,6 +1,5 @@
+import type { SaveAdminAlbum } from "@oioi-bwg/contracts/album";
 import { mutationOptions } from "@tanstack/react-query";
-
-import type { SaveAdminAlbum } from "@/shared/contracts/album";
 
 import { createAdminAlbum, deleteAdminAlbum, updateAdminAlbum } from "./api";
 

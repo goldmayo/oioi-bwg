@@ -1,9 +1,8 @@
+import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
+import { signupOtpResponseSchema } from "@oioi-bwg/contracts/signup";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "@/server/errors/app-error";
-
-import { apiErrorResponseSchema } from "@/shared/contracts/error";
-import { signupOtpResponseSchema } from "@/shared/contracts/signup";
 
 const requestOtp = vi.hoisted(() => vi.fn());
 const headers = vi.hoisted(() => vi.fn());

@@ -1,6 +1,5 @@
+import { adminSongListSchema } from "@oioi-bwg/contracts/song";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { adminSongListSchema } from "@/shared/contracts/song";
 
 import { AppError } from "../errors/app-error";
 import { SongSlugConflictError } from "../repositories/repository-error";

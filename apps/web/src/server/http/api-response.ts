@@ -1,10 +1,9 @@
 import "server-only";
 
+import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { z } from "zod";
 
 import { reportServerError } from "@/server/observability/server-error-reporter";
-
-import { apiErrorResponseSchema } from "@/shared/contracts/error";
 
 import { AppError, type AppErrorCode } from "../errors/app-error";
 

@@ -5,4 +5,4 @@ export {
   lyricsDataSchema as LyricsDataSchema,
   type LyricSegment,
   lyricSegmentSchema as LyricSegmentSchema,
-} from "@/shared/contracts/song";
+} from "@oioi-bwg/contracts/song";

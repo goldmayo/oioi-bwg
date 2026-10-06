@@ -1,8 +1,7 @@
 "use client";
 
 import { createMongoAbility, type MongoAbility } from "@casl/ability";
-
-import type { SerializedAbilityRule } from "@/shared/contracts/authorization";
+import type { SerializedAbilityRule } from "@oioi-bwg/contracts/authorization";
 
 export type ClientAbility = MongoAbility<
   [string, string | { accountId?: string; authorAccountId?: string }]

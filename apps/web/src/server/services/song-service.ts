@@ -8,7 +8,7 @@ import {
   type SaveAdminSongLyrics,
   type SongDetail,
   type UpdateAdminSong,
-} from "@/shared/contracts/song";
+} from "@oioi-bwg/contracts/song";
 
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";

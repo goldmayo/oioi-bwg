@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import type { SaveAdminSongLyrics } from "@oioi-bwg/contracts/song";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { authAbilityQueryKeys, createClientAbility } from "@/features/auth";
@@ -10,7 +11,6 @@ import { LazyLyricsEditor, type SongEditor } from "@/features/manage-lyrics";
 import { songMutations, songQueryKeys } from "@/entities/song";
 
 import { ApiError } from "@/shared/api/http-errors";
-import type { SaveAdminSongLyrics } from "@/shared/contracts/song";
 
 /** Ability와 Song mutation을 lazy lyric editor에 연결하는 route-private 조합 경계다. */
 export function AdminLyricsEditor({ song }: { song: SongEditor }) {
