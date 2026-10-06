@@ -185,7 +185,7 @@ async function journey(origin, label) {
   await page.getByRole("button", { name: "저장 (Ctrl+S)", exact: true }).click();
   const saved = await response;
   assert.ok(saved.ok());
-  const [row] = await sql`select lyrics from song where id = ${song.id}`;
+  const [row] = await sql`select lyrics from "Song" where id = ${song.id}`;
   assert.equal(row.lyrics[0].startTime, 3.25);
   assert.equal(row.lyrics[1].startTime, 4.1);
   assert.equal(row.lyrics[0].segments[0].text, "이관 검증 가사");
@@ -296,6 +296,22 @@ try {
   console.log(
     "Private admin migration smoke passed: both apps, isolated secrets/cookies, non-admin/inactive rejection and role revocation",
   );
+} catch (error) {
+  if (browser?.isConnected()) {
+    for (const [contextIndex, context] of browser.contexts().entries()) {
+      for (const [pageIndex, page] of context.pages().entries()) {
+        try {
+          await page.screenshot({
+            path: path.join(artifacts, `failure-${contextIndex}-${pageIndex}.png`),
+            fullPage: true,
+          });
+        } catch {
+          /* 실패한 페이지의 캡처 오류는 원래 실패를 가리지 않는다. */
+        }
+      }
+    }
+  }
+  throw error;
 } finally {
   await browser?.close();
   for (const child of processes) {
