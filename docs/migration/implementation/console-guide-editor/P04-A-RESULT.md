@@ -28,7 +28,7 @@ Turbo affected/hash 회귀를 검사한다. Docker의 manifest 입력만 추가�
 - `pnpm install --frozen-lockfile`: 통과. 기존 dependency resolution은 유지했다.
 - `pnpm verify`: type/lint/두 Steiger/unit/harness/ops/format/두 production build 통과.
   Console 15파일 75테스트, Web 41파일 160테스트, server 15파일 77테스트,
-  contracts 1파일 3테스트, harness 18개, ops 4파일 19테스트 통과.
+  contracts 1파일 3테스트, harness 18개, ops 4파일 51테스트 통과.
 - 추가한 smoke script의 Node ESLint와 최종 format 검사: 통과.
 - test-only secret으로 각각 loopback standalone 실행 후
   `node tests/ops/console-standalone-smoke.mjs http://127.0.0.1:3104`,
@@ -45,4 +45,5 @@ Turbo affected/hash 회귀를 검사한다. Docker의 manifest 입력만 추가�
 관리 화면/API는 P04-B, 가사 편집기/두 origin의 실제 PostgreSQL 작업 완주는 P04-C다.
 현재 WSL의 Docker daemon을 사용할 수 없어 로컬 Docker/PostgreSQL 통합은 실행하지 않았다.
 Console 공개 배포·MFA·Web 관리 경로 제거는 P05/P06의 범위다.
-PR 링크와 pre-push 자동 hook 결과는 PR 본문에 기록한다.
+PR: [#113](https://github.com/goldmayo/oioi-bwg/pull/113). 최초 push의 자동 hook이
+affected type/lint/unit와 root type/lint/harness/ops/format을 실행했고 모두 통과했다.
