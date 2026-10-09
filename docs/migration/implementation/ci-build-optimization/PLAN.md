@@ -45,3 +45,9 @@ export는 새 디렉터리에 한 뒤 교체하여 과거 blob 누적을 막는�
 동일 ref의 이전 key로 fallback할 수 있으나 BuildKit이 내용 hash를 검증한다.
 GitHub-hosted 일회성 VM에서 builder 삭제를 생략해 무거운 post-job 정리 비용도 줄인다.
 producer/consumer 및 실제 검증 범위는 최초 계획과 같으며 새 cold/warm CI로 재측정한다.
+
+추가로 archive를 cache graph에 먼저 포함한다. archive stage는 runtime entrypoint를
+builder entrypoint와 cmp로 대조해 두 target의 cache를 함께 참조하며, runner는 마지막
+alias로 유지한다. 다음 실행은 builder 전체 파일을 복원해 tar를 다시 만들지 않고
+이미 생성된 archive layer를 재사용한다. Dockerfile/.dockerignore는 BuildKit이 직접
+해석하고 .github는 앱 build가 참조하지 않으므로 COPY context에서 제외한다.

@@ -53,16 +53,7 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
       pnpm build; \
     fi
 
-# CI exports the same builder output used by the production runner.
-FROM builder AS verification-archive
-RUN tar -czf /tmp/standalone.tar.gz \
-    apps/web/.next/standalone apps/web/.next/static \
-    apps/console/.next/standalone apps/console/.next/static
-
-FROM scratch AS verification-artifacts
-COPY --from=verification-archive /tmp/standalone.tar.gz /standalone.tar.gz
-
-FROM node:${NODE_VERSION} AS runner
+FROM node:${NODE_VERSION} AS runtime
 
 LABEL org.opencontainers.image.source="https://github.com/goldmayo/oioi-bwg"
 
@@ -87,3 +78,17 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=6 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:3000/readyz').then((response) => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))"]
 
 CMD ["node", "apps/web/server.js"]
+
+# CI exports the same builder output used by the production runner.
+FROM builder AS verification-archive
+COPY --from=runtime /app/apps/web/server.js /tmp/runtime-server.js
+RUN cmp /tmp/runtime-server.js apps/web/.next/standalone/apps/web/server.js \
+    && tar -czf /tmp/standalone.tar.gz \
+    apps/web/.next/standalone apps/web/.next/static \
+    apps/console/.next/standalone apps/console/.next/static
+
+FROM scratch AS verification-artifacts
+COPY --from=verification-archive /tmp/standalone.tar.gz /standalone.tar.gz
+
+# Keep the production runner as the default target.
+FROM runtime AS runner

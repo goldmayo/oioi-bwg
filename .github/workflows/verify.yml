@@ -158,7 +158,17 @@ jobs:
           path: ${{ runner.temp }}/buildx-cache
           key: ${{ runner.os }}-verify-amd64-v1-${{ github.sha }}
           restore-keys: ${{ runner.os }}-verify-amd64-v1-
-      - name: Build standalone container and both apps
+      - name: Build and export both standalone apps
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: verification-artifacts
+          platforms: linux/amd64
+          build-args: NEXT_PUBLIC_APP_ENV=staging
+          outputs: type=local,dest=${{ runner.temp }}/ci-build
+          cache-from: type=local,src=${{ runner.temp }}/buildx-cache
+          cache-to: type=local,dest=${{ runner.temp }}/buildx-cache-new,mode=max,compression=zstd,compression-level=3
+      - name: Load standalone container from the same builder
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -167,16 +177,6 @@ jobs:
           load: true
           tags: oioi-bwg:workspace-check
           build-args: NEXT_PUBLIC_APP_ENV=staging
-          cache-from: type=local,src=${{ runner.temp }}/buildx-cache
-          cache-to: type=local,dest=${{ runner.temp }}/buildx-cache-new,mode=max,compression=zstd,compression-level=3
-      - name: Export both standalone apps from the same builder
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: verification-artifacts
-          platforms: linux/amd64
-          build-args: NEXT_PUBLIC_APP_ENV=staging
-          outputs: type=local,dest=${{ runner.temp }}/ci-build
       - name: Archive verified container
         run: docker save --output "${{ runner.temp }}/ci-build/web-image.tar" oioi-bwg:workspace-check
       - uses: actions/upload-artifact@v4
