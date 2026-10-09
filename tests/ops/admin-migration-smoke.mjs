@@ -245,7 +245,7 @@ async function journey(origin, label) {
     const draftInput = page.getByPlaceholder("URL 또는 ID 붙여넣기");
     const saveButton = page.getByRole("button", { name: "저장 (Ctrl+S)", exact: true });
     await draftInput.fill(draftId);
-    await sql`update "Account" set role = 'USER' where email = 'admin@p04.example.test'`;
+    await sql`update account set role = 'USER' where id = (select account_id from password_credential where email = 'admin@p04.example.test')`;
     const rejected = page.waitForResponse(
       (r) =>
         r.url().endsWith(`/api/admin/songs/${song.id}/lyrics`) && r.request().method() === "PATCH",
@@ -263,7 +263,7 @@ async function journey(origin, label) {
       animations: "disabled",
     });
 
-    await sql`update "Account" set role = 'ADMIN' where email = 'admin@p04.example.test'`;
+    await sql`update account set role = 'ADMIN' where id = (select account_id from password_credential where email = 'admin@p04.example.test')`;
     await context.clearCookies();
     const popup = context.waitForEvent("page");
     await page.getByRole("link", { name: "다시 로그인", exact: true }).click();
