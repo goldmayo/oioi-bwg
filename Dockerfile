@@ -53,6 +53,15 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
       pnpm build; \
     fi
 
+# CI exports the same builder output used by the production runner.
+FROM builder AS verification-archive
+RUN tar -czf /tmp/standalone.tar.gz \
+    apps/web/.next/standalone apps/web/.next/static \
+    apps/console/.next/standalone apps/console/.next/static
+
+FROM scratch AS verification-artifacts
+COPY --from=verification-archive /tmp/standalone.tar.gz /standalone.tar.gz
+
 FROM node:${NODE_VERSION} AS runner
 
 LABEL org.opencontainers.image.source="https://github.com/goldmayo/oioi-bwg"
