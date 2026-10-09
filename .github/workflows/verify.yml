@@ -149,6 +149,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
+        with:
+          cleanup: false # The GitHub-hosted VM is discarded after this job.
+      - name: Restore verification layer cache
+        id: build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/buildx-cache
+          key: ${{ runner.os }}-verify-amd64-v1-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-verify-amd64-v1-
       - name: Build standalone container and both apps
         uses: docker/build-push-action@v6
         with:
@@ -158,8 +167,8 @@ jobs:
           load: true
           tags: oioi-bwg:workspace-check
           build-args: NEXT_PUBLIC_APP_ENV=staging
-          cache-from: type=gha,scope=verify-amd64
-          cache-to: type=gha,scope=verify-amd64,mode=max
+          cache-from: type=local,src=${{ runner.temp }}/buildx-cache
+          cache-to: type=local,dest=${{ runner.temp }}/buildx-cache-new,mode=max,compression=zstd,compression-level=3
       - name: Export both standalone apps from the same builder
         uses: docker/build-push-action@v6
         with:
@@ -186,6 +195,16 @@ jobs:
           compression-level: 0
           if-no-files-found: error
           retention-days: 1
+      - name: Replace cache with current layers
+        run: |
+          rm -rf "${{ runner.temp }}/buildx-cache"
+          mv "${{ runner.temp }}/buildx-cache-new" "${{ runner.temp }}/buildx-cache"
+      - name: Save verification layer cache
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/buildx-cache
+          key: ${{ steps.build-cache.outputs.cache-primary-key }}
 
   build:
     name: build

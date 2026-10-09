@@ -32,3 +32,16 @@ created_at: "2026-10-10"
 새 CI를 한 번 더 실행하여 cold/warm 실행 시간과 cache hit를 비교한다.
 artifact 전송·job 의존으로 cold 실행이 느려질 수 있으므로 결과에 실제 시간을 기록한다.
 P05/TOTP, 앱 기능, production 연결·배포는 범위 밖이다. 완료 시 commit/push/PR을 생성한다.
+
+## 실행 중 보완 — 2026-10-10
+
+초기 구현 `1bb4db8`의 CI 37977862003 첫 실행은 모두 통과했지만 513초로 기준 294초보다
+느렸다. producer의 GHA mode=max cache export가 164.3초(압축 준비 43.9초,
+레이어 전송 120.5초)를 차지했다. 이 방식을 최종 최적화로 채택하지 않는다.
+
+[Docker의 local cache 예제](https://docs.docker.com/build/ci/github-actions/cache/#local-cache)를
+따라 local exporter와 actions/cache의 일괄 전송으로 바꾸고 zstd 압축을 사용한다.
+export는 새 디렉터리에 한 뒤 교체하여 과거 blob 누적을 막는다. 검증용 key는 amd64·SHA별이며
+동일 ref의 이전 key로 fallback할 수 있으나 BuildKit이 내용 hash를 검증한다.
+GitHub-hosted 일회성 VM에서 builder 삭제를 생략해 무거운 post-job 정리 비용도 줄인다.
+producer/consumer 및 실제 검증 범위는 최초 계획과 같으며 새 cold/warm CI로 재측정한다.
