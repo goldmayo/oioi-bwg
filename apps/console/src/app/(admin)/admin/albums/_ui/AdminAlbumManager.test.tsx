@@ -20,7 +20,9 @@ vi.mock("@/features/manage-album", () => ({
     </button>
   ),
 }));
-vi.mock("@/features/auth", () => ({
+vi.mock("@/features/auth/api/actions", () => ({ signIn: vi.fn(), signOut: vi.fn() }));
+vi.mock("@/features/auth", async () => ({
+  ...(await vi.importActual<typeof import("@/features/auth")>("@/features/auth")),
   authAbilityQueries: {
     current: () => ({
       queryFn: () => Promise.resolve({ rules: [] }),

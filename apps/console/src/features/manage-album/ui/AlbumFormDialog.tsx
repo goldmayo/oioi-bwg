@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImagePlus, Loader2 } from "lucide-react";
@@ -31,6 +31,8 @@ export type UploadAlbumImage = (formData: FormData) => Promise<{
 
 interface AlbumFormDialogProps {
   open: boolean;
+  canSubmit?: boolean;
+  submissionNotice?: ReactNode;
   onOpenChange: (open: boolean) => void;
   /** 편집 시 기존 앨범 데이터 */
   album?: AdminAlbumSummary;
@@ -44,6 +46,8 @@ export function AlbumFormDialog(props: AlbumFormDialogProps) {
 
 function AlbumFormSession({
   open,
+  canSubmit = true,
+  submissionNotice,
   onOpenChange,
   album,
   onUploadImage,
@@ -69,7 +73,7 @@ function AlbumFormSession({
   const handleImageUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (!file) return;
+      if (!file || !canSubmit) return;
 
       setIsUploading(true);
       const formData = new FormData();
@@ -87,11 +91,12 @@ function AlbumFormSession({
       }
       e.target.value = "";
     },
-    [form, onUploadImage],
+    [canSubmit, form, onUploadImage],
   );
 
   const handleSubmit = useCallback(
     async (values: AlbumFormValues) => {
+      if (!canSubmit) return;
       form.clearErrors("root.server");
       setIsSubmitting(true);
       try {
@@ -117,7 +122,7 @@ function AlbumFormSession({
         setIsSubmitting(false);
       }
     },
-    [form, onOpenChange, onSubmit],
+    [canSubmit, form, onOpenChange, onSubmit],
   );
 
   return (
@@ -130,6 +135,7 @@ function AlbumFormSession({
           </DialogDescription>
         </DialogHeader>
 
+        {submissionNotice}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
@@ -181,7 +187,7 @@ function AlbumFormSession({
                       type="button"
                       variant="outline"
                       size="icon"
-                      disabled={isUploading}
+                      disabled={isUploading || !canSubmit}
                       onClick={() => fileInputRef.current?.click()}
                     >
                       {isUploading ? (
@@ -263,7 +269,7 @@ function AlbumFormSession({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 취소
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !canSubmit}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEdit ? "수정" : "추가"}
               </Button>

@@ -190,3 +190,32 @@ describe("SongFormDialog edit session", () => {
     expect((screen.getByLabelText("곡 제목") as HTMLInputElement).value).toBe(song.title);
   });
 });
+
+it("preserves the open draft and blocks submission until authorization returns", async () => {
+  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  const props = { onOpenChange: vi.fn(), albums: [album], onSubmit };
+  const { rerender } = render(<SongFormDialog {...props} open song={song} />);
+  fireEvent.change(screen.getByLabelText("곡 제목"), { target: { value: "Unsaved song" } });
+  rerender(
+    <SongFormDialog
+      {...props}
+      open
+      song={song}
+      canSubmit={false}
+      submissionNotice={<p role="alert">다시 로그인</p>}
+    />,
+  );
+  expect(screen.getByRole("alert").textContent).toBe("다시 로그인");
+  expect((screen.getByLabelText("곡 제목") as HTMLInputElement).value).toBe("Unsaved song");
+  expect((screen.getByRole("button", { name: "수정" }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.submit(screen.getByRole("button", { name: "수정" }).closest("form")!);
+  await waitFor(() =>
+    expect((screen.getByLabelText("곡 제목") as HTMLInputElement).value).toBe("Unsaved song"),
+  );
+  expect(onSubmit).not.toHaveBeenCalled();
+  rerender(<SongFormDialog {...props} open song={song} canSubmit />);
+  fireEvent.click(screen.getByRole("button", { name: "수정" }));
+  await waitFor(() =>
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ title: "Unsaved song" })),
+  );
+});

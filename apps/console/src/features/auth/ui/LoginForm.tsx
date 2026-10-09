@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import Link from "next/link";
@@ -21,6 +21,10 @@ import { Input } from "@/shared/ui/input";
 
 import { signIn } from "../api/actions";
 
+const subscribeToHydration = () => () => undefined;
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 /**
  * 로그인 폼 유효성 검사 스키마
  */
@@ -32,6 +36,11 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginForm() {
+  const isHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedSnapshot,
+    getServerSnapshot,
+  );
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -96,6 +105,7 @@ export default function LoginForm() {
                       className="border-input bg-background focus-visible:ring-qwer-w/50"
                       autoComplete="email"
                       {...field}
+                      disabled={!isHydrated}
                     />
                   </FormControl>
                   <FormMessage />
@@ -116,6 +126,7 @@ export default function LoginForm() {
                       className="border-input bg-background focus-visible:ring-qwer-w/50"
                       autoComplete="current-password"
                       {...field}
+                      disabled={!isHydrated}
                     />
                   </FormControl>
                   <FormMessage />
@@ -126,7 +137,7 @@ export default function LoginForm() {
             <Button
               type="submit"
               className="bg-qwer-w hover:bg-qwer-w/90 mt-2 h-11 w-full font-bold text-white"
-              disabled={loading}
+              disabled={loading || !isHydrated}
             >
               {loading ? "로그인 중..." : "로그인"}
             </Button>
