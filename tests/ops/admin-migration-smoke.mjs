@@ -268,6 +268,7 @@ async function journey(origin, label) {
     const popup = context.waitForEvent("page");
     await page.getByRole("link", { name: "다시 로그인", exact: true }).click();
     const loginPage = await popup;
+    await loginPage.waitForURL(`${origin}/admin-login`);
     await loginPage.getByLabel("Email").fill("admin@p04.example.test");
     await loginPage.getByLabel("Password").fill(password);
     await loginPage.getByRole("button", { name: "로그인", exact: true }).click();

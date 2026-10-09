@@ -50,7 +50,7 @@ export function AdminLyricsEditor({ song }: { song: SongEditor }) {
       {!ability.can("manage", "all") && !recovery.requiresReauthentication && (
         <p role="alert">관리 권한이 없습니다. 작성 중인 내용은 이 화면에 유지됩니다.</p>
       )}
-      <fieldset disabled={!canManage} className="min-w-0 border-0 p-0">
+      <fieldset disabled={!canManage} className="h-full min-w-0 border-0 p-0">
         <LazyLyricsEditor key={song.id} song={song} saveSongData={saveSongData} />
       </fieldset>
     </>
