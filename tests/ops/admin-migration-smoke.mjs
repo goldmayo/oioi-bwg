@@ -96,7 +96,7 @@ async function journey(origin, label) {
         constructor(_element, options) {
           this.videoId = options.videoId;
           this.options = options;
-          this.time = 3.25;
+          this.time = options.videoId === "abcdefghijk" ? 3.25 : 8.5;
           setTimeout(() => {
             options.events.onReady({ target: this });
             this.playVideo();
@@ -106,7 +106,7 @@ async function journey(origin, label) {
           return this.time;
         }
         getDuration() {
-          return 120;
+          return this.videoId === "abcdefghijk" ? 120 : 240;
         }
         getVideoData() {
           return { video_id: this.videoId };
@@ -157,6 +157,7 @@ async function journey(origin, label) {
   await page.screenshot({
     path: path.join(artifacts, `${label}-album-reopened.png`),
     fullPage: true,
+    animations: "disabled",
   });
   await page
     .getByRole("dialog", { name: "앨범 수정", exact: true })
@@ -195,6 +196,7 @@ async function journey(origin, label) {
   await page.screenshot({
     path: path.join(artifacts, `${label}-song-reopened.png`),
     fullPage: true,
+    animations: "disabled",
   });
   await page
     .getByRole("dialog", { name: "곡 수정", exact: true })
@@ -212,6 +214,8 @@ async function journey(origin, label) {
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await page.getByRole("button", { name: "Redo", exact: true }).click();
   await page.getByText("00:03.25", { exact: true }).first().waitFor();
+  await page.getByPlaceholder("URL 또는 ID 붙여넣기").fill("lmnopqrstuv");
+  await page.getByText("00:08.50", { exact: true }).first().waitFor();
   await page.getByTitle("타임스탬프 동기화 (SYNC)", { exact: true }).first().click();
   const response = page.waitForResponse(
     (r) =>
@@ -221,7 +225,7 @@ async function journey(origin, label) {
   const saved = await response;
   assert.ok(saved.ok());
   const [row] = await sql`select lyrics from "Song" where id = ${song.id}`;
-  assert.equal(row.lyrics[0].startTime, 3.25);
+  assert.equal(row.lyrics[0].startTime, 8.5);
   assert.equal(row.lyrics[1].startTime, 4.1);
   assert.equal(row.lyrics[0].segments[0].text, "이관 검증 가사");
   await page.reload();
@@ -240,7 +244,7 @@ async function journey(origin, label) {
   const publicSong = await fetch(`${origins.web}/api/songs/p04-${label}-song`);
   assert.ok(publicSong.ok, `public song: HTTP ${publicSong.status}`);
   const detail = await publicSong.json();
-  assert.equal(detail.lyrics[0].startTime, 3.25);
+  assert.equal(detail.lyrics[0].startTime, 8.5);
   assert.equal(detail.lyrics[0].segments[0].text, "이관 검증 가사");
 
   await page.goto(`${origin}/admin/songs`);

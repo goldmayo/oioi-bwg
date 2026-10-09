@@ -1,71 +1,43 @@
 import { useEffect, useState } from "react";
-import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 
 import { clientLogger } from "@/shared/lib/client-logger";
-import { YouTubePlayerInstance } from "@/shared/model/youtube";
+import type { YouTubePlayerInstance } from "@/shared/model/youtube";
 
-/**
- * YouTube 광고를 감지하고 상태를 반환하는 훅
- * @param player 유튜브 플레이어 객체
- * @param targetId 재생하고자 하는 원본 영상 ID
- */
+/** player/영상별 길이 기준과 ticker 수명을 함께 관리한다. */
 export const useAdWatcher = (player: YouTubePlayerInstance | null, targetId: string) => {
-  const [isAdPlaying, setIsAdPlaying] = useState(false);
-  const [targetDuration, setTargetDuration] = useState(0);
-
-  // 1. 영상 로드 시 원본 길이를 한 번 저장합니다.
-  // 에러 해결: setState를 비동기적으로 호출하여 cascading render 경고를 방지합니다.
+  const [status, setStatus] = useState({ player, targetId, isAdPlaying: false });
   useEffect(() => {
-    if (!player || typeof player.getDuration !== "function" || isAdPlaying) return;
-
-    const d = player.getDuration();
-    const videoData = typeof player.getVideoData === "function" ? player.getVideoData() : null;
-    const currentVideoId = videoData?.video_id;
-
-    if (d > 0 && currentVideoId === targetId && targetDuration === 0) {
-      // 비동기 처리를 통해 이펙트 실행 직후의 동기적 상태 변경 방지
-      const timer = setTimeout(() => {
-        setTargetDuration(d);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [player, targetId, isAdPlaying, targetDuration]);
-
-  useGSAP(() => {
     if (!player || !targetId) return;
-
-    /**
-     * 프레임 단위로 광고 상태를 체크하는 내부 함수
-     */
+    let targetDuration = 0;
+    let wasAdPlaying = false;
     const checkAdStatus = () => {
       try {
-        const videoData = typeof player.getVideoData === "function" ? player.getVideoData() : null;
-        const currentId = videoData?.video_id;
-        const currentDuration = typeof player.getDuration === "function" ? player.getDuration() : 0;
-
-        // Heuristic: ID가 다르거나 길이가 원곡과 다를 때 (2초 이상 차이) 광고로 간주
-        const adDetected =
+        const currentId = player.getVideoData?.()?.video_id;
+        const duration = player.getDuration?.() ?? 0;
+        if (currentId === targetId && duration > 0 && targetDuration === 0)
+          targetDuration = duration;
+        const isAdPlaying = Boolean(
           (currentId && currentId !== targetId) ||
-          (targetDuration > 0 && Math.abs(currentDuration - targetDuration) > 2);
-
-        if (adDetected !== isAdPlaying) {
-          setIsAdPlaying(adDetected);
-
-          if (adDetected) {
-            clientLogger.debug("ad detected; sync paused");
-          } else {
-            clientLogger.debug("ad ended; sync resumed");
-          }
+          (targetDuration > 0 && Math.abs(duration - targetDuration) > 2),
+        );
+        if (isAdPlaying !== wasAdPlaying) {
+          clientLogger.debug(isAdPlaying ? "ad detected; sync paused" : "ad ended; sync resumed");
+          wasAdPlaying = isAdPlaying;
         }
-      } catch (_e) {
-        // 무시
+        setStatus((previous) =>
+          previous.player === player &&
+          previous.targetId === targetId &&
+          previous.isAdPlaying === isAdPlaying
+            ? previous
+            : { player, targetId, isAdPlaying },
+        );
+      } catch {
+        // 교체 중이거나 이미 파괴된 iframe은 다음 tick에서 확인한다.
       }
     };
-
     gsap.ticker.add(checkAdStatus);
     return () => gsap.ticker.remove(checkAdStatus);
-  }, [player, isAdPlaying, targetId, targetDuration]);
-
-  return isAdPlaying;
+  }, [player, targetId]);
+  return status.player === player && status.targetId === targetId ? status.isAdPlaying : false;
 };
