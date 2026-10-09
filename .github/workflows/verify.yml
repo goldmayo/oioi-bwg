@@ -177,6 +177,7 @@ jobs:
           load: true
           tags: oioi-bwg:workspace-check
           build-args: NEXT_PUBLIC_APP_ENV=staging
+          cache-from: type=local,src=${{ runner.temp }}/buildx-cache-new
       - name: Archive verified container
         run: docker save --output "${{ runner.temp }}/ci-build/web-image.tar" oioi-bwg:workspace-check
       - uses: actions/upload-artifact@v4

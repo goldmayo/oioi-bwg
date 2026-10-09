@@ -51,3 +51,6 @@ builder entrypoint와 cmp로 대조해 두 target의 cache를 함께 참조하�
 alias로 유지한다. 다음 실행은 builder 전체 파일을 복원해 tar를 다시 만들지 않고
 이미 생성된 archive layer를 재사용한다. Dockerfile/.dockerignore는 BuildKit이 직접
 해석하고 .github는 앱 build가 참조하지 않으므로 COPY context에서 제외한다.
+
+각 target 호출에 cache-from을 명시한다. 외부 cache hit로 건너뛴 ancestor는 두 번째
+호출의 내부 cache에 자동 저장되지 않으므로 runner도 방금 export한 local cache를 import한다.
