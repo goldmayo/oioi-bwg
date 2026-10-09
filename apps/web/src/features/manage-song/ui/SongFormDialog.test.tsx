@@ -154,3 +154,39 @@ describe("SongManagerTable legacy slug", () => {
     expect(screen.queryByRole("link", { name: song.title })).toBeNull();
   });
 });
+
+describe("SongFormDialog edit session", () => {
+  it("reopens with the saved DTO and submits its current title", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const props = { onOpenChange: vi.fn(), albums: [album], onSubmit };
+    const { rerender } = render(<SongFormDialog {...props} open song={song} />);
+    fireEvent.change(screen.getByLabelText("곡 제목"), { target: { value: "Saved title" } });
+    fireEvent.click(screen.getByRole("button", { name: "수정" }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledOnce());
+    const updated = { ...song, title: "Saved title" };
+    rerender(<SongFormDialog {...props} open={false} song={updated} />);
+    rerender(<SongFormDialog {...props} open song={updated} />);
+    expect((screen.getByLabelText("곡 제목") as HTMLInputElement).value).toBe(updated.title);
+    fireEvent.click(screen.getByRole("button", { name: "수정" }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenLastCalledWith(expect.objectContaining({ title: updated.title })),
+    );
+  });
+
+  it("preserves a dirty title across background DTO refresh", () => {
+    const props = { onOpenChange: vi.fn(), albums: [album], onSubmit: vi.fn() };
+    const { rerender } = render(<SongFormDialog {...props} open song={song} />);
+    fireEvent.change(screen.getByLabelText("곡 제목"), { target: { value: "Unsaved title" } });
+    rerender(<SongFormDialog {...props} open song={{ ...song, title: "Background title" }} />);
+    expect((screen.getByLabelText("곡 제목") as HTMLInputElement).value).toBe("Unsaved title");
+  });
+
+  it("discards a cancelled draft on the next explicit open", () => {
+    const props = { onOpenChange: vi.fn(), albums: [album], onSubmit: vi.fn() };
+    const { rerender } = render(<SongFormDialog {...props} open song={song} />);
+    fireEvent.change(screen.getByLabelText("곡 제목"), { target: { value: "Cancelled title" } });
+    rerender(<SongFormDialog {...props} open={false} song={song} />);
+    rerender(<SongFormDialog {...props} open song={song} />);
+    expect((screen.getByLabelText("곡 제목") as HTMLInputElement).value).toBe(song.title);
+  });
+});

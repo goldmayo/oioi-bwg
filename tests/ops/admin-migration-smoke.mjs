@@ -145,6 +145,24 @@ async function journey(origin, label) {
     .filter({ hasText: `${albumName} edited` })
     .waitFor();
 
+  await page
+    .getByRole("row")
+    .filter({ hasText: `${albumName} edited` })
+    .getByTitle("수정", { exact: true })
+    .click();
+  assert.equal(
+    await page.getByLabel("앨범 이름", { exact: true }).inputValue(),
+    `${albumName} edited`,
+  );
+  await page.screenshot({
+    path: path.join(artifacts, `${label}-album-reopened.png`),
+    fullPage: true,
+  });
+  await page
+    .getByRole("dialog", { name: "앨범 수정", exact: true })
+    .getByRole("button", { name: "취소", exact: true })
+    .click();
+
   await page.goto(`${origin}/admin/songs`);
   await page.getByRole("button", { name: "곡 추가", exact: true }).click();
   await page.getByRole("combobox").click();
@@ -165,6 +183,23 @@ async function journey(origin, label) {
   await songRow.getByTitle("수정", { exact: true }).click();
   await page.getByLabel("곡 제목", { exact: true }).fill(`${songTitle} edited`);
   await saveDialog(page, "곡 수정", "수정", "/api/admin/songs");
+  await page
+    .getByRole("row")
+    .filter({ hasText: `${songTitle} edited` })
+    .getByTitle("수정", { exact: true })
+    .click();
+  assert.equal(
+    await page.getByLabel("곡 제목", { exact: true }).inputValue(),
+    `${songTitle} edited`,
+  );
+  await page.screenshot({
+    path: path.join(artifacts, `${label}-song-reopened.png`),
+    fullPage: true,
+  });
+  await page
+    .getByRole("dialog", { name: "곡 수정", exact: true })
+    .getByRole("button", { name: "취소", exact: true })
+    .click();
   await page.getByRole("link", { name: `${songTitle} edited`, exact: true }).click();
   await page.getByRole("button", { name: "저장 (Ctrl+S)", exact: true }).waitFor();
   await page.getByRole("button", { name: "LRC Import", exact: true }).click();
