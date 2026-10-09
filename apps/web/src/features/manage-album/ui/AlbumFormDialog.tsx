@@ -38,7 +38,11 @@ interface AlbumFormDialogProps {
   onSubmit: (values: AlbumFormValues) => Promise<void>;
 }
 
-export function AlbumFormDialog({
+export function AlbumFormDialog(props: AlbumFormDialogProps) {
+  return props.open ? <AlbumFormSession {...props} /> : null;
+}
+
+function AlbumFormSession({
   open,
   onOpenChange,
   album,
@@ -93,7 +97,6 @@ export function AlbumFormDialog({
       try {
         await onSubmit(values);
         onOpenChange(false);
-        form.reset();
       } catch (error) {
         const fieldErrors = getValidationFieldErrors(error);
         const fieldNames = ["name", "slug", "imgUrl", "color", "releaseDate", "isVisible"] as const;
