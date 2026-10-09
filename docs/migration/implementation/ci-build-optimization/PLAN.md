@@ -54,3 +54,9 @@ alias로 유지한다. 다음 실행은 builder 전체 파일을 복원해 tar�
 
 각 target 호출에 cache-from을 명시한다. 외부 cache hit로 건너뛴 ancestor는 두 번째
 호출의 내부 cache에 자동 저장되지 않으므로 runner도 방금 export한 local cache를 import한다.
+
+cache hit에도 46.6초의 전체 재export가 관찰되어 cache key를 docs를 제외한 전체 Git
+tracked index(mode/blob/path)의 digest로 정한다. workflow/Dockerfile/ignore와 앱·공용
+설정·lockfile·테스트가 모두 key에 포함되며 문서 commit은 같은 key를 사용한다.
+exact hit에서는 재export·교체·save를 생략하고 두 target 모두 기존 cache를 import한다.
+fallback/미스일 때만 새 cache를 export·저장한다. 기존 v1 fallback은 전환 시 한 번 활용한다.
