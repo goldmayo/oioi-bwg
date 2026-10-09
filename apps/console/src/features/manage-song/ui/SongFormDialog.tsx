@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { useForm, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -37,6 +37,8 @@ import { LrcUploader } from "./LrcUploader";
 
 interface SongFormDialogProps {
   open: boolean;
+  canSubmit?: boolean;
+  submissionNotice?: ReactNode;
   onOpenChange: (open: boolean) => void;
   /** 앨범 목록 (select 옵션용) */
   albums: AdminAlbumSummary[];
@@ -87,7 +89,15 @@ export function SongFormDialog(props: SongFormDialogProps) {
   return props.open ? <SongFormSession {...props} /> : null;
 }
 
-function SongFormSession({ open, onOpenChange, albums, song, onSubmit }: SongFormDialogProps) {
+function SongFormSession({
+  open,
+  canSubmit = true,
+  submissionNotice,
+  onOpenChange,
+  albums,
+  song,
+  onSubmit,
+}: SongFormDialogProps) {
   const isEdit = !!song;
   const hasImmutableSlug = song !== undefined && song.slug !== null;
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,6 +122,7 @@ function SongFormSession({ open, onOpenChange, albums, song, onSubmit }: SongFor
 
   const handleSubmit = useCallback(
     async (values: SongEditValues) => {
+      if (!canSubmit) return;
       if (!isEdit && values.slug === "") {
         form.setError("slug", { message: "slug를 입력해주세요." });
         return;
@@ -134,7 +145,7 @@ function SongFormSession({ open, onOpenChange, albums, song, onSubmit }: SongFor
         setIsSubmitting(false);
       }
     },
-    [form, isEdit, onOpenChange, onSubmit],
+    [canSubmit, form, isEdit, onOpenChange, onSubmit],
   );
 
   return (
@@ -147,6 +158,7 @@ function SongFormSession({ open, onOpenChange, albums, song, onSubmit }: SongFor
           </DialogDescription>
         </DialogHeader>
 
+        {submissionNotice}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             {/* 앨범 선택 */}
@@ -334,7 +346,7 @@ function SongFormSession({ open, onOpenChange, albums, song, onSubmit }: SongFor
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 취소
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !canSubmit}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEdit ? "수정" : "추가"}
               </Button>

@@ -240,6 +240,66 @@ async function journey(origin, label) {
     ),
   );
 
+  if (label === "console") {
+    const draftId = "wxyz1234567";
+    const draftInput = page.getByPlaceholder("URL 또는 ID 붙여넣기");
+    const saveButton = page.getByRole("button", { name: "저장 (Ctrl+S)", exact: true });
+    await draftInput.fill(draftId);
+    await sql`update "Account" set role = 'USER' where email = 'admin@p04.example.test'`;
+    const rejected = page.waitForResponse(
+      (r) =>
+        r.url().endsWith(`/api/admin/songs/${song.id}/lyrics`) && r.request().method() === "PATCH",
+    );
+    await saveButton.click();
+    assert.equal((await rejected).status(), 401);
+    await page.getByRole("link", { name: "다시 로그인", exact: true }).waitFor();
+    assert.equal(await draftInput.inputValue(), draftId);
+    assert.ok(await saveButton.isDisabled());
+    const [unchanged] = await sql`select "youtubeId" from "Song" where id = ${song.id}`;
+    assert.equal(unchanged.youtubeId, "lmnopqrstuv");
+    await page.screenshot({
+      path: path.join(artifacts, "console-reauthentication-required.png"),
+      fullPage: true,
+      animations: "disabled",
+    });
+
+    await sql`update "Account" set role = 'ADMIN' where email = 'admin@p04.example.test'`;
+    await context.clearCookies();
+    const popup = context.waitForEvent("page");
+    await page.getByRole("link", { name: "다시 로그인", exact: true }).click();
+    const loginPage = await popup;
+    await loginPage.getByLabel("Email").fill("admin@p04.example.test");
+    await loginPage.getByLabel("Password").fill(password);
+    await loginPage.getByRole("button", { name: "로그인", exact: true }).click();
+    await loginPage.waitForURL(`${origin}/admin/albums`);
+    await loginPage.close();
+    await page.getByRole("button", { name: "로그인 상태 확인", exact: true }).click();
+    await saveButton.waitFor();
+    await page.waitForFunction(
+      () =>
+        !Array.from(document.querySelectorAll("button"))
+          .find((button) => button.textContent === "저장 (Ctrl+S)")
+          ?.closest("fieldset")?.disabled,
+    );
+    assert.equal(await draftInput.inputValue(), draftId);
+    const recovered = page.waitForResponse(
+      (r) =>
+        r.url().endsWith(`/api/admin/songs/${song.id}/lyrics`) && r.request().method() === "PATCH",
+    );
+    await saveButton.click();
+    assert.ok((await recovered).ok());
+    const [persisted] = await sql`select "youtubeId" from "Song" where id = ${song.id}`;
+    assert.equal(persisted.youtubeId, draftId);
+    await page.screenshot({
+      path: path.join(artifacts, "console-reauthenticated-editor.png"),
+      fullPage: true,
+      animations: "disabled",
+    });
+    console.log(
+      "console: 401 blocks persistence, preserves the draft, refreshes ability and resumes after separate-tab login",
+    );
+  }
+
   // 공개 Web reader도 같은 commit된 가사 DTO를 읽는지 확인한다.
   const publicSong = await fetch(`${origins.web}/api/songs/p04-${label}-song`);
   assert.ok(publicSong.ok, `public song: HTTP ${publicSong.status}`);

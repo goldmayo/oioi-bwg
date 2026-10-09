@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { albumQueries } from "@/entities/album";
@@ -17,10 +17,15 @@ import { SongManagerToolbar } from "./SongManagerToolbar";
 const PAGE_SIZE = 15;
 interface SongManagerClientProps {
   canManage: boolean;
+  submissionNotice?: ReactNode;
   onMutationError?: (error: unknown) => void;
 }
 
-export function SongManagerClient({ canManage, onMutationError }: SongManagerClientProps) {
+export function SongManagerClient({
+  canManage,
+  submissionNotice,
+  onMutationError,
+}: SongManagerClientProps) {
   const queryClient = useQueryClient();
   const {
     data: { items: songs },
@@ -134,10 +139,12 @@ export function SongManagerClient({ canManage, onMutationError }: SongManagerCli
           </div>
         )}
       </div>
-      {canManage && (
+      {formOpen && (
         <SongFormDialog
           key={editingSong?.id ?? "new"}
           open={formOpen}
+          canSubmit={canManage}
+          submissionNotice={submissionNotice}
           onOpenChange={setFormOpen}
           albums={albums}
           song={editingSong}

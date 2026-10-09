@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Edit, Plus, Trash2 } from "lucide-react";
 
@@ -28,6 +28,7 @@ const PAGE_SIZE = 10;
 
 interface AlbumManagerClientProps {
   canManage: boolean;
+  submissionNotice?: ReactNode;
   onUploadImage: UploadAlbumImage;
   onMutationError?: (error: unknown) => void;
   onNameChangeOrDelete?: () => void;
@@ -35,6 +36,7 @@ interface AlbumManagerClientProps {
 
 export function AlbumManagerClient({
   canManage,
+  submissionNotice,
   onUploadImage,
   onMutationError,
   onNameChangeOrDelete,
@@ -251,10 +253,12 @@ export function AlbumManagerClient({
       )}
 
       {/* 앨범 폼 다이얼로그 */}
-      {canManage && (
+      {formOpen && (
         <AlbumFormDialog
           key={editingAlbum?.id ?? "new"}
           open={formOpen}
+          canSubmit={canManage}
+          submissionNotice={submissionNotice}
           onOpenChange={setFormOpen}
           album={editingAlbum}
           onUploadImage={onUploadImage}

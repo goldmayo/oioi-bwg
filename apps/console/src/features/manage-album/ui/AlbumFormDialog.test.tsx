@@ -70,3 +70,32 @@ describe("AlbumFormDialog edit session", () => {
     expect((screen.getByLabelText("앨범 이름") as HTMLInputElement).value).toBe(album.name);
   });
 });
+
+it("preserves the open draft and blocks submission until authorization returns", async () => {
+  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  const props = { onOpenChange: vi.fn(), onUploadImage: vi.fn(), onSubmit };
+  const { rerender } = render(<AlbumFormDialog {...props} open album={album} />);
+  fireEvent.change(screen.getByLabelText("앨범 이름"), { target: { value: "Unsaved album" } });
+  rerender(
+    <AlbumFormDialog
+      {...props}
+      open
+      album={album}
+      canSubmit={false}
+      submissionNotice={<p role="alert">다시 로그인</p>}
+    />,
+  );
+  expect(screen.getByRole("alert").textContent).toBe("다시 로그인");
+  expect((screen.getByLabelText("앨범 이름") as HTMLInputElement).value).toBe("Unsaved album");
+  expect((screen.getByRole("button", { name: "수정" }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.submit(screen.getByRole("button", { name: "수정" }).closest("form")!);
+  await waitFor(() =>
+    expect((screen.getByLabelText("앨범 이름") as HTMLInputElement).value).toBe("Unsaved album"),
+  );
+  expect(onSubmit).not.toHaveBeenCalled();
+  rerender(<AlbumFormDialog {...props} open album={album} canSubmit />);
+  fireEvent.click(screen.getByRole("button", { name: "수정" }));
+  await waitFor(() =>
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ name: "Unsaved album" })),
+  );
+});

@@ -18,7 +18,9 @@ const auth = vi.hoisted(() => ({
 }));
 
 vi.mock("@/shared/api/http-client", () => ({ http }));
-vi.mock("@/features/auth", () => ({
+vi.mock("@/features/auth/api/actions", () => ({ signIn: vi.fn(), signOut: vi.fn() }));
+vi.mock("@/features/auth", async () => ({
+  ...(await vi.importActual<typeof import("@/features/auth")>("@/features/auth")),
   authAbilityQueries: {
     current: () => ({
       queryFn: auth.query,
@@ -27,7 +29,10 @@ vi.mock("@/features/auth", () => ({
     }),
   },
   authAbilityQueryKeys: { ability: () => ["auth", "ability"] },
-  createClientAbility: () => ({ cannot: () => false }),
+  createClientAbility: (rules: { action: string }[]) => ({
+    cannot: () => !rules.some((rule) => rule.action === "manage"),
+    can: () => rules.some((rule) => rule.action === "manage"),
+  }),
 }));
 vi.mock("@/features/manage-lyrics", async () => {
   const { useState } = await import("react");
@@ -92,7 +97,10 @@ function renderEditor() {
   );
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  auth.query.mockResolvedValue({ rules: [{ action: "manage", subject: "all" }] });
+});
 
 afterEach(() => {
   cleanup();
@@ -137,4 +145,80 @@ describe("AdminLyricsEditor cache orchestration", () => {
     expect(queryClient.getQueryState(albumQueryKeys.adminList())?.isInvalidated).toBe(false);
     expect((draft as HTMLInputElement).value).toBe("unsaved-id");
   });
+});
+
+it("refreshes ability on 401, keeps the draft and requests reauthentication", async () => {
+  http.patch.mockRejectedValue(
+    new ApiError(401, { code: "UNAUTHENTICATED", message: "로그인이 필요합니다." }),
+  );
+  auth.query.mockResolvedValueOnce({ rules: [] });
+  renderEditor();
+  const draft = screen.getByRole("textbox", { name: "YouTube ID draft" });
+  fireEvent.change(draft, { target: { value: "unsaved-id" } });
+  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  await waitFor(() => expect(auth.query).toHaveBeenCalledOnce());
+  expect(queryClient.getQueryData(["auth", "ability"])).toEqual({ rules: [] });
+  expect(
+    (screen.getByRole("textbox", { name: "YouTube ID draft" }) as HTMLInputElement).value,
+  ).toBe("unsaved-id");
+  expect(screen.getByRole("link", { name: "다시 로그인" }).getAttribute("target")).toBe("_blank");
+  expect(screen.getByRole("button", { name: "저장" }).closest("fieldset")?.disabled).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  expect(http.patch).toHaveBeenCalledOnce();
+  http.get.mockResolvedValue({ rules: [{ action: "manage", subject: "all" }] });
+  http.patch.mockResolvedValue({ id: song.id });
+  fireEvent.click(screen.getByRole("button", { name: "로그인 상태 확인" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "저장" }).closest("fieldset")?.disabled).toBe(false),
+  );
+  expect(
+    (screen.getByRole("textbox", { name: "YouTube ID draft" }) as HTMLInputElement).value,
+  ).toBe("unsaved-id");
+  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  await waitFor(() =>
+    expect(http.patch).toHaveBeenLastCalledWith(`/api/admin/songs/${song.id}/lyrics`, {
+      json: { lyrics: [], youtubeId: "unsaved-id" },
+    }),
+  );
+});
+
+it("keeps access and the draft on a server failure without requesting authentication", async () => {
+  http.patch.mockRejectedValue(
+    new ApiError(500, { code: "INTERNAL_SERVER_ERROR", message: "오류" }),
+  );
+  renderEditor();
+  fireEvent.change(screen.getByRole("textbox", { name: "YouTube ID draft" }), {
+    target: { value: "unsaved-id" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  await waitFor(() => expect(http.patch).toHaveBeenCalledOnce());
+  expect(auth.query).not.toHaveBeenCalled();
+  expect(screen.queryByRole("link", { name: "다시 로그인" })).toBeNull();
+  expect(
+    (screen.getByRole("textbox", { name: "YouTube ID draft" }) as HTMLInputElement).value,
+  ).toBe("unsaved-id");
+});
+
+it("keeps the draft blocked when a login check still lacks admin rights or fails", async () => {
+  http.patch.mockRejectedValue(
+    new ApiError(401, { code: "UNAUTHENTICATED", message: "로그인이 필요합니다." }),
+  );
+  auth.query.mockResolvedValue({ rules: [] });
+  renderEditor();
+  fireEvent.change(screen.getByRole("textbox", { name: "YouTube ID draft" }), {
+    target: { value: "unsaved-id" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "저장" }));
+  await screen.findByRole("link", { name: "다시 로그인" });
+  http.get.mockResolvedValue({ rules: [] });
+  fireEvent.click(screen.getByRole("button", { name: "로그인 상태 확인" }));
+  await screen.findByText("관리자 로그인이 확인되지 않았습니다. 계정 상태와 권한을 확인해주세요.");
+  http.get.mockRejectedValue(new Error("network failure"));
+  fireEvent.click(screen.getByRole("button", { name: "로그인 상태 확인" }));
+  await screen.findByText("로그인 상태를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.");
+  expect(screen.getByRole("button", { name: "저장" }).closest("fieldset")?.disabled).toBe(true);
+  expect(
+    (screen.getByRole("textbox", { name: "YouTube ID draft" }) as HTMLInputElement).value,
+  ).toBe("unsaved-id");
+  expect(http.patch).toHaveBeenCalledOnce();
 });
