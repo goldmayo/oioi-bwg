@@ -6,7 +6,7 @@ authority: plan
 source_commit: 8dae0d79125f1f8c8ef24ae4e4cb7a885b584c55
 created_at: "2026-10-10"
 updated_at: "2026-10-10"
-revision: 1
+revision: 2
 ---
 
 # P05 Console TOTP 인증 설계 초안
@@ -15,6 +15,8 @@ revision: 1
 기준은 `goldmayo/oioi-bwg`의 PR [#119](https://github.com/goldmayo/oioi-bwg/pull/119)가
 병합된 `migration_main`의 `8dae0d79125f1f8c8ef24ae4e4cb7a885b584c55`이며, 관찰일은 2026-10-10이다.
 이 문서는 제안과 구현 전 확인 항목을 담은 초안이다. 코드·DB migration·배포는 수행하지 않았다.
+revision 2에서는 PR #120 리뷰에 따라 Auth.js 실패 계약, 동시 setup 응답, P05-C fixture,
+운영 role/status 변경과 회수의 결합을 보완했다.
 
 상위 기준은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md),
 [Auth §4.1·§23·§24](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md),
@@ -30,15 +32,15 @@ revision: 1
 
 아래는 기준 커밋의 정적 코드 관찰이며, P05 runtime 검증 결과가 아니다.
 
-| 근거                                                                  | 현재 동작                                                                      | P05 변화                                                        |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| `apps/console/src/auth.ts`                                            | Credentials email/password, JWT, `maxAge = 8시간`. jwt callback은 `sub`만 반환 | 최종 authorize에서 TOTP 추가, MFA claims 보존                   |
-| `apps/console/src/server/auth/authenticate-console.ts`                | Argon2id 비밀번호와 DB의 ACTIVE ADMIN 확인                                     | 등록 상태·OTP 소모까지 성공해야 identity 반환                   |
-| `apps/console/src/server/auth/request-context.ts`                     | 요청별 DB role/status 확인 후 CASL context 생성                                | MFA 증명·현재 version·활성 상태도 확인                          |
-| `apps/console/src/features/auth`                                      | RHF 로그인 폼 → route-local Server Action → Auth.js                            | 메모리 안의 ID/PW → TOTP 입력, 제한된 등록 UI                   |
-| `apps/console/src/shared/config/console-runtime.ts`                   | 전용 secret/cookie, HTTP loopback만 허용, Secure=false                         | P05에서는 비공개 조건 유지; HTTPS/Secure 전환은 P06             |
-| `packages/server/src/db/schema.ts`, `repositories/auth-repository.ts` | Account/PasswordCredential, MFA 테이블 없음                                    | `admin_mfa`와 executor를 받는 전용 repository 추가              |
-| `packages/server/src/services`                                        | 가입·로그인 구현, Password/Email 변경 service는 없음                           | MFA reset/회수 추가; 미래 credential 변경 경로의 회수 계약 명시 |
+| 근거                                                                  | 현재 동작                                                                      | P05 변화                                                                   |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `apps/console/src/auth.ts`                                            | Credentials email/password, JWT, `maxAge = 8시간`. jwt callback은 `sub`만 반환 | 최종 authorize에서 TOTP 추가, MFA claims 보존                              |
+| `apps/console/src/server/auth/authenticate-console.ts`                | Argon2id 비밀번호와 DB의 ACTIVE ADMIN 확인                                     | 등록 상태·OTP 소모까지 성공해야 identity 반환                              |
+| `apps/console/src/server/auth/request-context.ts`                     | 요청별 DB role/status 확인 후 CASL context 생성                                | MFA 증명·현재 version·활성 상태도 확인                                     |
+| `apps/console/src/features/auth`                                      | RHF 로그인 폼 → route-local Server Action → Auth.js                            | 메모리 안의 ID/PW → TOTP 입력, 제한된 등록 UI                              |
+| `apps/console/src/shared/config/console-runtime.ts`                   | 전용 secret/cookie, HTTP loopback만 허용, Secure=false                         | P05에서는 비공개 조건 유지; HTTPS/Secure 전환은 P06                        |
+| `packages/server/src/db/schema.ts`, `repositories/auth-repository.ts` | Account/PasswordCredential, MFA 테이블 없음                                    | `admin_mfa`와 executor를 받는 전용 repository 추가                         |
+| `packages/server/src/services`                                        | 가입·로그인 구현, Password/Email·role/status 변경 service는 없음               | MFA reset/회수·운영 권한 변경 service 추가; 미래 credential 회수 계약 명시 |
 
 기존 관리 API·RSC·업로드 Action·ability API의 공통 request-context 경로를 점검한다.
 직접 `auth()`만 읽고 관리 권한으로 사용하는 경로가 있으면 같은 PR에서 공통 guard로 연결한다.
@@ -79,6 +81,12 @@ lastUsedStep이 없도록 한다. MFA 행을 삭제해 version을 1로 되돌리
 기존 pending secret을 재사용한다. 활성 MFA의 secret은 setup으로 교체하지 않는다.
 pending 교체가 필요한 경우에도 제한된 CLI reset을 거치며 version을 증가시킨다.
 
+setup 응답은 생성 후보가 아니라 **DB에 저장된 pending 행의 secret/version**으로 만든다.
+충돌에서 패배한 요청은 자신의 secret 후보를 폐기하고 저장된 행을 읽어 복호화한 뒤 QR을 생성한다.
+QR과 version은 동일한 저장 행의 snapshot을 사용하며, reset/활성화로 pending을 확보하지 못하면
+QR을 반환하지 않는다. 응답 후 reset이 일어날 수 있으므로 confirm의 version 검사는 그대로 필요하다.
+동시 setup 두 응답의 QR을 해독해 두 secret/version이 실제 DB pending 값과 같은지 검증한다.
+
 ### 암호화와 TOTP 라이브러리
 
 암호화 제안은 Node `crypto`의 AES-256-GCM, 매 암호화마다 무작위 12-byte nonce,
@@ -112,6 +120,29 @@ TOTP는 otplib, QR은 qrcode를 사용한다. 초기 제안은 SHA-1, 6자리, 3
 HTTP 입력은 Credentials/Route Handler에서 한 번 Zod 검증하며 OTP는 숫자 6자리 문자열이다.
 로그인 실패 메시지는 계정 존재·role·MFA 상태·잘못된 비밀번호/OTP를 구분해 공개하지 않는다.
 Auth.js의 CredentialsSignin과 내부 AppError를 앱의 Server Action/HTTP adapter에서 각각 번역한다.
+
+### 로그인 실패 제한의 전송별 계약
+
+현재 `next-auth@5.0.0-beta.32`/`@auth/core@0.41.3`의 callback은 일반 authorize 오류를
+CallbackRouteError로 감싸고, 서버 signIn의 raw 경로는 AuthError를 다시 던진다.
+따라서 limiter의 예상된 초과만 Console auth adapter에서 `CredentialsSignin` 하위 타입
+`LoginRateLimited`로 변환한다. `type = CredentialsSignin`을 유지하고 공개 code는 고정 `rate_limited`,
+서버 전용 속성은 limiter에서 얻은 양의 정수 `retryAfterSeconds`다. 임의 AppError 전체를 변환하지 않는다.
+[Auth.js CredentialsSignin 계약](https://authjs.dev/reference/core/errors#credentialssignin)을 따른다.
+
+| 진입점                                        | 제한 초과 응답 계약                                                                                                                                  |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 로그인 Server Action                          | 일반 CredentialsSignin보다 먼저 LoginRateLimited를 처리해 `{ error, code: "RATE_LIMITED", retryAfterSeconds }` 반환. HTTP 429/헤더를 약속하지 않음   |
+| Auth.js `POST /api/auth/callback/credentials` | 같은 authorize limiter 적용. 표준 CredentialsSignin redirect 또는 redirect-URL JSON의 `code=rate_limited` 사용. 별도 429/Retry-After를 약속하지 않음 |
+| setup/confirm Route Handler                   | 기존 HTTP error 계약의 `OTP_RATE_LIMITED`, HTTP 429, Retry-After 초 단위 헤더                                                                        |
+
+Action 응답은 로그인 폼 전용이며 API 공통 envelope를 추가하지 않는다. 폼은 서버가 준 대기 시간과
+재시도 안내를 표시하고 자동 재전송하지 않는다. 직접 callback의 공개 URL에는 code 외의 계정 정보·
+정확한 대기 시간·OTP를 넣지 않으며 로그인 화면은 일반 대기 안내만 표시한다.
+limiter는 Action 바깥의 최종 authorize에서 반드시 실행해 직접 callback 우회를 막는다.
+`auth-error-reporter.ts`의 CredentialsSignin 제외 정책에는 이 하위 타입도 포함되므로 예상된 제한을
+AUTH_FAILURE/Sentry 내부 장애로 보고하지 않는다. 예상 밖 CallbackRouteError는 기존 보고를 유지한다.
+P05-C에서 실제 Auth.js를 경유해 Action/직접 callback의 제한·세션 미발급·관측 분류를 함께 검증한다.
 
 ### 최초 등록과 reset 이후 등록
 
@@ -176,19 +207,23 @@ version을 증가시키되 활성 secret과 lastUsedStep을 보존한다. 재로
 정지·탈퇴·ADMIN 권한 회수에서도 DB 인가를 즉시 차단하고 version을 증가시켜 복귀 후 옛 JWT가 되살아나지 않게 한다.
 탈퇴 시 MFA secret은 인증수단으로 제거하며 Account tombstone 정책을 따른다.
 
-기준 코드에는 Password/Email 변경 service가 없다. 이 UI/API를 P05에 새로 만들지 않는다.
-운영 변경도 동일한 회수 service와 연결해야 하며, DB 직접 변경으로 version 갱신을 건너뛰는 것은 허용하지 않는다.
+기준 코드에는 Password/Email·role/status 변경 service가 없다. Password/Email 변경 UI/API는 새로 만들지 않는다.
+운영 role/status 변경은 P05-B의 account-access CLI와 공통 변경/회수 service를 필수 경로로 지정한다.
+Account 변경과 MFA version 증가는 같은 transaction에서 commit/rollback하며, 회수 후 별도 SQL로
+role/status를 바꾸는 두 단계 작업은 금지한다. 강등·정지뿐 아니라 재승격·복귀 시에도 version을 증가시킨다.
+MFA 미등록 계정은 version 행을 최초 생성하며, 이미 있는 행은 삭제/초기화하지 않는다.
 Domain AUTH-004~006의 **전체 Session 회수** 요구 중 이 설계가 구현하는 부분은 Console 회수다.
 Web 전체 회수의 기존 미구현 범위를 Console version으로 충족했다고 기록하거나 기존 Domain 정책을 약화하지 않는다.
 
 ## 6. 실패 제한과 Origin/CSRF
 
 rate-limiter-flexible의 단일 프로세스 메모리 limiter를 로그인/setup/confirm이 공유한다.
+인스턴스는 프로세스 단위로 유지하며 NextAuth의 lazy config 호출마다 새로 만들지 않는다.
 초기 제안은 정규화 계정당 5분에 실패 5회, 신뢰한 IP당 5분에 실패 20회다.
 Domain의 회원가입 Email OTP 발송 제한과는 별도 정책이며 수치는 구현 전 확정한다.
 동시 요청도 한도를 우회하지 못하도록 비싼 검증 전에 시도를 예약하고 실패를 유지한다.
 성공은 해당 요청의 예약만 환급하며 계정/IP 전체 실패 counter를 지우지 않는다.
-초과 요청은 adapter에서 429/Retry-After로 번역하고 자동 로그인/OTP 재시도를 하지 않는다.
+초과 요청의 Action/Auth.js/HTTP 응답은 §4의 전송별 계약을 따른다. 자동 로그인/OTP 재시도는 하지 않는다.
 [라이브러리 공식 예제](https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example)를 참고한다.
 
 IP는 임의의 X-Forwarded-For를 신뢰하지 않는다. P06 Caddy가 외부 입력을 덮어쓰고
@@ -216,6 +251,18 @@ CLI는 accountId를 명시적으로 받아 공유 회수 service를 호출한다
 CLI는 secret/OTP를 출력하지 않으며 대상·전후 version·성공 여부만 안전하게 기록한다.
 P05 구현/검증은 guarded Docker Compose PostgreSQL에서 수행한다. production 실행은 별도 명시적 승인 범위다.
 
+P05-B CLI에는 `mfa-reset`과 `account-access` 두 작업을 둔다. account-access는 대상 accountId,
+기대 role/status/version, 변경할 role/status, 변경 사유를 명시적으로 받고 기대값이 다르면 중단한다.
+공통 service가 Account를 잠근 뒤 변경과 version 증가를 함께 수행하며, 실패 시 둘 다 rollback한다.
+MFA 미등록 행의 기대 version은 없음으로 명시하고 최초 행 생성 경합도 거절/재조회한다.
+운영 출력에는 대상·전후 role/status/version·성공 여부만 남기고 사유 원문을 자동 전송하지 않는다.
+
+[운영 절차](../../../../ops/oci/README.md)에 CLI를 유일한 role/status 변경 절차로 등록하고
+수동 UPDATE 예제를 제공하지 않는다. P05-B 완료 조건에 이 절차와 CLI 경합/rollback 검증을 포함한다.
+다만 현 DB owner/migrator의 임의 SQL까지 DB 권한으로 차단했다고 주장하지 않는다.
+임의 SQL을 통한 우회가 불가능해야 하는 운영 환경이라면 공개 전 별도 DB 권한/강제 장치 설계가 필요하다.
+현재 범위의 보장은 승인된 CLI 경로의 원자성과 그 경로를 따르는 운영 절차이며, DB role 세분화는 후속 범위다.
+
 | 위치                                                 | 책임                                                                                |
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `packages/server/src/db`, `repositories`, `services` | schema, executor 기반 MFA persistence, 등록/소모/회수 규칙과 transaction            |
@@ -233,12 +280,20 @@ runtime key가 없는 build에서도 비공개 화면의 컴파일이 가능하�
 각 단위는 최신 migration_main에서 분기하고 선행 병합 후 진행한다. 파일 20개/400줄 목표를 적용하며
 보안 전환을 분리할 수 없으면 결합 이유·리뷰 순서를 PR에 적는다. P05 중간 상태는 공개하지 않는다.
 
-| 순서  | concern                                                | 완료 기준                                                                        |
-| ----- | ------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| P05-A | Auth/Domain 정책 개정 + additive MFA schema/repository | 회수 정책 명시, migration SQL 검토·guarded local 적용, constraint/동시 생성 검증 |
-| P05-B | 암호화·TOTP 원자 소모·등록/회수 core와 CLI             | 변조/replay/reset 경합을 실제 PostgreSQL로 검증. HTTP 등록 경로는 아직 열지 않음 |
-| P05-C | Auth.js claims·공통 guard·limiter·Origin/CSRF 연결     | password-only 차단과 모든 관리 entry 보호를 같은 전환에서 확인                   |
-| P05-D | 등록 endpoint·로그인/등록 UI·브라우저 통합             | 제한된 등록 → 다음 OTP 로그인 → 기존 관리/편집 완주, 회수 UX/두 앱 격리          |
+| 순서  | concern                                                | 완료 기준                                                                                                                        |
+| ----- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| P05-A | Auth/Domain 정책 개정 + additive MFA schema/repository | 회수 정책 명시, migration SQL 검토·guarded local 적용, constraint/동시 생성 검증                                                 |
+| P05-B | 암호화·TOTP 원자 소모·등록/회수 core와 운영 CLI        | 변조/replay/reset 및 role/status 변경·회수의 원자성, 복귀 후 옛 JWT 거절에 필요한 DB facts 검증. HTTP 등록 경로는 아직 열지 않음 |
+| P05-C | Auth.js claims·공통 guard·limiter·Origin/CSRF 연결     | 사전 MFA 등록 fixture로 실제 로그인·관리 요청, password-only 차단, 전송별 제한 계약, 복귀 후 옛 JWT 거절 검증                    |
+| P05-D | 등록 endpoint·로그인/등록 UI·브라우저 통합             | 제한된 등록 → 다음 OTP 로그인 → 기존 관리/편집 완주, 회수 UX/두 앱 격리                                                          |
+
+P05-C에서는 D의 등록 endpoint/UI 없이도 인증을 검증할 수 있도록 기존 격리 PostgreSQL 통합 runner의
+전용 테스트 계정에 B의 등록/confirm core로 MFA를 사전 등록한다. 테스트 전용 runtime key와
+otplib로 생성한 다음 미사용 OTP를 사용해 실제 Auth.js 로그인과 보호된 관리 요청을 검증한다.
+같은 fixture로 Server Action과 CSRF가 유효한 callback 직접 POST의 limiter를 각각 검증한다.
+Action으로 한도를 소모한 뒤 같은 계정/IP의 직접 callback도 거절되는지 확인한다.
+fixture는 테스트 DB에서만 명시적으로 준비/정리하며 운영 seed·password-only 우회 flag를 추가하지 않는다.
+C 병합 후 D 완료까지 일반 관리자용 등록/로그인 UI가 준비되지 않는 중간 상태임을 결과에 기록한다.
 
 구현 PR의 기본 검증은 `pnpm type-check`, `pnpm test:harness`, `pnpm lint`, `pnpm lint:fsd`,
 `pnpm test:unit:run`, `pnpm format:check`이며 runtime/build 변경에는 `pnpm build`를 추가한다.
@@ -247,8 +302,13 @@ root `pnpm verify`로 묶어 실행했다면 실제 실행 내역으로 기록�
 - Vitest: OTP 형식·시간 경계·허용 범위·암호화 AAD/변조·claims 보존·session.update 주입·실패 제한.
 - Docker PostgreSQL: 같은 OTP 동시 요청 중 1건 성공, stale version/secret 거절, setup/confirm/reset 경합,
   version 단조 증가, 회수 후 새 등록에도 이전 JWT 거절. mock 결과만으로 원자성 완료를 선언하지 않는다.
+- 동시 setup 두 건의 QR secret/version이 DB pending 값과 일치하고 패배한 생성 후보가 응답되지 않는지 검증한다.
+- account-access CLI로 ADMIN → USER → ADMIN 및 ACTIVE → SUSPENDED → ACTIVE를 실행하고,
+  각 변경의 version 증가/원자적 rollback, P05-C에서 변경 전 JWT 거절과 새 OTP 재로그인을 검증한다.
 - Playwright/실제 Auth.js: 첫 단계/등록 확인까지 관리 세션 없음, 다음 코드 로그인,
   password-only/미등록/비ADMIN/정지 계정/Web cookie 거절, cross-origin/누락 Origin/CSRF 실패.
+- 실제 Auth.js 제한 초과: Action의 code/대기 시간, 직접 callback의 공개 code, setup/confirm의
+  429/Retry-After, 세션 미발급, CredentialsSignin 하위 타입의 Sentry 제외와 예상 밖 오류 보고를 검증한다.
 - 기존 Admin 통합 fixture는 Console만 실제 TOTP 등록/로그인으로 전환하고 Web password 로그인은 보존한다.
 - 편집 중 version/role 회수 → 401 → 초안 보존·재인증 안내를 확인한다. 과거 JWT는 복귀 후에도 거절한다.
 - 로그/응답/image에서 비밀번호·OTP·QR/secret·key 유출이 없는지 확인한다.
@@ -260,7 +320,7 @@ P05 완료 결과에는 source/PR/실행 명령·결과와 P06 선행 조건을 
 
 1. 등록 confirm 후 다음 코드로 별도 로그인하는 UX, pending 재사용과 서버 등록 허용 설정 이름.
 2. otplib/qrcode/limiter 설치 버전, TOTP 허용 범위와 실패 한도, memory key 상한/신뢰 IP 획득 방식.
-3. Domain AUTH-006 및 Auth §4.1에 반영할 Console version 회수 규칙과 운영 credential/role 변경 연결.
+3. Domain AUTH-006 및 Auth §4.1에 반영할 Console version 회수 규칙과 미래 credential 변경 경로 연결.
 4. reset 행의 nullable 제약, Account 탈퇴 시 secret 제거, guarded CLI 경로와 키 복구의 P06 인계.
 
 이 초안에서는 정적 근거와 공식 문서를 대조했다. 위 runtime·DB·브라우저 게이트는 아직 실행하지 않았다.
