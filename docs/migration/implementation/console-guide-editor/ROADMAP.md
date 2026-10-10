@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-10"
-revision: 11
+updated_at: "2026-10-11"
+revision: 12
 ---
 
 # 구현 순서와 PR 단위
@@ -48,7 +48,7 @@ P09~P10도 기존 가사 JSON을 입력으로 사용한다. BPM/beatOffset은 So
 | P03 `refactor(workspace): 공통 계약과 서버 코드 추출`       | 실제 contracts/server·migration 경로 추출. React/Next request/session/HTTP adapter는 앱에 유지. 외부 계약 동일.                                                                      | P02                                                   | contracts 순수성·server-only·repository/service 방향·앱 간 의존 금지, 소비 앱 type-check/build 성공.                                                                                  |
 | P04 `feat(console): 운영 화면과 API 이관`                   | Console entry·기존 Admin UI/API/업로드 Action 이관. Web 경로 임시 유지.                                                                                                              | P03                                                   | 접근 제한 환경에서 두 경로의 기존 작업 완주. 독립 build, direct import 없음.                                                                                                          |
 | P05 `feat(auth): 콘솔에 간단한 TOTP 인증 적용`              | admin_mfa migration·Auth.js+otplib·등록 UI·limiter·Origin/CSRF·CLI reset·관리 guard. Auth/Domain 회수 규칙 반영.                                                                     | P04                                                   | password-only/비ADMIN/미등록/다른 앱 cookie 거절. replay·동시성·version 회수·제한된 재등록 검증.                                                                                      |
-| P06 `feat(deploy): 두 앱 배포와 기존 관리 경로 종료`        | 두 image·기존 CD/Compose/Caddy/env/health/rollback 보정, preview Web을 www로 전환. Web 관리 route/API/Action 및 기존 Web Worker·staging 경로 종료.                                     | P04/P05. Audio/Guide 불필요.                          | 기존 가사 편집만으로 Console 공개. 데이터/파일 보존, 최종 두 hostname·전용 cookie·인가·pool·복구 smoke, www 관리 직접 호출 실패.                                                      |
+| P06 `feat(deploy): 두 앱 배포와 기존 관리 경로 종료`        | 두 image·기존 CD/Compose/Caddy/env/health/rollback 보정, preview Web을 www로 전환. Web 관리 route/API/Action·회원가입 페이지/가입 API 및 기존 Web Worker·staging 경로 종료.          | P04/P05. Audio/Guide 불필요.                          | ARM64 빌드 전 B0 IAM 실증·실제 Web/Console metadata 차단 후 Console 공개. 데이터/파일 보존, 최종 두 hostname·전용 cookie·인가·pool·복구 smoke, www 관리·가입 API 직접 호출 실패.      |
 | P07 `feat(guide): 세 종류 응원법과 선택 화면 추가`          | 최소 CheerGuide migration·기존 가사 JSON/쓰기·수동 분류·조회·segmented/nuqs. Domain의 FAN 분리·초기 이력 적용 범위 반영.                                                             | 모델 P03, 관리 화면 P04의 공통 guard. 운영상 P06 후.  | 0/1/2~3개·우선순위·URL/재생 유지, 미분류/내용 보존, LRC/삭제 경로·동시 저장 충돌 검증.                                                                                                |
 | P08 `feat(waveform): 큐 기반 일회성 파형 작업 추가`         | WaveformJob/결과 migration·active Job 재사용·202/status API·OCI Queue/DLQ·Runner Instance Principal/Unix socket·worker·내부 결과 API·EventEmitter/SSE. Domain source/lifecycle 반영. | P03/P04 및 관리 guard P05. 운영상 P06 후, P07 불필요. | 동시 생성/재전달·visibility 연장·저장 전 delete 금지·DLQ→FAILED·enqueue/DB 경계·IAM/socket/metadata 제한·SSE 재연결/알림 실패 검증. ARM64/비영속성 및 3개 anchor의 offset/drift 검증. |
 | P09 `feat(editor): 파형과 큐 타임라인 편집 제공`            | Peaks.js·YouTube adapter·overview/zoom/playhead·point drag·RHF draft/history.                                                                                                        | P04/P08, 기존 가사 JSON 사용 가능.                    | JSON만으로 표시·재생/seek 동기화·1회 Undo/취소·기존 캡처/LRC/강조 보존. 누적 drift 미해결이면 integration 완료로 처리하지 않음.                                                       |
@@ -65,7 +65,8 @@ P09~P10도 기존 가사 JSON을 입력으로 사용한다. BPM/beatOffset은 So
 - UI는 바뀐 selector·로그인·editor/SSE 연결 흐름을 Playwright로 확인한다. root config/harness 변경이 affected 검증에서 빠지거나 다른 workspace 정책을 섞지 않는지도 확인한다.
 - P08은 실제 OCI Queue staging에서 long poll·재전달·visibility 연장·DLQ·runner/VM 재시작·결과 commit 후 ack 실패를 확인한다. mock만으로 완료하지 않는다.
 - P08에서 연속 클릭·응답 유실 후 재요청·동시 POST가 동일 songId/videoId의 active Job 한 개를 재사용하고 새 message를 추가하지 않는지 검증한다. DB 원자성 수단은 구현 시 선택하고 terminal 이후 재생성은 허용한다.
-- Runner의 Instance Principal과 Queue push/pull 범위, Console의 제한된 Unix socket 호출, Console/Web/worker의 metadata 차단을 staging에서 확인한다. 같은 VM의 IAM을 process별 권한 분리로 간주하지 않는다.
+- P06은 ARM64 빌드 전 동일 Stack의 Plan/Apply·두 repo push/pull·새 secret 읽기·새 Run Command exit 0을 실제 주체로 증명한다. 실패 시 해당 검사에서 중단한다. Web/Console metadata 차단은 Console secret 읽기 권한 추가 전 준비하고 실제 두 앱·재시작/복구 후까지 확인한다.
+- P08은 Runner의 Instance Principal과 Queue push/pull 범위, Console의 제한된 Unix socket 호출, worker metadata 차단을 제한된 실제 OCI 환경에서 추가 검증하고 기존 Web/Console 차단을 재검증한다. 같은 VM의 IAM을 process별 권한 분리로 간주하지 않는다.
 - Worker의 성공/실패/timeout/강제 종료 후 host/container/volume/log/Sentry에 음원·PCM이 남지 않아야 한다. 같은 videoId의 3개 이상 anchor로 일정 offset과 누적 drift를 구분하며 기준·측정값을 기록한다.
 - SSE는 단일 Console process의 DB commit → EventEmitter → stream으로 연결한다. 이벤트 누락/중복·재연결·서버 재시작·listener 오류 후에도 DB를 Query로 다시 읽으면 같은 job/결과를 보아야 한다. LISTEN/NOTIFY는 Console process/container가 둘 이상일 때 후속으로 검토한다.
 - 문서 작업은 내용·링크·format만 검사한다. push hook 검증은 hook 실행 결과로 별도 보고한다.
@@ -93,7 +94,7 @@ P06 전환 순서는 **두 image/routing 준비 → 비공개 Console smoke/MFA 
 단일 VM의 기존 Promotion·OCI Run Command를 유지하는 세부 PR 분할과 두 앱 복구 계획은
 [P06 계획 초안](P06-PLAN.md)을 참조한다. 계획 작성은 환경 적용이나 공개 승인을 의미하지 않는다.
 기존 preview 관리자 계정을 사용하는 사전 준비 절차는 [P06 사전 준비 안내](P06-PREPARATION.md)에 둔다.
-관리자 생성·공인 IP 설정은 제외하며 일반 회원가입 페이지 제거는 P06 구현에서 다룬다.
+관리자 생성·공인 IP 설정은 제외하며 일반 회원가입 페이지와 가입 API 세 개 종료는 P06-E에서 다룬다.
 P04/P05의 기존 기능과 인가 확인 전에는 기존 경로를 지우지 않는다. rollback도 password-only 관리 경로를 다시 공개하지 않는다.
 Guide writer 전환 뒤 rollback은 새 guide를 읽는 호환 앱으로 제한하고 Song.lyrics의 파괴적 정리는 후속으로 둔다.
 

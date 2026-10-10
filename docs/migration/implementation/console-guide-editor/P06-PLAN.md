@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
-updated_at: "2026-10-10"
-revision: 5
+updated_at: "2026-10-11"
+revision: 6
 ---
 
 # P06 계획 초안
@@ -36,6 +36,10 @@ P05 A~D의 통합과 공개 운영 준비를 구분한다. [P05-D 결과](P05-D-
 - revision 5는 사용자 확인에 따라 기존 preview 관리자 계정 사용을 전제로 한다. 관리자 생성·승격과
   일반 회원가입 작업은 사전 준비에서 제외하고, 일반 회원가입 페이지 제거는 P06 구현에 남긴다.
   따라 할 화면 입력값·조회 명령은 [사전 준비 안내](P06-PREPARATION.md)를 따른다.
+- revision 6은 #130의 `52573857f3d3bad9120a96ee7fda0c417abf55fa` 리뷰를 반영한다. IAM 주체별
+  실제 검증을 ARM64 빌드 전 B0로 추가하고 Web/Console metadata 차단을 P06으로 당긴다.
+  일반 회원가입은 페이지와 가입 API 세 개까지 종료한다. OCI 현재 권한·Plan/Apply·push/pull·
+  secret 읽기·Run Command는 실행하지 않았으며 운영 IAM 준비 완료 판정이 아니다.
 
 상위 기준은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md),
 [Auth §4.1](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md#41-console의-단계적-전환),
@@ -100,24 +104,104 @@ flowchart LR
 각 행은 `migration_main` 대상 feature PR이다. 20파일/400줄 목표를 넘으면 해당 행을 독립 검증
 가능한 준비/구현으로 더 나눈다. PR 병합과 환경 적용은 별개이며 RESULT에 실제 검증 ref를 남긴다.
 
-| 단계 | 하나의 concern / 주요 파일 | 완료 조건 |
-| --- | --- | --- |
-| P06-A 이미지 | Dockerfile 두 runtime target, 일반 CI 두 container artifact/smoke, Console readiness | 같은 source의 두 amd64 실제 이미지에서 server/static/public·native dependency·DB readiness 확인. 런타임 secret 없이 build 성공 |
-| P06-B1 후보 계약 | Promotion candidate JSON/검증, ARM64 publish/pull, summary/Slack | 두 ARM64 **게시 digest 자체**로 container smoke 통과 후 artifact 기록. 한쪽 누락·다른 head/run/registry·실패 시 promotion 거절 |
-| P06-B2 host 배포 | Compose, Run Command, deploy/installer/preflight, env 예시 | 두 이미지/설정 모두 사전 검증, 두 앱 성공 후 상태 확정. 한쪽 실패 시 두 앱과 env 복구, lock·exit code·로그 비밀 미노출 검증 |
-| P06-C HTTPS 경계 | Console runtime/cookies/Origin/auth ingress, 신뢰 IP limiter, Caddy routing 절차 | 제한된 HTTPS에서 host-only Secure 쿠키, 직접 callback/Action/등록의 같은 limiter, 위조 forwarded header·다른 Origin 거절 |
-| P06-D 제한 운영 검증 | production용 CLI 실행 경계, migration/키 복구·최초 등록 절차, 기존 smoke 확장 | 비공개 Console에서 실물 인증기 등록·새 OTP 로그인·CLI reset/회수·관리 작업·복구 검증. 공개 endpoint로 등록 불가 |
-| P06-E Web 관리 종료 | Web `/admin`, `/admin-login`, `/api/admin/*`, 관리 upload Action/연결 UI·테스트 정리 | Console 작업 검증 후 제거. Web의 직접 관리 호출/이전 Action ID 거절, 일반 로그인·signup·조회 유지. 안전한 rollback 기준 수립 |
-| P06-F 운영 전환 | 운영 build/승격 계약, www routing 전환·레거시 종료 runbook/RESULT | 검증한 동일 두 digest로 preview의 Web을 www로 전환. 데이터·HTTPS·회수·복구 확인 후 Console 공개, 기존 Web Worker·staging·preview 경로 종료 |
+| 단계                 | 하나의 concern / 주요 파일                                                                                           | 완료 조건                                                                                                                                                  |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P06-A 이미지         | Dockerfile 두 runtime target, 일반 CI 두 container artifact/smoke, Console readiness                                 | 같은 source의 두 amd64 실제 이미지에서 server/static/public·native dependency·DB readiness 확인. 런타임 secret 없이 build 성공                             |
+| P06-B0 IAM 검증      | 동일 Stack·주체/정책 inventory, 최소 probe와 권한 증거, metadata 사전 차단                                           | §4.1 실제 Plan/Apply·두 repo push/pull·새 secret 읽기·새 Run Command exit 0. 실패 시 ARM64 빌드 중단                                                       |
+| P06-B1 후보 계약     | Promotion candidate JSON/검증, ARM64 publish/pull, summary/Slack                                                     | 두 ARM64 **게시 digest 자체**로 container smoke 통과 후 artifact 기록. 한쪽 누락·다른 head/run/registry·실패 시 promotion 거절                             |
+| P06-B2 host 배포     | Compose, Run Command, deploy/installer/preflight, env 예시                                                           | 두 이미지/설정 모두 사전 검증, 두 앱 성공 후 상태 확정. 한쪽 실패 시 두 앱과 env 복구, lock·exit code·로그 비밀 미노출 및 실제 두 앱 metadata 차단 검증    |
+| P06-C HTTPS 경계     | Console runtime/cookies/Origin/auth ingress, 신뢰 IP limiter, Caddy routing 절차                                     | 제한된 HTTPS에서 host-only Secure 쿠키, 직접 callback/Action/등록의 같은 limiter, 위조 forwarded header·다른 Origin 거절                                   |
+| P06-D 제한 운영 검증 | production용 CLI 실행 경계, migration/키 복구·최초 등록 절차, 기존 smoke 확장                                        | 비공개 Console에서 실물 인증기 등록·새 OTP 로그인·CLI reset/회수·관리 작업·복구 검증. 공개 endpoint로 등록 불가                                            |
+| P06-E Web 관리 종료  | Web `/admin`, `/admin-login`, `/api/admin/*`, 관리 upload Action/연결 UI·테스트, 회원가입 페이지·가입 API 세 개 종료 | Console 작업 검증 후 제거. Web의 직접 관리 호출/이전 Action ID 거절, 일반 로그인·조회 유지, 가입 API 직접 POST 거절·부작용 없음. 안전한 rollback 기준 수립 |
+| P06-F 운영 전환      | 운영 build/승격 계약, www routing 전환·레거시 종료 runbook/RESULT                                                    | 검증한 동일 두 digest로 preview의 Web을 www로 전환. 데이터·HTTPS·회수·복구 확인 후 Console 공개, 기존 Web Worker·staging·preview 경로 종료                 |
 
+B0의 IAM 실증 전에는 전체 ARM64 후보 빌드를 시작하지 않는다.
 B1과 B2는 계약 producer/consumer이므로 **둘 다 병합·host upgrade 확인 전에는 Promotion을 실행하지 않는다.**
 B1의 후보 생성 성공을 기존 단일-digest host의 배포 호환성으로 오해하지 않는다.
 각 단계 구현 시 해당 경계를 소유하는 active 문서를 함께 개정한다. 특히 B1/B2는 배포 §19/21,
-C는 Auth/Runtime의 loopback·cookie 계약, E는 헌법/관련 문서의 임시 Web Admin 유지 규칙을 갱신한다.
+C는 Auth/Runtime의 loopback·cookie 계약, E는 헌법/관련 문서의 임시 Web Admin 유지 규칙과 Auth/Domain의 공개 가입 중단 적용 범위를 갱신한다.
 F는 Development Promotion을 운영 배포로 연결하는 승인·환경 계약과 레거시 종료 절차를
 분리 검증 가능한 PR로 나눈다. 현재 `NEXT_PUBLIC_APP_ENV=staging` 고정값을 운영용으로
 바꾸는 단계에서는 해당 build 입력으로 생성한 두 digest 자체를 검증한다. 배포 시 재build하지 않는다.
 이 계획 PR에서는 현재 실행 계약을 바꾼 것으로 문서화하지 않는다.
+
+### 4.1. P06-B0: ARM64 빌드 전 IAM 준비·실증
+
+**IAM 준비 → 동일 Stack의 Plan 검토·Apply → 작은 이미지 push/pull → VM의 새 secret 읽기 →
+새 Run Command 생성·실행·결과 조회 → 전체 ARM64 빌드** 순서다. B0의 외부 적용은 변경안과
+복구 절차를 승인한 뒤 실행한다. 일반 feature verify에 OCI credential을 요구하지 않는다.
+
+먼저 Stack OCID·소스 repository/ref·Job이 사용한 실제 SHA·Terraform 작업 경로(`infra/oci`),
+region/tenancy, Stack/Job 실행 주체와 provider 인증 주체, 각 identity domain/group을 기록한다.
+Registry(`compartment_ocid`)·Compute(`compute_compartment_ocid`)·Secret(`secret_compartment_ocid`)와
+Vault/Key·VM OCID를 구분한다. 이름·소스 branch만으로 실제 실행 대상을 확정하지 않는다.
+
+| 주체                            | 검토할 정책과 범위                                                                                                                                                                                                                                                                        | 통과 증거                                                                                                                |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Resource Manager 실행 주체      | 해당 Stack의 `orm-stacks`/`orm-jobs` 실행·조회, Registry의 repository 생성, tenancy의 기존 `policies`·group/dynamic-group 변경 권한을 별도 확인. Terraform refresh의 Instance·Object Storage namespace/기존 backup bucket·IAM·Vault/Key·Logging/Monitoring/Notifications 조회 권한도 필요 | 기록한 동일 SHA/path의 Plan과 그 Plan에 대한 Apply Job 성공, 실제 Console repository·정책 조회                           |
+| Vault secret 생성 운영자        | Secret compartment의 `SECRET_CREATE`, 지정 Vault의 `VAULT_CREATE_SECRET`, 지정 Key의 `KEY_ENCRYPT`·`KEY_DECRYPT`. 생성 전에는 secret OCID가 없으므로 생성 범위와 생성 후 읽기 범위를 구분                                                                                                 | 지정 Vault/Key에 두 secret 생성 또는 기존 secret 보존 확인. 내용 읽기는 다음 VM 주체로 별도 증명                         |
+| CI 게시 계정 `OCIR_USERNAME`    | 두 고정 repository의 `REPOSITORY_READ`·`REPOSITORY_UPDATE`. `REPOSITORY_CREATE`는 Terraform 주체에만 두며 CI에 repository 생성/삭제 권한을 추가하지 않음                                                                                                                                  | 실제 candidate 게시와 동일 credential·실행 환경으로 두 repository에 작은 이미지 push 후 digest 확인                      |
+| VM Instance Principal           | exact VM dynamic group에 두 repository의 `read repos`, 기존 runtime secret과 새 Console secret 두 OCID만 `read secret-bundles`                                                                                                                                                            | host의 실제 credential helper로 두 digest pull, `--auth instance_principal`로 각 새 secret CURRENT bundle 읽기·형식 검증 |
+| Run Command 계정 `OCI_CLI_USER` | 기존 Compute compartment의 `read instances`, `manage instance-agent-command-family`, `use instance-agent-command-execution-family` 세 정책 유지                                                                                                                                           | 같은 CI principal로 대상 Instance 조회 → 새 command 생성 → VM 실행 → command execution 결과 조회 → exit 0                |
+
+Resource Manager 사용 권한은 실제 리소스 생성·수정 권한을 대체하지 않는다. 권한 bootstrap은
+기존 IAM 운영자가 수행하며 실행할 Stack이 자기 권한을 먼저 얻을 수 있다고 가정하지 않는다.
+Terraform 관리 resource의 refresh 권한과 Plan의 실제 변경 권한을 API별로 대조하고, 기존 VM·Web
+repository·Vault/Key·backup bucket의 destroy/replace나 예상 밖 IAM 확대가 있으면 Apply하지 않는다.
+Secret 원문은 Terraform 입력/state에 넣지 않는다. [Resource Manager IAM](https://docs.oracle.com/en-us/iaas/Content/Security/Reference/resourcemanager_security.htm),
+[secret 생성/읽기 권한](https://docs.oracle.com/en-us/iaas/Content/Identity/Reference/keypolicyreference.htm).
+
+아래는 B0에서 실제 identity domain/group·compartment·repo/secret OCID로 치환할 정책 형식이다.
+게시 계정의 그룹과 Run Command 그룹은 구분한다. VM의 기존 정책을 유지하며 Console 항목만
+추가한다. Web/Console 각 repo 및 새 secret 두 개에 각각 적용하고 Terraform Plan에서 대조한다.
+
+```text
+Allow group <domain>/<publish-group> to manage repos in compartment id <registry-compartment> where all {target.repo.name='<repo-name>', any {request.permission='REPOSITORY_READ', request.permission='REPOSITORY_UPDATE'}}
+Allow dynamic-group <domain>/<compute-group> to read repos in compartment id <registry-compartment> where target.repo.name='<repo-name>'
+Allow dynamic-group <domain>/<compute-group> to read secret-bundles in compartment id <secret-compartment> where target.secret.id='<secret-ocid>'
+```
+
+domain 표기는 실제 tenancy와 `iam_identity_domain_name`을 확인하며, domain 생략을 임의로 가정하지
+않는다. push와 repository 생성은 별개다. [OCIR 정책](https://docs.oracle.com/en-us/iaas/Content/Registry/Concepts/registrypolicyrepoaccess.htm).
+Run Command의 현재 세 정책은 `infra/oci/iam.tf`와 [infra 안내](../../../../infra/oci/README.md#iam-boundary)가 기준이다.
+
+검사는 다음 증거를 남기고 단계별로 중단할 수 있게 구현한다.
+
+1. Console secret 읽기 권한을 VM에 추가하기 **전에** 기존 Web container의 metadata 차단을
+   적용·실증한다. Console용 network 경계는 작은 probe container로 먼저 확인한다. 이 probe를
+   최종 Console 이미지의 검증으로 대체하지 않으며 B2에서 실제 두 앱을 다시 검사한다.
+2. 동일 Stack의 검토한 Plan/Apply Job ID·SHA·정책 변경을 기록한다. 작은 ARM64 호환 probe 이미지를
+   고유 tag로 두 repository에 게시하고 반환된 digest를 host에서 실제 pull한다. 앱 재배포나 전체
+   ARM64 build를 수행하지 않는다. probe image 정리는 기존 retention/승인된 운영 절차를 따른다.
+3. host에서 새 secret 두 개의 CURRENT bundle을 읽어 보호된 임시 파일에서 session key·MFA key
+   형식을 검증하고 제거한다. 출력은 OCID·version·검사 성공 여부만 남기며 원문/인코딩값/hash,
+   env·인증서·private key·CLI raw 응답을 로그나 artifact에 남기지 않는다.
+4. 실제 배포 workflow의 API credential과 region으로 Instance 조회 후 **새** secret-free Run Command를
+   생성한다. 허용된 host probe만 실행하고 command ID·execution ID·대상 VM·UTC·exit 0을 대조한다.
+   timeout/생성·실행·결과 조회 실패는 모두 실패다. command list나 과거 marker만으로 통과하지 않는다.
+5. 모든 권한 검증이 끝난 후 B1의 전체 ARM64 후보 빌드를 허용한다. 실패하면 해당 단계에서
+   멈추고 IAM 수정 후 실패 검사만 재실행한다. principal·대상·정책 변경 시 관련 증거를 재검증한다.
+
+현재 `preflight-host.sh`의 helper 존재·`oci os ns get`·기존 probe 파일 검사는 이 gate를 대신할 수 없다.
+[과거 장애 수정](https://github.com/goldmayo/oioi-bwg/commit/6eb3d9ac9ea2c0b7a93778b6272efe60e7a13930)에서도
+동일 principal의 command list 성공 뒤 Instance 조회·CreateInstanceAgentCommand가 실패했다.
+
+### 4.2. P06 metadata 차단 완료 조건
+
+VM IAM은 process별로 나뉘지 않는다. Web에 MFA env를 주지 않는 것만으로 Console secret을
+보호하지 못하므로 Web·Console의 `169.254.169.254` 접근 차단을 **P06 공개 gate**로 둔다.
+B0의 사전 차단을 B2 host 설치·upgrade·복구 절차에도 반영한다. host firewall/network 수단은 실제
+Docker 경로를 확인해 선택하고 host network·privileged·Docker socket 등 우회 경로를 허용하지 않는다.
+
+실제 OCI VM의 두 앱 container 안에서 IMDSv1(활성인 경우) 및 IMDSv2의 metadata/identity 경로에
+직접 요청한다. v2는 `Authorization: Bearer Oracle`을 포함하고 proxy를 우회해 검사하며 응답 body는
+버린다. header 누락에 따른 401/404를 네트워크 차단 증거로 쓰지 않는다.
+host의 Instance Principal pull·secret 읽기 성공을 양성 대조로 두어 서비스 장애와 차단을 구분한다.
+container 재생성·Docker/VM 재시작·rollback 후에도 차단이 유지돼야 하며 검증 결과와 적용 규칙을
+RESULT에 기록한다. 로컬 mock으로 실제 VM의 차단 완료를 주장하지 않는다.
+[IMDS 요청 규칙](https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/gettingmetadata.htm),
+[Instance Principal 경계](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm).
+P08에서는 Runner/worker·Queue IAM·Unix socket을 추가 검증하며 Web/Console 차단을 재검증한다.
 
 ## 5. 배포·복구에서 먼저 해결할 사항
 
@@ -146,6 +230,12 @@ E 이후 previous가 Web Admin을 포함한 pair라면 일반 자동 rollback �
 관리 기능이 제거되거나 실제 경계에서 차단된 검증 pair만 안전한 복구 기준으로 삼는다.
 안전한 pair가 없으면 접근 제한/maintenance를 유지하고 수동 복구한다. password-only 관리 경로를 열지 않는다.
 등록 허용 flag·proxy 접근 제한 같은 보안 설정은 과거 env/config 복원으로 다시 열리지 않게 검증한다.
+
+E는 `/api/auth/signup/otp`, `/api/auth/signup/otp/verify`, `/api/auth/signup/complete`의 POST도
+제거/차단한다. UI만 숨기지 않으며 기존 client·발급된 가입 OTP/증명을 사용한 직접 요청에도
+메일 발송·OTP 변경·Account 생성이 없어야 한다. 기존 Account·일반 로그인·조회는 보존한다.
+과거 이미지 rollback 후에도 가입 중단 경계가 유지되는지 확인한다. 도메인의 가입 방식 규칙을
+임의의 관리자 생성 정책으로 바꾸지 않고 공개 접수 중단의 적용 범위를 E에서 명시한다.
 
 ### Migration과 secret은 배포 전에 준비
 
@@ -197,13 +287,15 @@ DB/인증 변경은 기존 `pnpm test:integration:postgres:local`, `pnpm test:in
 E에서는 두 앱 관리 CRUD 회귀를 **Console 관리 CRUD + Web 관리 거절/일반 기능 유지**로 전환한다.
 fixture는 격리 DB에만 생성하고 잔여 연결/lock·DB/role 정리를 확인한다.
 
-| 수준 | 필요한 증거 | 완료로 대체할 수 없는 것 |
-| --- | --- | --- |
-| Ops 자동 검사 | pair 누락/변조 거절, lock, secret 실패 시 무변경, 한쪽 실패/rollback 실패, state/env 복구 | mock Docker만으로 실제 배포 복구 완료 주장 |
-| 로컬 실제 runtime | 두 Docker 이미지+Caddy+Compose PostgreSQL, HTTPS/쿠키/Origin, OTP/CRUD, 한쪽 장애와 pair 복구 | 두 standalone Node process 검증만으로 두 이미지 완료 주장 |
-| Promotion | 같은 source/run의 두 ARM64 게시 digest pull/architecture/health/인증 smoke, artifact/tree 일치 | amd64·다른 tag·재build 이미지의 성공 |
-| 제한된 환경 적용 | 실제 host preflight/HTTPS/DB migration·권한/Vault·CLI/키 복구, 실물 인증 앱 QR 등록·로그인 | 자동 QR decode만으로 실물 등록 완료 주장 |
-| 공개 gate | Web 관리 직접 접근 거절, enrollment 닫힘, 두 hostname cookie 격리, reset/강등 후 옛 JWT 거절, rollback·자원 proof | feature PR/Promotion merge만으로 배포 완료 주장 |
+| 수준              | 필요한 증거                                                                                                                | 완료로 대체할 수 없는 것                                  |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 빌드 전 IAM       | §4.1 동일 주체의 실제 Plan/Apply·두 repo push/pull·새 secret 읽기·새 Run Command exit 0                                    | helper·namespace 조회·command list·과거 probe marker      |
+| Ops 자동 검사     | pair 누락/변조 거절, lock, secret 실패 시 무변경, 한쪽 실패/rollback 실패, state/env 복구                                  | mock Docker만으로 실제 배포 복구 완료 주장                |
+| 로컬 실제 runtime | 두 Docker 이미지+Caddy+Compose PostgreSQL, HTTPS/쿠키/Origin, OTP/CRUD, 한쪽 장애와 pair 복구                              | 두 standalone Node process 검증만으로 두 이미지 완료 주장 |
+| Promotion         | 같은 source/run의 두 ARM64 게시 digest pull/architecture/health/인증 smoke, artifact/tree 일치                             | amd64·다른 tag·재build 이미지의 성공                      |
+| 제한된 환경 적용  | 실제 host preflight/HTTPS/DB migration·권한/Vault·CLI/키 복구, 실물 인증 앱 QR 등록·로그인                                 | 자동 QR decode만으로 실물 등록 완료 주장                  |
+| VM metadata       | §4.2 실제 두 앱 차단 + host 양성 대조, container/Docker/VM 재시작·복구 후 유지                                             | MFA env 분리·v2 header 누락·local mock                    |
+| 공개 gate         | Web 관리·가입 API 직접 접근 거절, enrollment 닫힘, 두 hostname cookie 격리, reset/강등 후 옛 JWT 거절, rollback·자원 proof | feature PR/Promotion merge만으로 배포 완료 주장           |
 
 Web+Console pool 최대 20에 migrator/operator/monitoring·PostgreSQL reserved connection 여유를 더해
 실제 `max_connections`와 비교한다. 2 OCPU/12 GB 기준은 헌법의 목표이며 실측값이 아니다.
@@ -218,7 +310,7 @@ SSH 포워딩과 Caddy 차단/전환의 실제 경로, Console OCIR/Vault/IAM �
 operator 실행 경계와 key 복구 보관 방식, 실측 pool/메모리/디스크 여유다.
 이 값들을 추측한 production 명령은 계획에 넣지 않았다.
 
-다음 구현은 P06-A부터다. B1/B2 연결과 host upgrade, C/D의 제한 운영 proof를 건너뛰고
+다음 구현은 P06-A부터이며 ARM64 빌드 전 B0를 완료한다. B1/B2 연결과 host upgrade, C/D의 제한 운영 proof를 건너뛰고
 Web Admin을 제거하거나 Console을 공개하지 않는다. 외부 환경 적용은 구체적인 변경·대상·복구
 절차를 review 가능하게 만든 후 별도 승인으로 진행한다. 현재 요청으로 production DB/credential을 사용하지 않는다.
 VM 분리, 무중단 배포, 범용 release framework, shared limiter 저장소, DB role hardening,

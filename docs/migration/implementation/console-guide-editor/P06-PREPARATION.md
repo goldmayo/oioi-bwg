@@ -5,14 +5,14 @@ status: draft
 authority: plan
 source_commit: 5135f6eb1a53782b86a3120b1d8b0134410bf4d4
 created_at: "2026-10-10"
-updated_at: "2026-10-10"
-revision: 1
+updated_at: "2026-10-11"
+revision: 2
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
 
 **preview에서 만들어 둔 기존 관리자 계정을 그대로 사용한다.** 관리자 계정 생성·승격은
-사전 준비에서 제외한다. 일반 회원가입 페이지는 사용자 지시에 따라 P06에서 제거할 대상으로
+사전 준비에서 제외한다. 일반 회원가입 페이지와 가입 API 세 개는 사용자 지시에 따라 P06에서 종료할 대상으로
 남기며 이 안내에서는 생성·수정·삭제하지 않는다. 공인 IP 등록·고정 IP·WAF 차단 규칙·
 Cloudflare Access 가입도 요구하지 않는다.
 
@@ -30,14 +30,14 @@ apex는 www로 redirect하는 안이며 적용 절차는 P06 전환 시 확정�
 
 ## 1. 먼저 실행 시점을 구분하기
 
-| 항목 | 지금 | P06 구현·검증 후 |
-| --- | --- | --- |
-| Cloudflare | 현재 설정 보관, Console 캐시 제외 준비, SSL 상태 확인 | Console DNS 연결, www Worker 연결 해제·VM 전환 |
-| OCI Vault | Console 키 보관, secret OCID·복구 위치 기록 | host secret mapping·읽기 권한 적용 |
-| OCIR·IAM | 기존 repository/compartment 확인 | Terraform으로 Console repository·최소 권한 추가 |
-| GitHub | 기존 Environment/변수/secret 이름 확인 | 확정된 Console 변수·운영 build 입력 반영 |
-| VM | Caddy 실행 방식·설정 경로·포트·자원 확인 | 두 앱 배포·HTTPS·MFA 등록/회수 검증 |
-| R2 | assets 연결·버킷 의존성 확인 | 필요 시 파일 이관 후 이전 리소스 종료 |
+| 항목       | 지금                                                  | P06 구현·검증 후                                  |
+| ---------- | ----------------------------------------------------- | ------------------------------------------------- |
+| Cloudflare | 현재 설정 보관, Console 캐시 제외 준비, SSL 상태 확인 | Console DNS 연결, www Worker 연결 해제·VM 전환    |
+| OCI Vault  | Console 키 보관, secret OCID·복구 위치 기록           | host secret mapping·읽기 권한 적용                |
+| OCIR·IAM   | Stack·주체/domain·compartment·정책 기록               | B0의 Plan/Apply·실제 권한 검사 완료 후 ARM64 빌드 |
+| GitHub     | 기존 Environment/변수/secret 이름 확인                | 확정된 Console 변수·운영 build 입력 반영          |
+| VM         | Caddy 실행 방식·설정 경로·포트·자원 확인              | 두 앱 배포·HTTPS·MFA 등록/회수 검증               |
+| R2         | assets 연결·버킷 의존성 확인                          | 필요 시 파일 이관 후 이전 리소스 종료             |
 
 기준 코드의 Console은 HTTP loopback만 허용하고 쿠키 Secure=false이며 배포는 Web 한 앱만
 처리한다. 지금 DNS와 `CONSOLE_ORIGIN=https://console.oioibawige.com`만 넣으면 정상 실행되지 않는다.
@@ -100,6 +100,9 @@ preview DB에 기존 MFA가 등록돼 있다면 해당 키를 먼저 확보·보
 출력된 디렉터리의 두 파일을 각각 열어 한 줄 값을 사용한다. 서로 다른 키이며 Web AUTH_SECRET과
 로컬 개발 키를 재사용하지 않는다. 키 파일을 repo·PR·채팅에 붙여 넣지 않는다.
 
+생성 운영자의 Secret/Vault/Key 범위와 `SECRET_CREATE`·`VAULT_CREATE_SECRET`·`KEY_ENCRYPT`·
+`KEY_DECRYPT`를 먼저 확인한다. 정책별 범위·통과 조건은 [계획 §4.1](P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)을 따른다.
+secret 생성 권한을 VM의 내용 읽기 권한이나 Resource Manager 권한과 합쳐 판단하지 않는다.
 OCI에서 기존 runtime secret이 있는 Vault의 Secrets → Create secret으로 이동한다.
 메뉴를 찾기 어려우면 OCI 검색창의 Vault/Secrets를 사용한다. 두 secret을 각각 생성한다.
 
@@ -126,9 +129,34 @@ GitHub에 runtime 키 원문을 등록하지 않는다. 배포/등록마다 새 
 OCI Container Registry에서 기존 `oioi-bwg`의 region·compartment·namespace·private 여부를 기록한다.
 Console repository 이름은 `oioi-bwg-console`을 제안하며 P06 후보 계약에서 확정한다.
 repository는 Terraform이 관리하므로 지금 수동 생성하지 않는다.
-같은 Resource Manager Stack의 Plan 검토 후 Console repository·VM pull·CI push 권한을 추가한다.
-VM에는 위 두 secret 읽기 권한을 추가하고 Run Command principal에 Vault/DB 권한을 합치지 않는다.
-기존 VM·Web repository를 교체/삭제하는 Plan을 적용하지 않는다.
+**전체 ARM64 빌드보다 먼저 P06-B0를 통과해야 한다.** 정책 형식·주체별 권한·실제 통과 조건은
+[계획 §4.1](P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)이 소유한다. 다음을 기록한다.
+
+| 확인 화면/근거                                | 보관할 값                                                                                                                               |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Resource Manager → 기존 Stack → 소스 설정/Job | Stack OCID, repository/ref, Job의 실제 SHA, 작업 경로 `infra/oci`, region, Plan/Apply Job ID                                            |
+| IAM → Domains/Groups/Policies 및 Job 인증     | Stack 실행자/provider principal, Vault 생성자, `OCIR_USERNAME` 게시 사용자, `OCI_CLI_USER` API 사용자 각각의 OCID·identity domain/group |
+| Registry·Compute·Secret 리소스                | 각 compartment OCID, 대상 VM, 두 repo 이름/private 여부, Vault/Key·새 secret 두 OCID                                                    |
+| IAM 정책                                      | Resource Manager 실행 권한과 리소스 권한, 생성/게시/pull/내용 읽기/Run Command의 개별 정책·조건                                         |
+
+기록에는 credential·secret 원문을 넣지 않는다. 기존 사용자라고 모든 역할이 같은 계정이라고
+가정하지 않는다. Stack 화면 접근 가능이나 Plan 성공만으로 Apply 권한을 증명하지 않는다.
+같은 Stack에서 검토한 Plan을 Apply하고, 기존 VM·Web repo·Vault/Key·backup의 교체/삭제가
+나오면 중단한다. VM의 새 Console secret 읽기 권한 추가 전에 기존 Web metadata 차단을 확인한다.
+Run Command principal에 Vault/DB 권한을 합치지 않는다.
+
+B0 구현 후 승인된 실행 시점에는 아래 순서대로 증거를 기록한다. 지금 구현되지 않은 probe를
+임의의 운영 shell 명령으로 대신 실행하지 않는다.
+
+1. IAM 준비와 Web metadata 차단 → 동일 Stack Plan 검토·Apply.
+2. 동일 CI 게시 계정으로 작은 이미지를 Web/Console repo에 push → VM Instance Principal로 digest pull.
+3. VM host에서 새 secret 두 개의 CURRENT 읽기·형식 검사. 원문 출력 없이 OCID/version·성공 여부만 기록.
+4. 동일 CI API 계정으로 Instance 조회 → 새 Run Command 생성 → VM 실행 → 결과 조회·exit 0 기록.
+5. 네 단계 성공 후 전체 ARM64 빌드. 실패 시 중단하고 권한 수정 후 실패 검사만 재실행.
+
+helper 존재·`oci os ns get`·기존 probe marker는 위 실증을 대체하지 못한다.
+metadata 차단은 [계획 §4.2](P06-PLAN.md#42-p06-metadata-차단-완료-조건)에 따라 최종 실제 두 앱과
+재생성/재시작/rollback까지 확인한다. P08로 미루지 않는다.
 
 GitHub → 저장소 Settings → Environments → `oci-development-image`에서 다음 **이름의 존재**를 확인한다.
 
@@ -140,7 +168,7 @@ GitHub → 저장소 Settings → Environments → `oci-development-image`에서
 기존 credential을 재발급하거나 새 Environment를 미리 만들지 않는다. Console 변수명·Sentry 설정은
 P06 구현과 함께 확정한다. 현재 workflow의 NEXT_PUBLIC_APP_ENV=staging은 고정 build 입력이므로
 GitHub Variable만 production으로 바꿔 해결하지 않는다. 운영 입력으로 만든 digest 자체를 검증해야 한다.
-완료: 기존 설정 위치 확인, Console repository 이름안과 Vault OCID 준비.
+준비 완료: 위 실행 대상·주체·정책 기록과 기존 GitHub 설정 확인. 빌드 허용은 실제 B0 증거 확보 후다.
 
 ## 5. VM: Caddy·포트·자원 조회
 
@@ -200,7 +228,8 @@ Console의 최종 origin은 `https://console.oioibawige.com`, 공개 시 enrollm
 관리자 비밀번호·TOTP·키 원문을 준비 기록에 넣지 않는다.
 
 두 앱과 데이터/이미지 보존을 확인한 뒤 기존 Web Worker·staging/www.staging·preview 경로와
-이전 배포 설정을 종료한다. 일반 회원가입 페이지 제거는 사용자 지시대로 P06 구현에서 다룬다.
+이전 배포 설정을 종료한다. 일반 회원가입 페이지와 `/api/auth/signup/otp`, `/api/auth/signup/otp/verify`,
+`/api/auth/signup/complete` POST 종료는 P06-E에서 구현·직접 호출 검증한다.
 DNS 전환만으로 운영 활성화·MFA 검증·배포 완료를 기록하지 않는다.
 
 ## 8. 준비 완료 체크
@@ -208,7 +237,8 @@ DNS 전환만으로 운영 활성화·MFA 검증·배포 완료를 기록하지 
 - [ ] 현재 Cloudflare DNS/Worker/관련 규칙 기록.
 - [ ] Console 캐시 Bypass 규칙 또는 draft, SSL mode·인증서 범위 기록.
 - [ ] Console 키 두 개의 Vault OCID와 보호된 복구 사본 준비.
-- [ ] 기존 OCIR/GitHub 설정 위치 확인.
+- [ ] 기존 OCIR/GitHub 설정과 Stack 소스 SHA/path·주체/domain·세 compartment·정책 기록.
+- [ ] ARM64 빌드 전 승인된 B0 Plan/Apply·push/pull·새 secret 읽기·새 Run Command 증거 확보.
 - [ ] VM의 Caddy 배치·설정 경로·포트·자원·시간 동기화 기록.
 - [ ] assets/R2의 실제 연결과 이관 필요 여부 확인.
 
