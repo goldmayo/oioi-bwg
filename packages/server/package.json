@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./auth/admin-mfa-crypto": "./src/auth/admin-mfa-crypto.ts",
+    "./auth/admin-mfa-totp": "./src/auth/admin-mfa-totp.ts",
     "./auth/ability": "./src/auth/ability.ts",
     "./auth/request-context": "./src/auth/request-context.ts",
     "./db": "./src/db/index.ts",
@@ -39,6 +41,7 @@
     "argon2": "^0.45.1",
     "drizzle-orm": "^0.45.1",
     "oci-sdk": "^2.140.0",
+    "otplib": "13.5.0",
     "postgres": "^3.4.8",
     "zod": "^4.3.6",
     "server-only": "0.0.1"
