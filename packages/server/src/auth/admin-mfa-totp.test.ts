@@ -49,6 +49,8 @@ describe("AUTH-009 Console MFA TOTP verification", () => {
       "ABCDEF",
       "００５９２４",
       "000000",
+      undefined as unknown as string,
+      5924 as unknown as string,
     ]) {
       expect(verifyAdminMfaTotp(secret, token, epoch)).toBeNull();
     }

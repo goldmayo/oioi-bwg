@@ -24,7 +24,7 @@ export function verifyAdminMfaTotp(
   epoch: number,
   lastUsedStep?: number,
 ): number | null {
-  if (token.length !== 6 || !/^\d{6}$/.test(token)) return null;
+  if (typeof token !== "string" || token.length !== 6 || !/^\d{6}$/.test(token)) return null;
   try {
     const result = verifySync({
       strategy: "totp",

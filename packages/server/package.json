@@ -24,6 +24,8 @@
     "./services/album-image-service": "./src/services/album-image-service.ts",
     "./services/album-service": "./src/services/album-service.ts",
     "./services/authentication-service": "./src/services/authentication-service.ts",
+    "./services/console-mfa-service": "./src/services/console-mfa-service.ts",
+    "./services/console-mfa-revocation-service": "./src/services/console-mfa-revocation-service.ts",
     "./services/email-verification-service": "./src/services/email-verification-service.ts",
     "./services/signup-service": "./src/services/signup-service.ts",
     "./services/song-service": "./src/services/song-service.ts",
