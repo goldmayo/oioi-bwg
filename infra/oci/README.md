@@ -67,10 +67,17 @@ Compute dynamic group은 유지한다. 해당 instance는 다음 책임만 가�
 GitHub deployment principal은 별도 `oioi_bwg_github_deploy` group에 넣고 다음 권한만 부여한다.
 
 ```text
-use instance-agent-command-family on the Compute compartment
+read instances in the Compute compartment
+manage instance-agent-command-family in the Compute compartment
+use instance-agent-command-execution-family in the Compute compartment
 ```
 
-GitHub principal에는 Vault read, database, runtime secret, SSH, OCIR admin 권한을 주지 않는다.
+세 정책의 실제 statement/domain 표기는 [iam.tf](iam.tf)의 `github_deploy_policy_statements`를 따른다.
+Run Command 계정과 OCIR 이미지 게시 계정을 구분한다. command list 성공은 대상 Instance 조회나
+command 생성 권한의 증명이 아니다. 동일 CI API principal로 Instance 조회 → 새 command 생성 →
+VM 실행 → execution 결과 조회·exit 0까지 기록해야 한다.
+
+Run Command principal에는 Vault read, database, runtime secret, SSH, OCIR admin 권한을 주지 않는다.
 API signing private key는 Terraform state에 넣지 않는다.
 
 ## GitHub environment
@@ -106,6 +113,11 @@ sudo /srv/oioibawige/scripts/preflight-host.sh
 ```
 
 실제 probe 성공 evidence와 agent version을 남기기 전에는 automatic deploy를 활성화하지 않는다.
+현재 preflight의 helper 존재·Object Storage namespace 조회·과거 probe marker만으로 새 repository
+pull·새 secret 읽기·현재 CI 계정의 Run Command 권한까지 증명하지 못한다.
+P06의 빌드 전 주체별 실증과 Web/Console metadata 차단은
+[P06-B0 계획](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)을 따른다.
+이는 현재 OCI 정책/VM 적용 상태를 확인했다는 기록이 아니다.
 
 ## Existing backup IaC adoption
 
