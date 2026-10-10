@@ -8,6 +8,15 @@ import path from "node:path";
 import { chromium } from "playwright";
 import postgres from "postgres";
 
+import {
+  enrollConsoleFixture,
+  fixtureKey,
+  loginConsole,
+  changeConsoleAccess,
+  assertConsoleSessionBoundary,
+  assertConsoleLogsSafe,
+} from "./console-mfa-smoke.mjs";
+
 // 운영/복원 DB에서 fixture를 만들지 않는다. 기존 runner가 생성한 격리 DB만 허용한다.
 for (const name of ["DATABASE_URL", "M7_TEST_POSTGRES_VERIFICATION_URL"]) {
   const url = new URL(process.env[name] ?? "");
@@ -40,6 +49,7 @@ async function start(app, port) {
         : {
             CONSOLE_AUTH_SECRET: "p04-console-private-browser-fixture-secret",
             CONSOLE_ORIGIN: origin,
+            CONSOLE_MFA_ENCRYPTION_KEY: fixtureKey,
           }),
     },
     stdio: ["ignore", log, log],
@@ -62,6 +72,11 @@ async function start(app, port) {
 
 async function login(context, origin, email = "admin@p04.example.test") {
   const page = await context.newPage();
+  if (origin === origins.console) {
+    await loginConsole(context, origin, sql, email);
+    await page.goto(`${origin}/admin/albums`);
+    return page;
+  }
   await page.goto(`${origin}/admin-login`);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
@@ -245,7 +260,7 @@ async function journey(origin, label) {
     const draftInput = page.getByPlaceholder("URL 또는 ID 붙여넣기");
     const saveButton = page.getByRole("button", { name: "저장 (Ctrl+S)", exact: true });
     await draftInput.fill(draftId);
-    await sql`update account set role = 'USER' where id = (select account_id from password_credential where email = 'admin@p04.example.test')`;
+    await changeConsoleAccess(sql, "USER");
     const rejected = page.waitForResponse(
       (r) =>
         r.url().endsWith(`/api/admin/songs/${song.id}/lyrics`) && r.request().method() === "PATCH",
@@ -263,15 +278,19 @@ async function journey(origin, label) {
       animations: "disabled",
     });
 
-    await sql`update account set role = 'ADMIN' where id = (select account_id from password_credential where email = 'admin@p04.example.test')`;
+    await changeConsoleAccess(sql, "ADMIN");
+    assert.equal(
+      (await context.request.get(`${origin}/api/admin/songs`)).status(),
+      401,
+      "restored ADMIN must not restore the old JWT",
+    );
     await context.clearCookies();
     const popup = context.waitForEvent("page");
     await page.getByRole("link", { name: "다시 로그인", exact: true }).click();
     const loginPage = await popup;
     await loginPage.waitForURL(`${origin}/admin-login`);
-    await loginPage.getByLabel("Email").fill("admin@p04.example.test");
-    await loginPage.getByLabel("Password").fill(password);
-    await loginPage.getByRole("button", { name: "로그인", exact: true }).click();
+    await loginConsole(context, origin, sql);
+    await loginPage.goto(`${origin}/admin/albums`);
     await loginPage.waitForURL(`${origin}/admin/albums`);
     await loginPage.close();
     await page.getByRole("button", { name: "로그인 상태 확인", exact: true }).click();
@@ -352,16 +371,19 @@ try {
     ["ADMIN", "ACTIVE", "admin"],
     ["USER", "ACTIVE", "user"],
     ["ADMIN", "SUSPENDED", "disabled"],
+    ["ADMIN", "ACTIVE", "unregistered"],
   ]) {
     const [account] =
       await sql`insert into account (role, status) values (${role}, ${status}) returning id`;
     await sql`insert into profile (account_id, nickname) values (${account.id}, ${`p04-${email}`})`;
     await sql`insert into password_credential (account_id, email, password_hash, email_verified_at, password_changed_at) values (${account.id}, ${`${email}@p04.example.test`}, ${passwordHash}, now(), now())`;
   }
+  await enrollConsoleFixture();
   origins = { web: await start("web", 3200), console: await start("console", 3201) };
   browser = await chromium.launch();
   const web = await journey(origins.web, "web");
   const consoleApp = await journey(origins.console, "console");
+  await assertConsoleSessionBoundary(browser, origins.console, sql);
   for (const [from, to, target] of [
     [web, origins.console, "oioi-console.session-token"],
     [consoleApp, origins.web, "authjs.session-token"],
@@ -376,18 +398,13 @@ try {
     );
     await context.close();
   }
-  for (const email of ["user", "disabled"]) {
+  for (const email of ["user", "disabled", "unregistered"]) {
     const context = await browser.newContext();
-    const page = await context.newPage();
-    await page.goto(`${origins.console}/admin-login`);
-    await page.getByLabel("Email").fill(`${email}@p04.example.test`);
-    await page.getByLabel("Password").fill(password);
-    await page.getByRole("button", { name: "로그인", exact: true }).click();
-    await page.getByText("이메일 또는 비밀번호를 확인해주세요.", { exact: true }).waitFor();
+    await loginConsole(context, origins.console, sql, `${email}@p04.example.test`, false);
     assert.equal((await context.request.get(`${origins.console}/api/admin/songs`)).status(), 401);
     await context.close();
   }
-  await sql`update account set role = 'USER' where id = (select account_id from password_credential where email = 'admin@p04.example.test')`;
+  await changeConsoleAccess(sql, "USER");
   assert.equal(
     (await consoleApp.context.request.get(`${origins.console}/api/admin/songs`)).status(),
     401,
@@ -396,6 +413,7 @@ try {
   console.log(
     "Private admin migration smoke passed: both apps, isolated secrets/cookies, non-admin/inactive rejection and role revocation",
   );
+  assertConsoleLogsSafe(artifacts);
 } catch (error) {
   if (browser?.isConnected()) {
     for (const [contextIndex, context] of browser.contexts().entries()) {

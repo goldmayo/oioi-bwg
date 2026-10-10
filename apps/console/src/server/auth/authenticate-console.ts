@@ -1,13 +1,13 @@
 import "server-only";
 
-import { getDatabase } from "@oioi-bwg/server/db";
-import { findAuthorizationFactsByAccountId } from "@oioi-bwg/server/repositories/auth-repository";
-import { authenticateCredentials } from "@oioi-bwg/server/services/authentication-service";
+import { AdminMfaCryptoError, parseAdminMfaKey } from "@oioi-bwg/server/auth/admin-mfa-crypto";
+import { authenticateConsoleMfa } from "@oioi-bwg/server/services/console-mfa-service";
 
-/** Console의 기존 password 검증 뒤 활성 관리자만 identity로 반환한다. */
-export async function authenticateConsole(email: string, password: string) {
-  const identity = await authenticateCredentials(email, password);
-  if (!identity) return null;
-  const facts = await findAuthorizationFactsByAccountId(getDatabase(), BigInt(identity.id));
-  return facts?.status === "ACTIVE" && facts.role === "ADMIN" ? identity : null;
+/** runtime key를 명시적으로 전달하며 password-only identity는 발급하지 않는다. */
+export async function authenticateConsole(email: string, password: string, otp: string) {
+  const encoded = process.env.CONSOLE_MFA_ENCRYPTION_KEY ?? "";
+  if (encoded === process.env.CONSOLE_AUTH_SECRET || encoded === process.env.AUTH_SECRET)
+    throw new AdminMfaCryptoError();
+  const key = parseAdminMfaKey(encoded);
+  return authenticateConsoleMfa(email, password, otp, key);
 }
