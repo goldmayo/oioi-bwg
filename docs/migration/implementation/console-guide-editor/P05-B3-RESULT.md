@@ -36,3 +36,19 @@ production host/Vault 경로의 개방·guard/smoke는 별도 승인과 P06 검�
 C/D의 Auth.js/JWT 거절·등록 QR 전용 secret 취급·Origin/limiter·HTTP/UI는 아직 구현하지 않았다.
 Web 전체 Session 회수와 탈퇴 개인정보 제거 service는 완료하지 않았고, 탈퇴 secret 제거/tombstone 정책과
 [runtime 직접 SQL 우회 한계](P05-A-RESULT.md#pr-121-리뷰-보완-2026-10-10)는 유지한다.
+
+## PR #124 리뷰 보완 (2026-10-10)
+
+리뷰 기준은 `4da7a741953bb73008d175ddb77b1573ea88e444`, 보완 구현·검증 source는
+`72f8cc867d269594f1a062fdfdd5ec42a109ab6c`다. 사용자 변경 없이 같은 PR 브랜치에서 추가 커밋했다.
+[운영 절차](../../../../ops/oci/README.md#console-mfa-reset-및-운영-rolestatus-변경-p05-b3)에
+승인 티켓의 사유·승인자와 operator UID/UTC 실행 시각/대상/CLI 결과를 연결하도록 명시했다.
+사유 파일은 입력 확인이며 영속 감사 저장이 아니다. 연결은 운영 절차로 요구하며 CLI 자동 저장/참조값은 추가하지 않았다.
+loopback/DB identity가 SSH 포워딩까지 차단하지 않는 한계와 P06 credential 분리·실제 접근 통제 검증도 명시했다.
+
+통합 테스트는 성공/실패 모두 stdout와 stderr를 수집해 양쪽에서 민감정보를 검사한다.
+`pnpm test:integration:postgres:local` **33/33 통과**, 임시 DB/role 정리와 잔여 connection/advisory lock 0.
+직접 실행한 기본 여섯 검사 모두 통과(하네스 18건, 단위 417건은 Turbo cache 결과).
+테스트/문서 보완으로 앱 runtime/build 변경이 없어 build는 실행하지 않았다.
+pre-commit 자동 eslint/prettier 통과. pre-push 자동 검사 결과는 갱신한 PR 본문에 별도로 기록한다.
+production DB/credential을 사용하지 않았다. 새 head의 CI와 병합은 이전 `4da7a74` CI 성공과 구분한다.
