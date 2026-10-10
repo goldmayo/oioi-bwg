@@ -4,8 +4,12 @@ import fs from "node:fs";
 import { loginConsole, nextConsoleOtp } from "./console-mfa-smoke.mjs";
 
 const password = "P04-fixture-pass1!";
+const consoleStandaloneDirectory = "apps/console/.next/standalone/apps/console";
 const manifest = JSON.parse(
-  fs.readFileSync("apps/console/.next/server/server-reference-manifest.json", "utf8"),
+  fs.readFileSync(
+    `${consoleStandaloneDirectory}/.next/server/server-reference-manifest.json`,
+    "utf8",
+  ),
 );
 function actionId(name) {
   const match = Object.entries(manifest.node).find(([, entry]) => entry.exportedName === name);
