@@ -70,9 +70,15 @@ export async function loginConsole(
   return otp;
 }
 
-export async function changeConsoleAccess(sql, role, status = "ACTIVE", reset = false) {
+export async function changeConsoleAccess(
+  sql,
+  role,
+  status = "ACTIVE",
+  reset = false,
+  email = fixtureEmail,
+) {
   const [current] =
-    await sql`select a.id,a.role,a.status,m.version from account a join admin_mfa m on m.account_id=a.id where a.id=(select account_id from password_credential where email=${fixtureEmail})`;
+    await sql`select a.id,a.role,a.status,m.version from account a join admin_mfa m on m.account_id=a.id where a.id=(select account_id from password_credential where email=${email})`;
   const [server] =
     await sql`select extract(epoch from pg_postmaster_start_time())::text as started`;
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "p05c-cli-"));
@@ -245,10 +251,10 @@ export async function assertConsoleSessionBoundary(browser, origin, sql) {
   for (const item of contexts) await item.close();
 }
 
-export function assertConsoleLogsSafe(artifacts) {
+export function assertConsoleLogsSafe(artifacts, additionalValues = []) {
   for (const app of ["web", "console"]) {
     const output = fs.readFileSync(path.join(artifacts, `${app}.log`), "utf8");
-    for (const value of sensitiveValues)
+    for (const value of [...sensitiveValues, ...additionalValues])
       assert.ok(
         !output.includes(value),
         "runtime log must not contain fixture credentials, OTP, secret or key",

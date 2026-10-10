@@ -6,6 +6,7 @@
   "exports": {
     "./album": "./src/album.ts",
     "./authorization": "./src/authorization.ts",
+    "./console-mfa": "./src/console-mfa.ts",
     "./error": "./src/error.ts",
     "./signup": "./src/signup.ts",
     "./song": "./src/song.ts"

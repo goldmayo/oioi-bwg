@@ -65,6 +65,8 @@ export async function assertConsoleAuthIngress(browser, origin, sql, artifacts) 
       ["POST", "/api/auth/callback/credentials"],
       ["POST", "/api/auth/signout"],
       ["POST", "/api/auth/session"],
+      ["POST", "/api/auth/mfa/setup"],
+      ["POST", "/api/auth/mfa/confirm"],
     ]) {
       const response = await context.request.fetch(`${origin}${route}`, {
         method,
@@ -145,12 +147,14 @@ export async function assertConsoleAuthIngress(browser, origin, sql, artifacts) 
   assert.equal(sessionCookie(await context.cookies()), undefined);
   await context.close();
 
-  // 아직 OTP UI가 없는 C2에서는 실제 폼이 보내는 Flight payload를 관찰한 뒤 OTP 필드만 보완한다.
+  // 실제 OTP 폼의 Flight payload로 Action과 직접 callback의 공유 제한을 검사한다.
   const attempts = await browser.newContext();
   const loginPage = await attempts.newPage();
   await loginPage.goto(`${origin}/admin-login`);
   await loginPage.getByLabel("Email").fill("rate-action@p04.example.test");
   await loginPage.getByLabel("Password").fill(password);
+  await loginPage.getByRole("button", { name: "다음", exact: true }).click();
+  await loginPage.getByLabel("인증 코드").fill("000000");
   const emitted = loginPage.waitForRequest(
     (r) => r.method() === "POST" && Boolean(r.headers()["next-action"]),
   );
@@ -170,7 +174,7 @@ export async function assertConsoleAuthIngress(browser, origin, sql, artifacts) 
   // Flight의 root를 마지막에 보낸다. plain object는 숫자 key 0을 앞에 옮겨 FormData가 비게 된다.
   fields.append("0", root);
   const multipart = fields;
-  await loginPage.getByText("이메일 또는 비밀번호를 확인해주세요.", { exact: true }).waitFor();
+  await loginPage.getByText("인증 정보를 확인해주세요.", { exact: true }).waitFor();
   const positive = await browser.newContext();
   const positiveFields = new FormData();
   for (const [name, value] of fields) positiveFields.append(name, value);
@@ -191,15 +195,16 @@ export async function assertConsoleAuthIngress(browser, origin, sql, artifacts) 
   const beforeLimits = fs
     .readFileSync(`${artifacts}/console.log`, "utf8")
     .split('"event":"auth.failure"').length;
-  for (let i = 0; i < 5; i++) {
+  // 최초 실제 UI 실패 1건과 아래 4건이 계정 한도 5건을 소모한다.
+  for (let i = 0; i < 4; i++) {
     const response = await action(attempts, origin, "signIn", origin, multipart);
-    assert.ok((await response.text()).includes("이메일 또는 비밀번호를 확인해주세요."));
+    assert.ok((await response.text()).includes("인증 정보를 확인해주세요."));
   }
   const limitedAction = await action(attempts, origin, "signIn", origin, multipart);
   const limitedBody = await limitedAction.text();
   assert.ok(
     limitedBody.includes('"code":"RATE_LIMITED"'),
-    `Action limit response: HTTP ${limitedAction.status()}, credentials=${limitedBody.includes("이메일 또는 비밀번호를 확인해주세요.")}`,
+    `Action limit response: HTTP ${limitedAction.status()}, credentials=${limitedBody.includes("인증 정보를 확인해주세요.")}`,
   );
   assert.ok(
     !limitedBody.includes(password) && !limitedBody.includes("rate-action@p04.example.test"),

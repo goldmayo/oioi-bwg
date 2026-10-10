@@ -23,7 +23,7 @@ it("enables login only after hydration and submits the entered credentials", asy
   document.body.append(container);
   expect((screen.getByLabelText("Email") as HTMLInputElement).disabled).toBe(true);
   expect((screen.getByLabelText("Password") as HTMLInputElement).disabled).toBe(true);
-  expect((screen.getByRole("button", { name: "로그인" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "다음" }) as HTMLButtonElement).disabled).toBe(true);
   await act(async () => {
     root = hydrateRoot(container, <LoginForm />);
   });
@@ -32,10 +32,15 @@ it("enables login only after hydration and submits the entered credentials", asy
   );
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "admin@p04.example.test" } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "fixture-password" } });
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  await screen.findByLabelText("인증 코드");
+  expect(signIn).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText("인증 코드"), { target: { value: "123456" } });
   fireEvent.click(screen.getByRole("button", { name: "로그인" }));
   await screen.findByText("검증용 로그인 결과");
   expect(signIn).toHaveBeenCalledOnce();
   const submitted = signIn.mock.calls[0][0] as FormData;
   expect(submitted.get("email")).toBe("admin@p04.example.test");
   expect(submitted.get("password")).toBe("fixture-password");
+  expect(submitted.get("otp")).toBe("123456");
 });

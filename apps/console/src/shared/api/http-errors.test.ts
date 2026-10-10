@@ -4,6 +4,27 @@ import { describe, expect, it } from "vitest";
 import { ApiError, ClientTransportError, normalizeHttpError } from "./http-errors";
 
 describe("normalizeHttpError", () => {
+  it.each([
+    ["42", 42],
+    ["0", undefined],
+    ["1.5", undefined],
+    ["invalid", undefined],
+  ])("handles Retry-After %s without transport retries", async (header, retryAfterSeconds) => {
+    const fetch = async () =>
+      new Response(
+        JSON.stringify({ code: "OTP_RATE_LIMITED", message: "요청 횟수를 초과했습니다." }),
+        {
+          status: 429,
+          headers: { "content-type": "application/json", "retry-after": header },
+        },
+      );
+    const error = await ky
+      .create({ fetch, retry: 0 })
+      .post("https://example.test/auth")
+      .json()
+      .catch(normalizeHttpError);
+    expect(error).toMatchObject({ status: 429, retryAfterSeconds });
+  });
   it("converts a Ky v2 HTTPError body into ApiError", async () => {
     const client = ky.create({
       fetch: async () =>

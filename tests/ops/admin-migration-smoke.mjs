@@ -9,6 +9,7 @@ import { chromium } from "playwright";
 import postgres from "postgres";
 
 import { assertConsoleAuthIngress } from "./console-auth-ingress-smoke.mjs";
+import { assertConsoleEnrollment, assertEnrollmentClosed } from "./console-enrollment-smoke.mjs";
 
 import {
   enrollConsoleFixture,
@@ -35,7 +36,7 @@ const passwordHash =
 const processes = [];
 let browser;
 
-async function start(app, port, append = false) {
+async function start(app, port, append = false, enrollmentEnabled = false) {
   const origin = `http://127.0.0.1:${port}`;
   const log = fs.openSync(path.join(artifacts, `${app}.log`), append ? "a" : "w");
   const child = spawn(process.execPath, [`apps/${app}/.next/standalone/apps/${app}/server.js`], {
@@ -52,6 +53,7 @@ async function start(app, port, append = false) {
             CONSOLE_AUTH_SECRET: "p04-console-private-browser-fixture-secret",
             CONSOLE_ORIGIN: origin,
             CONSOLE_MFA_ENCRYPTION_KEY: fixtureKey,
+            CONSOLE_MFA_ENROLLMENT_ENABLED: String(enrollmentEnabled),
           }),
     },
     stdio: ["ignore", log, log],
@@ -376,6 +378,9 @@ try {
     ["ADMIN", "ACTIVE", "unregistered"],
     ["ADMIN", "ACTIVE", "rate-action"],
     ["ADMIN", "ACTIVE", "rate-concurrent"],
+    ["ADMIN", "ACTIVE", "enroll-concurrent"],
+    ["ADMIN", "ACTIVE", "enroll-ui"],
+    ["ADMIN", "ACTIVE", "enroll-limit"],
   ]) {
     const [account] =
       await sql`insert into account (role, status) values (${role}, ${status}) returning id`;
@@ -386,10 +391,16 @@ try {
   origins = { web: await start("web", 3200), console: await start("console", 3201) };
   browser = await chromium.launch();
   await assertConsoleAuthIngress(browser, origins.console, sql, artifacts);
-  // 제한으로 포화된 프로세스를 종료한다. 다음 C1 회귀는 새 프로세스에서 독립적으로 실행한다.
+  await assertEnrollmentClosed(browser, origins.console);
+  // 제한으로 포화된 C2 뒤 D 등록과 C1 회귀를 각각 새 프로세스에서 독립 실행한다.
   const limitedConsole = processes.at(-1);
   limitedConsole.kill("SIGTERM");
   await once(limitedConsole, "exit");
+  origins.console = await start("console", 3201, true, true);
+  const enrollmentValues = await assertConsoleEnrollment(browser, origins.console, sql, artifacts);
+  const enrollmentConsole = processes.at(-1);
+  enrollmentConsole.kill("SIGTERM");
+  await once(enrollmentConsole, "exit");
   origins.console = await start("console", 3201, true);
   const web = await journey(origins.web, "web");
   const consoleApp = await journey(origins.console, "console");
@@ -423,7 +434,7 @@ try {
   console.log(
     "Private admin migration smoke passed: both apps, isolated secrets/cookies, non-admin/inactive rejection and role revocation",
   );
-  assertConsoleLogsSafe(artifacts);
+  assertConsoleLogsSafe(artifacts, enrollmentValues);
 } catch (error) {
   if (browser?.isConnected()) {
     for (const [contextIndex, context] of browser.contexts().entries()) {
