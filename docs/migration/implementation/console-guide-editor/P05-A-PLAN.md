@@ -32,3 +32,10 @@ created_at: "2026-10-10"
 정수 overflow는 DB 오류로 실패하며 version을 순환시키지 않는다. DB owner의 임의 DELETE/감소를
 trigger로 금지하는 범위는 포함하지 않는다. 양의 CHECK와 승인된 repository 경로의 단조 증가를 구분한다.
 완료 조건은 위 실DB 검증·기본 검사, 한글 commit/push, `migration_main` 대상 PR 생성이다.
+
+## PR #121 리뷰 보완 (2026-10-10)
+
+위 실행 전 계획의 DB 강제 장치 제외 범위는 owner/migrator에만 한정되지 않는다.
+현재 runtime app role도 `admin_mfa`에 DELETE/UPDATE 권한을 갖기 때문에 직접 SQL의 행 삭제·
+재생성·양수 범위 내 version 감소는 단조 증가 보장 대상이 아니다. 승인된 repository 경로의 보장과 구분한다.
+DELETE 권한 제한과 version 변경 권한 세분화는 별도 후속 관심사로 남긴다. DELETE 제한만으로 version 감소를 막지는 못한다.

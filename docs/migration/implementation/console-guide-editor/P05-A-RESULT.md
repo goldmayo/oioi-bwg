@@ -35,3 +35,13 @@ DB CHECK는 양수 version/유효 상태를 보호하며 임의 SQL의 감소/DE
 회수 service의 role/status 동시 commit·복귀 후 JWT 거절·QR 응답 검증은 아직 완료하지 않았다.
 UX/라이브러리 버전/실패 한도는 보류한다. Web 전체 Session 회수도 기존 미구현이며 Console version으로 대체하지 않는다.
 P06의 공개 배포/HTTPS/Web Admin 종료는 남는다. P05-A 결과는 P05 인증 runtime 완료를 의미하지 않는다.
+
+## PR #121 리뷰 보완 (2026-10-10)
+
+[runtime role 설정](../../../../scripts/configure-postgres-runtime-roles.ts)은 `admin_mfa`에도
+SELECT/INSERT/UPDATE/DELETE를 부여한다. 따라서 owner/migrator뿐 아니라 runtime app role의 직접 SQL도
+행 삭제·재생성 또는 양수 범위 내 version 감소가 가능하며 단조 증가 보장 대상이 아니다.
+이번 보완은 이 한계를 명시하는 문서 수정이다. DELETE 제한·version 권한 세분화는 별도 후속 관심사이며,
+DELETE만 제한해도 임의 UPDATE의 version 감소는 막지 못한다. DB 권한·schema·runtime 코드는 변경하지 않았다.
+[기존 CI](https://github.com/goldmayo/oioi-bwg/actions/runs/38016186504)는 `ce29699`에서 전체 필수 job 통과를 확인했다.
+이 문서 보완을 위해 직접 테스트를 재실행하지 않았으며 push hook의 실제 실행 결과는 PR에 별도 기록한다.
