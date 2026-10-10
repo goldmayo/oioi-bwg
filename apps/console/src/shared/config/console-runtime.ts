@@ -31,6 +31,11 @@ export function getConsoleRuntimeConfig(env: ConsoleEnvironment = process.env) {
   return { origin, secret };
 }
 
+/** 공개 전 제한된 등록만 명시적으로 열며 오타/누락은 닫힘으로 처리한다. */
+export function isConsoleMfaEnrollmentEnabled(env: ConsoleEnvironment = process.env) {
+  return env.CONSOLE_MFA_ENROLLMENT_ENABLED === "true";
+}
+
 export const consoleCookies = {
   sessionToken: {
     name: "oioi-console.session-token",

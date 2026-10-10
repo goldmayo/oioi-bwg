@@ -78,7 +78,9 @@
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "globals": "^16.4.0",
-    "turbo": "^2.11.2"
+    "turbo": "^2.11.2",
+    "jsqr": "1.4.0",
+    "pngjs": "7.0.0"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,tsx,mts,cts}": [

@@ -96,7 +96,7 @@ export async function signIn(formData: FormData) {
     if (error instanceof AppError && error.code === "FORBIDDEN")
       return { error: "요청 출처를 확인할 수 없습니다." };
     if (error instanceof AuthError && error.type === "CredentialsSignin")
-      return { error: "이메일 또는 비밀번호를 확인해주세요." };
+      return { error: "인증 정보를 확인해주세요." };
     throw error;
   }
 }

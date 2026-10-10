@@ -24,9 +24,24 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(new URL("/admin", origin).href);
   await page.waitForURL(new URL("/admin-login", origin).href);
-  await page.getByRole("button", { name: "로그인", exact: true }).waitFor();
+  await page.getByRole("button", { name: "다음", exact: true }).waitFor();
   assert.equal(await page.getByLabel("Email").count(), 1);
   assert.equal(await page.getByLabel("Password").count(), 1);
+  const posts = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST") posts.push(request.url());
+  });
+  await page.getByLabel("Email").fill("standalone@example.test");
+  await page.getByLabel("Password").fill("Standalone-fixture-1!");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByLabel("인증 코드").waitFor();
+  await page.getByRole("button", { name: "로그인", exact: true }).waitFor();
+  assert.equal(posts.length, 0, "first step does not authenticate or call an enrollment endpoint");
+  assert.ok(
+    (await page.context().cookies()).every(
+      (cookie) => cookie.name !== "oioi-console.session-token",
+    ),
+  );
   assert.deepEqual(errors, [], "Console browser runtime errors");
   if (process.env.P04_SCREENSHOT_PATH)
     await page.screenshot({ path: process.env.P04_SCREENSHOT_PATH });

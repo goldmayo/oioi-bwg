@@ -4,7 +4,7 @@ import { lazy, Suspense } from "react";
 
 const LoginForm = lazy(() => import("./LoginForm"));
 
-export function LazyLoginForm() {
+export function LazyLoginForm({ enrollmentEnabled = false }: { enrollmentEnabled?: boolean }) {
   return (
     <Suspense
       fallback={
@@ -16,7 +16,7 @@ export function LazyLoginForm() {
         </div>
       }
     >
-      <LoginForm />
+      <LoginForm enrollmentEnabled={enrollmentEnabled} />
     </Suspense>
   );
 }

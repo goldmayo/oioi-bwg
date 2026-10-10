@@ -12,7 +12,11 @@ export class ApiError extends Error {
   readonly code: ApiErrorCode;
   readonly details?: ApiErrorResponse["details"];
 
-  constructor(status: number, response: ApiErrorResponse) {
+  constructor(
+    status: number,
+    response: ApiErrorResponse,
+    readonly retryAfterSeconds?: number,
+  ) {
     super(response.message);
     this.name = "ApiError";
     this.status = status;
@@ -74,7 +78,14 @@ export function normalizeHttpError(error: unknown): unknown {
   const parsed = apiErrorResponseSchema.safeParse(error.data);
 
   if (parsed.success) {
-    return new ApiError(error.response.status, parsed.data);
+    const retryAfter = Number(error.response.headers.get("retry-after"));
+    return new ApiError(
+      error.response.status,
+      parsed.data,
+      error.response.status === 429 && Number.isSafeInteger(retryAfter) && retryAfter > 0
+        ? retryAfter
+        : undefined,
+    );
   }
 
   return new ClientTransportError(
