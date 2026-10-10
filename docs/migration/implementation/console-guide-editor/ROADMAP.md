@@ -5,15 +5,17 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-05"
-revision: 6
+updated_at: "2026-10-10"
+revision: 8
 ---
 
 # 구현 순서와 PR 단위
 
 [설계](DESIGN.md)를 구현하는 **10개 checkpoint**다. 전체 방향 승인 후 runtime/검증 구조 수정 지시를 반영했다.
-Console 배포를 P06으로 앞당긴 독립 기능 작업선을 유지하고, 이번 개정은 P08의 enqueue 응답 불확실성 완료 조건만 보완한다.
-아직 구현하지 않았으며 이 문서 PR에 앱·DB·인증·runner/worker 코드는 포함하지 않는다.
+Console 배포를 P06으로 앞당긴 독립 기능 작업선을 유지하고, P04 이후의 인증 checkpoint는
+[P05 설계 초안](P05-DESIGN.md)에서 상세화한다. 이번 개정은 Auth.js 실패 계약·동시 등록 응답·
+단계별 검증 fixture·운영 회수 경로를 보완한다. 이 문서 PR에는 앱·DB·인증·runner/worker 코드가 없다.
+전체 단계의 최초 소스 기준은 metadata에 유지하며 단계별 실행 내역은 각 PLAN/RESULT에서 확인한다.
 
 ## 1. 코드 의존성과 운영 순서
 
