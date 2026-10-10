@@ -11,6 +11,7 @@ created_at: "2026-10-10"
 [계획](P05-D-PLAN.md)의 구현·직접 검증 source는 위 커밋이다. 사용자 #126 재검토 승인과
 최신 Verify 전체 성공을 확인해 `e907024`로 squash 병합하고 fetch한 merge head에서 분기했다.
 기존 local migration_main은 분기 기준으로 쓰지 않았고 사용자 변경은 없었다.
+[PR #127](https://github.com/goldmayo/oioi-bwg/pull/127)을 migration_main 대상으로 생성했다.
 
 ## 구현과 보장 범위
 
@@ -59,7 +60,10 @@ RHF 첫 로그인 단계는 입력만 확인하고 최종 단계에서 OTP를 �
   [등록 완료](P05-D-ENROLLED.png)를 확보했다. QR/인증 입력은 캡처하지 않았다.
 
 코드 pre-commit의 ESLint/Prettier는 통과했다. 문서 커밋은 lint-staged 대상이 없었다.
-후속 push의 자동 pre-push 결과와 CI 상태는 직접 실행 검사와 구분해 PR/완료 보고에 기록한다.
+최초 push의 pre-push는 `turbo run type-check lint test --affected`의 12개 task를 모두 cache로
+통과했다. 이어 `pnpm type-check:repo`, `pnpm lint:repo`, `pnpm test:harness`(18건),
+`pnpm test:ops`(54건), `pnpm format:check`도 통과했다. 직접 실행 검사와 구분한다.
+이 PR/hook 기록 보완 push의 자동 검사와 최신 CI 상태는 PR/완료 보고에 기록한다.
 
 ## 보류와 후속
 
