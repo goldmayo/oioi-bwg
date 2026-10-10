@@ -6,6 +6,8 @@ import { z } from "zod";
 
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
+import { assertConsoleOrigin } from "./console-origin";
+
 const appErrorDefinitions = {
   ALBUM_NOT_FOUND: { message: "앨범을 찾을 수 없습니다.", status: 404 },
   ALBUM_SLUG_ALREADY_EXISTS: { message: "이미 사용 중인 앨범 slug입니다.", status: 409 },
@@ -41,6 +43,11 @@ class OutputContractError extends Error {
 
 /** JSON syntax failure와 schema failure를 모두 request validation failure로 보존한다. */
 export async function parseJsonRequest<T>(request: Request, schema: z.ZodType<T>): Promise<T> {
+  assertConsoleOrigin(request.headers);
+  if (
+    request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json"
+  )
+    throw new InvalidJsonBodyError();
   let value: unknown;
 
   try {

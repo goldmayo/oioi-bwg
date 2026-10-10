@@ -30,6 +30,17 @@ export async function enrollConsoleFixture() {
   sensitiveValues.push(pending.secret);
 }
 
+export async function nextConsoleOtp(sql) {
+  const [row] =
+    await sql`select last_used_step from admin_mfa where account_id=(select account_id from password_credential where email=${fixtureEmail})`;
+  const step = Math.max(Math.floor(Date.now() / 30_000), Number(row.last_used_step) + 1);
+  while (step > Math.floor(Date.now() / 30_000) + 1)
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  const otp = generateSync({ secret: pending.secret, epoch: step * 30 });
+  sensitiveValues.push(otp);
+  return otp;
+}
+
 export async function loginConsole(
   context,
   origin,
@@ -37,15 +48,7 @@ export async function loginConsole(
   email = fixtureEmail,
   expectedSuccess = true,
 ) {
-  let otp = "000000";
-  if (email === fixtureEmail) {
-    const [row] =
-      await sql`select last_used_step from admin_mfa where account_id=(select account_id from password_credential where email=${email})`;
-    const step = Math.max(Math.floor(Date.now() / 30_000), Number(row.last_used_step) + 1);
-    while (step > Math.floor(Date.now() / 30_000) + 1)
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    otp = generateSync({ secret: pending.secret, epoch: step * 30 });
-  }
+  const otp = email === fixtureEmail ? await nextConsoleOtp(sql) : "000000";
   const { csrfToken } = await (await context.request.get(`${origin}/api/auth/csrf`)).json();
   const response = await context.request.post(`${origin}/api/auth/callback/credentials`, {
     headers: { Origin: origin },
@@ -64,7 +67,6 @@ export async function loginConsole(
     expectedSuccess,
     "MFA fixture login result",
   );
-  if (email === fixtureEmail) sensitiveValues.push(otp);
   return otp;
 }
 

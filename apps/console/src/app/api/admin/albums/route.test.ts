@@ -50,7 +50,7 @@ describe("/api/admin/albums", () => {
     const response = await POST(
       new Request("https://example.test/api/admin/albums", {
         body: JSON.stringify(input),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "POST",
       }),
     );

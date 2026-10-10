@@ -7,6 +7,7 @@ import { deleteAlbum, editAlbum } from "@oioi-bwg/server/services/album-service"
 
 import { getRequestContext } from "@/server/auth/request-context";
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
+import { assertConsoleOrigin } from "@/server/http/console-origin";
 
 interface AlbumRouteContext {
   params: Promise<{ id: string }>;
@@ -23,8 +24,9 @@ export async function PATCH(request: Request, context: AlbumRouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: AlbumRouteContext) {
+export async function DELETE(request: Request, context: AlbumRouteContext) {
   try {
+    assertConsoleOrigin(request.headers);
     const { id } = adminAlbumIdParamsSchema.parse(await context.params);
     await deleteAlbum(await getRequestContext(), id);
     return new Response(null, { status: 204 });

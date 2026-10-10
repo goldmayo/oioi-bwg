@@ -37,7 +37,7 @@ describe("/api/admin/songs/[id]/lyrics", () => {
     const response = await PATCH(
       new Request("https://example.test/api/admin/songs/2/lyrics", {
         body: JSON.stringify(input),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "PATCH",
       }),
       routeContext,
@@ -52,7 +52,7 @@ describe("/api/admin/songs/[id]/lyrics", () => {
     const invalid = await PATCH(
       new Request("https://example.test/api/admin/songs/2/lyrics", {
         body: JSON.stringify({ ...input, lyrics: [{ invalid: true }] }),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "PATCH",
       }),
       routeContext,
@@ -63,7 +63,7 @@ describe("/api/admin/songs/[id]/lyrics", () => {
     const missing = await PATCH(
       new Request("https://example.test/api/admin/songs/2/lyrics", {
         body: JSON.stringify(input),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "PATCH",
       }),
       routeContext,
