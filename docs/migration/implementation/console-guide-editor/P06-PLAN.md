@@ -6,7 +6,7 @@ authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
 updated_at: "2026-10-11"
-revision: 6
+revision: 7
 ---
 
 # P06 계획 초안
@@ -40,6 +40,9 @@ P05 A~D의 통합과 공개 운영 준비를 구분한다. [P05-D 결과](P05-D-
   실제 검증을 ARM64 빌드 전 B0로 추가하고 Web/Console metadata 차단을 P06으로 당긴다.
   일반 회원가입은 페이지와 가입 API 세 개까지 종료한다. OCI 현재 권한·Plan/Apply·push/pull·
   secret 읽기·Run Command는 실행하지 않았으며 운영 IAM 준비 완료 판정이 아니다.
+- revision 7은 #130 병합 커밋 `382049d488f1157f083f694ea260f1fb02ee6d43`에서 배포 기록과
+  실제 container 교체를 구분한다. 기존 Compose 기본 동작을 유지하고 변경 없는 실행 중
+  container는 보존한다. 두 이미지의 동일 source/run 계약과 빌드 생략 보류는 유지한다.
 
 상위 기준은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md),
 [Auth §4.1](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md#41-console의-단계적-전환),
@@ -96,8 +99,9 @@ flowchart LR
 - 기존 단일 VM, Caddy, PostgreSQL, 백업, Monitoring/Logging, Instance Principal, 제한된 sudoers를 유지한다.
   runtime secret은 host가 Vault에서 읽으며 GitHub/이미지/Run Command 본문에 전달하지 않는다.
   Waveform runner/Queue/P07~P10은 선행 조건으로 넣지 않는다.
-- 짧은 maintenance downtime을 허용한다. Compose의 두 container 교체를 원자적 transaction이라고
+- 짧은 maintenance downtime을 허용한다. Compose의 container 교체를 원자적 transaction이라고
   부르지 않는다. 배포 중 접근을 제한하고 **두 앱의 검증 완료**를 논리적 release 성공 기준으로 삼는다.
+  실제 교체는 §5의 Compose 기본 동작을 따른다. 같은 VM이 두 container의 강제 재시작을 요구하지 않는다.
 
 ## 4. PR별 구현 순서와 완료 조건
 
@@ -109,7 +113,7 @@ flowchart LR
 | P06-A 이미지         | Dockerfile 두 runtime target, 일반 CI 두 container artifact/smoke, Console readiness                                 | 같은 source의 두 amd64 실제 이미지에서 server/static/public·native dependency·DB readiness 확인. 런타임 secret 없이 build 성공                             |
 | P06-B0 IAM 검증      | 동일 Stack·주체/정책 inventory, 최소 probe와 권한 증거, metadata 사전 차단                                           | §4.1 실제 Plan/Apply·두 repo push/pull·새 secret 읽기·새 Run Command exit 0. 실패 시 ARM64 빌드 중단                                                       |
 | P06-B1 후보 계약     | Promotion candidate JSON/검증, ARM64 publish/pull, summary/Slack                                                     | 두 ARM64 **게시 digest 자체**로 container smoke 통과 후 artifact 기록. 한쪽 누락·다른 head/run/registry·실패 시 promotion 거절                             |
-| P06-B2 host 배포     | Compose, Run Command, deploy/installer/preflight, env 예시                                                           | 두 이미지/설정 모두 사전 검증, 두 앱 성공 후 상태 확정. 한쪽 실패 시 두 앱과 env 복구, lock·exit code·로그 비밀 미노출 및 실제 두 앱 metadata 차단 검증    |
+| P06-B2 host 배포     | Compose, Run Command, deploy/installer/preflight, env 예시                                                           | 두 이미지/설정 모두 사전 검증, 변경 없는 container 유지·두 앱 성공 후 상태 확정. 한쪽 실패 시 두 앱과 env 복구, lock·exit code·로그 비밀 미노출 및 실제 두 앱 metadata 차단 검증    |
 | P06-C HTTPS 경계     | Console runtime/cookies/Origin/auth ingress, 신뢰 IP limiter, Caddy routing 절차                                     | 제한된 HTTPS에서 host-only Secure 쿠키, 직접 callback/Action/등록의 같은 limiter, 위조 forwarded header·다른 Origin 거절                                   |
 | P06-D 제한 운영 검증 | production용 CLI 실행 경계, migration/키 복구·최초 등록 절차, 기존 smoke 확장                                        | 비공개 Console에서 실물 인증기 등록·새 OTP 로그인·CLI reset/회수·관리 작업·복구 검증. 공개 endpoint로 등록 불가                                            |
 | P06-E Web 관리 종료  | Web `/admin`, `/admin-login`, `/api/admin/*`, 관리 upload Action/연결 UI·테스트, 회원가입 페이지·가입 API 세 개 종료 | Console 작업 검증 후 제거. Web의 직접 관리 호출/이전 Action ID 거절, 일반 로그인·조회 유지, 가입 API 직접 POST 거절·부작용 없음. 안전한 rollback 기준 수립 |
@@ -212,9 +216,32 @@ P08에서는 Runner/worker·Queue IAM·Unix socket을 추가 검증하며 Web/Co
 current/previous를 확정한다. 서로 다른 시점의 Web/Console digest와 env를 섞지 않는다.
 앱 재배포가 DB를 migrate/rollback하거나 MFA version/secret을 되돌리지 않는다.
 
-실패는 `20`(후보 실패·복구 성공), `21`(복구 실패)을 유지한다. Console만 실패해도 Web까지
-직전 pair로 복구한다. 중단/VM 재시작 중 부분 교체 시 완료 상태를 기록하지 않고 접근 제한을
-유지하며, 직전 검증 pair로 명시적으로 복구한 후 해제한다. 무중단/분산 배포 장치는 추가하지 않는다.
+**변경 없는 실행 중 서비스의 container는 유지한다. 전체 `down/up`이나 `--force-recreate`를
+기본 배포·복구에 사용하지 않는다. 배포 성공 판정과 버전 기록은 두 앱을 함께 관리한다.**
+기존 `deploy-release.sh`의 `up -d --wait app`을 두 서비스 대상으로 확장하며 별도의 변경 앱
+선택 로직을 만들지 않는다. 계획 명령은 `docker compose up -d --wait web console`이다.
+Compose가 실제 image·service configuration 변경을 기준으로 교체하고, 미실행 서비스는 시작한다.
+[Docker Compose up 동작](https://docs.docker.com/reference/cli/docker/compose/up/).
+
+| 실제 image digest·환경변수·service 설정 변화 | 실행 중 container의 교체 대상 |
+| --- | --- |
+| Console만 변경 | Console |
+| Web만 변경 | Web |
+| 둘 다 변경 | 둘 다 |
+| 둘 다 동일 | 교체 없이 두 앱 상태 확인 |
+
+소스 파일 수정 여부로 교체 대상을 판단하지 않는다. 환경변수의 유효 값·service 설정은
+앱별로 유지하고 매 배포 공통 release ID·임시 env 경로를 두 앱 설정에 주입해 불필요한 교체를
+유발하지 않는다. CI의 `SENTRY_RELEASE=oioi-bwg@<source SHA>`와 image revision label은
+commit마다 달라지므로 한 앱 소스만 수정해도 두 image digest가 바뀔 수 있다. 이 경우 둘 다
+교체하는 것이 위 기준에 맞으며, 변경 없는 앱의 재시작 방지를 보장했다고 보고하지 않는다.
+한 앱의 빌드를 생략하거나 이전 run의 digest를 재사용하는 최적화는 동일 source/run 후보 계약의
+별도 개정이 필요하므로 보류한다. P06에서는 두 이미지를 같은 source/run에서 검증한다.
+
+실패는 `20`(후보 실패·복구 성공), `21`(복구 실패)을 유지한다. Console만 실패해도 Web·Console의
+목표 digest/env를 직전 pair로 맞추고 두 앱을 검증한다. 실제 복구 교체도 위 기준을 따르므로
+이미 직전 정상 image/config로 실행 중인 container는 유지한다.
+중단/VM 재시작 중 부분 교체 시 완료 상태를 기록하지 않고 접근 제한을 유지하며, 직전 검증 pair로 명시적으로 복구한 후 해제한다. 무중단/분산 배포 장치는 추가하지 않는다.
 
 최초 host 전환에서는 단일 `current` digest를 가짜 Console digest로 채우지 않는다.
 기존 Web digest/env·Compose/script/config와 서비스 이름 `app`을 보존하고,
@@ -296,6 +323,11 @@ fixture는 격리 DB에만 생성하고 잔여 연결/lock·DB/role 정리를 �
 | 제한된 환경 적용  | 실제 host preflight/HTTPS/DB migration·권한/Vault·CLI/키 복구, 실물 인증 앱 QR 등록·로그인                                 | 자동 QR decode만으로 실물 등록 완료 주장                  |
 | VM metadata       | §4.2 실제 두 앱 차단 + host 양성 대조, container/Docker/VM 재시작·복구 후 유지                                             | MFA env 분리·v2 header 누락·local mock                    |
 | 공개 gate         | Web 관리·가입 API 직접 접근 거절, enrollment 닫힘, 두 hostname cookie 격리, reset/강등 후 옛 JWT 거절, rollback·자원 proof | feature PR/Promotion merge만으로 배포 완료 주장           |
+
+B2의 실제 Compose 검증은 §5의 네 변경 조합과 rollback에서 container ID/시작 시각을 비교한다.
+동일 digest라도 한 앱 env/config가 바뀌면 그 앱만 교체되고, 두 앱이 동일하고 정상 실행 중이면
+둘 다 유지돼야 한다. 매 경우 두 앱 health/readiness/smoke 후에만 state를 확정한다.
+mock 명령 인자 확인만으로 container 유지·교체 검증을 완료했다고 하지 않는다.
 
 Web+Console pool 최대 20에 migrator/operator/monitoring·PostgreSQL reserved connection 여유를 더해
 실제 `max_connections`와 비교한다. 2 OCPU/12 GB 기준은 헌법의 목표이며 실측값이 아니다.
