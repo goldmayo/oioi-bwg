@@ -11,7 +11,8 @@ created_at: "2026-10-10"
 [계획](P05-C2-PLAN.md)의 구현·검증 source는 위 커밋이다. 사용자 C1 승인과
 [PR #125 Verify](https://github.com/goldmayo/oioi-bwg/actions/runs/38029030507) 필수 검사 성공 후
 #125를 squash 병합한 `4313eec`를 fetch해 분기했다. 최초 사용자 변경은 없었다.
-이 결과를 포함한 C2 PR은 `migration_main` 대상으로 생성하며 최종 보고/PR 본문에서 연결한다.
+[PR #126](https://github.com/goldmayo/oioi-bwg/pull/126)을 `migration_main` 대상으로 생성했다.
+새 PR은 병합하지 않았으며 CI 전체 성공은 아직 확인하지 않았다.
 
 ## 구현과 보장 범위
 
@@ -73,4 +74,8 @@ process 재시작은 counter를 지운다. 신뢰 proxy IP·복수 process/분�
 완료로 주장하지 않는다. production DB/credential 및 운영 seed 사용은 없었다. C2 PR 병합/D 착수는 보류한다.
 
 자동 hook은 직접 실행 검사와 구분한다. 코드 커밋의 pre-commit eslint/prettier는 통과했다.
-push hook의 실제 명령/결과는 실행 후 PR 본문과 최종 보고에 기록한다.
+문서 커밋은 lint-staged 대상이 없었다. 최초 push의 pre-push는
+`turbo run type-check lint test --affected`의 Console 3개 task를 모두 cache로 통과했다.
+이어 `pnpm type-check:repo`, `pnpm lint:repo`, `pnpm test:harness`(18건),
+`pnpm test:ops`(54건), `pnpm format:check`도 모두 통과했다.
+이 문서의 PR/hook 기록 보완 push에서 자동 재실행되는 검사는 최종 PR 본문/보고에서 구분한다.
