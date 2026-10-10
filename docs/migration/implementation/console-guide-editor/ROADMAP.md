@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-10"
-revision: 8
+revision: 9
 ---
 
 # 구현 순서와 PR 단위
@@ -88,6 +88,8 @@ Runner의 내부 API 기록 후 socket 응답만 유실된 경우와, 기록도 
 이 검증에 Outbox/DB queue/retry scheduler/분산 transaction/범용 reconciliation·broker abstraction을 추가하지 않는다.
 
 P06 전환 순서는 **두 image/routing 준비 → 비공개 Console smoke/MFA 등록 → Web 관리 경로 제거 → 두 앱 배포 검증 → Console 공개**다.
+기존 preview 관리자 계정을 사용하는 외부 사전 준비는 [P06 사전 준비 안내](P06-PREPARATION.md)를 따른다.
+관리자 생성·공인 IP 설정은 준비 항목에서 제외하고, 일반 회원가입 페이지 제거는 P06 구현에서 다룬다.
 P04/P05의 기존 기능과 인가 확인 전에는 기존 경로를 지우지 않는다. rollback도 password-only 관리 경로를 다시 공개하지 않는다.
 Guide writer 전환 뒤 rollback은 새 guide를 읽는 호환 앱으로 제한하고 Song.lyrics의 파괴적 정리는 후속으로 둔다.
 
