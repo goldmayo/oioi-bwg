@@ -12,7 +12,7 @@ created_at: "2026-10-10"
 [PR #125 Verify](https://github.com/goldmayo/oioi-bwg/actions/runs/38029030507) 필수 검사 성공 후
 #125를 squash 병합한 `4313eec`를 fetch해 분기했다. 최초 사용자 변경은 없었다.
 [PR #126](https://github.com/goldmayo/oioi-bwg/pull/126)을 `migration_main` 대상으로 생성했다.
-새 PR은 병합하지 않았으며 CI 전체 성공은 아직 확인하지 않았다.
+최초 결과 기록 시점에는 새 PR을 병합하지 않았으며 CI 전체 성공을 확인하지 못했다.
 
 ## 구현과 보장 범위
 
@@ -79,3 +79,32 @@ process 재시작은 counter를 지운다. 신뢰 proxy IP·복수 process/분�
 이어 `pnpm type-check:repo`, `pnpm lint:repo`, `pnpm test:harness`(18건),
 `pnpm test:ops`(54건), `pnpm format:check`도 모두 통과했다.
 이 문서의 PR/hook 기록 보완 push에서 자동 재실행되는 검사는 최종 PR 본문/보고에서 구분한다.
+
+## PR #126 리뷰 후 CI 산출물 경로 수정
+
+수정 source는 `7e00d383976dba87a97bb433298830f6b5b23430`이다. 리뷰 당시 head `a064529`의
+[Verify](https://github.com/goldmayo/oioi-bwg/actions/runs/38037372855)는 Admin 통합 초기화의
+manifest ENOENT로 실패했다. 위 로컬 빌드 검증은 CI 복원 구조까지 검증한 결과가 아니었다.
+동일 브랜치에서 수정했으며 시작 시 사용자 변경은 없었다.
+
+실패 run의 `ci-standalone` 아카이브를 내려받아 `tar -tzf`로 manifest가
+`apps/console/.next/standalone/apps/console/.next/server/server-reference-manifest.json`에
+포함됨을 확인했다. smoke는 이 standalone 디렉터리 상수를 기준으로 읽도록 수정했다.
+일반 `.next/server`를 추가로 패키징하거나 앱 인증 코드/빌드 설정을 바꿀 필요는 없었다.
+
+- 직접 실행한 기본 여섯 검사 모두 통과했다. harness 18건, unit 445건이며
+  type-check/lint/unit의 네 workspace task는 모두 cache였고 repo 검사도 통과했다.
+  최초 format 실패는 해당 파일에 Prettier를 적용한 뒤 재실행해 통과했다.
+  `node --check tests/ops/console-auth-ingress-smoke.mjs`와 `git diff --check`도 통과했다.
+- 내려받은 amd64 아카이브를 arm64 환경에서 실행한 첫 시도는 Argon2 native build 불일치로
+  중단됐다. 이는 통과로 집계하지 않으며 임시 DB/role 정리와 기존 빌드 복원을 완료했다.
+- 기존 로컬 빌드를 Dockerfile과 동일한 standalone/static 경로만 아카이브한 뒤 복원했다.
+  두 앱 모두 일반 `.next/server`가 없는 상태에서 기존 경로의 ENOENT와 수정 후 import 성공을
+  확인하고 `pnpm test:integration:admin:local` 전체를 실행해 통과했다. 실제 C2 인증 경계,
+  C1 세션 회수 및 두 앱 관리 흐름을 검증했으며 잔여 connection/advisory lock은 0이다.
+  증거는 `/tmp/oioi-p04-smoke-hQPi0m`이며 기존 로컬 빌드를 복원했다.
+- 앱 runtime/build 변경이 없어 새 build와 독립 PostgreSQL suite는 재실행하지 않았다.
+  production DB/credential 사용은 없었다. 수정 커밋의 pre-commit ESLint/Prettier는 통과했다.
+
+후속 push의 pre-push 결과와 최신 head Verify 상태는 PR 본문/완료 보고에 별도로 기록한다.
+PR 병합과 P05-D 착수, P06 공개 전 제한 재설계 등 기존 보류 범위는 유지한다.
