@@ -93,6 +93,37 @@ pnpm db:configure-runtime-roles -- --allow-production
 완료 후 application Vault secret을 `DB_APP_PASSWORD`의 새 version으로 교체하고 deployment를 별도로 실행한다.
 `DATABASE_URL`에는 `oioi_app`만 사용한다.
 
+### Console MFA reset 및 운영 role/status 변경 (P05-B3)
+
+운영 role/status 변경은 `pnpm console:mfa account-access`를 유일한 승인 절차로 사용한다.
+Account 변경과 Console version 회수는 하나의 transaction이며 재승격/복귀에도 증가한다.
+수동 UPDATE나 회수 후 별도 role/status 변경 절차를 사용하지 않는다. 현재 CLI는 **local Compose 검증 전용**이다.
+production host/Vault 실행은 별도 승인과 P06 host guard 검증 전까지 열지 않는다. `ocarun`/HTTP에 권한을 추가하지 않는다.
+
+승인된 POSIX operator에게만 app credential과 설정 파일 읽기 권한을 준다. OS 계정 공유를 피하고,
+`umask 077`로 `.local/console-mfa-operator.json`을 생성하여 operator 소유·0600·단일 일반 파일로 관리한다.
+CLI는 UID/소유권/permission을 검사하며 symlink/hardlink, ambient DATABASE_URL/Web dotenv를 허용하지 않는다.
+설정은 `{ "scope": "local-compose", "operatorUid": <id -u>, "databaseUrl": "<local app URL>",
+"serverStartedAt": "<검증한 DB 시작 epoch>" }`다. 실제 credential을 argv/history/리뷰에 적지 않는다.
+대상 URL은 `127.0.0.1:5432/oioibawige`의 `oioi_app`만 허용한다(격리 runner의 test DB/role은 별도 허용).
+DB 시작 epoch는 다음 secret-free 조회 결과를 기록한다. 재시작 후에는 대상을 다시 확인하고 설정을 갱신한다.
+
+```bash
+docker compose -f compose.dev.yml exec -T postgres psql -U oioibawige -d postgres -Atc 'select extract(epoch from pg_postmaster_start_time())::text'
+pnpm console:mfa mfa-reset --config .local/console-mfa-operator.json --account-id 104 --expected-version 3 --reason-file .local/operator-reason.txt --apply
+pnpm console:mfa account-access --config .local/console-mfa-operator.json --account-id 104 --expected-version 4 --expected-role ADMIN --expected-status ACTIVE --role USER --status ACTIVE --reason-file .local/operator-reason.txt --apply
+```
+
+사유는 operator 소유·0600의 `.local/operator-reason.txt`에 비어 있지 않은 200자 이하로 작성한다.
+argv에는 파일 경로만 전달하여 pnpm의 명령 echo에도 사유 원문이 나오지 않게 한다.
+실행 전 대상 id/role/status/version만 조회·검토한다. MFA 행 없음은 `--expected-version none`이며 기대값이 다르면 중단한다.
+ACTIVE/SUSPENDED만 변경하며 가입 활성화·탈퇴/복구의 개인정보 정책을 우회하지 않는다.
+출력은 대상·전후 role/status/version·성공 여부 또는 고정 실패 코드뿐이다. secret/OTP/비밀번호/사유 원문을 기록하지 않는다.
+실패 시 최신 상태를 재조회하며 자동 재시도하지 않는다. SQL 오류·connection URL·stack을 evidence에 남기지 않는다.
+reset 순서는 **Console 접근 제한 → CLI reset → 기존 세션 거절 확인 → 제한된 재등록 → 재공개**다.
+실제 JWT 거절/QR 전용 secret 취급은 P05-C/D, 공개 HTTPS 운영 smoke는 P06에서 검증한다.
+Web 전체 Session 회수와 runtime app role/owner/migrator의 직접 SQL 우회 차단은 이 절차로 완료되지 않는다.
+
 ## 5. Filesystem metric and existing backup boundary
 
 `oioi-bwg-alerts` Topic의 Slack subscription은 token이 Terraform state에 들어가지 않도록 Console에서 관리한다.
