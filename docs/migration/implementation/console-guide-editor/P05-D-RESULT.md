@@ -65,6 +65,19 @@ RHF 첫 로그인 단계는 입력만 확인하고 최종 단계에서 OTP를 �
 `pnpm test:ops`(54건), `pnpm format:check`도 통과했다. 직접 실행 검사와 구분한다.
 이 PR/hook 기록 보완 push의 자동 검사와 최신 CI 상태는 PR/완료 보고에 기록한다.
 
+## CI 후속 보완
+
+`d859114`의 [Verify](https://github.com/goldmayo/oioi-bwg/actions/runs/38046419032)는
+Admin migration integration을 포함한 나머지 필수 job이 성공했지만 Build가 실패했다.
+기존 Console standalone smoke가 첫 화면의 `로그인` 버튼을 기다린 것이 원인이었다.
+`d2f597a`에서 첫 단계의 `다음` → OTP 화면을 검사하고 이 단계의 POST/세션 미발급도 확인했다.
+앱 runtime과 빌드 설정은 변경하지 않았다.
+
+DB 연결과 MFA 키 없이 로컬 standalone을 실행해 보완된 smoke를 통과했다.
+기본 여섯 검사를 다시 통과했고 harness는 18건, workspace type-check/lint/unit은 모두 cache였다.
+별도 repo 검사와 FSD/format 검사도 통과했다. 테스트만 변경해 앱 build는 다시 실행하지 않았다.
+후속 pre-commit ESLint/Prettier도 통과했으며 최신 head의 CI와 push hook 결과는 PR/완료 보고에 기록한다.
+
 ## 보류와 후속
 
 새 PR 병합과 P06 착수는 하지 않는다. production DB/credential과 운영 seed는 사용하지 않았다.
