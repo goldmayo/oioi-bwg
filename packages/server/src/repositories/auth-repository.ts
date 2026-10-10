@@ -1,6 +1,9 @@
 import "server-only";
 
+import { eq } from "drizzle-orm";
+
 import type { DbExecutor } from "../db";
+import type { AccountRole, AccountStatus } from "../db/schema";
 import { isPostgresUniqueViolation } from "../db/postgres-error";
 import { account, passwordCredential, profile } from "../db/schema";
 
@@ -68,4 +71,20 @@ export function findAuthorizationFactsByAccountId(executor: DbExecutor, accountI
       status: true,
     },
   });
+}
+
+export function findConsolePasswordCredential(executor: DbExecutor, email: string) {
+  return executor.query.passwordCredential.findFirst({
+    where: eq(passwordCredential.email, email),
+    with: { account: true },
+  });
+}
+
+export function updateAccountAccess(
+  executor: DbExecutor,
+  accountId: bigint,
+  role: AccountRole,
+  status: AccountStatus,
+) {
+  return executor.update(account).set({ role, status }).where(eq(account.id, accountId));
 }
