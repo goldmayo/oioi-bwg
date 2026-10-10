@@ -35,6 +35,7 @@
     "lint:repo": "eslint . --config config/eslint/node.mjs --ignore-pattern \"apps/**\"",
     "type-check:repo": "tsc --noEmit -p tsconfig.json",
     "dev:console": "pnpm --filter @oioi-bwg/console dev",
+    "dev:console:local": "tsx scripts/dev-console-local.mts",
     "test:integration:admin": "tsx scripts/run-postgres-integration-tests.ts --admin-smoke",
     "test:integration:admin:local": "docker compose -f compose.dev.yml up -d --wait postgres && tsx scripts/run-postgres-integration-tests.ts --local --admin-smoke"
   },
