@@ -1,5 +1,8 @@
 .git
 **/.next
+**/.turbo
+**/*.tsbuildinfo
+**/next-env.d.ts
 **/node_modules
 .pnpm-store
 **/.env
@@ -9,5 +12,9 @@
 coverage
 playwright-report
 test-results
+docs
 *.dump
 *.log
+Dockerfile
+.dockerignore
+.github

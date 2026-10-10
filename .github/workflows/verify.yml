@@ -142,8 +142,82 @@ jobs:
         env:
           M7_TEST_POSTGRES_ADMIN_URL: postgresql://postgres@127.0.0.1:5432/postgres
 
+  app_build:
+    name: app build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+        with:
+          cleanup: false # The GitHub-hosted VM is discarded after this job.
+      - name: Identify verification cache inputs
+        id: cache-key
+        run: |
+          source_digest=$(git ls-files -s -- . ':(exclude)docs/**' | sha256sum | cut -d ' ' -f 1)
+          echo "key=${RUNNER_OS}-verify-amd64-v2-${source_digest}" >> "${GITHUB_OUTPUT}"
+      - name: Restore verification layer cache
+        id: build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/buildx-cache
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            ${{ runner.os }}-verify-amd64-v2-
+            ${{ runner.os }}-verify-amd64-v1-
+      - name: Build and export both standalone apps
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: verification-artifacts
+          platforms: linux/amd64
+          build-args: NEXT_PUBLIC_APP_ENV=staging
+          outputs: type=local,dest=${{ runner.temp }}/ci-build
+          cache-from: type=local,src=${{ runner.temp }}/buildx-cache
+          cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
+      - name: Load standalone container from the same builder
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runner
+          platforms: linux/amd64
+          load: true
+          tags: oioi-bwg:workspace-check
+          build-args: NEXT_PUBLIC_APP_ENV=staging
+          cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
+      - name: Archive verified container
+        run: docker save --output "${{ runner.temp }}/ci-build/web-image.tar" oioi-bwg:workspace-check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-standalone
+          path: ${{ runner.temp }}/ci-build/standalone.tar.gz
+          overwrite: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-web-image
+          path: ${{ runner.temp }}/ci-build/web-image.tar
+          overwrite: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+      - name: Replace cache with current layers
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "${{ runner.temp }}/buildx-cache"
+          mv "${{ runner.temp }}/buildx-cache-new" "${{ runner.temp }}/buildx-cache"
+      - name: Save verification layer cache
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/buildx-cache
+          key: ${{ steps.build-cache.outputs.cache-primary-key }}
+
   build:
     name: build
+    needs: app_build
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -161,20 +235,18 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Restore Next.js build cache
-        uses: actions/cache@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: apps/web/.next/cache
-          key: ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-
-
-      - run: pnpm build
-        env:
-          NEXT_PUBLIC_APP_ENV: staging
-
-      - name: Build standalone container
-        run: docker build --tag oioi-bwg:workspace-check .
+          name: ci-standalone
+          path: ${{ runner.temp }}/ci-build
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-web-image
+          path: ${{ runner.temp }}/ci-build
+      - name: Restore this run's verified build
+        run: |
+          tar -xzf "${{ runner.temp }}/ci-build/standalone.tar.gz"
+          docker load --input "${{ runner.temp }}/ci-build/web-image.tar"
 
       - name: Install smoke test browser
         run: pnpm exec playwright install --with-deps chromium
@@ -211,6 +283,7 @@ jobs:
 
   admin_integration:
     name: Admin migration integration
+    needs: app_build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
@@ -237,9 +310,12 @@ jobs:
           node-version: 22.16.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-        env:
-          NEXT_PUBLIC_APP_ENV: staging
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-standalone
+          path: ${{ runner.temp }}/ci-build
+      - name: Restore this run's verified apps
+        run: tar -xzf "${{ runner.temp }}/ci-build/standalone.tar.gz"
       - run: pnpm exec playwright install --with-deps chromium
       - name: Complete existing admin flows on both private standalone origins
         run: pnpm test:integration:admin
@@ -262,6 +338,7 @@ jobs:
       - unit
       - postgres_integration
       - admin_integration
+      - app_build
       - build
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -274,6 +351,7 @@ jobs:
           UNIT_RESULT: ${{ needs.unit.result }}
           ADMIN_INTEGRATION_RESULT: ${{ needs.admin_integration.result }}
           POSTGRES_RESULT: ${{ needs.postgres_integration.result }}
+          APP_BUILD_RESULT: ${{ needs.app_build.result }}
           BUILD_RESULT: ${{ needs.build.result }}
         run: |
           set -euo pipefail
@@ -283,6 +361,7 @@ jobs:
             "${UNIT_RESULT}" \
             "${POSTGRES_RESULT}" \
             "${ADMIN_INTEGRATION_RESULT}" \
+            "${APP_BUILD_RESULT}" \
             "${BUILD_RESULT}"; do
             if [[ "${result}" != "success" ]]; then
               echo "Verification dependency did not succeed: ${result}" >&2
