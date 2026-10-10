@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-10"
-revision: 10
+revision: 11
 ---
 
 # 구현 순서와 PR 단위
@@ -92,6 +92,8 @@ P06 전환 순서는 **두 image/routing 준비 → 비공개 Console smoke/MFA 
 전환 검증 후 기존 Web Worker·staging·preview 경로를 종료한다. assets/R2·메일은 실제 의존성 확인 후 정리한다.
 단일 VM의 기존 Promotion·OCI Run Command를 유지하는 세부 PR 분할과 두 앱 복구 계획은
 [P06 계획 초안](P06-PLAN.md)을 참조한다. 계획 작성은 환경 적용이나 공개 승인을 의미하지 않는다.
+기존 preview 관리자 계정을 사용하는 사전 준비 절차는 [P06 사전 준비 안내](P06-PREPARATION.md)에 둔다.
+관리자 생성·공인 IP 설정은 제외하며 일반 회원가입 페이지 제거는 P06 구현에서 다룬다.
 P04/P05의 기존 기능과 인가 확인 전에는 기존 경로를 지우지 않는다. rollback도 password-only 관리 경로를 다시 공개하지 않는다.
 Guide writer 전환 뒤 rollback은 새 guide를 읽는 호환 앱으로 제한하고 Song.lyrics의 파괴적 정리는 후속으로 둔다.
 

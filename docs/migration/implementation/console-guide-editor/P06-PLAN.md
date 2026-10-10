@@ -6,7 +6,7 @@ authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
 updated_at: "2026-10-10"
-revision: 4
+revision: 5
 ---
 
 # P06 계획 초안
@@ -33,6 +33,9 @@ P05 A~D의 통합과 공개 운영 준비를 구분한다. [P05-D 결과](P05-D-
   DB migration 상태, current digest는 미확인이다. 운영 credential을 사용하지 않았다.
 - revision 4는 사용자 지시로 공인 IP allowlist·Cloudflare 차단 규칙·Access의 사전 설정 요구를
   제외했다. 최초 등록은 기존 SSH의 localhost 포워딩으로 준비하며 서버의 비공개 경계는 유지한다.
+- revision 5는 사용자 확인에 따라 기존 preview 관리자 계정 사용을 전제로 한다. 관리자 생성·승격과
+  일반 회원가입 작업은 사전 준비에서 제외하고, 일반 회원가입 페이지 제거는 P06 구현에 남긴다.
+  따라 할 화면 입력값·조회 명령은 [사전 준비 안내](P06-PREPARATION.md)를 따른다.
 
 상위 기준은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md),
 [Auth §4.1](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md#41-console의-단계적-전환),
