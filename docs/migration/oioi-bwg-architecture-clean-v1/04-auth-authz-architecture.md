@@ -1,10 +1,10 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.3"
+version: "1.4"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-07"
+updated_at: "2026-10-10"
 depends_on:
   - "01"
   - "03"
@@ -21,7 +21,7 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.3
+# oioi-bwg Authentication / Authorization Architecture v1.4
 
 ## 1. 목적
 
@@ -198,8 +198,26 @@ P04의 HTTP loopback cookie는 HttpOnly/SameSite=Lax를 유지하며 Secure는 H
 
 공개 Console 인증은 P05의 TOTP 완료를 전제로 한다. 비밀번호·ACTIVE·ADMIN·TOTP를
 모두 확인한 뒤에만 identity를 발급하며, MFA 증명/version과 DB의 현재 상태를 공통 Console
-guard에서 검사한다. 회수 규칙은 P05에서 Domain과 함께 개정한다. 공개 hostname·Secure cookie와
+guard에서 검사한다. 등록·회수 규칙은 아래와 Domain AUTH-009를 따른다. 공개 hostname·Secure cookie와
 배포 전환은 P06에서 검증한다. P04에서 공개 배포하거나 Web 관리 경로를 제거하지 않는다.
+
+Console JWT는 최소 identity의 명시적 예외로 `mfaVerified: true`와 `mfaVersion`을 보존한다.
+role/CASL rules는 넣지 않으며 client session.update로 MFA 증명을 승격하지 않는다.
+공통 Console guard는 매 요청 JWT 증명과 DB MFA 활성/version·ACTIVE ADMIN을 함께 확인한다.
+증명 누락/version 불일치는 UNAUTHENTICATED다. 요청별 조회 이후 이미 인가된 작업의 중단은 보장하지 않는다.
+
+`admin_mfa`는 Account당 최대 한 행이며 accountId PK/FK로 tombstone을 참조한다.
+reset은 행을 보존하고 version을 증가시킨 뒤 secret/enabledAt/lastUsedStep을 비운다.
+등록은 password와 ACTIVE ADMIN을 매번 재확인하고 관리 세션을 발급하지 않는다.
+동시 setup은 저장된 pending secret/version의 동일 snapshot으로 응답하고 활성 secret을 교체하지 않는다.
+reset/활성화 경합으로 pending을 얻지 못하면 QR을 반환하지 않는다. confirm은 version을 비교한다.
+회수만 필요한 변경은 활성 secret/lastUsedStep을 보존하고 version을 증가시킨다.
+Account/credential 변경과 version 증가는 service의 동일 transaction에 속한다.
+lock 순서는 Account → credential → MFA이며 비싼 password/crypto/QR 처리는 lock 밖에서 수행한다.
+운영 role/status 변경은 공통 변경·회수 service와 CLI를 사용하며 재승격/복귀도 version을 증가시킨다.
+탈퇴는 secret을 제거하고 증가한 version 행과 Account tombstone을 보존한다.
+전체 Session 회수의 도메인 요구는 유지한다. Console version만으로 Web 회수 완료를 주장하지 않는다.
+P05-A는 persistence 기반만 제공하며 위 service/guard/CLI 연결과 인증 runtime 검증은 P05-B~D에 속한다.
 
 ---
 
@@ -901,7 +919,8 @@ JWT에 authorization state를 넣지 않으므로 role 변경은 다음 요청�
 
 # 29. Session revocation은 YAGNI
 
-v1에서는 기본 구현하지 않는다.
+v1에서는 아래 세션 관리 기능을 기본 구현하지 않는다. Console 전체 회수용 MFA version은
+§4.1의 확정된 예외이며, Domain AUTH-004~006의 전체 Session 회수 요구를 없애지 않는다.
 
 ```text
 device별 session 관리

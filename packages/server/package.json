@@ -13,6 +13,7 @@
     "./email/signup-verification-email": "./src/email/signup-verification-email.ts",
     "./email/templates/signup-verification-email": "./src/email/templates/signup-verification-email.ts",
     "./errors/app-error": "./src/errors/app-error.ts",
+    "./repositories/admin-mfa-repository": "./src/repositories/admin-mfa-repository.ts",
     "./repositories/album-repository": "./src/repositories/album-repository.ts",
     "./repositories/auth-repository": "./src/repositories/auth-repository.ts",
     "./repositories/email-verification-repository": "./src/repositories/email-verification-repository.ts",

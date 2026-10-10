@@ -452,6 +452,28 @@ Account
 
 ---
 
+## AUTH-009. Console MFA 등록과 회수
+
+Console은 비밀번호·ACTIVE ADMIN·활성 MFA·미사용 TOTP가 모두 확인되어야 세션을 발급한다.
+제한된 환경의 최초 등록/재등록은 매 요청 비밀번호와 ACTIVE ADMIN을 확인하며 관리 권한을 발급하지 않는다.
+pending secret은 재사용하고 동시 setup 응답은 실제 저장된 secret/version을 사용한다.
+활성 secret 또는 pending secret의 교체는 운영 reset을 거쳐야 하며 confirm은 pending version을 비교한다.
+최초 확인에 성공한 실제 TOTP step도 소모한다. 사용한 step 이하의 코드는 다시 사용할 수 없다.
+
+Account당 MFA 행은 최대 하나다. 최초 version은 1이며 reset/회수 때 단조 증가한다.
+reset 후 secret/enabledAt/lastUsedStep은 null이고 행과 version은 보존한다. 재등록으로 version을 초기화하지 않는다.
+활성 상태에는 secret과 lastUsedStep이 필수이고 미활성 상태에는 lastUsedStep이 없다.
+Password/Email 변경의 Console 회수는 version만 증가시키고 활성 secret/사용 step을 보존한다.
+운영 role/status 변경은 Account 변경과 version 증가를 같은 transaction에서 수행한다.
+ADMIN 회수·정지뿐 아니라 재승격·복귀에서도 증가시켜 과거 Console 세션이 되살아나지 않게 한다.
+미등록 계정의 회수는 secret 없는 version 행을 최초 생성한다. 탈퇴는 version 증가와 secret 제거를 수행한다.
+
+AUTH-004~006의 전체 Session 회수 요구는 그대로 유지한다. 이 정책의 Console version은
+Web 전체 Session 회수의 대체가 아니며 그 기존 미구현 범위를 완료로 간주하지 않는다.
+P05-A는 persistence 기반이며 로그인/회수 service와 guard의 적용은 후속 P05-B~D에서 검증한다.
+
+---
+
 # 7. Account Lifecycle & Privacy
 
 ## 7.1 Account Status
@@ -470,6 +492,8 @@ SUSPENDED      DELETED
 ## 7.2 탈퇴
 
 탈퇴는 물리 Account row 삭제가 아니다.
+
+Console MFA secret도 제거한다. AUTH-009에 따라 증가한 version의 빈 MFA 행은 tombstone에 남긴다.
 
 ```text
 Account deletion
@@ -500,6 +524,7 @@ deletedAt 기록
 |---|---|---:|---|---|
 | Email | 로그인/복구 | X | 제거 | 인증정보 |
 | PasswordHash | 로그인 | X | 제거 | 절대 로그 금지 |
+| Console MFA secret | 관리자 추가 인증 | X | 제거 | 암호화 저장, secret/QR/OTP 로그 금지 |
 | Nickname | 공개 기여자 표시 | O | 비식별화 | 탈퇴 후 `탈퇴한 사용자` |
 | Avatar | 프로필 | O | 제거 | |
 | OAuth provider subject | 추가 로그인 | X | 제거 | unlink 시에도 제거 |

@@ -13,7 +13,7 @@ export default defineConfig({
     environment: "node",
     fileParallelism: false,
     hookTimeout: 30_000,
-    include: ["tests/integration/m7-foundation.postgres.test.ts"],
+    include: ["tests/integration/*.postgres.test.ts"],
     maxWorkers: 1,
     sequence: { concurrent: false },
     testTimeout: 30_000,
