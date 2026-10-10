@@ -6,7 +6,7 @@ authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
 updated_at: "2026-10-10"
-revision: 1
+revision: 2
 ---
 
 # P06 계획 초안
@@ -23,9 +23,11 @@ P05 A~D의 통합과 공개 운영 준비를 구분한다. [P05-D 결과](P05-D-
 - 2026-10-10 fetch한 `origin/migration_develop`은
   `30592191f7bbf168a227a16a000085944c2191fa`(P01 승격)다. 두 ref의 migration 차이는
   `drizzle/0005_p05a_admin_mfa.sql`과 metadata다. 이것이 실제 VM의 적용 상태를 증명하지는 않는다.
-- 열린 [#128](https://github.com/goldmayo/oioi-bwg/pull/128)(로컬 실행 안내),
+- 초안 작성 시 열린 [#128](https://github.com/goldmayo/oioi-bwg/pull/128)(로컬 실행 안내),
   [#129](https://github.com/goldmayo/oioi-bwg/pull/129)(로그인 폼 정리)는 기준에 포함되지 않았다.
-  후속 구현은 그때 최신 integration head에서 분기하며 이 계획을 이유로 두 PR을 병합하지 않는다.
+  두 PR은 이후 사용자 지시로 #129 → #128 순서로 병합됐다. revision 2의 코드 확인 기준은
+  `5135f6eb1a53782b86a3120b1d8b0134410bf4d4`이며 작업 브랜치에도 merge로 반영했다.
+  초안의 source_commit은 최초 조사 기준으로 보존하고 후속 구현은 최신 integration head에서 분기한다.
 - 근거는 저장소 코드·설정의 정적 확인이다. 실제 host Caddyfile, DNS/CDN, VM 자원 사용량,
   Vault/IAM, DB migration 상태, current digest는 미확인이다. 운영 credential을 사용하지 않았다.
 
@@ -209,3 +211,76 @@ Web 전체 Session 회수 미구현 해결, Waveform/Guide는 별도 관심사�
 
 이 계획 작성에서는 Git ref/diff와 관련 코드·문서만 확인했다. 문서 format·링크·diff 검사는 PR에
 실제 결과를 기록하며, push hook의 자동 검증은 직접 실행한 runtime 검사와 구분한다.
+
+## 9. 외부 설정 사전 점검 (revision 2)
+
+2026-10-10 공개 DNS/HTTPS HEAD, GitHub Environment·ruleset을 read-only로 확인했다.
+Cloudflare dashboard·실제 VM·OCI IAM/Vault/DB에는 접근하지 않았다. 아래는 확인 결과와
+준비 목록이며 자원을 생성/변경하거나 배포하지 않았다. GitHub secret은 이름만 조회했다.
+
+### 확인한 사실과 아직 모르는 값
+
+| 대상 | 관찰 결과 / 한계 |
+| --- | --- |
+| 공개 DNS | apex/www는 A/AAAA 응답, NS는 Cloudflare. console/dev와 임의 비교 hostname은 A/AAAA/CNAME NXDOMAIN |
+| 공개 HTTPS | apex/www HEAD 200, `server: cloudflare`·`cf-ray` 있음. www `/healthz`·`/readyz` HEAD는 404 |
+| origin | 위 결과로 www가 OCI Development VM인지 확인할 수 없음. DNS 응답의 Cloudflare edge IP를 VM 주소로 쓰지 않음 |
+| GitHub 변수 | `oci-development-image`에 OCIR_REGISTRY/NAMESPACE/REPOSITORY, NEXT_PUBLIC_SENTRY_DSN, SENTRY_ORG/PROJECT 있음. 현재 repository 값은 `oioi-bwg` |
+| GitHub secret 이름 | OCIR_USERNAME/AUTH_TOKEN, OCI_CLI_USER/TENANCY/FINGERPRINT/KEY_CONTENT, SENTRY_AUTH_TOKEN, SLACK_DEPLOY_WEBHOOK_URL 있음. 유효 권한/값 검증은 아님 |
+| GitHub 보호 | Environment에 migration_develop·refs/pull/*/merge 허용. integration은 verify, deployment는 verify+promotion 및 strict 검사 활성 |
+| IaC 권한 | `infra/oci/iam.tf`의 Compute pull은 기존 repository 이름 하나, Vault read는 runtime_secret_ocids의 개별 secret에 한정. 실제 적용 여부는 미확인 |
+
+실제 OCI Development hostname과 Cloudflare DNS의 원본 대상/Proxied 여부를 먼저 확인한다.
+www의 404를 Next 앱 장애나 VM 연결 실패로 단정하지 않는다. routing/다른 서비스 여부부터 구분한다.
+
+### Cloudflare에서 준비할 항목
+
+| 항목 | 준비 / 적용 조건 |
+| --- | --- |
+| DNS | 기존 oioibawige.com zone에 이름 console의 A를 **대상 VM의 실제 공인 IPv4**로 추가하는 안. 원본 hostname이 검증됐으면 CNAME도 가능. 새 도메인 구매/zone 등록/NS 교체는 불필요 |
+| Proxy | 기존 CDN 경로를 유지하는 Proxied 안. AAAA는 origin IPv6가 실제 작동할 때만 구성. proxied 응답의 IPv6를 origin IPv6로 오해하지 않음 |
+| TLS edge | Universal SSL의 active certificate가 console을 포함하는지 확인. 1단계 subdomain은 일반적으로 포함되지만 더 깊은 staging hostname은 별도 coverage 확인 |
+| TLS origin | Caddy의 console 인증서/SNI/443과 Full (strict)를 함께 검증. 기존 자동 ACME 또는 Origin CA 방식을 확인해 확장. zone 전체 SSL mode 변경은 기존 www origin 영향부터 확인 |
+| Cache | hostname console의 Cache eligibility를 Bypass cache로 두는 안. 기존 Cache Everything/Page Rule 우선순위도 확인하여 QR·인증·관리 응답 저장 방지. Web cache 설정은 유지 |
+| Routing/WAF | apex/www redirect, Workers route, Origin/Transform Rule이 console까지 일치하는지 확인. Host/SNI를 www로 바꾸거나 callback/Action을 redirect/challenge하는 규칙은 Console 흐름으로 검증 |
+| 최초 등록 제한 | DNS 노출 전 console virtual host를 운영자 제한/차단 상태로 준비. 운영자 IP 제한 등 기존 수단 우선. Access를 선택하면 origin 우회 차단과 JWT 서명/audience 검증까지 계획하며 헤더 존재만 신뢰하지 않음 |
+
+DNS 추가 순서는 **실제 origin 확인 → 제한된 Caddy virtual host/TLS 준비 → DNS/proxy 연결 →
+제한된 HTTPS 검증 → MFA 등록 → 등록 닫힘 확인 → 공개**다. console이 기존 Web fallback으로
+연결되지 않아야 한다. 공개 단계에도 enrollment flag는 false다. 비공개·등록 제한을 DNS 부재만으로 보장하지 않는다.
+Origin CA는 Cloudflare↔origin용이므로 DNS-only로 바꿀 때 브라우저가 신뢰하는 인증서인지 별도로 확인한다.
+DNS challenge를 선택할 때만 필요한 Caddy DNS plugin/권한 제한 token을 준비하며 일반 DNS 수동 등록에 token을 요구하지 않는다.
+
+근거: [subdomain DNS](https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-subdomain/),
+[Universal SSL 범위](https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/limitations/),
+[Full strict](https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/full-strict/),
+[Origin CA](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/),
+[Cache rule](https://developers.cloudflare.com/cache/how-to/cache-rules/create-dashboard/),
+[Origin rules](https://developers.cloudflare.com/rules/origin-rules/),
+[Access origin 검증](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/).
+
+### OCI·GitHub·VM에서 준비할 항목
+
+| 항목 | 준비 / 검증 |
+| --- | --- |
+| OCIR | 기존 private oioi-bwg 유지, Console private repository 추가안의 이름/IaC 소유권 확정. 같은 Resource Manager Stack에서 Plan review → Apply, 기존 VM/registry/backup destroy·replace 금지 |
+| Publish/pull IAM | 기존 CI OCIR publisher가 새 repository에 push 가능한지, Compute Instance Principal이 pull 가능한지 확인. Run Command 전용 principal에 registry/Vault 권한을 합치지 않음 |
+| Vault | CONSOLE_AUTH_SECRET·CONSOLE_MFA_ENCRYPTION_KEY 두 secret 준비. Web/로컬과 별도 값, 암호화 키 canonical Base64 32 bytes. 실제 key 값을 Terraform/GitHub에 등록하지 않음 |
+| Vault IAM | 새 두 secret OCID를 runtime_secret_ocids 및 host mapping에 반영, Instance Principal read 검증. 등록/배포마다 key 재생성 금지, 접근 통제된 동일 key 복구 준비 |
+| GitHub | 기존 Environment/credential/branch policy 재사용. B1이 정한 Console repository 변수 추가, 앱별 Sentry/build 설정 확정. 변수명은 아직 구현 계약이 아니므로 임의로 선등록하지 않음 |
+| Caddy/네트워크 | 설치 버전·host/container 위치·설정 경로 확인, 외부 443/선택한 ACME 경로와 IPv4/IPv6 확인. 앱 3000/3001·DB 5432는 외부 개방하지 않음. Caddy가 container면 localhost upstream 대신 실제 network 경로 확정 |
+| 신뢰 IP | 실제 Cloudflare CIDR만 trusted proxy로 설정하고 정규화된 client IP를 앱에 전달. 임의 forwarded header·직접 origin 우회 검증. 현재 unknown bucket으로 공개하지 않음 |
+| Host upgrade | 두 env 0600·Compose·deploy script·config/state 변환·sudoers/preflight 준비. 자동 installer는 기존 protected config를 업데이트하지 않으므로 명시적 검토/반영 필수 |
+| DB | 실제 journal·admin_mfa·app 권한 확인 후 승인된 별도 migrator 적용. 앱 deploy에 migration/owner credential/seed 없음 |
+| 운영 복구 | 대상 DB/host/credential guard가 갖춰진 CLI, 개인 operator·승인 티켓, TOTP용 host/인증기 시간 동기화, MFA key·DB 복구 조합, 안전한 rollback pair 준비 |
+| 자원/관측 | pool 합계 20+운영 여유, CPU/RSS/디스크 실측. Console log 수집/알람·Sentry 이벤트·소스맵과 두 앱 health 확인 |
+| R2 | 기존 bucket/assets hostname과 server-side S3 업로드 재사용, Console env에 필요한 credential 주입. 현재 서버 업로드 때문에 Console용 CORS PUT을 추가할 필요는 없음 |
+
+Caddy의 CDN trust는 [공식 reverse_proxy 문서](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)를
+설치 버전과 대조한다. R2 CORS는 [브라우저 cross-origin 요청](https://developers.cloudflare.com/r2/buckets/cors/)을
+위한 설정이며 현재 `packages/server/src/storage/upload-public-asset.ts`의 서버 S3Client 호출과 구분한다.
+Console은 Credentials+TOTP이므로 별도 Google/Kakao OAuth client/callback, 신규 DB/VM/bucket은 준비 항목이 아니다.
+
+지금 먼저 확보할 정보는 **실제 VM origin/Development hostname, 현재 Caddy 배치·인증서 방식,
+등록 접근 제한 수단, 새 Console repository 이름과 두 Vault secret 관리 위치**다.
+이후 구현 PR의 계약과 일치하도록 설정하며 모든 외부 적용은 별도 실행 범위로 둔다.
