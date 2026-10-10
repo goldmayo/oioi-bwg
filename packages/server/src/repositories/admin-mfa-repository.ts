@@ -11,6 +11,22 @@ export function findAdminMfa(executor: DbExecutor, accountId: bigint) {
   });
 }
 
+// 단일 statement의 동일 snapshot으로 세션 인가 facts만 읽는다. secret은 projection에 넣지 않는다.
+export async function findConsoleAuthorizationFacts(executor: DbExecutor, accountId: bigint) {
+  const [facts] = await executor
+    .select({
+      id: account.id,
+      role: account.role,
+      status: account.status,
+      enabledAt: adminMfa.enabledAt,
+      version: adminMfa.version,
+    })
+    .from(account)
+    .innerJoin(adminMfa, eq(adminMfa.accountId, account.id))
+    .where(eq(account.id, accountId));
+  return facts;
+}
+
 // 인증·등록 허용 여부는 호출하는 service가 확인한다.
 export async function ensurePendingAdminMfa(
   executor: DbExecutor,
