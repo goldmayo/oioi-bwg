@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-10"
-revision: 9
+revision: 10
 ---
 
 # 구현 순서와 PR 단위
@@ -48,7 +48,7 @@ P09~P10도 기존 가사 JSON을 입력으로 사용한다. BPM/beatOffset은 So
 | P03 `refactor(workspace): 공통 계약과 서버 코드 추출`       | 실제 contracts/server·migration 경로 추출. React/Next request/session/HTTP adapter는 앱에 유지. 외부 계약 동일.                                                                      | P02                                                   | contracts 순수성·server-only·repository/service 방향·앱 간 의존 금지, 소비 앱 type-check/build 성공.                                                                                  |
 | P04 `feat(console): 운영 화면과 API 이관`                   | Console entry·기존 Admin UI/API/업로드 Action 이관. Web 경로 임시 유지.                                                                                                              | P03                                                   | 접근 제한 환경에서 두 경로의 기존 작업 완주. 독립 build, direct import 없음.                                                                                                          |
 | P05 `feat(auth): 콘솔에 간단한 TOTP 인증 적용`              | admin_mfa migration·Auth.js+otplib·등록 UI·limiter·Origin/CSRF·CLI reset·관리 guard. Auth/Domain 회수 규칙 반영.                                                                     | P04                                                   | password-only/비ADMIN/미등록/다른 앱 cookie 거절. replay·동시성·version 회수·제한된 재등록 검증.                                                                                      |
-| P06 `feat(deploy): 두 앱 배포와 기존 관리 경로 종료`        | 두 image·기존 CD/Compose/Caddy/env/health/rollback 보정, staging 확인 후 Web 관리 route/API/Action 제거.                                                                             | P04/P05. Audio/Guide 불필요.                          | 기존 가사 편집만으로 Console 공개. 두 hostname·전용 cookie·인가·pool·복구 smoke, www 관리 직접 호출 실패.                                                                             |
+| P06 `feat(deploy): 두 앱 배포와 기존 관리 경로 종료`        | 두 image·기존 CD/Compose/Caddy/env/health/rollback 보정, preview Web을 www로 전환. Web 관리 route/API/Action 및 기존 Web Worker·staging 경로 종료.                                     | P04/P05. Audio/Guide 불필요.                          | 기존 가사 편집만으로 Console 공개. 데이터/파일 보존, 최종 두 hostname·전용 cookie·인가·pool·복구 smoke, www 관리 직접 호출 실패.                                                      |
 | P07 `feat(guide): 세 종류 응원법과 선택 화면 추가`          | 최소 CheerGuide migration·기존 가사 JSON/쓰기·수동 분류·조회·segmented/nuqs. Domain의 FAN 분리·초기 이력 적용 범위 반영.                                                             | 모델 P03, 관리 화면 P04의 공통 guard. 운영상 P06 후.  | 0/1/2~3개·우선순위·URL/재생 유지, 미분류/내용 보존, LRC/삭제 경로·동시 저장 충돌 검증.                                                                                                |
 | P08 `feat(waveform): 큐 기반 일회성 파형 작업 추가`         | WaveformJob/결과 migration·active Job 재사용·202/status API·OCI Queue/DLQ·Runner Instance Principal/Unix socket·worker·내부 결과 API·EventEmitter/SSE. Domain source/lifecycle 반영. | P03/P04 및 관리 guard P05. 운영상 P06 후, P07 불필요. | 동시 생성/재전달·visibility 연장·저장 전 delete 금지·DLQ→FAILED·enqueue/DB 경계·IAM/socket/metadata 제한·SSE 재연결/알림 실패 검증. ARM64/비영속성 및 3개 anchor의 offset/drift 검증. |
 | P09 `feat(editor): 파형과 큐 타임라인 편집 제공`            | Peaks.js·YouTube adapter·overview/zoom/playhead·point drag·RHF draft/history.                                                                                                        | P04/P08, 기존 가사 JSON 사용 가능.                    | JSON만으로 표시·재생/seek 동기화·1회 Undo/취소·기존 캡처/LRC/강조 보존. 누적 drift 미해결이면 integration 완료로 처리하지 않음.                                                       |
@@ -88,6 +88,8 @@ Runner의 내부 API 기록 후 socket 응답만 유실된 경우와, 기록도 
 이 검증에 Outbox/DB queue/retry scheduler/분산 transaction/범용 reconciliation·broker abstraction을 추가하지 않는다.
 
 P06 전환 순서는 **두 image/routing 준비 → 비공개 Console smoke/MFA 등록 → Web 관리 경로 제거 → 두 앱 배포 검증 → Console 공개**다.
+현재 preview의 OCI Web이 최종 www가 되며 Console은 같은 VM을 사용한다. 상시 staging을 추가하지 않고
+전환 검증 후 기존 Web Worker·staging·preview 경로를 종료한다. assets/R2·메일은 실제 의존성 확인 후 정리한다.
 단일 VM의 기존 Promotion·OCI Run Command를 유지하는 세부 PR 분할과 두 앱 복구 계획은
 [P06 계획 초안](P06-PLAN.md)을 참조한다. 계획 작성은 환경 적용이나 공개 승인을 의미하지 않는다.
 P04/P05의 기존 기능과 인가 확인 전에는 기존 경로를 지우지 않는다. rollback도 password-only 관리 경로를 다시 공개하지 않는다.

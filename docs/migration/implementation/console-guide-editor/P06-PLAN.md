@@ -6,7 +6,7 @@ authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
 updated_at: "2026-10-10"
-revision: 2
+revision: 3
 ---
 
 # P06 계획 초안
@@ -28,8 +28,9 @@ P05 A~D의 통합과 공개 운영 준비를 구분한다. [P05-D 결과](P05-D-
   두 PR은 이후 사용자 지시로 #129 → #128 순서로 병합됐다. revision 2의 코드 확인 기준은
   `5135f6eb1a53782b86a3120b1d8b0134410bf4d4`이며 작업 브랜치에도 merge로 반영했다.
   초안의 source_commit은 최초 조사 기준으로 보존하고 후속 구현은 최신 integration head에서 분기한다.
-- 근거는 저장소 코드·설정의 정적 확인이다. 실제 host Caddyfile, DNS/CDN, VM 자원 사용량,
-  Vault/IAM, DB migration 상태, current digest는 미확인이다. 운영 credential을 사용하지 않았다.
+- 저장소 정적 확인과 공개 조회에 더해 revision 3에는 사용자의 Cloudflare DNS 스크린샷과
+  preview → www 전환 지시를 반영했다. 실제 host Caddyfile, VM 자원 사용량, Vault/IAM,
+  DB migration 상태, current digest는 미확인이다. 운영 credential을 사용하지 않았다.
 
 상위 기준은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md),
 [Auth §4.1](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md#41-console의-단계적-전환),
@@ -71,9 +72,11 @@ flowchart LR
   C --> D
 ```
 
-설계 hostname은 `www.oioibawige.com`·`console.oioibawige.com`이다. 첫 실행 대상은 기존 OCI
-Development 환경을 제안하며 실제 staging hostname·프록시 경로는 실행 전 확인한다.
-Development 승격을 production 활성화로 간주하지 않는다. 각 앱은 자기 origin의 API를 사용한다.
+현재 `preview.oioibawige.com`의 OCI Web을 같은 VM에서 `www.oioibawige.com`으로 전환한다.
+사용자 스크린샷의 preview origin은 `129.225.183.112`이며 Console도 같은 VM에 배치한다.
+최종 서비스 hostname은 www·console이다. 기존 Web Worker와 staging 경로는 전환 후 종료하며
+별도의 상시 staging 환경을 추가하지 않는다. apex는 www로 redirect하는 안을 제안한다.
+각 앱은 자기 origin의 API를 사용한다. Development Promotion과 운영 활성화는 별도 gate다.
 
 - `feature/* → migration_main → Promotion PR → migration_develop → OCI Run Command`를 유지한다.
   feature PR 병합으로 VM을 변경하지 않는다. source/test-merge/squash tree 동일성, 최신 성공 run,
@@ -100,12 +103,15 @@ Development 승격을 production 활성화로 간주하지 않는다. 각 앱은
 | P06-C HTTPS 경계 | Console runtime/cookies/Origin/auth ingress, 신뢰 IP limiter, Caddy routing 절차 | 제한된 HTTPS에서 host-only Secure 쿠키, 직접 callback/Action/등록의 같은 limiter, 위조 forwarded header·다른 Origin 거절 |
 | P06-D 제한 운영 검증 | production용 CLI 실행 경계, migration/키 복구·최초 등록 절차, 기존 smoke 확장 | 비공개 Console에서 실물 인증기 등록·새 OTP 로그인·CLI reset/회수·관리 작업·복구 검증. 공개 endpoint로 등록 불가 |
 | P06-E Web 관리 종료 | Web `/admin`, `/admin-login`, `/api/admin/*`, 관리 upload Action/연결 UI·테스트 정리 | Console 작업 검증 후 제거. Web의 직접 관리 호출/이전 Action ID 거절, 일반 로그인·signup·조회 유지. 안전한 rollback 기준 수립 |
-| P06-F 활성화 기록 | 운영 runbook/RESULT, 별도 Promotion과 적용 증거 | 검증한 동일 두 digest로 두 앱 배포, 등록 닫힘/HTTPS/회수/rollback·자원 smoke 확인 후 Console 공개 |
+| P06-F 운영 전환 | 운영 build/승격 계약, www routing 전환·레거시 종료 runbook/RESULT | 검증한 동일 두 digest로 preview의 Web을 www로 전환. 데이터·HTTPS·회수·복구 확인 후 Console 공개, 기존 Web Worker·staging·preview 경로 종료 |
 
 B1과 B2는 계약 producer/consumer이므로 **둘 다 병합·host upgrade 확인 전에는 Promotion을 실행하지 않는다.**
 B1의 후보 생성 성공을 기존 단일-digest host의 배포 호환성으로 오해하지 않는다.
 각 단계 구현 시 해당 경계를 소유하는 active 문서를 함께 개정한다. 특히 B1/B2는 배포 §19/21,
 C는 Auth/Runtime의 loopback·cookie 계약, E는 헌법/관련 문서의 임시 Web Admin 유지 규칙을 갱신한다.
+F는 Development Promotion을 운영 배포로 연결하는 승인·환경 계약과 레거시 종료 절차를
+분리 검증 가능한 PR로 나눈다. 현재 `NEXT_PUBLIC_APP_ENV=staging` 고정값을 운영용으로
+바꾸는 단계에서는 해당 build 입력으로 생성한 두 digest 자체를 검증한다. 배포 시 재build하지 않는다.
 이 계획 PR에서는 현재 실행 계약을 바꾼 것으로 문서화하지 않는다.
 
 ## 5. 배포·복구에서 먼저 해결할 사항
@@ -198,7 +204,7 @@ pool/container limit을 결정한다. 두 이미지/직전 이미지/로그 여�
 
 ## 8. 미확정 사항과 다음 작업
 
-실행 전 확인할 값은 실제 Development hostname·Caddy 소유 경로·CDN/proxy 체인,
+실행 전 확인할 값은 Caddy 소유 경로·CDN/proxy 체인·preview 접근 정책,
 등록 시 운영자 접근 제한 수단, Console OCIR/Vault/IAM 설정, host 현재 state/DB journal,
 operator 실행 경계와 key 복구 보관 방식, 실측 pool/메모리/디스크 여유다.
 이 값들을 추측한 production 명령은 계획에 넣지 않았다.
@@ -212,9 +218,10 @@ Web 전체 Session 회수 미구현 해결, Waveform/Guide는 별도 관심사�
 이 계획 작성에서는 Git ref/diff와 관련 코드·문서만 확인했다. 문서 format·링크·diff 검사는 PR에
 실제 결과를 기록하며, push hook의 자동 검증은 직접 실행한 runtime 검사와 구분한다.
 
-## 9. 외부 설정 사전 점검 (revision 2)
+## 9. 외부 설정 사전 점검 (revision 3)
 
 2026-10-10 공개 DNS/HTTPS HEAD, GitHub Environment·ruleset을 read-only로 확인했다.
+사용자가 제공한 DNS 스크린샷도 근거로 구분해 기록했다.
 Cloudflare dashboard·실제 VM·OCI IAM/Vault/DB에는 접근하지 않았다. 아래는 확인 결과와
 준비 목록이며 자원을 생성/변경하거나 배포하지 않았다. GitHub secret은 이름만 조회했다.
 
@@ -224,22 +231,24 @@ Cloudflare dashboard·실제 VM·OCI IAM/Vault/DB에는 접근하지 않았다. 
 | --- | --- |
 | 공개 DNS | apex/www는 A/AAAA 응답, NS는 Cloudflare. console/dev와 임의 비교 hostname은 A/AAAA/CNAME NXDOMAIN |
 | 공개 HTTPS | apex/www HEAD 200, `server: cloudflare`·`cf-ray` 있음. www `/healthz`·`/readyz` HEAD는 404 |
-| origin | 위 결과로 www가 OCI Development VM인지 확인할 수 없음. DNS 응답의 Cloudflare edge IP를 VM 주소로 쓰지 않음 |
+| 사용자 확인 | preview는 OCI Web, A 원본 `129.225.183.112`·Proxied. apex/www는 Worker `oioibawige`, staging/www.staging은 Worker `oioibawige-staging` 연결 |
+| preview 공개 조회 | `/healthz`·`/readyz` HEAD 403. 접근 정책/차단 원인은 미확인이며 runtime 정상 여부를 검증한 결과가 아님. DNS의 Cloudflare edge IP와 스크린샷의 origin을 구분 |
+| assets | 스크린샷에서 `assets.oioibawige.com`은 R2 `oioibawige-r2-staging` 연결. 이름만으로 버킷을 폐기하면 기존 이미지가 유실될 수 있음 |
 | GitHub 변수 | `oci-development-image`에 OCIR_REGISTRY/NAMESPACE/REPOSITORY, NEXT_PUBLIC_SENTRY_DSN, SENTRY_ORG/PROJECT 있음. 현재 repository 값은 `oioi-bwg` |
 | GitHub secret 이름 | OCIR_USERNAME/AUTH_TOKEN, OCI_CLI_USER/TENANCY/FINGERPRINT/KEY_CONTENT, SENTRY_AUTH_TOKEN, SLACK_DEPLOY_WEBHOOK_URL 있음. 유효 권한/값 검증은 아님 |
 | GitHub 보호 | Environment에 migration_develop·refs/pull/*/merge 허용. integration은 verify, deployment는 verify+promotion 및 strict 검사 활성 |
 | IaC 권한 | `infra/oci/iam.tf`의 Compute pull은 기존 repository 이름 하나, Vault read는 runtime_secret_ocids의 개별 secret에 한정. 실제 적용 여부는 미확인 |
 
-실제 OCI Development hostname과 Cloudflare DNS의 원본 대상/Proxied 여부를 먼저 확인한다.
-www의 404를 Next 앱 장애나 VM 연결 실패로 단정하지 않는다. routing/다른 서비스 여부부터 구분한다.
+www의 기존 404는 Worker 경로에서 관찰한 값이며 preview VM의 readiness 증거가 아니다.
+preview에서 제한된 사전 검증을 진행하고 최종 www origin에서도 인증·일반 기능을 다시 확인한다.
 
 ### Cloudflare에서 준비할 항목
 
 | 항목 | 준비 / 적용 조건 |
 | --- | --- |
-| DNS | 기존 oioibawige.com zone에 이름 console의 A를 **대상 VM의 실제 공인 IPv4**로 추가하는 안. 원본 hostname이 검증됐으면 CNAME도 가능. 새 도메인 구매/zone 등록/NS 교체는 불필요 |
+| DNS | 기존 zone의 www·console을 `129.225.183.112`로 연결하는 안. console CNAME을 선택하면 최종 www를 대상으로 검토하며 폐기할 preview를 참조하지 않음. 새 도메인 구매/zone 등록/NS 교체는 불필요 |
 | Proxy | 기존 CDN 경로를 유지하는 Proxied 안. AAAA는 origin IPv6가 실제 작동할 때만 구성. proxied 응답의 IPv6를 origin IPv6로 오해하지 않음 |
-| TLS edge | Universal SSL의 active certificate가 console을 포함하는지 확인. 1단계 subdomain은 일반적으로 포함되지만 더 깊은 staging hostname은 별도 coverage 확인 |
+| TLS edge | Universal SSL의 active certificate가 최종 www·console과 apex를 포함하는지 확인. 기존 Worker Custom Domain 해제 후의 certificate 상태도 재확인 |
 | TLS origin | Caddy의 console 인증서/SNI/443과 Full (strict)를 함께 검증. 기존 자동 ACME 또는 Origin CA 방식을 확인해 확장. zone 전체 SSL mode 변경은 기존 www origin 영향부터 확인 |
 | Cache | hostname console의 Cache eligibility를 Bypass cache로 두는 안. 기존 Cache Everything/Page Rule 우선순위도 확인하여 QR·인증·관리 응답 저장 방지. Web cache 설정은 유지 |
 | Routing/WAF | apex/www redirect, Workers route, Origin/Transform Rule이 console까지 일치하는지 확인. Host/SNI를 www로 바꾸거나 callback/Action을 redirect/challenge하는 규칙은 Console 흐름으로 검증 |
@@ -259,6 +268,31 @@ DNS challenge를 선택할 때만 필요한 Caddy DNS plugin/권한 제한 token
 [Origin rules](https://developers.cloudflare.com/rules/origin-rules/),
 [Access origin 검증](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/).
 
+### preview → www 전환과 레거시 종료
+
+1. 기존 Worker Web과 preview Web의 실제 DB·업로드 저장소·데이터 최신성을 대조한다.
+   동일 데이터라고 가정하지 않는다. 회원/콘텐츠/파일 보존, 필요한 이관·백업·쓰기 중지와
+   전환 후 복구 기준을 확정하기 전에는 www를 전환하지 않는다. 지금 production DB에는 접근하지 않는다.
+2. preview에서 두 앱과 MFA를 제한 검증한다. 최종 www의 canonical URL·일반 로그인/메일 링크,
+   Console origin·쿠키·Sentry/build 환경, Caddy TLS/라우팅을 준비한다. 운영용 build 변수는
+   이미지 생성 전에 적용하고 그 digest로 검증한다. 기존 staging의 검증 성공으로 대체하지 않는다.
+3. 기존 www의 Worker Custom Domain 연결 및 겹치는 route를 해제하고 VM DNS/라우팅으로
+   전환한다. DNS의 잠긴 Worker 레코드를 일반 A처럼 편집하는 것으로 끝내지 않는다.
+   apex도 기존 Worker 연결을 해제하고 www redirect로 전환하는 안이다.
+   실제 www에서 일반 기능·Console 분리·Web 관리 거절·이미지·enrollment 닫힘을 검증한다.
+4. 전환 성공 후 `staging`·`www.staging` 연결, 기존 Web Worker `oioibawige`·`oioibawige-staging`,
+   임시 preview DNS/Caddy 경로와 이전 Web 배포 trigger/credential을 종료한다.
+   Worker의 workers.dev/preview URL·잔여 route도 확인하여 옛 관리 경로가 남지 않게 한다.
+   서비스 의존성이 없는 것으로 확인된 레거시 리소스만 삭제하며 별도 알림 Worker는 구분한다.
+5. `assets`가 참조하는 staging 이름의 R2는 실제 파일·DB URL 의존성을 확인한다.
+   버킷도 폐기한다면 먼저 파일 이관과 assets 연결/업로드 전환, 기존 URL 조회를 검증한다.
+   메일 DKIM/SPF/DMARC는 Web staging 레코드와 구분하여 운영 메일 의존성을 확인한다.
+
+전환 복구는 검증된 VM 앱/설정/데이터 기준으로 계획한다. 옛 Worker로 DNS를 되돌리는 것만으로
+복구 성공이라 하지 않으며 이전 password-only 관리 경로와 서로 다른 DB의 쓰기를 다시 열지 않는다.
+Worker Custom Domain의 DNS 자동 관리와 apex redirect 조건은
+[Cloudflare 공식 문서](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/)를 따른다.
+
 ### OCI·GitHub·VM에서 준비할 항목
 
 | 항목 | 준비 / 검증 |
@@ -267,20 +301,21 @@ DNS challenge를 선택할 때만 필요한 Caddy DNS plugin/권한 제한 token
 | Publish/pull IAM | 기존 CI OCIR publisher가 새 repository에 push 가능한지, Compute Instance Principal이 pull 가능한지 확인. Run Command 전용 principal에 registry/Vault 권한을 합치지 않음 |
 | Vault | CONSOLE_AUTH_SECRET·CONSOLE_MFA_ENCRYPTION_KEY 두 secret 준비. Web/로컬과 별도 값, 암호화 키 canonical Base64 32 bytes. 실제 key 값을 Terraform/GitHub에 등록하지 않음 |
 | Vault IAM | 새 두 secret OCID를 runtime_secret_ocids 및 host mapping에 반영, Instance Principal read 검증. 등록/배포마다 key 재생성 금지, 접근 통제된 동일 key 복구 준비 |
-| GitHub | 기존 Environment/credential/branch policy 재사용. B1이 정한 Console repository 변수 추가, 앱별 Sentry/build 설정 확정. 변수명은 아직 구현 계약이 아니므로 임의로 선등록하지 않음 |
+| GitHub | 기존 Development Environment/승격 검증 재사용. B1의 Console repository 변수 추가. 운영 build 입력·승인/배포 계약은 F에서 명시하며 Environment 이름만 바꿔 운영 승인 완료로 처리하지 않음 |
 | Caddy/네트워크 | 설치 버전·host/container 위치·설정 경로 확인, 외부 443/선택한 ACME 경로와 IPv4/IPv6 확인. 앱 3000/3001·DB 5432는 외부 개방하지 않음. Caddy가 container면 localhost upstream 대신 실제 network 경로 확정 |
 | 신뢰 IP | 실제 Cloudflare CIDR만 trusted proxy로 설정하고 정규화된 client IP를 앱에 전달. 임의 forwarded header·직접 origin 우회 검증. 현재 unknown bucket으로 공개하지 않음 |
 | Host upgrade | 두 env 0600·Compose·deploy script·config/state 변환·sudoers/preflight 준비. 자동 installer는 기존 protected config를 업데이트하지 않으므로 명시적 검토/반영 필수 |
 | DB | 실제 journal·admin_mfa·app 권한 확인 후 승인된 별도 migrator 적용. 앱 deploy에 migration/owner credential/seed 없음 |
 | 운영 복구 | 대상 DB/host/credential guard가 갖춰진 CLI, 개인 operator·승인 티켓, TOTP용 host/인증기 시간 동기화, MFA key·DB 복구 조합, 안전한 rollback pair 준비 |
 | 자원/관측 | pool 합계 20+운영 여유, CPU/RSS/디스크 실측. Console log 수집/알람·Sentry 이벤트·소스맵과 두 앱 health 확인 |
-| R2 | 기존 bucket/assets hostname과 server-side S3 업로드 재사용, Console env에 필요한 credential 주입. 현재 서버 업로드 때문에 Console용 CORS PUT을 추가할 필요는 없음 |
+| R2 | assets hostname과 기존 URL 보존, staging 버킷 폐기 여부에 맞춰 파일/연결/credential 이관 후 정리. Console의 server-side S3 업로드에는 CORS PUT 추가 불필요 |
 
 Caddy의 CDN trust는 [공식 reverse_proxy 문서](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)를
 설치 버전과 대조한다. R2 CORS는 [브라우저 cross-origin 요청](https://developers.cloudflare.com/r2/buckets/cors/)을
 위한 설정이며 현재 `packages/server/src/storage/upload-public-asset.ts`의 서버 S3Client 호출과 구분한다.
-Console은 Credentials+TOTP이므로 별도 Google/Kakao OAuth client/callback, 신규 DB/VM/bucket은 준비 항목이 아니다.
+Console은 Credentials+TOTP이므로 별도 Google/Kakao OAuth client/callback, 신규 DB/VM은 필요하지 않다.
+R2는 staging 버킷 정리 방식에 따라 재사용 또는 이관을 결정하며 새 버킷을 필수로 가정하지 않는다.
 
-지금 먼저 확보할 정보는 **실제 VM origin/Development hostname, 현재 Caddy 배치·인증서 방식,
-등록 접근 제한 수단, 새 Console repository 이름과 두 Vault secret 관리 위치**다.
+지금 먼저 확보할 정보는 **현재 Caddy 배치·인증서/preview 접근 정책, 기존 Worker와 VM의
+데이터/파일 차이, 등록 접근 제한 수단, Console repository와 두 Vault secret 관리 위치**다.
 이후 구현 PR의 계약과 일치하도록 설정하며 모든 외부 적용은 별도 실행 범위로 둔다.
