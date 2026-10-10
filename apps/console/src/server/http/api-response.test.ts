@@ -47,7 +47,7 @@ describe("toErrorResponse", () => {
   it("treats malformed JSON as a request validation failure", async () => {
     const request = new Request("https://example.test/api", {
       body: "{broken",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
       method: "POST",
     });
 

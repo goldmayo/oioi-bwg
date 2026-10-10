@@ -40,7 +40,7 @@ describe("/api/admin/albums/[id]", () => {
     const response = await PATCH(
       new Request("https://example.test/api/admin/albums/1", {
         body: JSON.stringify(input),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "PATCH",
       }),
       routeContext,
@@ -55,7 +55,10 @@ describe("/api/admin/albums/[id]", () => {
     deleteAlbum.mockResolvedValue(undefined);
 
     const response = await DELETE(
-      new Request("https://example.test/api/admin/albums/1", { method: "DELETE" }),
+      new Request("https://example.test/api/admin/albums/1", {
+        method: "DELETE",
+        headers: { Origin: "http://127.0.0.1:3001" },
+      }),
       routeContext,
     );
 
@@ -67,7 +70,10 @@ describe("/api/admin/albums/[id]", () => {
     deleteAlbum.mockRejectedValue(new AppError("ALBUM_NOT_FOUND"));
 
     const response = await DELETE(
-      new Request("https://example.test/api/admin/albums/1", { method: "DELETE" }),
+      new Request("https://example.test/api/admin/albums/1", {
+        method: "DELETE",
+        headers: { Origin: "http://127.0.0.1:3001" },
+      }),
       routeContext,
     );
 

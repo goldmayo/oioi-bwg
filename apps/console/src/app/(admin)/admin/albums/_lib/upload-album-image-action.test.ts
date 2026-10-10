@@ -1,6 +1,11 @@
 import { AppError } from "@oioi-bwg/server/errors/app-error";
+import { headers } from "next/headers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+
+vi.mock("next/headers", () => ({
+  headers: vi.fn(async () => new Headers({ Origin: "http://127.0.0.1:3001" })),
+}));
 
 const getRequestContext = vi.hoisted(() => vi.fn());
 const reportServerError = vi.hoisted(() => vi.fn());
@@ -18,6 +23,17 @@ describe("uploadAlbumImageAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getRequestContext.mockResolvedValue(context);
+  });
+
+  it("Origin이 없으면 context/storage를 읽기 전에 거절한다", async () => {
+    vi.mocked(headers).mockResolvedValueOnce(new Headers());
+    await expect(uploadAlbumImageAction(new FormData())).resolves.toEqual({
+      success: false,
+      error: "이미지 업로드에 실패했습니다.",
+    });
+    expect(getRequestContext).not.toHaveBeenCalled();
+    expect(uploadAlbumImage).not.toHaveBeenCalled();
+    expect(reportServerError).not.toHaveBeenCalled();
   });
 
   it("passes the request context and FormData file to the upload service", async () => {

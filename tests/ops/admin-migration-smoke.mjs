@@ -8,6 +8,8 @@ import path from "node:path";
 import { chromium } from "playwright";
 import postgres from "postgres";
 
+import { assertConsoleAuthIngress } from "./console-auth-ingress-smoke.mjs";
+
 import {
   enrollConsoleFixture,
   fixtureKey,
@@ -33,9 +35,9 @@ const passwordHash =
 const processes = [];
 let browser;
 
-async function start(app, port) {
+async function start(app, port, append = false) {
   const origin = `http://127.0.0.1:${port}`;
-  const log = fs.openSync(path.join(artifacts, `${app}.log`), "w");
+  const log = fs.openSync(path.join(artifacts, `${app}.log`), append ? "a" : "w");
   const child = spawn(process.execPath, [`apps/${app}/.next/standalone/apps/${app}/server.js`], {
     env: {
       PATH: process.env.PATH,
@@ -372,6 +374,8 @@ try {
     ["USER", "ACTIVE", "user"],
     ["ADMIN", "SUSPENDED", "disabled"],
     ["ADMIN", "ACTIVE", "unregistered"],
+    ["ADMIN", "ACTIVE", "rate-action"],
+    ["ADMIN", "ACTIVE", "rate-concurrent"],
   ]) {
     const [account] =
       await sql`insert into account (role, status) values (${role}, ${status}) returning id`;
@@ -381,6 +385,12 @@ try {
   await enrollConsoleFixture();
   origins = { web: await start("web", 3200), console: await start("console", 3201) };
   browser = await chromium.launch();
+  await assertConsoleAuthIngress(browser, origins.console, sql, artifacts);
+  // 제한으로 포화된 프로세스를 종료한다. 다음 C1 회귀는 새 프로세스에서 독립적으로 실행한다.
+  const limitedConsole = processes.at(-1);
+  limitedConsole.kill("SIGTERM");
+  await once(limitedConsole, "exit");
+  origins.console = await start("console", 3201, true);
   const web = await journey(origins.web, "web");
   const consoleApp = await journey(origins.console, "console");
   await assertConsoleSessionBoundary(browser, origins.console, sql);
@@ -433,7 +443,7 @@ try {
 } finally {
   await browser?.close();
   for (const child of processes) {
-    if (child.exitCode !== null) continue;
+    if (child.exitCode !== null || child.signalCode !== null) continue;
     const exited = once(child, "exit");
     child.kill("SIGTERM");
     const timeout = setTimeout(() => child.kill("SIGKILL"), 5000);

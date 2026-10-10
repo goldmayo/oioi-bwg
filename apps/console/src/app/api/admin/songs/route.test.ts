@@ -57,7 +57,7 @@ describe("/api/admin/songs", () => {
     const response = await POST(
       new Request("https://example.test/api/admin/songs", {
         body: JSON.stringify(input),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "POST",
       }),
     );
@@ -73,7 +73,7 @@ describe("/api/admin/songs", () => {
     const response = await POST(
       new Request("https://example.test/api/admin/songs", {
         body: JSON.stringify(input),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "POST",
       }),
     );
@@ -91,7 +91,7 @@ describe("/api/admin/songs", () => {
     const response = await POST(
       new Request("https://example.test/api/admin/songs", {
         body: JSON.stringify({ ...input, lrcText: "" }),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "POST",
       }),
     );
@@ -104,7 +104,7 @@ describe("/api/admin/songs", () => {
     const response = await POST(
       new Request("https://example.test/api/admin/songs", {
         body: JSON.stringify({ ...input, slug: null }),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "POST",
       }),
     );

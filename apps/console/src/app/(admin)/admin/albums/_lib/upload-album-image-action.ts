@@ -2,9 +2,11 @@
 
 import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { uploadAlbumImage } from "@oioi-bwg/server/services/album-image-service";
+import { headers } from "next/headers";
 import { ZodError } from "zod";
 
 import { getRequestContext } from "@/server/auth/request-context";
+import { assertConsoleOrigin } from "@/server/http/console-origin";
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
 const FALLBACK_ERROR_MESSAGE = "이미지 업로드에 실패했습니다.";
@@ -12,6 +14,7 @@ const FALLBACK_ERROR_MESSAGE = "이미지 업로드에 실패했습니다.";
 /** 앨범 이미지 업로드 use case를 호출하는 route-private delivery adapter다. */
 export async function uploadAlbumImageAction(formData: FormData) {
   try {
+    assertConsoleOrigin(await headers());
     const context = await getRequestContext();
     const { url } = await uploadAlbumImage(context, formData.get("file"));
 

@@ -39,7 +39,7 @@ describe("/api/admin/songs/[id]", () => {
     const response = await PATCH(
       new Request("https://example.test/api/admin/songs/2", {
         body: JSON.stringify(input),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "PATCH",
       }),
       routeContext,
@@ -57,7 +57,7 @@ describe("/api/admin/songs/[id]", () => {
     const response = await PATCH(
       new Request("https://example.test/api/admin/songs/2", {
         body: JSON.stringify(legacyInput),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "PATCH",
       }),
       routeContext,
@@ -75,7 +75,7 @@ describe("/api/admin/songs/[id]", () => {
       const response = await PATCH(
         new Request("https://example.test/api/admin/songs/2", {
           body: JSON.stringify(input),
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
           method: "PATCH",
         }),
         routeContext,
@@ -90,7 +90,10 @@ describe("/api/admin/songs/[id]", () => {
     deleteSong.mockResolvedValue(undefined);
 
     const response = await DELETE(
-      new Request("https://example.test/api/admin/songs/2", { method: "DELETE" }),
+      new Request("https://example.test/api/admin/songs/2", {
+        method: "DELETE",
+        headers: { Origin: "http://127.0.0.1:3001" },
+      }),
       routeContext,
     );
 
@@ -101,14 +104,20 @@ describe("/api/admin/songs/[id]", () => {
   it("maps a missing song and an invalid path", async () => {
     deleteSong.mockRejectedValue(new AppError("SONG_NOT_FOUND"));
     const missing = await DELETE(
-      new Request("https://example.test/api/admin/songs/2", { method: "DELETE" }),
+      new Request("https://example.test/api/admin/songs/2", {
+        method: "DELETE",
+        headers: { Origin: "http://127.0.0.1:3001" },
+      }),
       routeContext,
     );
     expect(missing.status).toBe(404);
     expect(apiErrorResponseSchema.parse(await missing.json()).code).toBe("SONG_NOT_FOUND");
 
     const invalid = await DELETE(
-      new Request("https://example.test/api/admin/songs/nope", { method: "DELETE" }),
+      new Request("https://example.test/api/admin/songs/nope", {
+        method: "DELETE",
+        headers: { Origin: "http://127.0.0.1:3001" },
+      }),
       { params: Promise.resolve({ id: "nope" }) },
     );
     expect(invalid.status).toBe(400);
