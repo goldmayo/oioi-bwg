@@ -99,6 +99,8 @@ pnpm db:configure-runtime-roles -- --allow-production
 Account 변경과 Console version 회수는 하나의 transaction이며 재승격/복귀에도 증가한다.
 수동 UPDATE나 회수 후 별도 role/status 변경 절차를 사용하지 않는다. 현재 CLI는 **local Compose 검증 전용**이다.
 production host/Vault 실행은 별도 승인과 P06 host guard 검증 전까지 열지 않는다. `ocarun`/HTTP에 권한을 추가하지 않는다.
+loopback URL/DB identity 검사는 오접속을 줄이는 guard이며 SSH 포트 포워딩을 통한 production 접근 차단을 보장하지 않는다.
+P06에서 local/production credential 분리와 실제 네트워크·호스트 접근 통제를 별도로 검증한다.
 
 승인된 POSIX operator에게만 app credential과 설정 파일 읽기 권한을 준다. OS 계정 공유를 피하고,
 `umask 077`로 `.local/console-mfa-operator.json`을 생성하여 operator 소유·0600·단일 일반 파일로 관리한다.
@@ -116,6 +118,9 @@ pnpm console:mfa account-access --config .local/console-mfa-operator.json --acco
 
 사유는 operator 소유·0600의 `.local/operator-reason.txt`에 비어 있지 않은 200자 이하로 작성한다.
 argv에는 파일 경로만 전달하여 pnpm의 명령 echo에도 사유 원문이 나오지 않게 한다.
+실행 전 접근 통제된 변경 승인 티켓에 사유와 승인자를 보존하고, 실행 후 같은 티켓에 operator UID·UTC 실행 시각·
+대상 Account·CLI 결과(전후 role/status/version·성공 여부)를 첨부해 해당 실행과 사유를 연결한다. 실패도 같은 티켓에 기록한다.
+`--reason-file` 검사는 입력 확인이며 영속 감사 저장이 아니다. 티켓에 사유/결과를 보존하지 않은 실행은 승인 절차를 충족하지 않는다.
 실행 전 대상 id/role/status/version만 조회·검토한다. MFA 행 없음은 `--expected-version none`이며 기대값이 다르면 중단한다.
 ACTIVE/SUSPENDED만 변경하며 가입 활성화·탈퇴/복구의 개인정보 정책을 우회하지 않는다.
 출력은 대상·전후 role/status/version·성공 여부 또는 고정 실패 코드뿐이다. secret/OTP/비밀번호/사유 원문을 기록하지 않는다.

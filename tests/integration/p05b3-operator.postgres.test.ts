@@ -86,12 +86,16 @@ async function cli(
       "--status",
       access[3],
     );
-  const output = await promisify(execFile)("pnpm", args, {
+  const result = await promisify(execFile)("pnpm", args, {
     env: { PATH: process.env.PATH, DATABASE_URL: "postgresql://ignored.invalid/production" },
     timeout: 10_000,
   }).then(
-    ({ stdout }) => stdout,
-    (error: { stderr: string }) => error.stderr,
+    ({ stdout, stderr }) => ({ stdout, stderr, succeeded: true }),
+    (error: { stdout: string; stderr: string }) => ({
+      stdout: error.stdout,
+      stderr: error.stderr,
+      succeeded: false,
+    }),
   );
   for (const forbidden of [
     reason,
@@ -101,7 +105,8 @@ async function cli(
     "stack",
     "query",
   ])
-    expect(output).not.toContain(forbidden);
+    for (const output of [result.stdout, result.stderr]) expect(output).not.toContain(forbidden);
+  const output = result.succeeded ? result.stdout : result.stderr;
   return JSON.parse(output) as { success: boolean; code?: string; version?: number };
 }
 
