@@ -111,6 +111,35 @@ export const passwordCredential = pgTable(
   ],
 );
 
+export const adminMfa = pgTable(
+  "admin_mfa",
+  {
+    accountId: bigint("account_id", { mode: "bigint" }).primaryKey().notNull(),
+    encryptedSecret: text("encrypted_secret"),
+    enabledAt: timestamp("enabled_at", { withTimezone: true, mode: "string" }),
+    lastUsedStep: integer("last_used_step"),
+    version: integer().default(1).notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.accountId],
+      foreignColumns: [account.id],
+      name: "admin_mfa_account_id_fkey",
+    }).onDelete("restrict"),
+    check("admin_mfa_version_check", sql`${table.version} > 0`),
+    check(
+      "admin_mfa_secret_check",
+      sql`${table.encryptedSecret} is null or ${table.encryptedSecret} <> ''`,
+    ),
+    check("admin_mfa_step_check", sql`${table.lastUsedStep} is null or ${table.lastUsedStep} >= 0`),
+    check(
+      "admin_mfa_state_check",
+      sql`(${table.enabledAt} is null and ${table.lastUsedStep} is null)
+        or (${table.enabledAt} is not null and ${table.encryptedSecret} is not null and ${table.lastUsedStep} is not null)`,
+    ),
+  ],
+);
+
 export const emailVerificationChallenge = pgTable(
   "email_verification_challenge",
   {
