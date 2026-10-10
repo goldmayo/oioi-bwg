@@ -6,7 +6,7 @@ authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
 updated_at: "2026-10-10"
-revision: 3
+revision: 4
 ---
 
 # P06 계획 초안
@@ -31,6 +31,8 @@ P05 A~D의 통합과 공개 운영 준비를 구분한다. [P05-D 결과](P05-D-
 - 저장소 정적 확인과 공개 조회에 더해 revision 3에는 사용자의 Cloudflare DNS 스크린샷과
   preview → www 전환 지시를 반영했다. 실제 host Caddyfile, VM 자원 사용량, Vault/IAM,
   DB migration 상태, current digest는 미확인이다. 운영 credential을 사용하지 않았다.
+- revision 4는 사용자 지시로 공인 IP allowlist·Cloudflare 차단 규칙·Access의 사전 설정 요구를
+  제외했다. 최초 등록은 기존 SSH의 localhost 포워딩으로 준비하며 서버의 비공개 경계는 유지한다.
 
 상위 기준은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md),
 [Auth §4.1](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md#41-console의-단계적-전환),
@@ -170,9 +172,13 @@ Sentry source map/release·공개 build 변수는 두 앱의 실제 consumer를 
   로그인/등록의 ingress adapter에서 같은 값을 제공한다. IP 식별 실패 시 우회 허용하지 않고 보수적으로 제한한다.
   Console 1 process/1 replica의 메모리 limiter를 유지하며 재시작 초기화 한계를 기록한다.
   다중 replica를 켜기 전 shared limiter 설계를 별도로 승인한다. 단일 VM이라는 이유로 두 Console replica를 허용하지 않는다.
-- 최초 등록/재등록은 **proxy에서 운영자만 접근 가능한 상태 + enrollment flag 명시적 허용**을 함께 요구한다.
-  구체적인 제한 수단은 실제 접근 환경 확인 후 D 실행 계획에서 확정한다. flag=true만으로 제한 완료라 하지 않는다.
+- 최초 등록/재등록에 운영자 공인 IP 관리·고정 IP·Cloudflare WAF/Access 설정을 요구하지 않는다.
+  기존 SSH로 VM의 localhost Console에 포워딩하는 절차를 D에서 구현/검증한다. 등록 동안
+  host publish는 loopback, Console origin은 포워딩한 HTTP loopback 주소로 일치시키고
+  Caddy의 외부 Console 접근은 서버 배포 설정으로 차단한다. DNS 부재나 flag=true만으로 제한 완료라 하지 않는다.
   최초 confirm → 다음 OTP 로그인 → CRUD 후 flag=false로 전환하고 setup/confirm 거절을 확인한다.
+  같은 DB·MFA 키를 유지한 채 HTTPS origin·Secure cookie로 전환하고 새 로그인/회수와 등록 닫힘을
+  다시 검증한다. 별도 등록 서버/두 번째 Console process를 추가하지 않는다.
   QR/secret/OTP/비밀번호를 로그·Sentry·artifact·브라우저 저장소에 남기지 않는다.
 - 현재 B3 CLI는 local Compose 전용이므로 production URL을 넣어서 사용하지 않는다.
   production host의 승인된 개별 operator·보호 설정·대상 DB identity·credential 공급·네트워크 접근 통제를
@@ -205,7 +211,7 @@ pool/container limit을 결정한다. 두 이미지/직전 이미지/로그 여�
 ## 8. 미확정 사항과 다음 작업
 
 실행 전 확인할 값은 Caddy 소유 경로·CDN/proxy 체인·preview 접근 정책,
-등록 시 운영자 접근 제한 수단, Console OCIR/Vault/IAM 설정, host 현재 state/DB journal,
+SSH 포워딩과 Caddy 차단/전환의 실제 경로, Console OCIR/Vault/IAM 설정, host 현재 state/DB journal,
 operator 실행 경계와 key 복구 보관 방식, 실측 pool/메모리/디스크 여유다.
 이 값들을 추측한 production 명령은 계획에 넣지 않았다.
 
@@ -218,7 +224,7 @@ Web 전체 Session 회수 미구현 해결, Waveform/Guide는 별도 관심사�
 이 계획 작성에서는 Git ref/diff와 관련 코드·문서만 확인했다. 문서 format·링크·diff 검사는 PR에
 실제 결과를 기록하며, push hook의 자동 검증은 직접 실행한 runtime 검사와 구분한다.
 
-## 9. 외부 설정 사전 점검 (revision 3)
+## 9. 외부 설정 사전 점검 (revision 4)
 
 2026-10-10 공개 DNS/HTTPS HEAD, GitHub Environment·ruleset을 read-only로 확인했다.
 사용자가 제공한 DNS 스크린샷도 근거로 구분해 기록했다.
@@ -252,10 +258,11 @@ preview에서 제한된 사전 검증을 진행하고 최종 www origin에서도
 | TLS origin | Caddy의 console 인증서/SNI/443과 Full (strict)를 함께 검증. 기존 자동 ACME 또는 Origin CA 방식을 확인해 확장. zone 전체 SSL mode 변경은 기존 www origin 영향부터 확인 |
 | Cache | hostname console의 Cache eligibility를 Bypass cache로 두는 안. 기존 Cache Everything/Page Rule 우선순위도 확인하여 QR·인증·관리 응답 저장 방지. Web cache 설정은 유지 |
 | Routing/WAF | apex/www redirect, Workers route, Origin/Transform Rule이 console까지 일치하는지 확인. Host/SNI를 www로 바꾸거나 callback/Action을 redirect/challenge하는 규칙은 Console 흐름으로 검증 |
-| 최초 등록 제한 | DNS 노출 전 console virtual host를 운영자 제한/차단 상태로 준비. 운영자 IP 제한 등 기존 수단 우선. Access를 선택하면 origin 우회 차단과 JWT 서명/audience 검증까지 계획하며 헤더 존재만 신뢰하지 않음 |
+| 최초 등록 제한 | 사용자 사전 작업에 공인 IP allowlist·WAF 차단 규칙·Access를 넣지 않음. 기존 SSH localhost 포워딩과 서버 Caddy 차단으로 비공개 등록, 등록 닫힘 후 HTTPS 전환 검증 |
 
-DNS 추가 순서는 **실제 origin 확인 → 제한된 Caddy virtual host/TLS 준비 → DNS/proxy 연결 →
-제한된 HTTPS 검증 → MFA 등록 → 등록 닫힘 확인 → 공개**다. console이 기존 Web fallback으로
+전환 순서는 **실제 origin 확인 → SSH loopback 등록·등록 닫힘 → 차단된 Caddy virtual host/TLS 준비 →
+서버 내부 경로로 HTTPS 검증 → DNS/proxy 연결·공개**다. HTTPS 검증 경로는 C/D에서 외부 차단을
+유지하는 방식으로 구체화하며 공인 IP allowlist를 요구하지 않는다. console이 기존 Web fallback으로
 연결되지 않아야 한다. 공개 단계에도 enrollment flag는 false다. 비공개·등록 제한을 DNS 부재만으로 보장하지 않는다.
 Origin CA는 Cloudflare↔origin용이므로 DNS-only로 바꿀 때 브라우저가 신뢰하는 인증서인지 별도로 확인한다.
 DNS challenge를 선택할 때만 필요한 Caddy DNS plugin/권한 제한 token을 준비하며 일반 DNS 수동 등록에 token을 요구하지 않는다.
@@ -265,8 +272,7 @@ DNS challenge를 선택할 때만 필요한 Caddy DNS plugin/권한 제한 token
 [Full strict](https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/full-strict/),
 [Origin CA](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/),
 [Cache rule](https://developers.cloudflare.com/cache/how-to/cache-rules/create-dashboard/),
-[Origin rules](https://developers.cloudflare.com/rules/origin-rules/),
-[Access origin 검증](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/).
+[Origin rules](https://developers.cloudflare.com/rules/origin-rules/).
 
 ### preview → www 전환과 레거시 종료
 
@@ -317,5 +323,5 @@ Console은 Credentials+TOTP이므로 별도 Google/Kakao OAuth client/callback, 
 R2는 staging 버킷 정리 방식에 따라 재사용 또는 이관을 결정하며 새 버킷을 필수로 가정하지 않는다.
 
 지금 먼저 확보할 정보는 **현재 Caddy 배치·인증서/preview 접근 정책, 기존 Worker와 VM의
-데이터/파일 차이, 등록 접근 제한 수단, Console repository와 두 Vault secret 관리 위치**다.
+데이터/파일 차이, SSH 포워딩 경로, Console repository와 두 Vault secret 관리 위치**다.
 이후 구현 PR의 계약과 일치하도록 설정하며 모든 외부 적용은 별도 실행 범위로 둔다.
