@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-10"
-revision: 8
+revision: 9
 ---
 
 # 구현 순서와 PR 단위
@@ -88,6 +88,8 @@ Runner의 내부 API 기록 후 socket 응답만 유실된 경우와, 기록도 
 이 검증에 Outbox/DB queue/retry scheduler/분산 transaction/범용 reconciliation·broker abstraction을 추가하지 않는다.
 
 P06 전환 순서는 **두 image/routing 준비 → 비공개 Console smoke/MFA 등록 → Web 관리 경로 제거 → 두 앱 배포 검증 → Console 공개**다.
+단일 VM의 기존 Promotion·OCI Run Command를 유지하는 세부 PR 분할과 두 앱 복구 계획은
+[P06 계획 초안](P06-PLAN.md)을 참조한다. 계획 작성은 환경 적용이나 공개 승인을 의미하지 않는다.
 P04/P05의 기존 기능과 인가 확인 전에는 기존 경로를 지우지 않는다. rollback도 password-only 관리 경로를 다시 공개하지 않는다.
 Guide writer 전환 뒤 rollback은 새 guide를 읽는 호환 앱으로 제한하고 Song.lyrics의 파괴적 정리는 후속으로 둔다.
 
