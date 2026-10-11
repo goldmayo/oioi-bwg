@@ -6,7 +6,7 @@ authority: plan
 source_commit: 7cb3a6d424fc7255449c30786e10a3282884c6b6
 created_at: "2026-10-11"
 updated_at: "2026-10-11"
-revision: 1
+revision: 2
 ---
 
 # 로컬 개발과 OCI 운영 환경변수 구성 개선 계획
@@ -25,6 +25,7 @@ revision: 1
 
 상위 규칙과 문서 소유권:
 
+- [환경변수·CI/CD 확인 증적](ENVIRONMENT-CONFIGURATION-EVIDENCE.md): 변수 consumer, 보안 개선 대상, 사용자 제공 OCI 실행 결과
 - [Architecture Constitution](../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md)
 - [Runtime §11–14](../oioi-bwg-architecture-clean-v1/11-content-i18n-assets-runtime-architecture.md): 앱 설정·빌드 입력·Vault 주입의 기준
 - [Deployment Runbook](../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md): Promotion 및 운영 실행 절차
@@ -117,6 +118,9 @@ GitHub Environment 이름만 바꾸어 기존 이미지의 빌드값이 바뀌�
 
 ### ENV-1 — 앱 템플릿과 환경 의미 정리
 
+- `NEXT_PUBLIC_ASSETS_URL`은 현재 consumer가 없으므로 Compose 주입과 안내에서 제거한다.
+  `ASSETS_PUBLIC_BASE_URL`은 서버 업로드가 공개 이미지 URL을 만드는 runtime 입력으로 유지한다.
+  기존 저장된 이미지 URL과 R2 버킷을 이 정리 작업에서 변경하지 않는다.
 - Web·Console 변수마다 consumer, 필수/선택, 로컬/운영, 서버/브라우저, 빌드/runtime을 표시한다.
 - Web의 DB 입력 누락을 설명하고, R2 업로드·OCI 메일·Sentry는 해당 기능에 필요한 선택 설정으로 나눈다.
 - Web/Console 키 분리와 MFA 키 보존을 명시한다. 키를 매 실행마다 생성하지 않는다.
@@ -147,12 +151,22 @@ GitHub Environment 이름만 바꾸어 기존 이미지의 빌드값이 바뀌�
 
 새 운영 전환 계획을 만들지 않고 P06-B1/B2/F의 해당 PR에 연결한다.
 
+- [증적 §3](ENVIRONMENT-CONFIGURATION-EVIDENCE.md#3-cicd-보안-개선-대상)의 CI-ENV-01~06을 해당 P06 변경의 검토 항목으로 연결한다.
+- 이미지 게시와 운영 배포의 GitHub Environment 분리를 검토한다. 현재 runbook §21의 단일
+  Environment 계약을 변경하려면 해당 P06 PR에서 runbook·workflow·보호 설정을 함께 개정한다.
+  이름 변경만으로 비밀 접근 범위가 분리됐다고 처리하지 않는다.
+- OCI 개인 키는 인증·실행에 필요한 step에만 전달하고 인증 파일의 권한·정리를 검증한다.
+- 원격 명령부터 secret 출력이 발생하지 않게 하고, CI에는 안전한 상태·종료 코드·진단만 전달한다.
+  Console MFA 키, 원문/변환 값, agent message와 양쪽 출력 스트림의 실패 경로를 검토한다.
+- `.local/`을 Docker build context에서 제외하고 credential을 취급하는 Action의 SHA 고정을 검토한다.
 - 앱별 env 허용 목록, 필수 값, 생성 파일 권한과 rollback 복구를 실제 host 계약에 반영한다.
 - GitHub의 이미지 게시 계정과 Run Command 계정을 구분하고 runtime 비밀의 CI 유입을 금지한다.
 - 두 앱 빌드의 prod 환경 값과 Sentry 동작을 확인한다. 빌드 입력 변경은 새 candidate로 검증한다.
 - `oci-development-image` 이름 변경은 Secrets 재등록·보호 설정·workflow 참조 전환이 동반되므로
   P06에서 결정한다. 레거시 Worker의 `production` Environment를 확인 없이 재사용하지 않는다.
 - IAM은 새 repository pull·secret 읽기·Run Command 실제 실행을 증명한 뒤 전체 ARM64 빌드로 진행한다.
+  사용자 제공 기존 Run Command의 `SUCCEEDED`/exit 0은 과거 실행 증거이며 새 Console 권한의
+  검증을 대체하지 않는다. [증적 §4](ENVIRONMENT-CONFIGURATION-EVIDENCE.md#4-사용자-제공-oci-auditrun-command-증적)를 따른다.
 - staging/production Worker 경로 및 관련 설정의 삭제 시점은 P06 전환·데이터 확인 이후로 유지한다.
 
 완료 조건은 P06의 실제 운영 검증을 따른다. 문서 검토나 로컬 모의 입력으로 운영 IAM·주입을
