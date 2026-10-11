@@ -5,8 +5,8 @@ status: active
 source_commit: 7cb3a6d424fc7255449c30786e10a3282884c6b6
 observed_at: "2026-10-11"
 created_at: "2026-10-11"
-updated_at: "2026-10-11"
-revision: 2
+updated_at: "2026-10-12"
+revision: 3
 ---
 
 # 환경변수·CI/CD 보안 및 OCI 실행 확인 증적
@@ -106,6 +106,9 @@ feature flag 보호 분기가 성립하지 않고 Sentry도 staging으로 분류
 제외하지 않는다. [Dockerfile](../../../Dockerfile)의 `COPY . .`로 로컬 설정·증적이 builder context에
 들어갈 여지가 있다. 수동 로컬 빌드의 `.local/` 제외와 context 검증을 추가할 대상이다.
 비밀 파일이 실제 이미지·cache에 들어갔다는 결과는 확인하지 않았다.
+2026-10-12 리뷰 보완: `compose.dev.yml`의 `.:/app`은 개발 앱에서 `.local/`을 읽을 수 있게 한다.
+build context 제외는 bind mount를 막지 않는다. 로컬 관리자·migrator 파일을 프로젝트 밖에
+보관하고 앱에 mount하지 않는 조건을 ENV-2에 반영했다. 아직 코드에 적용한 것은 아니다.
 
 유지할 보호: OCI 경로는 runtime DB/Auth/R2 비밀을 host의 Vault 주입으로 획득한다.
 Sentry 게시 토큰은 BuildKit secret으로 전달하고 runtime 비밀을 Docker build arg로 넣지 않는다.
@@ -125,14 +128,15 @@ Audit 조회 범위는 `ap-osaka-1`, 2026-10-05 **16:01:00Z~16:12:00Z**다.
 | 해당 명령 최종 실행 결과 | 아래 command/instance 조회 | `state: SUCCEEDED`, `exitCode: 0` |
 
 Audit의 표시 이름 `oioi github-deploy`는 앞서 확인한 `github-deploy`와 principal OCID가 같다.
-게시 principal은 `ocid1.user.oc1..aaaaaaaagp4krqbnha7whqquvxu3pfcxmkqm3ctnzu33qhri3i4b2u4vhjua`,
-Run Command principal은 `ocid1.user.oc1..aaaaaaaa7fyaikz2wysgcui6wzujf6uv6xfmmwkw6kksxqnp6vzbncwvctta`다.
+게시 principal은 `oioi-github-ci`(OCID 끝 `…b2u4vhjua`),
+Run Command principal은 `github-deploy`(OCID 끝 `…ncwvctta`)다.
+정확한 식별자는 저장소 밖의 보호된 로컬 운영 기록에 보존하고 공개 문서에는 일부만 남긴다.
 
 사용자가 조회한 대상과 최소 결과:
 
 ```text
-command: ocid1.instanceagentcommand.oc1.ap-osaka-1.amaaaaaahcgbyoaaeybvrrloxgzv64c2r34zd222afh6q5bmnbopvuktlg2q
-instance: ocid1.instance.oc1.ap-osaka-1.anvwsljrhcgbyoacqa6id2hr257tlu26cfjd7x7yywnai7hh37kkytix57cq
+command: OCID 끝 …pvuktlg2q (원문은 비공개 운영 기록)
+instance: OCID 끝 …h37kkytix57cq (원문은 비공개 운영 기록)
 query: data.{state:"lifecycle-state",exitCode:content."exit-code"}
 result: {"exitCode":0,"state":"SUCCEEDED"}
 ```

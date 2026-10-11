@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: 7cb3a6d424fc7255449c30786e10a3282884c6b6
 created_at: "2026-10-11"
-updated_at: "2026-10-11"
-revision: 2
+updated_at: "2026-10-12"
+revision: 3
 ---
 
 # 로컬 개발과 OCI 운영 환경변수 구성 개선 계획
@@ -62,7 +62,7 @@ revision: 2
 
 | 입력 | 소유 위치 | 소비자 |
 | --- | --- | --- |
-| 로컬 PostgreSQL 연결 요소 | ignored `.local/postgres.env` | Compose PostgreSQL·로컬 시작 스크립트·DB 도구 |
+| 로컬 PostgreSQL 연결 요소 | 프로젝트 밖 `~/.config/oioi-bwg/postgres.dev.env` | Compose PostgreSQL·로컬 시작 스크립트·DB 도구 |
 | Web 전용 설정·로컬 키 | `apps/web/.env.local` | Web |
 | Console 전용 설정·로컬 키 | `apps/console/.env.local` | Console |
 | 변수 설명과 안전한 예시 | 추적되는 각 `.env.example` 및 로컬 DB 템플릿 | 개발자 |
@@ -73,7 +73,10 @@ revision: 2
 WSL 직접 실행은 `127.0.0.1`, Compose 안의 앱은 서비스명 `postgres`를 사용한다.
 
 설정 파일은 WSL Linux 파일시스템에 두고 디렉터리 `0700`, 비밀 파일 `0600`을 사용한다.
-원본 DB 파일 전체를 앱 컨테이너에 주입하지 않고 앱 실행에 필요한 URL만 전달한다.
+현재 Compose의 `.:/app` bind mount는 프로젝트의 `.local/`도 앱에서 읽을 수 있게 한다.
+따라서 관리자·migrator credential 파일은 프로젝트 밖에 두고 앱에 mount하지 않는다.
+`.dockerignore`는 build context만 제한하므로 bind mount 격리의 근거로 사용하지 않는다.
+원본 파일 전체를 앱 환경에 주입하지 않고 앱 실행에 필요한 URL만 전달한다.
 앱용과 owner/migrator용 연결 목적을 구분하고, 기존 역할을 축소하거나 변경하는 작업은 별도 검증한다.
 운영 owner/migrator credential은 이 로컬 파일에 가져오지 않는다.
 
@@ -116,6 +119,10 @@ GitHub Environment 이름만 바꾸어 기존 이미지의 빌드값이 바뀌�
 
 ## 4. 구현 순서와 PR 경계
 
+ENV-1을 우선 정리하면서 **P06-A 이미지 개발은 바로 착수할 수 있다. ENV-2는 별도 PR이며
+P06의 필수 선행 작업이 아니다.** 로컬 실행을 실제로 막는 문제가 있을 때만 필요한 부분을 먼저
+처리하고, ENV-3은 P06-B1/B2/F에 포함한다.
+
 ### ENV-1 — 앱 템플릿과 환경 의미 정리
 
 - `NEXT_PUBLIC_ASSETS_URL`은 현재 consumer가 없으므로 Compose 주입과 안내에서 제거한다.
@@ -133,7 +140,8 @@ GitHub Environment 이름만 바꾸어 기존 이미지의 빌드값이 바뀌�
 
 ### ENV-2 — 로컬 DB 입력과 시작 경로 통합
 
-- 로컬 DB 템플릿과 ignored 실제 파일을 도입하고 Compose의 credential/URL 고정값을 제거한다.
+- 로컬 DB 템플릿과 프로젝트 밖 실제 파일을 도입하고 Compose의 credential/URL 고정값을 제거한다.
+- 앱 컨테이너가 관리자·migrator credential 파일을 읽지 못하도록 mount 경계를 확인한다.
 - Web·Console 시작 경로와 migration·통합 runner·dump 복원이 동일 입력을 사용하게 한다.
 - DB 도구는 실행 목적에 맞는 연결을 명시하고 기존 local guard를 강화한다.
 - 로컬 대상의 protocol/host/port/DB명 및 불필요한 query 옵션을 확인한다. hostname만으로
@@ -146,6 +154,7 @@ GitHub Environment 이름만 바꾸어 기존 이미지의 빌드값이 바뀌�
 
 완료 조건: 기존 DB 볼륨과 MFA 정보를 유지하면서 호스트 Web·Console 및 Compose Web의 DB 조회가
 성공한다. 특수문자 비밀번호·입력 충돌·비로컬 URL 거절·격리 테스트 DB 삭제를 확인한다.
+실제 앱 컨테이너에서 관리자·migrator credential 파일이 보이지 않는 것도 검증한다.
 
 ### ENV-3 — P06 운영 주입 및 빌드 입력에 반영
 
