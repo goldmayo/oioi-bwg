@@ -6,7 +6,7 @@ source_commit: 7cb3a6d424fc7255449c30786e10a3282884c6b6
 observed_at: "2026-10-11"
 created_at: "2026-10-11"
 updated_at: "2026-10-11"
-revision: 1
+revision: 2
 ---
 
 # 환경변수·CI/CD 보안 및 OCI 실행 확인 증적
@@ -144,3 +144,41 @@ HTTP 200만으로 exit 0을 추론하지 않았다. 명령 본문·당시 배포
 
 **새 Console repository push/pull, 두 Console secret의 VM 읽기, 변경된 IAM의 새 Run Command,
 컨테이너 metadata 차단은 아직 검증되지 않았다.** 기존 명령의 성공으로 P06-B0를 완료 처리하지 않는다.
+
+## 5. GitHub 등록 credential과 OCI principal 대조
+
+2026-10-11 GitHub API로 실제 run/job/step 시각, 배포 job 로그, Secret 변경 시각과 해당 실행의
+workflow를 추가 확인했다. Secret 원문을 읽거나 재등록하지 않았다. 실행의 head SHA는
+`9fd9661e1dafae94a92e600b2c4b57679a9965f8`이며 해당 ref의 workflow가
+`oci-development-image`에서 아래 Secret 이름을 참조함을 확인했다.
+
+| GitHub Secret | 대응 OCI 사용자 | 실제 실행 대조 |
+| --- | --- | --- |
+| `OCIR_USERNAME` + `OCIR_AUTH_TOKEN` | `oioi-github-ci` | [Verify run 37335131706](https://github.com/goldmayo/oioi-bwg/actions/runs/37335131706), attempt 2의 게시 job 시각과 §4의 이미지 게시 Audit 일치 |
+| `OCI_CLI_USER` + API key/fingerprint | `github-deploy` | [Deploy run 37338457348](https://github.com/goldmayo/oioi-bwg/actions/runs/37338457348)의 job 로그에 §4와 동일한 command OCID 존재 |
+
+이미지 게시 job ID는 `111855974428`이다. UTC 기준 OCIR 로그인은 16:01:57~16:01:59,
+ARM64 build/publish는 16:01:59~16:04:29, 게시 이미지 pull/smoke는 16:05:23~16:05:40에
+성공했다. 사용자 Audit의 `oioi-github-ci` 이미지 게시 16:04:28~16:04:29와 manifest 조회
+16:05:24~16:05:25가 해당 step 구간과 일치한다. 이는 실행 시각의 상관 대조이며 두 로그의
+이미지 digest/request ID를 직접 비교한 것은 아니다.
+
+배포 job ID는 `111859146508`이며 Run Command step은 UTC 16:09:44~16:11:40에 성공했다.
+job 로그에서 추출한 command OCID는 §4의 사용자 Audit/실행 결과와 **정확히 동일**하다.
+따라서 같은 GitHub 실행이 만든 명령의 OCI principal이 `github-deploy`였음을 확인했다.
+
+현재 Environment Secret metadata의 마지막 변경 시각(UTC):
+
+| Secret | updated_at |
+| --- | --- |
+| `OCIR_USERNAME` | 2026-09-11T01:21:01Z |
+| `OCIR_AUTH_TOKEN` | 2026-09-10T17:26:07Z |
+| `OCI_CLI_USER` | 2026-09-16T13:21:25Z |
+| `OCI_CLI_FINGERPRINT` | 2026-09-16T13:21:49Z |
+| `OCI_CLI_KEY_CONTENT` | 2026-09-16T13:23:37Z |
+| `OCI_CLI_TENANCY` | 2026-09-16T13:21:35Z |
+
+관련 Secrets는 모두 이 실제 실행 이후 변경되지 않았다. **현재 등록 credential의 사용자 대응은
+위 실행 증거와 변경 이력으로 확인 완료**로 기록한다. GitHub API에서 Secret 원문을 직접 확인했다는
+뜻은 아니며, 오늘 새 인증을 수행하거나 현재 OCI 쪽 key/token 유효성·추가 권한까지 검사한 결과도 아니다.
+§4의 새 Console 권한·metadata 차단 미검증 범위는 유지한다.
