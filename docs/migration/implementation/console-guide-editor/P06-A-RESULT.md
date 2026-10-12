@@ -4,8 +4,8 @@ kind: migration-result
 status: complete
 source_commit: 434a685e2ad15e924d471491495f68fa5ed88905
 verified_at: "2026-10-12"
-updated_at: "2026-10-12"
-revision: 1
+updated_at: "2026-10-13"
+revision: 2
 ---
 
 # P06-A 결과
@@ -33,3 +33,9 @@ commit hook의 lint-staged와 push hook의 affected type-check/lint/test·repo �
 직접 검사와 별도로 실행돼 통과했다. 이 결과는 기록 변경 commit의 새 CI까지 대신하지 않는다.
 ENV-1은 독립 PR, ENV-2는 비차단 후속이다. B0 IAM/metadata·ARM64 게시·VM/HTTPS·Web 관리 종료는
 미실행이다. 다음 진입점과 운영 실행 gate는 [P06-HANDOFF](P06-HANDOFF.md)에 유지한다.
+
+2026-10-13 상태 재확인: #134는 Open·리뷰 기록 없음이며, 기록 commit
+`1c3bff1c3f72cf273de646fabd79b8dcec7baa30`의 [Verify 38265204560](https://github.com/goldmayo/oioi-bwg/actions/runs/38265204560)은
+attempt 2에서 전체 성공했다. 이전 세션의 attempt 1 Terraform OCI provider 다운로드 HTTP 500은
+실패 job 재실행으로 해소됐으며 코드 결함으로 분류하지 않았다. 위 source_commit의 직접 검증을
+이번 세션에 반복한 결과가 아니다. 이 상태 기록 이후 commit의 CI는 PR에서 별도로 확인한다.
