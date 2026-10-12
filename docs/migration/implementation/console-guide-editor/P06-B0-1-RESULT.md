@@ -5,7 +5,7 @@ status: active
 source_commit: 0da834d57017c403c58f52f31e2bf0f3b98392e3
 verified_at: "2026-10-13"
 updated_at: "2026-10-13"
-revision: 2
+revision: 3
 ---
 
 # P06-B0-1 결과
@@ -13,6 +13,7 @@ revision: 2
 **코드 구현·로컬 검증 완료, 실제 VM 적용·지속성 증거는 대기 중이다.**
 [B0 계획](P06-B0-PLAN.md)의 B0-1만 구현했다. #135 병합 head `9a31a90`에서
 `feature/p06b0-metadata-guard`를 분기했다. 검증 코드 ref는 위 source_commit이다.
+[구현 PR #136](https://github.com/goldmayo/oioi-bwg/pull/136)은 리뷰/CI 확인 대상이며 운영 적용 승인이 아니다.
 
 전용 nft table의 atomic 갱신·drift 검사, Docker 이전 guard 의존/시작 전 검사,
 별도 승인 installer와 직접 HTTP probe를 추가했다. probe는 host v2 양성 대조·container v1/v2
@@ -45,6 +46,10 @@ fixture의 curl 누락·테스트 작성 중 문법/모듈 규칙은 수정 후 
 
 이 계정의 sudo는 비밀번호를 요구한다. privileged 설치·probe·restart는 사용자 터미널에서
 기존 sudo 인증으로 실행할 수 있게 준비하며 비밀번호 수집·NOPASSWD 확대는 하지 않는다.
+설치용 archive는 검증 코드 ref의 guard/probe/installer/unit/drop-in 다섯 파일만 `git archive`로 만들었다.
+B0 worktree의 `.local/p06b0-metadata-guard-0da834d.tar`, SHA-256
+`cc605652825fda0f386df52afd5d3aa4f3981dad14f9f1c3274daf39fc00508a`다.
+VM 업로드·설치·실제 Web probe의 1차 적용안으로 준비했으며 재시작 proof와 Console grant는 후속 승인 범위다.
 읽기 조회는 설치 승인이나 실제 IMDS 차단 proof가 아니다. 설치·IAM/Stack·DB 변경,
 키 재생성·Secret 조회·전체 ARM64 빌드는 미실행이다. 사용자 P06-PLAN 수정·개인 env·키는 보존했다.
 Web 실제 차단·지속성 proof 전 새 Console grant를 추가하지 않는다. B0-2 권한 실증 후만 B1을 허용한다.

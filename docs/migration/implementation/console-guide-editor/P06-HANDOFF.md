@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-13"
-revision: 4
+revision: 5
 ---
 
 # P06 작업 인계
@@ -17,7 +17,7 @@ revision: 4
 - 작업 경로: `.local/worktrees/p06b0-metadata-guard`. 원래 worktree의 사용자 P06-PLAN 수정은 별개로 보존했다.
 - 완료 PR: [#134](https://github.com/goldmayo/oioi-bwg/pull/134) → `0e21208`, [#135](https://github.com/goldmayo/oioi-bwg/pull/135) → `9a31a90`.
   각각 최신 base/head CI 전체 성공 후 사용자 지시로 squash 병합했다.
-- B0-1 검증 코드: `0da834d57017c403c58f52f31e2bf0f3b98392e3`. 새 PR은 위 head branch로 조회하며 CI는 실제 최신 head에서 확인한다.
+- B0-1 PR: [#136](https://github.com/goldmayo/oioi-bwg/pull/136). 검증 코드 `0da834d57017c403c58f52f31e2bf0f3b98392e3`, CI는 실제 최신 head에서 확인한다.
   직접 기본 검사·ops 82건·두 앱 build·격리 namespace 검증은 RESULT 참조. 실제 VM 완료 증거가 아니다.
 - ENV-1은 별도 PR로 처리하고 ENV-2는 P06-A를 차단하지 않는다. 운영 APP_ENV 전환은 새 candidate 검증과 연결한다.
 - 다음 단계: B0-1 리뷰 후 준비한 host diff·복구/중단 검토 → 승인된 실제 Web 차단·재시작 proof.
