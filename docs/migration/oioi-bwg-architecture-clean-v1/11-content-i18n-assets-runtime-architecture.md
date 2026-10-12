@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.3"
+version: "1.4"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-07"
+updated_at: "2026-10-12"
 depends_on:
   - "01"
   - "05"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.3
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.4
 
 ## 1. 목적
 
@@ -180,6 +180,11 @@ P04의 Console은 `apps/console`에 자동 탐색 설정과 `.env*`를 소유한
 `CONSOLE_AUTH_SECRET`은 최소 32자이고 Web의 `AUTH_SECRET`으로 fallback하지 않는다.
 runtime 설정은 요청 시 검증해 build에 secret을 요구하지 않는다. 기존 Web 이미지와 배포 대상은
 P06 전까지 유지하고, CI/local에서는 두 앱 standalone을 독립 build한다.
+
+P06-A의 일반 CI/local 검증은 같은 builder에서 Web `runner`와 Console `runner-console` 두
+Docker runtime을 생성한다. 각 이미지의 server/static/public 경로와 native dependency를 실제로
+검증하며 Console `/readyz`는 인증 설정과 PostgreSQL 기본 가용성을 확인하고 오류 원문을 숨긴다.
+이 이미지 검증은 OCI 게시·host 배포·Console HTTPS 공개 완료를 뜻하지 않는다.
 
 Next 자동 탐색 설정과 `public/`, 로컬 `.env*` 파일은 앱 루트인 `apps/web`이 소유한다.
 정적 자산의 공개 URL과 환경변수 이름·build/runtime 해석은 앱 이동으로 변경하지 않는다.
