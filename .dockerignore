@@ -18,3 +18,4 @@ docs
 Dockerfile
 .dockerignore
 .github
+.local
