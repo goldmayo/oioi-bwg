@@ -5,7 +5,7 @@ status: active
 source_commit: 0da834d57017c403c58f52f31e2bf0f3b98392e3
 verified_at: "2026-10-13"
 updated_at: "2026-10-13"
-revision: 1
+revision: 2
 ---
 
 # P06-B0-1 결과
@@ -33,8 +33,19 @@ namespace 실증의 Docker inspect/exec dispatch는 mock이며 HTTP·nft·forwar
 fixture의 curl 누락·테스트 작성 중 문법/모듈 규칙은 수정 후 재검증했다. 임시 container는 제거됐다.
 실제 OCI Instance Principal pull/Secret 읽기나 Docker/VM 재시작을 이 실험으로 검증했다고 주장하지 않는다.
 
-운영 SSH 조회는 호스트명 해석 실패·공개 주소의 publickey 인증 거절로 원격 명령이 실행되지 않았다.
-접속 방식 확인 또는 사용자 직접 읽기 점검 후 실제 host diff를 검토한다. 설치·IAM/Stack·DB 변경,
+초기 SSH 선택은 호스트명 해석·publickey 인증에 실패했다. 사용자가 지정한 기존 키 selector로
+접속한 뒤 다음 설정을 읽기 조회했다. 키 원문·env·OCI 식별자는 출력/공개 문서에 복사하지 않았다.
+
+| VM 관찰 출처                 | 결과와 적용안의 영향                                                                                                                                             |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 에이전트 SSH 읽기            | nft 1.0.9, iptables 1.8.10 `nf_tables`, Docker 29.7.2/live-restore=true. 표준 Docker unit 활성·drop-in 없음                                                      |
+| 에이전트 container 선택 조회 | 기존 Web bridge driver, privileged=false·추가 cap 없음·mount 0. probe 실행 조건과 일치                                                                           |
+| 에이전트 설정 읽기           | nftables service 비활성, ufw/firewalld 미설치. 기본 nftables.conf의 global flush 존재 → 기본 service 활성화/reload/stop 금지, 전용 guard만 사용                  |
+| 사용자 sudo 읽기 요약        | 현재 ip/ip6 filter FORWARD priority 0, filter/nat/raw table만 존재, flowtable 0, 전용 inet guard table 없음. 새 -10 hook이 기존 forward보다 먼저 실행하도록 준비 |
+
+이 계정의 sudo는 비밀번호를 요구한다. privileged 설치·probe·restart는 사용자 터미널에서
+기존 sudo 인증으로 실행할 수 있게 준비하며 비밀번호 수집·NOPASSWD 확대는 하지 않는다.
+읽기 조회는 설치 승인이나 실제 IMDS 차단 proof가 아니다. 설치·IAM/Stack·DB 변경,
 키 재생성·Secret 조회·전체 ARM64 빌드는 미실행이다. 사용자 P06-PLAN 수정·개인 env·키는 보존했다.
 Web 실제 차단·지속성 proof 전 새 Console grant를 추가하지 않는다. B0-2 권한 실증 후만 B1을 허용한다.
 현재 진입점은 기존 [HANDOFF](P06-HANDOFF.md) 한 파일을 갱신한다.

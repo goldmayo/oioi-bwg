@@ -209,6 +209,8 @@ sudo python3 -I /srv/oioibawige/scripts/metadata-guard.py probe <existing-web-co
 guard는 전용 table만 한 nft transaction으로 갱신하고 host OUTPUT을 건드리지 않는다.
 Docker 시작은 guard에 의존하며 table drift가 있으면 시작 전 검사에서 실패한다. guard stop은 deny를 남긴다.
 규칙이 없으면 operator가 원인을 해결해 `apply`한 뒤 Docker 시작을 재시도한다. backend 변경·전체 flush는 하지 않는다.
+기본 `nftables.service`의 global flush 설정을 유지한 채 이를 활성화·재시작·reload/stop하지 않는다.
+해당 관리 서비스의 lifecycle 변경은 guard 영향을 따로 검토하며 전용 guard service만 사용한다.
 [nft 원자적 갱신](https://wiki.nftables.org/wiki-nftables/index.php/Atomic_rule_replacement),
 [systemd 의존성](https://github.com/systemd/systemd/blob/main/man/systemd.unit.xml).
 

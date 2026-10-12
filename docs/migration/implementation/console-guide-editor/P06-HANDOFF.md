@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-13"
-revision: 3
+revision: 4
 ---
 
 # P06 작업 인계
@@ -20,8 +20,9 @@ revision: 3
 - B0-1 검증 코드: `0da834d57017c403c58f52f31e2bf0f3b98392e3`. 새 PR은 위 head branch로 조회하며 CI는 실제 최신 head에서 확인한다.
   직접 기본 검사·ops 82건·두 앱 build·격리 namespace 검증은 RESULT 참조. 실제 VM 완료 증거가 아니다.
 - ENV-1은 별도 PR로 처리하고 ENV-2는 P06-A를 차단하지 않는다. 운영 APP_ENV 전환은 새 candidate 검증과 연결한다.
-- 다음 단계: B0-1 리뷰 후 host firewall/unit 읽기 점검 → 구체적인 diff·복구/중단 검토 → 승인된 실제 Web 차단·재시작 proof.
-  SSH 접속 방식은 확인 중이며 키 원문은 수집하지 않는다. 기존 credential 대응은 #133에서 확인 완료이며 재조사하지 않는다.
+- 다음 단계: B0-1 리뷰 후 준비한 host diff·복구/중단 검토 → 승인된 실제 Web 차단·재시작 proof.
+  SSH 읽기 및 사용자 sudo firewall 요약은 RESULT에 기록했다. 기존 키를 인증 selector로만 사용했고 원문은 수집하지 않았다.
+  기존 sudo 인증이 필요한 설치·probe는 사용자 터미널 실행으로 준비한다. 기존 credential 대응은 #133에서 확인 완료이며 재조사하지 않는다.
 - B0 코드는 사용자 지시로 시작했지만 운영 적용·Secret 읽기·IAM/Stack 변경·전체 ARM64 빌드는 미승인·미실행이다.
 - B0 추가 검토: 기존 광범위 게시 정책을 두 repo READ/UPDATE로 교체하고, 기존 Stack의
   `migration_develop` 소스와 검토할 B0 코드의 차이를 해소한다. 같은 CI의 작은 probe가 기존 전체
