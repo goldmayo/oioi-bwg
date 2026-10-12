@@ -16,6 +16,13 @@ assert.ok((await csrf.json()).csrfToken);
 const cookies = csrf.headers.getSetCookie();
 assert.ok(cookies.some((cookie) => cookie.startsWith("oioi-console.csrf-token=")));
 assert.ok(cookies.every((cookie) => !cookie.includes("Domain=")));
+const login = await fetch(new URL("/admin-login", origin));
+assert.equal(login.status, 200);
+const assets = [...new Set((await login.text()).match(/\/_next\/static\/[^"<> ]+\.(?:js|css)/g))];
+assert.ok(assets.length > 0, "Console login must reference static assets");
+for (const asset of assets) {
+  assert.equal((await fetch(new URL(asset, origin))).status, 200, asset);
+}
 
 const browser = await chromium.launch();
 try {
