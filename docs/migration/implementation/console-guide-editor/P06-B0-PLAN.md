@@ -5,8 +5,8 @@ status: active
 authority: plan
 source_commit: 699b41a15a84af5adc2c05eda70e1ac0007ea1cd
 created_at: "2026-10-13"
-updated_at: "2026-10-13"
-revision: 2
+updated_at: "2026-10-14"
+revision: 3
 ---
 
 # P06-B0 계획
@@ -18,6 +18,13 @@ VM 설치·재시작·IAM/Stack 변경·실제 권한 probe는 별도 승인 대
 **기존 Web의 Instance Metadata 접근을 차단한 뒤 Console 권한을 추가하고 실제 주체로 검증한다.**
 이 문서는 변경·검증안이며 PR 병합, VM 변경, Stack 소스 변경, IAM Apply 또는 probe 실행 승인이 아니다.
 P06-A 병합 전에는 계획 준비만 진행한다. 구현은 A 병합 후 fetch한 최신 `migration_main`에서 분기한다.
+
+2026-10-14 적용 준비 보완: 사용자가 #136을 병합했고 1차 VM 파일 전달·백업·설치·현재 Web
+검증을 승인했다. 읽기 조회에서 기존 `/srv/oioibawige`와 scripts가 일반 사용자 소유여서
+root 실행 guard의 교체 방지를 위해 `/usr/local/lib/oioi-metadata-guard`를 사용한다.
+installer는 상위 경로와 기존 파일의 소유권·쓰기 권한·symlink/hardlink를 검사한다.
+기존 배포 디렉터리 권한은 바꾸지 않는다. 이 보완 코드의 검증·리뷰를 먼저 완료한다.
+운영 재시작·IAM/Stack 변경·새 Secret 읽기는 이번 1차 승인에 포함되지 않는다.
 
 ## 1. 기준과 이번 세션의 관찰
 

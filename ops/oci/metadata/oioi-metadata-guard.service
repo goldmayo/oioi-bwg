@@ -7,6 +7,6 @@ After=nftables.service firewalld.service ufw.service
 Type=oneshot
 RemainAfterExit=yes
 Environment=PATH=/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=/usr/bin/python3 -I /srv/oioibawige/scripts/metadata-guard.py apply
-ExecReload=/usr/bin/python3 -I /srv/oioibawige/scripts/metadata-guard.py apply
+ExecStart=/usr/bin/python3 -I /usr/local/lib/oioi-metadata-guard/metadata-guard.py apply
+ExecReload=/usr/bin/python3 -I /usr/local/lib/oioi-metadata-guard/metadata-guard.py apply
 # Stop intentionally leaves the deny rule in place.
