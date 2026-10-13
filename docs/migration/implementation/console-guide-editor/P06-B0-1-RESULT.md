@@ -4,8 +4,8 @@ kind: migration-result
 status: active
 source_commit: 0da834d57017c403c58f52f31e2bf0f3b98392e3
 verified_at: "2026-10-13"
-updated_at: "2026-10-13"
-revision: 3
+updated_at: "2026-10-14"
+revision: 4
 ---
 
 # P06-B0-1 결과
@@ -54,3 +54,31 @@ VM 업로드·설치·실제 Web probe의 1차 적용안으로 준비했으며 �
 키 재생성·Secret 조회·전체 ARM64 빌드는 미실행이다. 사용자 P06-PLAN 수정·개인 env·키는 보존했다.
 Web 실제 차단·지속성 proof 전 새 Console grant를 추가하지 않는다. B0-2 권한 실증 후만 B1을 허용한다.
 현재 진입점은 기존 [HANDOFF](P06-HANDOFF.md) 한 파일을 갱신한다.
+
+## 2026-10-14 설치 경로 보완
+
+#136의 병합 head `b8aa61be2594f6e95c5ceaf9de979033e742c08b`와 PR Verify 성공을
+GitHub에서 확인했다. 사용자는 1차 파일 전달·백업·설치·현재 Web 검증을 승인했다.
+기존 installer를 바로 설치하지 않고 SSH 읽기 조회를 재실행했다. 기존 Web bridge·mount 0·
+추가 cap 없음·비privileged, Docker/live-restore·관리 service 상태는 이전 관찰과 같았다.
+Web `/healthz`·`/readyz`는 body 없이 조회해 각각 HTTP 200, 두 container는 healthy였다.
+
+`/srv/oioibawige` 및 scripts가 일반 사용자 소유/0750인 것을 확인했다. root 소유 파일만
+두어도 이 상위 디렉터리를 통해 교체할 수 있어 guard를 root 보호 경로로 옮기는 보완을
+먼저 구현한다. `/usr`·`/usr/local`·`/usr/local/lib`는 root:root/0755이고 새 guard 디렉터리는 없다.
+설치 경로만 `/usr/local/lib/oioi-metadata-guard`로 변경하고 기존 배포 디렉터리 권한은 보존한다.
+상위 경로·기존 파일의 비보호 소유권/쓰기 권한·symlink/hardlink는 변경 전에 거절한다.
+기존 guard/probe의 네트워크 동작과 nft 규칙은 변경하지 않는다.
+
+처음 격리 검증은 Docker WSL 통합 비활성으로 실행하지 못했다. 사용자 활성화 후
+`docker run --rm --network none`으로 `tests/ops/metadata-install-container.sh --isolated-container`를
+실행해 exit 0을 확인했다. 실제 파일 소유권·permission·symlink/hardlink를 사용해 여섯 거절
+경로와 두 차례 설치를 검증했고 기존 scripts 소유권도 유지됐다. nft·curl·Docker·systemd
+명령 dispatch는 mock이며 운영 nft 동작·systemd 지속성 검증을 대체하지 않는다.
+
+보완 회귀 검사 포함 `pnpm test:ops` 90건, type-check·harness 18건·FSD·unit 459건·
+format·두 앱 build가 성공했다. 새 worktree에서 cache hit 0으로 실행했다. 최초 lint는
+harness가 생성한 의도적 위반 fixture를 동시에 읽어 실패했다. fixture의 생성/삭제 코드를
+확인하고 harness 종료 후 lint 재실행은 성공했다. 이후 검사는 두 명령을 동시에 실행하지 않는다.
+기존 archive는 #136의 다섯 파일과 동일하지만 보완 전 경로를 사용하므로 VM에 전달/설치하지 않았다.
+운영 firewall·unit·IAM/Stack·DB 변경은 아직 미실행이다. 운영 재시작은 별도 승인 범위다.

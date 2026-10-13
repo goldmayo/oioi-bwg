@@ -193,16 +193,19 @@ Docker unit/drop-in·live-restore와 Web container를 선택 조회한다. env/i
 probe는 mount·추가 capability·privileged가 없는 bridge container만 허용한다.
 이 조건과 맞지 않거나 forwarded IMDS가 필요한 다른 workload가 있으면 적용 전에 변경안을 재검토한다.
 
-승인할 변경은 `/srv/oioibawige/scripts/metadata-guard.py`·`metadata-probe.mjs`,
+승인할 변경은 `/usr/local/lib/oioi-metadata-guard/`의 `metadata-guard.py`·`metadata-probe.mjs`,
 `/etc/systemd/system/oioi-metadata-guard.service`, Docker의 `50-oioi-metadata-guard.conf` drop-in,
 `inet oioi_metadata_guard` table뿐이다. 기존 파일·전용 table·unit의 root 소유 복구 사본을 보존하고
-SSH 복구 경로와 maintenance 범위를 확인한다. 표준 `docker.service`와 nft/Node 지원이 필요하다.
+SSH 복구 경로와 maintenance 범위를 확인한다.
+root 실행 파일은 root 소유·group/other 쓰기 금지인 상위 경로에만 설치한다. installer는 symlink,
+사용자 소유/쓰기 가능 디렉터리와 기존 비보호 파일을 변경 전에 거절한다. 기존 `/srv/oioibawige`
+디렉터리의 소유권·권한은 이 installer가 변경하지 않는다. 표준 `docker.service`와 nft/Node 지원이 필요하다.
 다음 명령은 **적용 승인 후** 같은 VM에서 실행한다.
 
 ```bash
 sudo bash ops/oci/install-metadata-guard.sh --apply
-sudo python3 -I /srv/oioibawige/scripts/metadata-guard.py check
-sudo python3 -I /srv/oioibawige/scripts/metadata-guard.py probe <existing-web-container>
+sudo python3 -I /usr/local/lib/oioi-metadata-guard/metadata-guard.py check
+sudo python3 -I /usr/local/lib/oioi-metadata-guard/metadata-guard.py probe <existing-web-container>
 ```
 
 일반 installer·deploy에는 연결하지 않았다. 이 installer는 Docker를 재시작하거나 앱을 재배포하지 않는다.
