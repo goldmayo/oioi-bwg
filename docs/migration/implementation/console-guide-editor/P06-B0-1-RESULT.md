@@ -81,4 +81,19 @@ format·두 앱 build가 성공했다. 새 worktree에서 cache hit 0으로 실�
 harness가 생성한 의도적 위반 fixture를 동시에 읽어 실패했다. fixture의 생성/삭제 코드를
 확인하고 harness 종료 후 lint 재실행은 성공했다. 이후 검사는 두 명령을 동시에 실행하지 않는다.
 기존 archive는 #136의 다섯 파일과 동일하지만 보완 전 경로를 사용하므로 VM에 전달/설치하지 않았다.
+
+보완 검증 소스는 `280710eb929f78aa7b7096d6bbaf1329aa2e7ef2`,
+[PR #137](https://github.com/goldmayo/oioi-bwg/pull/137)이다. commit hook은 lint-staged/commitlint
+성공, 첫 커밋 시도의 본문 줄 길이 초과는 줄바꿈 후 해소했다. push hook은 affected task 0과
+repo 검사·harness 18건·ops 90건·format 성공으로 직접 전체 검사와 구분한다.
+
+사용자가 승인한 파일 전달을 수행했다. `git archive`로 소스의 다섯 설치 파일만 묶고
+VM의 새 사용자 작업 디렉터리(0700)에 archive와 1차 실행 스크립트(각 0600)를 전달했다.
+archive SHA-256은 `93f742f415d7208ee065ef52fe575541a4bb8ad1b75f0c9c889be83476c77302`,
+1차 실행 스크립트 SHA-256은 `3973538f8ee5ec3803c940ed16c780ce7350043c9ecd76dcc2d10cefb6402ea1`이며
+전송 후 VM에서 일치를 확인했다. 실행 스크립트의 Bash 구문도 원격에서 확인했다.
+정확한 명령/실행 파일은 보완 worktree의 ignored `.local/first-phase.sh`에 있다.
+실행 시 root 전용 백업·현재 firewall 대조·host IMDS 양성 대조·guard 설치·현재 Web probe·
+DNS/outbound·health·Docker/Web 시작 시각 유지 검사를 수행하도록 준비했다.
+실제 sudo 실행 결과는 아직 없으므로 root 백업·설치·Web 차단 성공으로 기록하지 않는다.
 운영 firewall·unit·IAM/Stack·DB 변경은 아직 미실행이다. 운영 재시작은 별도 승인 범위다.
