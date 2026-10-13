@@ -5,7 +5,7 @@ status: active
 source_commit: 0da834d57017c403c58f52f31e2bf0f3b98392e3
 verified_at: "2026-10-14"
 updated_at: "2026-10-14"
-revision: 5
+revision: 6
 ---
 
 # P06-B0-1 결과
@@ -126,3 +126,25 @@ Docker 재시작/live-restore, VM reboot 및 이전 Web 복구 후 지속성 검
 실제 Instance Principal repo pull·Vault Secret 읽기·신규 CI Run Command는 B0-2 증거로 남는다.
 재시작·Console 권한·IAM/Stack Plan/Apply·전체 ARM64 후보 빌드는 이번에 실행하지 않았다.
 지속성 proof 전 새 Console Secret grant를 적용하지 않는다.
+
+### #137 병합과 2A 준비 관찰
+
+사용자 지시로 #137을 squash 병합했으며 GitHub가 반환한 merge head는
+`5db6962572ccea5cf51f34926a71608270458796`이다. 최신 PR head `855bf2b`와
+Verify `38424190112` attempt 1 전체 성공을 확인하고 최종 한글 본문을 squash 본문에 사용했다.
+
+그 뒤 SSH 읽기 조회로 기존 Web의 프로젝트·app service·Compose 파일 경로, pinned image 사용,
+`unless-stopped`, mount 0·DB bridge, Compose 5.5.0·Docker live-restore=true를 확인했다.
+Web image의 env key는 표준 Node 기본 항목뿐이고 image volume 없음·non-root이며 임시 probe
+이름도 비어 있다. container env 값은 복사하지 않았다. app.env는 root/0600 일반 파일, 기존
+Compose는 root/0644 일반 파일이다. protected deploy.conf는 현재 SSH 사용자에게 읽을 수 없어
+원문을 읽지 않았다. 이 관찰은 재시작 성공이나 현재/이전 release 상태의 검증이 아니다.
+
+[PLAN](P06-B0-PLAN.md)의 2A 범위에 맞춘 ignored 실행 스크립트의 Bash 구문과 격리 Docker의
+mock command smoke를 실행했다. 성공, live-restore 비활성, image에 runtime secret key 존재,
+probe 실패, daemon 뒤 app 재시작, container 부분 생성 실패의 여섯 분기에서 기대 결과를 확인했다.
+명령 dispatch는 mock이며 실제 daemon을 재시작한 검증이 아니다. smoke container는 `--rm
+--network none`으로 실행했다. 문서 변경이므로 별도 lint/type/test/build를 계획하지 않았다.
+
+실행 스크립트 SHA-256은 `e7f39db8e440c4fc2aa9030c4a1547e3c8d7d91e697f8e9449076fa343d62ef4`다.
+VM 전달·2A 적용은 아직 미승인·미실행이며 2B/2C와 IAM/Stack도 보류다.
