@@ -6,7 +6,7 @@ authority: plan
 source_commit: 699b41a15a84af5adc2c05eda70e1ac0007ea1cd
 created_at: "2026-10-13"
 updated_at: "2026-10-14"
-revision: 3
+revision: 4
 ---
 
 # P06-B0 계획
@@ -110,6 +110,51 @@ guard 실패 시 새 Docker 시작을 거절하는 안을 구현한다. 실행 �
 요청 규칙은 [OCI IMDS](https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/gettingmetadata.htm)를 따른다.
 identity certificate/private key 응답도 body를 저장하거나 출력하지 않는다. Web 차단 proof 전에는
 새 Console Secret 권한을 적용하지 않는다. 실제 Console의 최종 검증은 B2에 남긴다.
+
+### 2026-10-14 지속성 검증의 다음 승인 단위
+
+#137은 사용자 지시로 `5db6962572ccea5cf51f34926a71608270458796`에 병합했다.
+최신 PR head `855bf2b`의 Verify `38424190112` attempt 1은 전체 성공이다.
+이 ref에서 지속성 검증 준비를 분기하며 1차 적용 성공은 [B0-1 RESULT](P06-B0-1-RESULT.md)가 소유한다.
+
+다음 승인은 **2A: 작은 probe 두 차례 생성/삭제와 Docker daemon 한 차례 재시작**으로 한정한다.
+현재 Web image·env·컨테이너, PostgreSQL 컨테이너·volume, Caddy 설정은 변경하지 않는다.
+재시작 중 연결이 잠시 끊길 수 있으며 live-restore 유지 여부를 실제로 측정한다.
+[Docker live restore](https://docs.docker.com/engine/daemon/live-restore/)는 daemon 설정을 유지한
+재시작에서 동작하는 기능이므로 backend·network·version 변경을 함께 수행하지 않는다.
+
+| 순서   | 실행할 구체적 변경/검사                                                                        | 성공 및 중단 기준                                                                                                                                              |
+| ------ | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 준비   | guard check/probe, Web/PostgreSQL ID·시작 시각, Docker PID·live-restore, Caddy·Web health 확인 | 현재 값과 조건이 다르면 임시 container 생성 전 중단                                                                                                            |
+| probe  | 기존 Web의 **local image ID**로 Node idle process를 같은 DB bridge에 두 번 생성·probe·삭제     | runtime env·mount·port를 전달하지 않고 non-root·read-only·cap-drop ALL·no-new-privileges·restart=no 적용. 각 ID가 다르고 여섯 경로·counter·host 대조 성공 필요 |
+| daemon | `systemctl restart docker.service` 한 차례, 호출은 60초로 제한                                 | Docker PID 변경/active·live-restore 유지, Web/PostgreSQL ID·시작 시각 동일. guard check·Web probe·health 모두 재검증                                           |
+| 종료   | 임시 probe 삭제 확인, 고정 성공/실패 출력만 반환                                               | 실패 시 이후 Web/VM 변경과 IAM/Stack 작업을 중단. 타 container·전체 ruleset·기본 nftables service를 수정하지 않음                                              |
+
+실행 파일은 새 worktree의 ignored `.local/probe-docker-verification.sh`로 준비한다.
+승인 후 해시가 같은 파일만 별도 사용자 staging에 전달하고 본인 SSH 터미널에서 실행한다.
+
+```bash
+# 2A 실행 승인과 파일 전달·해시 확인 후
+sudo bash probe-docker-verification.sh --apply
+printf 'exit=%s\n' "$?"
+```
+
+최종 `p06_b0_probe_docker_passed`·exit 0과 고정 probe/guard 출력을 수집한다.
+생성 실패를 포함해 이 실행이 붙인 고유 label의 임시 probe만 cleanup한다.
+Docker/SSH/health 또는 guard가 실패하면 원인을 읽기 조회하고 필요한 복구만 검토한다.
+차단 유실 시 기존 보호 경로의 `metadata-guard.py apply`로 **전용 table만** 복구하고 check/probe한다.
+Docker startup 검사가 거절되면 차단을 복구한 뒤 Docker 재시작을 한 번 재시도한다.
+원인 미해결이면 중단 상태로 기록하고 deny 의존을 제거하거나 전체 ruleset을 replay하지 않는다.
+
+2A 뒤의 **2B: 현재 Web 재생성·유지 전 Web release 복구**, **2C: VM reboot**는 별도 승인 단위다.
+2B는 현재 pinned digest·Compose·env를 root/0700 작업 경로에 0600으로 보존하고, 렌더링 결과와
+실행 중 Web의 설정을 값 미출력 방식으로 대조한 뒤 해당 app만 검증한다. env 값을 채팅·Git·
+artifact로 보내거나 Vault에서 새로 읽지 않는다. 복구 기준은 maintenance 시작 전 Web release다.
+같은 digest/env의 명시적 재생성 검증에서만 app 대상 `--no-deps --no-build --pull never
+--force-recreate --wait`를 검토하며 일반 배포 기본 명령은 바꾸지 않는다. [Compose up](https://docs.docker.com/reference/cli/docker/compose/up/).
+2C는 Web·PostgreSQL·Caddy/Agent가 재시작되는 VM 전체 중단 범위와 SSH 재접속·복구 경로를
+승인받는다. boot ID 변경, guard→Docker 순서, Web/DB 자동 기동·health·차단/host 대조를 확인한다.
+작은 probe나 daemon 성공만으로 2B/2C 완료를 기록하지 않는다. 모든 지속성 proof 전 새 Console grant는 보류한다.
 
 ## 4. B0-2: 저장소와 최소 IAM 변경안
 

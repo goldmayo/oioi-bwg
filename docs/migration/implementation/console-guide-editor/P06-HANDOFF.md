@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-14"
-revision: 7
+revision: 8
 ---
 
 # P06 작업 인계
@@ -13,15 +13,18 @@ revision: 7
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
 - 현재 단계: **B0-1 실제 VM의 현재 Web 차단 1차 적용 완료, 재시작 지속성 검증 대기**, [B0 PLAN](P06-B0-PLAN.md) / [B0-1 RESULT](P06-B0-1-RESULT.md).
-- 브랜치: `feature/p06b0-guard-install-hardening`, 기준 merge head `b8aa61be2594f6e95c5ceaf9de979033e742c08b`.
-- 작업 경로: `.local/worktrees/p06b0-guard-install-hardening`. 원래 worktree의 사용자 P06-PLAN 수정은 별개로 보존했다.
+- 브랜치: `feature/p06b0-restart-verification`, 기준 merge head `5db6962572ccea5cf51f34926a71608270458796`.
+- 작업 경로: `.local/worktrees/p06b0-restart-verification`. 원래 worktree의 사용자 P06-PLAN 수정은 별개로 보존했다.
 - 완료 PR: [#134](https://github.com/goldmayo/oioi-bwg/pull/134) → `0e21208`, [#135](https://github.com/goldmayo/oioi-bwg/pull/135) → `9a31a90`.
   각각 최신 base/head CI 전체 성공 후 사용자 지시로 squash 병합했다. #136은 사용자 병합을
   GitHub에서 확인했으며 merge head는 `b8aa61b`, 최신 PR Verify는 성공이다.
 - B0-1 PR: [#136](https://github.com/goldmayo/oioi-bwg/pull/136). 검증 코드 `0da834d57017c403c58f52f31e2bf0f3b98392e3`, 병합 전 PR Verify `38275418704` 전체 성공을 재확인했다.
   직접 기본 검사·ops 82건·두 앱 build·격리 namespace 검증은 RESULT 참조. 실제 VM 완료 증거가 아니다.
 - ENV-1은 별도 PR로 처리하고 ENV-2는 P06-A를 차단하지 않는다. 운영 APP_ENV 전환은 새 candidate 검증과 연결한다.
-- 다음 단계: 보완 PR #137 리뷰/병합 → 별도 승인된 작은 probe·Web/Docker/VM 재시작·이전 Web 복구 proof.
+- 다음 단계: 2A(작은 probe 2회 생성/삭제·Docker daemon 재시작) 승인 → 실제 검증.
+  #137은 `5db6962`에 병합 완료, 최신 Verify `38424190112` 전체 성공을 확인했다.
+  [PLAN](P06-B0-PLAN.md)의 2A 명령·중단/복구안과 ignored `.local/probe-docker-verification.sh`를 준비했다.
+  2A는 Web/VM 재생성·재부팅을 포함하지 않는다. Web 유지 전 release 복구·VM reboot는 2B/2C에서 별도 승인한다.
   SSH 읽기 및 사용자 sudo firewall 요약은 RESULT에 기록했다. 기존 키를 인증 selector로만 사용했고 원문은 수집하지 않았다.
   기존 sudo 인증이 필요한 설치·probe는 사용자 터미널 실행으로 준비한다. 기존 credential 대응은 #133에서 확인 완료이며 재조사하지 않는다.
 - 2026-10-14 사용자 `시작하자` 지시로 1차 파일 전달·백업·guard 설치·현재 Web 검증을 승인받았다.
