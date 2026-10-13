@@ -3,14 +3,14 @@ title: "P06-B0-1 Metadata 차단 코드 검증 결과"
 kind: migration-result
 status: active
 source_commit: 0da834d57017c403c58f52f31e2bf0f3b98392e3
-verified_at: "2026-10-13"
+verified_at: "2026-10-14"
 updated_at: "2026-10-14"
-revision: 4
+revision: 5
 ---
 
 # P06-B0-1 결과
 
-**코드 구현·로컬 검증 완료, 실제 VM 적용·지속성 증거는 대기 중이다.**
+**코드·보완 검증 및 실제 VM의 현재 Web 차단 1차 적용 완료, 재시작 지속성 증거는 대기 중이다.**
 [B0 계획](P06-B0-PLAN.md)의 B0-1만 구현했다. #135 병합 head `9a31a90`에서
 `feature/p06b0-metadata-guard`를 분기했다. 검증 코드 ref는 위 source_commit이다.
 [구현 PR #136](https://github.com/goldmayo/oioi-bwg/pull/136)은 리뷰/CI 확인 대상이며 운영 적용 승인이 아니다.
@@ -97,3 +97,32 @@ archive SHA-256은 `93f742f415d7208ee065ef52fe575541a4bb8ad1b75f0c9c889be83476c7
 DNS/outbound·health·Docker/Web 시작 시각 유지 검사를 수행하도록 준비했다.
 실제 sudo 실행 결과는 아직 없으므로 root 백업·설치·Web 차단 성공으로 기록하지 않는다.
 운영 firewall·unit·IAM/Stack·DB 변경은 아직 미실행이다. 운영 재시작은 별도 승인 범위다.
+
+### 실제 VM 1차 적용 결과
+
+사용자가 본인 SSH 터미널의 기존 sudo 인증으로 준비한 `first-phase.sh --apply`를 실행했다.
+공유 출력은 host IMDS 양성 대조, 설치/check/probe의 `metadata_guard_passed`, 설치 전후
+`web_dns_outbound_passed`, 최종 `p06_b0_first_phase_passed`와 `exit=0`이다.
+검증 소스·archive·실행 스크립트는 위 고정 SHA/해시와 같다. 이 결과는 로컬 mock이 아닌
+실제 기존 VM/Web에 대한 사용자 실행 증거이며 에이전트가 sudo를 실행한 것으로 기록하지 않는다.
+
+해당 스크립트가 실제로 성공 조건으로 확인한 범위는 다음과 같다.
+
+- root/0700 백업 디렉터리에 변경 전 ruleset·Docker unit/dependency·대상 부재/디렉터리 상태 보존.
+  기존 table·flowtable·forward hook과 새 대상 부재 대조 후 승인 범위만 설치.
+- host IMDSv2 metadata/cert/key HTTP 200을 body 폐기 방식으로 양성 대조.
+- 현재 Web의 v1/v2 여섯 경로 모두 네트워크 실패, 차단 counter 증가, 동일 시점 host 양성 대조.
+  HTTP 응답이나 단순 timeout만으로 성공 판정하지 않음.
+- 설치 전후 Web DNS·HTTPS outbound 성공, `/healthz`·`/readyz` HTTP 200과 healthy.
+  Web ID/시작 시각 및 Docker 활성 진입 시각 유지. 재생성·재시작은 실행하지 않음.
+
+공유 결과 후 에이전트의 SSH 읽기 재확인도 성공했다. guard unit은 loaded/active(exited)/
+success, Docker는 active이며 전용 guard Requires와 drop-in이 연결됐다. 새 경로·파일·unit은
+root:root이고 쓰기 권한은 root만 가지며, root 백업은 0700이다. 기존 scripts는 일반 사용자
+소유/0750을 그대로 유지했다. 기존 Web/PostgreSQL은 healthy, 두 health endpoint도 HTTP 200이다.
+
+**현재 Web 차단의 1차 proof만 완료했다.** 동일 bridge 작은 probe 재생성, 실제 Web 재생성,
+Docker 재시작/live-restore, VM reboot 및 이전 Web 복구 후 지속성 검증은 아직 없다.
+실제 Instance Principal repo pull·Vault Secret 읽기·신규 CI Run Command는 B0-2 증거로 남는다.
+재시작·Console 권한·IAM/Stack Plan/Apply·전체 ARM64 후보 빌드는 이번에 실행하지 않았다.
+지속성 proof 전 새 Console Secret grant를 적용하지 않는다.
