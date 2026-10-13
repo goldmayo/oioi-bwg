@@ -184,3 +184,43 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
 기존 `migration_develop` ruleset `22798840`에도 strict 검사와 required `promotion`을 적용했다.
 두 ruleset은 PR/필수 검사/force-push 금지와 stale approval 재검토를 적용하며 bypass actor가 없다.
 Environment에는 기존 development branch를 유지하면서 `refs/pull/*/merge` 정책 `62037752`를 추가했다.
+
+## 7. P06 Metadata 차단
+
+실제 VM 적용은 [B0 계획](../../docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의
+B0-1 승인 작업이다. 기존 SSH에서 nft/iptables backend·forward/flowtable·firewall reload 규칙,
+Docker unit/drop-in·live-restore와 Web container를 선택 조회한다. env/inspect 전체는 출력하지 않는다.
+probe는 mount·추가 capability·privileged가 없는 bridge container만 허용한다.
+이 조건과 맞지 않거나 forwarded IMDS가 필요한 다른 workload가 있으면 적용 전에 변경안을 재검토한다.
+
+승인할 변경은 `/srv/oioibawige/scripts/metadata-guard.py`·`metadata-probe.mjs`,
+`/etc/systemd/system/oioi-metadata-guard.service`, Docker의 `50-oioi-metadata-guard.conf` drop-in,
+`inet oioi_metadata_guard` table뿐이다. 기존 파일·전용 table·unit의 root 소유 복구 사본을 보존하고
+SSH 복구 경로와 maintenance 범위를 확인한다. 표준 `docker.service`와 nft/Node 지원이 필요하다.
+다음 명령은 **적용 승인 후** 같은 VM에서 실행한다.
+
+```bash
+sudo bash ops/oci/install-metadata-guard.sh --apply
+sudo python3 -I /srv/oioibawige/scripts/metadata-guard.py check
+sudo python3 -I /srv/oioibawige/scripts/metadata-guard.py probe <existing-web-container>
+```
+
+일반 installer·deploy에는 연결하지 않았다. 이 installer는 Docker를 재시작하거나 앱을 재배포하지 않는다.
+guard는 전용 table만 한 nft transaction으로 갱신하고 host OUTPUT을 건드리지 않는다.
+Docker 시작은 guard에 의존하며 table drift가 있으면 시작 전 검사에서 실패한다. guard stop은 deny를 남긴다.
+규칙이 없으면 operator가 원인을 해결해 `apply`한 뒤 Docker 시작을 재시도한다. backend 변경·전체 flush는 하지 않는다.
+기본 `nftables.service`의 global flush 설정을 유지한 채 이를 활성화·재시작·reload/stop하지 않는다.
+해당 관리 서비스의 lifecycle 변경은 guard 영향을 따로 검토하며 전용 guard service만 사용한다.
+[nft 원자적 갱신](https://wiki.nftables.org/wiki-nftables/index.php/Atomic_rule_replacement),
+[systemd 의존성](https://github.com/systemd/systemd/blob/main/man/systemd.unit.xml).
+
+probe는 host의 v2 metadata/cert/key HTTP 200, container의 v1/v2 여섯 경로 차단, counter 증가,
+동일 시점 host 성공을 확인한다. body·원문 오류를 버리고 고정 event만 출력한다.
+401/404/5xx·counter 증가 없는 timeout은 실패다. 실제 Instance Principal pull/Secret 성공,
+Web readiness·DNS/일반 outbound, container 재생성·Docker/VM 재시작·이전 Web 복구 후 재검증은
+별도로 기록한다. probe event만으로 B0 완료 판정하지 않는다.
+
+새 Console grant 전 장애는 새 IAM 작업을 중단하고 이전 guard 파일/전용 table을 복구해 다시 검사한다.
+새 Secret grant 이후에는 deny를 제거하지 않는다. 차단을 유지할 수 없으면 앱 접근을 제한·중지하고
+승인된 Console Secret grant 회수·검증부터 진행한다. 기존 Web 권한과 다른 firewall 규칙은 보존한다.
+운영 실행·비공개 증적은 B0 RESULT/기존 Notion에 기록한다. 실제 두 앱의 최종 검증은 B2에 남긴다.

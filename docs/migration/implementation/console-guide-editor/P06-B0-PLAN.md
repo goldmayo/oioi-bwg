@@ -1,15 +1,19 @@
 ---
 title: "P06-B0 Metadata 차단과 OCI 권한 실증 계획"
 kind: migration-plan
-status: draft
+status: active
 authority: plan
 source_commit: 699b41a15a84af5adc2c05eda70e1ac0007ea1cd
 created_at: "2026-10-13"
 updated_at: "2026-10-13"
-revision: 1
+revision: 2
 ---
 
 # P06-B0 계획
+
+2026-10-13 승인 기록: 사용자 지시로 [#135](https://github.com/goldmayo/oioi-bwg/pull/135)를
+`9a31a90`에 병합하고 B0 코드 작업을 시작했다. 아래 최초 관찰과 계획은 보존한다.
+VM 설치·재시작·IAM/Stack 변경·실제 권한 probe는 별도 승인 대상이다.
 
 **기존 Web의 Instance Metadata 접근을 차단한 뒤 Console 권한을 추가하고 실제 주체로 검증한다.**
 이 문서는 변경·검증안이며 PR 병합, VM 변경, Stack 소스 변경, IAM Apply 또는 probe 실행 승인이 아니다.
@@ -44,9 +48,9 @@ P06-A 병합 전에는 계획 준비만 진행한다. 구현은 A 병합 후 fet
 
 ## 2. 코드 변경을 나눌 단위
 
-| 단위 | 변경안 | 완료 경계 |
-| --- | --- | --- |
-| B0-1 | `ops/oci`의 명시적 Metadata 차단 설치·검사, 부팅 순서, body를 버리는 probe, ops 테스트와 적용/복구 안내 | 코드 검증·PR과 별개로 승인된 실제 VM Web/작은 probe 차단 증거 확보. 새 Secret 권한은 추가하지 않음 |
+| 단위 | 변경안                                                                                                                                 | 완료 경계                                                                                                   |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| B0-1 | `ops/oci`의 명시적 Metadata 차단 설치·검사, 부팅 순서, body를 버리는 probe, ops 테스트와 적용/복구 안내                                | 코드 검증·PR과 별개로 승인된 실제 VM Web/작은 probe 차단 증거 확보. 새 Secret 권한은 추가하지 않음          |
 | B0-2 | `infra/oci`의 private Console repository·정확한 VM 읽기 정책, 기존 게시 정책 교체안, 같은 CI credential의 작은 image/Run Command probe | 동일 Stack의 검토한 Plan/Apply, 두 repo push/pull, 두 CURRENT Secret 형식 검사, 새 command exit 0 모두 성공 |
 
 각 단위는 하나의 concern으로 PR을 나누고 20파일/400줄 목표를 적용한다. 새로운 release framework,
@@ -102,13 +106,13 @@ identity certificate/private key 응답도 body를 저장하거나 출력하지 
 
 ## 4. B0-2: 저장소와 최소 IAM 변경안
 
-| 대상 | 구체적인 변경안 |
-| --- | --- |
-| `infra/oci/ocir.tf` | 기존 `application` resource 주소·Web 이름 유지. `console` private repository `oioi-bwg-console`만 추가 |
-| `variables.tf` / tfvars 예시 | Console repository 이름 및 Console Secret OCID 두 개의 별도 입력. 중복·잘못된 종류·개수 거절. 기존 runtime Secret 목록 유지, 실제 값/OCID는 예시에 기록하지 않음 |
-| `iam.tf` | exact VM dynamic group·domain 유지. Console repo `read repos` 하나, 두 Secret의 exact `target.secret.id` statement만 추가. 기존 Web/4 Secret·metrics/log-content·Run Command 세 정책 유지 |
-| `outputs.tf` | Console repository 경로 출력 추가. 실제 운영 식별자를 공개 RESULT에 복사하지 않음 |
-| 기존 게시 정책 | Stack 밖 `oioi-github-ci-ocir-push`의 광범위 statement를 아래 두 statement로 **교체**. B0에서는 import·중복 policy 생성·새 그룹·사용자 변경을 하지 않음 |
+| 대상                         | 구체적인 변경안                                                                                                                                                                           |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `infra/oci/ocir.tf`          | 기존 `application` resource 주소·Web 이름 유지. `console` private repository `oioi-bwg-console`만 추가                                                                                    |
+| `variables.tf` / tfvars 예시 | Console repository 이름 및 Console Secret OCID 두 개의 별도 입력. 중복·잘못된 종류·개수 거절. 기존 runtime Secret 목록 유지, 실제 값/OCID는 예시에 기록하지 않음                          |
+| `iam.tf`                     | exact VM dynamic group·domain 유지. Console repo `read repos` 하나, 두 Secret의 exact `target.secret.id` statement만 추가. 기존 Web/4 Secret·metrics/log-content·Run Command 세 정책 유지 |
+| `outputs.tf`                 | Console repository 경로 출력 추가. 실제 운영 식별자를 공개 RESULT에 복사하지 않음                                                                                                         |
+| 기존 게시 정책               | Stack 밖 `oioi-github-ci-ocir-push`의 광범위 statement를 아래 두 statement로 **교체**. B0에서는 import·중복 policy 생성·새 그룹·사용자 변경을 하지 않음                                   |
 
 기존 정책은 비공개 관찰 기준으로 compartment 전체 `manage repos`다. 제한 statement를 덧붙여도
 기존 허용이 남는다. 다음 형식으로 기존 정책 내용을 직접 교체하는 승인안을 준비하고 변경 직전

@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.4"
+version: "1.5"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-12"
+updated_at: "2026-10-13"
 depends_on:
   - "01"
   - "05"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.4
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.5
 
 ## 1. 목적
 
@@ -262,6 +262,13 @@ OCI runtime secret의 SSOT는 OCI Secret Management다. Application request path
 읽어 완전한 temporary env를 검증한 뒤 mode `0600`의 runtime env file을 atomic하게
 교체한다. GitHub CI, Terraform configuration/state, container image, Run Command plain-text
 payload에 runtime secret을 넣지 않는다.
+
+VM Instance Principal은 process별 권한 분리가 아니다. P06의 새 Console Secret 권한을
+추가하기 전에 기존 Web의 `169.254.169.254` 접근 차단을 실제 VM에서 입증한다.
+Web/Console은 host network·privileged·추가 capability·host mount를 사용하지 않는 bridge 실행으로
+검증한다. host의 pull/Secret 읽기는 유지한다. 직접 IMDSv2 인증 header를 포함한 요청의 body를
+버리고 네트워크 차단·host 양성 대조·차단 규칙 counter를 함께 확인한다. 실제 두 앱과 container/
+Docker/VM 재시작·복구 후 검증 전에는 공개 gate를 통과한 것으로 기록하지 않는다. 운영 절차는 12가 소유한다.
 
 ---
 

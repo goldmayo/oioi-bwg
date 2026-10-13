@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.8"
+version: "1.9"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-06"
+updated_at: "2026-10-13"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.8
+# oioi-bwg Deployment / Migration Runbook v1.9
 
 ## 1. 목적
 
@@ -559,6 +559,14 @@ Terraform state secret absence
 Runtime secret은 11을 따라 OCI Secret Management에서 protected env file로 materialize한다.
 Terraform은 Vault/key infrastructure만 관리하고 actual secret value나 Slack webhook endpoint를
 configuration/state에 넣지 않는다.
+
+P06-B0의 Metadata 차단은 별도 승인된 host 작업이다. 전용 nftables forward table을 원자적으로
+적용하고 Docker unit의 필수 의존·시작 전 검사를 둔다. 일반 host installer/배포로 암묵 적용하지
+않고, Docker 소유 규칙·전체 ruleset·backend는 변경하지 않는다. guard 중지는 deny를 지우지 않는다.
+host firewall reload/flow offload/자동 시작/live-restore 경로와 SSH 복구 방법을 먼저 검토한다.
+guard의 성공 출력만으로 실제 VM 검증을 대체하지 않는다. 운영 적용과 재시작은 별도 승인이 필요하며
+새 Console Secret grant 이후에는 차단을 제거하는 복구를 하지 않는다.
+[Metadata 운영 절차](../../../ops/oci/README.md#7-p06-metadata-차단)를 따른다.
 
 ---
 
