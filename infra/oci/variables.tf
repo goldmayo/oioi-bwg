@@ -110,14 +110,22 @@ variable "console_ocir_repository_name" {
   }
 }
 
-variable "console_secret_ocids" {
-  description = "Exactly two existing Console Auth/MFA Secret OCIDs; no secret values enter this stack."
-  type        = list(string)
+variable "console_auth_secret_ocid" {
+  description = "기존 Console Auth Secret의 OCID이며 Secret 원문 값이 아닙니다."
+  type        = string
 
   validation {
-    condition = length(var.console_secret_ocids) == 2 && length(distinct(var.console_secret_ocids)) == 2 && alltrue([
-      for secret_ocid in var.console_secret_ocids : can(regex("^ocid1\\.vaultsecret\\.[a-z0-9.-]+$", secret_ocid))
-    ])
-    error_message = "Provide two distinct OCI Vault Secret OCIDs for Console Auth and MFA."
+    condition     = can(regex("^ocid1\\.vaultsecret\\.[a-z0-9.-]+$", var.console_auth_secret_ocid))
+    error_message = "Provide the existing Console Auth Vault Secret OCID."
+  }
+}
+
+variable "console_mfa_secret_ocid" {
+  description = "기존 Console MFA 암호화 키를 담은 Vault Secret의 OCID이며 키 원문 값이 아닙니다."
+  type        = string
+
+  validation {
+    condition     = can(regex("^ocid1\\.vaultsecret\\.[a-z0-9.-]+$", var.console_mfa_secret_ocid))
+    error_message = "Provide the existing Console MFA Vault Secret OCID."
   }
 }
