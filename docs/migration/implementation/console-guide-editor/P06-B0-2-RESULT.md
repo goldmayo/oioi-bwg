@@ -5,12 +5,13 @@ status: active
 source_commit: 6ac0c387fc7c9cecc5907e5a309f6fdb399c56cb
 verified_at: "2026-10-14"
 updated_at: "2026-10-15"
-revision: 5
+revision: 6
 ---
 
 # P06-B0-2 결과
 
-**실제 Stack Plan 검토와 승인된 Apply 성공을 확인했다. 주체별 권한 실증은 아직 미실행이다.**
+**Stack Plan/Apply와 두 repo push/pull·두 CURRENT Secret 형식 검사·신규 command exit 0을 확인했다.**
+게시 정책의 최소 권한 교체는 사용자 승인으로 기존 정책에 복원했으며 후속 보류다.
 [B0 계획](P06-B0-PLAN.md)의 선언 변경과 실제 probe를 독립 검증 가능한 PR로 나눈다.
 #138 merge head `345315e9377dd3cd7050f2d5afefb5b6fd18eed5`에서 분기했고 위 source_commit이
 `infra/oci` 구현 여섯 파일의 검증 ref다. 정확한 전체 SHA와 PR/CI는 PR 본문에서도 대조한다.
@@ -219,3 +220,46 @@ OCI API·Vault·Run Command 원문은 숨긴다. 실제 자식 프로세스의 s
 겹쳐 임시 fixture 삭제의 ENOENT로 실패했고, harness 종료 후 lint부터 순서대로 재실행해 통과했다.
 앱 runtime/build 파일은 바꾸지 않았다. 코드 commit hook은 대상 확장자가 없어 lint-staged task 0과
 commitlint 성공이었다. push hook·GitHub CI·실제 게시 결과는 PR에서 별도로 확인한다.
+
+## 2026-10-15 정책 복원과 B0 실제 권한 실증 통과
+
+#145는 Verify `38596373441` 전체 성공 후 사용자 승인으로
+`439f824ee060321130e499cb07cfdd8724d96d6c`에 squash 병합했다. 이것이 최종 probe source다.
+해당 source와 #142 가상 merge tree는 `7dd939baccd1513356bc2efb8f452991cee32033`으로 같았다.
+Verify `38597712962` attempt 1은 일반 verify·이미지·브라우저·Admin 검증 성공 뒤 첫 Web push에서
+`denied: User UserId(<비공개 사용자 OCID>) not authorized`로 실패했다. 실제 OCID는 기존 비공개
+게시 계정 기록과 일치했다. 코드나 시크릿 교체를 원인 해결로 주장하지 않는다.
+
+사용자는 기존 조건 없는 compartment 범위 `manage repos` 한 줄로 복원하는 안과 최소 권한 조정의
+후속 분리를 승인하고, OCI 콘솔 저장 완료를 확인했다. 관리자 API로 정책 저장 상태를 재조회한
+것은 아니다. 같은 source·시크릿에서 실패한 게시 job만 재실행했다. attempt 2의
+[게시 job](https://github.com/goldmayo/oioi-bwg/actions/runs/38597712962/job/115978635176)은
+Web·Console push/digest와 artifact 업로드 모두 성공했다. Admin job은 이전 성공 시각 그대로여서
+다시 실행되지 않았다. 정책 축소와 실패의 비교 근거이며 어느 조건이 원인인지는 미분리다.
+
+artifact `b0-publish-439f824ee060321130e499cb07cfdd8724d96d6c-2`의 source/run/attempt·두 repo
+digest를 내려받아 대조했다. 동일 ARM64 marker 이미지의 공통 digest는
+`sha256:4268a065acecbb5c1aac3ad3a543099369a0b4fdb6f3b1bd8fba91468214332b`다.
+host 도구·게시 증거·기존 Console ID 매핑을 전달하고 로컬/VM hash를 대조했다. 사용자가 root/0700
+경로에 root/0600으로 복사한 세 파일의 hash를 다시 확인한 뒤 검증 도구를 실행했다.
+도구 hash는 `adb289a2bd8d327d4c48434b10fa46e1fe2a80b6ac54de9fcffbc82ad139e6bb`다.
+
+사용자 결과는 `b0_host_probe_passed`, Auth version 1·MFA version 1, exit 0이었다.
+이는 실제 guard/Web probe·Instance Principal의 두 digest pull·ARM64/env/marker 대조·시작하지
+않은 임시 container 삭제·두 CURRENT Secret의 메모리 내 형식 검사 성공이다. 값·변환 값·Secret
+hash는 출력하지 않았다. 이후 SSH 읽기에서 Web/PostgreSQL healthy와 임시 probe 잔존 없음도 확인했다.
+
+그 후에만 같은 source의 host attestation과 신규 명령 실행 label을 #142에 붙였다.
+[신규 command workflow](https://github.com/goldmayo/oioi-bwg/actions/runs/38601706992)의
+job `115982310366`은 source·게시·host gate와 새 command 생성/실행/결과 확인을 성공했다.
+artifact `b0-command-439f824ee060321130e499cb07cfdd8724d96d6c-38601706992-1`을 내려받아
+source·새 display name `p06-b0-38601706992-1`·생성 시각·`SUCCEEDED`/정수 exit 0을 대조했다.
+생성 시각은 한국 시간 2026-10-15 01:52:52다. 기존 marker나 과거 command 결과를 재사용하지 않았다.
+기존 배포 계정의 별도 OCI 읽기 조회에서도 새 ID·대상 VM/compartment·명령 본문·execution ID
+연결·생성 시각·exit 0을 대조했다. 원문 OCID는 비공개 운영 기록에만 둔다.
+
+**B0 실제 권한 실증은 통과했다. 게시 최소 권한 조정은 승인된 보류이며 완료가 아니다.**
+Stack Apply Job 자체의 source/저장 Plan 연결 metadata 미대조도 앞선 한계로 유지한다.
+#142 전체 run의 실패 표시는 의도된 promotion 차단이며 게시 job 성공과 구분한다. #142는 병합하지
+않았다. 실제 배포·DB migration·서비스 재시작·전체 ARM64 앱 후보는 이번 실증에 포함되지 않았다.
+다음은 B1 두 이미지 candidate 계약이며 B1+B2/host 준비 전 실제 Promotion은 금지한다.
