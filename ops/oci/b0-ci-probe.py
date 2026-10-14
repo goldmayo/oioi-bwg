@@ -26,6 +26,9 @@ def run(args, phase=None, **kwargs):
             reason = 'timeout' if isinstance(error, subprocess.TimeoutExpired) else 'command_failed'
             if isinstance(error, subprocess.CalledProcessError) and re.search(r'\b(denied|unauthorized|401|403)\b', (error.stdout or '') + (error.stderr or ''), re.IGNORECASE):
                 reason = 'permission_denied'
+            if phase in ('web.push', 'console.push') and isinstance(error, subprocess.CalledProcessError):
+                print(error.stdout or '', end='', flush=True)
+                print(error.stderr or '', end='', file=sys.stderr, flush=True)
             print(json.dumps({'event': 'b0_publish_step_failed', 'phase': phase, 'reason': reason}), flush=True)
         raise
 

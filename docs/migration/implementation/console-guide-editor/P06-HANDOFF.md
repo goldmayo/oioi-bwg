@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-15"
-revision: 12
+revision: 13
 ---
 
 # P06 작업 인계
@@ -13,7 +13,7 @@ revision: 12
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
 - 현재 단계: **B0-1 실제 지속성 완료 / B0-2 Stack Apply·게시 정책 교체·CI 입력 등록 완료, #142 작은 이미지 게시 실패 원인 확인 중**, [B0 PLAN](P06-B0-PLAN.md) / [B0-1 RESULT](P06-B0-1-RESULT.md).
-- 브랜치: `feature/p06b0-live-evidence`, fetched 최신 main `7734be3b308a7627f5ccb46fbb2bfdb09e42a01a`에서 분기했다.
+- 브랜치: `feature/p06b0-push-diagnostics`, fetched 최신 main `106bbf6f63d3edcf4a96abe24b4945a354b092f0`에서 분기했다.
 - 작업 경로: `.local/worktrees/p06b0-live-evidence`. 원래 worktree의 사용자 P06-PLAN·개인 env는 수정하지 않았다.
 - 완료 PR: [#134](https://github.com/goldmayo/oioi-bwg/pull/134) → `0e21208`, [#135](https://github.com/goldmayo/oioi-bwg/pull/135) → `9a31a90`.
   각각 최신 base/head CI 전체 성공 후 사용자 지시로 squash 병합했다. #136은 사용자 병합을
@@ -21,7 +21,7 @@ revision: 12
 - B0-1 PR: [#136](https://github.com/goldmayo/oioi-bwg/pull/136). 검증 코드 `0da834d57017c403c58f52f31e2bf0f3b98392e3`, 병합 전 PR Verify `38275418704` 전체 성공을 재확인했다.
   직접 기본 검사·ops 82건·두 앱 build·격리 namespace 검증은 RESULT 참조. 실제 VM 완료 증거가 아니다.
 - ENV-1은 별도 PR로 처리하고 ENV-2는 P06-A를 차단하지 않는다. 운영 APP_ENV 전환은 새 candidate 검증과 연결한다.
-- 다음 단계: 이 브랜치의 smoke 대기·안전한 게시 단계 진단 보완을 검토·CI·승인 병합한 뒤
+- 다음 단계: 이 브랜치의 실패한 Docker push 원문 진단을 검토·CI·승인 병합한 뒤
   검증용 [#142](https://github.com/goldmayo/oioi-bwg/pull/142)의 작은 두 repo push 재검증 →
   VM Instance Principal pull·두 CURRENT Secret 형식 검사 → 같은 CI 계정 신규 command exit 0.
   사용자는 #140 병합·GitHub VM/compartment variable 등록·위 실제 probe 전체를 승인했다.
@@ -35,7 +35,11 @@ revision: 12
   기다리면 모두 1로 복구됨을 확인했다. Playwright 대기 assertion 보완 후 전체 smoke 20회가 성공했다.
   실제 게시 job은 로그인 뒤 `b0_ci_probe_failed`로 실패해 아직 두 repo 게시 성공 증거가 없다.
   코드 보완 ref `6f0b3bfd1b69924de5045fad19467513e26dff75`는 고정 단계·제한된 실패 분류만 남긴다.
-  사용자가 두 repo에서 `p06-b0-38587311262-2` tag 존재 여부를 확인하는 질문에 답할 때 연결한다.
+  #144는 전체 CI 성공 후 `106bbf6`에 병합했다. 이 source의 #142 Verify `38591227653`에서
+  일반 verify·작은 이미지 build·Docker login은 성공했지만 첫 Web push가 `permission_denied`다.
+  사용자는 이전 tag가 양쪽에 없고 Console repo가 비어 있음을 확인했다. 저장된 정책·GitHub
+  설정은 검토안과 일치하고 지정 Audit 조회에서는 단서를 얻지 못했다. 사용자는 실제 push
+  오류 원문을 보이게 하고 직접 확인할 것을 요청했다. 상세 진단과 한계는 RESULT가 소유한다.
   #142는 병합하지 않으며 새로운 실패를 OCI provider HTTP 500 같은 과거 장애로 분류하지 않는다.
   full ARM64 앱 후보는 이 실증 전까지 보류한다. 상세 source/범위/한계는 [B0-2 RESULT](P06-B0-2-RESULT.md) 참조.
   #141은 `801917c`에 병합했고 실제 Plan 소스 SHA도 일치했다. 사용자가 Logging의 기존 time_type
