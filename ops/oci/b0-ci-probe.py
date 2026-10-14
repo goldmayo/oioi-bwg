@@ -16,8 +16,18 @@ def require(value):
         raise ValueError()
 
 
-def run(args, **kwargs):
-    return subprocess.run(args, capture_output=True, text=True, timeout=90, check=True, **kwargs).stdout
+def run(args, phase=None, **kwargs):
+    if phase:
+        print(json.dumps({'event': 'b0_publish_phase', 'phase': phase}), flush=True)
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=90, check=True, **kwargs).stdout
+    except subprocess.SubprocessError as error:
+        if phase:
+            reason = 'timeout' if isinstance(error, subprocess.TimeoutExpired) else 'command_failed'
+            if isinstance(error, subprocess.CalledProcessError) and re.search(r'\b(denied|unauthorized|401|403)\b', (error.stdout or '') + (error.stderr or ''), re.IGNORECASE):
+                reason = 'permission_denied'
+            print(json.dumps({'event': 'b0_publish_step_failed', 'phase': phase, 'reason': reason}), flush=True)
+        raise
 
 
 def identity():
@@ -38,11 +48,11 @@ def publish():
         (root / 'Dockerfile').write_text('FROM scratch\nENV PATH=/p06-b0-no-binaries\nCOPY marker /p06-b0-marker\n')
         tag = f"p06-b0-{marker['runId']}-{marker['runAttempt']}"
         tags = [f'{prefix}/{name}:{tag}' for name in ('oioi-bwg', 'oioi-bwg-console')]
-        run(['docker', 'build', '--platform', 'linux/arm64', '-t', tags[0], '-t', tags[1], directory])
+        run(['docker', 'build', '--platform', 'linux/arm64', '-t', tags[0], '-t', tags[1], directory], phase='build')
         for app, reference in zip(('web', 'console'), tags):
-            run(['docker', 'push', reference])
+            run(['docker', 'push', reference], phase=app + '.push')
             repository = reference.rsplit(':', 1)[0]
-            digests = json.loads(run(['docker', 'image', 'inspect', '--format', '{{json .RepoDigests}}', reference]))
+            digests = json.loads(run(['docker', 'image', 'inspect', '--format', '{{json .RepoDigests}}', reference], phase=app + '.digest'))
             matches = [value for value in digests if value.startswith(repository + '@sha256:')]
             require(len(matches) == 1 and re.fullmatch(re.escape(repository) + r'@sha256:[0-9a-f]{64}', matches[0]))
             images[app] = matches[0]

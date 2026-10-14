@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { chromium } from "playwright";
+import { expect } from "playwright/test";
 
 const baseUrl = process.argv[2];
 assert.ok(baseUrl, "Usage: node tests/ops/console-standalone-smoke.mjs <base-url>");
@@ -32,8 +33,8 @@ try {
   await page.goto(new URL("/admin", origin).href);
   await page.waitForURL(new URL("/admin-login", origin).href);
   await page.getByRole("button", { name: "다음", exact: true }).waitFor();
-  assert.equal(await page.getByLabel("Email").count(), 1);
-  assert.equal(await page.getByLabel("Password").count(), 1);
+  await expect(page.getByLabel("Email")).toHaveCount(1);
+  await expect(page.getByLabel("Password")).toHaveCount(1);
   const posts = [];
   page.on("request", (request) => {
     if (request.method() === "POST") posts.push(request.url());

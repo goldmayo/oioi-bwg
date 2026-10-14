@@ -4,8 +4,8 @@ kind: migration-result
 status: active
 source_commit: 6ac0c387fc7c9cecc5907e5a309f6fdb399c56cb
 verified_at: "2026-10-14"
-updated_at: "2026-10-14"
-revision: 3
+updated_at: "2026-10-15"
+revision: 4
 ---
 
 # P06-B0-2 결과
@@ -130,3 +130,67 @@ Plan SHA 확인과 실제 Apply 리소스 증거를 구분하며 재계획 표�
 최신 main 동기화와 workflow 수정 후 기본 여섯 검사·ops 92건을 다시 실행해 모두 성공했다.
 실제 GitHub CI는 수정 push 후 확인하며 최초 workflow 검증 실패와 구분한다. 변경 문서 링크와
 충돌 marker 부재도 확인했다. push hook의 자동 실행 결과는 PR 본문에 별도로 기록한다.
+
+## 2026-10-15 게시 정책·CI 입력 등록과 Promotion 이력 연결
+
+사용자가 기존 게시 정책의 광역 statement를 제공했고, 검토한 Web·Console 각각의
+`REPOSITORY_READ`/`REPOSITORY_UPDATE` 두 statement로 교체했다고 확인했다. 기존 광역 허용을
+남긴 채 제한 statement를 추가하는 안이 아니다. 실제 권한 결과는 아래 probe와 구분한다.
+
+#140의 최신 head `6566ba32c2a7deab6b000121aec9630b3d59747b`는 Verify `38583267243` 전체
+성공 후 사용자 승인으로 `ab02551f2cd2ce2d51969a7fa27b125cabae504c`에 squash 병합했다.
+같은 승인 범위에서 `oci-development-image`의 `OCI_COMPUTE_INSTANCE_OCID`와
+`OCI_COMPUTE_COMPARTMENT_OCID`를 기존 VM·compartment ID로 등록하고 API 읽기로 일치 대조했다.
+새 credential을 만들거나 Secret 값을 읽은 작업이 아니다.
+
+검증용 #142는 기존 `migration_main → migration_develop` 경계로 열었으나 충돌해 CI가 시작되지
+않았다. develop `30592191f7bbf168a227a16a000085944c2191fa`의 tree는 이전 승격 원본
+`9fd9661e1dafae94a92e600b2c4b57679a9965f8`의 tree와 같고 해당 원본은 최신 main의 조상이었다.
+독립적인 develop 파일 변경은 없으며 과거 squash의 조상 관계 때문에 충돌한 경우다.
+
+최신 main에서 분기한 feature branch에 Git ours merge로 develop 이력만 연결한 #143을 준비했다.
+파일 diff는 0개, source tree와 develop의 가상 merge tree 모두
+`6c30f8a66b68691936ea7496a83b573a1aaac86e`임을 실제 Git 명령으로 대조했다.
+Verify `38585791504` 전체 성공 후 사용자가 이 PR 한정 일반 merge와 임시 설정 변경·원복을
+승인했다. 저장소 `allow_merge_commit`과 main ruleset의 허용 방식에만 일반 merge를 잠시 추가하고
+#143을 `7734be3b308a7627f5ccb46fbb2bfdb09e42a01a`로 병합했다. 즉시 저장소 설정과 ruleset을
+원본 squash 전용으로 원복했고 전체 rules·조건·enforcement·bypass 목록까지 원본과 일치 대조했다.
+required verify·strict·PR·force-push 금지 규칙은 계속 유지했다. 향후 Promotion squash 방식은 유지한다.
+
+#142의 충돌 해소와 source/가상 merge tree 일치를 재확인했고 Verify `38587311262`가 시작됐다.
+두 repo 실제 push/pull·두 CURRENT Secret 형식 검사·새 command는 승인됐으나 아직 미실행이다.
+host 도구와 기존 Secret ID 매핑은 VM 사용자 staging에 전달해 SHA-256을 대조했다. 도구 hash는
+`adb289a2bd8d327d4c48434b10fa46e1fe2a80b6ac54de9fcffbc82ad139e6bb`이며, 실제 root probe는
+게시 artifact 확인 후 수행한다. VM의 기존 Run Command probe 파일도 저장소와 hash가 일치했다.
+값·원문 식별자는 공개 문서에 기록하지 않는다. #142 병합·서비스 재시작·앱 배포·전체 ARM64 후보는 보류한다.
+
+## 2026-10-15 실제 smoke·게시 실패와 진단 보완
+
+#142 Verify `38587311262` attempt 1은 Console native·DB readiness를 통과한 뒤
+`console-standalone-smoke.mjs`의 Email label 즉시 count가 0이라 실패했다. 같은 앱 소스의 로컬
+standalone 이미지에서 새 브라우저 context 30회로 같은 순서를 대조해 4회 재현했다. 네 경우 모두
+locator를 기다린 뒤 count 1로 복구됐고 pageerror는 0건이었다. `apps/console`·`packages`의
+이전 P06-A 로컬 검증 소스와 현재 source diff가 없음을 대조했다. CI artifact 이미지 자체를
+로컬로 다시 내려받아 대조한 검사는 아니며 이 재현을 운영 이미지 검증으로 기록하지 않는다.
+
+실패한 build job과 그 dependent job만 같은 source에서 재실행했다. attempt 2의 build·일반
+verify는 성공했고 작은 이미지 게시 job이 시작됐다. Docker login은 성공했으나 게시 Python
+단계가 `b0_ci_probe_failed`로 실패해 `b0-proof.json`은 생성되지 않았다. 기존 도구가 subprocess의
+양쪽 stream을 모두 capture하면서 실패 단계까지 남기지 않아 현재 로그로는 build·push·digest
+중 어디서 실패했는지 구분하지 못한다. 권한 거절이나 Docker 결함으로 원인을 단정하지 않는다.
+사용자에게 두 repo의 해당 tag 존재 여부를 조회해 달라고 요청했다. 같은 실패를 맹목 재실행하지 않는다.
+
+보완 코드 ref는 `6f0b3bfd1b69924de5045fad19467513e26dff75`다. Console smoke의 두 label 검사를
+기존 `playwright/test`의 `expect(locator).toHaveCount(1)`로 바꿔 렌더링을 기다리며 동일 개수 조건을
+검증한다. 기존 standalone 전체 smoke가 20회 연속 성공했고 진단용 로컬 container는 삭제했다.
+[Playwright 공식 권고](https://playwright.dev/docs/api/class-locator#locator-count)를 따른다.
+
+게시 도구는 고정된 build·각 repo push/digest 단계만 출력한다. 실패 시 timeout·permission_denied·
+command_failed의 한정된 분류만 기록하고 원문 양쪽 stream·credential·Secret은 출력하지 않는다.
+출력 보호 fixture에 build timeout·권한 거절·Console push 실패를 추가해 중단 순서·고정 진단과
+민감 문자열 비노출을 대조했다. 게시·digest·host 선행·전체 ARM64 차단 계약은 유지한다.
+
+기본 여섯 검사를 모두 통과했고 ops 92건도 성공했다. Python 진단 보완 후 ops 92건을 다시
+통과했다. commit hook ESLint/Prettier는 성공했으며 최초 commitlint의 본문 100자 제한 실패는
+본문 줄바꿈을 정정해 해소했다. push hook·실제 새 CI 결과는 PR에서 별도로 기록한다.
+실제 두 repo 게시·host pull·CURRENT Secret 읽기·신규 command exit 0은 여전히 미완료다.
