@@ -415,9 +415,51 @@ jobs:
             fi
           done
 
+  b0-publish:
+    name: B0 publish probe
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.base.ref == 'migration_develop' &&
+      github.event.pull_request.head.ref == 'migration_main' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: verify
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    environment: oci-development-image
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Validate source and verification tree
+        id: source
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
+            await promotion.prepare({ github, context, core });
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.OCIR_REGISTRY }}
+          username: ${{ secrets.OCIR_USERNAME }}
+          password: ${{ secrets.OCIR_AUTH_TOKEN }}
+      - name: Publish tiny images with existing publisher credentials
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
+          OCIR_REGISTRY: ${{ vars.OCIR_REGISTRY }}
+          OCIR_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
+        run: python3 -I ops/oci/b0-ci-probe.py publish
+      - uses: actions/upload-artifact@v4
+        with:
+          name: b0-publish-${{ steps.source.outputs.source_sha }}-${{ github.run_attempt }}
+          path: b0-proof.json
+          if-no-files-found: error
+          retention-days: 14
+
+  # B0: require actual permission proofs before restoring full ARM64 candidates in B1.
   promotion-candidate:
     name: promotion candidate
     if: >-
+      false &&
       github.event_name == 'pull_request' &&
       github.event.pull_request.base.ref == 'migration_develop' &&
       github.event.pull_request.head.ref == 'migration_main' &&

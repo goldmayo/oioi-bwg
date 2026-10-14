@@ -5,12 +5,12 @@ status: active
 source_commit: 6ac0c387fc7c9cecc5907e5a309f6fdb399c56cb
 verified_at: "2026-10-14"
 updated_at: "2026-10-14"
-revision: 2
+revision: 3
 ---
 
 # P06-B0-2 결과
 
-**IaC 구현·로컬 검사 완료, 실제 Stack Plan/Apply·주체별 권한 실증은 미실행이다.**
+**실제 Stack Plan 검토와 승인된 Apply 성공을 확인했다. 주체별 권한 실증은 아직 미실행이다.**
 [B0 계획](P06-B0-PLAN.md)의 선언 변경과 실제 probe를 독립 검증 가능한 PR로 나눈다.
 #138 merge head `345315e9377dd3cd7050f2d5afefb5b6fd18eed5`에서 분기했고 위 source_commit이
 `infra/oci` 구현 여섯 파일의 검증 ref다. 정확한 전체 SHA와 PR/CI는 PR 본문에서도 대조한다.
@@ -63,3 +63,70 @@ push hook·GitHub CI는 실행 후 PR 본문에서 별도 기록한다.
 
 수정 소스가 콘솔에 반영된 뒤 실제 두 문자열 입력칸 표시·OCID 전달·Plan 성공·실제 Job SHA/diff를
 확인해야 한다. 현재는 코드/로컬 검사 완료이며 콘솔 입력·Apply 성공을 주장하지 않는다.
+
+## 2026-10-14 IaC 병합·probe 코드 검증
+
+IaC PR #139의 head `c0dee97a57690836e2185037c5ee424fe8797a4e`, Verify `38572266634`
+attempt 1 전체 성공·mergeable/CLEAN을 확인했다. 사용자 승인으로 squash 병합했고 merge head는
+`141e8eba5ae811874409a312d4e137950e087f2a`다. 최종 한글 PR 본문을 squash 본문으로 사용했다.
+사용자는 같은 Stack의 branch/input 변경·Plan까지만 승인했다. 로컬 OCI에는 배포 계정용 프로필만
+있어 관리자 credential을 추가로 수집하지 않고 OCI 콘솔 절차를 안내했다. 실제 Plan 결과는 대기다.
+
+그 merge head에서 `feature/p06b0-ci-probes`를 분기했다. 검증 코드 ref는
+`dac797ed6998e90f1eb78923ef6f075f0afe8ca8`이다. 두 repository의 작은 marker 게시,
+보호된 입력·guard 확인 후 host digest pull·CURRENT Secret 형식 검사, host 선행 확인 뒤
+같은 CI API 계정의 신규 command 생성/결과 확인을 구현했다. artifact는 안전한 metadata만
+담으며 full candidate는 비활성이다. workflow 배치·메모리 검사 보완은 [PLAN 갱신](P06-B0-PLAN.md#2026-10-14-b0-1-완료와-probe-구현-보완)에 기록했다.
+
+직접 기본 여섯 검사와 ops 92건이 성공했다. harness 18건·unit 459건이며 캐시 hit 0이다.
+최초 format 검사는 새 README 줄바꿈에서 실패해 Prettier 적용 후 같은 format 검사가 성공했다.
+새 ops wrapper 두 건은 Python mock 10건과 source/host gate 정상 1건·거절 5건을 실행한다.
+잘못된 대상·command·exit, 게시 실패·digest 불일치, noisy 오류 출력 보호·signing key cleanup,
+guard 실패·marker/env 거절·container 부분 생성 실패 cleanup·Secret 형식 실패를 확인했다.
+격리 Docker `--network none`에서도 mock 10건이 성공했다. 실제 OCI 권한을 검사한 결과는 아니다.
+
+로컬 Docker에서는 marker만 담은 ARM64 scratch 이미지를 실제 빌드하고 약 2KB 크기·architecture·
+예상 env·marker 추출을 확인했다. 임시 container를 시작하지 않고 삭제했다. 최초 검사는 Docker가
+추가하는 기본 PATH 때문에 실패해 Dockerfile에 비밀 없는 PATH를 명시하고 정확히 대조하도록 수정했다.
+이는 OCI push/pull, Console 실행 또는 full ARM64 앱 후보 빌드가 아니다. commit hook은
+lint-staged ESLint/Prettier·commitlint 성공이다. push hook·CI는 PR 본문에서 별도 확인한다.
+
+Stack Apply·게시 정책 교체·GitHub의 새 ID variable 등록·실제 권한 probe는 아직 승인/실행하지
+않았다. B0 완료와 B1 시작을 선언하지 않는다. 다음은 실제 Plan SHA/diff 검토와 별도 Apply 승인이다.
+
+
+## 2026-10-14 실제 Plan/Apply 확인과 workflow 수정
+
+입력 보완 #141은 Verify `38578612070` 전체 성공 후 사용자 승인으로
+`801917cf4723fee244481c291e003e5e18503643`에 병합했다. 사용자의 실제 Plan은
+private Console repository 생성, runtime policy의 읽기 statement 세 개 추가,
+기존 Logging parser의 `time_type = "string"` 추가로 `1 to add, 2 to change, 0 to destroy`였다.
+새 두 Secret ID는 비공개 준비 기록의 기존 Console Auth/MFA ID와 일치했다.
+Logging 항목은 기존 `ec5180b` 코드에도 있는 선언이며 새 P06 기능으로 추가한 설정이 아니다.
+
+사용자가 표준 `oci resource-manager job get` 조회 결과로 branch `migration_main`과 commit
+`801917cf4723fee244481c291e003e5e18503643`을 확인했다. 최초 안내의 응답 경로
+`config-source-record`는 잘못됐고, 실제 `data."config-source"`로 정정한 조회에서 확인했다.
+정확한 Job OCID는 공개 문서에 기록하지 않는다.
+
+사용자는 Logging을 포함한 위 세 리소스의 Apply를 명시적으로 승인한 뒤 성공을 공유했다.
+제공한 실제 Apply 로그의 완료 결과는 `Apply complete! Resources: 1 added, 2 changed, 0 destroyed.`다.
+Console repo 생성과 policy·Logging in-place 수정 완료를 각각 확인했다. 실행된 diff도 검토 범위와
+일치한다. Secret 원문·VM/DB 생성·앱 배포·migration·키 재생성은 이 실행에 포함되지 않았다.
+Apply 로그에는 별도의 Job ID/소스 SHA/저장 Plan 연결 metadata가 없어 해당 연결은 아직 미대조다.
+Plan SHA 확인과 실제 Apply 리소스 증거를 구분하며 재계획 표시만으로 저장 Plan 사용을 단정하지 않는다.
+
+별도 probe PR #140의 최초 Verify `38574705384`는 YAML job이 최상위에 놓여 workflow 검증에서
+실패했고 테스트 job은 실행되지 않았다. Prettier 구문 검사만으로 GitHub workflow 구조 검증을
+대체한 실수였다. `b0-publish`를 기존 `jobs` 아래로 옮기고 최신 #141 merge head를 반영했다.
+`actionlint` 1.7.12 공식 배포와 checksum을 대조해 두 변경 workflow의 정적 검사가 성공했다.
+이 도구는 ignored 로컬 경로에만 두었고 프로젝트 의존성·운영 설정은 추가하지 않았다.
+
+게시 계정의 기존 광역 정책 교체·GitHub ID variable 등록·실제 작은 push/pull·두 CURRENT Secret
+읽기·새 Run Command exit 0은 아직 미실행이다. B0 완료와 전체 ARM64 B1 시작은 보류한다.
+
+수정된 `verify.yml`의 SHA-256은 `a5f5c6fdbb3ef66fb20460cac2a9c1e00e577fdaa9d27f942e311f76f6e8ae34`다.
+
+최신 main 동기화와 workflow 수정 후 기본 여섯 검사·ops 92건을 다시 실행해 모두 성공했다.
+실제 GitHub CI는 수정 push 후 확인하며 최초 workflow 검증 실패와 구분한다. 변경 문서 링크와
+충돌 marker 부재도 확인했다. push hook의 자동 실행 결과는 PR 본문에 별도로 기록한다.

@@ -5,12 +5,12 @@ status: active
 source_commit: 0da834d57017c403c58f52f31e2bf0f3b98392e3
 verified_at: "2026-10-14"
 updated_at: "2026-10-14"
-revision: 7
+revision: 8
 ---
 
 # P06-B0-1 결과
 
-**코드·보완 검증 및 실제 VM의 현재 Web 차단 1차 적용 완료, 재시작 지속성 증거는 대기 중이다.**
+**코드·보완 검증과 실제 VM의 1차 적용·2A·2B·2C 재시작 지속성 검증을 완료했다.**
 [B0 계획](P06-B0-PLAN.md)의 B0-1만 구현했다. #135 병합 head `9a31a90`에서
 `feature/p06b0-metadata-guard`를 분기했다. 검증 코드 ref는 위 source_commit이다.
 [구현 PR #136](https://github.com/goldmayo/oioi-bwg/pull/136)은 리뷰/CI 확인 대상이며 운영 적용 승인이 아니다.
@@ -172,4 +172,12 @@ mock으로 검증했다. 전달 후 VM 해시도 대조했다.
 두 차례 모두 Web ID 변경·platform image/env 동일, PostgreSQL ID/시작 시각 유지, 기존 env
 파일 불변, health·metadata 차단/counter·host 대조를 성공 조건으로 확인했다.
 실제 다른 과거 image 또는 Console candidate에 대한 rollback 검증은 이 결과에 포함하지 않는다.
-2C 재부팅 후 검증 결과는 아직 대기 중이다. OCI IAM/Stack·새 Secret 권한은 적용하지 않았다.
+2C는 같은 승인 범위에서 사용자가 VM을 한 번 재부팅하고 동일 해시의 helper `verify-boot`를
+실행했다. 공유 결과는 `p06_b0_reboot_phase_passed`·exit 0이다. boot ID 변경, guard 활성 진입이
+Docker보다 선행, 마지막 Web ID/image·PostgreSQL ID 유지와 두 container 시작 시각 변경,
+auto-start·health·Web 여섯 경로 차단/counter·host 양성 대조를 성공 조건으로 확인했다.
+이후 에이전트의 SSH 읽기에서도 guard active/success, Web/PostgreSQL healthy·readyz 200,
+Caddy 및 OCI Agent/updater active를 확인했다. 추가 재부팅은 실행하지 않았다.
+
+**B0-1 실제 지속성 proof는 완료했다.** Console 실제 이미지와 공동 release rollback 검증은 B2다.
+OCI IAM/Stack Apply·새 Console Secret 읽기는 이 증거에 포함하지 않는다.
