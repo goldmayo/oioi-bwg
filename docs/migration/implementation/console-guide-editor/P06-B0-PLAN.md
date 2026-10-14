@@ -6,7 +6,7 @@ authority: plan
 source_commit: 699b41a15a84af5adc2c05eda70e1ac0007ea1cd
 created_at: "2026-10-13"
 updated_at: "2026-10-14"
-revision: 4
+revision: 5
 ---
 
 # P06-B0 계획
@@ -231,7 +231,7 @@ Credential의 job/step 제한과 `0600` signing key cleanup도 이 probe에 적�
 
 ## 6. 승인·복구·완료 기록
 
-운영 승인은 두 번의 구체적 변경 단위로 준비한다. **지금은 둘 다 미승인·미실행이다.**
+운영 승인은 두 번의 구체적 변경 단위로 준비한다. **계획 작성 당시 둘 다 미승인·미실행이었다. 이후 승인·결과는 아래 갱신과 RESULT로 대조한다.**
 
 - B0-1 코드 검증 후: 실제 host 규칙·unit diff, 변경 전 복구 사본, 적용/probe 명령, Web 중단 여부와
   재시작 일정까지 준비한 뒤 승인받는다. SSH/Caddy/DB/health 실패 시 새 IAM 작업을 중단한다.
@@ -252,3 +252,26 @@ Credential의 job/step 제한과 `0600` signing key cleanup도 이 probe에 적�
 HANDOFF는 기존 한 파일의 다음 진입점만 갱신한다. 실행되지 않은 RESULT나 완료 체크를 만들지 않는다.
 **B0의 모든 실제 검사가 성공해야 B1 전체 ARM64 빌드를 시작한다.** ENV-1/ENV-2, DB journal/
 `admin_mfa`/runtime role·동기화 판단(B2/D), TLS 발급(C), MFA 등록(D), Web 종료(E), 공개 전환(F)은 보류한다.
+
+
+## 2026-10-14 B0-1 완료와 probe 구현 보완
+
+실제 2A·2B·2C는 승인된 사용자 실행으로 모두 exit 0이며 [B0-1 RESULT](P06-B0-1-RESULT.md)가
+증거를 소유한다. IaC [#139](https://github.com/goldmayo/oioi-bwg/pull/139)는 전체 CI 성공 후
+사용자 승인으로 `141e8eba5ae811874409a312d4e137950e087f2a`에 병합했다. 사용자는 같은 Stack의
+branch/input 변경·Plan까지만 승인했다. 실제 Plan 결과 대기이며 Apply·게시 정책 교체·권한 probe는
+아직 승인·실행하지 않았다.
+
+probe 구현은 §5의 순서를 유지하면서 두 부분을 구체화한다. 게시 job은 기존 Verify의 동일 저장소
+Promotion 경계에 두고, host 성공 뒤의 신규 command는 `pull_request:labeled` 전용 workflow로
+분리한다. 전체 Verify를 다시 시작하지 않으며 동일 SHA/tree·같은 PR 최신 verify/게시 성공과
+`b0-host-<source SHA>` 수동 확인 label을 요구한다. 실제 host 검사 전 이 label을 붙이지 않는다.
+일반 feature/fork credential 차단과 기존 Environment 허용 ref를 유지한다. B0 동안 full candidate는
+명시적으로 비활성화하고 required promotion은 성공시키지 않는다.
+
+§5.3의 Secret 값 임시 파일 방식 대신 OCI 양쪽 stream을 capture하고 메모리에서만 decode·형식
+검사한다. 디스크에는 Secret 값을 쓰지 않는다. OCID 매핑·게시 증거 입력은 root/0600 파일로 받고,
+기존 host helper로 digest pull·시작하지 않은 임시 container의 marker 대조 후 삭제한다. Signing key만
+CI의 임시 0700 경로/0600 파일로 만들고 cleanup한다. 새 command 원문 응답·OCID를 공개 artifact에
+넣지 않으며 OCI 콘솔의 display name으로 찾아 기존 비공개 기록에 연결한다. 이는 출력 보호의
+구체화이며 실제 권한 실증을 mock 검사로 대체하지 않는다.
