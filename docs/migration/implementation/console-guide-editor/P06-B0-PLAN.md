@@ -6,7 +6,7 @@ authority: plan
 source_commit: 699b41a15a84af5adc2c05eda70e1ac0007ea1cd
 created_at: "2026-10-13"
 updated_at: "2026-10-14"
-revision: 4
+revision: 5
 ---
 
 # P06-B0 계획
@@ -252,3 +252,18 @@ Credential의 job/step 제한과 `0600` signing key cleanup도 이 probe에 적�
 HANDOFF는 기존 한 파일의 다음 진입점만 갱신한다. 실행되지 않은 RESULT나 완료 체크를 만들지 않는다.
 **B0의 모든 실제 검사가 성공해야 B1 전체 ARM64 빌드를 시작한다.** ENV-1/ENV-2, DB journal/
 `admin_mfa`/runtime role·동기화 판단(B2/D), TLS 발급(C), MFA 등록(D), Web 종료(E), 공개 전환(F)은 보류한다.
+
+
+## 2026-10-14 OCI 콘솔 입력 보완
+
+#139는 `141e8eba5ae811874409a312d4e137950e087f2a`에 병합했다. 같은 Stack의 편집 후
+사용자가 실행한 실제 Plan은 `console_secret_ocids`가 빈 목록으로 전달돼 검증에 실패했다.
+provider 설치·기존 리소스 조회는 성공했고, 드롭다운에는 사용 가능한 옵션이 없다는 사용자
+관찰과 일치한다. 상세 결과는 [B0-2 RESULT](P06-B0-2-RESULT.md)가 소유한다.
+
+목록 입력을 필수 `string` 변수 `console_auth_secret_ocid`·`console_mfa_secret_ocid`로 바꾸고,
+내부 local 목록에서만 결합한다. 기존 두 Secret만 읽는 정책과 중복·종류·기존 runtime 겹침
+검증은 유지한다. 새로운 Secret·credential이나 별도 입력 도구를 만들지 않는다.
+같은 OCI 콘솔에서 수정 소스의 두 입력칸을 확인하고 기존 Secret OCID를 한 개씩 설정한 뒤
+Plan을 다시 실행한다. 성공한 실제 Plan의 SHA/diff 검토와 Apply는 기존 운영 절차를 따른다.
+기존 runtime 변수는 보존하며 현재 빈 입력을 보완하기 위해 검증 조건을 완화하지 않는다.
