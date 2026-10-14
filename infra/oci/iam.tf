@@ -18,12 +18,13 @@ locals {
   compute_policy_statements = concat(
     [
       "Allow dynamic-group ${local.compute_principal} to read repos in compartment id ${var.compartment_ocid} where target.repo.name='${var.ocir_repository_name}'",
+      "Allow dynamic-group ${local.compute_principal} to read repos in compartment id ${var.compartment_ocid} where target.repo.name='${var.console_ocir_repository_name}'",
       "Allow dynamic-group ${local.compute_principal} to use metrics in compartment id ${var.compute_compartment_ocid}",
       "Allow dynamic-group ${local.compute_principal} to use log-content in compartment id ${var.compartment_ocid}",
       "Allow dynamic-group ${local.compute_principal} to use instance-agent-command-execution-family in compartment id ${var.compute_compartment_ocid} where request.instance.id=target.instance.id",
     ],
     [
-      for secret_ocid in var.runtime_secret_ocids :
+      for secret_ocid in concat(var.runtime_secret_ocids, var.console_secret_ocids) :
       "Allow dynamic-group ${local.compute_principal} to read secret-bundles in compartment id ${var.secret_compartment_ocid} where target.secret.id='${secret_ocid}'"
     ],
   )
@@ -44,4 +45,11 @@ resource "oci_identity_policy" "runtime_and_deployment" {
     local.github_deploy_policy_statements,
   )
   freeform_tags = var.freeform_tags
+
+  lifecycle {
+    precondition {
+      condition     = length(setintersection(toset(var.runtime_secret_ocids), toset(var.console_secret_ocids))) == 0
+      error_message = "Console Secret OCIDs must not duplicate existing Web runtime Secret OCIDs."
+    }
+  }
 }

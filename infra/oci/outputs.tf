@@ -33,3 +33,8 @@ output "backup_bucket" {
   }
   description = "Existing host-managed PostgreSQL backup bucket referenced without Terraform ownership."
 }
+
+output "console_ocir_repository" {
+  value       = "${local.ocir_registry_host}/${oci_artifacts_container_repository.console.namespace}/${oci_artifacts_container_repository.console.display_name}"
+  description = "Private Console repository path; B0 probes and releases use immutable digests."
+}

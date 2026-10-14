@@ -98,3 +98,26 @@ variable "freeform_tags" {
     managed-by   = "resource-manager"
   }
 }
+
+variable "console_ocir_repository_name" {
+  description = "Private Console repository; the existing Web repository remains unchanged."
+  type        = string
+  default     = "oioi-bwg-console"
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9._/-]{0,254}$", var.console_ocir_repository_name))
+    error_message = "Console repository name must be a valid lowercase repository path."
+  }
+}
+
+variable "console_secret_ocids" {
+  description = "Exactly two existing Console Auth/MFA Secret OCIDs; no secret values enter this stack."
+  type        = list(string)
+
+  validation {
+    condition = length(var.console_secret_ocids) == 2 && length(distinct(var.console_secret_ocids)) == 2 && alltrue([
+      for secret_ocid in var.console_secret_ocids : can(regex("^ocid1\\.vaultsecret\\.[a-z0-9.-]+$", secret_ocid))
+    ])
+    error_message = "Provide two distinct OCI Vault Secret OCIDs for Console Auth and MFA."
+  }
+}
