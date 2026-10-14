@@ -5,8 +5,8 @@ status: active
 authority: plan
 source_commit: 699b41a15a84af5adc2c05eda70e1ac0007ea1cd
 created_at: "2026-10-13"
-updated_at: "2026-10-14"
-revision: 6
+updated_at: "2026-10-15"
+revision: 7
 ---
 
 # P06-B0 계획
@@ -298,3 +298,15 @@ parser `time_type = "string"` 추가도 포함했다. 동일 source SHA 확인 �
 포함한 `1 create / 2 update / 0 destroy`의 Apply를 명시적으로 승인했다. 실제 성공 로그와
 확인 한계는 [B0-2 RESULT](P06-B0-2-RESULT.md)가 소유한다. 최초 허용 목록을 모든 Logging 변경에
 확대하지 않으며 이 한정된 diff의 승인으로 기록한다. 게시 정책 교체·실제 권한 probe는 별도다.
+
+## 2026-10-15 Docker push 실패 원문 확인
+
+사용자는 실제 `docker push` 오류가 보이도록 보완하고 직접 확인할 것을 요청했다. §5.5의
+출력 제한 중 실패한 작은 이미지 `docker push`의 stdout/stderr만 CI 로그에 허용한다.
+고정 단계·실패 분류도 유지하며 OCI API/Vault/Run Command 응답은 계속 capture하여 숨긴다.
+push 인자는 기존 registry 이미지 참조뿐이며 credential 인자나 Docker debug 옵션을 추가하지 않는다.
+GitHub Environment의 기존 Secret 마스킹을 유지한다. Secret 값을 출력하거나 변환해 확인하지 않는다.
+
+기존 Promotion 경계·동일 CI credential·작은 두 repo 이미지·전체 ARM64 후보 차단을 유지한다.
+보완 코드의 PR 검증·승인 병합 후 #142에서 실제 오류를 읽는다. 실패 원인 확인 전 시크릿 재발급이나
+IAM 확대를 하지 않는다. 원문 확인 성공은 두 repo 게시·host pull·Secret 읽기 성공과 구분한다.

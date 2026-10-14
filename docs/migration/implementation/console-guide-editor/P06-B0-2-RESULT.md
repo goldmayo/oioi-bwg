@@ -5,7 +5,7 @@ status: active
 source_commit: 6ac0c387fc7c9cecc5907e5a309f6fdb399c56cb
 verified_at: "2026-10-14"
 updated_at: "2026-10-15"
-revision: 4
+revision: 5
 ---
 
 # P06-B0-2 결과
@@ -194,3 +194,28 @@ command_failed의 한정된 분류만 기록하고 원문 양쪽 stream·credent
 통과했다. commit hook ESLint/Prettier는 성공했으며 최초 commitlint의 본문 100자 제한 실패는
 본문 줄바꿈을 정정해 해소했다. push hook·실제 새 CI 결과는 PR에서 별도로 기록한다.
 실제 두 repo 게시·host pull·CURRENT Secret 읽기·신규 command exit 0은 여전히 미완료다.
+
+## 2026-10-15 실제 Web push 거절과 원문 진단
+
+#144는 Verify `38589901644` 전체 성공 후 사용자 승인으로
+`106bbf6f63d3edcf4a96abe24b4945a354b092f0`에 병합했다. 이 source의 #142 Verify
+`38591227653`에서 일반 verify·앱 이미지·브라우저·Admin 검증은 성공했다. 작은 이미지 build와
+Docker login도 성공했지만 첫 Web push가 `permission_denied`로 실패했다. Console push에는
+도달하지 않았고 게시 artifact가 없다. 분류만으로 IAM과 credential 중 어느 것이 원인인지 단정하지 않는다.
+사용자는 이전 attempt의 tag가 양쪽에 없고 Console repository가 비어 있다고 확인했다.
+
+사용자가 다시 제공한 게시 정책 두 statement는 계획과 일치했다. 관리자 Audit의 지정 구간 조회는
+출력 없이 끝났으며 원인 증거를 얻지 못했다. GitHub 조회에서 기존 Environment의 OCIR Secret
+두 개 존재·9월 이후 변경 없음·저장소 수준 중복 없음·실제 workflow의 참조를 대조했다.
+사용자 화면의 registry/namespace와 ref 허용도 일치했다. Secret 원문은 조회하거나 출력하지 않았다.
+
+사용자 요청에 따라 실패한 Web/Console `docker push`의 양쪽 stream만 CI에 기록하도록 보완했다.
+OCI API·Vault·Run Command 원문은 숨긴다. 실제 자식 프로세스의 stdout/stderr가 push 실패에서만
+보이는 로컬 검사와 orchestrator fixture 11건이 성공했다. 아직 수정 후 실제 push를 실행하지 않았으며
+코드 검증·PR 및 실제 로그 결과는 후속 기록으로 연결한다. IAM·시크릿·운영 앱은 변경하지 않았다.
+
+코드 검증 ref는 `4010d35c98513c5658cb40f0252e12081220e2f8`이다. 기본 여섯 검사와 ops 92건이
+성공했다. harness 18건이며 unit 네 task는 모두 기존 성공 캐시를 재사용했다. 최초 lint는 harness와
+겹쳐 임시 fixture 삭제의 ENOENT로 실패했고, harness 종료 후 lint부터 순서대로 재실행해 통과했다.
+앱 runtime/build 파일은 바꾸지 않았다. 코드 commit hook은 대상 확장자가 없어 lint-staged task 0과
+commitlint 성공이었다. push hook·GitHub CI·실제 게시 결과는 PR에서 별도로 확인한다.
