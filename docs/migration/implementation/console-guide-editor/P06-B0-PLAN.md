@@ -6,7 +6,7 @@ authority: plan
 source_commit: 699b41a15a84af5adc2c05eda70e1ac0007ea1cd
 created_at: "2026-10-13"
 updated_at: "2026-10-14"
-revision: 5
+revision: 6
 ---
 
 # P06-B0 계획
@@ -231,7 +231,7 @@ Credential의 job/step 제한과 `0600` signing key cleanup도 이 probe에 적�
 
 ## 6. 승인·복구·완료 기록
 
-운영 승인은 두 번의 구체적 변경 단위로 준비한다. **계획 작성 당시 둘 다 미승인·미실행이었다. 이후 승인·결과는 아래 갱신과 RESULT로 대조한다.**
+운영 승인은 두 번의 구체적 변경 단위로 준비한다. **최초 계획 시점에는 둘 다 미승인·미실행이었다. 이후 승인·실행은 아래 갱신과 RESULT로 대조한다.**
 
 - B0-1 코드 검증 후: 실제 host 규칙·unit diff, 변경 전 복구 사본, 적용/probe 명령, Web 중단 여부와
   재시작 일정까지 준비한 뒤 승인받는다. SSH/Caddy/DB/health 실패 시 새 IAM 작업을 중단한다.
@@ -254,6 +254,20 @@ HANDOFF는 기존 한 파일의 다음 진입점만 갱신한다. 실행되지 �
 `admin_mfa`/runtime role·동기화 판단(B2/D), TLS 발급(C), MFA 등록(D), Web 종료(E), 공개 전환(F)은 보류한다.
 
 
+## 2026-10-14 OCI 콘솔 입력 보완
+
+#139는 `141e8eba5ae811874409a312d4e137950e087f2a`에 병합했다. 같은 Stack의 편집 후
+사용자가 실행한 실제 Plan은 `console_secret_ocids`가 빈 목록으로 전달돼 검증에 실패했다.
+provider 설치·기존 리소스 조회는 성공했고, 드롭다운에는 사용 가능한 옵션이 없다는 사용자
+관찰과 일치한다. 상세 결과는 [B0-2 RESULT](P06-B0-2-RESULT.md)가 소유한다.
+
+목록 입력을 필수 `string` 변수 `console_auth_secret_ocid`·`console_mfa_secret_ocid`로 바꾸고,
+내부 local 목록에서만 결합한다. 기존 두 Secret만 읽는 정책과 중복·종류·기존 runtime 겹침
+검증은 유지한다. 새로운 Secret·credential이나 별도 입력 도구를 만들지 않는다.
+같은 OCI 콘솔에서 수정 소스의 두 입력칸을 확인하고 기존 Secret OCID를 한 개씩 설정한 뒤
+Plan을 다시 실행한다. 성공한 실제 Plan의 SHA/diff 검토와 Apply는 기존 운영 절차를 따른다.
+기존 runtime 변수는 보존하며 현재 빈 입력을 보완하기 위해 검증 조건을 완화하지 않는다.
+
 ## 2026-10-14 B0-1 완료와 probe 구현 보완
 
 실제 2A·2B·2C는 승인된 사용자 실행으로 모두 exit 0이며 [B0-1 RESULT](P06-B0-1-RESULT.md)가
@@ -275,3 +289,12 @@ Promotion 경계에 두고, host 성공 뒤의 신규 command는 `pull_request:l
 CI의 임시 0700 경로/0600 파일로 만들고 cleanup한다. 새 command 원문 응답·OCID를 공개 artifact에
 넣지 않으며 OCI 콘솔의 display name으로 찾아 기존 비공개 기록에 연결한다. 이는 출력 보호의
 구체화이며 실제 권한 실증을 mock 검사로 대체하지 않는다.
+
+
+### 실제 Plan의 추가 Logging 변경 승인
+
+사용자 제공 성공 Plan은 Console repo 생성·runtime policy 읽기 추가 외에 기존 선언의 Logging
+parser `time_type = "string"` 추가도 포함했다. 동일 source SHA 확인 후 사용자가 이 항목까지
+포함한 `1 create / 2 update / 0 destroy`의 Apply를 명시적으로 승인했다. 실제 성공 로그와
+확인 한계는 [B0-2 RESULT](P06-B0-2-RESULT.md)가 소유한다. 최초 허용 목록을 모든 Logging 변경에
+확대하지 않으며 이 한정된 diff의 승인으로 기록한다. 게시 정책 교체·실제 권한 probe는 별도다.

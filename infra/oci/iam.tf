@@ -12,6 +12,8 @@ resource "oci_identity_group" "github_deploy" {
 }
 
 locals {
+  console_secret_ocids = [var.console_auth_secret_ocid, var.console_mfa_secret_ocid]
+
   compute_principal       = var.iam_identity_domain_name == "" ? oci_identity_dynamic_group.compute.name : "${var.iam_identity_domain_name}/${oci_identity_dynamic_group.compute.name}"
   github_deploy_principal = var.iam_identity_domain_name == "" ? oci_identity_group.github_deploy.name : "${var.iam_identity_domain_name}/${oci_identity_group.github_deploy.name}"
 
@@ -24,7 +26,7 @@ locals {
       "Allow dynamic-group ${local.compute_principal} to use instance-agent-command-execution-family in compartment id ${var.compute_compartment_ocid} where request.instance.id=target.instance.id",
     ],
     [
-      for secret_ocid in concat(var.runtime_secret_ocids, var.console_secret_ocids) :
+      for secret_ocid in concat(var.runtime_secret_ocids, local.console_secret_ocids) :
       "Allow dynamic-group ${local.compute_principal} to read secret-bundles in compartment id ${var.secret_compartment_ocid} where target.secret.id='${secret_ocid}'"
     ],
   )
@@ -48,7 +50,11 @@ resource "oci_identity_policy" "runtime_and_deployment" {
 
   lifecycle {
     precondition {
-      condition     = length(setintersection(toset(var.runtime_secret_ocids), toset(var.console_secret_ocids))) == 0
+      condition     = length(distinct(local.console_secret_ocids)) == 2
+      error_message = "Console Auth and MFA must use distinct Vault Secret OCIDs."
+    }
+    precondition {
+      condition     = length(setintersection(toset(var.runtime_secret_ocids), toset(local.console_secret_ocids))) == 0
       error_message = "Console Secret OCIDs must not duplicate existing Web runtime Secret OCIDs."
     }
   }

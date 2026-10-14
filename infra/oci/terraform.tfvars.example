@@ -18,7 +18,5 @@ runtime_secret_ocids = [
 
 # Existing Secrets: replace placeholders privately only after Web IMDS persistence proof.
 console_ocir_repository_name = "oioi-bwg-console"
-console_secret_ocids = [
-  "ocid1.vaultsecret.oc1.ap-osaka-1.<console-auth>",
-  "ocid1.vaultsecret.oc1.ap-osaka-1.<console-mfa>",
-]
+console_auth_secret_ocid     = "ocid1.vaultsecret.oc1.ap-osaka-1.<console-auth>"
+console_mfa_secret_ocid      = "ocid1.vaultsecret.oc1.ap-osaka-1.<console-mfa>"

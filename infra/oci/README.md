@@ -62,8 +62,17 @@ production infrastructure의 기본 실행 경로는 Resource Manager Plan → h
 [B0 계획](../../docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의
 실제 Web metadata 차단·재시작 지속성 proof를 확인한 뒤 같은 Resource Manager Stack에서 검토한다.
 `console_ocir_repository_name` 기본값은 `oioi-bwg-console`이며 기존 Web repository와 달라야 한다.
-`console_secret_ocids`에는 이미 생성한 Console Auth/MFA Secret OCID **두 개만** 비공개 Stack 입력으로
-설정한다. 중복·다른 종류·기존 runtime 목록과 겹치는 값은 거절한다. secret 값은 입력하지 않는다.
+비공개 Stack 입력 `console_auth_secret_ocid`와 `console_mfa_secret_ocid`에 이미 생성한
+Auth/MFA Secret OCID를 각각 설정한다. 중복·다른 종류·기존 runtime 목록과 겹치는 값은 거절한다.
+secret 값은 입력하지 않는다. 두 필드는 문자열이며 내부에서만 두 OCID 목록으로 결합한다.
+
+초기 `console_secret_ocids` 목록 입력은 OCI 콘솔에서 선택지가 없는 드롭다운으로 표시됐고,
+실제 Plan에 빈 목록이 전달돼 검증에 실패했다. 수정 병합 후 같은 Stack의 Git branch
+`migration_main`·작업 디렉터리 `infra/oci`를 유지한 채 편집을 다시 열어 새 두 입력칸을 확인한다.
+`console_auth_secret_ocid`에는 `oioi-console-auth-secret`의 OCID,
+`console_mfa_secret_ocid`에는 `oioi-console-mfa-encryption-key`의 OCID를 한 개씩 입력한다.
+따옴표·대괄호 없이 각 `ocid1.vaultsecret...` 문자열만 사용한다. 기존 runtime 변수는 유지한다.
+목록 필드만 계속 보이면 수정 소스를 아직 읽지 못한 것이므로 Plan을 다시 실행하지 않는다.
 
 이 변경의 허용 Plan은 private Console repository 한 개 생성과 기존 runtime/deployment policy의
 Console repo/두 Secret 읽기 추가다. 기존 Web repo·runtime Secret 목록·VM·Vault/Key·그룹·
