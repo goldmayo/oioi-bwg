@@ -24,7 +24,9 @@ OCI DevOps Managed Build와 Shell Stage는 사용하지 않는다. Shell Stage�
 생성하므로 추가 deployment compute 비용과 cold start가 발생한다. M9는 기존 Compute의 Oracle Cloud Agent와
 Run Command를 직접 사용한다.
 
-## Current Resource Manager state transition
+## M9 Resource Manager state 전환 기록
+
+아래는 M9 전환 당시의 허용 목록이다. 현재 P06-B0 승인 범위는 다음 별도 절을 따른다.
 
 기존 state에는 과거 실험에서 생성한 OCI DevOps project/pipeline, command-spec artifact, Shell Stage,
 DevOps dynamic group과 관련 IAM이 들어 있다. 이 변경을 Apply하면 해당 리소스는 제거 대상이다.
@@ -54,6 +56,23 @@ existing PostgreSQL backup bucket
 
 production infrastructure의 기본 실행 경로는 Resource Manager Plan → human review → Apply다. 로컬
 `terraform apply`와 actual secret value가 포함된 tfvars commit은 금지한다.
+
+## P06-B0 Console repository와 읽기 권한
+
+[B0 계획](../../docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의
+실제 Web metadata 차단·재시작 지속성 proof를 확인한 뒤 같은 Resource Manager Stack에서 검토한다.
+`console_ocir_repository_name` 기본값은 `oioi-bwg-console`이며 기존 Web repository와 달라야 한다.
+`console_secret_ocids`에는 이미 생성한 Console Auth/MFA Secret OCID **두 개만** 비공개 Stack 입력으로
+설정한다. 중복·다른 종류·기존 runtime 목록과 겹치는 값은 거절한다. secret 값은 입력하지 않는다.
+
+이 변경의 허용 Plan은 private Console repository 한 개 생성과 기존 runtime/deployment policy의
+Console repo/두 Secret 읽기 추가다. 기존 Web repo·runtime Secret 목록·VM·Vault/Key·그룹·
+backup·Logging·Monitoring의 destroy/replace 또는 무관한 update가 있으면 Apply하지 않는다.
+output `console_ocir_repository`는 새 repository 경로를 제공한다. 로컬 Apply는 실행하지 않는다.
+
+기존 Stack의 Git ref·Plan 실제 SHA·Apply 대상 Plan을 B0 계획대로 대조한다. 게시 계정의 기존
+광범위 정책 교체는 Stack 밖 별도 승인 작업이며 이 코드가 수행하지 않는다. 같은 CI의 작은
+push/pull·host Secret 형식 검사·새 Run Command exit 0이 모두 확인돼야 B0 완료다.
 
 ## IAM boundary
 

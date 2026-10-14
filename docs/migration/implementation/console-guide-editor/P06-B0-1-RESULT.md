@@ -5,7 +5,7 @@ status: active
 source_commit: 0da834d57017c403c58f52f31e2bf0f3b98392e3
 verified_at: "2026-10-14"
 updated_at: "2026-10-14"
-revision: 6
+revision: 7
 ---
 
 # P06-B0-1 결과
@@ -148,3 +148,28 @@ probe 실패, daemon 뒤 app 재시작, container 부분 생성 실패의 여섯
 
 실행 스크립트 SHA-256은 `e7f39db8e440c4fc2aa9030c4a1547e3c8d7d91e697f8e9449076fa343d62ef4`다.
 VM 전달·2A 적용은 아직 미승인·미실행이며 2B/2C와 IAM/Stack도 보류다.
+
+## 2026-10-14 실제 2A·2B 검증
+
+#138은 `345315e9377dd3cd7050f2d5afefb5b6fd18eed5`에 병합됐고 최신 CI 전체 성공을
+확인했다. 사용자가 2A 실행을 승인해 고정 해시의 스크립트를 새 VM 사용자 staging에 전달했다.
+사용자는 본인 sudo 인증으로 실행한 `p06_b0_probe_creation_1_passed`,
+`p06_b0_probe_creation_2_passed`, `p06_b0_probe_docker_passed`·exit 0을 공유했다.
+같은 bridge의 두 임시 container에서 차단·counter·host 대조를 통과했고 Docker 재시작 후
+Web/PostgreSQL ID·시작 시각 유지, guard·health·live-restore 성공을 실제로 확인했다.
+후속 SSH 읽기에서도 새 Docker PID·guard active/success·두 container healthy·readyz 200을 확인했다.
+
+사용자가 2B·2C를 함께 승인했다. 기존 Compose의 SHA-256이 repo 파일과 같은 것을 확인하고
+`.local/web-recreate-verification.py`를 준비했다. SHA-256은
+`91f8d94055079efa232616a60ec4a87d23cf2963d8216c958b6642e6cc226cf8`다.
+Python 구문과 격리 Docker의 성공/설정 drift/복구 성공·실패/guard 실패/부팅 순서 분기를
+mock으로 검증했다. 전달 후 VM 해시도 대조했다.
+
+사용자가 실제로 실행한 2B 출력은 `p06_b0_web_recreate_passed`,
+`p06_b0_web_restore_passed`, `p06_b0_web_phase_passed`·exit 0이다.
+기존 Compose/env는 VM의 root/0700 backup 경로에 0600으로 보존했다. 동일 pinned image와
+동일 env의 Web을 두 차례 재생성해 maintenance 시작 전 release 복구를 검증했다.
+두 차례 모두 Web ID 변경·platform image/env 동일, PostgreSQL ID/시작 시각 유지, 기존 env
+파일 불변, health·metadata 차단/counter·host 대조를 성공 조건으로 확인했다.
+실제 다른 과거 image 또는 Console candidate에 대한 rollback 검증은 이 결과에 포함하지 않는다.
+2C 재부팅 후 검증 결과는 아직 대기 중이다. OCI IAM/Stack·새 Secret 권한은 적용하지 않았다.
