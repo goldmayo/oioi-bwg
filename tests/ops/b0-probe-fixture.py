@@ -38,13 +38,16 @@ class CiProbe(unittest.TestCase):
         def fake(args, **kwargs):
             calls.append(args)
             if args[0] == 'docker':
+                self.assertTrue(kwargs['capture_output'])
+                self.assertNotIn('SENSITIVE-FAKE', ' '.join(args))
+                self.assertNotIn('--debug', args)
                 if args[1] == 'build' and variant == 'build-fail':
                     raise subprocess.TimeoutExpired(args, 90, 'SENSITIVE-FAKE', 'SENSITIVE-FAKE')
                 if args[1] == 'push' and variant in ('push-fail', 'push-denied'):
-                    detail = 'denied SENSITIVE-FAKE' if variant == 'push-denied' else 'SENSITIVE-FAKE'
-                    raise subprocess.CalledProcessError(1, args, detail, detail)
+                    detail = 'denied: requested access to the resource is denied\n' if variant == 'push-denied' else 'Docker push failed\n'
+                    raise subprocess.CalledProcessError(1, args, 'The push refers to repository [fixture]\n', detail)
                 if args[1] == 'push' and 'oioi-bwg-console:' in args[-1] and variant == 'console-push-fail':
-                    raise subprocess.CalledProcessError(1, args, 'SENSITIVE-FAKE', 'SENSITIVE-FAKE')
+                    raise subprocess.CalledProcessError(1, args, '', 'Console push failed\n')
                 if args[1:3] == ['image', 'inspect']:
                     repo = args[-1].rsplit(':', 1)[0]
                     output = [repo + '@sha256:' + '1' * 64]
@@ -52,6 +55,7 @@ class CiProbe(unittest.TestCase):
                     return subprocess.CompletedProcess(args, 0, json.dumps(output), '')
                 return subprocess.CompletedProcess(args, 0, '', '')
             env = kwargs['env']
+            self.assertTrue(kwargs['capture_output'])
             self.assertNotIn('OCI_CLI_KEY_CONTENT', env)
             key = Path(env['OCI_CLI_KEY_FILE']); keys.append(key)
             self.assertEqual(stat.S_IMODE(key.stat().st_mode), 0o600)
@@ -83,7 +87,8 @@ class CiProbe(unittest.TestCase):
                 files = {p.name: json.loads(p.read_text()) for p in Path('.').glob('*.json')}
             finally: os.chdir(before)
         self.assertNotIn('SENSITIVE-FAKE', output.getvalue() + errors.getvalue() + json.dumps(files))
-        self.events = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.output, self.errors = output.getvalue(), errors.getvalue()
+        self.events = [json.loads(line) for line in self.output.splitlines() if line.startswith('{')]
         self.assertTrue(all(not key.exists() for key in keys))
         return status, calls, files
 
@@ -94,7 +99,7 @@ class CiProbe(unittest.TestCase):
         self.assertEqual(set(files['b0-proof.json']['images']), {'web', 'console'})
         self.assertNotIn('candidate.json', files)
 
-    def test_publish_failure_stops_and_hides_raw_output(self):
+    def test_publish_failure_stops_and_limits_raw_output_to_docker_push(self):
         for variant in ('push-fail', 'push-denied', 'digest-mismatch', 'build-fail', 'console-push-fail'):
             with self.subTest(variant=variant):
                 status, calls, files = self.execute('publish', variant)
@@ -107,6 +112,23 @@ class CiProbe(unittest.TestCase):
                     failed = [e for e in self.events if e['event'] == 'b0_publish_step_failed']
                     reason = {'build-fail': 'timeout', 'push-denied': 'permission_denied'}.get(variant, 'command_failed')
                     self.assertEqual(failed, [{'event': 'b0_publish_step_failed', 'phase': expected, 'reason': reason}])
+                if variant == 'push-denied':
+                    self.assertIn('The push refers to repository [fixture]', self.output)
+                    self.assertIn('denied: requested access to the resource is denied', self.errors)
+                if variant == 'console-push-fail':
+                    self.assertIn('Console push failed', self.errors)
+
+    def test_real_child_streams_are_visible_only_for_failed_push(self):
+        module = load('b0-ci-probe')
+        for phase in ('web.push', 'console.push', 'build', None):
+            with self.subTest(phase=phase):
+                output, errors = io.StringIO(), io.StringIO()
+                child = [sys.executable, '-c', 'import sys; print("child stdout"); print("child stderr", file=sys.stderr); sys.exit(1)']
+                with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors), self.assertRaises(subprocess.CalledProcessError):
+                    module.run(child, phase=phase)
+                visible = phase in ('web.push', 'console.push')
+                self.assertEqual('child stdout' in output.getvalue(), visible)
+                self.assertEqual('child stderr' in errors.getvalue(), visible)
 
     def test_new_command_success_and_eventual_consistency(self):
         for variant in ('ok', 'not-ready'):
