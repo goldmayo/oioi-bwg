@@ -227,3 +227,42 @@ Web readiness·DNS/일반 outbound, container 재생성·Docker/VM 재시작·�
 새 Secret grant 이후에는 deny를 제거하지 않는다. 차단을 유지할 수 없으면 앱 접근을 제한·중지하고
 승인된 Console Secret grant 회수·검증부터 진행한다. 기존 Web 권한과 다른 firewall 규칙은 보존한다.
 운영 실행·비공개 증적은 B0 RESULT/기존 Notion에 기록한다. 실제 두 앱의 최종 검증은 B2에 남긴다.
+
+## 8. P06-B0 권한 probe
+
+[B0 계획](../../docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의 실제 Web 차단·
+재시작 증거와 검토한 Stack Plan/Apply·게시 정책 교체를 완료한 뒤, 별도 승인된 probe만 실행한다.
+일반 feature PR은 OCI credential을 사용하지 않는다. B0 동안 전체 ARM64 candidate는 비활성이고
+required `promotion`은 실패하므로 probe용 Promotion PR을 병합하지 않는다.
+
+1. 같은 저장소 `migration_main → migration_develop` PR의 Verify가 성공하면 `B0 publish probe`가
+   기존 게시 credential로 약 2KB의 scratch marker 이미지를 두 repo에 게시한다. 앱 Dockerfile은
+   빌드하지 않는다. `b0-publish-<source SHA>-<attempt>` artifact의 `b0-proof.json`만 전달한다.
+2. 검토한 소스의 `b0-host-probe.py`와 입력을 보호된 root 경로에 전달한다. 두 JSON 입력은
+   root 소유·0600 일반 파일이어야 한다. 두 번째 JSON은 `{"auth":"<기존 Auth Secret OCID>",
+"mfa":"<기존 MFA Secret OCID>"}`이며 실제 ID는 비공개 기록에서 가져온다. Secret 값이 아니다.
+
+   ```bash
+   sudo python3 -I /protected/path/b0-host-probe.py /protected/path/b0-proof.json /protected/path/console-secret-ids.json
+   ```
+
+   이 도구는 guard check/현재 Web probe 후 기존 host credential helper로 두 digest를 pull하고,
+   시작하지 않은 임시 container에서 marker를 대조한다. container는 성공·실패 모두 삭제한다.
+   Instance Principal로 두 CURRENT bundle을 읽고 메모리에서 형식만 검사한다. Secret 원문/변환 값/
+   hash/CLI 오류 원문을 출력·파일 저장하지 않는다. 성공 출력의 두 version만 비공개 증거에 남긴다.
+
+3. host 성공을 확인한 maintainer가 해당 PR에 `b0-host-<전체 source SHA>` label을 붙이고,
+   `p06-b0-command` label을 추가한다. 전용 labeled workflow는 최신 SHA/tree, 같은 PR의 최신
+   Verify와 게시 job 성공, source에 결합한 host 확인을 요구한다. 이 label은 실제 host 실행 증거를
+   대체하지 않는다. 재실행은 원인 확인 후 실행 label을 제거·추가하며 전체 Verify는 다시 돌리지 않는다.
+4. GitHub `oci-development-image`에 기존 VM·compartment ID를 각각
+   `OCI_COMPUTE_INSTANCE_OCID`, `OCI_COMPUTE_COMPARTMENT_OCID` variable로 승인 후 등록한다.
+   API credential은 기존 `OCI_CLI_*`를 command step에만 주입한다. 임시 0600 signing key는
+   종료 시 삭제하며 신규 command는 기존 `run-command-probe.sh`만 호출한다. 새 execution의
+   대상·command 대응·최근 UTC·SUCCEEDED·정수 exit 0을 대조한다. 안전한 결과 artifact만 남기고
+   정확한 command OCID는 OCI 콘솔에서 display name으로 찾아 비공개 기록에 보관한다.
+
+오류는 고정 event만 출력한다. 각 단계 실패 시 다음 단계로 진행하지 않는다. probe image는 배포
+후보가 아니며 `candidate.json`을 만들지 않는다. B0 실제 권한 실증 완료 후 B1에서 전체 candidate를
+복구하고, B1+B2와 host upgrade 완료 후 실제 Promotion을 진행한다. CI에 image 삭제 권한을 추가하거나
+다른 image를 prune하지 않는다.
