@@ -38,7 +38,12 @@ class CiProbe(unittest.TestCase):
         def fake(args, **kwargs):
             calls.append(args)
             if args[0] == 'docker':
-                if args[1] == 'push' and variant == 'push-fail':
+                if args[1] == 'build' and variant == 'build-fail':
+                    raise subprocess.TimeoutExpired(args, 90, 'SENSITIVE-FAKE', 'SENSITIVE-FAKE')
+                if args[1] == 'push' and variant in ('push-fail', 'push-denied'):
+                    detail = 'denied SENSITIVE-FAKE' if variant == 'push-denied' else 'SENSITIVE-FAKE'
+                    raise subprocess.CalledProcessError(1, args, detail, detail)
+                if args[1] == 'push' and 'oioi-bwg-console:' in args[-1] and variant == 'console-push-fail':
                     raise subprocess.CalledProcessError(1, args, 'SENSITIVE-FAKE', 'SENSITIVE-FAKE')
                 if args[1:3] == ['image', 'inspect']:
                     repo = args[-1].rsplit(':', 1)[0]
@@ -78,6 +83,7 @@ class CiProbe(unittest.TestCase):
                 files = {p.name: json.loads(p.read_text()) for p in Path('.').glob('*.json')}
             finally: os.chdir(before)
         self.assertNotIn('SENSITIVE-FAKE', output.getvalue() + errors.getvalue() + json.dumps(files))
+        self.events = [json.loads(line) for line in output.getvalue().splitlines()]
         self.assertTrue(all(not key.exists() for key in keys))
         return status, calls, files
 
@@ -89,11 +95,18 @@ class CiProbe(unittest.TestCase):
         self.assertNotIn('candidate.json', files)
 
     def test_publish_failure_stops_and_hides_raw_output(self):
-        for variant in ('push-fail', 'digest-mismatch'):
+        for variant in ('push-fail', 'push-denied', 'digest-mismatch', 'build-fail', 'console-push-fail'):
             with self.subTest(variant=variant):
                 status, calls, files = self.execute('publish', variant)
                 self.assertEqual(status, 1); self.assertEqual(files, {})
-                self.assertEqual(len([c for c in calls if c[1] == 'push']), 1)
+                self.assertEqual(len([c for c in calls if c[1] == 'push']), 0 if variant == 'build-fail' else 2 if variant == 'console-push-fail' else 1)
+                phases = [e['phase'] for e in self.events if e['event'] == 'b0_publish_phase']
+                expected = {'build-fail': 'build', 'console-push-fail': 'console.push', 'digest-mismatch': 'web.digest'}.get(variant, 'web.push')
+                self.assertEqual(phases[-1], expected)
+                if variant != 'digest-mismatch':
+                    failed = [e for e in self.events if e['event'] == 'b0_publish_step_failed']
+                    reason = {'build-fail': 'timeout', 'push-denied': 'permission_denied'}.get(variant, 'command_failed')
+                    self.assertEqual(failed, [{'event': 'b0_publish_step_failed', 'phase': expected, 'reason': reason}])
 
     def test_new_command_success_and_eventual_consistency(self):
         for variant in ('ok', 'not-ready'):
