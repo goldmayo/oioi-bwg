@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-IMAGE_DIGEST="${1:-}"
-: "${OCI_COMPUTE_COMPARTMENT_OCID:?OCI_COMPUTE_COMPARTMENT_OCID is required}"
-: "${OCI_COMPUTE_INSTANCE_OCID:?OCI_COMPUTE_INSTANCE_OCID is required}"
-
-if [[ ! "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-  echo "IMAGE_DIGEST must be an immutable sha256 manifest digest" >&2
+WEB_IMAGE_DIGEST="${1:-}"
+CONSOLE_IMAGE_DIGEST="${2:-}"
+if [[ "$#" -ne 2 ]] ||
+  [[ ! "${WEB_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
+  [[ ! "${CONSOLE_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+  echo "Exactly two immutable digests are required: Web then Console" >&2
   exit 2
 fi
+: "${OCI_COMPUTE_COMPARTMENT_OCID:?OCI_COMPUTE_COMPARTMENT_OCID is required}"
+: "${OCI_COMPUTE_INSTANCE_OCID:?OCI_COMPUTE_INSTANCE_OCID is required}"
 
 for command in oci jq; do
   command -v "${command}" >/dev/null 2>&1 || {
@@ -20,9 +22,14 @@ done
 target="$(jq -cn --arg instance_id "${OCI_COMPUTE_INSTANCE_OCID}" '{instanceId:$instance_id}')"
 content="$(
   jq -cn \
-    --arg text "sudo /srv/oioibawige/scripts/deploy-release.sh ${IMAGE_DIGEST}" \
+    --arg text "sudo /srv/oioibawige/scripts/deploy-release.sh ${WEB_IMAGE_DIGEST} ${CONSOLE_IMAGE_DIGEST}" \
     '{source:{sourceType:"TEXT",text:$text},output:{outputType:"TEXT"}}'
 )"
+
+umask 077
+execution_file="$(mktemp)"
+error_file="$(mktemp)"
+trap 'rm -f -- "${execution_file}" "${error_file}"' EXIT
 
 command_id="$(
   oci instance-agent command create \
@@ -32,19 +39,15 @@ command_id="$(
     --target "${target}" \
     --content "${content}" \
     --query 'data.id' \
-    --raw-output
-)"
+    --raw-output 2>"${error_file}"
+)" || { echo "Failed to create OCI Run Command" >&2; exit 1; }
 
-if [[ ! "${command_id}" =~ ^ocid1\.instanceagentcommand\. ]]; then
+if [[ ! "${command_id}" =~ ^ocid1\.instanceagentcommand\.[a-z0-9.-]+$ ]]; then
   echo "Failed to create OCI Run Command" >&2
   exit 1
 fi
 
 echo "Created OCI Run Command: ${command_id}"
-
-execution_file="$(mktemp)"
-error_file="$(mktemp)"
-trap 'rm -f -- "${execution_file}" "${error_file}"' EXIT
 
 overall_deadline=$(($(date +%s) + 900))
 execution_state=""
@@ -54,7 +57,10 @@ while (( $(date +%s) < overall_deadline )); do
     --command-id "${command_id}" \
     --instance-id "${OCI_COMPUTE_INSTANCE_OCID}" \
     >"${execution_file}" 2>"${error_file}"; then
-    execution_state="$(jq -r '.data["lifecycle-state"] // empty' "${execution_file}")"
+    execution_state="$(jq -r '.data["lifecycle-state"] // empty' "${execution_file}" 2>/dev/null)" || {
+      echo "Invalid Run Command execution response" >&2
+      exit 1
+    }
     case "${execution_state}" in
       SUCCEEDED|FAILED|TIMED_OUT|CANCELED)
         break
@@ -71,7 +77,6 @@ while (( $(date +%s) < overall_deadline )); do
     fi
 
     echo "Failed to read OCI Run Command execution" >&2
-    sed -E 's/(DATABASE_URL|DB_APP_PASSWORD|AUTH_SECRET|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY)=([^[:space:]]+)/\1=<redacted>/g' "${error_file}" >&2
     exit 1
   fi
 
@@ -83,41 +88,22 @@ case "${execution_state}" in
     ;;
   *)
     echo "Run Command did not reach a terminal state before timeout" >&2
-    if [[ -s "${error_file}" ]]; then
-      sed -E 's/(DATABASE_URL|DB_APP_PASSWORD|AUTH_SECRET|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY)=([^[:space:]]+)/\1=<redacted>/g' "${error_file}" >&2
-    fi
     exit 1
     ;;
 esac
 
-remote_exit_code="$(jq -r '.data.content["exit-code"] // empty' "${execution_file}")"
-agent_message="$(jq -r '.data.content.message // "none"' "${execution_file}")"
-remote_output="$(jq -r '.data.content.text // "<empty>"' "${execution_file}")"
-
-sensitive_markers=(
-  'DATABASE_URL='
-  'DB_APP_PASSWORD='
-  'AUTH_SECRET='
-  'R2_ACCESS_KEY_ID='
-  'R2_SECRET_ACCESS_KEY='
-  'postgresql://'
-  'postgres://'
-)
-
-for marker in "${sensitive_markers[@]}"; do
-  if [[ "${remote_output}" == *"${marker}"* ]]; then
-    remote_output='<redacted: remote output contained a sensitive marker>'
-    break
-  fi
-done
-
+remote_exit_code="$(jq -er '.data.content["exit-code"] | select(type == "number" and . == floor and . >= 0 and . <= 255)' "${execution_file}" 2>/dev/null)" || {
+  echo "Invalid Run Command exit code" >&2
+  exit 1
+}
+# Agent message/text and OCI error streams may contain either app's runtime secrets.
+# Only the bounded lifecycle/exit code and fixed diagnostics cross into Actions logs.
 echo "Run Command lifecycle: ${execution_state}"
-echo "Remote exit code: ${remote_exit_code:-UNKNOWN}"
-echo "Agent message: ${agent_message}"
-echo "Remote output:"
-printf '%s\n' "${remote_output}"
-
-if [[ ! "${remote_exit_code}" =~ ^[0-9]+$ ]]; then
+echo "Remote exit code: ${remote_exit_code}"
+echo "Remote output: <redacted: inspect protected host logs>"
+if [[ "${execution_state}" == "TIMED_OUT" || "${execution_state}" == "CANCELED" ]] ||
+  [[ "${execution_state}" != "SUCCEEDED" && "${remote_exit_code}" == "0" ]]; then
+  echo "Run Command did not succeed" >&2
   exit 1
 fi
 

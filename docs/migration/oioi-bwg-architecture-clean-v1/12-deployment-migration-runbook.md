@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.10"
+version: "1.11"
 status: "active"
 authority: "runbook"
 updated_at: "2026-10-15"
@@ -485,7 +485,11 @@ merge 전에 성공하지 않은 run, 다른 PR/head/tree/registry, 만료·누�
 
 P06-B1은 후보 검증까지 활성화한다. B2의 두 앱 배포 구현과 별도 승인된 host upgrade 전에는
 배포 workflow가 후보 대조·summary 이후 OCI 인증/Run Command 전에 실패한다.
-이 차단은 repository 설정 flag로 우회하지 않으며 B2에서 두 digest 전달·복구 검증과 함께 교체한다.
+이 차단은 repository 설정 flag로 우회하지 않으며 B2의 host apply/rollback 검증과 함께 교체한다.
+B2-1의 CI Run Command adapter는 Web·Console 순서의 immutable digest 두 개만 받고,
+누락·추가 인자·가변 tag는 OCI 호출 전에 거절한다. 원격 message/text와 OCI 오류 원문은
+CI 로그로 전달하지 않는다. lifecycle·정수 exit code·고정 진단만 기록하며 0/20/21을 유지한다.
+이 adapter의 준비를 host 배포·복구 구현이나 upgrade 완료로 간주하지 않는다.
 
 배포 workflow는 image를 다시 build/publish하지 않고 검증된 digest를 기존 OCI Run Command와
 `deploy-release.sh`에 전달한다. health/readiness/smoke 및 직전 정상 digest/env rollback, exit 0/20/21은 유지한다.
