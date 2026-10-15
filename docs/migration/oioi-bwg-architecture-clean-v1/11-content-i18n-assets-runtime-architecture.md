@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.5"
+version: "1.6"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-13"
+updated_at: "2026-10-16"
 depends_on:
   - "01"
   - "05"
@@ -262,6 +262,12 @@ OCI runtime secret의 SSOT는 OCI Secret Management다. Application request path
 읽어 완전한 temporary env를 검증한 뒤 mode `0600`의 runtime env file을 atomic하게
 교체한다. GitHub CI, Terraform configuration/state, container image, Run Command plain-text
 payload에 runtime secret을 넣지 않는다.
+
+public env에는 Secret 값을 두지 않으며 앱별 Secret mapping의 허용 이름을 검증한다.
+Web에는 `CONSOLE_*`, Console에는 Web `AUTH_SECRET`을 전달하지 않는다. Console의 자체
+Auth secret은 최소 32자, MFA key는 canonical Base64 32 bytes이며 두 값이 같으면 거절한다.
+중복 키·누락·줄바꿈/NUL·Vault 읽기/형식 오류는 임시 env 승격 전에 실패한다. raw env의 값은
+보간하거나 shell로 실행하지 않는다. 앱별 임시 env 생성과 두 앱의 배포/복구 완료는 구분한다.
 
 VM Instance Principal은 process별 권한 분리가 아니다. P06의 새 Console Secret 권한을
 추가하기 전에 기존 Web의 `169.254.169.254` 접근 차단을 실제 VM에서 입증한다.
