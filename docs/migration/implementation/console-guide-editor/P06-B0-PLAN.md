@@ -6,7 +6,7 @@ authority: plan
 source_commit: 699b41a15a84af5adc2c05eda70e1ac0007ea1cd
 created_at: "2026-10-13"
 updated_at: "2026-10-15"
-revision: 7
+revision: 8
 ---
 
 # P06-B0 계획
@@ -310,3 +310,16 @@ GitHub Environment의 기존 Secret 마스킹을 유지한다. Secret 값을 출
 기존 Promotion 경계·동일 CI credential·작은 두 repo 이미지·전체 ARM64 후보 차단을 유지한다.
 보완 코드의 PR 검증·승인 병합 후 #142에서 실제 오류를 읽는다. 실패 원인 확인 전 시크릿 재발급이나
 IAM 확대를 하지 않는다. 원문 확인 성공은 두 repo 게시·host pull·Secret 읽기 성공과 구분한다.
+
+## 2026-10-15 게시 정책 복원과 최소 권한 조정 보류 승인
+
+사용자는 축소 정책을 더 조사하는 대신 기존의 조건 없는 compartment 범위 `manage repos`
+statement 한 줄로 복원하고, 최소 권한 조정을 후속 작업으로 분리하는 안을 승인했다.
+§4의 두 repo READ/UPDATE 교체는 완료로 처리하지 않는다. 게시 계정은 기존 광역 권한 상태이며
+repo-name 조건과 permission 조건 중 실패 원인을 분리하는 작업도 후속에 남긴다.
+VM runtime과 Run Command 계정의 정책을 함께 넓히는 승인은 아니다.
+
+같은 source·시크릿으로 실패한 B0 게시 job만 재실행한 뒤, 두 digest의 실제 host pull·두 CURRENT
+Secret 형식 검사·신규 command exit 0을 확인한다. 이 실증과 게시 최소 권한 조정의 완료 여부를
+분리한다. 실제 결과는 [B0-2 RESULT](P06-B0-2-RESULT.md)가 소유한다. 본 승인으로 앱 배포·
+서비스 재시작·DB migration·#142 병합을 허용하지 않는다.
