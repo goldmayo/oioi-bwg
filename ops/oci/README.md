@@ -166,7 +166,12 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
 - `oci-development-image` Environment: 기존 `migration_develop`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
   credential을 사용하는 PR job은 동일 저장소 `migration_main → migration_develop`에서만 실행된다.
 - 후보 기록은 GitHub Actions artifact `promotion-<source SHA>-<attempt>`의 `candidate.json`이다.
-  보관 90일 안에 merge하며, 삭제/만료/미완료 run/다른 tree는 배포 실패로 처리한다.
+  하나의 PR/source SHA/tree/run/attempt에 `images.web`·`images.console`의 repository/digest를 기록한다.
+  보관 90일 안에 merge하며, 단일 이미지 이전 형식·한쪽 누락·다른 registry·삭제/만료/미완료 run/다른 tree는 거절한다.
+  `oci-development-image`의 추가 variable `OCIR_CONSOLE_REPOSITORY`는 B0에서 검증한
+  Console repository 이름 `oioi-bwg-console`로 설정해야 한다. 2026-10-15 읽기 확인에서는 미등록이며 설정 변경은 별도 승인 후 진행한다.
+  B1은 두 게시 digest smoke 후에만 artifact를 생성한다. B2와 승인된 host upgrade 전 배포 workflow는
+  후보 summary 이후 OCI 인증/Run Command 전에 실패하므로 Promotion을 병합하지 않는다.
 - repository의 squash-only 전략을 유지한다. 테스트 merge tree와 실제 squash tree 모두 source tree와 같아야 한다.
   일치하지 않으면 source를 먼저 갱신하고 PR 검증을 다시 수행한다.
 - base를 바꾼 PR은 새 synchronize/reopen 실행에서 검증한다. 제목·본문 수정만으로 candidate를 다시 build하지 않는다.

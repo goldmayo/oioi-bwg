@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.9"
+version: "1.10"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-13"
+updated_at: "2026-10-15"
 depends_on:
   - "01"
   - "02"
@@ -470,16 +470,22 @@ migration_main → Promotion PR → migration_develop (OCI Development 배포 �
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
 `promotion` check가 실패한다.
 
-Promotion PR은 full verify 후 현재 `migration_main` head로 linux/arm64 candidate를 한 번 build/publish한다.
+Promotion PR은 full verify 후 현재 `migration_main` head의 같은 builder에서 Web·Console 두 linux/arm64 candidate를 build/publish한다.
 `candidate-<source SHA>-<run id>-<attempt>` tag는 추적용이며 release identity는 immutable manifest digest다.
-OCI 배포 없이 해당 digest를 pull하여 container smoke를 수행한다. 성공한 run의 GitHub Actions artifact에
-PR/source SHA/tree, image repository/digest, run/attempt를 기록한다. PR head 변경 시 verify와 candidate 검증을 다시 수행한다.
+OCI 배포 없이 두 게시 digest를 각각 pull하여 architecture·source revision·native module·readiness·browser smoke를 수행한다.
+둘 다 성공한 뒤 하나의 `candidate.json`에 공통 PR/source SHA/tree/run/attempt와 정확히
+`images.web`·`images.console`의 repository/digest를 기록한다. 두 repository는 서로 달라야 하며
+배포 환경의 고정 repository와 각각 대조한다. 단일 이미지의 이전 형식·한쪽 누락·추가 앱은 거절한다. PR head 변경 시 verify와 candidate 검증을 다시 수행한다.
 
 현재 squash merge 전략을 유지한다. PR의 검증용 merge tree가 source tree와 같아야 candidate를 만들고,
 실제 squash merge 결과 tree도 같은 source tree여야 배포한다. 이 전제가 깨지면 새 image를 우회 build하지 않고 실패한다.
 Promotion PR의 merged/closed event만 배포를 시작한다. 현재 head의 최신 검증 run과 그 artifact를 대조하며,
 merge 전에 성공하지 않은 run, 다른 PR/head/tree/registry, 만료·누락된 artifact는 배포하지 않는다.
 병합 커밋/tree·source SHA·candidate run·digest는 Actions summary로 추적한다.
+
+P06-B1은 후보 검증까지 활성화한다. B2의 두 앱 배포 구현과 별도 승인된 host upgrade 전에는
+배포 workflow가 후보 대조·summary 이후 OCI 인증/Run Command 전에 실패한다.
+이 차단은 repository 설정 flag로 우회하지 않으며 B2에서 두 digest 전달·복구 검증과 함께 교체한다.
 
 배포 workflow는 image를 다시 build/publish하지 않고 검증된 digest를 기존 OCI Run Command와
 `deploy-release.sh`에 전달한다. health/readiness/smoke 및 직전 정상 digest/env rollback, exit 0/20/21은 유지한다.
