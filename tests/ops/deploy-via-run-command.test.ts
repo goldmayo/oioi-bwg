@@ -9,7 +9,7 @@ describe("GitHub Actions OCI Run Command deployment", () => {
 
     expect(source).toContain("^sha256:[0-9a-f]{64}$");
     expect(source).toContain("instance-agent command create");
-    expect(source).toContain("deploy-release.sh ${IMAGE_DIGEST}");
+    expect(source).toContain("deploy-release.sh ${WEB_IMAGE_DIGEST} ${CONSOLE_IMAGE_DIGEST}");
     expect(source).not.toMatch(/:(?:latest|development)\b/);
   });
 
@@ -44,7 +44,9 @@ describe("GitHub Actions OCI Run Command deployment", () => {
     expect(deployment).toContain("deploy:\n    name: deploy");
     expect(deployment).not.toContain("docker/build-push-action");
     expect(deployment).toContain("oracle-actions/run-oci-cli-command@v1.3.2");
-    expect(deployment).toContain('bash ops/oci/deploy-via-run-command.sh "${IMAGE_DIGEST}"');
+    expect(deployment).toContain(
+      'bash ops/oci/deploy-via-run-command.sh "${WEB_IMAGE_DIGEST}" "${CONSOLE_IMAGE_DIGEST}"',
+    );
   });
 
   test("uploads Sentry source maps with commit correlation and a BuildKit secret", async () => {
@@ -70,7 +72,7 @@ describe("GitHub Actions OCI Run Command deployment", () => {
   test("redacts sensitive remote output and preserves deployment exit semantics", async () => {
     const source = await readFile(resolve("ops/oci/deploy-via-run-command.sh"), "utf8");
 
-    expect(source).toContain("<redacted: remote output contained a sensitive marker>");
+    expect(source).toContain("<redacted: inspect protected host logs>");
     expect(source).toContain("candidate failed; rollback succeeded");
     expect(source).toContain("candidate failed; rollback failed");
     expect(source).toContain('exit "${remote_exit_code}"');

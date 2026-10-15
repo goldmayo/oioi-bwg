@@ -169,9 +169,14 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
   하나의 PR/source SHA/tree/run/attempt에 `images.web`·`images.console`의 repository/digest를 기록한다.
   보관 90일 안에 merge하며, 단일 이미지 이전 형식·한쪽 누락·다른 registry·삭제/만료/미완료 run/다른 tree는 거절한다.
   `oci-development-image`의 추가 variable `OCIR_CONSOLE_REPOSITORY`는 B0에서 검증한
-  Console repository 이름 `oioi-bwg-console`로 설정해야 한다. 2026-10-15 읽기 확인에서는 미등록이며 설정 변경은 별도 승인 후 진행한다.
+  Console repository 이름 `oioi-bwg-console`로 설정한다. 2026-10-15 최초 조회에서는 미등록이었으며,
+  사용자 #147 병합·다음 작업 지시 후 등록하고 저장 값을 대조했다.
   B1은 두 게시 digest smoke 후에만 artifact를 생성한다. B2와 승인된 host upgrade 전 배포 workflow는
   후보 summary 이후 OCI 인증/Run Command 전에 실패하므로 Promotion을 병합하지 않는다.
+- B2-1의 CI adapter 호출은 `bash ops/oci/deploy-via-run-command.sh <Web digest> <Console digest>`다.
+  host `deploy-release.sh`는 아직 단일 digest만 받으므로 실제 호출하지 않는다. workflow 차단을 유지하며
+  두 env·state·apply/rollback과 기존 `app`의 최초 전환을 구현·검증한 뒤 별도 승인된 host upgrade를 진행한다.
+  Actions 로그에는 원격 body/agent message/OCI 오류 원문을 출력하지 않으며 host 로그는 보호된 경로에서 조사한다.
 - repository의 squash-only 전략을 유지한다. 테스트 merge tree와 실제 squash tree 모두 source tree와 같아야 한다.
   일치하지 않으면 source를 먼저 갱신하고 PR 검증을 다시 수행한다.
 - base를 바꾼 PR은 새 synchronize/reopen 실행에서 검증한다. 제목·본문 수정만으로 candidate를 다시 build하지 않는다.

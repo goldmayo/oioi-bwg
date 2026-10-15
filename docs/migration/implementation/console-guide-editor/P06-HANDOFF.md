@@ -2,8 +2,8 @@
 title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
-updated_at: "2026-10-15"
-revision: 15
+updated_at: "2026-10-16"
+revision: 16
 ---
 
 # P06 작업 인계
@@ -12,19 +12,22 @@ revision: 15
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- 현재 단계: **B1 구현·로컬 검증 완료 / 실제 전체 ARM64 후보 실증은 미실행**, [B1 RESULT](P06-B1-RESULT.md).
-  B0는 #146에서 완료 기록을 병합했다. 게시 최소 권한 조정은 승인된 보류를 유지한다.
-- 브랜치: `feature/p06b1-paired-candidate`, fetched 최신 main `152d2a008ee620adcdf118b957e9ca945644113f`에서 분기했다.
-- 작업 경로: `.local/worktrees/p06b1-paired-candidate`. 원래 worktree의 사용자 P06-PLAN·개인 env는 수정하지 않았다.
+- 현재 단계: **B1 실제 두 ARM64 앱 후보 실증 통과 / B2-1 전달 계약 구현·로컬 검증 완료**,
+  [B1 RESULT](P06-B1-RESULT.md) / [B2-1 RESULT](P06-B2-1-RESULT.md).
+  #147은 사용자 지시로 전체 CI 성공을 재확인한 뒤 `f31471b`에 squash 병합했다. Console repository variable도 등록·대조했다.
+  B0 완료와 게시 최소 권한 재설계의 승인된 보류는 유지한다.
+- 브랜치: `feature/p06b2-paired-transport`, fetched 최신 main `f31471bceb0c04d18382f05b50ee0fa11a6b6b08`에서 분기했다.
+- 작업 경로: `.local/worktrees/p06b2-paired-transport`. 원래 worktree의 사용자 P06-PLAN·개인 env는 수정하지 않았다.
 - 완료 PR: [#134](https://github.com/goldmayo/oioi-bwg/pull/134) → `0e21208`, [#135](https://github.com/goldmayo/oioi-bwg/pull/135) → `9a31a90`.
   각각 최신 base/head CI 전체 성공 후 사용자 지시로 squash 병합했다. #136은 사용자 병합을
   GitHub에서 확인했으며 merge head는 `b8aa61b`, 최신 PR Verify는 성공이다.
 - B0-1 PR: [#136](https://github.com/goldmayo/oioi-bwg/pull/136). 검증 코드 `0da834d57017c403c58f52f31e2bf0f3b98392e3`, 병합 전 PR Verify `38275418704` 전체 성공을 재확인했다.
   직접 기본 검사·ops 82건·두 앱 build·격리 namespace 검증은 RESULT 참조. 실제 VM 완료 증거가 아니다.
 - ENV-1은 별도 PR로 처리하고 ENV-2는 P06-A를 차단하지 않는다. 운영 APP_ENV 전환은 새 candidate 검증과 연결한다.
-- 다음 단계: B1 PR 검토 후 별도 승인으로 `OCIR_CONSOLE_REPOSITORY=oioi-bwg-console` 등록·병합,
-  새 source의 실제 두 ARM64 후보 검증과 B2 host/env/rollback 구현을 진행한다. B2 코드는 아직 착수하지 않았다.
-  B1은 OCI 인증/Run Command 전에 실패하도록 차단했다. B1+B2 병합·host upgrade 전 실제 Promotion은 금지한다.
+- B1 실제 증거: source `f31471b`의 Verify `38754229290` attempt 1 전체 성공과 두 digest artifact를 대조했다. 상세 값과 한계는 B1 RESULT가 소유한다.
+- 다음 단계: B2-1 PR을 검토한다. B2-1은 두 digest의 CLI 입력·명령 전달·원문 로그 보호만 구현했다.
+  후속 B2는 두 env/state·apply/rollback, 기존 `app`의 최초 전환 실패 시 Web 복구/Console 중지, 명시적 installer/preflight upgrade다.
+  OCI 인증/Run Command 전 차단은 유지한다. B2 전체 병합·승인된 host upgrade 전 실제 Promotion은 금지한다.
   #142는 검증용으로 계속 열어 두며 병합하지 않는다. 운영 APP_ENV 전환은 새 후보 검증과 연결한다.
 - 이전 진행 기록(아래 실패·대기는 당시 상태이며 최종 통과 증거는 RESULT가 소유한다):
   검증용 [#142](https://github.com/goldmayo/oioi-bwg/pull/142)의 작은 두 repo push 재검증 →
