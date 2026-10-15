@@ -38,7 +38,7 @@ describe("GitHub Actions OCI Run Command deployment", () => {
     expect(deployment).toContain("actions/download-artifact@v4");
     expect(workflow).toContain("NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}");
     expect(workflow).toContain(
-      "required=(OCIR_REGISTRY OCIR_NAMESPACE OCIR_REPOSITORY NEXT_PUBLIC_SENTRY_DSN SENTRY_ORG SENTRY_PROJECT SENTRY_AUTH_TOKEN)",
+      "required=(OCIR_REGISTRY OCIR_NAMESPACE OCIR_REPOSITORY OCIR_CONSOLE_REPOSITORY NEXT_PUBLIC_SENTRY_DSN SENTRY_ORG SENTRY_PROJECT SENTRY_AUTH_TOKEN)",
     );
     expect(workflow).toContain("NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}");
     expect(deployment).toContain("deploy:\n    name: deploy");

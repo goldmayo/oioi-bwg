@@ -24,25 +24,31 @@ export function assertCandidate(candidate, expected) {
   if (
     !sha.test(candidate.sourceSha) ||
     !sha.test(candidate.sourceTree) ||
-    !/^[a-z0-9.-]+\/[a-z0-9._/-]+$/.test(candidate.imageRepository) ||
     ![candidate.prNumber, candidate.runId, candidate.runAttempt].every(
       (value) => Number.isSafeInteger(value) && value > 0,
     )
   ) {
     throw new Error("Invalid candidate source or run identity");
   }
-  for (const key of [
-    "prNumber",
-    "sourceSha",
-    "sourceTree",
-    "runId",
-    "runAttempt",
-    "imageRepository",
-  ]) {
+  for (const key of ["prNumber", "sourceSha", "sourceTree", "runId", "runAttempt"]) {
     if (candidate[key] !== expected[key]) throw new Error(`Candidate ${key} mismatch`);
   }
-  if (!digest.test(candidate.imageDigest))
-    throw new Error("Candidate requires an immutable digest");
+  if (!candidate.images || Object.keys(candidate.images).sort().join(",") !== "console,web")
+    throw new Error("Candidate requires exactly Web and Console images");
+  for (const app of ["web", "console"]) {
+    const image = candidate.images[app];
+    if (
+      !image ||
+      Object.keys(image).sort().join(",") !== "digest,repository" ||
+      !/^[a-z0-9.-]+(?:\/[a-z0-9._-]+)+$/.test(image.repository) ||
+      image.repository !== expected.images[app].repository
+    )
+      throw new Error(`Candidate ${app} repository mismatch`);
+    if (!digest.test(image.digest))
+      throw new Error(`Candidate ${app} requires an immutable digest`);
+  }
+  if (candidate.images.web.repository === candidate.images.console.repository)
+    throw new Error("Candidate repositories must be distinct");
 }
 
 export function selectCandidateRun(runs, pr) {
@@ -105,11 +111,28 @@ export async function record({ github, context, core }) {
     sourceTree,
     runId: Number(process.env.GITHUB_RUN_ID),
     runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
-    imageRepository: process.env.IMAGE_REPOSITORY,
-    imageDigest: process.env.IMAGE_DIGEST,
+    images: {
+      web: { repository: process.env.IMAGE_REPOSITORY, digest: process.env.IMAGE_DIGEST },
+      console: {
+        repository: process.env.CONSOLE_IMAGE_REPOSITORY,
+        digest: process.env.CONSOLE_IMAGE_DIGEST,
+      },
+    },
   };
   assertCandidate(candidate, candidate);
   await writeFile("candidate.json", JSON.stringify(candidate) + "\n");
+  await core.summary
+    .addHeading("Verified paired candidate")
+    .addTable([
+      ["Source SHA", candidate.sourceSha],
+      ["Source/merge tree", sourceTree],
+      ["Candidate run/attempt", `${candidate.runId}/${candidate.runAttempt}`],
+      ...Object.entries(candidate.images).map(([app, image]) => [
+        app,
+        `${image.repository}@${image.digest}`,
+      ]),
+    ])
+    .write();
 }
 
 export async function resolve({ github, context, core }) {

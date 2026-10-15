@@ -3,26 +3,28 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-15"
-revision: 14
+revision: 15
 ---
 
 # P06 작업 인계
 
-사용자 요청으로 이 파일 하나를 갱신한다. 단계별 사실·검증의 소유자는 PLAN/RESULT이며
+단계별 사실·검증의 소유자는 PLAN/RESULT이며
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- 현재 단계: **B0 실제 지속성·push/pull·Secret 형식·신규 command 실증 통과 / 게시 최소 권한 조정은 승인된 보류 / 다음 B1**, [B0 PLAN](P06-B0-PLAN.md) / [B0-2 RESULT](P06-B0-2-RESULT.md).
-- 브랜치: `feature/p06b0-completion-record`, fetched 최신 main `439f824ee060321130e499cb07cfdd8724d96d6c`에서 분기했다.
-- 작업 경로: `.local/worktrees/p06b0-live-evidence`. 원래 worktree의 사용자 P06-PLAN·개인 env는 수정하지 않았다.
+- 현재 단계: **B1 구현·로컬 검증 완료 / 실제 전체 ARM64 후보 실증은 미실행**, [B1 RESULT](P06-B1-RESULT.md).
+  B0는 #146에서 완료 기록을 병합했다. 게시 최소 권한 조정은 승인된 보류를 유지한다.
+- 브랜치: `feature/p06b1-paired-candidate`, fetched 최신 main `152d2a008ee620adcdf118b957e9ca945644113f`에서 분기했다.
+- 작업 경로: `.local/worktrees/p06b1-paired-candidate`. 원래 worktree의 사용자 P06-PLAN·개인 env는 수정하지 않았다.
 - 완료 PR: [#134](https://github.com/goldmayo/oioi-bwg/pull/134) → `0e21208`, [#135](https://github.com/goldmayo/oioi-bwg/pull/135) → `9a31a90`.
   각각 최신 base/head CI 전체 성공 후 사용자 지시로 squash 병합했다. #136은 사용자 병합을
   GitHub에서 확인했으며 merge head는 `b8aa61b`, 최신 PR Verify는 성공이다.
 - B0-1 PR: [#136](https://github.com/goldmayo/oioi-bwg/pull/136). 검증 코드 `0da834d57017c403c58f52f31e2bf0f3b98392e3`, 병합 전 PR Verify `38275418704` 전체 성공을 재확인했다.
   직접 기본 검사·ops 82건·두 앱 build·격리 namespace 검증은 RESULT 참조. 실제 VM 완료 증거가 아니다.
 - ENV-1은 별도 PR로 처리하고 ENV-2는 P06-A를 차단하지 않는다. 운영 APP_ENV 전환은 새 candidate 검증과 연결한다.
-- 다음 단계: B1의 두 ARM64 candidate 계약·게시 digest smoke·artifact/summary/Slack을 준비한다.
-  기존 준비와 B0 검증은 반복하지 않는다. B1+B2 병합·host upgrade 전 실제 Promotion은 금지한다.
+- 다음 단계: B1 PR 검토 후 별도 승인으로 `OCIR_CONSOLE_REPOSITORY=oioi-bwg-console` 등록·병합,
+  새 source의 실제 두 ARM64 후보 검증과 B2 host/env/rollback 구현을 진행한다. B2 코드는 아직 착수하지 않았다.
+  B1은 OCI 인증/Run Command 전에 실패하도록 차단했다. B1+B2 병합·host upgrade 전 실제 Promotion은 금지한다.
   #142는 검증용으로 계속 열어 두며 병합하지 않는다. 운영 APP_ENV 전환은 새 후보 검증과 연결한다.
 - 이전 진행 기록(아래 실패·대기는 당시 상태이며 최종 통과 증거는 RESULT가 소유한다):
   검증용 [#142](https://github.com/goldmayo/oioi-bwg/pull/142)의 작은 두 repo push 재검증 →
