@@ -30,3 +30,9 @@ host `deploy-release.sh`는 아직 단일 digest 계약이며 두 인자를 보�
 다음 B2 checkpoint는 두 env/state·apply/rollback, `app → web` 최초 전환의 기존 Web 복구/Console 중지,
 installer/preflight의 명시적 upgrade와 실제 두 앱 Metadata 차단이다. 별도 승인 없이 활성화하지 않는다.
 최소 권한 재설계·운영 APP_ENV 전환·P06-C 이후 공개 경계도 보류한다.
+
+## 2026-10-16 병합과 다음 checkpoint
+
+사용자 지시로 #148 최신 head/전체 CI 성공을 확인하고 `18de205ad1b187101922228dfe83678f927238d7`에
+squash 병합했다. 새 source의 Verify `38758478070`도 일반 verify·두 ARM64 candidate·promotion 전체 성공이다.
+실제 Run Command/host 배포는 없다. env 생성·검증의 후속 구현은 [B2-2 결과](P06-B2-2-RESULT.md)가 소유한다.
