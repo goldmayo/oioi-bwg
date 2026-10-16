@@ -5,6 +5,22 @@ set -Eeuo pipefail
 [[ "${EUID}" == "0" ]] || { printf 'M9 host preflight requires root\n' >&2; exit 1; }
 runtime_root="${OIOI_RUNTIME_ROOT:-/srv/oioibawige}"
 config_root="${OIOI_CONFIG_ROOT:-/etc/oioibawige}"
+# Stop before Docker/Instance Principal calls when a privileged path is replaceable.
+python3 -I - "${runtime_root}" "${config_root}" <<'PYTHON'
+import stat
+import sys
+from pathlib import Path
+runtime, config = map(Path, sys.argv[1:3])
+try:
+    for root in (runtime, runtime / 'scripts', runtime / 'deploy', config):
+        for path in (*reversed(root.parents), root):
+            info = path.lstat()
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+                raise ValueError()
+except (OSError, ValueError):
+    print('Host preflight path is not root-protected', file=sys.stderr)
+    sys.exit(1)
+PYTHON
 failures=0
 
 pass() {
@@ -101,7 +117,7 @@ for protected_file in "${config_files[@]}"; do
 done
 
 for root_file in "${runtime_files[@]}" "${config_files[@]}"; do
-  if [[ -f "${root_file}" ]] && [[ -z "$(find "${root_file}" -maxdepth 0 \( ! -user root -o -perm /022 \) -print -quit)" ]]; then
+  if [[ -f "${root_file}" && ! -L "${root_file}" ]] && [[ -z "$(find "${root_file}" -maxdepth 0 \( ! -user root -o -perm /022 -o ! -links 1 \) -print -quit)" ]]; then
     pass "root-owned-not-writable:${root_file}"
   else
     fail "root-owned-not-writable:${root_file}"
