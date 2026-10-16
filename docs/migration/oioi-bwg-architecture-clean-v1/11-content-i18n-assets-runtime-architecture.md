@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.6"
+version: "1.7"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-16"
+updated_at: "2026-10-17"
 depends_on:
   - "01"
   - "05"
@@ -230,7 +230,9 @@ runtime
 
 Secret은 어떤 경우에도 이 메커니즘으로 전달하지 않는다.
 
-12의 image build/deploy 전략은 이 원칙을 따른다.
+Sentry Release와 OCI revision label은 image의 실제 build source에 연결한다. 재사용 이미지에는
+새 릴리스 source를 덮어쓰지 않는다. 공개 build 입력 변경은 새 build가 필요하며 선택적 재사용의
+검증·baseline·공동 smoke와 배포 전략은 12 §21이 소유한다.
 
 ---
 
