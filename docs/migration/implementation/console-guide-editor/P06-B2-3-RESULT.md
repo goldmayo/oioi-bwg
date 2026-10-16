@@ -49,3 +49,25 @@ commit hook ESLint/Prettier·commitlint도 성공했다. 후속 PR과 원격 CI 
 
 실제 VM 설치/배포·OCI/Vault·Terraform·Secret/DB 변경은 실행하지 않았다.
 OCI 인증 전 배포 차단과 #142 OPEN을 유지하며, 실제 첫 paired 전환·공동 복구·두 앱 IMDS 검증은 남아 있다.
+
+## 2026-10-17 root 실행 경로 보호 보완
+
+[B0-1 결과](P06-B0-1-RESULT.md)에 기록된 사용자 소유 runtime/scripts 경로와 달리 기존 installer는
+상위 경로를 검사하지 않았다. 최신 main `5a8e31c`를 대조하고 #153 head `3c4bf31` 위의 별도 PR로
+보완했다. #153의 파일 누락 concern은 유지하며 #153 병합 뒤 main을 반영해 후속 PR을 검증한다.
+
+구현 `1eba2ac7224d999cade49f9a7e2e1f54deb96a02`는 installer의 첫 mkdir/lock 전 runtime·scripts·deploy·
+config의 전체 ancestor를 검사한다. 사용자 소유·쓰기 가능 경로·symlink, 기존 설치 대상/lock의
+symlink·hardlink·비보호 파일은 거절한다. preflight는 Docker/OCI 전 디렉터리를 검사하고 필수 파일의
+symlink/hardlink도 거절한다. 새 디렉터리만 root 소유로 만들며 비보호 기존 경로는 자동 수정하지 않는다.
+현재 소유권 확인과 수동 검토 절차는 [운영 문서 §1](../../../../ops/oci/README.md#1-install-and-configure)이 소유한다.
+
+기본 여섯 검사(harness 18건·unit 459건), ops 194건, 두 앱 build(캐시 0), actionlint,
+변경한 두 script의 `bash -n`, Python fixture AST, `git diff --check`가 성공했다.
+새 경로 검사에서는 UID/임시 ancestor만 모사하고 실제 mode·symlink·hardlink를 사용했다.
+설치 fixture는 실제 복사·lock·권한과 명시적 `--upgrade-paired`의 기존 세 파일 백업·설정/env 보존을 확인했다.
+이 fixture의 root 소유권·sudoers/systemd 검증은 모사다. CI에는 별도 임시 root 경로에서 실제 소유권과
+쓰기 권한·symlink 거절 및 upgrade 백업의 root/0600을 확인하는 검사를 추가했다. 원격 결과는 PR 본문에서 추적한다.
+
+실제 VM의 현재 경로 소유권은 재조회하지 않았고 운영 소유권·설치·배포·Secret/DB를 변경하지 않았다.
+#153 Verify `38938988484`의 최종 전체 성공을 확인했다. #153/#142는 병합하지 않으며 배포 차단도 유지한다.

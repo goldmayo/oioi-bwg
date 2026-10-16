@@ -19,6 +19,21 @@ Container Instance나 build runtime을 만들지 않고 기존 Compute와 GitHub
 
 ## 1. Install and configure
 
+설치 전 root 실행 경로의 전체 상위 경로를 확인한다. installer는 runtime·scripts·deploy·config와
+각 ancestor가 root 소유·group/other 쓰기 금지인 일반 디렉터리인지 **첫 mkdir/lock 전에** 검사한다.
+기존 설치 대상과 lock의 symlink/hardlink·비보호 파일도 거절한다. preflight도 같은 디렉터리 조건을
+Docker/OCI 호출 전에 확인하며 필요한 경로가 없으면 실패한다.
+
+```bash
+sudo namei -l /srv/oioibawige/scripts/deploy-release.sh
+sudo stat -c '%U:%G %a %n' /srv/oioibawige /srv/oioibawige/scripts /srv/oioibawige/deploy /etc/oioibawige
+```
+
+B0 기록의 사용자 소유 경로가 남아 있으면 설치를 중단한다. 운영자는 실행 중인 작업·보호 파일·기존
+backup과 경로의 용도를 검토한 후 필요한 디렉터리만 별도 승인으로 보호해야 한다. installer는 기존
+비보호 경로를 자동 chown/chmod하지 않으며 recursive 소유권 변경·symlink 경유 설치도 하지 않는다.
+검토가 끝난 보호 경로에서만 다음 설치를 실행한다.
+
 ```bash
 sudo ./ops/oci/install-host-assets.sh
 sudoedit /etc/oioibawige/deploy.conf

@@ -91,6 +91,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:unit:run
       - run: pnpm test:ops
+      - name: Verify root-protected host paths and paired upgrade
+        run: sudo env GITHUB_ACTIONS=true python3 -I tests/ops/host-install-root-fixture.py
 
   postgres_integration:
     name: PostgreSQL integration
