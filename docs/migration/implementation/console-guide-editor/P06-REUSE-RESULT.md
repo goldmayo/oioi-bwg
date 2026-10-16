@@ -7,7 +7,7 @@ verified_at: "2026-10-17"
 verified_source:
   repository: goldmayo/oioi-bwg
   branch: feature/p06-selective-integration
-  commit: 0ec969db1f82af30e6b44efa92b8b0f1f0e0169a
+  commit: 0c4e9a01351aad0c98708e6081d4d6a3b9239c6e
 ---
 
 # P06 선택적 재사용 결과
@@ -51,3 +51,12 @@ ID/StartedAt을 실제 inspect해 비교한다. **로컬 WSL에서는 실행하�
 #150 Verify 38926511148과 #151 Verify 38928227575는 전체 성공이다. 이 두 run은 새 Compose 검사를 포함하지 않는다.
 실제 ARM64 선택적 Promotion/OCI/Vault·VM upgrade/metadata 차단·중단 후 수동 복구는 미검증이며 별도 승인 후다.
 기존 배포 차단·credential 범위·#142 OPEN을 유지하고 운영 VM/Terraform/Secret/DB/개인 env를 변경하지 않았다.
+
+## Git fixture의 hook 환경 격리 보완
+
+첫 통합 push hook의 실제 Git fixture가 상속된 GIT_DIR 때문에 작업 브랜치/index와 공통 core.bare를
+변경했다. 원격 전달 전에 push와 hook을 중단하고 작업 ref/index를 `fac8779`로, core.bare를 false로
+복구했다. 원래 worktree `0011723`의 깨끗한 상태와 원격 브랜치 미생성을 확인했다. 실제 파일은 삭제하지 않았다.
+`0c4e9a0`은 fixture의 Git/Turbo subprocess에서 모든 GIT_*를 제거하고 사용자 Git 설정도 격리한다.
+hook 환경을 의도적으로 주입해 fixture 경계·본 저장소 HEAD/index 보존을 확인하는 회귀 검사가 성공했다.
+repo type/lint도 성공했다. 이후 push hook 재실행의 실제 명령/결과는 PR 본문에서 추적한다.

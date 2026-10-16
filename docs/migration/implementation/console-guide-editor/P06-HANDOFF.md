@@ -99,3 +99,6 @@ paired host는 #149를 전제로 별도 concern에서 구현한다. 원래 workt
 - 최종 로컬 구현 `0ec969d`: 기본 여섯 검사·ops 154건·두 앱 build·actionlint 성공.
   #151도 Verify 38928227575 전체 성공이다. 새 실제 Compose ID/StartedAt 검사는 workflow 연결 PR의
   CI 결과를 확인한다. 실제 선택적 ARM64/OCI·host upgrade 검증과 배포 활성화는 아직 보류다.
+
+- 통합 push의 Git fixture 환경 상속 문제는 `0c4e9a0`에서 격리했다. 작업 ref/index·공통 Git 설정을
+  복구하고 원래 worktree 무변경을 확인했다. 상세 원인·복구·검증은 재사용 RESULT에 기록했다.
