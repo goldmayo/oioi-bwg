@@ -29,3 +29,23 @@ unit/build 캐시 0이다. ops 한 테스트 안에서 Python CLI fixture 15개 
 `bash -n` 세 script와 Python AST 구문 검사가 성공했다. 구현 commit/PR·원격 CI는 PR 본문에서 추적한다. 실제 WSL Docker CLI가 실행 불가하므로 fake Docker/OCI의 ID/시작 시각
 보존은 실제 Compose 증거가 아니다. 실제 OCI/VM 배포·Terraform·Secret/DB·개인 env 변경은 없다.
 workflow 배포 차단과 #142 OPEN을 유지한다. 실제 host upgrade/metadata 차단·중단 후 수동 복구 proof는 보류다.
+
+## 2026-10-17 host installer 누락 보완
+
+#149~#152 병합 후 main `5a8e31c32e636d2179c32b6aef9ac183777309e5`에서 후속 수정했다.
+위 installer 설명과 달리 설치 목록에 `paired-release.py`가 빠져 있어 신규 설치 후 preflight와
+배포 진입점의 필수 파일 검사가 실패할 수 있었다. `300f73f97d096f738f64850d4c75bd691d986de7`은
+기존 목록에 helper를 추가하며, 설치 경로·0755 권한·보호 설정 보존·명시적 upgrade 계약은 유지한다.
+
+회귀 테스트는 수정 전 helper 누락(ENOENT)으로 실패했고 수정 후 성공했다. 임시 경로에서 실제
+installer의 `install`/`flock`을 실행해 여섯 스크립트의 내용·0755 권한, 재설치 시 stale helper 교체,
+기존 설정 세 파일의 값·0600 권한 보존을 확인했다. root 검사는 fixture에서 우회하고
+sudoers 검증·systemd 호출은 대체했다. 실제 root 소유권·legacy host upgrade의 실증은 아니다.
+
+기본 여섯 검사(harness 18건·unit 459건)와 두 앱 `pnpm build`(캐시 0), `bash -n`,
+`git diff --check`가 성공했다. ops 최초 실행은 앱 검사/build와 동시 실행 중 기존 Python fixture의
+10초 timeout 두 건으로 실패했다. 코드·timeout 변경 없이 단독 재실행한 `pnpm test:ops`는 155건 모두 성공했다.
+commit hook ESLint/Prettier·commitlint도 성공했다. 후속 PR과 원격 CI 결과는 PR 본문에서 추적한다.
+
+실제 VM 설치/배포·OCI/Vault·Terraform·Secret/DB 변경은 실행하지 않았다.
+OCI 인증 전 배포 차단과 #142 OPEN을 유지하며, 실제 첫 paired 전환·공동 복구·두 앱 IMDS 검증은 남아 있다.
