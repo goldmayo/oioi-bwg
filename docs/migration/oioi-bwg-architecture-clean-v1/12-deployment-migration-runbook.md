@@ -482,11 +482,21 @@ migration_main → Promotion PR → migration_develop (OCI Development 배포 �
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
 `promotion` check가 실패한다.
 
-Promotion PR은 full verify 후 현재 `migration_main` head의 같은 builder에서 Web·Console 두 linux/arm64 candidate를 build/publish한다.
+Promotion PR은 full verify 후 현재 `migration_main` head에서 하나의 논리적 paired release를 검증한다.
+P06 선택적 재사용 계약은 마지막 **실제 배포 exit 0**의 immutable Actions receipt/candidate artifact만 기준으로 삼는다.
+최신 정상 배포의 PR/source/tree/run/attempt·artifact 미만료·성공 check·registry를 검증하고,
+그 기준 source부터 현재 source까지 앱 경로와 Turbo affected 결과를 함께 확인한다. 공통/알 수 없는 경로,
+lockfile·Dockerfile·공통 build 설정·build-time 공개 설정 변경, 이력/분석 오류는 두 이미지를 빌드한다.
+증거 누락/만료/불일치는 재사용을 금지한다. 첫 paired deployment는 두 이미지를 빌드한다.
+기존 source/run은 현재 조합 검증의 출처다. 각 image의 `buildSourceSha`와 `origin`(built/reused)을
+별도로 기록하고 Sentry release·OCI revision은 실제 build source를 유지한다. 재사용한 digest도 현재
+run에서 pull/smoke한다. B2는 후보의 baseline release ID와 lock 안의 VM current pair를 대조하고,
+불일치하면 서비스 변경 전에 거절한다. 기준이 null이면 기존 paired state가 없어야 한다.
+아래 후보 검증과 배포 게이트는 그대로 적용한다. workflow 연결 전에는 두 앱 새 빌드를 유지한다.
 `candidate-<source SHA>-<run id>-<attempt>` tag는 추적용이며 release identity는 immutable manifest digest다.
 OCI 배포 없이 두 게시 digest를 각각 pull하여 architecture·source revision·native module·readiness·browser smoke를 수행한다.
 둘 다 성공한 뒤 하나의 `candidate.json`에 공통 PR/source SHA/tree/run/attempt와 정확히
-`images.web`·`images.console`의 repository/digest를 기록한다. 두 repository는 서로 달라야 하며
+`images.web`·`images.console`의 repository/digest/buildSourceSha/origin과 baseline proof·공개 build 설정 hash를 기록한다. 두 repository는 서로 달라야 하며
 배포 환경의 고정 repository와 각각 대조한다. 단일 이미지의 이전 형식·한쪽 누락·추가 앱은 거절한다. PR head 변경 시 verify와 candidate 검증을 다시 수행한다.
 
 현재 squash merge 전략을 유지한다. PR의 검증용 merge tree가 source tree와 같아야 candidate를 만들고,
