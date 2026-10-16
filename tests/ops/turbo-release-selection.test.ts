@@ -3,12 +3,27 @@ import { copyFileSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, symlinkSyn
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { buildConfigHash, releaseId } from "../../ops/oci/promotion.mjs";
 import { planImages } from "../../ops/oci/release-baseline.mjs";
 
 test("uses the installed Turbo graph and real Git history for each app and shared package", () => {
+  const repository = process.cwd();
+  const cleanGitEnv = (environment: NodeJS.ProcessEnv = process.env) => ({
+    ...Object.fromEntries(Object.entries(environment).filter(([name]) => !name.startsWith("GIT_"))),
+    GIT_CONFIG_NOSYSTEM: "1",
+    GIT_CONFIG_GLOBAL: "/dev/null",
+  });
+  const repositoryGit = (args: string[]) =>
+    execFileSync("git", args, { cwd: repository, env: cleanGitEnv(), encoding: "utf8" }).trim();
+  const beforeHead = repositoryGit(["rev-parse", "HEAD"]);
+  const beforeIndex = repositoryGit(["ls-files", "--stage"]);
+  // Deliberately reproduce the Git variables exported by a push hook. Every
+  // fixture subprocess (including Turbo's Git children) must strip them.
+  vi.stubEnv("GIT_DIR", repositoryGit(["rev-parse", "--absolute-git-dir"]));
+  vi.stubEnv("GIT_WORK_TREE", repository);
+  vi.stubEnv("GIT_INDEX_FILE", resolve(repositoryGit(["rev-parse", "--git-path", "index"])));
   const root = mkdtempSync(join(tmpdir(), "turbo-release-"));
   try {
     for (const file of [
@@ -27,8 +42,9 @@ test("uses the installed Turbo graph and real Git history for each app and share
     mkdirSync(join(root, "node_modules"), { recursive: true });
     symlinkSync(resolve("node_modules/turbo"), join(root, "node_modules/turbo"), "dir");
     const git = (args: string[]) =>
-      execFileSync("git", args, {
+      execFileSync("git", ["-C", root, ...args], {
         cwd: root,
+        env: cleanGitEnv(),
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       }).trim();
@@ -48,6 +64,7 @@ test("uses the installed Turbo graph and real Git history for each app and share
       return git(["rev-parse", "HEAD"]);
     };
     git(["init", "-q"]);
+    expect(git(["rev-parse", "--show-toplevel"])).toBe(root);
     let sourceSha = commit();
     for (const app of ["web", "console", "shared", "rename"]) {
       const baseline = {
@@ -78,11 +95,15 @@ test("uses the installed Turbo graph and real Git history for each app and share
         );
       }
       const head = commit();
-      const execute = (command: string, args: string[], options: object = {}) =>
+      const execute = (
+        command: string,
+        args: string[],
+        options: { env?: NodeJS.ProcessEnv } = {},
+      ) =>
         execFileSync(
           command === "pnpm" ? resolve("node_modules/.bin/turbo") : command,
           command === "pnpm" ? args.slice(2) : args,
-          { ...options, cwd: root, encoding: "utf8" },
+          { ...options, cwd: root, encoding: "utf8", env: cleanGitEnv(options.env) },
         );
       const result = planImages({
         baseline,
@@ -95,5 +116,8 @@ test("uses the installed Turbo graph and real Git history for each app and share
     }
   } finally {
     rmSync(root, { recursive: true, force: true });
+    vi.unstubAllEnvs();
+    expect(repositoryGit(["rev-parse", "HEAD"])).toBe(beforeHead);
+    expect(repositoryGit(["ls-files", "--stage"])).toBe(beforeIndex);
   }
 });
