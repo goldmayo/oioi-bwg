@@ -281,3 +281,25 @@ required `promotion`은 실패하므로 probe용 Promotion PR을 병합하지 �
 후보가 아니며 `candidate.json`을 만들지 않는다. B0 실제 권한 실증 완료 후 B1에서 전체 candidate를
 복구하고, B1+B2와 host upgrade 완료 후 실제 Promotion을 진행한다. CI에 image 삭제 권한을 추가하거나
 다른 image를 prune하지 않는다.
+
+### P06-B2 paired host 준비 계약
+
+`deploy-release.sh <web digest> <console digest> <base64url candidate>`가 strict 인자·root 파일·lock을 확인한다.
+paired helper는 두 앱의 Vault env/DB 동일성·Auth/MFA 분리·digest/revision·Compose를 서비스 변경 전 검증한다.
+현재 pair와 후보 baseline ID, 재사용 digest/build source, 실행 image/config hash·보호 env가 맞아야 한다.
+`baseline=null`은 paired state가 아직 없는 첫 배포만 허용한다. 증거 만료로 baseline을 얻지 못하면
+두 앱을 빌드해도 기존 paired VM에 무조건 적용할 수 없다. 정상 배포 증거 복원/새 검증이 먼저다.
+
+기존 host의 설치 변경은 별도 승인 후 `install-host-assets.sh --upgrade-paired`로 실행한다.
+installer는 기존 Compose/script/deploy.conf를 root-only `deploy/legacy-host`에 보존하며 배포 lock을 획득한다.
+보호된 deploy.conf의 Console repository/port/smoke와 두 Console env 파일을 운영자가 명시적으로 준비하고
+preflight를 통과해야 한다. 예시는 자동 덮어쓰기/Secret 생성이 아니다. 설치 자체로 container/state를 전환하지 않는다.
+
+성공 pair는 `deploy/current-pair` → root-only snapshot이며 `previous-pair`에 직전 pair를 보관한다.
+웹/콘솔 runtime env 경로는 `web.env`·`console.env`로 고정한다. pending-pair가 남으면 새 배포를 거절한다.
+중단/복구 실패 시 maintenance를 유지하고 current snapshot의 candidate/env/Compose/config를 검토하여 명시적으로
+복구한다. pending 파일만 지우고 계속하지 않는다. 기존 legacy current/app.env/설치 backup은 보존한다.
+첫 pair 실패 시 새 두 서비스를 중지하고 기존 app을 복구한다. DB migration/rollback은 자동 수행하지 않는다.
+
+workflow의 실제 배포 차단은 아직 유지한다. CI receipt/선택적 빌드/새 인자 연결은 별도 PR이다.
+실제 Docker/OCI·VM metadata/재시작 지속성 검증과 승인된 host upgrade 전 Promotion을 실행하지 않는다.

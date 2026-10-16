@@ -77,13 +77,16 @@ runtime_files=(
   "${runtime_root}/compose.oci-development.yml" \
   "${runtime_root}/scripts/deploy-release.sh" \
   "${runtime_root}/scripts/materialize-runtime-env.py" \
+  "${runtime_root}/scripts/paired-release.py" \
   "${runtime_root}/scripts/publish-filesystem-metric.sh" \
   "${runtime_root}/scripts/run-command-probe.sh"
 )
 config_files=(
   "${config_root}/deploy.conf" \
   "${config_root}/runtime-public.env" \
-  "${config_root}/runtime-secrets.env"
+  "${config_root}/runtime-secrets.env" \
+  "${config_root}/console-runtime-public.env" \
+  "${config_root}/console-runtime-secrets.env"
 )
 for required_file in "${runtime_files[@]}" "${config_files[@]}"; do
   [[ -f "${required_file}" ]] && pass "file:${required_file}" || fail "file:${required_file}"
@@ -104,6 +107,16 @@ for root_file in "${runtime_files[@]}" "${config_files[@]}"; do
     fail "root-owned-not-writable:${root_file}"
   fi
 done
+
+if grep -q '^CONSOLE_IMAGE_REPOSITORY=' "${config_root}/deploy.conf" &&
+  grep -q '^CONSOLE_PORT=' "${config_root}/deploy.conf" &&
+  grep -q '^CONSOLE_SMOKE_PATHS=' "${config_root}/deploy.conf" &&
+  grep -q '^  web:' "${runtime_root}/compose.oci-development.yml" &&
+  grep -q '^  console:' "${runtime_root}/compose.oci-development.yml"; then
+  pass paired-host-configuration
+else
+  fail paired-host-configuration
+fi
 
 # Oracle Cloud Agent 1.61.0 added Ubuntu snap support for Compute Run Command.
 # Keep a real, secret-free probe as runtime evidence in addition to the version gate.
