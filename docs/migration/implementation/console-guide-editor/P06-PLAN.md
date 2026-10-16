@@ -452,3 +452,12 @@ R2는 staging 버킷 정리 방식에 따라 재사용 또는 이관을 결정�
 지금 먼저 확보할 정보는 **현재 Caddy 배치·인증서/preview 접근 정책, 기존 Worker와 VM의
 데이터/파일 차이, SSH 포워딩 경로, Console repository와 두 Vault secret 관리 위치**다.
 이후 구현 PR의 계약과 일치하도록 설정하며 모든 외부 적용은 별도 실행 범위로 둔다.
+
+## 2026-10-17 선택적 재사용 개정
+
+사용자 요청으로 §3/5의 동일 source 두 이미지 **빌드** 및 재사용 보류를 개정한다.
+동일 source/run은 조합 검증의 출처이며 image마다 실제 build source를 구분한다.
+마지막 정상 paired deployment의 검증 가능한 receipt만 재사용 기준이다. 첫 배포·증거 오류·공통 변경은
+두 앱 새 빌드, B1/B2 사이 baseline 변경은 배포 거절이다. 상세 계약은 active 배포 runbook §21이 소유한다.
+최소 PR 순서는 후보/증거 계약 → #149 기반 paired host apply/rollback → workflow producer/consumer 연결이다.
+의존 PR 병합은 승인 대기하며 host upgrade·실제 Promotion 차단은 유지한다.

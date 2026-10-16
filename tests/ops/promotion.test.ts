@@ -7,6 +7,7 @@ import {
   assertCandidate,
   assertPromotion,
   assertSameTree,
+  buildConfigHash,
   prepare,
   record,
   resolve as resolvePromotion,
@@ -36,9 +37,18 @@ const candidate = {
   prNumber: pr.number,
   sourceSha,
   sourceTree,
+  baseline: null,
+  buildConfigHash: buildConfigHash(),
   images: {
-    web: { repository: "registry.example/namespace/web", digest: imageDigest },
+    web: {
+      buildSourceSha: sourceSha,
+      origin: "built",
+      repository: "registry.example/namespace/web",
+      digest: imageDigest,
+    },
     console: {
+      buildSourceSha: sourceSha,
+      origin: "built",
       repository: "registry.example/namespace/console",
       digest: `sha256:${"e".repeat(64)}`,
     },
