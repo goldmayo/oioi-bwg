@@ -391,9 +391,21 @@ concern으로 남긴다.
 
 ## 19. Rollback
 
-Application rollback 단위는 OCIR image digest다. Host에 secret이 아닌 `current`/
-`previous` digest를 atomic하게 관리하고 candidate health/readiness/smoke 실패 시 previous
-digest를 복구한다.
+Application rollback 단위는 Web·Console의 immutable digest pair와 보호된 env/config snapshot이다.
+P06-B2 host는 lock 안에서 `current-pair` symlink 하나를 원자적으로 확정한다. 각 snapshot에는
+candidate·앱별 env·Compose·유효 설정·실행 image/config hash를 저장한다. `previous-pair`는 직전 정상
+snapshot을 가리킨다. 두 앱 health/readiness/smoke 전에는 current를 전진시키지 않는다.
+일반 apply/rollback은 안정된 앱별 env 경로에서 `docker compose up -d --wait web console`을 실행한다.
+Compose가 변경된 digest/유효 설정만 교체한다. 공통 release ID나 임시 env 경로를 service 설정에 넣지 않는다.
+한 앱 실패도 직전 pair의 env/Compose/유효 설정을 함께 복구하고 양쪽을 확인한다. exit 0/20/21을 유지한다.
+`pending-pair`가 남으면 중단/복구 실패 상태이므로 이후 배포를 거절하고, 보호 snapshot으로 명시적으로 복구한다.
+Compose는 원자적 transaction이 아니며 `down/up`·`--force-recreate`를 기본값으로 쓰지 않는다.
+
+기존 단일 `current` digest는 최초 전환 증거로 보존한다. 명시적 `--upgrade-paired` 설치가 기존
+Compose/script/deploy.conf를 `legacy-host`에 보존하며 기존 보호 설정·app.env·DB는 덮어쓰지 않는다.
+최초 apply 전 두 이미지/env/config를 검증하고 기존 app을 정지한다. pair 성공 후에만 app을 제거한다.
+실패하면 web/console을 중지하고 기존 digest/app.env/Compose/config의 app을 복구한다.
+설치·로컬 mock 성공은 실제 host upgrade/배포 또는 metadata 차단 실증을 뜻하지 않는다.
 
 후보:
 

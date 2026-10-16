@@ -1,5 +1,6 @@
 # Non-secret host deployment configuration. Install as /etc/oioibawige/deploy.conf (0600).
 IMAGE_REPOSITORY=ap-osaka-1.ocir.io/<namespace>/<repository>
+CONSOLE_IMAGE_REPOSITORY=ap-osaka-1.ocir.io/<namespace>/<console-repository>
 POSTGRES_NETWORK=<existing-postgresql-docker-network>
 DATABASE_HOST=<postgres-container-dns>
 DATABASE_PORT=5432
@@ -7,6 +8,8 @@ DATABASE_NAME=<database>
 DATABASE_USER=oioi_app
 APP_BIND_ADDRESS=127.0.0.1
 APP_PORT=3000
+CONSOLE_PORT=3001
+CONSOLE_SMOKE_PATHS="/admin-login"
 SMOKE_PATHS="/ /api/auth/session"
 REQUIRED_RUNTIME_KEYS="DATABASE_URL AUTH_SECRET"
 

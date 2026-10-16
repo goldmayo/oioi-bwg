@@ -81,3 +81,11 @@ revision: 17
 
 다음 세션은 AGENTS·active Runtime/배포 문서·현재 PLAN/RESULT를 읽고 실제 branch/status·PR을
 확인한다. 개인 env·DB 볼륨·MFA 키를 덮어쓰지 않으며 OCI/운영 DB/공개 전환을 암묵 실행하지 않는다.
+
+## 2026-10-17 선택적 릴리스 작업
+
+#147/#148 MERGED, #149 OPEN(`c19d0a7`)을 재확인했다. 후보 계약은 독립 Draft #150,
+paired host는 #149를 전제로 별도 concern에서 구현한다. 원래 worktree·미커밋/개인 env·MFA/DB는 보존한다.
+기존 B2-2 기록은 역사적 결과로 유지하며 현재 변경/검증은 [B2-3 결과](P06-B2-3-RESULT.md)가 소유한다.
+다음 연결은 실제 배포 exit 0 receipt → B1 재사용 → B2 baseline 대조다. workflow 배포 차단과 #142 OPEN은 유지한다.
+의존 PR 병합·host upgrade·실제 OCI/DB/Secret 변경은 별도 승인이다.

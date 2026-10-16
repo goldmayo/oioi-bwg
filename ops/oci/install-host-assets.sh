@@ -8,6 +8,23 @@ repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 runtime_root="/srv/oioibawige"
 config_root="/etc/oioibawige"
 
+[[ "$#" -eq 0 || ( "$#" -eq 1 && "$1" == --upgrade-paired ) ]] || { printf 'Invalid installer argument\n' >&2; exit 1; }
+install -d -m 0750 "${runtime_root}/deploy"
+exec 8>"${runtime_root}/deploy/deployment.lock"
+flock -n 8 || { printf 'Deployment already running\n' >&2; exit 1; }
+if [[ -e "${runtime_root}/compose.oci-development.yml" ]] && grep -q '^  app:' "${runtime_root}/compose.oci-development.yml"; then
+  [[ "${1:-}" == --upgrade-paired ]] || { printf 'Explicit --upgrade-paired and reviewed configuration are required\n' >&2; exit 1; }
+  legacy="${runtime_root}/deploy/legacy-host"
+  [[ ! -e "${legacy}" ]] || { printf 'Legacy snapshot already exists; inspect it before upgrade\n' >&2; exit 1; }
+  for file in "${runtime_root}/compose.oci-development.yml" "${runtime_root}/scripts/deploy-release.sh" "${config_root}/deploy.conf"; do
+    [[ -f "${file}" && ! -L "${file}" && -z "$(find "${file}" -maxdepth 0 \( ! -user root -o -perm /022 \) -print -quit)" ]] || exit 1
+  done
+  install -d -m 0700 "${legacy}"
+  install -m 0600 "${runtime_root}/compose.oci-development.yml" "${legacy}/compose.yml"
+  install -m 0600 "${runtime_root}/scripts/deploy-release.sh" "${legacy}/deploy-release.sh"
+  install -m 0600 "${config_root}/deploy.conf" "${legacy}/deploy.conf"
+fi
+
 install -d -m 0750 "${runtime_root}" "${runtime_root}/deploy" "${runtime_root}/scripts" "${config_root}"
 install -m 0644 "${repository_root}/compose.oci-development.yml" "${runtime_root}/compose.oci-development.yml"
 for script in materialize-runtime-env.py deploy-release.sh publish-filesystem-metric.sh run-command-probe.sh preflight-host.sh; do
