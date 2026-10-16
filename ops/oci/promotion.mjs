@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 
 const sha = /^[0-9a-f]{40}$/;
@@ -20,7 +21,44 @@ export function assertSameTree(source, merged) {
     throw new Error("Promotion source/merge tree mismatch");
 }
 
+export function buildConfigHash(env = process.env) {
+  return releaseId(
+    Object.fromEntries(
+      [
+        "NEXT_PUBLIC_APP_ENV",
+        "NEXT_PUBLIC_GTM_ID",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT",
+        "SENTRY_SOURCE_MAPS_ENABLED",
+      ].map((key) => [key, env[key] || ""]),
+    ),
+  );
+}
+
+export function releaseId(candidate) {
+  const canonical = (value) =>
+    Array.isArray(value)
+      ? value.map(canonical)
+      : value && typeof value === "object"
+        ? Object.fromEntries(
+            Object.keys(value)
+              .sort()
+              .map((key) => [key, canonical(value[key])]),
+          )
+        : value;
+  return createHash("sha256")
+    .update(JSON.stringify(canonical(candidate)))
+    .digest("hex");
+}
+
 export function assertCandidate(candidate, expected) {
+  if (
+    !candidate ||
+    Object.keys(candidate).sort().join(",") !==
+      "baseline,buildConfigHash,images,prNumber,runAttempt,runId,sourceSha,sourceTree"
+  )
+    throw new Error("Invalid candidate fields");
   if (
     !sha.test(candidate.sourceSha) ||
     !sha.test(candidate.sourceTree) ||
@@ -33,17 +71,39 @@ export function assertCandidate(candidate, expected) {
   for (const key of ["prNumber", "sourceSha", "sourceTree", "runId", "runAttempt"]) {
     if (candidate[key] !== expected[key]) throw new Error(`Candidate ${key} mismatch`);
   }
+  if (!/^[0-9a-f]{64}$/.test(candidate.buildConfigHash))
+    throw new Error("Invalid build configuration proof");
+  if (
+    candidate.baseline !== null &&
+    (!candidate.baseline ||
+      Object.keys(candidate.baseline).sort().join(",") !==
+        "artifactId,releaseId,runAttempt,runId" ||
+      !/^[0-9a-f]{64}$/.test(candidate.baseline.releaseId) ||
+      ![
+        candidate.baseline.artifactId,
+        candidate.baseline.runId,
+        candidate.baseline.runAttempt,
+      ].every((n) => Number.isSafeInteger(n) && n > 0))
+  )
+    throw new Error("Invalid deployment baseline proof");
   if (!candidate.images || Object.keys(candidate.images).sort().join(",") !== "console,web")
     throw new Error("Candidate requires exactly Web and Console images");
   for (const app of ["web", "console"]) {
     const image = candidate.images[app];
     if (
       !image ||
-      Object.keys(image).sort().join(",") !== "digest,repository" ||
+      Object.keys(image).sort().join(",") !== "buildSourceSha,digest,origin,repository" ||
       !/^[a-z0-9.-]+(?:\/[a-z0-9._-]+)+$/.test(image.repository) ||
       image.repository !== expected.images[app].repository
     )
       throw new Error(`Candidate ${app} repository mismatch`);
+    if (
+      !sha.test(image.buildSourceSha) ||
+      !["built", "reused"].includes(image.origin) ||
+      (image.origin === "built" && image.buildSourceSha !== candidate.sourceSha) ||
+      (image.origin === "reused" && !candidate.baseline)
+    )
+      throw new Error(`Invalid ${app} build provenance`);
     if (!digest.test(image.digest))
       throw new Error(`Candidate ${app} requires an immutable digest`);
   }
@@ -111,11 +171,20 @@ export async function record({ github, context, core }) {
     sourceTree,
     runId: Number(process.env.GITHUB_RUN_ID),
     runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+    baseline: null,
+    buildConfigHash: buildConfigHash(),
     images: {
-      web: { repository: process.env.IMAGE_REPOSITORY, digest: process.env.IMAGE_DIGEST },
+      web: {
+        repository: process.env.IMAGE_REPOSITORY,
+        digest: process.env.IMAGE_DIGEST,
+        buildSourceSha: context.payload.pull_request.head.sha,
+        origin: "built",
+      },
       console: {
         repository: process.env.CONSOLE_IMAGE_REPOSITORY,
         digest: process.env.CONSOLE_IMAGE_DIGEST,
+        buildSourceSha: context.payload.pull_request.head.sha,
+        origin: "built",
       },
     },
   };
