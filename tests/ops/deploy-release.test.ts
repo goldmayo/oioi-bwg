@@ -114,6 +114,23 @@ describe("OCI release deployment", () => {
     expect(result.stderr).toContain('"event":"exactly_one_digest_required"');
   });
 
+  test("preserves Web and release state when runtime env validation fails", async () => {
+    const paths = await fixture();
+    const current = digest("a");
+    await writeFile(join(paths.runtime, "deploy", "current"), current + "\n");
+    await writeFile(join(paths.runtime, "app.env"), "AUTH_SECRET=previous\n", { mode: 0o600 });
+    await writeFile(
+      join(paths.config, "runtime-public.env"),
+      "CONSOLE_ORIGIN=http://localhost:3001\n",
+    );
+    const result = execute(paths, digest("b"));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("vault_secret_materialization_failed");
+    expect(await readFile(join(paths.runtime, "app.env"), "utf8")).toBe("AUTH_SECRET=previous\n");
+    expect(await readFile(join(paths.runtime, "deploy", "current"), "utf8")).toBe(current + "\n");
+    await expect(readFile(join(paths.root, "docker.log"))).rejects.toThrow();
+  });
+
   test("promotes an immutable digest and atomically shifts release state", async () => {
     const paths = await fixture();
     const previous = digest("a");

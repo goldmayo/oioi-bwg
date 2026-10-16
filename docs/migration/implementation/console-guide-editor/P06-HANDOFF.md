@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-16"
-revision: 16
+revision: 17
 ---
 
 # P06 작업 인계
@@ -12,12 +12,12 @@ revision: 16
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- 현재 단계: **B1 실제 두 ARM64 앱 후보 실증 통과 / B2-1 전달 계약 구현·로컬 검증 완료**,
-  [B1 RESULT](P06-B1-RESULT.md) / [B2-1 RESULT](P06-B2-1-RESULT.md).
+- 현재 단계: **B1 실제 후보 실증 통과 / B2-1 병합 / B2-2 앱별 env 구현·로컬 검증 완료**,
+  [B1 RESULT](P06-B1-RESULT.md) / [B2-1 RESULT](P06-B2-1-RESULT.md) / [B2-2 RESULT](P06-B2-2-RESULT.md).
   #147은 사용자 지시로 전체 CI 성공을 재확인한 뒤 `f31471b`에 squash 병합했다. Console repository variable도 등록·대조했다.
   B0 완료와 게시 최소 권한 재설계의 승인된 보류는 유지한다.
-- 브랜치: `feature/p06b2-paired-transport`, fetched 최신 main `f31471bceb0c04d18382f05b50ee0fa11a6b6b08`에서 분기했다.
-- 작업 경로: `.local/worktrees/p06b2-paired-transport`. 원래 worktree의 사용자 P06-PLAN·개인 env는 수정하지 않았다.
+- 브랜치: `feature/p06b2-runtime-env`, fetched 최신 main `18de205ad1b187101922228dfe83678f927238d7`에서 분기했다.
+- 작업 경로: `.local/worktrees/p06b2-runtime-env`. 원래 worktree의 사용자 P06-PLAN·개인 env는 수정하지 않았다.
 - 완료 PR: [#134](https://github.com/goldmayo/oioi-bwg/pull/134) → `0e21208`, [#135](https://github.com/goldmayo/oioi-bwg/pull/135) → `9a31a90`.
   각각 최신 base/head CI 전체 성공 후 사용자 지시로 squash 병합했다. #136은 사용자 병합을
   GitHub에서 확인했으며 merge head는 `b8aa61b`, 최신 PR Verify는 성공이다.
@@ -25,8 +25,9 @@ revision: 16
   직접 기본 검사·ops 82건·두 앱 build·격리 namespace 검증은 RESULT 참조. 실제 VM 완료 증거가 아니다.
 - ENV-1은 별도 PR로 처리하고 ENV-2는 P06-A를 차단하지 않는다. 운영 APP_ENV 전환은 새 candidate 검증과 연결한다.
 - B1 실제 증거: source `f31471b`의 Verify `38754229290` attempt 1 전체 성공과 두 digest artifact를 대조했다. 상세 값과 한계는 B1 RESULT가 소유한다.
-- 다음 단계: B2-1 PR을 검토한다. B2-1은 두 digest의 CLI 입력·명령 전달·원문 로그 보호만 구현했다.
-  후속 B2는 두 env/state·apply/rollback, 기존 `app`의 최초 전환 실패 시 Web 복구/Console 중지, 명시적 installer/preflight upgrade다.
+- #148도 사용자 지시로 전체 CI 성공 확인 후 `18de205`에 squash 병합했다. 상세 후속 검증은 B2-1 RESULT 참조.
+- 다음 단계: B2-2 PR 검토 후 두 env 동시 preflight·앱 간 키 값 비교·pair state/snapshot·apply/rollback을 연결한다.
+  기존 `app`의 최초 전환 실패 시 Web 복구/Console 중지, 명시적 host upgrade와 실제 두 앱 Metadata 검증도 남았다.
   OCI 인증/Run Command 전 차단은 유지한다. B2 전체 병합·승인된 host upgrade 전 실제 Promotion은 금지한다.
   #142는 검증용으로 계속 열어 두며 병합하지 않는다. 운영 APP_ENV 전환은 새 후보 검증과 연결한다.
 - 이전 진행 기록(아래 실패·대기는 당시 상태이며 최종 통과 증거는 RESULT가 소유한다):
