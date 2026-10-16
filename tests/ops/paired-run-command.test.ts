@@ -7,9 +7,32 @@ import { afterEach, describe, expect, test } from "vitest";
 
 const roots: string[] = [];
 const pair = ["a", "b"].map((value) => `sha256:${value.repeat(64)}`);
+const payload = Buffer.from(
+  JSON.stringify({
+    prNumber: 142,
+    sourceSha: "c".repeat(40),
+    sourceTree: "d".repeat(40),
+    runId: 17,
+    runAttempt: 1,
+    baseline: null,
+    buildConfigHash: "e".repeat(64),
+    images: Object.fromEntries(
+      ["web", "console"].map((app, i) => [
+        app,
+        {
+          repository: `registry.test/namespace/${app}`,
+          digest: pair[i],
+          buildSourceSha: "c".repeat(40),
+          origin: "built",
+        },
+      ]),
+    ),
+  }),
+).toString("base64url");
+const validArgs = [...pair, payload];
 const secret = "fixture-console-private-material";
 
-async function execute(args = pair, extra: NodeJS.ProcessEnv = {}) {
+async function execute(args = validArgs, extra: NodeJS.ProcessEnv = {}) {
   const root = await mkdtemp(join(tmpdir(), "paired-run-command-"));
   roots.push(root);
   await writeFile(
@@ -66,19 +89,25 @@ afterEach(async () => {
 });
 
 describe("paired OCI Run Command transport", () => {
-  test.each([[], [pair[0]], [...pair, "extra"], ["latest", pair[1]], [pair[0], `${pair[1]};id`]])(
-    "rejects invalid pair arguments before contacting OCI: %j",
-    async (...args) => {
-      const { result, calls } = await execute(args);
-      expect(result.status).toBe(2);
-      expect(calls).toEqual([]);
-    },
-  );
+  test.each([
+    [],
+    [pair[0]],
+    pair,
+    [...pair, "extra"],
+    [...validArgs, "extra"],
+    ["latest", pair[1], payload],
+    [pair[0], `${pair[1]};id`, payload],
+    [pair[1], pair[0], payload],
+  ])("rejects invalid pair arguments before contacting OCI: %j", async (...args) => {
+    const { result, calls } = await execute(args);
+    expect(result.status).toBe(2);
+    expect(calls).toEqual([]);
+  });
 
   test.each([0, 20, 21])(
     "passes the exact pair and preserves exit %i without remote secrets",
     async (code) => {
-      const { result, calls } = await execute(pair, {
+      const { result, calls } = await execute(validArgs, {
         MOCK_EXIT: String(code),
         MOCK_STATE: code ? "FAILED" : "SUCCEEDED",
       });
@@ -86,7 +115,7 @@ describe("paired OCI Run Command transport", () => {
       const create = calls[0];
       const content = JSON.parse(create[create.indexOf("--content") + 1]);
       expect(content.source.text).toBe(
-        `sudo /srv/oioibawige/scripts/deploy-release.sh ${pair.join(" ")}`,
+        `sudo /srv/oioibawige/scripts/deploy-release.sh ${validArgs.join(" ")}`,
       );
       expect(JSON.parse(create[create.indexOf("--target") + 1])).toEqual({
         instanceId: "fixture-instance",
@@ -104,28 +133,28 @@ describe("paired OCI Run Command transport", () => {
   );
 
   test("waits for delayed execution without creating a second command", async () => {
-    const { result, calls } = await execute(pair, { MOCK_DELAY: "1" });
+    const { result, calls } = await execute(validArgs, { MOCK_DELAY: "1" });
     expect(result.status).toBe(0);
     expect(calls.filter((args) => args[1] === "command")).toHaveLength(1);
     expect(calls.filter((args) => args[1] === "command-execution")).toHaveLength(2);
   });
 
   test.each(["create", "lookup"])("hides OCI %s errors", async (phase) => {
-    const { result } = await execute(pair, { MOCK_ERROR: phase });
+    const { result } = await execute(validArgs, { MOCK_ERROR: phase });
     expect(result.status).toBe(1);
   });
 
   test.each(["null", '"20"', "-1", "256", "1.5"])(
     "rejects invalid host exit code %s",
     async (code) => {
-      const { result } = await execute(pair, { MOCK_EXIT: code });
+      const { result } = await execute(validArgs, { MOCK_EXIT: code });
       expect(result.status).toBe(1);
       expect(result.stderr).toContain("Invalid Run Command exit code");
     },
   );
 
   test.each(["TIMED_OUT", "CANCELED"])("does not report rollback after %s", async (state) => {
-    const { result } = await execute(pair, { MOCK_STATE: state, MOCK_EXIT: "20" });
+    const { result } = await execute(validArgs, { MOCK_STATE: state, MOCK_EXIT: "20" });
     expect(result.status).toBe(1);
     expect(result.stderr).not.toContain("rollback succeeded");
   });
@@ -133,7 +162,7 @@ describe("paired OCI Run Command transport", () => {
   test.each(["FAILED", "TIMED_OUT", "CANCELED"])(
     "rejects %s with a zero exit code",
     async (state) => {
-      const { result } = await execute(pair, { MOCK_STATE: state });
+      const { result } = await execute(validArgs, { MOCK_STATE: state });
       expect(result.status).toBe(1);
       expect(result.stdout).not.toContain("deployment succeeded");
     },

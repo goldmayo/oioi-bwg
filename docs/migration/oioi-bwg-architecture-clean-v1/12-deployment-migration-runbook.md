@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.12"
+version: "1.13"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-16"
+updated_at: "2026-10-17"
 depends_on:
   - "01"
   - "02"
@@ -492,7 +492,13 @@ lockfile·Dockerfile·공통 build 설정·build-time 공개 설정 변경, 이�
 별도로 기록하고 Sentry release·OCI revision은 실제 build source를 유지한다. 재사용한 digest도 현재
 run에서 pull/smoke한다. B2는 후보의 baseline release ID와 lock 안의 VM current pair를 대조하고,
 불일치하면 서비스 변경 전에 거절한다. 기준이 null이면 기존 paired state가 없어야 한다.
-아래 후보 검증과 배포 게이트는 그대로 적용한다. workflow 연결 전에는 두 앱 새 빌드를 유지한다.
+아래 후보 검증과 실제 배포 게이트는 그대로 적용한다. workflow는 검증된 기준에 따라 앱별 build를 선택하며
+Dockerfile의 기본 all builder는 일반 CI에 유지하고 Promotion은 BUILD_APP=web/console로 필요한 앱만 빌드한다.
+두 exact digest를 같은 격리 DB에서 **동시에 실행**해 native/readiness/browser smoke를 통과해야 한다.
+현재 run/attempt·각 digest/buildSourceSha를 묶은 smoke proof가 없거나 다르면 candidate.json을 쓰지 않는다.
+실제 배포 exit 0 뒤에만 candidate와 command/merge/배포 run/attempt의 receipt를 하나의 immutable
+`paired-deployment-<run>-<attempt>` artifact로 90일 저장한다. rollback 20/21에서는 만들지 않는다.
+정상 배포 증거가 없어 baseline=null인 후보는 새 paired state가 없는 VM에만 적용할 수 있다.
 `candidate-<source SHA>-<run id>-<attempt>` tag는 추적용이며 release identity는 immutable manifest digest다.
 OCI 배포 없이 두 게시 digest를 각각 pull하여 architecture·source revision·native module·readiness·browser smoke를 수행한다.
 둘 다 성공한 뒤 하나의 `candidate.json`에 공통 PR/source SHA/tree/run/attempt와 정확히
@@ -508,12 +514,12 @@ merge 전에 성공하지 않은 run, 다른 PR/head/tree/registry, 만료·누�
 P06-B1은 후보 검증까지 활성화한다. B2의 두 앱 배포 구현과 별도 승인된 host upgrade 전에는
 배포 workflow가 후보 대조·summary 이후 OCI 인증/Run Command 전에 실패한다.
 이 차단은 repository 설정 flag로 우회하지 않으며 B2의 host apply/rollback 검증과 함께 교체한다.
-B2-1의 CI Run Command adapter는 Web·Console 순서의 immutable digest 두 개만 받고,
+B2의 CI Run Command adapter는 Web·Console 순서의 immutable digest 두 개와 제한된 base64url candidate 하나를 받고,
 누락·추가 인자·가변 tag는 OCI 호출 전에 거절한다. 원격 message/text와 OCI 오류 원문은
 CI 로그로 전달하지 않는다. lifecycle·정수 exit code·고정 진단만 기록하며 0/20/21을 유지한다.
-이 adapter의 준비를 host 배포·복구 구현이나 upgrade 완료로 간주하지 않는다.
-B2-2는 기존 Web env 생성을 앱별 materializer로 연결하고 Console 임시 env 검증을 준비한다.
-두 env/state·apply/rollback과 최초 host 전환은 후속 checkpoint이며 배포 차단을 유지한다.
+전달 전에 candidate schema와 두 digest를 대조하고 원격에서도 strict하게 검증한다.
+B2-2 materializer를 사용한 B2-3 host의 pair state/apply/rollback·최초 전환 구현은 §19를 따른다.
+로컬/mock 검증을 실제 host upgrade로 간주하지 않으며 승인된 upgrade 전 배포 차단은 유지한다.
 
 배포 workflow는 image를 다시 build/publish하지 않고 검증된 digest를 기존 OCI Run Command와
 `deploy-release.sh`에 전달한다. health/readiness/smoke 및 직전 정상 digest/env rollback, exit 0/20/21은 유지한다.

@@ -2,8 +2,8 @@
 title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
-updated_at: "2026-10-16"
-revision: 17
+updated_at: "2026-10-17"
+revision: 18
 ---
 
 # P06 작업 인계
@@ -89,3 +89,16 @@ paired host는 #149를 전제로 별도 concern에서 구현한다. 원래 workt
 기존 B2-2 기록은 역사적 결과로 유지하며 현재 변경/검증은 [B2-3 결과](P06-B2-3-RESULT.md)가 소유한다.
 다음 연결은 실제 배포 exit 0 receipt → B1 재사용 → B2 baseline 대조다. workflow 배포 차단과 #142 OPEN은 유지한다.
 의존 PR 병합·host upgrade·실제 OCI/DB/Secret 변경은 별도 승인이다.
+
+- 선택적 후보 계약 Draft [#150](https://github.com/goldmayo/oioi-bwg/pull/150) `9c78f8f`는 전체 원격 CI 성공이다.
+- paired host Draft [#151](https://github.com/goldmayo/oioi-bwg/pull/151) `68a01fb`는 #149 기반이다.
+  #149 → #150/#151 → workflow 연결 순서로 승인 병합하고, 의존 PR의 최종 base는 migration_main으로 갱신한다.
+- workflow 연결은 `feature/p06-selective-integration`에서 두 concern을 merge해 검증한다. 변경·검증의
+  canonical 결과는 [재사용 RESULT](P06-REUSE-RESULT.md)이며 실제 OCI 배포 차단은 유지한다.
+
+- 최종 로컬 구현 `0ec969d`: 기본 여섯 검사·ops 154건·두 앱 build·actionlint 성공.
+  #151도 Verify 38928227575 전체 성공이다. 새 실제 Compose ID/StartedAt 검사는 workflow 연결 PR의
+  CI 결과를 확인한다. 실제 선택적 ARM64/OCI·host upgrade 검증과 배포 활성화는 아직 보류다.
+
+- 통합 push의 Git fixture 환경 상속 문제는 `0c4e9a0`에서 격리했다. 작업 ref/index·공통 Git 설정을
+  복구하고 원래 worktree 무변경을 확인했다. 상세 원인·복구·검증은 재사용 RESULT에 기록했다.

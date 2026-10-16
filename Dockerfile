@@ -26,6 +26,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM dependencies AS builder
 
+ARG BUILD_APP=all
 ARG NEXT_PUBLIC_APP_ENV=staging
 ARG NEXT_PUBLIC_GTM_ID
 ARG NEXT_PUBLIC_SENTRY_DSN
@@ -42,6 +43,8 @@ ENV NODE_ENV=production \
 COPY . .
 RUN mkdir -p apps/console/public
 RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
+    case "${BUILD_APP}" in all|web|console) ;; *) exit 1 ;; esac; \
+    set --; if [ "${BUILD_APP}" != all ]; then set -- "--filter=@oioi-bwg/${BUILD_APP}"; fi; \
     if [ "${SENTRY_SOURCE_MAPS_ENABLED}" = "true" ]; then \
       test -s /run/secrets/SENTRY_AUTH_TOKEN || { echo "Missing SENTRY_AUTH_TOKEN build secret" >&2; exit 1; }; \
       SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN)" \
@@ -49,9 +52,9 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
       SENTRY_PROJECT="${SENTRY_PROJECT}" \
       SENTRY_RELEASE="${SENTRY_RELEASE}" \
       SENTRY_SOURCE_MAPS_ENABLED=true \
-      pnpm build; \
+      pnpm exec turbo run build "$@"; \
     else \
-      pnpm build; \
+      pnpm exec turbo run build "$@"; \
     fi
 
 FROM node:${NODE_VERSION} AS runtime-base

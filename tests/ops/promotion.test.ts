@@ -10,6 +10,7 @@ import {
   buildConfigHash,
   prepare,
   record,
+  recordDeployment,
   resolve as resolvePromotion,
   selectCandidateRun,
 } from "../../ops/oci/promotion.mjs";
@@ -17,6 +18,7 @@ import {
 vi.mock("node:fs/promises", async (original) => ({
   ...(await original<typeof import("node:fs/promises")>()),
   writeFile: vi.fn(),
+  readFile: vi.fn((await original<typeof import("node:fs/promises")>()).readFile),
 }));
 
 const sourceSha = "a".repeat(40);
@@ -182,9 +184,22 @@ describe("migration promotion identity", () => {
       IMAGE_DIGEST: imageDigest,
       CONSOLE_IMAGE_REPOSITORY: candidate.images.console.repository,
       CONSOLE_IMAGE_DIGEST: candidate.images.console.digest,
+      PAIR_SMOKE_FILE: "/fixture/smoke.json",
     }))
       vi.stubEnv(key, value);
     vi.mocked(writeFile).mockClear();
+    vi.mocked(readFile).mockResolvedValueOnce(
+      JSON.stringify({
+        runId: 17,
+        runAttempt: 1,
+        images: Object.fromEntries(
+          Object.entries(candidate.images).map(([app, image]) => [
+            app,
+            { digest: image.digest, buildSourceSha: image.buildSourceSha },
+          ]),
+        ),
+      }),
+    );
     try {
       await record(f);
       const [file, contents] = vi.mocked(writeFile).mock.calls[0];
@@ -196,10 +211,53 @@ describe("migration promotion identity", () => {
           ["console", `${candidate.images.console.repository}@${candidate.images.console.digest}`],
         ]),
       );
+      const oldBuild = "f".repeat(40);
+      const selected = {
+        sourceSha,
+        buildConfigHash: candidate.buildConfigHash,
+        baseline: { releaseId: "0".repeat(64), runId: 31, runAttempt: 1, artifactId: 99 },
+        build: { web: true, console: false },
+        images: {
+          ...candidate.images,
+          console: { ...candidate.images.console, origin: "reused", buildSourceSha: oldBuild },
+        },
+      };
+      vi.stubEnv("IMAGE_PLAN_FILE", "/fixture/plan.json");
+      vi.mocked(readFile)
+        .mockResolvedValueOnce(JSON.stringify(selected))
+        .mockResolvedValueOnce(
+          JSON.stringify({ runId: 17, runAttempt: 1, images: selected.images }),
+        );
+      vi.mocked(writeFile).mockClear();
+      await record(f);
+      const reused = JSON.parse(String(vi.mocked(writeFile).mock.calls[0][1]));
+      expect(reused.sourceSha).toBe(sourceSha);
+      expect(reused.images.console).toMatchObject({ origin: "reused", buildSourceSha: oldBuild });
+      expect(reused.baseline).toEqual(selected.baseline);
+      vi.stubEnv("IMAGE_PLAN_FILE", "");
       vi.mocked(writeFile).mockClear();
       vi.stubEnv("CONSOLE_IMAGE_DIGEST", "");
       await expect(record(f)).rejects.toThrow("immutable digest");
       expect(writeFile).not.toHaveBeenCalled();
+      vi.stubEnv("CONSOLE_IMAGE_DIGEST", candidate.images.console.digest);
+      for (const invalid of [
+        undefined,
+        { runId: 17, runAttempt: 2, images: candidate.images },
+        {
+          runId: 17,
+          runAttempt: 1,
+          images: {
+            ...candidate.images,
+            console: { ...candidate.images.console, digest: imageDigest },
+          },
+        },
+      ]) {
+        if (invalid) vi.mocked(readFile).mockResolvedValueOnce(JSON.stringify(invalid));
+        else vi.mocked(readFile).mockRejectedValueOnce(new Error("missing smoke proof"));
+        vi.mocked(writeFile).mockClear();
+        await expect(record(f)).rejects.toThrow();
+        expect(writeFile).not.toHaveBeenCalled();
+      }
     } finally {
       vi.unstubAllEnvs();
     }
@@ -230,6 +288,37 @@ describe("migration promotion identity", () => {
     f.livePr.head.sha = "e".repeat(40);
     await expect(prepare(f)).rejects.toThrow("head changed");
     expect(f.core.setOutput).not.toHaveBeenCalled();
+  });
+
+  test.each(["20", "21", "1", ""])(
+    "never emits deployment reuse proof for exit %s",
+    async (code) => {
+      vi.stubEnv("DEPLOY_EXIT_CODE", code);
+      vi.mocked(writeFile).mockClear();
+      await expect(recordDeployment(fixture())).rejects.toThrow("Only successful");
+      expect(writeFile).not.toHaveBeenCalled();
+      vi.unstubAllEnvs();
+    },
+  );
+
+  test("binds the successful receipt to the candidate, command and deployment attempt", async () => {
+    for (const [key, value] of Object.entries({
+      DEPLOY_EXIT_CODE: "0",
+      CANDIDATE_DIR: "/fixture",
+      GITHUB_RUN_ID: "31",
+      GITHUB_RUN_ATTEMPT: "2",
+      CANDIDATE_ARTIFACT_ID: "99",
+      OCI_COMMAND_ID: "ocid1.instanceagentcommand.test.fixture",
+    }))
+      vi.stubEnv(key, value);
+    vi.mocked(readFile).mockResolvedValueOnce(JSON.stringify(candidate));
+    vi.mocked(writeFile).mockClear();
+    await recordDeployment(fixture());
+    expect(writeFile).toHaveBeenCalledWith(
+      "/fixture/receipt.json",
+      expect.stringContaining('"candidateArtifactId":99'),
+    );
+    vi.unstubAllEnvs();
   });
 
   test("resolves only the verified pre-merge artifact for the current squash result", async () => {

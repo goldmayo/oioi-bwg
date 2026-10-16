@@ -239,7 +239,7 @@ jobs:
     name: build
     needs: app_build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17
@@ -326,6 +326,9 @@ jobs:
           done
           node tests/ops/container-readiness-smoke.mjs http://127.0.0.1:3001
           node tests/ops/console-standalone-smoke.mjs http://127.0.0.1:3001
+
+      - name: Verify paired Compose container preservation and recovery
+        run: bash tests/ops/paired-compose-smoke.sh
 
   admin_integration:
     name: Admin migration integration
@@ -456,7 +459,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  # B0 proofs completed; build both apps as one source/run/attempt candidate.
+  # One release verification; build only affected apps using proven paired deployment evidence.
   promotion-candidate:
     name: promotion candidate
     if: >-
@@ -488,12 +491,16 @@ jobs:
       NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+      NEXT_PUBLIC_APP_ENV: staging
+      NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
+      SENTRY_SOURCE_MAPS_ENABLED: "true"
       IMAGE_REPOSITORY: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ vars.OCIR_REPOSITORY }}
       CONSOLE_IMAGE_REPOSITORY: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ vars.OCIR_CONSOLE_REPOSITORY }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
       - name: Validate promotion source and verification tree
         id: source
         uses: actions/github-script@v7
@@ -513,6 +520,43 @@ jobs:
             fi
           done
           [[ "${IMAGE_REPOSITORY}" != "${CONSOLE_IMAGE_REPOSITORY}" ]]
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Find last successful paired deployment evidence
+        id: baseline
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reuse = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/release-baseline.mjs');
+            await reuse.findBaseline({ github, context, core });
+      - uses: actions/download-artifact@v4
+        if: steps.baseline.outputs.artifact_id != ''
+        continue-on-error: true
+        with:
+          artifact-ids: ${{ steps.baseline.outputs.artifact_id }}
+          run-id: ${{ steps.baseline.outputs.run_id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/paired-baseline
+      - name: Validate deployment evidence and select image builds
+        id: selection
+        uses: actions/github-script@v7
+        env:
+          IMAGE_PLAN_FILE: ${{ runner.temp }}/promotion-image-plan.json
+          BASELINE_DIR: ${{ runner.temp }}/paired-baseline
+          BASELINE_ARTIFACT_ID: ${{ steps.baseline.outputs.artifact_id }}
+          BASELINE_RUN_ID: ${{ steps.baseline.outputs.run_id }}
+          BASELINE_RUN_ATTEMPT: ${{ steps.baseline.outputs.run_attempt }}
+        with:
+          script: |
+            const reuse = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/release-baseline.mjs');
+            await reuse.selectImages({ github, context, core });
       - uses: docker/setup-buildx-action@v3
       - name: Log in to OCIR
         uses: docker/login-action@v3
@@ -522,6 +566,7 @@ jobs:
           password: ${{ secrets.OCIR_AUTH_TOKEN }}
       - name: Build and publish ARM64 Web candidate
         id: image
+        if: steps.selection.outputs.build_web == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -530,6 +575,7 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_REPOSITORY }}:candidate-${{ steps.source.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: |
+            BUILD_APP=web
             NEXT_PUBLIC_APP_ENV=staging
             NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
@@ -546,6 +592,7 @@ jobs:
           cache-to: type=gha,scope=promotion-web,mode=min
       - name: Build and publish ARM64 Console candidate
         id: console-image
+        if: steps.selection.outputs.build_console == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -554,6 +601,7 @@ jobs:
           push: true
           tags: ${{ env.CONSOLE_IMAGE_REPOSITORY }}:candidate-${{ steps.source.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: |
+            BUILD_APP=console
             NEXT_PUBLIC_APP_ENV=staging
             NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
@@ -568,70 +616,26 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha,scope=promotion-console
           cache-to: type=gha,scope=promotion-console,mode=min
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.1
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.16.0
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
       - name: Migrate isolated smoke database
         run: pnpm db:migrate
         env:
           DATABASE_URL: postgresql://postgres@127.0.0.1:5432/promotion_smoke
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Pull and smoke the published Web digest
+      - name: Pull and smoke the exact image pair together
         env:
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
-        run: |
-          set -euo pipefail
-          [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
-          image="${IMAGE_REPOSITORY}@${IMAGE_DIGEST}"
-          docker pull --platform linux/arm64 "${image}"
-          [[ "$(docker image inspect "${image}" --format '{{.Architecture}}')" == 'arm64' ]]
-          [[ "$(docker image inspect "${image}" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" == "${{ steps.source.outputs.source_sha }}" ]]
-          node tests/ops/container-native-smoke.mjs "${image}" web
-          docker run --detach --name promotion-smoke --network host \
-            --env DATABASE_URL=postgresql://postgres@127.0.0.1:5432/promotion_smoke \
-            --env AUTH_SECRET=promotion-smoke-local-only-secret --env AUTH_TRUST_HOST=true "${image}"
-          trap 'docker logs promotion-smoke; docker rm --force promotion-smoke' EXIT
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent --output /dev/null http://127.0.0.1:3000/readyz; then break; fi
-            sleep 1
-          done
-          curl --fail --silent --output /dev/null http://127.0.0.1:3000/readyz
-          curl --fail --silent --output /dev/null http://127.0.0.1:3000/
-          node tests/ops/web-standalone-smoke.mjs http://127.0.0.1:3000
-      - name: Pull and smoke the published Console digest
-        env:
-          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest }}
-        run: |
-          set -euo pipefail
-          [[ "${CONSOLE_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
-          image="${CONSOLE_IMAGE_REPOSITORY}@${CONSOLE_IMAGE_DIGEST}"
-          docker pull --platform linux/arm64 "${image}"
-          [[ "$(docker image inspect "${image}" --format '{{.Architecture}}')" == 'arm64' ]]
-          [[ "$(docker image inspect "${image}" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" == "${{ steps.source.outputs.source_sha }}" ]]
-          node tests/ops/container-native-smoke.mjs "${image}" console
-          docker run --detach --name console-promotion-smoke \
-            --add-host host.docker.internal:host-gateway --publish 127.0.0.1:3001:3000 \
-            --env DATABASE_URL=postgresql://postgres@host.docker.internal:5432/promotion_smoke \
-            --env CONSOLE_AUTH_SECRET=console-promotion-smoke-local-only-secret \
-            --env CONSOLE_ORIGIN=http://127.0.0.1:3001 \
-            --env CONSOLE_MFA_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= "${image}"
-          trap 'docker logs console-promotion-smoke; docker rm --force console-promotion-smoke' EXIT
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent --output /dev/null http://127.0.0.1:3001/readyz; then break; fi
-            sleep 1
-          done
-          node tests/ops/container-readiness-smoke.mjs http://127.0.0.1:3001
-          node tests/ops/console-standalone-smoke.mjs http://127.0.0.1:3001
+          PAIR_SMOKE_FILE: ${{ runner.temp }}/promotion-pair-smoke.json
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.selection.outputs.web_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest || steps.selection.outputs.console_digest }}
+          WEB_BUILD_SOURCE_SHA: ${{ steps.selection.outputs.web_build_source_sha }}
+          CONSOLE_BUILD_SOURCE_SHA: ${{ steps.selection.outputs.console_build_source_sha }}
+        run: bash ops/oci/smoke-paired-candidate.sh
       - name: Record verified candidate and recheck head
         uses: actions/github-script@v7
         env:
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
-          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest }}
+          IMAGE_PLAN_FILE: ${{ runner.temp }}/promotion-image-plan.json
+          PAIR_SMOKE_FILE: ${{ runner.temp }}/promotion-pair-smoke.json
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.selection.outputs.web_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest || steps.selection.outputs.console_digest }}
         with:
           script: |
             const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
@@ -642,18 +646,21 @@ jobs:
           path: candidate.json
           if-no-files-found: error
           retention-days: 90
+      - name: Clean up candidate smoke containers
+        if: always()
+        run: docker rm --force promotion-smoke console-promotion-smoke >/dev/null 2>&1 || true
       - name: Notify candidate result
         if: always()
         continue-on-error: true
         env:
           SLACK_DEPLOY_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK_URL }}
           PHASE: candidate
-          PUBLISH_RESULT: ${{ steps.image.outcome }}
-          CONSOLE_PUBLISH_RESULT: ${{ steps.console-image.outcome }}
+          PUBLISH_RESULT: ${{ steps.image.outcome == 'skipped' && 'reused' || steps.image.outcome }}
+          CONSOLE_PUBLISH_RESULT: ${{ steps.console-image.outcome == 'skipped' && 'reused' || steps.console-image.outcome }}
           CANDIDATE_RESULT: ${{ job.status }}
           SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
-          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.selection.outputs.web_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest || steps.selection.outputs.console_digest }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           python3 ops/oci/slack-deploy-payload.py > /tmp/slack-payload.json

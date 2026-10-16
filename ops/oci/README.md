@@ -11,7 +11,7 @@ Promotion squash merge
   → source SHA/tree·merged tree·성공한 run/artifact 대조
   → 새 build/publish 없이 검증한 동일 digest 선택
   → OCI Run Command API → Oracle Cloud Agent / ocarun
-  → deploy-release.sh <digest> → health/readiness/smoke → rollback 또는 release 상태 갱신
+  → deploy-release.sh <Web digest> <Console digest> <base64url candidate> → health/readiness/smoke → rollback 또는 release 상태 갱신
 ```
 
 OCI DevOps Managed Build, Managed Shell, Events, Functions는 active CD 경로에 두지 않는다. 배포 때마다 별도
@@ -61,10 +61,10 @@ host의 `deploy-release.sh`는 다음을 수행한다.
 
 ```text
 lock → Vault fetch → complete env validation → exact digest pull → Compose apply
-→ health/readiness/smoke → atomic current/previous update
+→ paired health/readiness/smoke → atomic current-pair update
 ```
 
-후보 실패 시 이전 env와 `current` digest를 복구한다. exit `20`은 candidate failure + rollback success,
+후보 실패 시 `current-pair` snapshot의 두 env/config/digest를 복구한다. exit `20`은 candidate failure + rollback success,
 exit `21`은 candidate failure + rollback failure다. DB migration/rollback은 이 script가 실행하지 않는다.
 
 Run Command는 `ocarun`으로 실행되며 sudo 권한은 다음 두 명령에만 제한한다.
@@ -166,27 +166,27 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
 - `oci-development-image` Environment: 기존 `migration_develop`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
   credential을 사용하는 PR job은 동일 저장소 `migration_main → migration_develop`에서만 실행된다.
 - 후보 기록은 GitHub Actions artifact `promotion-<source SHA>-<attempt>`의 `candidate.json`이다.
-  하나의 PR/source SHA/tree/run/attempt에 `images.web`·`images.console`의 repository/digest를 기록한다.
+  공통 PR/source SHA/tree/run/attempt는 조합 검증 출처이며 `images.web`·`images.console`에 repository/digest/buildSourceSha/origin을 기록한다.
   보관 90일 안에 merge하며, 단일 이미지 이전 형식·한쪽 누락·다른 registry·삭제/만료/미완료 run/다른 tree는 거절한다.
   `oci-development-image`의 추가 variable `OCIR_CONSOLE_REPOSITORY`는 B0에서 검증한
   Console repository 이름 `oioi-bwg-console`로 설정한다. 2026-10-15 최초 조회에서는 미등록이었으며,
   사용자 #147 병합·다음 작업 지시 후 등록하고 저장 값을 대조했다.
   B1은 두 게시 digest smoke 후에만 artifact를 생성한다. B2와 승인된 host upgrade 전 배포 workflow는
   후보 summary 이후 OCI 인증/Run Command 전에 실패하므로 Promotion을 병합하지 않는다.
-- B2-1의 CI adapter 호출은 `bash ops/oci/deploy-via-run-command.sh <Web digest> <Console digest>`다.
-  host `deploy-release.sh`는 아직 단일 digest만 받으므로 실제 호출하지 않는다. workflow 차단을 유지하며
-  두 env·state·apply/rollback과 기존 `app`의 최초 전환을 구현·검증한 뒤 별도 승인된 host upgrade를 진행한다.
+- B2-1의 CI adapter 호출은 `bash ops/oci/deploy-via-run-command.sh <Web digest> <Console digest> <base64url candidate>`다.
+  두 digest와 candidate schema를 OCI 전 대조하고 host에서도 검증한다. 구현된 paired host는 아직 실제 설치하지 않았다.
+  workflow 차단을 유지하며 별도 승인된 host upgrade와 실제 검증 후 활성화한다.
   Actions 로그에는 원격 body/agent message/OCI 오류 원문을 출력하지 않으며 host 로그는 보호된 경로에서 조사한다.
 - B2-2의 `materialize-runtime-env.py <web|console> <public env> <secret map> <temporary output>`은
   앱별 Vault CURRENT 값을 검증해 0600 raw env를 만든다. DB 좌표는 기존 `deploy.conf` 값을 전달한다.
-  기존 Web deploy가 이 helper를 사용하며 installer/preflight도 helper 파일을 포함한다.
+  paired deploy가 이 helper로 두 env를 만들고 installer/preflight도 helper 파일을 포함한다.
   Console 입력 예시는 `console-runtime-{public,secrets}.env.example`이다. installer는 Console 설정을 생성/덮어쓰지 않는다.
-  두 env의 서비스 적용·pair state·복구·최초 전환은 아직 미구현이며 실제 host 설치는 별도 승인 후 진행한다.
+  두 env의 서비스 적용·pair state·복구·최초 전환은 아래 B2 paired host 계약을 따른다. 실제 host 설치는 별도 승인이다.
 - repository의 squash-only 전략을 유지한다. 테스트 merge tree와 실제 squash tree 모두 source tree와 같아야 한다.
   일치하지 않으면 source를 먼저 갱신하고 PR 검증을 다시 수행한다.
 - base를 바꾼 PR은 새 synchronize/reopen 실행에서 검증한다. 제목·본문 수정만으로 candidate를 다시 build하지 않는다.
 - `Deploy promotion` run summary에 source/tree·merge SHA·candidate run/attempt·exact digest가 남는다.
-  실제 배포 상태는 host current digest와 성공한 health/readiness/smoke가 기준이다. merge만으로 성공을 간주하지 않는다.
+  실제 배포 상태는 host current-pair와 성공한 health/readiness/smoke가 기준이다. merge만으로 성공을 간주하지 않는다.
 
 2026-10-05 관찰: `migration_develop`에는 활성 ruleset의 PR required/verify/force-push 금지가 있다.
 기존 strict 검사는 꺼져 있고 `allow_update_branch=false`다. 신규 `migration_main` protection,
@@ -301,5 +301,7 @@ preflight를 통과해야 한다. 예시는 자동 덮어쓰기/Secret 생성이
 복구한다. pending 파일만 지우고 계속하지 않는다. 기존 legacy current/app.env/설치 backup은 보존한다.
 첫 pair 실패 시 새 두 서비스를 중지하고 기존 app을 복구한다. DB migration/rollback은 자동 수행하지 않는다.
 
-workflow의 실제 배포 차단은 아직 유지한다. CI receipt/선택적 빌드/새 인자 연결은 별도 PR이다.
+CI는 최근 성공한 실제 배포의 candidate/receipt artifact와 원래 verify artifact/check를 대조한 뒤 Turbo로
+앱별 build를 선택한다. 재사용 digest도 새 조합에서 동시에 smoke하며 actual build SHA label을 확인한다.
+exit 0 이후만 90일 paired-deployment artifact를 기록한다. workflow의 실제 배포 차단은 유지한다.
 실제 Docker/OCI·VM metadata/재시작 지속성 검증과 승인된 host upgrade 전 Promotion을 실행하지 않는다.

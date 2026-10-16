@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
-updated_at: "2026-10-11"
-revision: 7
+updated_at: "2026-10-17"
+revision: 8
 ---
 
 # P06 계획 초안

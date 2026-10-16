@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 
 const sha = /^[0-9a-f]{40}$/;
 const digest = /^sha256:[0-9a-f]{64}$/;
@@ -188,7 +188,37 @@ export async function record({ github, context, core }) {
       },
     },
   };
+  if (process.env.IMAGE_PLAN_FILE) {
+    const plan = JSON.parse(await readFile(process.env.IMAGE_PLAN_FILE, "utf8"));
+    if (
+      plan.sourceSha !== candidate.sourceSha ||
+      plan.buildConfigHash !== candidate.buildConfigHash
+    )
+      throw new Error("Image plan source/configuration changed");
+    candidate.baseline = plan.baseline;
+    for (const app of ["web", "console"]) {
+      const selected = plan.images[app];
+      if (
+        selected.repository !== candidate.images[app].repository ||
+        (selected.origin === "reused" && selected.digest !== candidate.images[app].digest) ||
+        plan.build[app] !== (selected.origin === "built")
+      )
+        throw new Error("Image plan provenance mismatch");
+      candidate.images[app] = { ...selected, digest: candidate.images[app].digest };
+    }
+  }
   assertCandidate(candidate, candidate);
+  const smoke = JSON.parse(await readFile(process.env.PAIR_SMOKE_FILE, "utf8"));
+  if (
+    smoke.runId !== candidate.runId ||
+    smoke.runAttempt !== candidate.runAttempt ||
+    !["web", "console"].every(
+      (app) =>
+        smoke.images?.[app]?.digest === candidate.images[app].digest &&
+        smoke.images[app].buildSourceSha === candidate.images[app].buildSourceSha,
+    )
+  )
+    throw new Error("Paired smoke proof mismatch");
   await writeFile("candidate.json", JSON.stringify(candidate) + "\n");
   await core.summary
     .addHeading("Verified paired candidate")
@@ -281,4 +311,33 @@ export async function resolve({ github, context, core }) {
     merged_sha: pr.merge_commit_sha,
   }))
     core.setOutput(key, value);
+}
+
+export async function recordDeployment({ context }) {
+  if (process.env.DEPLOY_EXIT_CODE !== "0")
+    throw new Error("Only successful deployments produce reuse evidence");
+  const directory = process.env.CANDIDATE_DIR;
+  const candidate = JSON.parse(await readFile(directory + "/candidate.json", "utf8"));
+  assertCandidate(candidate, candidate);
+  const pr = context.payload.pull_request;
+  const receipt = {
+    releaseId: releaseId(candidate),
+    exitCode: 0,
+    runId: Number(process.env.GITHUB_RUN_ID),
+    runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+    candidateArtifactId: Number(process.env.CANDIDATE_ARTIFACT_ID),
+    commandId: process.env.OCI_COMMAND_ID,
+    mergedSha: pr.merge_commit_sha,
+  };
+  if (
+    candidate.prNumber !== pr.number ||
+    candidate.sourceSha !== pr.head.sha ||
+    !sha.test(receipt.mergedSha) ||
+    !/^ocid1\.instanceagentcommand\.[a-z0-9.-]+$/.test(receipt.commandId) ||
+    ![receipt.runId, receipt.runAttempt, receipt.candidateArtifactId].every(
+      (n) => Number.isSafeInteger(n) && n > 0,
+    )
+  )
+    throw new Error("Invalid deployment receipt identity");
+  await writeFile(directory + "/receipt.json", JSON.stringify(receipt) + "\n");
 }
