@@ -14,6 +14,8 @@ application_env="${OIOI_APPLICATION_ENV:-${runtime_root}/app.env}"
 state_dir="${OIOI_STATE_DIR:-${runtime_root}/deploy}"
 deployment_id="${OCI_DEPLOYMENT_ID:-manual}"
 
+runtime_env_helper="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/materialize-runtime-env.py"
+
 candidate_env=""
 rollback_env=""
 
@@ -44,7 +46,7 @@ if [[ ! "${deployment_id}" =~ ^[A-Za-z0-9._:-]{1,200}$ ]]; then
   fail invalid_deployment_id
 fi
 
-for required_file in "${config_file}" "${public_env_file}" "${secret_map_file}" "${compose_file}"; do
+for required_file in "${config_file}" "${public_env_file}" "${secret_map_file}" "${compose_file}" "${runtime_env_helper}"; do
   [[ -f "${required_file}" ]] || fail required_file_missing
 done
 
@@ -53,6 +55,7 @@ if find \
   "${public_env_file}" \
   "${secret_map_file}" \
   "${compose_file}" \
+  "${runtime_env_helper}" \
   -maxdepth 0 -perm /022 -print -quit | grep -q .; then
   fail insecure_configuration_permissions
 fi
@@ -61,6 +64,7 @@ if [[ "${M9_DEPLOY_TEST_MODE:-0}" != "1" ]] && find \
   "${public_env_file}" \
   "${secret_map_file}" \
   "${compose_file}" \
+  "${runtime_env_helper}" \
   -maxdepth 0 ! -user root -print -quit | grep -q .; then
   fail invalid_configuration_owner
 fi
@@ -93,72 +97,11 @@ if [[ -f "${state_dir}/current" ]]; then
   [[ "${current_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || fail invalid_current_release_state
 fi
 
-append_public_environment() {
-  local line
-  local name
-  while IFS= read -r line || [[ -n "${line}" ]]; do
-    [[ -z "${line}" || "${line}" == \#* ]] && continue
-    [[ "${line}" =~ ^[A-Z][A-Z0-9_]*=.*$ ]] || return 1
-    name="${line%%=*}"
-    [[ "${name}" != "DATABASE_URL" && "${name}" != "DB_APP_PASSWORD" ]] || return 1
-    ! grep -q "^${name}=" "${candidate_env}" || return 1
-    printf '%s\n' "${line}" >>"${candidate_env}"
-  done <"${public_env_file}"
-}
-
 fetch_runtime_secrets() {
-  local encoded_content
-  local name
-  local secret_file
-  local secret_id
-  local value
-  local db_app_password=""
-
-  append_public_environment || return 1
-  while IFS='=' read -r name secret_id || [[ -n "${name}${secret_id}" ]]; do
-    [[ -z "${name}" || "${name}" == \#* ]] && continue
-    [[ "${name}" =~ ^[A-Z][A-Z0-9_]*$ ]] || return 1
-    [[ "${secret_id}" =~ ^ocid1\.vaultsecret\.[a-z0-9.-]+$ ]] || return 1
-    ! grep -q "^${name}=" "${candidate_env}" || return 1
-
-    encoded_content="$(
-      oci secrets secret-bundle get \
-        --auth instance_principal \
-        --secret-id "${secret_id}" \
-        --stage CURRENT \
-        --query 'data."secret-bundle-content".content' \
-        --raw-output
-    )" || return 1
-    secret_file="$(mktemp "${state_dir}/secret.XXXXXX")" || return 1
-    printf '%s' "${encoded_content}" | base64 --decode >"${secret_file}" || return 1
-    if ! cmp -s "${secret_file}" <(tr -d '\r\n' <"${secret_file}"); then
-      rm -f -- "${secret_file}"
-      return 1
-    fi
-    value="$(<"${secret_file}")"
-    rm -f -- "${secret_file}"
-    [[ -n "${value}" ]] || return 1
-
-    if [[ "${name}" == "DB_APP_PASSWORD" ]]; then
-      db_app_password="${value}"
-    else
-      printf '%s=%s\n' "${name}" "${value}" >>"${candidate_env}"
-    fi
-  done <"${secret_map_file}"
-
-  [[ -n "${db_app_password}" ]] || return 1
-  local encoded_password
-  encoded_password="$(printf '%s' "${db_app_password}" | python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read(), safe=""))')"
-  printf 'DATABASE_URL=postgresql://%s:%s@%s:%s/%s\n' \
-    "${DATABASE_USER}" "${encoded_password}" "${DATABASE_HOST}" "${DATABASE_PORT}" "${DATABASE_NAME}" \
-    >>"${candidate_env}"
-
-  local required_key
-  for required_key in ${REQUIRED_RUNTIME_KEYS}; do
-    [[ "${required_key}" =~ ^[A-Z][A-Z0-9_]*$ ]] || return 1
-    grep -Eq "^${required_key}=.+" "${candidate_env}" || return 1
-  done
-  chmod 0600 "${candidate_env}"
+  DATABASE_HOST="${DATABASE_HOST}" DATABASE_PORT="${DATABASE_PORT}" \
+    DATABASE_NAME="${DATABASE_NAME}" DATABASE_USER="${DATABASE_USER}" \
+    REQUIRED_RUNTIME_KEYS="${REQUIRED_RUNTIME_KEYS}" \
+    python3 -I "${runtime_env_helper}" web "${public_env_file}" "${secret_map_file}" "${candidate_env}"
 }
 
 compose_apply() {

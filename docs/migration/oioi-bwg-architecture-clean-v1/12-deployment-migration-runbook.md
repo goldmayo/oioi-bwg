@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.11"
+version: "1.12"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-15"
+updated_at: "2026-10-16"
 depends_on:
   - "01"
   - "02"
@@ -490,6 +490,8 @@ B2-1의 CI Run Command adapter는 Web·Console 순서의 immutable digest 두 �
 누락·추가 인자·가변 tag는 OCI 호출 전에 거절한다. 원격 message/text와 OCI 오류 원문은
 CI 로그로 전달하지 않는다. lifecycle·정수 exit code·고정 진단만 기록하며 0/20/21을 유지한다.
 이 adapter의 준비를 host 배포·복구 구현이나 upgrade 완료로 간주하지 않는다.
+B2-2는 기존 Web env 생성을 앱별 materializer로 연결하고 Console 임시 env 검증을 준비한다.
+두 env/state·apply/rollback과 최초 host 전환은 후속 checkpoint이며 배포 차단을 유지한다.
 
 배포 workflow는 image를 다시 build/publish하지 않고 검증된 digest를 기존 OCI Run Command와
 `deploy-release.sh`에 전달한다. health/readiness/smoke 및 직전 정상 digest/env rollback, exit 0/20/21은 유지한다.

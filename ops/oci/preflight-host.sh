@@ -76,6 +76,7 @@ fi
 runtime_files=(
   "${runtime_root}/compose.oci-development.yml" \
   "${runtime_root}/scripts/deploy-release.sh" \
+  "${runtime_root}/scripts/materialize-runtime-env.py" \
   "${runtime_root}/scripts/publish-filesystem-metric.sh" \
   "${runtime_root}/scripts/run-command-probe.sh"
 )

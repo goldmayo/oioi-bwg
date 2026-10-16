@@ -177,6 +177,11 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
   host `deploy-release.sh`는 아직 단일 digest만 받으므로 실제 호출하지 않는다. workflow 차단을 유지하며
   두 env·state·apply/rollback과 기존 `app`의 최초 전환을 구현·검증한 뒤 별도 승인된 host upgrade를 진행한다.
   Actions 로그에는 원격 body/agent message/OCI 오류 원문을 출력하지 않으며 host 로그는 보호된 경로에서 조사한다.
+- B2-2의 `materialize-runtime-env.py <web|console> <public env> <secret map> <temporary output>`은
+  앱별 Vault CURRENT 값을 검증해 0600 raw env를 만든다. DB 좌표는 기존 `deploy.conf` 값을 전달한다.
+  기존 Web deploy가 이 helper를 사용하며 installer/preflight도 helper 파일을 포함한다.
+  Console 입력 예시는 `console-runtime-{public,secrets}.env.example`이다. installer는 Console 설정을 생성/덮어쓰지 않는다.
+  두 env의 서비스 적용·pair state·복구·최초 전환은 아직 미구현이며 실제 host 설치는 별도 승인 후 진행한다.
 - repository의 squash-only 전략을 유지한다. 테스트 merge tree와 실제 squash tree 모두 source tree와 같아야 한다.
   일치하지 않으면 source를 먼저 갱신하고 PR 검증을 다시 수행한다.
 - base를 바꾼 PR은 새 synchronize/reopen 실행에서 검증한다. 제목·본문 수정만으로 candidate를 다시 build하지 않는다.
