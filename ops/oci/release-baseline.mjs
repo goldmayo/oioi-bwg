@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFile, writeFile } from "node:fs/promises";
 
 import { assertCandidate, buildConfigHash, releaseId } from "./promotion.mjs";
 
@@ -86,7 +87,8 @@ export async function validateBaseline({
   });
   if (
     !artifact ||
-    artifact.expired ||
+    artifact.expired !== false ||
+    !Number.isFinite(Date.parse(artifact.expires_at)) ||
     Date.parse(artifact.expires_at) <= Date.now() ||
     !jobs.some((j) => j.name === "deploy" && j.conclusion === "success")
   )
@@ -151,7 +153,9 @@ export async function validateBaseline({
   });
   if (
     !verified ||
-    verified.expired ||
+    verified.expired !== false ||
+    !Number.isFinite(Date.parse(verified.expires_at)) ||
+    !Number.isFinite(Date.parse(verified.created_at)) ||
     Date.parse(verified.expires_at) <= Date.now() ||
     Date.parse(verified.created_at) > Date.parse(pr.merged_at) ||
     !["verify", "promotion", "promotion candidate"].every((name) =>
@@ -181,10 +185,17 @@ export function planImages({
     assertCandidate(baseline, baseline);
     if (releaseId(baseline) !== proof.releaseId || baseline.buildConfigHash !== configHash)
       return result;
-    execute("git", ["merge-base", "--is-ancestor", baseline.sourceSha, sourceSha]);
-    const files = execute("git", ["diff", "--name-only", "-z", baseline.sourceSha, sourceSha], {
-      encoding: "utf8",
-    })
+    execute("git", ["merge-base", "--is-ancestor", baseline.sourceSha, sourceSha], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const files = execute(
+      "git",
+      ["diff", "--no-renames", "--name-only", "-z", baseline.sourceSha, sourceSha],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    )
       .split("\0")
       .filter(Boolean);
     // Root configuration, shared packages, lockfile, Dockerfile, workflows, or any
@@ -193,6 +204,7 @@ export function planImages({
     const dry = JSON.parse(
       execute("pnpm", ["exec", "turbo", "run", "build", "--affected", "--dry=json"], {
         encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
         env: { ...process.env, TURBO_SCM_BASE: baseline.sourceSha, TURBO_SCM_HEAD: sourceSha },
       }),
     );
@@ -222,4 +234,53 @@ export function planImages({
   } catch {
     return result;
   }
+}
+
+export async function selectImages({ github, context, core }) {
+  let baseline = null;
+  let proof = null;
+  const repositories = {
+    web: { repository: process.env.IMAGE_REPOSITORY },
+    console: { repository: process.env.CONSOLE_IMAGE_REPOSITORY },
+  };
+  try {
+    const directory = process.env.BASELINE_DIR;
+    const candidate = JSON.parse(await readFile(directory + "/candidate.json", "utf8"));
+    const receipt = JSON.parse(await readFile(directory + "/receipt.json", "utf8"));
+    proof = await validateBaseline({
+      github,
+      context,
+      candidate,
+      receipt,
+      repositories,
+      proof: {
+        artifactId: Number(process.env.BASELINE_ARTIFACT_ID),
+        runId: Number(process.env.BASELINE_RUN_ID),
+        runAttempt: Number(process.env.BASELINE_RUN_ATTEMPT),
+      },
+    });
+    baseline = candidate;
+  } catch {
+    core.info("No verified paired baseline; rebuild both images");
+  }
+  const sourceSha = context.payload.pull_request.head.sha;
+  const plan = {
+    ...planImages({ baseline, proof, sourceSha }),
+    sourceSha,
+    buildConfigHash: buildConfigHash(),
+    images: {},
+  };
+  for (const app of ["web", "console"]) {
+    const built = plan.build[app];
+    plan.images[app] = {
+      ...repositories[app],
+      buildSourceSha: built ? sourceSha : baseline.images[app].buildSourceSha,
+      origin: built ? "built" : "reused",
+      ...(built ? {} : { digest: baseline.images[app].digest }),
+    };
+    core.setOutput(`build_${app}`, String(built));
+    core.setOutput(`${app}_digest`, plan.images[app].digest || "");
+    core.setOutput(`${app}_build_source_sha`, plan.images[app].buildSourceSha);
+  }
+  await writeFile(process.env.IMAGE_PLAN_FILE, JSON.stringify(plan) + "\n");
 }

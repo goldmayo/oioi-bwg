@@ -3,26 +3,44 @@ set -Eeuo pipefail
 
 WEB_IMAGE_DIGEST="${1:-}"
 CONSOLE_IMAGE_DIGEST="${2:-}"
-if [[ "$#" -ne 2 ]] ||
+CANDIDATE_PAYLOAD="${3:-}"
+if [[ "$#" -ne 3 ]] ||
   [[ ! "${WEB_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
-  [[ ! "${CONSOLE_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-  echo "Exactly two immutable digests are required: Web then Console" >&2
+  [[ ! "${CONSOLE_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
+  [[ ! "${CANDIDATE_PAYLOAD}" =~ ^[A-Za-z0-9_-]{1,16000}$ ]]; then
+  echo "Two immutable digests and one bounded candidate payload are required" >&2
   exit 2
 fi
 : "${OCI_COMPUTE_COMPARTMENT_OCID:?OCI_COMPUTE_COMPARTMENT_OCID is required}"
 : "${OCI_COMPUTE_INSTANCE_OCID:?OCI_COMPUTE_INSTANCE_OCID is required}"
 
-for command in oci jq; do
+for command in oci jq node; do
   command -v "${command}" >/dev/null 2>&1 || {
     echo "Required command not found: ${command}" >&2
     exit 2
   }
 done
 
+script_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! node --input-type=module - "${script_root}" "${CANDIDATE_PAYLOAD}" "${WEB_IMAGE_DIGEST}" "${CONSOLE_IMAGE_DIGEST}" >/dev/null 2>&1 <<'JS'
+import { pathToFileURL } from 'node:url';
+const [root, payload, web, consoleDigest] = process.argv.slice(2);
+const { assertCandidate } = await import(pathToFileURL(root + '/promotion.mjs'));
+const bytes = Buffer.from(payload, 'base64url');
+if (bytes.toString('base64url') !== payload) process.exit(1);
+const candidate = JSON.parse(bytes.toString('utf8'));
+assertCandidate(candidate, candidate);
+if (candidate.images.web.digest !== web || candidate.images.console.digest !== consoleDigest) process.exit(1);
+JS
+then
+  echo "Invalid paired candidate payload" >&2
+  exit 2
+fi
+
 target="$(jq -cn --arg instance_id "${OCI_COMPUTE_INSTANCE_OCID}" '{instanceId:$instance_id}')"
 content="$(
   jq -cn \
-    --arg text "sudo /srv/oioibawige/scripts/deploy-release.sh ${WEB_IMAGE_DIGEST} ${CONSOLE_IMAGE_DIGEST}" \
+    --arg text "sudo /srv/oioibawige/scripts/deploy-release.sh ${WEB_IMAGE_DIGEST} ${CONSOLE_IMAGE_DIGEST} ${CANDIDATE_PAYLOAD}" \
     '{source:{sourceType:"TEXT",text:$text},output:{outputType:"TEXT"}}'
 )"
 
@@ -48,6 +66,9 @@ if [[ ! "${command_id}" =~ ^ocid1\.instanceagentcommand\.[a-z0-9.-]+$ ]]; then
 fi
 
 echo "Created OCI Run Command: ${command_id}"
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+  printf 'command_id=%s\n' "${command_id}" >>"${GITHUB_OUTPUT}"
+fi
 
 overall_deadline=$(($(date +%s) + 900))
 execution_state=""

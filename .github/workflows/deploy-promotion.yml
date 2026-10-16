@@ -82,6 +82,7 @@ jobs:
                 console: { repository: process.env.CONSOLE_IMAGE_REPOSITORY },
               },
             });
+            core.setOutput('candidate_payload', Buffer.from(JSON.stringify(candidate)).toString('base64url'));
             core.setOutput('image_digest', candidate.images.web.digest);
             core.setOutput('console_image_digest', candidate.images.console.digest);
             await core.summary.addHeading('Verified paired candidate; deployment pending P06-B2').addTable([
@@ -138,13 +139,36 @@ jobs:
         env:
           WEB_IMAGE_DIGEST: ${{ steps.candidate.outputs.image_digest }}
           CONSOLE_IMAGE_DIGEST: ${{ steps.candidate.outputs.console_image_digest }}
+          CANDIDATE_PAYLOAD: ${{ steps.candidate.outputs.candidate_payload }}
         run: |
           set +e
-          bash ops/oci/deploy-via-run-command.sh "${WEB_IMAGE_DIGEST}" "${CONSOLE_IMAGE_DIGEST}"
+          bash ops/oci/deploy-via-run-command.sh "${WEB_IMAGE_DIGEST}" "${CONSOLE_IMAGE_DIGEST}" "${CANDIDATE_PAYLOAD}"
           exit_code=$?
           set -e
           echo "exit_code=${exit_code}" >> "${GITHUB_OUTPUT}"
           exit "${exit_code}"
+
+      - name: Record successful paired deployment evidence
+        if: success() && steps.deploy-release.outputs.exit_code == '0'
+        uses: actions/github-script@v7
+        env:
+          CANDIDATE_DIR: ${{ runner.temp }}/promotion-candidate
+          CANDIDATE_ARTIFACT_ID: ${{ steps.proof.outputs.artifact_id }}
+          OCI_COMMAND_ID: ${{ steps.deploy-release.outputs.command_id }}
+          DEPLOY_EXIT_CODE: ${{ steps.deploy-release.outputs.exit_code }}
+        with:
+          script: |
+            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
+            await promotion.recordDeployment({ context });
+      - uses: actions/upload-artifact@v4
+        if: success() && steps.deploy-release.outputs.exit_code == '0'
+        with:
+          name: paired-deployment-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/promotion-candidate/candidate.json
+            ${{ runner.temp }}/promotion-candidate/receipt.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Record deployment result
         if: success()

@@ -1,7 +1,16 @@
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, test, vi } from "vitest";
 
 import { buildConfigHash, releaseId, assertCandidate } from "../../ops/oci/promotion.mjs";
-import { findBaseline, planImages, validateBaseline } from "../../ops/oci/release-baseline.mjs";
+import {
+  findBaseline,
+  planImages,
+  validateBaseline,
+  selectImages,
+} from "../../ops/oci/release-baseline.mjs";
 
 const candidate = {
   prNumber: 142,
@@ -145,6 +154,7 @@ describe("paired release evidence and conservative image selection", () => {
     expect(execute.mock.calls[0]).toEqual([
       "git",
       ["merge-base", "--is-ancestor", candidate.sourceSha, "f".repeat(40)],
+      { stdio: ["ignore", "pipe", "pipe"] },
     ]);
   });
   test.each([
@@ -238,6 +248,43 @@ describe("paired release evidence and conservative image selection", () => {
     if (failure === "late-check") f.checks[0].completed_at = "2999-01-01";
     await expect(validateBaseline(f)).rejects.toThrow();
   });
+  test("materializes a build plan from verified evidence and discards invalid evidence", async () => {
+    const f = fixture();
+    const root = await mkdtemp(join(tmpdir(), "release-selection-"));
+    try {
+      for (const [key, value] of Object.entries({
+        BASELINE_DIR: root,
+        IMAGE_PLAN_FILE: root + "/plan.json",
+        BASELINE_ARTIFACT_ID: "99",
+        BASELINE_RUN_ID: "31",
+        BASELINE_RUN_ATTEMPT: "2",
+        IMAGE_REPOSITORY: candidate.images.web.repository,
+        CONSOLE_IMAGE_REPOSITORY: candidate.images.console.repository,
+      }))
+        vi.stubEnv(key, value);
+      await writeFile(root + "/candidate.json", JSON.stringify(candidate));
+      await writeFile(root + "/receipt.json", JSON.stringify(receipt));
+      const context = {
+        ...f.context,
+        payload: { pull_request: { head: { sha: "f".repeat(40) } } },
+      };
+      await selectImages({ ...f, context });
+      expect(JSON.parse(await readFile(root + "/plan.json", "utf8"))).toMatchObject({
+        baseline: proof,
+        build: { web: true, console: true },
+      });
+      await writeFile(root + "/receipt.json", JSON.stringify({ ...receipt, exitCode: 20 }));
+      await selectImages({ ...f, context });
+      expect(JSON.parse(await readFile(root + "/plan.json", "utf8"))).toMatchObject({
+        baseline: null,
+        build: { web: true, console: true },
+      });
+    } finally {
+      vi.unstubAllEnvs();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   test("does not fall back to an older artifact or expose API error text", async () => {
     const f = fixture();
     f.artifacts[0].expired = true;
