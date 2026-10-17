@@ -19,10 +19,14 @@ FROM base AS dependencies
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
+COPY apps/console/package.json ./apps/console/package.json
+COPY packages/contracts/package.json ./packages/contracts/package.json
+COPY packages/server/package.json ./packages/server/package.json
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM dependencies AS builder
 
+ARG BUILD_APP=all
 ARG NEXT_PUBLIC_APP_ENV=staging
 ARG NEXT_PUBLIC_GTM_ID
 ARG NEXT_PUBLIC_SENTRY_DSN
@@ -37,7 +41,10 @@ ENV NODE_ENV=production \
     NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
 COPY . .
+RUN mkdir -p apps/console/public
 RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
+    case "${BUILD_APP}" in all|web|console) ;; *) exit 1 ;; esac; \
+    set --; if [ "${BUILD_APP}" != all ]; then set -- "--filter=@oioi-bwg/${BUILD_APP}"; fi; \
     if [ "${SENTRY_SOURCE_MAPS_ENABLED}" = "true" ]; then \
       test -s /run/secrets/SENTRY_AUTH_TOKEN || { echo "Missing SENTRY_AUTH_TOKEN build secret" >&2; exit 1; }; \
       SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN)" \
@@ -45,12 +52,12 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
       SENTRY_PROJECT="${SENTRY_PROJECT}" \
       SENTRY_RELEASE="${SENTRY_RELEASE}" \
       SENTRY_SOURCE_MAPS_ENABLED=true \
-      pnpm build; \
+      pnpm exec turbo run build "$@"; \
     else \
-      pnpm build; \
+      pnpm exec turbo run build "$@"; \
     fi
 
-FROM node:${NODE_VERSION} AS runner
+FROM node:${NODE_VERSION} AS runtime-base
 
 LABEL org.opencontainers.image.source="https://github.com/goldmayo/oioi-bwg"
 
@@ -61,11 +68,7 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
-RUN mkdir -p apps/web/.next && chown -R node:node apps
-
-COPY --from=builder --chown=node:node /app/apps/web/public ./apps/web/public
-COPY --from=builder --chown=node:node /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
+RUN mkdir -p apps && chown node:node apps
 
 USER node
 
@@ -74,4 +77,38 @@ EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=6 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:3000/readyz').then((response) => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))"]
 
+FROM runtime-base AS runtime
+
+RUN mkdir -p apps/web/.next
+
+COPY --from=builder --chown=node:node /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=node:node /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
+
 CMD ["node", "apps/web/server.js"]
+
+FROM runtime-base AS runner-console
+
+RUN mkdir -p apps/console/.next
+
+COPY --from=builder --chown=node:node /app/apps/console/public ./apps/console/public
+COPY --from=builder --chown=node:node /app/apps/console/.next/standalone ./
+COPY --from=builder --chown=node:node /app/apps/console/.next/static ./apps/console/.next/static
+
+CMD ["node", "apps/console/server.js"]
+
+# CI exports the same builder output used by the production runner.
+FROM builder AS verification-archive
+COPY --from=runtime /app/apps/web/server.js /tmp/runtime-server.js
+COPY --from=runner-console /app/apps/console/server.js /tmp/console-server.js
+RUN cmp /tmp/runtime-server.js apps/web/.next/standalone/apps/web/server.js \
+    && cmp /tmp/console-server.js apps/console/.next/standalone/apps/console/server.js \
+    && tar -czf /tmp/standalone.tar.gz \
+    apps/web/.next/standalone apps/web/.next/static \
+    apps/console/.next/standalone apps/console/.next/static
+
+FROM scratch AS verification-artifacts
+COPY --from=verification-archive /tmp/standalone.tar.gz /standalone.tar.gz
+
+# Keep the production runner as the default target.
+FROM runtime AS runner

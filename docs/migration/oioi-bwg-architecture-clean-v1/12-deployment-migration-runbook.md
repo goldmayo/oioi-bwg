@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.8"
+version: "1.15"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-06"
+updated_at: "2026-10-17"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.8
+# oioi-bwg Deployment / Migration Runbook v1.9
 
 ## 1. 목적
 
@@ -391,9 +391,21 @@ concern으로 남긴다.
 
 ## 19. Rollback
 
-Application rollback 단위는 OCIR image digest다. Host에 secret이 아닌 `current`/
-`previous` digest를 atomic하게 관리하고 candidate health/readiness/smoke 실패 시 previous
-digest를 복구한다.
+Application rollback 단위는 Web·Console의 immutable digest pair와 보호된 env/config snapshot이다.
+P06-B2 host는 lock 안에서 `current-pair` symlink 하나를 원자적으로 확정한다. 각 snapshot에는
+candidate·앱별 env·Compose·유효 설정·실행 image/config hash를 저장한다. `previous-pair`는 직전 정상
+snapshot을 가리킨다. 두 앱 health/readiness/smoke 전에는 current를 전진시키지 않는다.
+일반 apply/rollback은 안정된 앱별 env 경로에서 `docker compose up -d --wait web console`을 실행한다.
+Compose가 변경된 digest/유효 설정만 교체한다. 공통 release ID나 임시 env 경로를 service 설정에 넣지 않는다.
+한 앱 실패도 직전 pair의 env/Compose/유효 설정을 함께 복구하고 양쪽을 확인한다. exit 0/20/21을 유지한다.
+`pending-pair`가 남으면 중단/복구 실패 상태이므로 이후 배포를 거절하고, 보호 snapshot으로 명시적으로 복구한다.
+Compose는 원자적 transaction이 아니며 `down/up`·`--force-recreate`를 기본값으로 쓰지 않는다.
+
+기존 단일 `current` digest는 최초 전환 증거로 보존한다. 명시적 `--upgrade-paired` 설치가 기존
+Compose/script/deploy.conf를 `legacy-host`에 보존하며 기존 보호 설정·app.env·DB는 덮어쓰지 않는다.
+최초 apply 전 두 이미지/env/config를 검증하고 기존 app을 정지한다. pair 성공 후에만 app을 제거한다.
+실패하면 web/console을 중지하고 기존 digest/app.env/Compose/config의 app을 복구한다.
+설치·로컬 mock 성공은 실제 host upgrade/배포 또는 metadata 차단 실증을 뜻하지 않는다.
 
 후보:
 
@@ -466,20 +478,55 @@ migration_main → Promotion PR → migration_develop (OCI Development 배포 �
 ```
 
 일반 feature PR은 기존 verify(정적 검사·unit/ops/PostgreSQL·Next build)를 수행한다.
+단, `migration_main` 대상 전체 PR diff가 일반 파일 `.md` 변경뿐이면 scope 판정과 필수 `verify`만 실행한다.
+이력 누락·빈 diff·symlink/실행 mode·MDX·코드 혼합은 전체 검증이다. Git raw diff의 삭제/추가 양쪽을
+검사해 code→md rename과 API 파일 수 제한에 의한 누락을 방지한다. workflow 자체를 path filter로 생략하지 않는다.
+Promotion은 문서만 달라도 전체 검증·후보 계약을 유지하며 이 예외로 과거 candidate를 재사용하지 않는다.
 `migration_main` merge push와 `migration_develop` push에서는 무거운 검증·image build를 반복하지 않는다.
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
 `promotion` check가 실패한다.
 
-Promotion PR은 full verify 후 현재 `migration_main` head로 linux/arm64 candidate를 한 번 build/publish한다.
+Promotion PR은 full verify 후 현재 `migration_main` head에서 하나의 논리적 paired release를 검증한다.
+P06 선택적 재사용 계약은 마지막 **실제 배포 exit 0**의 immutable Actions receipt/candidate artifact만 기준으로 삼는다.
+최신 정상 배포의 PR/source/tree/run/attempt·artifact 미만료·성공 check·registry를 검증하고,
+그 기준 source부터 현재 source까지 앱 경로와 Turbo affected 결과를 함께 확인한다. 공통/알 수 없는 경로,
+lockfile·Dockerfile·공통 build 설정·build-time 공개 설정 변경, 이력/분석 오류는 두 이미지를 빌드한다.
+증거 누락/만료/불일치는 재사용을 금지한다. 첫 paired deployment는 두 이미지를 빌드한다.
+기존 source/run은 현재 조합 검증의 출처다. 각 image의 `buildSourceSha`와 `origin`(built/reused)을
+별도로 기록하고 Sentry release·OCI revision은 실제 build source를 유지한다. 재사용한 digest도 현재
+run에서 pull/smoke한다. B2는 후보의 baseline release ID와 lock 안의 VM current pair를 대조하고,
+불일치하면 서비스 변경 전에 거절한다. 기준이 null이면 기존 paired state가 없어야 한다.
+아래 후보 검증과 실제 배포 게이트는 그대로 적용한다. workflow는 검증된 기준에 따라 앱별 build를 선택하며
+Dockerfile의 기본 all builder는 일반 CI에 유지하고 Promotion은 BUILD_APP=web/console로 필요한 앱만 빌드한다.
+두 exact digest를 같은 격리 DB에서 **동시에 실행**해 native/readiness/browser smoke를 통과해야 한다.
+현재 run/attempt·각 digest/buildSourceSha를 묶은 smoke proof가 없거나 다르면 candidate.json을 쓰지 않는다.
+실제 배포 exit 0 뒤에만 candidate와 command/merge/배포 run/attempt의 receipt를 하나의 immutable
+`paired-deployment-<run>-<attempt>` artifact로 90일 저장한다. rollback 20/21에서는 만들지 않는다.
+정상 배포 증거가 없어 baseline=null인 후보는 새 paired state가 없는 VM에만 적용할 수 있다.
 `candidate-<source SHA>-<run id>-<attempt>` tag는 추적용이며 release identity는 immutable manifest digest다.
-OCI 배포 없이 해당 digest를 pull하여 container smoke를 수행한다. 성공한 run의 GitHub Actions artifact에
-PR/source SHA/tree, image repository/digest, run/attempt를 기록한다. PR head 변경 시 verify와 candidate 검증을 다시 수행한다.
+OCI 배포 없이 두 게시 digest를 각각 pull하여 architecture·source revision·native module·readiness·browser smoke를 수행한다.
+둘 다 성공한 뒤 하나의 `candidate.json`에 공통 PR/source SHA/tree/run/attempt와 정확히
+`images.web`·`images.console`의 repository/digest/buildSourceSha/origin과 baseline proof·공개 build 설정 hash를 기록한다. 두 repository는 서로 달라야 하며
+배포 환경의 고정 repository와 각각 대조한다. 단일 이미지의 이전 형식·한쪽 누락·추가 앱은 거절한다. PR head 변경 시 verify와 candidate 검증을 다시 수행한다.
 
 현재 squash merge 전략을 유지한다. PR의 검증용 merge tree가 source tree와 같아야 candidate를 만들고,
 실제 squash merge 결과 tree도 같은 source tree여야 배포한다. 이 전제가 깨지면 새 image를 우회 build하지 않고 실패한다.
 Promotion PR의 merged/closed event만 배포를 시작한다. 현재 head의 최신 검증 run과 그 artifact를 대조하며,
 merge 전에 성공하지 않은 run, 다른 PR/head/tree/registry, 만료·누락된 artifact는 배포하지 않는다.
 병합 커밋/tree·source SHA·candidate run·digest는 Actions summary로 추적한다.
+
+P06-B1의 후보 전용 단계에서는 OCI 인증/Run Command 전 임시 차단을 유지했다.
+B2의 paired 구현·CI 실제 Compose 복구 검증과 승인된 host upgrade·Console 설정·DB 준비가
+완료되면 별도 코드 리뷰로 임시 차단을 제거한다. repository 설정 flag로 우회하지 않는다.
+이 변경의 integration merge는 배포하지 않는다. 첫 실제 실행은 별도 승인된 정상 Promotion으로만
+시작하며 두 앱을 새로 빌드한다. 기존 Web 복구·공동 rollback·IMDS/재시작 지속성의 실제 검증과
+공개 gate는 별개이며, 실제 증거가 갖춰질 때까지 B 완료나 공개 전환을 선언하지 않는다.
+B2의 CI Run Command adapter는 Web·Console 순서의 immutable digest 두 개와 제한된 base64url candidate 하나를 받고,
+누락·추가 인자·가변 tag는 OCI 호출 전에 거절한다. 원격 message/text와 OCI 오류 원문은
+CI 로그로 전달하지 않는다. lifecycle·정수 exit code·고정 진단만 기록하며 0/20/21을 유지한다.
+전달 전에 candidate schema와 두 digest를 대조하고 원격에서도 strict하게 검증한다.
+B2-2 materializer를 사용한 B2-3 host의 pair state/apply/rollback·최초 전환 구현은 §19를 따른다.
+로컬/mock 검증을 실제 host upgrade로 간주하지 않는다. 임시 차단 제거 전 승인된 upgrade의 실제 결과를 확인한다.
 
 배포 workflow는 image를 다시 build/publish하지 않고 검증된 digest를 기존 OCI Run Command와
 `deploy-release.sh`에 전달한다. health/readiness/smoke 및 직전 정상 digest/env rollback, exit 0/20/21은 유지한다.
@@ -559,6 +606,14 @@ Terraform state secret absence
 Runtime secret은 11을 따라 OCI Secret Management에서 protected env file로 materialize한다.
 Terraform은 Vault/key infrastructure만 관리하고 actual secret value나 Slack webhook endpoint를
 configuration/state에 넣지 않는다.
+
+P06-B0의 Metadata 차단은 별도 승인된 host 작업이다. 전용 nftables forward table을 원자적으로
+적용하고 Docker unit의 필수 의존·시작 전 검사를 둔다. 일반 host installer/배포로 암묵 적용하지
+않고, Docker 소유 규칙·전체 ruleset·backend는 변경하지 않는다. guard 중지는 deny를 지우지 않는다.
+host firewall reload/flow offload/자동 시작/live-restore 경로와 SSH 복구 방법을 먼저 검토한다.
+guard의 성공 출력만으로 실제 VM 검증을 대체하지 않는다. 운영 적용과 재시작은 별도 승인이 필요하며
+새 Console Secret grant 이후에는 차단을 제거하는 복구를 하지 않는다.
+[Metadata 운영 절차](../../../ops/oci/README.md#7-p06-metadata-차단)를 따른다.
 
 ---
 

@@ -16,10 +16,13 @@ let interruptedBy: NodeJS.Signals | undefined;
 function parseArguments() {
   const arguments_ = process.argv.slice(2);
 
-  if (arguments_.length === 0) return { local: false };
-  if (arguments_.length === 1 && arguments_[0] === "--local") return { local: true };
-
-  throw new Error("Usage: run-postgres-integration-tests.ts [--local]");
+  if (arguments_.some((argument) => !["--local", "--admin-smoke"].includes(argument))) {
+    throw new Error("Usage: run-postgres-integration-tests.ts [--local] [--admin-smoke]");
+  }
+  return {
+    local: arguments_.includes("--local"),
+    adminSmoke: arguments_.includes("--admin-smoke"),
+  };
 }
 
 function resolveAdminUrl(local: boolean) {
@@ -88,7 +91,7 @@ function quoteIdentifier(identifier: string) {
 }
 
 async function main() {
-  const { local } = parseArguments();
+  const { local, adminSmoke } = parseArguments();
   const adminUrl = resolveAdminUrl(local);
   assertSafeAdminUrl(adminUrl);
 
@@ -194,7 +197,9 @@ async function main() {
     });
     await runCommand(
       packageManager,
-      ["exec", "vitest", "run", "--config", "vitest.postgres.config.ts", "--reporter=verbose"],
+      adminSmoke
+        ? ["exec", "node", "tests/ops/admin-migration-smoke.mjs"]
+        : ["exec", "vitest", "run", "--config", "vitest.postgres.config.ts", "--reporter=verbose"],
       childEnvironment,
     );
   } catch (error) {

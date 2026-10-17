@@ -1,7 +1,7 @@
+import { serializedAbilityResponseSchema } from "@oioi-bwg/contracts/authorization";
+
 import { getRequestContext } from "@/server/auth/request-context";
 import { jsonResponse, toErrorResponse } from "@/server/http/api-response";
-
-import { serializedAbilityResponseSchema } from "@/shared/contracts/authorization";
 
 export async function GET() {
   try {

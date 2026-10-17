@@ -1,6 +1,5 @@
+import { listVisibleSongsForSitemap } from "@oioi-bwg/server/services/song-service";
 import { MetadataRoute } from "next";
-
-import { listVisibleSongsForSitemap } from "@/server/services/song-service";
 
 export const dynamic = "force-dynamic";
 

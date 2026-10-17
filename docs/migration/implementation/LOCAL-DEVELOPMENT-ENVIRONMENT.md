@@ -66,6 +66,44 @@ postgres
 
 ## Local development workflow
 
+### Console MFA 로컬 확인 (P05 이후)
+
+Console은 호스트의 별도 Next 프로세스와 Compose PostgreSQL을 사용한다. Docker Desktop/daemon을
+먼저 실행하고 저장소 루트에서 의존성을 설치한다. `next` 컨테이너는 Console 실행에 필요하지 않다.
+
+```bash
+pnpm install --frozen-lockfile
+```
+
+`apps/console/.env.local`이 없으면 [Console env 예제](../../../apps/console/.env.example)를 복사한다.
+예제의 주석을 따라 `openssl rand -base64 32`를 두 번 실행해 서로 다른 서명/암호화 키를 채운다.
+기존 파일과 등록 후의 암호화 키는 보존한다. 최초 QR 등록을 확인할 때만
+`CONSOLE_MFA_ENROLLMENT_ENABLED=true`로 설정한다. Web env 파일을 복사하지 않는다.
+
+준비 후 매번 다음 명령 하나로 실행한다.
+
+```bash
+pnpm dev:console:local
+```
+
+스크립트는 Console env의 대상/키/Origin을 먼저 검사하고 Compose PostgreSQL을 health까지 기다린다.
+고정된 Compose 개발용 bootstrap credential로 guarded `db:migrate`를 실행한 뒤 Console dev 서버를
+3001에서 시작한다. migration은 미적용분만 반영하며 기존 데이터와 키를 초기화하지 않는다.
+앱의 `DATABASE_URL`도 `127.0.0.1:5432/oioibawige`로 제한한다. 환경변수/credential을 출력하지 않는다.
+Docker 연결 실패나 env/migration 실패 시 다음 단계를 실행하지 않는다.
+
+`http://127.0.0.1:3001/admin-login`에서 다음을 확인한다(Origin 설정과 같은 hostname 사용).
+
+1. 기존 로컬 ACTIVE ADMIN 이메일/비밀번호로 **인증기 등록 → QR 생성**.
+2. 인증기 앱으로 QR 스캔 → 6자리 입력 → **등록 확인**. 이 단계는 세션을 발급하지 않는다.
+3. **로그인으로 돌아가기** → 이메일/비밀번호 → **다음** → 다음 OTP로 **로그인**.
+   등록에 사용한 OTP는 이미 소모됐으므로 코드가 바뀔 때까지 기다린다.
+4. 확인 후 등록 설정을 `false`로 바꾸고 dev 서버를 재시작한다. 기존 OTP 로그인은 유지된다.
+
+`Ctrl+C`는 Console을 종료하며 PostgreSQL과 데이터는 보존한다. Docker 중단은 `down`을 사용한다.
+이 명령은 계정이나 seed를 생성하지 않는다. 관리자 계정이 없다면 별도로 승인된 로컬 계정 준비가
+필요하다. 실패 5회 후에는 계정별 5분 window 제한이 적용될 수 있다. 공개 운영은 P06 범위다.
+
 ### 최초 실행
 
 기존 `apps/web/.env.local`이 있으면 덮어쓰지 않는다. 처음 만드는 경우:

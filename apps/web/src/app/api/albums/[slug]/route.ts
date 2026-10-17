@@ -1,7 +1,7 @@
-import { jsonResponse, toErrorResponse } from "@/server/http/api-response";
-import { requireAlbumDetailBySlug } from "@/server/services/album-service";
+import { albumDetailSchema, albumSlugParamsSchema } from "@oioi-bwg/contracts/album";
+import { requireAlbumDetailBySlug } from "@oioi-bwg/server/services/album-service";
 
-import { albumDetailSchema, albumSlugParamsSchema } from "@/shared/contracts/album";
+import { jsonResponse, toErrorResponse } from "@/server/http/api-response";
 
 interface AlbumRouteContext {
   params: Promise<{ slug: string }>;

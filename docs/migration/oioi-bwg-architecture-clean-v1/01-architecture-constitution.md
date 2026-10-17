@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.11"
+version: "2.14"
 status: "active"
 authority: "constitution"
-updated_at: "2026-10-06"
+updated_at: "2026-10-07"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.11
+# oioi-bwg Architecture Constitution v2.14
 
 ## 1. 목적
 
@@ -142,7 +142,7 @@ OCIR tag immutability를 가정하지 않는다. source/merge tree 일치, 기�
 
 Next.js는 화면 렌더링과 HTTP delivery를 담당한다.
 
-서버 application logic은 Next.js Route Handler 자체에 작성하지 않고 `src/server`에 격리한다.
+서버 application logic은 Next.js Route Handler 자체에 작성하지 않고 공통 `packages/server/src` core에 격리한다.
 
 RSC는 같은 프로세스 안의 service를 직접 호출한다. 서버 내부에서 자신의 `/api/*` endpoint를 HTTP로 다시 호출하지 않는다.
 
@@ -150,9 +150,20 @@ RSC는 같은 프로세스 안의 service를 직접 호출한다. 서버 내부�
 
 ## 5. 최상위 디렉터리
 
+P04부터 `apps/console`은 별도의 Next 프로세스인 관리자 앱이다. Web과 Console은
+동일한 contracts/server 소스를 소비하지만 다른 앱의 파일을 직접 import하지 않는다.
+각 앱의 FSD root와 request/session/HTTP adapter, 자동 탐색 설정은 해당 앱이 소유한다.
+Web 관리 경로는 P06 전환 전까지 유지하며, Console의 비공개 단계 인증은 04 §4.1을 따른다.
+공용 UI/domain/api-client package를 선생성하지 않고 실제 이관에 필요한 UI만 앱 내부에 둔다.
+
 현재 Next 앱의 루트는 `apps/web`이다. 아래 구조와 active 문서의 `src/...` 경로는
 별도 명시가 없으면 이 앱 루트를 기준으로 한다. `/admin`을 포함한 기존 route와 서버 boundary는 유지한다.
 저장소 루트에는 workspace 진입점, 기존 검증 도구, 운영 스크립트와 migration 이력을 유지한다.
+
+클라이언트와 서버가 함께 소비하는 serializable HTTP contract는 `packages/contracts`가 소유한다.
+`@oioi-bwg/contracts/<domain>`의 명시적 export로 소비하며 Zod schema/DTO/enum만 둔다.
+기존 `shared/contracts`와 같은 경계 예외이며 FSD UI, persistence, Node/Next/React dependency를
+포함하지 않는다. 각 workspace의 검사 정책과 source package dependency는 해당 workspace가 소유한다.
 
 ```text
 src/
@@ -181,6 +192,12 @@ FSD 레이어가 아니다.
 서버 application/persistence boundary를 표현하는 별도의 축이다.
 
 `server`를 FSD slice 내부로 분산시키지 않는다.
+
+공통 서버 core는 `packages/server/src`가 소유한다. DB/schema·repository·service·CASL rule·
+context type/guard·application error·email/storage를 명시적인 package export로 제공한다.
+`React.cache`/Auth.js 요청 세션 획득과 HTTP/Next/Sentry adapter는 각 앱의 `src/server`에 둔다.
+공통 서버는 앱·React·Next·UI를 참조하지 않으며 client/FSD 레이어는 server package를 참조하지 않는다.
+DB 및 migration 의미는 유지하며 root Drizzle 진입점이 공통 schema를 읽는다.
 
 ---
 

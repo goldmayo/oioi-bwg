@@ -1,11 +1,10 @@
 import { cache } from "react";
+import { getSongDetailBySlug } from "@oioi-bwg/server/services/song-service";
 import { notFound } from "next/navigation";
 
 import { LyricsViewerClient } from "@/features/chant-sync";
 
 import { toAlbumViewModel } from "@/entities/album";
-
-import { getSongDetailBySlug } from "@/server/services/song-service";
 
 import { constructMetadata } from "@/shared/lib/metadata";
 

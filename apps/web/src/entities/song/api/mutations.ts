@@ -1,6 +1,5 @@
+import type { SaveAdminSongLyrics, UpdateAdminSong } from "@oioi-bwg/contracts/song";
 import { mutationOptions } from "@tanstack/react-query";
-
-import type { SaveAdminSongLyrics, UpdateAdminSong } from "@/shared/contracts/song";
 
 import { createAdminSong, deleteAdminSong, saveAdminSongLyrics, updateAdminSong } from "./api";
 

@@ -1,10 +1,10 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.1"
+version: "1.3"
 status: "active"
 authority: "architecture"
-updated_at: "2026-08-29"
+updated_at: "2026-10-17"
 depends_on:
   - "01"
   - "02"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.1
+# oioi-bwg Testing Architecture v1.3
 
 ## 1. 목적
 
@@ -303,6 +303,16 @@ fixture가 반복될 때 작은 builder를 사용할 수 있다.
 ---
 
 ## 17. CI Gate
+
+일반 `migration_main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 무거운 검사를 생략한다.
+scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·빈 diff·판정 실패는 전체 검증이다.
+feature push hook도 같은 전체 diff 판정을 사용한다. Promotion과 main/develop push는 이 예외를 적용하지 않는다.
+
+Web과 Console은 독립 FSD root에서 lint/type-check/unit/build를 실행한다.
+각 앱의 alias와 테스트 include는 다른 앱의 소스·테스트를 읽지 않도록 해당 workspace가 소유한다.
+repo harness는 직접 앱 import, source package 및 공통 설정 변경의 두 앱 task 선택/hash를 검사한다.
+P04 회귀는 두 standalone origin에서 로그인·기존 앨범/곡/LRC/가사 저장·권한 거부·세션 격리를
+검증한다. CI의 PostgreSQL fixture는 격리된 test DB에만 만들고 정리한다.
 
 최소 후보:
 

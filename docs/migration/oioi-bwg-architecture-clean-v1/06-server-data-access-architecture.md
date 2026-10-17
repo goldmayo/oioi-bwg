@@ -1,10 +1,10 @@
 ---
 title: "Server / Data Access Architecture"
 document_id: "06"
-version: "1.1"
+version: "1.2"
 status: "active"
 authority: "architecture"
-updated_at: "2026-09-09"
+updated_at: "2026-10-07"
 depends_on:
   - "01"
   - "03"
@@ -20,7 +20,7 @@ tags:
   - "transaction"
 ---
 
-# oioi-bwg Server / Data Access Architecture v1.0
+# oioi-bwg Server / Data Access Architecture v1.2
 
 ## 1. 목적
 
@@ -102,6 +102,28 @@ Drizzle
 PostgreSQL
 = data persistence
 ```
+
+---
+
+## 2.1. Monorepo의 공통 core와 앱 adapter
+
+P03부터 `packages/server/src`가 DB singleton/schema, repository, service, CASL rule,
+RequestContext type/requireUser, AppError, email/storage 구현을 소유한다. 각 앱은
+`@oioi-bwg/server/*`의 명시적 export를 소비하며 공통 core는 앱·React·Next·UI·HTTP adapter를
+import하지 않는다. 아래 `server/*` 예시는 이 공통 core의 논리 계층을 가리킨다.
+
+앱별 `src/server/auth/request-context.ts`가 Auth.js 세션·활성 Account 조회와 `React.cache()`를
+통한 요청별 획득을 소유한다. 결과는 공통 RequestContext이며 service의 인가를 대체하지 않는다.
+HTTP 응답 변환과 Next/Sentry observability는 앱의 `src/server/http`, `src/server/observability`에
+남는다. DB service/repository/외부 IO entry는 `server-only`를 유지하고 client/FSD 레이어의
+package 참조는 lint에서 거부한다. schema는 Drizzle Kit의 Node 실행을 위해 framework guard를
+import하지 않으며 client에 공개하는 계약이 아니다.
+
+root `drizzle.config.ts`는 `packages/server/src/db/schema.ts`를 읽고 migration 출력과 이력은
+root `drizzle/`을 유지한다. 추출은 SQL, constraint, pool 수치, transaction/authorization를
+변경하지 않는다. source package는 공통 Node 설정의 lib/types를 상속하고 모듈 해석만 `ESNext`/`Bundler`로
+설정한다. 별도 library build 없이 Next source transpilation으로 소비하므로 emitted Node ESM의
+확장자 규칙을 강제하지 않는다. Node 운영 스크립트의 공통 `NodeNext` 기본값은 유지한다.
 
 ---
 

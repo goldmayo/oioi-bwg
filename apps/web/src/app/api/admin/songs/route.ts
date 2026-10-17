@@ -1,12 +1,12 @@
-import { getRequestContext } from "@/server/auth/request-context";
-import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
-import { createSong, listAdminSongs } from "@/server/services/song-service";
-
 import {
   adminSongListSchema,
   adminSongMutationResultSchema,
   createAdminSongSchema,
-} from "@/shared/contracts/song";
+} from "@oioi-bwg/contracts/song";
+import { createSong, listAdminSongs } from "@oioi-bwg/server/services/song-service";
+
+import { getRequestContext } from "@/server/auth/request-context";
+import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 
 export async function GET() {
   try {

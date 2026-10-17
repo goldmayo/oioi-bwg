@@ -1,12 +1,12 @@
-import { getRequestContext } from "@/server/auth/request-context";
-import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
-import { deleteAlbum, editAlbum } from "@/server/services/album-service";
-
 import {
   adminAlbumIdParamsSchema,
   albumSummarySchema,
   saveAdminAlbumSchema,
-} from "@/shared/contracts/album";
+} from "@oioi-bwg/contracts/album";
+import { deleteAlbum, editAlbum } from "@oioi-bwg/server/services/album-service";
+
+import { getRequestContext } from "@/server/auth/request-context";
+import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 
 interface AlbumRouteContext {
   params: Promise<{ id: string }>;

@@ -1,6 +1,5 @@
+import { getDatabase } from "@oioi-bwg/server/db";
 import { sql } from "drizzle-orm";
-
-import { getDatabase } from "@/server/db";
 
 export const dynamic = "force-dynamic";
 

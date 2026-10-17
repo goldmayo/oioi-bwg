@@ -1,7 +1,6 @@
+import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-
-import { AppError } from "@/server/errors/app-error";
 
 const getRequestContext = vi.hoisted(() => vi.fn());
 const reportServerError = vi.hoisted(() => vi.fn());
@@ -9,7 +8,7 @@ const uploadAlbumImage = vi.hoisted(() => vi.fn());
 
 vi.mock("@/server/auth/request-context", () => ({ getRequestContext }));
 vi.mock("@/server/observability/server-error-reporter", () => ({ reportServerError }));
-vi.mock("@/server/services/album-image-service", () => ({ uploadAlbumImage }));
+vi.mock("@oioi-bwg/server/services/album-image-service", () => ({ uploadAlbumImage }));
 
 import { uploadAlbumImageAction } from "./upload-album-image-action";
 

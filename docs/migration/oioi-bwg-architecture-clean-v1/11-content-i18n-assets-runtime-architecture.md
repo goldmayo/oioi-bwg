@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.2"
+version: "1.7"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-05"
+updated_at: "2026-10-17"
 depends_on:
   - "01"
   - "05"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.2
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.5
 
 ## 1. 목적
 
@@ -175,6 +175,17 @@ provider migration이 domain schema에 과도하게 스며들지 않게 한다.
 
 ## 11. Runtime Environment
 
+P04의 Console은 `apps/console`에 자동 탐색 설정과 `.env*`를 소유한다.
+`CONSOLE_ORIGIN`은 loopback HTTP origin만 허용하며 dev/start는 `127.0.0.1:3001`에 바인딩한다.
+`CONSOLE_AUTH_SECRET`은 최소 32자이고 Web의 `AUTH_SECRET`으로 fallback하지 않는다.
+runtime 설정은 요청 시 검증해 build에 secret을 요구하지 않는다. 기존 Web 이미지와 배포 대상은
+P06 전까지 유지하고, CI/local에서는 두 앱 standalone을 독립 build한다.
+
+P06-A의 일반 CI/local 검증은 같은 builder에서 Web `runner`와 Console `runner-console` 두
+Docker runtime을 생성한다. 각 이미지의 server/static/public 경로와 native dependency를 실제로
+검증하며 Console `/readyz`는 인증 설정과 PostgreSQL 기본 가용성을 확인하고 오류 원문을 숨긴다.
+이 이미지 검증은 OCI 게시·host 배포·Console HTTPS 공개 완료를 뜻하지 않는다.
+
 Next 자동 탐색 설정과 `public/`, 로컬 `.env*` 파일은 앱 루트인 `apps/web`이 소유한다.
 정적 자산의 공개 URL과 환경변수 이름·build/runtime 해석은 앱 이동으로 변경하지 않는다.
 OCI container에 주입하는 env 파일과 운영 도구는 기존 저장소 루트 경계를 유지한다.
@@ -219,7 +230,9 @@ runtime
 
 Secret은 어떤 경우에도 이 메커니즘으로 전달하지 않는다.
 
-12의 image build/deploy 전략은 이 원칙을 따른다.
+Sentry Release와 OCI revision label은 image의 실제 build source에 연결한다. 재사용 이미지에는
+새 릴리스 source를 덮어쓰지 않는다. 공개 build 입력 변경은 새 build가 필요하며 선택적 재사용의
+검증·baseline·공동 smoke와 배포 전략은 12 §21이 소유한다.
 
 ---
 
@@ -251,6 +264,19 @@ OCI runtime secret의 SSOT는 OCI Secret Management다. Application request path
 읽어 완전한 temporary env를 검증한 뒤 mode `0600`의 runtime env file을 atomic하게
 교체한다. GitHub CI, Terraform configuration/state, container image, Run Command plain-text
 payload에 runtime secret을 넣지 않는다.
+
+public env에는 Secret 값을 두지 않으며 앱별 Secret mapping의 허용 이름을 검증한다.
+Web에는 `CONSOLE_*`, Console에는 Web `AUTH_SECRET`을 전달하지 않는다. Console의 자체
+Auth secret은 최소 32자, MFA key는 canonical Base64 32 bytes이며 두 값이 같으면 거절한다.
+중복 키·누락·줄바꿈/NUL·Vault 읽기/형식 오류는 임시 env 승격 전에 실패한다. raw env의 값은
+보간하거나 shell로 실행하지 않는다. 앱별 임시 env 생성과 두 앱의 배포/복구 완료는 구분한다.
+
+VM Instance Principal은 process별 권한 분리가 아니다. P06의 새 Console Secret 권한을
+추가하기 전에 기존 Web의 `169.254.169.254` 접근 차단을 실제 VM에서 입증한다.
+Web/Console은 host network·privileged·추가 capability·host mount를 사용하지 않는 bridge 실행으로
+검증한다. host의 pull/Secret 읽기는 유지한다. 직접 IMDSv2 인증 header를 포함한 요청의 body를
+버리고 네트워크 차단·host 양성 대조·차단 규칙 counter를 함께 확인한다. 실제 두 앱과 container/
+Docker/VM 재시작·복구 후 검증 전에는 공개 gate를 통과한 것으로 기록하지 않는다. 운영 절차는 12가 소유한다.
 
 ---
 

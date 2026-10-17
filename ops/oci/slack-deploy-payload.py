@@ -11,17 +11,29 @@ run_url = os.environ["RUN_URL"]
 sha = os.environ.get("SOURCE_SHA", "")
 short_sha = sha[:7]
 
-if digest.startswith("sha256:") and len(digest) >= 24:
-    short_digest = f"sha256:{digest[7:19]}…{digest[-8:]}"
-else:
-    short_digest = "unknown"
+
+def short_digest(value):
+    if value.startswith("sha256:") and len(value) >= 24:
+        return f"sha256:{value[7:19]}…{value[-8:]}"
+    return "unknown"
+
 
 if phase == "candidate":
     title = "✅ OCI 배포 후보 검증 완료" if candidate_result == "success" else "❌ OCI 배포 후보 검증 실패"
     detail = "후보 이미지 게시·검증 결과입니다. OCI 배포는 아직 실행하지 않았습니다."
     color = "#2EB67D" if candidate_result == "success" else "#E01E5A"
-    result_lines = f"이미지 게시: {publish_result or '미실행'} / 후보 검증: {candidate_result}"
+    result_lines = (
+        f"Web 게시: {publish_result or '미실행'} / "
+        f"Console 게시: {os.environ.get('CONSOLE_PUBLISH_RESULT') or '미실행'} / "
+        f"후보 검증: {candidate_result}"
+    )
     stage = "Candidate"
+elif os.environ.get("DEPLOYMENT_BLOCKED") == "true":
+    title = "⛔ OCI 두 앱 배포 보류"
+    detail = "후보 검증은 완료했지만 P06-B2와 승인된 host upgrade가 필요합니다."
+    color = "#ECB22E"
+    result_lines = "두 앱 배포 차단: Run Command 미실행"
+    stage = "Paired deployment gate"
 elif candidate_result != "success":
     title = "❌ OCI 개발 배포 실패"
     detail = "병합한 PR의 검증된 후보 기록을 확인하지 못했습니다. 이미지를 다시 build/publish하지 않습니다."
@@ -57,8 +69,15 @@ fields = [
     {"type": "mrkdwn", "text": "*환경*\nOCI Development"},
     {"type": "mrkdwn", "text": "*브랜치*\n`migration_develop`"},
     {"type": "mrkdwn", "text": f"*소스 커밋*\n`{short_sha}`"},
-    {"type": "mrkdwn", "text": f"*이미지*\n`{short_digest}`"},
+    {"type": "mrkdwn", "text": f"*Web*\n`{short_digest(digest)}`"},
+    {"type": "mrkdwn", "text": f"*Console*\n`{short_digest(os.environ.get('CONSOLE_IMAGE_DIGEST', ''))}`"},
 ]
+
+if phase == "candidate":
+    fields.append({
+        "type": "mrkdwn",
+        "text": f"*후보 run/attempt*\n{os.environ.get('GITHUB_RUN_ID', '')}/{os.environ.get('GITHUB_RUN_ATTEMPT', '')}",
+    })
 
 if phase == "deploy":
     fields.append({"type": "mrkdwn", "text": f"*병합 커밋*\n`{os.environ.get('GITHUB_SHA', '')[:7]}`"})

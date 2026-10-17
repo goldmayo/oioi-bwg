@@ -1,0 +1,85 @@
+import { adminAlbumListSchema } from "@oioi-bwg/contracts/album";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { AppError } from "../errors/app-error";
+import { AlbumSlugConflictError } from "../repositories/repository-error";
+
+const findAllAlbums = vi.hoisted(() => vi.fn());
+const insertAlbum = vi.hoisted(() => vi.fn());
+const updateAlbum = vi.hoisted(() => vi.fn());
+
+vi.mock("server-only", () => ({}));
+vi.mock("../auth/request-context", () => ({
+  requireUser: (ctx: { user: unknown }) => {
+    if (!ctx.user) throw new AppError("UNAUTHENTICATED");
+  },
+}));
+vi.mock("../db", () => ({ getDatabase: () => ({}) }));
+vi.mock("../repositories/album-repository", () => ({
+  findAlbumBySlug: vi.fn(),
+  findAllAlbums,
+  findVisibleAlbumsWithSongs: vi.fn(),
+  insertAlbum,
+  removeAlbum: vi.fn(),
+  updateAlbum,
+}));
+
+import { createAlbum, editAlbum, listAdminAlbums } from "./album-service";
+
+const context = {
+  user: { id: "1" },
+  ability: { cannot: () => false },
+} as never;
+const input = {
+  color: "#000000",
+  imgUrl: "https://assets.oioibawige.com/images/albums/test.webp",
+  isVisible: true,
+  name: "Test Album",
+  releaseDate: null,
+  slug: "test-album",
+};
+
+describe("album-service admin list DTO", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("maps the full admin result to the domain list contract", async () => {
+    const album = {
+      ...input,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      id: 1,
+    };
+    findAllAlbums.mockResolvedValue([album]);
+
+    const result = await listAdminAlbums(context);
+
+    expect(adminAlbumListSchema.parse(result)).toEqual({
+      items: [album],
+      nextCursor: null,
+    });
+  });
+});
+
+describe("album-service unique conflicts", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("maps create and edit repository slug conflicts to the album AppError", async () => {
+    insertAlbum.mockRejectedValueOnce(new AlbumSlugConflictError());
+    updateAlbum.mockRejectedValueOnce(new AlbumSlugConflictError());
+
+    await expect(createAlbum(context, input)).rejects.toMatchObject({
+      code: "ALBUM_SLUG_ALREADY_EXISTS",
+    });
+    await expect(editAlbum(context, 1, input)).rejects.toMatchObject({
+      code: "ALBUM_SLUG_ALREADY_EXISTS",
+    });
+  });
+
+  it("preserves an unrelated repository failure as an unexpected error", async () => {
+    const error = new Error("unexpected repository failure");
+    insertAlbum.mockRejectedValueOnce(error);
+
+    const caught = await createAlbum(context, input).catch((cause: unknown) => cause);
+
+    expect(caught).toBe(error);
+  });
+});

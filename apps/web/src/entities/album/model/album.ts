@@ -1,4 +1,4 @@
-import type { AlbumDetail } from "@/shared/contracts/album";
+import type { AlbumDetail } from "@oioi-bwg/contracts/album";
 
 /**
  * [ViewModel]

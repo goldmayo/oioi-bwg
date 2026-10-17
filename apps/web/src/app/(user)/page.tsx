@@ -1,9 +1,8 @@
 import { Suspense } from "react";
+import { listVisibleAlbumsWithSongs } from "@oioi-bwg/server/services/album-service";
 import type { Metadata } from "next";
 
 import { AlbumListSkeleton, toAlbumViewModel } from "@/entities/album";
-
-import { listVisibleAlbumsWithSongs } from "@/server/services/album-service";
 
 import { SITE_CONFIG } from "@/shared/config/site";
 

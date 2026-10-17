@@ -8,6 +8,7 @@ const APPLICATION_TABLES = [
   "Album",
   "Song",
   "account",
+  "admin_mfa",
   "profile",
   "password_credential",
   "email_verification_challenge",

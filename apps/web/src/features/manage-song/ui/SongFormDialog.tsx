@@ -83,13 +83,11 @@ function applySongFormError(
   }
 }
 
-export function SongFormDialog({
-  open,
-  onOpenChange,
-  albums,
-  song,
-  onSubmit,
-}: SongFormDialogProps) {
+export function SongFormDialog(props: SongFormDialogProps) {
+  return props.open ? <SongFormSession {...props} /> : null;
+}
+
+function SongFormSession({ open, onOpenChange, albums, song, onSubmit }: SongFormDialogProps) {
   const isEdit = !!song;
   const hasImmutableSlug = song !== undefined && song.slug !== null;
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,7 +128,6 @@ export function SongFormDialog({
       try {
         await onSubmit(values);
         onOpenChange(false);
-        form.reset();
       } catch (error) {
         applySongFormError(error, form, setLrcError);
       } finally {

@@ -1,12 +1,12 @@
-import { getRequestContext } from "@/server/auth/request-context";
-import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
-import { saveSongLyrics } from "@/server/services/song-service";
-
 import {
   adminSongIdParamsSchema,
   adminSongMutationResultSchema,
   saveAdminSongLyricsSchema,
-} from "@/shared/contracts/song";
+} from "@oioi-bwg/contracts/song";
+import { saveSongLyrics } from "@oioi-bwg/server/services/song-service";
+
+import { getRequestContext } from "@/server/auth/request-context";
+import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 
 interface SongLyricsRouteContext {
   params: Promise<{ id: string }>;

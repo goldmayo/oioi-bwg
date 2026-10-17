@@ -27,6 +27,7 @@ jobs:
       exit_code: ${{ steps.deploy-release.outputs.exit_code }}
       image_digest: ${{ steps.candidate.outputs.image_digest }}
       candidate_result: ${{ steps.candidate.outcome }}
+      console_image_digest: ${{ steps.candidate.outputs.console_image_digest }}
 
     env:
       OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
@@ -37,6 +38,7 @@ jobs:
       OCI_COMPUTE_COMPARTMENT_OCID: ocid1.compartment.oc1..aaaaaaaavs5y44txsstgn5px5zfwynupw3m4mvlgndaje6q3lyi3hi65ucbq
       OCI_COMPUTE_INSTANCE_OCID: ocid1.instance.oc1.ap-osaka-1.anvwsljrhcgbyoacqa6id2hr257tlu26cfjd7x7yywnai7hh37kkytix57cq
       IMAGE_REPOSITORY: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ vars.OCIR_REPOSITORY }}
+      CONSOLE_IMAGE_REPOSITORY: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ vars.OCIR_CONSOLE_REPOSITORY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -74,18 +76,25 @@ jobs:
               prNumber: context.payload.pull_request.number,
               sourceSha: process.env.SOURCE_SHA, sourceTree: process.env.SOURCE_TREE,
               runId: Number(process.env.CANDIDATE_RUN_ID), runAttempt: Number(process.env.CANDIDATE_RUN_ATTEMPT),
-              imageRepository: process.env.IMAGE_REPOSITORY,
+              images: {
+                web: { repository: process.env.IMAGE_REPOSITORY },
+                console: { repository: process.env.CONSOLE_IMAGE_REPOSITORY },
+              },
             });
-            core.setOutput('image_digest', candidate.imageDigest);
-            core.exportVariable('IMAGE_DIGEST', candidate.imageDigest);
-            await core.summary.addHeading('Verified promotion deployment').addTable([
+            core.setOutput('candidate_payload', Buffer.from(JSON.stringify(candidate)).toString('base64url'));
+            core.setOutput('image_digest', candidate.images.web.digest);
+            core.setOutput('console_image_digest', candidate.images.console.digest);
+            await core.summary.addHeading('Verified paired candidate').addTable([
               ['Source SHA', candidate.sourceSha], ['Source/merge tree', candidate.sourceTree],
               ['Merged SHA', context.payload.pull_request.merge_commit_sha],
               ['Candidate run/attempt', `${candidate.runId}/${candidate.runAttempt}`],
-              ['Image', `${candidate.imageRepository}@${candidate.imageDigest}`],
+              ...Object.entries(candidate.images).map(([app, image]) => [app, `${image.repository}@${image.digest}`]),
             ]).write();
 
       - name: Validate deployment configuration
+        env:
+          WEB_IMAGE_DIGEST: ${{ steps.candidate.outputs.image_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.candidate.outputs.console_image_digest }}
         run: |
           set -euo pipefail
           required=(
@@ -96,7 +105,8 @@ jobs:
             OCI_CLI_REGION
             OCI_COMPUTE_COMPARTMENT_OCID
             OCI_COMPUTE_INSTANCE_OCID
-            IMAGE_DIGEST
+            WEB_IMAGE_DIGEST
+            CONSOLE_IMAGE_DIGEST
           )
           for name in "${required[@]}"; do
             if [[ -z "${!name}" ]]; then
@@ -104,7 +114,8 @@ jobs:
               exit 1
             fi
           done
-          [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "${WEB_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "${CONSOLE_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
 
       - name: Verify OCI Run Command authentication
         uses: oracle-actions/run-oci-cli-command@v1.3.2
@@ -114,25 +125,55 @@ jobs:
             --compartment-id ${{ env.OCI_COMPUTE_COMPARTMENT_OCID }}
             --limit 1
 
-      - name: Deploy immutable digest with OCI Run Command
+      - name: Deploy immutable pair with OCI Run Command
         id: deploy-release
+        env:
+          WEB_IMAGE_DIGEST: ${{ steps.candidate.outputs.image_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.candidate.outputs.console_image_digest }}
+          CANDIDATE_PAYLOAD: ${{ steps.candidate.outputs.candidate_payload }}
         run: |
           set +e
-          bash ops/oci/deploy-via-run-command.sh "${IMAGE_DIGEST}"
+          bash ops/oci/deploy-via-run-command.sh "${WEB_IMAGE_DIGEST}" "${CONSOLE_IMAGE_DIGEST}" "${CANDIDATE_PAYLOAD}"
           exit_code=$?
           set -e
           echo "exit_code=${exit_code}" >> "${GITHUB_OUTPUT}"
           exit "${exit_code}"
 
+      - name: Record successful paired deployment evidence
+        if: success() && steps.deploy-release.outputs.exit_code == '0'
+        uses: actions/github-script@v7
+        env:
+          CANDIDATE_DIR: ${{ runner.temp }}/promotion-candidate
+          CANDIDATE_ARTIFACT_ID: ${{ steps.proof.outputs.artifact_id }}
+          OCI_COMMAND_ID: ${{ steps.deploy-release.outputs.command_id }}
+          DEPLOY_EXIT_CODE: ${{ steps.deploy-release.outputs.exit_code }}
+        with:
+          script: |
+            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
+            await promotion.recordDeployment({ context });
+      - uses: actions/upload-artifact@v4
+        if: success() && steps.deploy-release.outputs.exit_code == '0'
+        with:
+          name: paired-deployment-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/promotion-candidate/candidate.json
+            ${{ runner.temp }}/promotion-candidate/receipt.json
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Record deployment result
         if: success()
+        env:
+          WEB_IMAGE_DIGEST: ${{ steps.candidate.outputs.image_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.candidate.outputs.console_image_digest }}
         run: |
           {
             echo "### OCI development deployment succeeded"
             echo
             echo "Commit: \`${GITHUB_SHA}\`"
             echo
-            echo "Digest: \`${IMAGE_DIGEST}\`"
+            echo "Web: \`${WEB_IMAGE_DIGEST}\`"
+            echo "Console: \`${CONSOLE_IMAGE_DIGEST}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   notify-deploy:
@@ -160,6 +201,7 @@ jobs:
           DEPLOY_RESULT: ${{ needs.deploy.result }}
           DEPLOY_EXIT_CODE: ${{ needs.deploy.outputs.exit_code }}
           IMAGE_DIGEST: ${{ needs.deploy.outputs.image_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ needs.deploy.outputs.console_image_digest }}
           SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |

@@ -98,3 +98,34 @@ variable "freeform_tags" {
     managed-by   = "resource-manager"
   }
 }
+
+variable "console_ocir_repository_name" {
+  description = "Private Console repository; the existing Web repository remains unchanged."
+  type        = string
+  default     = "oioi-bwg-console"
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9._/-]{0,254}$", var.console_ocir_repository_name))
+    error_message = "Console repository name must be a valid lowercase repository path."
+  }
+}
+
+variable "console_auth_secret_ocid" {
+  description = "기존 Console Auth Secret의 OCID이며 Secret 원문 값이 아닙니다."
+  type        = string
+
+  validation {
+    condition     = can(regex("^ocid1\\.vaultsecret\\.[a-z0-9.-]+$", var.console_auth_secret_ocid))
+    error_message = "Provide the existing Console Auth Vault Secret OCID."
+  }
+}
+
+variable "console_mfa_secret_ocid" {
+  description = "기존 Console MFA 암호화 키를 담은 Vault Secret의 OCID이며 키 원문 값이 아닙니다."
+  type        = string
+
+  validation {
+    condition     = can(regex("^ocid1\\.vaultsecret\\.[a-z0-9.-]+$", var.console_mfa_secret_ocid))
+    error_message = "Provide the existing Console MFA Vault Secret OCID."
+  }
+}

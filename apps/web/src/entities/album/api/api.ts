@@ -1,11 +1,12 @@
-import { http } from "@/shared/api/http-client";
-import { parseClientResponse } from "@/shared/api/http-errors";
 import {
   adminAlbumListSchema,
   albumDetailSchema,
   albumSummarySchema,
   type SaveAdminAlbum,
-} from "@/shared/contracts/album";
+} from "@oioi-bwg/contracts/album";
+
+import { http } from "@/shared/api/http-client";
+import { parseClientResponse } from "@/shared/api/http-errors";
 
 /** 공개 앨범 HTTP 어댑터. URL 조합과 응답 검증을 한 곳에서 수행한다. */
 export async function getAlbumDetail(slug: string, signal?: AbortSignal) {

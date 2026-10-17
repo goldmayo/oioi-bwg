@@ -1,0 +1,24 @@
+import {
+  adminSongIdParamsSchema,
+  adminSongMutationResultSchema,
+  saveAdminSongLyricsSchema,
+} from "@oioi-bwg/contracts/song";
+import { saveSongLyrics } from "@oioi-bwg/server/services/song-service";
+
+import { getRequestContext } from "@/server/auth/request-context";
+import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
+
+interface SongLyricsRouteContext {
+  params: Promise<{ id: string }>;
+}
+
+export async function PATCH(request: Request, context: SongLyricsRouteContext) {
+  try {
+    const { id } = adminSongIdParamsSchema.parse(await context.params);
+    const input = await parseJsonRequest(request, saveAdminSongLyricsSchema);
+    const song = await saveSongLyrics(await getRequestContext(), id, input);
+    return jsonResponse(adminSongMutationResultSchema, song);
+  } catch (error) {
+    return toErrorResponse(error);
+  }
+}

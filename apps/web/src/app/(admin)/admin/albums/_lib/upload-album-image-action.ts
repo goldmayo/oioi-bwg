@@ -1,11 +1,11 @@
 "use server";
 
+import { AppError } from "@oioi-bwg/server/errors/app-error";
+import { uploadAlbumImage } from "@oioi-bwg/server/services/album-image-service";
 import { ZodError } from "zod";
 
 import { getRequestContext } from "@/server/auth/request-context";
-import { AppError } from "@/server/errors/app-error";
 import { reportServerError } from "@/server/observability/server-error-reporter";
-import { uploadAlbumImage } from "@/server/services/album-image-service";
 
 const FALLBACK_ERROR_MESSAGE = "이미지 업로드에 실패했습니다.";
 

@@ -1,7 +1,7 @@
-import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
-import { verifyOtp } from "@/server/services/email-verification-service";
+import { verifySignupOtpResponseSchema, verifySignupOtpSchema } from "@oioi-bwg/contracts/signup";
+import { verifyOtp } from "@oioi-bwg/server/services/email-verification-service";
 
-import { verifySignupOtpResponseSchema, verifySignupOtpSchema } from "@/shared/contracts/signup";
+import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 
 export async function POST(request: Request) {
   try {

@@ -1,7 +1,7 @@
-import { jsonResponse, toErrorResponse } from "@/server/http/api-response";
-import { requireSongDetailBySlug } from "@/server/services/song-service";
+import { songDetailSchema, songSlugParamsSchema } from "@oioi-bwg/contracts/song";
+import { requireSongDetailBySlug } from "@oioi-bwg/server/services/song-service";
 
-import { songDetailSchema, songSlugParamsSchema } from "@/shared/contracts/song";
+import { jsonResponse, toErrorResponse } from "@/server/http/api-response";
 
 interface SongRouteContext {
   params: Promise<{ slug: string }>;

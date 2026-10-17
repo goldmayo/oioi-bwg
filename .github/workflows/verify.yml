@@ -18,7 +18,23 @@ permissions:
   actions: read
 
 jobs:
+  changes:
+    name: verification scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify complete PR changes
+        id: scope
+        run: node scripts/verification-scope.mjs >> "${GITHUB_OUTPUT}"
+
   infra:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     name: infra
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -38,6 +54,8 @@ jobs:
           terraform -chdir=infra/oci validate
 
   quality:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     name: quality
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -72,6 +90,8 @@ jobs:
         run: pnpm format:check
 
   unit:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     name: unit
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -91,8 +111,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:unit:run
       - run: pnpm test:ops
+      - name: Verify root-protected host paths and paired upgrade
+        run: sudo env GITHUB_ACTIONS=true python3 -I tests/ops/host-install-root-fixture.py
 
   postgres_integration:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     name: PostgreSQL integration
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -142,10 +166,118 @@ jobs:
         env:
           M7_TEST_POSTGRES_ADMIN_URL: postgresql://postgres@127.0.0.1:5432/postgres
 
-  build:
-    name: build
+  app_build:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    name: app build
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+        with:
+          cleanup: false # The GitHub-hosted VM is discarded after this job.
+      - name: Identify verification cache inputs
+        id: cache-key
+        run: |
+          source_digest=$(git ls-files -s -- . ':(exclude)docs/**' | sha256sum | cut -d ' ' -f 1)
+          echo "key=${RUNNER_OS}-verify-amd64-v2-${source_digest}" >> "${GITHUB_OUTPUT}"
+      - name: Restore verification layer cache
+        id: build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/buildx-cache
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            ${{ runner.os }}-verify-amd64-v2-
+            ${{ runner.os }}-verify-amd64-v1-
+      - name: Build and export both standalone apps
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: verification-artifacts
+          platforms: linux/amd64
+          build-args: NEXT_PUBLIC_APP_ENV=staging
+          outputs: type=local,dest=${{ runner.temp }}/ci-build
+          cache-from: type=local,src=${{ runner.temp }}/buildx-cache
+          cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
+      - name: Load standalone container from the same builder
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runner
+          platforms: linux/amd64
+          load: true
+          tags: oioi-bwg:workspace-check
+          build-args: NEXT_PUBLIC_APP_ENV=staging
+          cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
+      - name: Archive verified container
+        run: docker save --output "${{ runner.temp }}/ci-build/web-image.tar" oioi-bwg:workspace-check
+      - name: Load Console container from the same builder
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runner-console
+          platforms: linux/amd64
+          load: true
+          tags: oioi-bwg-console:workspace-check
+          build-args: NEXT_PUBLIC_APP_ENV=staging
+          cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
+      - name: Archive verified Console container
+        run: docker save --output "${{ runner.temp }}/ci-build/console-image.tar" oioi-bwg-console:workspace-check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-standalone
+          path: ${{ runner.temp }}/ci-build/standalone.tar.gz
+          overwrite: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-web-image
+          path: ${{ runner.temp }}/ci-build/web-image.tar
+          overwrite: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-console-image
+          path: ${{ runner.temp }}/ci-build/console-image.tar
+          overwrite: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+      - name: Replace cache with current layers
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "${{ runner.temp }}/buildx-cache"
+          mv "${{ runner.temp }}/buildx-cache-new" "${{ runner.temp }}/buildx-cache"
+      - name: Save verification layer cache
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/buildx-cache
+          key: ${{ steps.build-cache.outputs.cache-primary-key }}
+
+  build:
+    name: build
+    needs: app_build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: image_smoke
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d image_smoke"
+          --health-interval 5s --health-timeout 5s --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
@@ -161,20 +293,23 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Restore Next.js build cache
-        uses: actions/cache@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: apps/web/.next/cache
-          key: ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-
-
-      - run: pnpm build
-        env:
-          NEXT_PUBLIC_APP_ENV: staging
-
-      - name: Build standalone container
-        run: docker build --tag oioi-bwg:workspace-check .
+          name: ci-standalone
+          path: ${{ runner.temp }}/ci-build
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-web-image
+          path: ${{ runner.temp }}/ci-build
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-console-image
+          path: ${{ runner.temp }}/ci-build
+      - name: Restore this run's verified build
+        run: |
+          tar -xzf "${{ runner.temp }}/ci-build/standalone.tar.gz"
+          docker load --input "${{ runner.temp }}/ci-build/web-image.tar"
+          docker load --input "${{ runner.temp }}/ci-build/console-image.tar"
 
       - name: Install smoke test browser
         run: pnpm exec playwright install --with-deps chromium
@@ -182,8 +317,11 @@ jobs:
       - name: Smoke test standalone container
         run: |
           set -euo pipefail
+          node tests/ops/container-native-smoke.mjs oioi-bwg:workspace-check web
           docker run --detach --name web-workspace-check \
+            --add-host host.docker.internal:host-gateway \
             --publish 127.0.0.1:3000:3000 \
+            --env DATABASE_URL=postgresql://postgres@host.docker.internal:5432/image_smoke \
             --env AUTH_SECRET=workspace-smoke-local-only-secret \
             --env AUTH_TRUST_HOST=true \
             oioi-bwg:workspace-check
@@ -192,42 +330,144 @@ jobs:
             if curl --fail --silent http://127.0.0.1:3000/healthz; then break; fi
             sleep 1
           done
+          node tests/ops/container-readiness-smoke.mjs http://127.0.0.1:3000
           node tests/ops/web-standalone-smoke.mjs http://127.0.0.1:3000
+
+      - name: Smoke test private Console standalone
+        run: |
+          set -euo pipefail
+          node tests/ops/container-native-smoke.mjs oioi-bwg-console:workspace-check console
+          docker run --detach --name console-workspace-check \
+            --add-host host.docker.internal:host-gateway \
+            --publish 127.0.0.1:3001:3000 \
+            --env DATABASE_URL=postgresql://postgres@host.docker.internal:5432/image_smoke \
+            --env CONSOLE_AUTH_SECRET=console-workspace-smoke-local-only-secret \
+            --env CONSOLE_ORIGIN=http://127.0.0.1:3001 \
+            --env CONSOLE_MFA_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
+            oioi-bwg-console:workspace-check
+          trap 'docker logs console-workspace-check; docker rm --force console-workspace-check' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3001/healthz; then break; fi
+            sleep 1
+          done
+          node tests/ops/container-readiness-smoke.mjs http://127.0.0.1:3001
+          node tests/ops/console-standalone-smoke.mjs http://127.0.0.1:3001
+
+      - name: Verify paired Compose container preservation and recovery
+        run: bash tests/ops/paired-compose-smoke.sh
+
+  admin_integration:
+    name: Admin migration integration
+    needs: app_build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-standalone
+          path: ${{ runner.temp }}/ci-build
+      - name: Restore this run's verified apps
+        run: tar -xzf "${{ runner.temp }}/ci-build/standalone.tar.gz"
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Complete existing admin flows on both private standalone origins
+        run: pnpm test:integration:admin
+        env:
+          M7_TEST_POSTGRES_ADMIN_URL: postgresql://postgres@127.0.0.1:5432/postgres
+          P04_ARTIFACT_DIR: .local/p04-admin-smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p04-admin-smoke
+          path: .local/p04-admin-smoke
+          if-no-files-found: ignore
 
   verify:
     name: verify
     if: always()
     needs:
+      - changes
       - infra
       - quality
       - unit
       - postgres_integration
+      - admin_integration
+      - app_build
       - build
     runs-on: ubuntu-latest
     timeout-minutes: 2
 
     steps:
-      - name: Require all verification jobs
+      - uses: actions/checkout@v4
+      - name: Require all verification jobs or proven Markdown-only scope
         env:
-          INFRA_RESULT: ${{ needs.infra.result }}
-          QUALITY_RESULT: ${{ needs.quality.result }}
-          UNIT_RESULT: ${{ needs.unit.result }}
-          POSTGRES_RESULT: ${{ needs.postgres_integration.result }}
-          BUILD_RESULT: ${{ needs.build.result }}
-        run: |
-          set -euo pipefail
-          for result in \
-            "${INFRA_RESULT}" \
-            "${QUALITY_RESULT}" \
-            "${UNIT_RESULT}" \
-            "${POSTGRES_RESULT}" \
-            "${BUILD_RESULT}"; do
-            if [[ "${result}" != "success" ]]; then
-              echo "Verification dependency did not succeed: ${result}" >&2
-              exit 1
-            fi
-          done
+          VERIFICATION_NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/verification-scope.mjs --gate
 
+  b0-publish:
+    name: B0 publish probe
+    if: >-
+      false &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.base.ref == 'migration_develop' &&
+      github.event.pull_request.head.ref == 'migration_main' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: verify
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    environment: oci-development-image
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Validate source and verification tree
+        id: source
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
+            await promotion.prepare({ github, context, core });
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.OCIR_REGISTRY }}
+          username: ${{ secrets.OCIR_USERNAME }}
+          password: ${{ secrets.OCIR_AUTH_TOKEN }}
+      - name: Publish tiny images with existing publisher credentials
+        env:
+          SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
+          OCIR_REGISTRY: ${{ vars.OCIR_REGISTRY }}
+          OCIR_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
+        run: python3 -I ops/oci/b0-ci-probe.py publish
+      - uses: actions/upload-artifact@v4
+        with:
+          name: b0-publish-${{ steps.source.outputs.source_sha }}-${{ github.run_attempt }}
+          path: b0-proof.json
+          if-no-files-found: error
+          retention-days: 14
+
+  # One release verification; build only affected apps using proven paired deployment evidence.
   promotion-candidate:
     name: promotion candidate
     if: >-
@@ -255,14 +495,20 @@ jobs:
       OCIR_REGISTRY: ${{ vars.OCIR_REGISTRY }}
       OCIR_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
       OCIR_REPOSITORY: ${{ vars.OCIR_REPOSITORY }}
+      OCIR_CONSOLE_REPOSITORY: ${{ vars.OCIR_CONSOLE_REPOSITORY }}
       NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+      NEXT_PUBLIC_APP_ENV: staging
+      NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
+      SENTRY_SOURCE_MAPS_ENABLED: "true"
       IMAGE_REPOSITORY: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ vars.OCIR_REPOSITORY }}
+      CONSOLE_IMAGE_REPOSITORY: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ vars.OCIR_CONSOLE_REPOSITORY }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
       - name: Validate promotion source and verification tree
         id: source
         uses: actions/github-script@v7
@@ -274,13 +520,51 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
-          required=(OCIR_REGISTRY OCIR_NAMESPACE OCIR_REPOSITORY NEXT_PUBLIC_SENTRY_DSN SENTRY_ORG SENTRY_PROJECT SENTRY_AUTH_TOKEN)
+          required=(OCIR_REGISTRY OCIR_NAMESPACE OCIR_REPOSITORY OCIR_CONSOLE_REPOSITORY NEXT_PUBLIC_SENTRY_DSN SENTRY_ORG SENTRY_PROJECT SENTRY_AUTH_TOKEN)
           for name in "${required[@]}"; do
             if [[ -z "${!name}" ]]; then
               echo "Missing GitHub environment configuration: ${name}" >&2
               exit 1
             fi
           done
+          [[ "${IMAGE_REPOSITORY}" != "${CONSOLE_IMAGE_REPOSITORY}" ]]
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Find last successful paired deployment evidence
+        id: baseline
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const reuse = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/release-baseline.mjs');
+            await reuse.findBaseline({ github, context, core });
+      - uses: actions/download-artifact@v4
+        if: steps.baseline.outputs.artifact_id != ''
+        continue-on-error: true
+        with:
+          artifact-ids: ${{ steps.baseline.outputs.artifact_id }}
+          run-id: ${{ steps.baseline.outputs.run_id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/paired-baseline
+      - name: Validate deployment evidence and select image builds
+        id: selection
+        uses: actions/github-script@v7
+        env:
+          IMAGE_PLAN_FILE: ${{ runner.temp }}/promotion-image-plan.json
+          BASELINE_DIR: ${{ runner.temp }}/paired-baseline
+          BASELINE_ARTIFACT_ID: ${{ steps.baseline.outputs.artifact_id }}
+          BASELINE_RUN_ID: ${{ steps.baseline.outputs.run_id }}
+          BASELINE_RUN_ATTEMPT: ${{ steps.baseline.outputs.run_attempt }}
+        with:
+          script: |
+            const reuse = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/release-baseline.mjs');
+            await reuse.selectImages({ github, context, core });
       - uses: docker/setup-buildx-action@v3
       - name: Log in to OCIR
         uses: docker/login-action@v3
@@ -288,15 +572,18 @@ jobs:
           registry: ${{ env.OCIR_REGISTRY }}
           username: ${{ secrets.OCIR_USERNAME }}
           password: ${{ secrets.OCIR_AUTH_TOKEN }}
-      - name: Build and publish ARM64 candidate
+      - name: Build and publish ARM64 Web candidate
         id: image
+        if: steps.selection.outputs.build_web == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
+          target: runner
           platforms: linux/arm64
           push: true
           tags: ${{ env.IMAGE_REPOSITORY }}:candidate-${{ steps.source.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: |
+            BUILD_APP=web
             NEXT_PUBLIC_APP_ENV=staging
             NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
@@ -309,45 +596,54 @@ jobs:
           labels: |
             org.opencontainers.image.revision=${{ steps.source.outputs.source_sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=min
-      - uses: pnpm/action-setup@v4
+          cache-from: type=gha,scope=promotion-web
+          cache-to: type=gha,scope=promotion-web,mode=min
+      - name: Build and publish ARM64 Console candidate
+        id: console-image
+        if: steps.selection.outputs.build_console == 'true'
+        uses: docker/build-push-action@v6
         with:
-          version: 10.15.1
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.16.0
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          context: .
+          target: runner-console
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.CONSOLE_IMAGE_REPOSITORY }}:candidate-${{ steps.source.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          build-args: |
+            BUILD_APP=console
+            NEXT_PUBLIC_APP_ENV=staging
+            NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
+            SENTRY_ORG=${{ env.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ env.SENTRY_PROJECT }}
+            SENTRY_RELEASE=oioi-bwg@${{ steps.source.outputs.source_sha }}
+            SENTRY_SOURCE_MAPS_ENABLED=true
+          secrets: |
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+          labels: |
+            org.opencontainers.image.revision=${{ steps.source.outputs.source_sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=promotion-console
+          cache-to: type=gha,scope=promotion-console,mode=min
       - name: Migrate isolated smoke database
         run: pnpm db:migrate
         env:
           DATABASE_URL: postgresql://postgres@127.0.0.1:5432/promotion_smoke
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Pull and smoke the published digest
+      - name: Pull and smoke the exact image pair together
         env:
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
-        run: |
-          set -euo pipefail
-          [[ "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]
-          image="${IMAGE_REPOSITORY}@${IMAGE_DIGEST}"
-          docker pull --platform linux/arm64 "${image}"
-          [[ "$(docker image inspect "${image}" --format '{{.Architecture}}')" == 'arm64' ]]
-          docker run --detach --name promotion-smoke --network host \
-            --env DATABASE_URL=postgresql://postgres@127.0.0.1:5432/promotion_smoke \
-            --env AUTH_SECRET=promotion-smoke-local-only-secret --env AUTH_TRUST_HOST=true "${image}"
-          trap 'docker logs promotion-smoke; docker rm --force promotion-smoke' EXIT
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent --output /dev/null http://127.0.0.1:3000/readyz; then break; fi
-            sleep 1
-          done
-          curl --fail --silent --output /dev/null http://127.0.0.1:3000/readyz
-          curl --fail --silent --output /dev/null http://127.0.0.1:3000/
-          node tests/ops/web-standalone-smoke.mjs http://127.0.0.1:3000
+          PAIR_SMOKE_FILE: ${{ runner.temp }}/promotion-pair-smoke.json
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.selection.outputs.web_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest || steps.selection.outputs.console_digest }}
+          WEB_BUILD_SOURCE_SHA: ${{ steps.selection.outputs.web_build_source_sha }}
+          CONSOLE_BUILD_SOURCE_SHA: ${{ steps.selection.outputs.console_build_source_sha }}
+        run: bash ops/oci/smoke-paired-candidate.sh
       - name: Record verified candidate and recheck head
         uses: actions/github-script@v7
         env:
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          IMAGE_PLAN_FILE: ${{ runner.temp }}/promotion-image-plan.json
+          PAIR_SMOKE_FILE: ${{ runner.temp }}/promotion-pair-smoke.json
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.selection.outputs.web_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest || steps.selection.outputs.console_digest }}
         with:
           script: |
             const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
@@ -358,16 +654,21 @@ jobs:
           path: candidate.json
           if-no-files-found: error
           retention-days: 90
+      - name: Clean up candidate smoke containers
+        if: always()
+        run: docker rm --force promotion-smoke console-promotion-smoke >/dev/null 2>&1 || true
       - name: Notify candidate result
         if: always()
         continue-on-error: true
         env:
           SLACK_DEPLOY_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK_URL }}
           PHASE: candidate
-          PUBLISH_RESULT: ${{ steps.image.outcome }}
+          PUBLISH_RESULT: ${{ steps.image.outcome == 'skipped' && 'reused' || steps.image.outcome }}
+          CONSOLE_PUBLISH_RESULT: ${{ steps.console-image.outcome == 'skipped' && 'reused' || steps.console-image.outcome }}
           CANDIDATE_RESULT: ${{ job.status }}
           SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.selection.outputs.web_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest || steps.selection.outputs.console_digest }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           python3 ops/oci/slack-deploy-payload.py > /tmp/slack-payload.json

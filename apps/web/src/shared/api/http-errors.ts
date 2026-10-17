@@ -1,12 +1,11 @@
-import { isHTTPError, isNetworkError, isTimeoutError } from "ky";
-import { z } from "zod";
-
 import {
   type ApiErrorCode,
   type ApiErrorResponse,
   apiErrorResponseSchema,
   validationErrorDetailsSchema,
-} from "@/shared/contracts/error";
+} from "@oioi-bwg/contracts/error";
+import { isHTTPError, isNetworkError, isTimeoutError } from "ky";
+import { z } from "zod";
 
 export class ApiError extends Error {
   readonly status: number;

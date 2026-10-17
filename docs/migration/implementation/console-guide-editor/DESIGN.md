@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-05"
-revision: 6
+updated_at: "2026-10-11"
+revision: 7
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -239,7 +239,11 @@ Queue OCID/message endpoint는 배포 설정으로 고정하며 runtime에 Queue
 Console은 OCI SDK/credential을 사용하지 않고 Runner가 내부 결과 API에 쓰는 service token과 OCI 인증은 별개다.
 **IAM 주체는 container/process가 아니라 VM이며 이 VM을 OCI trust boundary로 본다.**
 Runner로 호출을 모아도 IAM 차원의 process별 권한 분리가 생기지는 않는다. Console/Web/worker의
-metadata 접근을 차단하고 host root 권한은 이 경계 안에 둔다. 실제 IAM/socket/metadata 제한은 P08에서 확인한다.
+metadata 접근을 차단하고 host root 권한은 이 경계 안에 둔다. Console MFA secret의 VM 읽기
+권한을 추가하는 **P06에서 Web/Console metadata 차단을 실제 VM에서 확인한다.** env 분리만으로
+접근 격리를 주장하지 않는다. [P06 계획 §4.1~4.2](P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)의
+선행 차단·host 양성 대조·재시작/복구 검증을 따른다. P08은 Runner/worker·Queue IAM·Unix socket을
+추가 검증하고 기존 Web/Console 차단도 재검증한다.
 
 Queue payload는 `{ jobId, songId, videoId }`만 받는다. image/command/argument/volume/env를 받지 않는다.
 Runner는 message의 songId/videoId를 DB job과 대조한 뒤 실행한다.

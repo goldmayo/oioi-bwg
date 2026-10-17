@@ -5,6 +5,22 @@ set -Eeuo pipefail
 [[ "${EUID}" == "0" ]] || { printf 'M9 host preflight requires root\n' >&2; exit 1; }
 runtime_root="${OIOI_RUNTIME_ROOT:-/srv/oioibawige}"
 config_root="${OIOI_CONFIG_ROOT:-/etc/oioibawige}"
+# Stop before Docker/Instance Principal calls when a privileged path is replaceable.
+python3 -I - "${runtime_root}" "${config_root}" <<'PYTHON'
+import stat
+import sys
+from pathlib import Path
+runtime, config = map(Path, sys.argv[1:3])
+try:
+    for root in (runtime, runtime / 'scripts', runtime / 'deploy', config):
+        for path in (*reversed(root.parents), root):
+            info = path.lstat()
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+                raise ValueError()
+except (OSError, ValueError):
+    print('Host preflight path is not root-protected', file=sys.stderr)
+    sys.exit(1)
+PYTHON
 failures=0
 
 pass() {
@@ -76,13 +92,17 @@ fi
 runtime_files=(
   "${runtime_root}/compose.oci-development.yml" \
   "${runtime_root}/scripts/deploy-release.sh" \
+  "${runtime_root}/scripts/materialize-runtime-env.py" \
+  "${runtime_root}/scripts/paired-release.py" \
   "${runtime_root}/scripts/publish-filesystem-metric.sh" \
   "${runtime_root}/scripts/run-command-probe.sh"
 )
 config_files=(
   "${config_root}/deploy.conf" \
   "${config_root}/runtime-public.env" \
-  "${config_root}/runtime-secrets.env"
+  "${config_root}/runtime-secrets.env" \
+  "${config_root}/console-runtime-public.env" \
+  "${config_root}/console-runtime-secrets.env"
 )
 for required_file in "${runtime_files[@]}" "${config_files[@]}"; do
   [[ -f "${required_file}" ]] && pass "file:${required_file}" || fail "file:${required_file}"
@@ -97,12 +117,22 @@ for protected_file in "${config_files[@]}"; do
 done
 
 for root_file in "${runtime_files[@]}" "${config_files[@]}"; do
-  if [[ -f "${root_file}" ]] && [[ -z "$(find "${root_file}" -maxdepth 0 \( ! -user root -o -perm /022 \) -print -quit)" ]]; then
+  if [[ -f "${root_file}" && ! -L "${root_file}" ]] && [[ -z "$(find "${root_file}" -maxdepth 0 \( ! -user root -o -perm /022 -o ! -links 1 \) -print -quit)" ]]; then
     pass "root-owned-not-writable:${root_file}"
   else
     fail "root-owned-not-writable:${root_file}"
   fi
 done
+
+if grep -q '^CONSOLE_IMAGE_REPOSITORY=' "${config_root}/deploy.conf" &&
+  grep -q '^CONSOLE_PORT=' "${config_root}/deploy.conf" &&
+  grep -q '^CONSOLE_SMOKE_PATHS=' "${config_root}/deploy.conf" &&
+  grep -q '^  web:' "${runtime_root}/compose.oci-development.yml" &&
+  grep -q '^  console:' "${runtime_root}/compose.oci-development.yml"; then
+  pass paired-host-configuration
+else
+  fail paired-host-configuration
+fi
 
 # Oracle Cloud Agent 1.61.0 added Ubuntu snap support for Compute Run Command.
 # Keep a real, secret-free probe as runtime evidence in addition to the version gate.

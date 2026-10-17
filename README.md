@@ -107,6 +107,10 @@ pnpm install --frozen-lockfile
 `pnpm dev`, `pnpm build`, `pnpm start`는 루트에서 web workspace를 실행합니다.
 검증·DB 명령은 기존과 같이 저장소 루트에서 실행합니다.
 
+Console MFA를 로컬에서 확인하려면 `apps/console/.env.example`의 주석대로 `.env.local`을 준비한 뒤
+`pnpm dev:console:local`을 실행합니다. PostgreSQL 시작·migration·Console 실행을 한 번에 처리합니다.
+등록과 로그인 순서는 [Console 로컬 확인 절차](docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#console-mfa-로컬-확인-p05-이후)를 따릅니다.
+
 ### 로컬 Docker 개발환경
 
 ```bash

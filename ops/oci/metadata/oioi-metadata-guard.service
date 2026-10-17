@@ -1,0 +1,12 @@
+[Unit]
+Description=Block forwarded OCI Instance Metadata before Docker starts
+Before=docker.service
+After=nftables.service firewalld.service ufw.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=PATH=/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/bin/python3 -I /usr/local/lib/oioi-metadata-guard/metadata-guard.py apply
+ExecReload=/usr/bin/python3 -I /usr/local/lib/oioi-metadata-guard/metadata-guard.py apply
+# Stop intentionally leaves the deny rule in place.
