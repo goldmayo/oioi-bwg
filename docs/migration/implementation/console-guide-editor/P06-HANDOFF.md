@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-18"
-revision: 26
+revision: 34
 ---
 
 # P06 작업 인계
@@ -12,26 +12,20 @@ revision: 26
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- 최신 진입점: **첫 정상 pair·두 앱 IMDS 검증 완료 / 반복 승격 baseline 연결 수정 검증 완료·PR 대기 / 유지보수 503**.
-  #158은 `070dcc9`에 병합됐다. Deploy [39042193932 attempt 1](https://github.com/goldmayo/oioi-bwg/actions/runs/39042193932/attempts/1)은
-  의도한 실패와 기존 Web 복구 exit 20이다. 사용자 `verify-legacy`·`restore-settings`도 성공했다.
-  실패 job만 재실행한 **attempt 2는 OCI SUCCEEDED·exit 0·Actions 전체 성공**이다. Web/Console healthz·readyz 네 검사는 모두 200이다.
-  DB ID/StartedAt은 유지됐고 기존 app은 제거됐다. 성공 artifact `12105120483`의 candidate가 원래 후보와 동일하며,
-  실제 `validateBaseline`으로 source/tree·필수 CI·미만료 artifact·PR/merge/run/attempt·receipt를 대조했다.
-  source `3a69948`, 정상 release ID `37bd0ae9184be182791fcdcab8c08270f08f1c77e331e0f404719bec7bef1874`를 유지한다.
-  사용자의 `p06_pair_phase_passed: verify-pair`로 보호 snapshot/두 env·image/config와 두 앱 IMDS 검증을 확인했다.
-  후속 [Promotion #159](https://github.com/goldmayo/oioi-bwg/pull/159)의 Verify `39043458634`는 전체 성공했지만
-  후보 `12105207454`는 baseline=null·두 origin=built·원래와 다른 digest라 병합하지 않는다.
-  #159 생성 뒤 GitHub가 기존 성공 Deploy run의 `pull_requests`를 `[159]`로 재연결해 정상 receipt가 거절됨을 실제 API로 재현했다.
-  candidate/receipt의 고정 PR·SHA/tree 검증을 유지하고 mutable association 대신 deploy run source SHA를 검사하도록 수정했다.
-  수정 전 회귀 2건 실패·수정 후 baseline 28건 및 실제 첫 receipt 재검증이 성공했다.
-  이 코드 수정은 현재 결과 checkpoint와 같은 PR로 검증한다. `prepare-pair-failure`는 아직 실행하지 않는다.
-  수정 병합 후 source SHA가 달라지므로 후속 운영 승인 범위 재확인이 필요하다. `migration_develop` strict latest-base 규칙도
-  별도 문제로 남아 있다. 원본/임시 JSON과 일회성 예외안만 로컬에 준비했으며 원격 보호 설정은 변경하지 않았다.
-  운영 자료는 원래 worktree의 ignored `.local/p06-b2-operation2`에 있으며, 운영 작업 2 전체와 해당 후속 Promotion 병합은 이미 승인됐다.
-  Docker/VM 재시작·preview 원복은 아직 남아 있다. 추가 DB 변경·키 재생성·C/D/E 확장은 없다.
-  결과 누적 경로는 `.local/worktrees/p06b2-acceptance`, 브랜치 `feature/p06b2-acceptance`(base `3a69948`)다.
-  실제 proof의 소유자는 [B2-3 RESULT](P06-B2-3-RESULT.md)이며 아래 준비/미반영 표시는 당시 이력이다.
+- 최신 진입점: **P06-B 완료 / 첫 정상 pair 유지 / preview 원복 완료 / 다음 단계 C**.
+  호스트 보호·백업/업그레이드·Console 설정과 승인된 기존 0005 적용, 첫 공동 배포와 기존 Web 복구,
+  공동 rollback·실제 두 앱 IMDS 차단/host 양성 대조·두 앱 재생성·Docker/VM 재시작 지속성을 확인했다.
+  사용자 root의 `verify-reboot`·`record-resources`·`finish`가 성공했고 SSH에서도 두 앱/DB healthy,
+  Docker/Caddy/IMDS guard active·네 loopback health/readiness 200·preview 원본 `/`/`/healthz`/`/readyz` 200을 대조했다.
+  실제 수치·원격 종료·digest·승인/예외 이력의 canonical 결과는 [B2-3 RESULT](P06-B2-3-RESULT.md#2026-10-18-b-운영-실증-완료와-최종-상태)가 소유한다.
+  #158 Deploy `39042193932` attempt 2의 첫 정상 pair와 receipt를 유지한다. #159는 새 두 digest로
+  의도적 smoke 실패·공동 rollback(exit 20)을 검증했으므로 새 성공 receipt는 없고 재실행하지 않는다.
+  #160 baseline 수정·#161 한정 이력 연결은 승인 병합됐다. #161 직후 두 merge 방식 설정은 원본으로 복원했다.
+  #142는 병합 없이 CLOSED다. B0 게시 최소 권한 재설계의 승인된 후속 보류도 유지한다.
+  다음은 C의 제한된 HTTPS/cookie/신뢰 IP 경계다. 실물 MFA·CLI/키 복구 검증은 D,
+  Web 관리/가입 경로 종료는 E, www 전환·레거시 종료는 F에 둔다. 운영 적용·새 PR 병합은 별도 승인이다.
+  자원은 유휴 단일 관찰이며 동시 CRUD/부하 수용량을 증명하지 않는다. 공개 gate의 추가 관측은 C/D/F에서 유지한다.
+  결과 작업 경로는 `.local/worktrees/p06b-completion`이다. 아래 대기·OPEN 표시는 당시 이력이다.
 - 이전 호스트·DB 준비 기록: **호스트·Console 설정 준비 및 승인된 DB 0005 적용 완료 / 실제 공동 배포 전**.
   #155는 `296e463`에 병합됐고 이 head의 #142 Verify `39033668584`가 두 ARM64 새 후보까지 전체 성공했다.
   자세한 실제 결과는 [B2-3 RESULT](P06-B2-3-RESULT.md#2026-10-17-첫-운영-작업-완료와-db-사전-확인)가 소유한다.

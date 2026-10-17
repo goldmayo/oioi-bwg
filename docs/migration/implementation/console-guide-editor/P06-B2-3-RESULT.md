@@ -8,6 +8,8 @@ verified_at: "2026-10-18"
 
 # P06-B2-3 결과
 
+**2026-10-18 합의된 B 운영 실증을 완료했다.** 현재 상태와 실제 증거는 [최종 결과](#2026-10-18-b-운영-실증-완료와-최종-상태)가 소유한다. 아래 날짜별 대기/미실행 표시는 당시 관찰 이력이다.
+
 [P06 계획](P06-PLAN.md) §5의 독립 container 교체와 공동 rollback을 #149의 env helper 위에 구현했다.
 최신 main `18de205`에서 분기하고 #149 head `c19d0a7`을 fast-forward로 반영했다. #149 브랜치는 변경하지 않았다.
 후보 source/build source 분리는 사용자 요청을 적용하며, 상세 계약은 active 배포 runbook §19/21이 소유한다.
@@ -281,3 +283,163 @@ mutable `run.pull_requests`를 권한 근거로 쓰지 않고 deploy run의 `hea
 jq PATH를 지정한 전체 ops 211건이 성공했다. 후속 lint/FSD는 harness 종료 후 실행했다.
 두 앱 `pnpm build`도 캐시 0으로 성공했다. commit/push hook 및 원격 검증은 PR 본문에서 추적한다.
 #159는 실제 후보와 승인 범위 불일치를 본문에 명시하고 Draft로 전환했다. 정상 pair와 유지보수 503을 유지한다.
+
+## 2026-10-18 수정 병합과 승격 이력 연결 준비
+
+사용자가 #160 squash 병합을 승인했다. 최종 head `7fb8590`과 Verify `39045460509` 전체 성공을 다시 대조하고
+PR 제목/본문으로 `1f3a7dc4a52b22000625560d370dfe5198fad888`에 병합했다. 실제 배포·보호 설정 변경은 포함하지 않는다.
+
+#159의 새 source는 이전 squash 승격과 충돌(`dirty`)해 새 후보 CI가 시작되지 않았다. 과거 #143과 같은
+조상 관계 문제다. develop `070dcc9`의 tree가 main 조상 `3a69948`의 tree와 같고 후자가 최신 main의 조상임을 대조했다.
+최신 main `1f3a7dc`에서 분기해 파일 변경 0개인 [#161](https://github.com/goldmayo/oioi-bwg/pull/161)을 준비했다.
+head `5cb0844dbb16ffd8f5ac8b85eb67e36a2cd01bee`의 부모는 main/develop이며 ours merge로 조상 관계만 연결한다.
+현재 코드 tree `bfe58d95661f9b57d5459c8f29c6eb9f8a420c47` 보존과 통합/승격 virtual merge tree 일치,
+develop 조상 포함을 실제 Git으로 검증했다. push hook의 repo type-check/lint·harness 18·ops 211·format은 성공했다.
+Turbo affected는 앱 task 0개이며 별도 앱 검사를 실행했다고 보고하지 않는다. 원격 필수 CI를 확인한 뒤 승인 요청한다.
+
+이 PR의 일반 merge와 repo/main 허용 방식의 일시 추가·즉시 원복은 별도 승인 대기다. verify/strict/PR/force-push 보호는 유지하고
+migration_develop 설정은 바꾸지 않는다. 이 경로로 충돌과 latest-base 조건을 함께 해소하므로 앞선 strict=false 예외안은 실행하지 않는다.
+정상 pair와 preview 503을 유지하며 실제 VM·DB·키/Secret·Caddy·추가 배포 변경은 없다. 새 후보가 없어 운영 승인도 요청하지 않았다.
+이 절은 운영 결과 누적 worktree의 미커밋 기록이며 파일 0개 #161의 tree에는 포함하지 않는다.
+
+#161 Verify `39047081892` attempt 1은 전체 성공했고 Compose 보존/복구와 Admin migration integration도 성공했다.
+원격 PR의 파일 0개·head/base/virtual tree와 repo/main 보호 설정 원본 일치를 다시 대조했다.
+사용자에게 #161 한정 일반 merge와 두 merge 방식 허용 설정의 일시 추가·즉시 원복 승인을 요청했다.
+#160 승인에는 보호 설정 변경이 제외돼 있어 이 추가 작업은 승인 전 실행하지 않는다.
+후속 SSH에서도 두 앱 healthy·healthz/readyz 4건 200, DB 시작 시각 유지, preview 503을 확인했다.
+
+## 2026-10-18 승인된 이력 연결 실행과 새 후보 시작
+
+사용자가 #161의 일회성 연결과 repo/main merge 방식의 임시 추가·즉시 원복을 승인했다.
+head `5cb0844`·base `1f3a7dc`·Verify `39047081892` 전체 성공·파일 0개와 원본 설정을 다시 대조했다.
+최종 PR 제목/본문으로 `bcad0253e6e94fc2a07116f7b8b64dd59b235417`에 일반 merge했다.
+병합 API 직후 finally에서 두 설정을 복원했고 repo merge booleans와 main ruleset 전체가 원본과 일치했다.
+verify/strict/PR 보호는 유지했으며 develop 설정은 변경하지 않았다.
+새 merge의 부모 `[1f3a7dc,5cb0844]` 및 tree `bfe58d95661f9b57d5459c8f29c6eb9f8a420c47` 보존을 API로,
+develop `070dcc9`의 조상 포함과 파일 diff 0을 실제 Git으로 대조했다.
+
+#159는 충돌이 해소됐고 source `bcad025`의 Verify `39049858063`이 자동 시작됐다.
+새 후보의 첫 정상 receipt baseline·source/tree/run/attempt·두 ARM64 digest를 검증한다.
+이전 후보나 고정 source 3a69948의 운영 승인을 새 후보에 적용하지 않는다. VM·DB·Caddy·실제 배포 변경은 없다.
+
+## 2026-10-18 새 후보 검증 완료와 남은 실증 승인안
+
+source `bcad0253e6e94fc2a07116f7b8b64dd59b235417` / tree `bfe58d95661f9b57d5459c8f29c6eb9f8a420c47`의
+[Verify 39049858063 attempt 1](https://github.com/goldmayo/oioi-bwg/actions/runs/39049858063)은 전체 성공했다.
+artifact `12106958454`를 내려받아 PR/source/tree/run/attempt·두 고정 repository·build 설정 hash와 미만료를 대조했다.
+baseline은 첫 실제 성공 artifact `12105120483` / run `39042193932` attempt 2 /
+release `37bd0ae9184be182791fcdcab8c08270f08f1c77e331e0f404719bec7bef1874`와 정확히 같다.
+이전 baseline=null 오류가 해결됐으며 ops/docs 변경에 따라 두 image는 origin=built/buildSourceSha=현재 source다.
+
+- Web: `sha256:852055a909b3bf93781b8e4aa3988919dfa6c8238a089ddf8bb7c9e36c17c49e`
+- Console: `sha256:20ecee48080234b52c1d84c6d6204dd355f07e3006450353edad55e3c1088082`
+- candidate JSON SHA-256: `316a8e94e8e87797fac25a701a0424636dbad27f72f67faa4b91c594a95c37a4`
+
+두 exact digest의 동시 ARM64 smoke와 필수 promotion까지 성공했다. main/PR head/virtual tree도 일치한다.
+기존 host paired helper hash는 `30cbae922f6da47b821c54b0dc338bfa3467c24c48de3f5f4cab924fa4ffd79f`로 같아 재설치하지 않는다.
+
+남은 실증용 ignored `fixed-candidate`에 새 검증 파일·root launch·고정 후보·review/provenance를 준비했다.
+operator SHA-256은 `3fe3bbab092ce8427657c38fd5391fb6e08895ab958f154e88bef36582c36a27`다. 원래 정상 snapshot/candidate 보호는 유지하고
+새 trial candidate도 root 보호 파일/hash로 고정한다. 두 digest가 모두 달라 복구 후 두 앱 ID가 바뀌어야 한다.
+Web ID 유지로 보고하지 않으며, 네 변경 조합 보존/교체는 실제 CI Compose 결과와 구분한다.
+Python 구문/CLI·launch bash 구문·fixture 20개가 성공했다. 한쪽/두 ID 유지와 trial hash 변경/누락은 거절한다.
+fixture의 root ownership·Docker·Caddy·systemd는 모사이며 실제 VM 완료 증거가 아니다.
+
+#159의 source/digest·새 operator VM 전달/root 설치·의도적 Console 실패와 첫 정상 pair 복구에 대한 추가 승인을 요청했다.
+그 뒤 기존 승인된 재생성·Docker/VM 재시작·자원 관찰·preview 원복을 이어가는 범위다. #159는 아직 Draft다.
+이번 #161 승인에는 후보 준비만 포함돼 있어 VM 파일 전달·실패 조건 주입·#159 병합·실제 배포를 실행하지 않았다.
+추가 DB 변경·키 재생성·C/D/E 범위를 끌어오지 않는다. 위 기록은 기존 결과 누적 worktree에 보존한다.
+
+
+## 2026-10-18 새 후보 실증 승인과 VM 전달
+
+사용자가 `#159 새 후보 실증 승인`으로 source `bcad025`·artifact `12106958454`와 고정 operator의 전달/root 설치,
+#159 squash 병합 후 의도적 Console smoke 실패·첫 정상 pair 공동 복구(exit 20)를 승인했다. 이후 기존 승인된 두 앱 재생성·Docker/VM 재시작·자원 관찰·preview 원복을 이어간다.
+추가 DB 변경·키 재생성·새 외부 라우팅은 없다. 두 후보 digest가 모두 바뀌므로 두 앱 ID 교체 후 복귀를 검증한다.
+
+승인된 네 파일을 새 VM staging으로 전달했고 SSH에서 UID 1002·디렉터리 0700·스크립트 0700·후보/검토안 0600,
+일반 파일/link 1·네 파일 SHA-256을 대조했다. 기존 Web·Console·DB는 모두 healthy이며 preview는 503이다.
+root `prepare-pair-failure`는 아직 미실행이다. 사용자 터미널에서 성공 marker를 확인하기 전 #159를 병합하지 않는다.
+
+
+## 2026-10-18 새 후보 root 준비 성공과 #159 병합
+
+사용자 sudo 실행의 `p06_pair_phase_passed: prepare-pair-failure`를 확인했다.
+병합 직전 GitHub source/main head·virtual tree·최신 Verify `39049858063` attempt 1 전체 성공·artifact 미만료를 재대조했고,
+SSH에서 기존 Web·Console·DB healthy와 maintenance 503을 확인했다. PR 본문에 승인·실제 root 준비 결과를 반영한 뒤 Draft를 해제했다.
+
+[#159](https://github.com/goldmayo/oioi-bwg/pull/159)는 `5824928da588a9a27fc3a24f3a03c6de32053ec7`에 squash 병합했다.
+실제 merge tree는 source tree `bfe58d95661f9b57d5459c8f29c6eb9f8a420c47`와 일치한다.
+[Deploy `39051578608`](https://github.com/goldmayo/oioi-bwg/actions/runs/39051578608) attempt 1이 실행 중이며
+아직 exit 20·공동 복구 성공으로 기록하지 않는다.
+
+
+## 2026-10-18 #159 공동 rollback 실제 종료와 외부 관찰
+
+Deploy `39051578608` attempt 1은 OCI lifecycle `FAILED`·remote exit `20`·
+`Deployment result: candidate failed; rollback succeeded`로 종료됐다. 의도한 Console smoke 실패에 따른 rollback이며
+Actions 결론도 `failure`다. 성공 receipt artifact는 0개다. 전체 원격 로그는 ignored 비공개 증거에 저장했다.
+
+SSH 읽기 관찰에서 두 새 후보 digest가 실제 적용된 것을 포착했다. 이후 Web `dd3ad8fdba8e`·Console `74f693ca0efa`가
+첫 정상 두 digest로 복귀했고 둘 다 이전 정상 pair의 ID와 다르다. 두 앱의 `/healthz`·`/readyz` 네 경로가 200이며
+DB의 기존 container와 StartedAt이 유지되고 healthy다. preview는 유지보수 503을 유지한다.
+
+이 관찰로 보호 snapshot/env/config·IMDS의 root 검증까지 대신하지 않는다. 다음은 사용자 sudo의
+`verify-pair-recovery` → `recreate-pair` → `restart-docker` → `mark-reboot` → VM reboot다.
+이후 `verify-reboot`·자원/읽기 전용 DB 연결 관찰·`finish`로 preview를 원복한다. B 완료는 아직 선언하지 않는다.
+
+
+## 2026-10-18 root 공동 복구·재생성·Docker 재시작 통과와 VM 복귀
+
+사용자 root 실행에서 `verify-pair-recovery`·`recreate-pair`·`restart-docker`·`mark-reboot`의
+`p06_pair_phase_passed` marker 네 개를 확인했다. 고정 operator는 각 단계의 보호 pair/env/config·두 앱 health/smoke·
+IMDS 차단과 host 양성 대조를 검증하고, 명시적 재생성에서는 두 앱 ID 교체도 검증한다.
+`verify-pair-recovery` 성공으로 첫 정상 snapshot과 두 앱 복귀·입력 설정 원복까지 확인했다.
+
+사용자가 2026-10-18 02:04:50 KST의 reboot 메시지와 SSH 종료를 공유했다. 이후 SSH 복귀에서
+Docker·Caddy·IMDS guard가 active이며 Web `8c019ff395ac`·Console `ca5a1122718b`가 첫 정상 digest로 healthy임을 확인했다.
+기존 DB container도 재시작 후 healthy이고 두 앱의 health/readiness 네 경로는 200이다. preview는 아직 maintenance 503이다.
+boot ID 관찰은 비공개 증거에 보존하며, 보호된 재부팅 전 값과의 대조는 root `verify-reboot`에서 수행한다.
+
+남은 단계는 `verify-reboot` → `record-resources` → `finish`다. 자원 기록·preview 원복·B 완료는 아직 미검증이다.
+
+
+## 2026-10-18 B 운영 실증 완료와 최종 상태
+
+사용자 root 실행의 `verify-reboot`·`record-resources`·`finish`가 모두 성공했다.
+고정 operator는 재부팅 전후 boot ID 변경, 보호 첫 정상 pair/env/config·두 앱 health/smoke·IMDS 차단과
+host 양성 대조를 검증했다. 기존 입력 설정·enrollment=false를 복원하고 원본 Caddy hash를 대조해 reload한 뒤
+preview 원본 `/healthz`·`/readyz` 200을 확인했다. 키/비밀번호 재생성·추가 DB 변경은 없다.
+
+이후 SSH 읽기 조회에서도 Docker·Caddy·IMDS guard active, 두 앱·DB healthy, 두 앱 loopback
+`/healthz`·`/readyz` 네 경로 200, preview 원본 `/`·`/healthz`·`/readyz` 200을 확인했다.
+이는 기존 preview 라우팅 원복 증거이며 Console 외부 공개·최종 www 전환 증거가 아니다.
+
+| 합의한 B 완료 항목 | 실제 증거 |
+| --- | --- |
+| 호스트 보호·백업·upgrade·Console 설정 | 운영 작업 1 root 성공, 기존 Web/DB 무재시작·oioi traversal 보존 |
+| DB 준비 | 별도 승인된 기존 0005를 migrator로 적용, journal/hash·runtime 권한 검증 |
+| 첫 ARM64 공동 배포·기존 Web 복구 | #158, Deploy `39042193932` attempt 1 exit 20·legacy 복구, attempt 2 exit 0·immutable receipt |
+| 후속 baseline·공동 rollback | #160 수정·#161 승인 이력 연결 뒤 #159, Deploy `39051578608` attempt 1 exit 20·두 앱 교체 후 첫 정상 pair 복구, 성공 artifact 0개 |
+| IMDS·재시작 지속성 | root `verify-pair-recovery`·`recreate-pair`·`restart-docker`·`mark-reboot`·`verify-reboot` 성공 |
+| 자원 관찰·preview 원복 | root `record-resources`·`finish` 성공 및 이후 SSH health/원본 HTTPS 200 재대조 |
+
+현재 정상 pair는 #158 source `3a69948f1e459e3c02233e588653601c1795d328`,
+merge `070dcc94a95f3773ef22dd952a83a16e0ce94d6a`, receipt artifact `12105120483`이며 release ID는
+`37bd0ae9184be182791fcdcab8c08270f08f1c77e331e0f404719bec7bef1874`다.
+Web `sha256:8b05ce50204a6990ecc4a378162aa9567c6faa8712046c18d982ee54e24618f9`,
+Console `sha256:54877980d6648ef38b1a6ae4d5f643d781beba0ef1687a7217b02a0773f36260`을 유지한다.
+최신 rollback 실증 source/merge는 `bcad0253e6e94fc2a07116f7b8b64dd59b235417` /
+`5824928da588a9a27fc3a24f3a03c6de32053ec7`이다. 이는 두 앱의 현재 실행 build source와 구분한다.
+실패한 #159 실행을 exit 0으로 재실행하거나 새 후보를 추가 배포하지 않는다.
+
+사용자가 공유한 재부팅 후 유휴 관찰에서 Web CPU 0.00%·메모리 사용 197.4 MiB(1.66%)·PIDs 12,
+Console CPU 0.00%·메모리 사용 128.9 MiB(1.08%)·PIDs 12다. 두 앱이 보는 host memory는 11.65 GiB이며
+DB 연결은 8 / max_connections 50이다. Docker memory 사용량을 RSS나 부하 수용량으로 해석하지 않는다.
+동시 CRUD/부하·공개 상태의 관측과 pool/limit 판단은 후속 제한 운영·공개 gate에서 확인한다.
+
+합의한 두 운영 작업으로 B를 종료하며 C의 HTTPS/Secure cookie/신뢰 IP, D의 실물 MFA·CLI/키 복구,
+E의 Web 관리/가입 종료, F의 www 전환·레거시 종료는 남겨둔다. 선택적 재사용의 baseline 검증은 실제 API/후속 후보에서,
+네 변경 조합의 container 보존/교체는 실제 CI Compose에서 검증했다. 이번 후속 VM 실행은 두 새 이미지를 적용한
+공동 rollback이며 변경 없는 digest를 재사용한 VM 실증으로 보고하지 않는다. B 범위를 늘려 반복 배포하지 않는다.
+원문 운영 식별자와 보호 파일/실행 증거는 [비공개 VM 기록](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541)에 둔다.
