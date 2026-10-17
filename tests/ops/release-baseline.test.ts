@@ -59,6 +59,7 @@ function fixture() {
     run_attempt: 2,
     path: ".github/workflows/deploy-promotion.yml",
     event: "pull_request",
+    head_sha: candidate.sourceSha,
     head_branch: "migration_main",
     head_repository: { full_name: "goldmayo/oioi-bwg" },
     status: "completed",
@@ -219,6 +220,18 @@ describe("paired release evidence and conservative image selection", () => {
     expect(f.core.setOutput).toHaveBeenCalledWith("artifact_id", 99);
     await expect(validateBaseline(f)).resolves.toEqual(proof);
   });
+  test.each([{ associations: [] }, { associations: [{ number: 159 }] }])(
+    "keeps the immutable deployment PR when GitHub changes run associations to $associations",
+    async ({ associations }) => {
+      const f = fixture();
+      f.run.pull_requests = associations;
+      await expect(validateBaseline(f)).resolves.toEqual(proof);
+      expect(f.github.rest.pulls.get).toHaveBeenCalledWith({
+        ...f.context.repo,
+        pull_number: candidate.prNumber,
+      });
+    },
+  );
   test.each([
     "expired",
     "missing",
@@ -228,6 +241,7 @@ describe("paired release evidence and conservative image selection", () => {
     "receipt",
     "digest",
     "pr",
+    "deployment-source",
     "tree",
     "verification",
     "verification-artifact",
@@ -242,6 +256,7 @@ describe("paired release evidence and conservative image selection", () => {
     if (failure === "receipt") f.receipt.exitCode = 20;
     if (failure === "digest") f.candidate.images.web.digest = `sha256:${"0".repeat(64)}`;
     if (failure === "pr") f.pr.head.sha = "0".repeat(40);
+    if (failure === "deployment-source") f.run.head_sha = "0".repeat(40);
     if (failure === "tree") f.candidate.sourceTree = "0".repeat(40);
     if (failure === "verification") f.verification.run_attempt++;
     if (failure === "verification-artifact") f.verifiedArtifacts[0].expired = true;

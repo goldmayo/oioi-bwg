@@ -3,7 +3,7 @@ title: "P06-B2-3 paired 배포·복구 구현 결과"
 kind: migration-result
 status: active
 source_commit: c19d0a777f41e3ef4bcab571044e64a89714d4a4
-verified_at: "2026-10-17"
+verified_at: "2026-10-18"
 ---
 
 # P06-B2-3 결과
@@ -166,3 +166,118 @@ harness와 lint는 순차 실행했고 unit 캐시는 0이다. 두 앱 `pnpm bui
 실제 배포는 새 Promotion에서 승인한다. #156은 Verify `39037084058` 전체 성공 후 `73b03fb`에 squash 병합했다.
 #157에 해당 main을 merge하며 HANDOFF의 양쪽 결과를 보존하고 active 문서 version을 갱신했다.
 이는 기존 검증 코드와 활성화 변경의 결합이며 추가 운영 변경·기존 Web/DB 재시작을 실행하지 않았다.
+
+## 2026-10-17 통합 완료와 실제 승격 후보 검증
+
+#142는 사용자 진행 지시에 따라 병합 없이 CLOSED다. #156은 `73b03fb`, #157은 최종 Verify
+[39038838955](https://github.com/goldmayo/oioi-bwg/actions/runs/39038838955) 전체 성공 후
+`3a69948f1e459e3c02233e588653601c1795d328`에 squash 병합했다. 최종 통합 push hook의
+repo type/lint·harness 18건·ops 208건·format은 모두 성공했다. 앞 절의 main 미반영/OPEN은 당시 이력이다.
+
+실제 배포용 [Promotion #158](https://github.com/goldmayo/oioi-bwg/pull/158)을 생성했다.
+source는 위 main이며 source/virtual merge tree `7094c566ce5ca246401a9c431341663ab84bfdbc`가 일치한다.
+Verify [39039512429 attempt 1](https://github.com/goldmayo/oioi-bwg/actions/runs/39039512429)은
+일반 verify·ARM64 후보·필수 promotion까지 전체 성공했다. artifact `12103941074`를 내려받아
+PR/source/tree/run/attempt·고정된 두 repository와 schema를 실제 대조했다. baseline=null이고
+두 origin=built·buildSourceSha=현재 source다. 첫 배포에서 두 앱을 새로 빌드하는 조건을 충족한다.
+
+- Web: `sha256:8b05ce50204a6990ecc4a378162aa9567c6faa8712046c18d982ee54e24618f9`
+- Console: `sha256:54877980d6648ef38b1a6ae4d5f643d781beba0ef1687a7217b02a0773f36260`
+- candidate JSON SHA-256: `d8395a6a28f52cff5de956576c8785aee810d50b1b3197c237fb922ba7a0d957`
+
+기존 ignored `.local/p06-b2-operation2`에 후보와 유지보수·설정·수동 복구·metadata/재시작 검증용
+operator 자료를 준비했다. 최종 Python 구문/CLI와 shell 구문 검사가 성공했고 fixture 13개가 성공했다.
+fixture의 root ownership·Docker·Caddy·systemd는 모사이며 실제 운영 실증과 구분한다.
+운영 승인안은 `operation2-review.txt`, 실행 script는 `pair-operation.py`이고 SHA-256은
+`2e78b87b0fe93cd9fa924a94a20c4558e2d4faed845852dc9d68159638f2593b`다.
+
+두 파일의 VM 사용자 staging 전달과 hash 대조까지 진행했다. 실제 root 작업·maintenance·앱 교체·
+Docker/VM 재시작과 #158 병합은 승인 대기다. B의 첫 pair·기존 Web 복구·공동 rollback·두 앱 IMDS
+및 재시작 지속성 실증은 아직 완료되지 않았다. C/D/E 범위와 Auth/MFA 키·DB 보존 조건을 유지한다.
+
+## 운영 작업 2 전체 승인과 sudo 실행 대기
+
+사용자가 검토안과 고정 source/candidate/script를 대상으로 **공동 배포·복구 실증 전체 승인**을 제출했다.
+#158과 같은 source/digest·첫 정상 receipt를 사용하는 후속 Promotion 병합, preview 유지보수/원복,
+기존 Web·pair 복구 및 두 앱 IMDS/재생성/Docker·VM 재시작 실증이 범위다. 추가 DB 변경·키 재생성·C/D/E는 제외다.
+원격 #158의 head와 전체 CI 성공·현재 main 동일성을 재확인했고, VM 사용자 staging의 candidate/script hash와
+원본 Caddy hash·새 root 경로 부재를 다시 대조했다. SSH의 `sudo -n true`는 비밀번호 필요로 실패했다.
+승인 대기가 아니라 사용자 터미널의 기존 sudo 인증을 통한 최초 root launch 실행 대기다.
+아직 maintenance/root 작업이나 Promotion 병합을 실행하지 않았으며 성공 marker 확인 뒤 승인 범위대로 진행한다.
+
+## 2026-10-17 유지보수 준비 완료와 첫 Promotion 병합
+
+사용자가 hash 검증된 root launch를 실행해 `p06_pair_phase_passed: prepare-first-failure`를 확인했다.
+보호 backup과 의도적 Console smoke 실패 조건을 준비했고, SSH에서 기존 Web·DB의 ID/StartedAt 유지·healthy와
+origin HTTPS 503을 대조했다. 승인 범위대로 #158을 `070dcc94a95f3773ef22dd952a83a16e0ce94d6a`에 squash 병합했다.
+실제 [Deploy 39042193932](https://github.com/goldmayo/oioi-bwg/actions/runs/39042193932)는 실행 중이다.
+source/tree/candidate 검증은 성공했고 예상 결과는 Console smoke 실패 후 기존 Web 복구 exit 20이다.
+실제 복구와 정상 pair·receipt는 아직 확인 전이다. 앞 절의 sudo/병합 대기는 실행 전 이력이다.
+
+첫 실행은 OCI lifecycle FAILED·remote exit 20, `candidate failed; rollback succeeded`로 종료했다.
+Actions의 failure 표시는 의도한 복구 실증 결과이며 정상 배포 완료를 뜻하지 않는다. SSH에서 새 web/console의 정지와
+기존 app의 healthy 복구, PostgreSQL의 기존 ID/StartedAt 유지를 확인했다. 성공 receipt artifact는 생성되지 않았다.
+보호 state·snapshot과 복구 Web IMDS의 root 검증 및 원래 검사 설정 복원이 다음 단계다.
+
+사용자가 `p06_pair_phase_passed: verify-legacy`와 `restore-settings` 성공을 확인했다.
+보호 state·복구 Web IMDS와 원래 검사 설정 원복을 검증한 뒤, `gh run rerun 39042193932 --failed`로
+실패한 Deploy job만 attempt 2로 재실행했다. 후보 build/Verify는 반복하지 않았고 source·두 digest를 유지한다.
+정상 pair와 성공 receipt는 이번 재실행의 실제 결과로 확인한다.
+
+## 2026-10-17 첫 정상 공동 배포와 receipt 검증
+
+같은 Deploy `39042193932` attempt 2는 OCI lifecycle SUCCEEDED·remote exit 0 및 Actions 전체 성공으로 완료됐다.
+실제 Web/Console 두 container는 healthy이고 기존 app은 제거됐다. 각 loopback port의 `/healthz`·`/readyz`는
+모두 200이다. PostgreSQL은 최초 ID와 StartedAt `2026-10-14T13:25:05.482972749Z`를 유지했다.
+
+immutable artifact `12105120483`(`paired-deployment-39042193932-2`, 미만료)에서 candidate/receipt를 내려받았다.
+candidate는 처음 검증한 JSON과 동일하고 release ID는 `37bd0ae9184be182791fcdcab8c08270f08f1c77e331e0f404719bec7bef1874`다.
+현재 `validateBaseline` 함수를 실제 GitHub API에 연결해 두 고정 repository, 성공한 deploy run/attempt/job,
+PR/merge/source tree, 최초 Verify/필수 check·artifact 및 병합 전 생성 시각을 검증했다.
+receipt의 candidateArtifactId는 `12103941074`, mergedSha는 `070dcc94a95f3773ef22dd952a83a16e0ce94d6a`다.
+원문 OCI command ID는 비공개 증거에만 보존했다. 새 build나 전체 Verify는 재실행하지 않았다.
+
+다음은 사용자 sudo의 `verify-pair`로 보호 snapshot/env/config와 두 앱 IMDS를 검증하는 단계다.
+후속 동일 source/digest Promotion의 공동 rollback, container 재생성·Docker/VM 재시작·preview 원복 실증은 남아 있으며 B 완료로 선언하지 않는다.
+
+## 2026-10-18 정상 pair root 검증과 공동 rollback 후보
+
+사용자 sudo의 `p06_pair_phase_passed: verify-pair`가 성공했다. 첫 정상 pair의 보호 snapshot·두 env/config·
+실행 image/health와 두 앱 IMDS 차단·host 양성 대조를 확인했다. 원래 운영 작업 2의 승인 범위에서
+같은 source/digest·첫 정상 receipt를 기준으로 [Promotion #159](https://github.com/goldmayo/oioi-bwg/pull/159)를 생성했다.
+head는 `3a69948`, base는 #158 squash `070dcc9`이며 두 실제 branch 및 virtual merge tree는
+`7094c566ce5ca246401a9c431341663ab84bfdbc`로 일치한다. 새로운 소스 변경은 없다.
+Verify `39043458634`의 새 후보에서 baseline `12105120483`/`39042193932`/attempt 2와 두 reused digest를 검증한다.
+후보 성공과 root `prepare-pair-failure` 성공을 확인한 뒤에만 승인된 후속 Promotion을 병합한다.
+
+후속 병합의 필수 문제도 읽기 조회로 확인했다. `migration_develop` 전용 active ruleset은
+verify/promotion 필수 check와 strict latest-base 요구를 적용한다. #158 squash가 현재 source의 조상이
+아니므로 #159는 충돌 없는 동일 tree지만 `mergeable_state=behind`다. source SHA를 바꾸면 고정된 승인 범위를 벗어난다.
+동일 source를 유지할 최소 예외는 #159 병합 동안 strict boolean 1개만 false로 바꾸고 병합 API 직후 원복하는 것이다.
+원본/임시 ruleset JSON과 검토안을 ignored 로컬 자료에 준비했다. 다른 checks·보호 규칙을 유지하며,
+후보 검증과 별도 명시적 승인 전에는 원격 보호 설정을 바꾸지 않는다. 운영 설정/추가 DB 변경은 실행하지 않았다.
+
+## 2026-10-18 반복 승격의 mutable PR 연결 오류 수정
+
+#159 Verify `39043458634`는 전체 성공했다. 하지만 artifact `12105207454`를 내려받은 결과 baseline=null,
+두 origin=built이며 두 digest도 승인한 첫 pair와 다르다. 이 후보는 병합하지 않는다. 실제 운영 pair·설정은 유지했다.
+
+실제 API에서 기존 성공 Deploy `39042193932`의 `pull_requests`가 #159 생성 뒤 `[159]`로 바뀌었음을 확인했다.
+같은 첫 receipt가 생성 직후에는 validateBaseline을 통과했고 새 PR 생성 뒤에는 `Deployment PR mismatch`로 거절됐다.
+공개 build 설정 hash와 source는 변하지 않았고 실제 Turbo dry-run의 affected task는 비어 있어 두 앱 재사용으로 선택됐다.
+따라서 baseline 누락은 source/build 설정 변경 때문이 아니라 변경 가능한 GitHub run association 검사 때문이다.
+
+수정은 candidate의 고정 PR과 receipt의 merge/run/attempt를 기준으로 기존 API/tree/CI/artifact 검증을 유지한다.
+mutable `run.pull_requests`를 권한 근거로 쓰지 않고 deploy run의 `head_sha=sourceSha`를 명시적으로 검사한다.
+새 PR로 재연결되거나 association이 비어도 원래 candidate PR을 조회하는 회귀와 다른 run source 거절을 추가했다.
+정확한 파일 필터로 실행한 수정 전 검사에서 재연결/다른 source 두 사례가 실패했고 수정 후 28건 모두 성공했다.
+수정 함수에 실제 GitHub API와 첫 배포 receipt를 전달한 검증도 성공했다. 운영/보호 설정을 바꾸지 않았다.
+
+검증 도중 최초 ops 파일 필터 전달이 전체 suite를 실행해 jq 없는 PATH의 adapter 오류를 냈으므로 중단했다.
+또 lint/FSD가 harness 종료 전에 겹쳐 fixture ENOENT가 발생해 lint를 중단했다. harness는 18건 성공했고
+후속 lint/FSD와 전체 ops는 harness 종료 및 jq PATH 설정 후 순차 재검증한다. 이 시도의 실패를 코드 통과로 보고하지 않는다.
+
+수정 후 기본 여섯 검사(type-check·harness 18건·lint·lint:fsd·unit 459건·format)와
+jq PATH를 지정한 전체 ops 211건이 성공했다. 후속 lint/FSD는 harness 종료 후 실행했다.
+두 앱 `pnpm build`도 캐시 0으로 성공했다. commit/push hook 및 원격 검증은 PR 본문에서 추적한다.
+#159는 실제 후보와 승인 범위 불일치를 본문에 명시하고 Draft로 전환했다. 정상 pair와 유지보수 503을 유지한다.
