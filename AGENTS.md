@@ -275,6 +275,8 @@ pnpm build
 - Playwright: 브라우저, 핵심 사용자 흐름, async Server Component와 UI regression
 - ESLint/FSD harness: import 방향과 파일 배치 검증
 - 문서만 변경하는 작업은 요청된 경우 lint/typecheck/test/build를 실행하지 않는다.
+- 일반 `migration_main` PR의 전체 diff가 일반 파일 `.md` 변경뿐이면 CI는 scope 판정과 필수 `verify`만 실행한다.
+  feature 브랜치의 push hook도 같은 기준으로 검증을 생략한다. 코드 혼합·판정 실패·Promotion은 전체 검증을 유지한다.
 - 문서 작업의 push에서 Git hook이 검증을 자동 실행했다면, 별도 검증으로 계획한 것처럼 기록하지 않고 hook이 실행한 명령과 결과를 그대로 보고한다.
 - 테스트 도구나 번들러의 기본 동작을 추측하지 말고 현재 config와 공식 문서를 확인한다.
 
