@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-17"
-revision: 19
+revision: 20
 ---
 
 # P06 작업 인계
@@ -12,6 +12,9 @@ revision: 19
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
+- #155는 전체 Verify `39033116630` 성공 후 `296e463`에 병합했다. 아래 host 전환안은 여전히 미적용이다.
+  사용자 요청의 문서 CI 생략은 별도 `feature/docs-only-verification`에서 이 main을 기준으로 구현한다.
+  결과는 [문서 검증 RESULT](../DOCUMENTATION-VERIFICATION-RESULT.md), 운영 설치/배포 승인과는 별개다.
 - 현재 단계: **#149~#154 병합 완료 / 실제 VM은 단일 Web 유지 / host upgrade 승인안 준비**.
   env #149 `8a46e3f`, 후보 계약 #150 `ac729af`, paired host #151 `a8b66d8`, workflow 연결 #152 `5a8e31c`,
   설치 누락 수정 #153 `998f46b`, root 경로 보호 #154 `d95d368`을 GitHub에서 재확인했다.
@@ -31,8 +34,8 @@ revision: 19
 - 다음 단계: 기존 SSH 계정 `oioi`로 접속한다. sudo는 사용자 터미널의 기존 인증을 사용한다.
   두 사용자 소유 디렉터리 보호·백업·명시적 asset upgrade → Console 보호 설정 → DB 준비 별도 승인 → 첫 pair 검증 순서다.
   세부 명령과 설치 실패/첫 배포 실패/중단의 복구 구분은 [운영 절차](../../../../ops/oci/README.md#9-p06-최초-host-전환)를 따른다.
-  최신 #142 Verify `38944025086`은 ops fixture 전체 180초 제한에서 실패했고 후보 생성은 skipped다.
-  이를 해결하고 최신 source의 두 ARM64 digest 조합을 검증해야 한다. 전체 CI의 무조건 재실행은 하지 않는다.
+  이전 #142 Verify `38944025086`은 ops fixture 전체 180초 제한에서 실패했고 후보 생성은 skipped였다.
+  #155 후속 run `39033668584`의 unit/ops는 성공했다. 후보 최신 상태는 GitHub에서 대조하며 무조건 전체 재실행하지 않는다.
   OCI/Run Command 전 차단과 #142 OPEN을 유지한다. 실제 설치·DB·배포·차단 해제는 이번 준비 승인에 포함되지 않는다.
 - 이전 진행 기록(아래 실패·대기는 당시 상태이며 최종 통과 증거는 RESULT가 소유한다):
   검증용 [#142](https://github.com/goldmayo/oioi-bwg/pull/142)의 작은 두 repo push 재검증 →
