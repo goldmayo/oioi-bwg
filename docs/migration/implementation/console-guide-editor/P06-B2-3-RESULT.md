@@ -101,3 +101,61 @@ SSH 선택 오류는 사용자가 지정한 기존 `oioi` 계정으로 바로잡
 조회는 stat/lstat·선택 Docker inspect·서비스/포트/자원·공개 Caddy 구조 확인뿐이다. guard active를 실제 IMDS 차단 재실증으로 보지 않는다.
 설치·chown·설정/Secret 읽기·DB 접속·Caddy reload·container 재시작·Promotion 병합은 실행하지 않았다.
 다음 적용안은 [PLAN](P06-PLAN.md#2026-10-17-host-전환-준비)과 [운영 절차](../../../../ops/oci/README.md#9-p06-최초-host-전환)에 기록한다.
+
+## 2026-10-17 첫 운영 작업 완료와 DB 사전 확인
+
+사용자가 B를 두 운영 작업으로 마무리하도록 지시했다. HTTPS·Secure cookie·실제 MFA 운영·Web 관리 제거는 C/D/E에 유지한다.
+첫 운영 실행의 `p06_operation1_passed`, Web/DB 무변경·oioi 접근 유지·Console 설정 준비/등록 닫힘 출력을 받았다.
+설치 원본은 `d95d368`이며 main `296e463`의 host asset과 같다. 복구본은 VM의 root-only
+`/var/lib/oioi-p06-operation1/before`, 설치 로그는 같은 보호 경로의 operation.log에 보존했다.
+두 부모 디렉터리는 `root:oioi 0750`으로 보호하고 installer의 root 그룹 덮어쓰기 후에도 oioi의 진입을 복원했다.
+하위 DB/앱/백업 파일의 소유권은 재귀 변경하지 않았다. 후속 SSH에서 두 경로 소유권/권한, 설치한
+Compose·deploy/paired/env/preflight 네 script의 원본 hash 일치, 기존 app/DB ID·healthy와 guard/Docker/Caddy active를 대조했다.
+
+#142의 Verify `39033668584` attempt 1은 main `296e463`에서 전체 성공했다. 미만료 candidate artifact의
+두 repository/digest와 source/run/attempt를 대조했으며 baseline=null·두 origin=built·buildSourceSha=현재 source다.
+이는 최초 두 앱 새 빌드 조건을 충족한다. #142는 OPEN이며 병합하지 않았다.
+
+DB는 명시적 READ ONLY transaction으로만 조회했다. PostgreSQL 17.11, max_connections 50·관찰 연결 7,
+journal의 0000~0004 hash/timestamp가 repo와 모두 일치한다. `admin_mfa`와 0005 journal은 없다.
+기존 migrator는 schema DDL 가능·database CREATE 불가, app은 DML 가능·schema/database CREATE 불가이며
+migrator의 새 public table에 app DML을 주는 default ACL도 확인했다. 기존 migrator 역할로 실행한
+읽기 전용 journal/identity 사전 조건 검사는 성공했다. 기존 0005만 적용하는 보호 SQL·백업/검증 실행안을 준비했으나
+DB 변경은 별도 승인 대기이며 아직 적용하지 않았다. 신규 계획 PR은 만들지 않는다.
+
+## 2026-10-17 승인된 0005 적용 완료
+
+사용자가 기존 `0005_p05a_admin_mfa.sql` 적용을 명시적으로 승인했다. operator의 sudo 실행은
+`p06_db_prepare_passed`, `existing_0005_applied_as_migrator`,
+`journal_and_runtime_permissions_verified`, `existing_web_and_database_not_restarted`로 완료됐다.
+root-only `/var/lib/oioi-p06-operation2-db`에 전체 custom-format DB 백업과 catalog·작업 로그를 보존했다.
+SQL은 기존 journal 5건/대상 identity/테이블 부재를 확인한 transaction 안에서 기존 migrator 역할로
+원본 0005와 journal 1건만 적용했다. Secret·키·비밀번호·기존 application row는 변경하지 않았다.
+
+후속 SSH의 READ ONLY 조회에서 journal 6건과 최신 timestamp `1791598021368`,
+원본 0005 hash `043a1ef48effae34b499e04e23b6d3e59797ba5578eba49272ca273209cf6cac`가 일치했다.
+`admin_mfa` owner는 `oioi_migrator`, `oioi_app`의 SELECT/INSERT/UPDATE/DELETE는 모두 true다.
+앞 절의 미적용/승인 대기는 실행 전 상태다. 호스트·Console 설정·DB 준비는 완료했으며
+실제 첫 paired 배포·기존 Web 복구·공동 rollback·두 앱 IMDS 및 재시작 지속성 실증은 남아 있다.
+main의 배포 workflow 차단과 검증용 #142 OPEN은 유지한다. 새 계획 PR은 만들지 않았다.
+
+## 2026-10-17 준비 완료 후 paired Promotion 활성화 변경
+
+같은 checkpoint에서 host/Console 설정/DB 준비의 실제 결과를 근거로 workflow의 임시 무조건 실패 step과
+그 전용 Slack 출력 연결을 제거했다. main 반영 전이며 실제 배포는 실행하지 않았다. 새 설정 flag나
+SSH 정상 배포 우회는 만들지 않았다. source/merge SHA·tree·성공한 candidate artifact·두 repository/digest·
+baseline 검증, OCI Run Command의 세 인자와 exit 0/20/21, 성공한 실제 배포만 receipt를 기록하는 계약을 유지한다.
+
+기존 차단 회귀 검사는 workflow의 실제 shell step을 실행해 두 digest와 candidate가 adapter에 전달되고
+0/20/21이 보존되는 검사로 교체했다. CI Compose의 예상 실패도 `up && healthy`로 판정하도록
+#156의 보완을 포함했다. 동일 보완의 실제 CI `39037084058`에서 Compose 보존/복구 step이 성공했다. candidate 검증이 OCI 인증 전이라는 순서도 확인한다.
+최초 테스트는 pipe stdout을 `/dev/stdout` 파일로 열 수 없어 실패했고, 출력 파일 대상을 `/dev/null`로
+수정한 뒤 promotion 검사 42건이 성공했다. actionlint 1.7.12(`-shellcheck=`)와 diff 공백 검사도 성공했다.
+
+이 PR의 integration merge는 배포하지 않는다. 실제 실행 전에 최신 source로 두 앱을 새로 빌드한
+후보를 검증하고 유지보수·실패/중단 복구 절차를 확인한 뒤 별도 Promotion 승인을 받는다. #142는 병합하지 않는다.
+B의 남은 범위는 첫 pair·기존 Web 복구·공동 rollback·두 앱 IMDS/재시작 지속성 실증이며 C/D/E는 유지한다.
+
+기본 여섯 검사(type-check·harness 18건·lint·lint:fsd·unit 459건·format)와 ops 196건이 성공했다.
+harness와 lint는 순차 실행했고 unit 캐시는 0이다. 두 앱 `pnpm build`도 캐시 0으로 성공했다.
+원격 검증과 push hook 결과는 PR 본문에서 추적한다.

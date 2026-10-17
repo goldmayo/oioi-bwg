@@ -55,7 +55,7 @@ up; healthy
 [[ "$(identity console)" == "${console_before}" && "$(identity web)" == "${web_before}" ]]
 # A bad Console runtime fails the pair. Reconcile the previous effective pair.
 printf '%s\n' 'CONSOLE_AUTH_SECRET=invalid' >"${CONSOLE_ENV_FILE}"
-if up; then echo 'Expected Console failure' >&2; exit 1; fi
+if up && healthy; then echo 'Expected Console failure' >&2; exit 1; fi
 cp "${root}/console-good.env" "${CONSOLE_ENV_FILE}"
 up; healthy
 [[ "$(identity web)" == "${web_before}" ]]

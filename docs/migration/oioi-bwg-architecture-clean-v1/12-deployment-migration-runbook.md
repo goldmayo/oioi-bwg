@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.13"
+version: "1.14"
 status: "active"
 authority: "runbook"
 updated_at: "2026-10-17"
@@ -511,15 +511,18 @@ Promotion PR의 merged/closed event만 배포를 시작한다. 현재 head의 �
 merge 전에 성공하지 않은 run, 다른 PR/head/tree/registry, 만료·누락된 artifact는 배포하지 않는다.
 병합 커밋/tree·source SHA·candidate run·digest는 Actions summary로 추적한다.
 
-P06-B1은 후보 검증까지 활성화한다. B2의 두 앱 배포 구현과 별도 승인된 host upgrade 전에는
-배포 workflow가 후보 대조·summary 이후 OCI 인증/Run Command 전에 실패한다.
-이 차단은 repository 설정 flag로 우회하지 않으며 B2의 host apply/rollback 검증과 함께 교체한다.
+P06-B1의 후보 전용 단계에서는 OCI 인증/Run Command 전 임시 차단을 유지했다.
+B2의 paired 구현·CI 실제 Compose 복구 검증과 승인된 host upgrade·Console 설정·DB 준비가
+완료되면 별도 코드 리뷰로 임시 차단을 제거한다. repository 설정 flag로 우회하지 않는다.
+이 변경의 integration merge는 배포하지 않는다. 첫 실제 실행은 별도 승인된 정상 Promotion으로만
+시작하며 두 앱을 새로 빌드한다. 기존 Web 복구·공동 rollback·IMDS/재시작 지속성의 실제 검증과
+공개 gate는 별개이며, 실제 증거가 갖춰질 때까지 B 완료나 공개 전환을 선언하지 않는다.
 B2의 CI Run Command adapter는 Web·Console 순서의 immutable digest 두 개와 제한된 base64url candidate 하나를 받고,
 누락·추가 인자·가변 tag는 OCI 호출 전에 거절한다. 원격 message/text와 OCI 오류 원문은
 CI 로그로 전달하지 않는다. lifecycle·정수 exit code·고정 진단만 기록하며 0/20/21을 유지한다.
 전달 전에 candidate schema와 두 digest를 대조하고 원격에서도 strict하게 검증한다.
 B2-2 materializer를 사용한 B2-3 host의 pair state/apply/rollback·최초 전환 구현은 §19를 따른다.
-로컬/mock 검증을 실제 host upgrade로 간주하지 않으며 승인된 upgrade 전 배포 차단은 유지한다.
+로컬/mock 검증을 실제 host upgrade로 간주하지 않는다. 임시 차단 제거 전 승인된 upgrade의 실제 결과를 확인한다.
 
 배포 workflow는 image를 다시 build/publish하지 않고 검증된 digest를 기존 OCI Run Command와
 `deploy-release.sh`에 전달한다. health/readiness/smoke 및 직전 정상 digest/env rollback, exit 0/20/21은 유지한다.

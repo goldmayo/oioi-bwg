@@ -390,20 +390,35 @@ describe("migration promotion identity", () => {
     expect(deploy).not.toContain("docker/login-action");
   });
 
-  test("blocks two-app candidates before any legacy Run Command deployment", async () => {
+  test.each([0, 20, 21])("deploys the verified pair and preserves exit %s", async (exitCode) => {
     const deploy = await readFile(".github/workflows/deploy-promotion.yml", "utf8");
-    const gate = deploy.slice(
-      deploy.indexOf("      - name: Block deployment"),
-      deploy.indexOf("      - name: Validate deployment configuration"),
+    expect(deploy).not.toContain("Block deployment");
+    const deployStep = deploy.slice(
+      deploy.indexOf("      - name: Deploy immutable pair"),
+      deploy.indexOf("      - name: Record successful paired deployment evidence"),
     );
-    expect(deploy.indexOf(gate)).toBeLessThan(deploy.indexOf("oracle-actions/run-oci-cli-command"));
-    const script = gate.split("        run: |\n")[1].replace(/^          /gm, "");
-    const result = spawnSync("bash", ["-c", script], {
+    const script = deployStep.split("        run: |\n")[1].replace(/^          /gm, "");
+    const adapter = `bash() {
+      [[ "$#" == 4 && "$1" == ops/oci/deploy-via-run-command.sh &&
+         "$2" == "$WEB_IMAGE_DIGEST" && "$3" == "$CONSOLE_IMAGE_DIGEST" &&
+         "$4" == "$CANDIDATE_PAYLOAD" ]] || return 88
+      echo verified_pair_forwarded
+      return ${exitCode}
+    }\n`;
+    const result = spawnSync("bash", ["-c", adapter + script], {
       encoding: "utf8",
-      env: { GITHUB_OUTPUT: "/dev/null" },
+      env: {
+        GITHUB_OUTPUT: "/dev/null",
+        WEB_IMAGE_DIGEST: imageDigest,
+        CONSOLE_IMAGE_DIGEST: `sha256:${"e".repeat(64)}`,
+        CANDIDATE_PAYLOAD: "verified-candidate",
+      },
     });
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("P06-B2");
+    expect(result.status).toBe(exitCode);
+    expect(result.stdout).toContain("verified_pair_forwarded");
+    expect(deploy.indexOf("Validate candidate identity")).toBeLessThan(
+      deploy.indexOf("oracle-actions/run-oci-cli-command"),
+    );
   });
 
   test.each([

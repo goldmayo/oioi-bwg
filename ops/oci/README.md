@@ -186,11 +186,11 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
   `oci-development-image`의 추가 variable `OCIR_CONSOLE_REPOSITORY`는 B0에서 검증한
   Console repository 이름 `oioi-bwg-console`로 설정한다. 2026-10-15 최초 조회에서는 미등록이었으며,
   사용자 #147 병합·다음 작업 지시 후 등록하고 저장 값을 대조했다.
-  B1은 두 게시 digest smoke 후에만 artifact를 생성한다. B2와 승인된 host upgrade 전 배포 workflow는
+  B1은 두 게시 digest smoke 후에만 artifact를 생성한다. B1 당시 B2와 승인된 host upgrade 전 배포 workflow는
   후보 summary 이후 OCI 인증/Run Command 전에 실패하므로 Promotion을 병합하지 않는다.
 - B2-1의 CI adapter 호출은 `bash ops/oci/deploy-via-run-command.sh <Web digest> <Console digest> <base64url candidate>`다.
-  두 digest와 candidate schema를 OCI 전 대조하고 host에서도 검증한다. 구현된 paired host는 아직 실제 설치하지 않았다.
-  workflow 차단을 유지하며 별도 승인된 host upgrade와 실제 검증 후 활성화한다.
+  두 digest와 candidate schema를 OCI 전 대조하고 host에서도 검증한다. B2 host upgrade·설정·DB 준비의
+  실제 결과를 확인한 뒤 임시 차단을 코드 리뷰로 제거한다. 실제 배포는 별도 승인된 Promotion으로 실행한다.
   Actions 로그에는 원격 body/agent message/OCI 오류 원문을 출력하지 않으며 host 로그는 보호된 경로에서 조사한다.
 - B2-2의 `materialize-runtime-env.py <web|console> <public env> <secret map> <temporary output>`은
   앱별 Vault CURRENT 값을 검증해 0600 raw env를 만든다. DB 좌표는 기존 `deploy.conf` 값을 전달한다.
@@ -318,8 +318,9 @@ preflight를 통과해야 한다. 예시는 자동 덮어쓰기/Secret 생성이
 
 CI는 최근 성공한 실제 배포의 candidate/receipt artifact와 원래 verify artifact/check를 대조한 뒤 Turbo로
 앱별 build를 선택한다. 재사용 digest도 새 조합에서 동시에 smoke하며 actual build SHA label을 확인한다.
-exit 0 이후만 90일 paired-deployment artifact를 기록한다. workflow의 실제 배포 차단은 유지한다.
-실제 Docker/OCI·VM metadata/재시작 지속성 검증과 승인된 host upgrade 전 Promotion을 실행하지 않는다.
+exit 0 이후만 90일 paired-deployment artifact를 기록한다. 임시 workflow 차단의 제거 조건은 active runbook §21을 따른다.
+실제 배포와 복구 실증은 승인된 host upgrade·설정·DB 준비 후 별도 승인한 Promotion으로 진행한다.
+VM metadata/재시작 지속성의 실제 증거를 확인하기 전 B2 완료나 공개 전환으로 기록하지 않는다.
 
 ## 9. P06 최초 host 전환
 

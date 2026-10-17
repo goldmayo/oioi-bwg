@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-17"
-revision: 19
+revision: 20
 ---
 
 # P06 작업 인계
@@ -12,7 +12,16 @@ revision: 19
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- 현재 단계: **#149~#154 병합 완료 / 실제 VM은 단일 Web 유지 / host upgrade 승인안 준비**.
+- 최신 운영 상태: **호스트·Console 설정 준비 및 승인된 DB 0005 적용 완료 / 실제 공동 배포 전**.
+  #155는 `296e463`에 병합됐고 이 head의 #142 Verify `39033668584`가 두 ARM64 새 후보까지 전체 성공했다.
+  자세한 실제 결과는 [B2-3 RESULT](P06-B2-3-RESULT.md#2026-10-17-첫-운영-작업-완료와-db-사전-확인)가 소유한다.
+  실행 자료는 원래 worktree의 ignored `.local/p06-b2-operation1`, `.local/p06-b2-operation2`에 있다.
+  0005는 root-only 전체 백업 후 기존 migrator로 적용했다. 후속 READ ONLY 조회에서 journal 6건·원본 hash,
+  admin_mfa 소유권과 앱 DML 4종 권한을 대조했다. 추가 DB 변경은 승인 범위에 포함하지 않는다. 다음은 첫 pair 배포·기존 Web 복구·공동 rollback·IMDS 실증이며 C/D/E를 끌어오지 않는다.
+  임시 workflow 차단 제거를 같은 실제 준비 checkpoint에서 구현했다(main 미반영). integration 병합은 배포하지 않으며
+  새 Promotion 병합·실제 배포는 별도 승인이다. #142는 병합하지 않는다. 아래 host upgrade 대기는 당시 이력이다.
+  현재 결과/활성화 변경 브랜치는 `feature/p06b2-live-verification`, base `296e463`이다.
+- 이전 host 전환 준비 이력: **#149~#154 병합 완료 / 실제 VM은 단일 Web 유지 / host upgrade 승인안 준비**.
   env #149 `8a46e3f`, 후보 계약 #150 `ac729af`, paired host #151 `a8b66d8`, workflow 연결 #152 `5a8e31c`,
   설치 누락 수정 #153 `998f46b`, root 경로 보호 #154 `d95d368`을 GitHub에서 재확인했다.
   [B2-3 RESULT](P06-B2-3-RESULT.md)의 최신 관찰과 [PLAN의 host 전환 순서](P06-PLAN.md#2026-10-17-host-전환-준비)를 따른다.
