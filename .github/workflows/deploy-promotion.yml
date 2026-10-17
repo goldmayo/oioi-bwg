@@ -28,7 +28,6 @@ jobs:
       image_digest: ${{ steps.candidate.outputs.image_digest }}
       candidate_result: ${{ steps.candidate.outcome }}
       console_image_digest: ${{ steps.candidate.outputs.console_image_digest }}
-      deployment_blocked: ${{ steps.deployment-gate.outputs.blocked }}
 
     env:
       OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
@@ -85,20 +84,12 @@ jobs:
             core.setOutput('candidate_payload', Buffer.from(JSON.stringify(candidate)).toString('base64url'));
             core.setOutput('image_digest', candidate.images.web.digest);
             core.setOutput('console_image_digest', candidate.images.console.digest);
-            await core.summary.addHeading('Verified paired candidate; deployment pending P06-B2').addTable([
+            await core.summary.addHeading('Verified paired candidate').addTable([
               ['Source SHA', candidate.sourceSha], ['Source/merge tree', candidate.sourceTree],
               ['Merged SHA', context.payload.pull_request.merge_commit_sha],
               ['Candidate run/attempt', `${candidate.runId}/${candidate.runAttempt}`],
               ...Object.entries(candidate.images).map(([app, image]) => [app, `${image.repository}@${image.digest}`]),
             ]).write();
-
-      # Keep blocked until paired host apply/rollback and approved host upgrade are complete.
-      - name: Block deployment until paired host support
-        id: deployment-gate
-        run: |
-          echo "blocked=true" >> "${GITHUB_OUTPUT}"
-          echo "P06-B2 paired deployment and approved host upgrade are required" >&2
-          exit 1
 
       - name: Validate deployment configuration
         env:
@@ -211,7 +202,6 @@ jobs:
           DEPLOY_EXIT_CODE: ${{ needs.deploy.outputs.exit_code }}
           IMAGE_DIGEST: ${{ needs.deploy.outputs.image_digest }}
           CONSOLE_IMAGE_DIGEST: ${{ needs.deploy.outputs.console_image_digest }}
-          DEPLOYMENT_BLOCKED: ${{ needs.deploy.outputs.deployment_blocked }}
           SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |

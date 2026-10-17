@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-17"
-revision: 20
+revision: 21
 ---
 
 # P06 작업 인계
@@ -12,10 +12,18 @@ revision: 20
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- #155는 전체 Verify `39033116630` 성공 후 `296e463`에 병합했다. 아래 host 전환안은 여전히 미적용이다.
-  사용자 요청의 문서 CI 생략은 별도 `feature/docs-only-verification`에서 이 main을 기준으로 구현한다.
-  결과는 [문서 검증 RESULT](../DOCUMENTATION-VERIFICATION-RESULT.md), 운영 설치/배포 승인과는 별개다.
-- 현재 단계: **#149~#154 병합 완료 / 실제 VM은 단일 Web 유지 / host upgrade 승인안 준비**.
+- 최신 운영 상태: **호스트·Console 설정 준비 및 승인된 DB 0005 적용 완료 / 실제 공동 배포 전**.
+  #155는 `296e463`에 병합됐고 이 head의 #142 Verify `39033668584`가 두 ARM64 새 후보까지 전체 성공했다.
+  자세한 실제 결과는 [B2-3 RESULT](P06-B2-3-RESULT.md#2026-10-17-첫-운영-작업-완료와-db-사전-확인)가 소유한다.
+  실행 자료는 원래 worktree의 ignored `.local/p06-b2-operation1`, `.local/p06-b2-operation2`에 있다.
+  0005는 root-only 전체 백업 후 기존 migrator로 적용했다. 후속 READ ONLY 조회에서 journal 6건·원본 hash,
+  admin_mfa 소유권과 앱 DML 4종 권한을 대조했다. 추가 DB 변경은 승인 범위에 포함하지 않는다. 다음은 첫 pair 배포·기존 Web 복구·공동 rollback·IMDS 실증이며 C/D/E를 끌어오지 않는다.
+  임시 workflow 차단 제거를 같은 실제 준비 checkpoint에서 구현했다(main 미반영). integration 병합은 배포하지 않으며
+  새 Promotion 병합·실제 배포는 별도 승인이다. #142는 검증을 완료해 병합 없이 CLOSED로 정리했다. 아래 host upgrade 대기는 당시 이력이다.
+  현재 결과/활성화 변경은 #157 `feature/p06b2-live-verification`이며 #156 병합 head `73b03fb`를 반영했다.
+- 문서 전용 검사 생략 #156은 Verify `39037084058` 전체 성공 후 `73b03fb`에 병합했다.
+  결과는 [문서 검증 RESULT](../DOCUMENTATION-VERIFICATION-RESULT.md)가 소유한다.
+- 이전 host 전환 준비 이력: **#149~#154 병합 완료 / 실제 VM은 단일 Web 유지 / host upgrade 승인안 준비**.
   env #149 `8a46e3f`, 후보 계약 #150 `ac729af`, paired host #151 `a8b66d8`, workflow 연결 #152 `5a8e31c`,
   설치 누락 수정 #153 `998f46b`, root 경로 보호 #154 `d95d368`을 GitHub에서 재확인했다.
   [B2-3 RESULT](P06-B2-3-RESULT.md)의 최신 관찰과 [PLAN의 host 전환 순서](P06-PLAN.md#2026-10-17-host-전환-준비)를 따른다.
@@ -31,7 +39,7 @@ revision: 20
 - ENV-1은 별도 PR로 처리하고 ENV-2는 P06-A를 차단하지 않는다. 운영 APP_ENV 전환은 새 candidate 검증과 연결한다.
 - B1 실제 증거: source `f31471b`의 Verify `38754229290` attempt 1 전체 성공과 두 digest artifact를 대조했다. 상세 값과 한계는 B1 RESULT가 소유한다.
 - #148도 사용자 지시로 전체 CI 성공 확인 후 `18de205`에 squash 병합했다. 상세 후속 검증은 B2-1 RESULT 참조.
-- 다음 단계: 기존 SSH 계정 `oioi`로 접속한다. sudo는 사용자 터미널의 기존 인증을 사용한다.
+- 이전 host 준비 단계의 순서: 기존 SSH 계정 `oioi`로 접속한다. sudo는 사용자 터미널의 기존 인증을 사용한다.
   두 사용자 소유 디렉터리 보호·백업·명시적 asset upgrade → Console 보호 설정 → DB 준비 별도 승인 → 첫 pair 검증 순서다.
   세부 명령과 설치 실패/첫 배포 실패/중단의 복구 구분은 [운영 절차](../../../../ops/oci/README.md#9-p06-최초-host-전환)를 따른다.
   이전 #142 Verify `38944025086`은 ops fixture 전체 180초 제한에서 실패했고 후보 생성은 skipped였다.
