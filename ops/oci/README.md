@@ -320,3 +320,129 @@ CI는 최근 성공한 실제 배포의 candidate/receipt artifact와 원래 ver
 앱별 build를 선택한다. 재사용 digest도 새 조합에서 동시에 smoke하며 actual build SHA label을 확인한다.
 exit 0 이후만 90일 paired-deployment artifact를 기록한다. workflow의 실제 배포 차단은 유지한다.
 실제 Docker/OCI·VM metadata/재시작 지속성 검증과 승인된 host upgrade 전 Promotion을 실행하지 않는다.
+
+## 9. P06 최초 host 전환
+
+적용 기준은 `d95d368a425ca59991ac3834b421508b56447919`다. 현재 관찰은
+[B2-3 RESULT](../../docs/migration/implementation/console-guide-editor/P06-B2-3-RESULT.md#2026-10-17-병합-후-vm-읽기-조회),
+실행 승인 범위는 [P06 PLAN](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-17-host-전환-준비)이 소유한다.
+아래는 **승인 후 실행할 제안**이며 이번 문서 갱신에서는 실행하지 않았다.
+
+### 9.1. Asset 설치만 먼저 승인
+
+현재 사용자 소유인 runtime·scripts 두 디렉터리만 root/0750으로 보호한다. recursive chown/chmod는 하지 않는다.
+기존 app·PostgreSQL·guard·Caddy·키·DB·env 값은 유지한다. installer는 Compose·여섯 script·sudoers·metric unit을
+설치하고 systemd daemon-reload를 실행하지만 서비스/타이머를 enable/restart하지 않는다.
+이 단계는 Console 설정 작성이나 실제 배포 승인을 포함하지 않는다.
+
+검토한 source archive는 다음 명령으로 로컬에서 생성한다. 개인 env나 운영 설정을 포함하지 않는다.
+
+```bash
+git archive --format=tar --output=/tmp/p06-host-assets-d95d368.tar \
+  d95d368a425ca59991ac3834b421508b56447919 \
+  compose.oci-development.yml ops/oci app.env.oci-development.example .env.oci-secrets.example
+sha256sum /tmp/p06-host-assets-d95d368.tar
+```
+
+SHA-256은 `d61643bf60c1b9b4f2eb8c5de32e963ab9f5171bdf7a579418837424b64fbfb7`다.
+승인 후 기존 SSH로 VM 사용자 staging `/home/oioi/p06-host-assets-d95d368.tar`에 전달하고,
+사용자가 기존 sudo 인증으로 아래 블록을 실행한다. 비밀번호는 에이전트에게 전달하지 않는다.
+실행 중 다른 배포/설치 작업을 금지하며 workflow 배포 차단은 유지한다.
+
+```bash
+sudo bash --noprofile --norc <<'SH'
+set -Eeuo pipefail
+umask 077
+work=/var/lib/oioi-p06-upgrade-d95d368
+[[ ! -e "$work" && ! -L "$work" ]]
+python3 -I - <<'PY'
+import stat
+from pathlib import Path
+for name, uid in [('/var', 0), ('/var/lib', 0), ('/srv', 0),
+                  ('/srv/oioibawige', 1002), ('/srv/oioibawige/scripts', 1002),
+                  ('/srv/oioibawige/deploy', 0), ('/etc', 0), ('/etc/oioibawige', 0)]:
+    s = Path(name).lstat()
+    assert stat.S_ISDIR(s.st_mode) and s.st_uid == uid and not s.st_mode & 0o022
+PY
+install -d -o root -g root -m 0700 "$work" "$work/source" "$work/before"
+install -o root -g root -m 0600 /home/oioi/p06-host-assets-d95d368.tar "$work/source.tar"
+printf '%s  %s\n' d61643bf60c1b9b4f2eb8c5de32e963ab9f5171bdf7a579418837424b64fbfb7 "$work/source.tar" |
+  sha256sum --check --status
+# Parent protection precedes privileged state/backup access; preserve the observed old metadata separately.
+stat -c '%u:%g %a %n' /srv/oioibawige /srv/oioibawige/scripts > "$work/before/directories.txt"
+chown root:root /srv/oioibawige /srv/oioibawige/scripts
+chmod 0750 /srv/oioibawige /srv/oioibawige/scripts
+python3 -I - <<'PY'
+import stat
+from pathlib import Path
+s = Path('/srv/oioibawige/deploy/deployment.lock').lstat()
+assert stat.S_ISREG(s.st_mode) and s.st_uid == 0 and s.st_nlink == 1 and not s.st_mode & 0o077
+PY
+exec 9<>/srv/oioibawige/deploy/deployment.lock
+flock -n 9
+app_id=$(docker ps -q --filter label=com.docker.compose.project=oioi-bwg-development --filter label=com.docker.compose.service=app)
+[[ "$app_id" =~ ^[0-9a-f]{12}$ ]]
+before=$(docker inspect --format '{{.Id}} {{.State.StartedAt}} {{.State.Running}} {{.State.Health.Status}}' "$app_id")
+[[ "$before" == *' true healthy' ]]
+printf '%s\n' "$before" > "$work/before/app-state.txt"
+paths=(srv/oioibawige/compose.oci-development.yml srv/oioibawige/scripts
+       srv/oioibawige/app.env srv/oioibawige/deploy etc/oioibawige)
+for path in etc/sudoers.d/oioi-bwg-ocarun etc/systemd/system/oioi-filesystem-metric.service etc/systemd/system/oioi-filesystem-metric.timer; do
+  [[ ! -e "/$path" ]] || paths+=("$path")
+done
+tar -C / -cpf "$work/before/host.tar" "${paths[@]}"
+cp -a /etc/oioibawige "$work/before/config"
+flock -u 9
+exec 9>&-
+tar -xf "$work/source.tar" -C "$work/source"
+bash "$work/source/ops/oci/install-host-assets.sh" --upgrade-paired
+for name in deploy.conf runtime-public.env runtime-secrets.env; do
+  cmp -s "$work/before/config/$name" "/etc/oioibawige/$name"
+done
+tar -xOf "$work/before/host.tar" srv/oioibawige/app.env | cmp -s - /srv/oioibawige/app.env
+tar -xOf "$work/before/host.tar" srv/oioibawige/deploy/current | cmp -s - /srv/oioibawige/deploy/current
+[[ "$before" == "$(docker inspect --format '{{.Id}} {{.State.StartedAt}} {{.State.Running}} {{.State.Health.Status}}' "$app_id")" ]]
+printf 'paired_host_assets_installed_existing_web_preserved\n'
+SH
+```
+
+어느 단계든 실패하면 중단한다. 새 root 작업 경로는 재사용하지 않으며 실패 원인과 backup/legacy-host를
+먼저 확인한다. 설치 전에 경로 보호만 적용된 경우에는 그 보호를 유지한다. 실패했다고 자동 재실행하거나
+사용자 소유권으로 되돌리지 않는다. 이 블록의 shell 구문 검증과 실제 VM 설치 성공은 구분한다.
+
+### 9.2. 보호 설정과 DB 준비
+
+설치 성공 후에도 Console 설정이 없으므로 paired preflight 완료로 기록하지 않는다. 다음 설정 변경을 별도로 승인한다.
+
+| 파일                        | 변경안                                                                                                                                                                                    |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 기존 deploy.conf            | 기존 Web repository·DB·network·port·smoke·metric 항목 보존. `CONSOLE_IMAGE_REPOSITORY`는 GitHub Console repository와 대조, `CONSOLE_PORT=3001`, `CONSOLE_SMOKE_PATHS="/admin-login"` 추가 |
+| console-runtime-public.env  | root/0600·일반 파일·link 1. `CONSOLE_ORIGIN=http://127.0.0.1:3001`, `CONSOLE_MFA_ENROLLMENT_ENABLED=false`. 필요한 R2 공개 항목만 명시                                                    |
+| console-runtime-secrets.env | root/0600·일반 파일·link 1. 기존 DB 앱 password와 준비된 Console Auth/MFA Secret OCID만 매핑. 업로드 검증 전에 기존 R2 매핑 검토                                                          |
+| 기존 Web public/map·app.env | 이번 설정 작업에서 변경하지 않음. Auth/MFA 값·version 재생성/교체 없음                                                                                                                    |
+
+실제 ID는 비공개 VM 기록에서 운영자가 입력하며 template placeholder를 그대로 설치하지 않는다.
+`sudo /srv/oioibawige/scripts/preflight-host.sh`는 설정·root 경로·Agent·Compose·Instance Principal을 확인한다.
+이 검사는 두 앱 Vault env materialization·digest pull·앱 간 키/DB 비교·실제 metadata 차단을 대신하지 않는다.
+DB journal/schema·app 권한 확인 및 필요한 migration은 별도 승인 작업이며 installer/deploy에서 실행하지 않는다.
+
+### 9.3. 첫 배포와 실패 복구의 구분
+
+최신 후보 성공, DB 준비, 유지보수 접근 제한과 구체적인 실패/중단 복구안이 갖춰진 뒤 첫 배포 실행 범위를 승인한다.
+현재 Caddy에는 maintenance가 없으므로 기존 preview block을 보존한 503 전환·`caddy validate`·reload·복원안을
+실제 파일 기준으로 먼저 검토한다. Console 외부 route/DNS는 추가하지 않는다. workflow 차단 해제는 별도 코드 변경이다.
+정상 배포는 승인된 Promotion 경로를 사용하며 검증용 #142를 병합하거나 SSH 직접 배포로 대체하지 않는다.
+활성화 전 별도 rehearsal이 필요하면 격리 범위·candidate 출처·state/receipt 처리·복구 절차를 승인안에 포함한다.
+
+| 실패 시점                         | 보존/복구와 재개 조건                                                                                                                                                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| asset 설치 실패, app 정상         | 새 배포 금지. root backup을 별도 보호 경로에 풀고 기존 Compose·네 script·sudoers·metric unit을 검토해 원래 경로에 원래 파일 mode로 복원. 기존 설정/env/current 및 root 디렉터리 보호·IMDS guard 유지. visudo/daemon-reload와 기존 app health/ID 확인 |
+| 첫 후보 사전 검사 실패            | app을 정지하기 전이므로 기존 Web/env/current 무변경을 확인. 원인만 수정하고 후보/기준을 다시 검증                                                                                                                                                    |
+| 첫 app 전환 실패·exit 20          | helper가 web/console을 stop하고 legacy-host의 Compose/config + 기존 current/app.env로 app 복구. 양쪽 새 서비스 중지·Web readiness·외부 접근 제한·IMDS를 확인한 뒤 재개 판단                                                                          |
+| paired 후보 실패·exit 20          | 직전 snapshot의 두 env/Compose/설정/digest pair 복원과 두 앱 smoke 확인. 새로운 성공 receipt를 만들지 않음                                                                                                                                           |
+| exit 21·중단·pending 잔존         | maintenance 유지. current/previous/pending·snapshot·실제 실행 image를 읽고 복구 대상을 확정. 최초 전환이면 legacy app, 정상 pair가 있으면 그 pair를 명시적으로 복구/검증한 뒤 pending 정리. pending만 지우거나 배포 재시도 금지                      |
+| host 성공 후 CI receipt 저장 실패 | VM current-pair를 지우거나 baseline=null을 강제 적용하지 않음. 해당 성공 실행의 검증 가능한 증거 복원·receipt 처리부터 검토                                                                                                                          |
+
+실제 첫 전환·rollback·중단 수동 복구는 아직 미검증이다. 적용 전에는 해당 snapshot의 경로·digest·env를 대조한
+실행 명령과 복구 완료 판정을 확정한다. OCI API/agent 오류 원문·runtime env·Secret은 CI/공개 기록으로 보내지 않는다.
+실제 두 앱의 container ID/StartedAt·health/readiness·IMDS 차단/host 양성 대조와 재시작 지속성까지 확인한 뒤 B2를 완료한다.

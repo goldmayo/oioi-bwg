@@ -6,7 +6,7 @@ authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
 updated_at: "2026-10-17"
-revision: 8
+revision: 9
 ---
 
 # P06 계획 초안
@@ -461,3 +461,27 @@ R2는 staging 버킷 정리 방식에 따라 재사용 또는 이관을 결정�
 두 앱 새 빌드, B1/B2 사이 baseline 변경은 배포 거절이다. 상세 계약은 active 배포 runbook §21이 소유한다.
 최소 PR 순서는 후보/증거 계약 → #149 기반 paired host apply/rollback → workflow producer/consumer 연결이다.
 의존 PR 병합은 승인 대기하며 host upgrade·실제 Promotion 차단은 유지한다.
+
+## 2026-10-17 host 전환 준비
+
+위 선택적 재사용 구현의 병합 대기는 #149~#154 병합으로 해소됐다. 이번 조사 기준은 fetch한
+`migration_main`의 `d95d368a425ca59991ac3834b421508b56447919`다. 이는 실제 VM 적용 완료를 뜻하지 않는다.
+[B2-3 RESULT의 관찰](P06-B2-3-RESULT.md#2026-10-17-병합-후-vm-읽기-조회)이 AS-IS 증거를 소유하며,
+반복 가능한 명령은 [host 전환 절차](../../../../ops/oci/README.md#9-p06-최초-host-전환)가 소유한다.
+
+| 순서 | 작업과 별도 실행 승인 범위 | 통과 조건 / 중단 기준 |
+| --- | --- | --- |
+| 1 | 현재 준비: main/CI/VM 읽기 조회·인계 갱신·적용/복구안 작성 | 기존 Web/DB ID·시작 시각을 보존. 운영 파일·DB·Vault 변경 없음 |
+| 2 | asset upgrade 승인: 디렉터리 metadata 보존 → 두 디렉터리만 보호 → root 복구본 → `--upgrade-paired` 설치 | 기존 app 정상·ID/시작 시각 유지, legacy-host 보존, 기존 설정/env 무변경. 오류면 새 배포 금지 |
+| 3 | 설정 승인: 기존 deploy.conf에 Console 항목 추가·Console public/map 파일 두 개 준비 | loopback 3001·enrollment=false·기존 Console Vault ID 사용. Web 설정/키·DB 좌표 보존. preflight 성공 |
+| 4 | DB 준비는 별도 승인 | 실제 journal/schema·admin_mfa·runtime role 권한·migration 호환성 확인. 필요 SQL은 별도 검토/실행, deploy 자동 migration 금지 |
+| 5 | 첫 pair 검증·배포 활성화는 별도 승인 | 최신 성공 후보/두 digest, 유지보수 접근 제한·기존 Web 복구·pair 복구·중단 복구의 실제 검증안 확정. 정상 Promotion 경로와 활성화 순서를 승인안에 명시 |
+| 6 | B2 실증 후 C 진입 | 실제 두 앱 IMDS 차단·host 양성 대조·재생성/Docker/VM 재시작·복구 후 유지, 두 앱 health와 자원 증거. 이후 HTTPS/쿠키/신뢰 IP 구현 |
+
+현재 Caddy는 preview → loopback Web만 라우팅하며 maintenance 규칙이 없다. 첫 교체 전에 기존
+Caddyfile의 보존·검증·접근 제한 적용/해제를 별도 변경안으로 준비한다. Console 외부 경로/DNS는 열지 않는다.
+root 경로/asset 설치에는 container 교체·Caddy reload·Docker/VM 재시작을 묶지 않는다.
+일반 Promotion은 기존 workflow 차단 상태이며 검증용 #142는 병합하지 않는다.
+
+최신 #142 Verify `38944025086`의 `test:ops`는 paired fixture 전체 timeout으로 실패했다.
+실패 원인 확인·보완과 최신 source 후보 검증이 운영 적용 전 선행 작업이다. B1의 과거 성공을 현재 후보로 재사용하지 않는다.

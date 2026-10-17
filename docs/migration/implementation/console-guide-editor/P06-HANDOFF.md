@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-17"
-revision: 18
+revision: 19
 ---
 
 # P06 작업 인계
@@ -12,12 +12,14 @@ revision: 18
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- 현재 단계: **B1 실제 후보 실증 통과 / B2-1 병합 / B2-2 앱별 env 구현·로컬 검증 완료**,
-  [B1 RESULT](P06-B1-RESULT.md) / [B2-1 RESULT](P06-B2-1-RESULT.md) / [B2-2 RESULT](P06-B2-2-RESULT.md).
-  #147은 사용자 지시로 전체 CI 성공을 재확인한 뒤 `f31471b`에 squash 병합했다. Console repository variable도 등록·대조했다.
+- 현재 단계: **#149~#154 병합 완료 / 실제 VM은 단일 Web 유지 / host upgrade 승인안 준비**.
+  env #149 `8a46e3f`, 후보 계약 #150 `ac729af`, paired host #151 `a8b66d8`, workflow 연결 #152 `5a8e31c`,
+  설치 누락 수정 #153 `998f46b`, root 경로 보호 #154 `d95d368`을 GitHub에서 재확인했다.
+  [B2-3 RESULT](P06-B2-3-RESULT.md)의 최신 관찰과 [PLAN의 host 전환 순서](P06-PLAN.md#2026-10-17-host-전환-준비)를 따른다.
+  B1 최초 실제 후보 증거는 [B1 RESULT](P06-B1-RESULT.md), 선택적 재사용 구현은 [재사용 RESULT](P06-REUSE-RESULT.md)가 소유한다.
   B0 완료와 게시 최소 권한 재설계의 승인된 보류는 유지한다.
-- 브랜치: `feature/p06b2-runtime-env`, fetched 최신 main `18de205ad1b187101922228dfe83678f927238d7`에서 분기했다.
-- 작업 경로: `.local/worktrees/p06b2-runtime-env`. 원래 worktree의 사용자 P06-PLAN·개인 env는 수정하지 않았다.
+- 브랜치: `feature/p06-host-transition-plan`, fetch한 main `d95d368a425ca59991ac3834b421508b56447919`에서 분기했다.
+- 작업 경로: `.local/worktrees/p06-host-transition-plan`. 원래 worktree·개인 env는 수정하지 않았다.
 - 완료 PR: [#134](https://github.com/goldmayo/oioi-bwg/pull/134) → `0e21208`, [#135](https://github.com/goldmayo/oioi-bwg/pull/135) → `9a31a90`.
   각각 최신 base/head CI 전체 성공 후 사용자 지시로 squash 병합했다. #136은 사용자 병합을
   GitHub에서 확인했으며 merge head는 `b8aa61b`, 최신 PR Verify는 성공이다.
@@ -26,10 +28,12 @@ revision: 18
 - ENV-1은 별도 PR로 처리하고 ENV-2는 P06-A를 차단하지 않는다. 운영 APP_ENV 전환은 새 candidate 검증과 연결한다.
 - B1 실제 증거: source `f31471b`의 Verify `38754229290` attempt 1 전체 성공과 두 digest artifact를 대조했다. 상세 값과 한계는 B1 RESULT가 소유한다.
 - #148도 사용자 지시로 전체 CI 성공 확인 후 `18de205`에 squash 병합했다. 상세 후속 검증은 B2-1 RESULT 참조.
-- 다음 단계: B2-2 PR 검토 후 두 env 동시 preflight·앱 간 키 값 비교·pair state/snapshot·apply/rollback을 연결한다.
-  기존 `app`의 최초 전환 실패 시 Web 복구/Console 중지, 명시적 host upgrade와 실제 두 앱 Metadata 검증도 남았다.
-  OCI 인증/Run Command 전 차단은 유지한다. B2 전체 병합·승인된 host upgrade 전 실제 Promotion은 금지한다.
-  #142는 검증용으로 계속 열어 두며 병합하지 않는다. 운영 APP_ENV 전환은 새 후보 검증과 연결한다.
+- 다음 단계: 기존 SSH 계정 `oioi`로 접속한다. sudo는 사용자 터미널의 기존 인증을 사용한다.
+  두 사용자 소유 디렉터리 보호·백업·명시적 asset upgrade → Console 보호 설정 → DB 준비 별도 승인 → 첫 pair 검증 순서다.
+  세부 명령과 설치 실패/첫 배포 실패/중단의 복구 구분은 [운영 절차](../../../../ops/oci/README.md#9-p06-최초-host-전환)를 따른다.
+  최신 #142 Verify `38944025086`은 ops fixture 전체 180초 제한에서 실패했고 후보 생성은 skipped다.
+  이를 해결하고 최신 source의 두 ARM64 digest 조합을 검증해야 한다. 전체 CI의 무조건 재실행은 하지 않는다.
+  OCI/Run Command 전 차단과 #142 OPEN을 유지한다. 실제 설치·DB·배포·차단 해제는 이번 준비 승인에 포함되지 않는다.
 - 이전 진행 기록(아래 실패·대기는 당시 상태이며 최종 통과 증거는 RESULT가 소유한다):
   검증용 [#142](https://github.com/goldmayo/oioi-bwg/pull/142)의 작은 두 repo push 재검증 →
   VM Instance Principal pull·두 CURRENT Secret 형식 검사 → 같은 CI 계정 신규 command exit 0.
@@ -82,7 +86,7 @@ revision: 18
 다음 세션은 AGENTS·active Runtime/배포 문서·현재 PLAN/RESULT를 읽고 실제 branch/status·PR을
 확인한다. 개인 env·DB 볼륨·MFA 키를 덮어쓰지 않으며 OCI/운영 DB/공개 전환을 암묵 실행하지 않는다.
 
-## 2026-10-17 선택적 릴리스 작업
+## 2026-10-17 선택적 릴리스 작업 — 병합 전 이력
 
 #147/#148 MERGED, #149 OPEN(`c19d0a7`)을 재확인했다. 후보 계약은 독립 Draft #150,
 paired host는 #149를 전제로 별도 concern에서 구현한다. 원래 worktree·미커밋/개인 env·MFA/DB는 보존한다.
