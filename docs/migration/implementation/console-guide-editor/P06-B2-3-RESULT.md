@@ -71,3 +71,33 @@ symlink/hardlink도 거절한다. 새 디렉터리만 root 소유로 만들며 �
 
 실제 VM의 현재 경로 소유권은 재조회하지 않았고 운영 소유권·설치·배포·Secret/DB를 변경하지 않았다.
 #153 Verify `38938988484`의 최종 전체 성공을 확인했다. #153/#142는 병합하지 않으며 배포 차단도 유지한다.
+
+## 2026-10-17 병합 후 VM 읽기 조회
+
+이번 사실 확인 기준은 main `d95d368a425ca59991ac3834b421508b56447919`다. #149~#154는 모두 MERGED다.
+위의 Draft/병합 대기는 당시 기록이며 현재 진입점은 [HANDOFF](P06-HANDOFF.md)다.
+#154 Verify [38943292146](https://github.com/goldmayo/oioi-bwg/actions/runs/38943292146)은 전체 성공이며
+실제 CI Compose 보존/복구 step과 root 소유권·upgrade fixture step도 성공했다. 실제 OCI VM 배포 증거와 구분한다.
+
+반면 최신 main을 검증한 #142 Verify [38944025086](https://github.com/goldmayo/oioi-bwg/actions/runs/38944025086)은
+unit job의 `pnpm test:unit:run` 성공 후 `pnpm test:ops`에서 실패했다. ops 193/194 통과이며
+`deploy-release.test.ts`가 Python fixture의 14개 완료 표시 후 전체 180,000ms 제한에 도달해 status=null이다.
+개별 배포 assertion 실패나 OCI 권한 오류로 확정하지 않는다. 후보 job은 skipped이며 최신 후보 성공을 주장하지 않는다.
+원격 재실행·코드 수정은 하지 않았다. 실패 로그는 Actions job API로 읽었다(gh log 출력은 빈 결과였다).
+
+SSH 선택 오류는 사용자가 지정한 기존 `oioi` 계정으로 바로잡았다. 12:25 UTC(21:25 KST) 읽기 조회에서:
+
+- 기존 project의 `app`과 별도 `postgres`는 healthy, 시작 시각은 각각 2026-10-14 13:25:05 UTC다.
+  후속 비교용 ID/정확한 시각은 로컬 비공개 조사 출력에 보존했다. root app.env는 0600, 새 web.env/console.env와 두 helper는 없다.
+- `/srv/oioibawige`와 `scripts`는 UID/GID 1002:1002·0750이고, `/srv`는 root/0755,
+  deploy·`/etc/oioibawige`는 root/0750이다. 현재 installer는 이 두 사용자 소유 디렉터리에서 설치를 거절한다.
+- 사용자가 별도 sudo metadata 조회를 실행한 결과 기존 설정 세 파일·current/previous/lock은 root/0600·일반 파일·link 1이다.
+  Console 설정 두 파일, current-pair/previous-pair/pending-pair/legacy-host는 없다. 일반 SSH의 unreadable을 absent로 오인하지 않았다.
+- Compose 5.5.0, 기존 Compose는 app만 있다. Web은 host loopback 3000, PostgreSQL은 loopback 5432이며 3001 listener는 없다.
+  Docker/guard/Caddy active, NTP 동기화 yes다. Web은 bridge·privileged=false·추가 cap 없음·mount 0이다.
+- Caddy 선택 조회는 preview와 `127.0.0.1:3000` upstream을 확인했고 Console 참조·maintenance/503 설정은 없다.
+  메모리 available 10,749MiB, 디스크 available 79,084MiB다. DB 연결 수/권한/journal은 조회하지 않았다.
+
+조회는 stat/lstat·선택 Docker inspect·서비스/포트/자원·공개 Caddy 구조 확인뿐이다. guard active를 실제 IMDS 차단 재실증으로 보지 않는다.
+설치·chown·설정/Secret 읽기·DB 접속·Caddy reload·container 재시작·Promotion 병합은 실행하지 않았다.
+다음 적용안은 [PLAN](P06-PLAN.md#2026-10-17-host-전환-준비)과 [운영 절차](../../../../ops/oci/README.md#9-p06-최초-host-전환)에 기록한다.
