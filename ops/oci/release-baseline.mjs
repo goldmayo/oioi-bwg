@@ -65,6 +65,7 @@ export async function validateBaseline({
     run.path !== ".github/workflows/deploy-promotion.yml" ||
     run.event !== "pull_request" ||
     run.head_branch !== "migration_main" ||
+    run.head_sha !== candidate.sourceSha ||
     run.head_repository?.full_name !== `${context.repo.owner}/${context.repo.repo}` ||
     run.status !== "completed" ||
     run.conclusion !== "success" ||
@@ -97,14 +98,15 @@ export async function validateBaseline({
     ...context.repo,
     pull_number: candidate.prNumber,
   });
+  // GitHub can associate an old run with the next PR for the same branch/SHA.
+  // Bind the deployment to its immutable candidate/receipt, not run.pull_requests.
   if (
     !pr.merged ||
     pr.head.sha !== candidate.sourceSha ||
     pr.merge_commit_sha !== receipt.mergedSha ||
     pr.base.ref !== "migration_develop" ||
     pr.head.ref !== "migration_main" ||
-    pr.head.repo?.full_name !== `${context.repo.owner}/${context.repo.repo}` ||
-    (run.pull_requests.length && !run.pull_requests.some((p) => p.number === pr.number))
+    pr.head.repo?.full_name !== `${context.repo.owner}/${context.repo.repo}`
   )
     throw new Error("Deployment PR mismatch");
   const { data: source } = await github.rest.git.getCommit({
