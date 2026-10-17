@@ -159,3 +159,10 @@ B의 남은 범위는 첫 pair·기존 Web 복구·공동 rollback·두 앱 IMDS
 기본 여섯 검사(type-check·harness 18건·lint·lint:fsd·unit 459건·format)와 ops 196건이 성공했다.
 harness와 lint는 순차 실행했고 unit 캐시는 0이다. 두 앱 `pnpm build`도 캐시 0으로 성공했다.
 원격 검증과 push hook 결과는 PR 본문에서 추적한다.
+
+## 2026-10-17 검증 PR 정리와 통합
+
+사용자의 진행 지시로 #142를 병합 없이 CLOSED로 정리했다. 검증 증거는 기존 RESULT/Actions에 보존하며
+실제 배포는 새 Promotion에서 승인한다. #156은 Verify `39037084058` 전체 성공 후 `73b03fb`에 squash 병합했다.
+#157에 해당 main을 merge하며 HANDOFF의 양쪽 결과를 보존하고 active 문서 version을 갱신했다.
+이는 기존 검증 코드와 활성화 변경의 결합이며 추가 운영 변경·기존 Web/DB 재시작을 실행하지 않았다.

@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.14"
+version: "1.15"
 status: "active"
 authority: "runbook"
 updated_at: "2026-10-17"
@@ -478,6 +478,10 @@ migration_main → Promotion PR → migration_develop (OCI Development 배포 �
 ```
 
 일반 feature PR은 기존 verify(정적 검사·unit/ops/PostgreSQL·Next build)를 수행한다.
+단, `migration_main` 대상 전체 PR diff가 일반 파일 `.md` 변경뿐이면 scope 판정과 필수 `verify`만 실행한다.
+이력 누락·빈 diff·symlink/실행 mode·MDX·코드 혼합은 전체 검증이다. Git raw diff의 삭제/추가 양쪽을
+검사해 code→md rename과 API 파일 수 제한에 의한 누락을 방지한다. workflow 자체를 path filter로 생략하지 않는다.
+Promotion은 문서만 달라도 전체 검증·후보 계약을 유지하며 이 예외로 과거 candidate를 재사용하지 않는다.
 `migration_main` merge push와 `migration_develop` push에서는 무거운 검증·image build를 반복하지 않는다.
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
 `promotion` check가 실패한다.

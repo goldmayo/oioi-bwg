@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-17"
-revision: 20
+revision: 21
 ---
 
 # P06 작업 인계
@@ -19,8 +19,10 @@ revision: 20
   0005는 root-only 전체 백업 후 기존 migrator로 적용했다. 후속 READ ONLY 조회에서 journal 6건·원본 hash,
   admin_mfa 소유권과 앱 DML 4종 권한을 대조했다. 추가 DB 변경은 승인 범위에 포함하지 않는다. 다음은 첫 pair 배포·기존 Web 복구·공동 rollback·IMDS 실증이며 C/D/E를 끌어오지 않는다.
   임시 workflow 차단 제거를 같은 실제 준비 checkpoint에서 구현했다(main 미반영). integration 병합은 배포하지 않으며
-  새 Promotion 병합·실제 배포는 별도 승인이다. #142는 병합하지 않는다. 아래 host upgrade 대기는 당시 이력이다.
-  현재 결과/활성화 변경 브랜치는 `feature/p06b2-live-verification`, base `296e463`이다.
+  새 Promotion 병합·실제 배포는 별도 승인이다. #142는 검증을 완료해 병합 없이 CLOSED로 정리했다. 아래 host upgrade 대기는 당시 이력이다.
+  현재 결과/활성화 변경은 #157 `feature/p06b2-live-verification`이며 #156 병합 head `73b03fb`를 반영했다.
+- 문서 전용 검사 생략 #156은 Verify `39037084058` 전체 성공 후 `73b03fb`에 병합했다.
+  결과는 [문서 검증 RESULT](../DOCUMENTATION-VERIFICATION-RESULT.md)가 소유한다.
 - 이전 host 전환 준비 이력: **#149~#154 병합 완료 / 실제 VM은 단일 Web 유지 / host upgrade 승인안 준비**.
   env #149 `8a46e3f`, 후보 계약 #150 `ac729af`, paired host #151 `a8b66d8`, workflow 연결 #152 `5a8e31c`,
   설치 누락 수정 #153 `998f46b`, root 경로 보호 #154 `d95d368`을 GitHub에서 재확인했다.
@@ -37,11 +39,11 @@ revision: 20
 - ENV-1은 별도 PR로 처리하고 ENV-2는 P06-A를 차단하지 않는다. 운영 APP_ENV 전환은 새 candidate 검증과 연결한다.
 - B1 실제 증거: source `f31471b`의 Verify `38754229290` attempt 1 전체 성공과 두 digest artifact를 대조했다. 상세 값과 한계는 B1 RESULT가 소유한다.
 - #148도 사용자 지시로 전체 CI 성공 확인 후 `18de205`에 squash 병합했다. 상세 후속 검증은 B2-1 RESULT 참조.
-- 다음 단계: 기존 SSH 계정 `oioi`로 접속한다. sudo는 사용자 터미널의 기존 인증을 사용한다.
+- 이전 host 준비 단계의 순서: 기존 SSH 계정 `oioi`로 접속한다. sudo는 사용자 터미널의 기존 인증을 사용한다.
   두 사용자 소유 디렉터리 보호·백업·명시적 asset upgrade → Console 보호 설정 → DB 준비 별도 승인 → 첫 pair 검증 순서다.
   세부 명령과 설치 실패/첫 배포 실패/중단의 복구 구분은 [운영 절차](../../../../ops/oci/README.md#9-p06-최초-host-전환)를 따른다.
-  최신 #142 Verify `38944025086`은 ops fixture 전체 180초 제한에서 실패했고 후보 생성은 skipped다.
-  이를 해결하고 최신 source의 두 ARM64 digest 조합을 검증해야 한다. 전체 CI의 무조건 재실행은 하지 않는다.
+  이전 #142 Verify `38944025086`은 ops fixture 전체 180초 제한에서 실패했고 후보 생성은 skipped였다.
+  #155 후속 run `39033668584`의 unit/ops는 성공했다. 후보 최신 상태는 GitHub에서 대조하며 무조건 전체 재실행하지 않는다.
   OCI/Run Command 전 차단과 #142 OPEN을 유지한다. 실제 설치·DB·배포·차단 해제는 이번 준비 승인에 포함되지 않는다.
 - 이전 진행 기록(아래 실패·대기는 당시 상태이며 최종 통과 증거는 RESULT가 소유한다):
   검증용 [#142](https://github.com/goldmayo/oioi-bwg/pull/142)의 작은 두 repo push 재검증 →
