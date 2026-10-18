@@ -1,11 +1,34 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { parseJsonRequest, toErrorResponse } from "./api-response";
 import { assertConsoleOrigin } from "./console-origin";
 
 const origin = "http://127.0.0.1:3001";
+afterEach(() => vi.unstubAllEnvs());
 describe("Console mutation Origin", () => {
+  it("HTTPS에서도 Host와 forwarded authority는 설정과 일치해야 한다", () => {
+    vi.stubEnv("CONSOLE_ORIGIN", "https://console.example.com");
+    const headers = new Headers({
+      origin: "https://console.example.com",
+      host: "console.example.com",
+      "x-forwarded-host": "console.example.com",
+      "x-forwarded-proto": "https",
+    });
+    expect(() => assertConsoleOrigin(headers)).not.toThrow();
+    for (const [key, value] of [
+      ["host", "evil.test"],
+      ["x-forwarded-host", "evil.test"],
+      ["x-forwarded-proto", "http"],
+      ["x-forwarded-host", "console.example.com, evil.test"],
+    ]) {
+      const forged = new Headers(headers);
+      forged.set(key, value);
+      expect(() => assertConsoleOrigin(forged)).toThrow(
+        expect.objectContaining({ code: "FORBIDDEN" }),
+      );
+    }
+  });
   it.each([
     undefined,
     "null",

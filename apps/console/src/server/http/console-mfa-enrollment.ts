@@ -28,7 +28,7 @@ export async function handleConsoleMfaEnrollment(request: Request, operation: "s
       operation === "setup" ? consoleMfaSetupSchema : consoleMfaConfirmSchema,
     );
     if (!isConsoleMfaEnrollmentEnabled()) throw new AppError("FORBIDDEN");
-    const refund = await reserveConsoleMfaAttempt(input.email);
+    const refund = await reserveConsoleMfaAttempt(input.email, request.headers);
     const key = getConsoleMfaKey();
     if ("otp" in input) {
       await confirmConsoleMfa(input.email, input.password, input.otp, input.version, key);
