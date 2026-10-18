@@ -2,10 +2,10 @@
 title: "P06-C Console HTTPS 및 인증 요청 보안 경계 구현 결과"
 kind: migration-result
 status: in-progress
-source_commit: 2a274cd6aa895b1130442278eb0f00ce9eb1d9c0
+source_commit: 9475415caef65f4a1d930d600c704c9960eedb70
 verified_at: "2026-10-19"
 updated_at: "2026-10-19"
-revision: 3
+revision: 4
 ---
 
 # P06-C 구현 결과
@@ -65,6 +65,18 @@ HTTPS 확장 중 드러난 기존 fixture의 모든 HTTPS 요청 차단과 단�
 첫 전체 ops 실행은 `jq` 누락과 동시 실행 부하의 timeout으로 실패했다. ignored 로컬 도구 경로에 jq를 준비한 뒤 위 211건을 재실행해 통과했다.
 중간 재빌드는 harness가 잠시 만드는 ESLint 회귀 fixture와 겹쳐 실패했다. harness 종료 후 두 앱 build를 다시 실행해 통과했다.
 테스트/배포 시스템이나 timeout 설정은 변경하지 않았다. 첫 push hook에서도 affected type-check/lint/test, repo type-check/lint, harness, ops 211건, format 검사를 자동 실행해 모두 통과했다. 별도로 계획한 검증과 구분한다.
+
+## 2026-10-19 PR #163 추가 리뷰 보완
+
+검토 기준 `9dacbcf`의 [Verify 39139757539](https://github.com/goldmayo/oioi-bwg/actions/runs/39139757539) 전체 성공 이후,
+`9475415`에서 아래 두 항목을 보완했다.
+
+- HTTPS 인증 경계는 Host·X-Forwarded-Host·X-Forwarded-Proto가 누락되거나 빈 값이면 거절한다. HTTP loopback은 누락 허용·전달된 값 일치 검사를 유지한다.
+- active 04 v1.5에 쿠키·필수 헤더·Origin/CSRF 계약을 명시하고, 11 v1.8의 loopback 전용 문구를 HTTP loopback/명시적 HTTPS 지원으로 개정했다. 인덱스 v1.25도 버전을 동기화했다.
+- `pnpm type-check`, `pnpm test:harness` 18건, `pnpm lint`, `pnpm lint:fsd`, `pnpm test:unit:run`(Console 221건), `pnpm format:check`, `pnpm build`를 재실행해 통과했다.
+- 기존 `console-https-smoke.mjs`도 실제 Caddy·Next.js·Chromium에서 재실행해 통과했다. 후속 CI와 push hook 결과는 같은 PR에 기록한다.
+
+이번 보완은 운영 적용이나 C 전체 완료를 뜻하지 않는다. 아래 실제 VM/Cloudflare 승인 게이트를 유지한다.
 
 ## 남은 완료 게이트와 운영 승인 범위
 
