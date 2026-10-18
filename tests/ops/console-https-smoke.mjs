@@ -249,6 +249,32 @@ try {
       403,
     );
   }
+  const manifest = JSON.parse(
+    fs.readFileSync(
+      "apps/console/.next/standalone/apps/console/.next/server/server-reference-manifest.json",
+      "utf8",
+    ),
+  );
+  const actionId = Object.entries(manifest.node).find(
+    ([, value]) => value.exportedName === "signIn",
+  )?.[0];
+  assert.ok(actionId);
+  const boundary = "p06-flight-boundary";
+  const flight = `--${boundary}\r\nContent-Disposition: form-data; name="0"\r\n\r\n["$K1"]\r\n--${boundary}--\r\n`;
+  for (const suppliedOrigin of [undefined, "https://evil.test"]) {
+    const denied = await request("/admin-login", {
+      method: "POST",
+      headers: {
+        "Next-Action": actionId,
+        Accept: "text/x-component",
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        ...(suppliedOrigin ? { Origin: suppliedOrigin, "X-Forwarded-Host": "evil.test" } : {}),
+      },
+      body: flight,
+    });
+    if (suppliedOrigin) assert.ok(denied.status >= 400);
+    else assert.ok(denied.body.includes("요청 출처를 확인할 수 없습니다."));
+  }
   const badCsrf = await request("/api/auth/signout", {
     method: "POST",
     headers: {
