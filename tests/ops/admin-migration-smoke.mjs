@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import fs from "node:fs";
+import https from "node:https";
 import os from "node:os";
 import path from "node:path";
 
@@ -37,7 +38,16 @@ const processes = [];
 let browser;
 
 async function start(app, port, append = false, enrollmentEnabled = false) {
-  const origin = `http://127.0.0.1:${port}`;
+  const internalOrigin = `http://127.0.0.1:${port}`;
+  const origin =
+    app === "console" && process.env.P06_HTTPS_ORIGIN
+      ? process.env.P06_HTTPS_ORIGIN
+      : internalOrigin;
+  if (origin !== internalOrigin) {
+    const configured = new URL(origin);
+    assert.equal(configured.protocol, "https:");
+    assert.equal(configured.hostname, "127.0.0.1");
+  }
   const log = fs.openSync(path.join(artifacts, `${app}.log`), append ? "a" : "w");
   const child = spawn(process.execPath, [`apps/${app}/.next/standalone/apps/${app}/server.js`], {
     env: {
@@ -64,7 +74,7 @@ async function start(app, port, append = false, enrollmentEnabled = false) {
   for (let attempt = 0; attempt < 100; attempt++) {
     assert.equal(child.exitCode, null, `${app} exited before readiness`);
     try {
-      if ((await fetch(`${origin}/healthz`, { signal: AbortSignal.timeout(500) })).ok)
+      if ((await fetch(`${internalOrigin}/healthz`, { signal: AbortSignal.timeout(500) })).ok)
         return origin;
     } catch {
       /* 서버 시작 대기 */
@@ -72,6 +82,55 @@ async function start(app, port, append = false, enrollmentEnabled = false) {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   throw new Error(`${app} startup timeout; see ${artifacts}`);
+}
+
+// 비공개 HTTPS profile에서 실제 TCP source 두 개로 proxy→limiter 연결을 검사한다.
+async function assertHttpsClientLimits(origin) {
+  const send = (localAddress, route, headers = {}, body) =>
+    new Promise((resolve, reject) => {
+      const request = https.request(
+        new URL(route, origin),
+        { localAddress, agent: false, method: body ? "POST" : "GET", headers },
+        (response) => {
+          let value = "";
+          response.on("data", (part) => (value += part));
+          response.on("end", () => resolve({ headers: response.headers, body: value }));
+        },
+      );
+      request.on("error", reject);
+      request.end(body);
+    });
+  for (const ip of ["127.0.0.2", "127.0.0.3"]) {
+    const csrf = await send(ip, "/api/auth/csrf");
+    const cookie = csrf.headers["set-cookie"].map((value) => value.split(";")[0]).join("; ");
+    for (let index = 0; index <= 20; index++) {
+      const response = await send(
+        ip,
+        "/api/auth/callback/credentials",
+        {
+          Origin: origin,
+          Cookie: cookie,
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Forwarded-For": `198.51.100.${index + 1}`,
+          "X-Console-Client-IP": `198.51.100.${index + 1}`,
+        },
+        new URLSearchParams({
+          csrfToken: JSON.parse(csrf.body).csrfToken,
+          email: `${ip}-${index}@p06.example.test`,
+          password,
+          otp: "000000",
+        }).toString(),
+      );
+      assert.equal(
+        new URL(response.headers.location).searchParams.get("code"),
+        index < 20 ? "credentials" : "rate_limited",
+        "independent client IP quota and forged header rejection",
+      );
+    }
+  }
+  console.log(
+    "HTTPS TCP client limits passed: independent 20/5m buckets for 127.0.0.2 and 127.0.0.3 despite forged IP headers",
+  );
 }
 
 async function login(context, origin, email = "admin@p04.example.test") {
@@ -146,7 +205,11 @@ async function journey(origin, label) {
       },
     };
   });
-  await context.route(/^https:\/\//, (route) => route.abort());
+  await context.route(/^https:\/\//, (route) =>
+    new URL(route.request().url()).origin === new URL(origin).origin
+      ? route.continue()
+      : route.abort(),
+  );
   const page = await login(context, origin);
   const albumName = `P04 ${label} album`;
   await page.getByRole("button", { name: "앨범 추가", exact: true }).click();
@@ -251,6 +314,12 @@ async function journey(origin, label) {
   await page.getByText("이관 검증 가사", { exact: true }).first().waitFor();
   await page.screenshot({ path: path.join(artifacts, `${label}-editor.png`), fullPage: true });
   const cookies = await context.cookies();
+  if (origin.startsWith("https:")) {
+    for (const cookie of cookies.filter((value) => value.name.startsWith("oioi-console."))) {
+      assert.ok(cookie.secure && cookie.httpOnly);
+      assert.equal(cookie.sameSite, "Lax");
+    }
+  }
   assert.ok(
     cookies.some((cookie) =>
       cookie.name.startsWith(
@@ -389,8 +458,13 @@ try {
   }
   await enrollConsoleFixture();
   origins = { web: await start("web", 3200), console: await start("console", 3201) };
-  browser = await chromium.launch();
+  browser = await chromium.launch({
+    args: process.env.P06_TLS_KEY_PIN
+      ? [`--ignore-certificate-errors-spki-list=${process.env.P06_TLS_KEY_PIN}`]
+      : [],
+  });
   await assertConsoleAuthIngress(browser, origins.console, sql, artifacts);
+  if (process.env.P06_HTTPS_ORIGIN) await assertHttpsClientLimits(origins.console);
   await assertEnrollmentClosed(browser, origins.console);
   // 제한으로 포화된 C2 뒤 D 등록과 C1 회귀를 각각 새 프로세스에서 독립 실행한다.
   const limitedConsole = processes.at(-1);

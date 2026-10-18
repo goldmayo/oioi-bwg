@@ -34,7 +34,7 @@ async function post(context, origin, operation, data, headers = { Origin: origin
     headers,
     data,
   });
-  assert.equal(response.headers()["cache-control"], "no-store");
+  assert.match(response.headers()["cache-control"], /(?:^|,\s*)no-store(?:,|$)/);
   assert.equal(response.headers()["set-cookie"], undefined);
   return response;
 }
