@@ -13,7 +13,7 @@ revision: 35
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
 - 현재 C 진입점: **HTTPS/쿠키/Origin·신뢰 IP 코드 및 격리 브라우저 검증 완료 / 운영 검증 대기**.
-  구현 `6ed4ece`, HTTPS Action 검증 `3822d13`. 결과·실제 명령·남은 승인 게이트는 [P06-C RESULT](P06-C-RESULT.md)가 소유한다.
+  PR [#163](https://github.com/goldmayo/oioi-bwg/pull/163), 구현 `6ed4ece`, HTTPS Action 검증 `3822d13`, host 검증 보완 `16c317d`. 결과·실제 명령·남은 승인 게이트는 [P06-C RESULT](P06-C-RESULT.md)가 소유한다.
   B의 정상 pair와 preview를 유지했다. Caddy 2.6.2/실제 설정을 SSH 읽기로 확인했으며 설치·reload·DNS·배포는 하지 않았다.
   Docker/격리 DB 전체 회귀와 실제 Cloudflare→VM의 비공개 HTTPS/IP·캐시 검증이 남았다. C 전체 완료로 해석하지 않는다.
 - B 종료 시 진입점: **P06-B 완료 / 첫 정상 pair 유지 / preview 원복 완료 / 다음 단계 C**.

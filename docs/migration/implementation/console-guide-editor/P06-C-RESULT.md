@@ -2,17 +2,18 @@
 title: "P06-C Console HTTPS 및 인증 요청 보안 경계 구현 결과"
 kind: migration-result
 status: in-progress
-source_commit: 3822d1377cccce3ff4a8c7df24a6bf4115091440
+source_commit: 16c317df8aa2a190668f8b45e02abf678b1b3e31
 verified_at: "2026-10-18"
 updated_at: "2026-10-18"
-revision: 1
+revision: 2
 ---
 
 # P06-C 구현 결과
 
 **코드와 격리 HTTPS 검증 완료 / 실제 VM·Cloudflare HTTPS 검증 대기. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
-구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증은 metadata의 커밋이다.
+구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 잘못된 배포 호스트 보완은 metadata의 커밋이다.
+검토 PR은 [#163](https://github.com/goldmayo/oioi-bwg/pull/163)이다.
 [P06-PLAN §6](P06-PLAN.md#6-https등록운영자-경계), active [Auth/Authz](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md),
 [B 완료 결과](P06-B2-3-RESULT.md#2026-10-18-b-운영-실증-완료와-최종-상태)를 따른다.
 
@@ -36,7 +37,7 @@ Console 호스트의 Worker route·Pseudo IPv4·IP 제거 transform 여부는 �
 | 범위 | 실행 및 결과 |
 | --- | --- |
 | 기본 검사 | `pnpm type-check`, `pnpm test:harness`(18건), `pnpm lint`, `pnpm lint:fsd`, `pnpm test:unit:run`, `pnpm format:check` 통과. Console unit 213건 포함 |
-| 배포 설정 | `pnpm test:ops` 211건 통과. runtime env Python fixture의 HTTPS·잘못된 Origin·Secret 격리 포함 |
+| 배포 설정 | `pnpm test:ops` 211건 통과. runtime env Python fixture의 HTTPS·잘못된 Origin/호스트·Secret 격리 포함 |
 | 두 앱 build | `pnpm build` 통과. Web·Console standalone 생성 |
 | HTTP 브라우저 | 기존 `console-standalone-smoke.mjs`를 `http://127.0.0.1:3101`에서 실행: health·쿠키·로그인 redirect·폼 hydration 통과 |
 | HTTPS 브라우저 | `P06_CADDY_BINARY="$PWD/.local/p06-c/bin/caddy" node tests/ops/console-https-smoke.mjs` 통과. 실제 Caddy 2.6.2·Next 16.3.3 standalone·Chromium 사용 |
@@ -52,7 +53,7 @@ HTTPS fixture는 임시 인증서의 공개 키만 Chromium에 고정하고 Node
 
 첫 전체 ops 실행은 `jq` 누락과 동시 실행 부하의 timeout으로 실패했다. ignored 로컬 도구 경로에 jq를 준비한 뒤 위 211건을 재실행해 통과했다.
 중간 재빌드는 harness가 잠시 만드는 ESLint 회귀 fixture와 겹쳐 실패했다. harness 종료 후 두 앱 build를 다시 실행해 통과했다.
-테스트/배포 시스템이나 timeout 설정은 변경하지 않았다. push hook이 수행한 검증은 PR 기록에서 별도로 구분한다.
+테스트/배포 시스템이나 timeout 설정은 변경하지 않았다. 첫 push hook에서도 affected type-check/lint/test, repo type-check/lint, harness, ops 211건, format 검사를 자동 실행해 모두 통과했다. 별도로 계획한 검증과 구분한다.
 
 ## 남은 완료 게이트와 운영 승인 범위
 
