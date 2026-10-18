@@ -92,7 +92,9 @@ print(base64.b64encode(json.loads((root/'values').read_text())[key].encode()).de
         self.assertIn('CONSOLE_ORIGIN=https://console.example\n', output)
         for origin in ('https://user@console.example', 'https://console.example/admin',
                        'https://console.example?', 'https://console.example#',
-                       'https://console.example:0', 'https:console.example'):
+                       'https://console.example:0', 'https:console.example',
+                       'https://console example', 'https://console.example\\evil',
+                       'https://%65xample.com'):
             result, output, calls, _ = self.run_case('console', 'bad-origin:' + origin)
             self.assertEqual(result.returncode, 1)
             self.assertEqual(output, 'previous-env')

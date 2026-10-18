@@ -51,7 +51,8 @@ def materialize(app, public_path, map_path, output):
         authority = f'{host}:{port}' if port and port != (443 if origin.scheme == 'https' else 80) else host
         require((origin.scheme == 'https' or
                  (origin.scheme == 'http' and origin.hostname in {'127.0.0.1', 'localhost', '::1'}))
-                and origin.hostname and not origin.username and not origin.password
+                and origin.hostname and re.fullmatch(r'[a-z0-9.:-]+', origin.hostname)
+                and not origin.username and not origin.password
                 and value in {f'{origin.scheme}://{authority}', f'{origin.scheme}://{authority}/'})
         if port is not None:
             require(0 < port <= 65535)
