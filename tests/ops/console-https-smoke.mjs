@@ -48,7 +48,10 @@ const { createHash } = await import("node:crypto");
 const pin = createHash("sha256").update(der).digest("base64");
 function launch(command, args, env = process.env) {
   const log = fs.openSync(path.join(directory, `${children.length}.log`), "w");
-  const child = spawn(command, args, { env, stdio: ["ignore", log, log] });
+  const child = spawn(command, args, {
+    env: { ...env, XDG_CONFIG_HOME: directory, XDG_DATA_HOME: directory },
+    stdio: ["ignore", log, log],
+  });
   fs.closeSync(log);
   children.push(child);
   return child;
