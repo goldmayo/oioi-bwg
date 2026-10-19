@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-20"
-revision: 42
+revision: 43
 ---
 
 # P06 작업 인계
@@ -12,13 +12,13 @@ revision: 42
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- 현재 C 진입점: **#164 HTTP 공동 배포·새 보호 백업·DNS 전 HTTP 차단/외부 검증 완료 / DNS/cache·인증서·제한 HTTPS 창 별도 승인 대기**.
+- 현재 C 진입점: **#164 HTTP 공동 배포·새 보호 백업·DNS 전 HTTP 차단/외부 검증 완료 / 사용자 DNS/cache 변경 완료·공개 HTTP 경로 확인 / 인증서·제한 HTTPS 창 별도 승인 대기**.
   #165 merge `ed19b6d` 후 두 merge 허용 설정을 원복했다. [#164](https://github.com/goldmayo/oioi-bwg/pull/164)는 승인된 고정 후보를 `64dca4c`로 squash 병합했고 정상 receipt가 발행됐다. #166은 Draft·미병합이다.
   검증 source/CI·후보 및 사용자의 Cloudflare 사전 점검 사실은 [P06-C RESULT](P06-C-RESULT.md)가 소유한다.
-  이미 확인된 Cloudflare 항목을 재조사하지 않는다. 남은 서버 조건과 최소 DNS/캐시 요청은 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)를 따른다.
+  이미 확인된 Cloudflare 항목을 재조사하지 않는다. 남은 서버 조건과 인증서 단계 승인 범위는 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)를 따른다.
   임시 헤더의 upstream 제거·matcher 제거 후 403은 실제 로컬 Caddy에서 검증했다. 보호 백업과 HTTP 배포의 실제 결과/receipt·정확한 source와 digest는 RESULT에 기록했다. 실제 HTTPS VM/Cloudflare 실증은 아직 아니다.
-  새 정상 HTTP pair와 preview, 사용자 root의 `p06_c_postdeploy_snapshot_verified`로 보호 백업·current/previous 복구 snapshot과 현재 env/config 일치·pending 부재를 확인했다. 정확한 링크 대상과 검증 범위는 RESULT를 따른다. 후속 host asset/HTTPS Origin·Caddy·인증서와 DNS/캐시 활성화는 별도 승인 대상이며 일반 공개는 F다. C 전체 완료가 아니다.
-  2026-10-20 Let's Encrypt 우선 경로의 DNS 전 백업/HTTP 차단 묶음을 사용자 승인 후 실행했다. root exit0·외부 HTTP403/TLS 거절·preview200·Caddy PID/세 컨테이너/env/snapshot 보존을 확인했다. 복구 백업/명령은 보존했고 실제 원복은 불필요해 실행하지 않았다. 정확한 hash·실행 결과는 RESULT, 다음 별도 승인 순서는 PREPARATION §2를 따른다. Always Use HTTPS OFF는 사용자 확인이며 재조사/변경하지 않았다. DNS/cache·인증서·HTTPS Origin은 미변경이다.
+  새 정상 HTTP pair와 preview, 사용자 root의 `p06_c_postdeploy_snapshot_verified`로 보호 백업·current/previous 복구 snapshot과 현재 env/config 일치·pending 부재를 확인했다. 정확한 링크 대상과 검증 범위는 RESULT를 따른다. 후속 host asset/HTTPS Origin·Caddy·인증서는 별도 승인 대상이며 일반 공개는 F다. C 전체 완료가 아니다.
+  2026-10-20 Let's Encrypt 우선 경로의 DNS 전 백업/HTTP 차단 묶음을 사용자 승인 후 실행했다. root exit0·외부 HTTP403/TLS 거절·preview200·Caddy PID/세 컨테이너/env/snapshot 보존을 확인했다. 복구 백업/명령은 보존했고 실제 원복은 불필요해 실행하지 않았다. 정확한 hash·실행 결과는 RESULT, 다음 별도 승인 순서는 PREPARATION §2를 따른다. Always Use HTTPS OFF는 사용자 확인이며 재조사/변경하지 않았다. 당시 DNS/cache·인증서·HTTPS Origin은 미변경이었다. 이후 사용자가 캐시 규칙 활성화·Proxied Console A 생성을 완료했다. 공개 DNS 두 resolver·Cloudflare HTTP/임의 ACME 경로403/no-store/DYNAMIC·현재 HTTPS525와 preview/기존 pair 보존을 읽기 확인했다. 인증서 발급의 새 보호 백업/비프록시 HTTPS403/180초 관찰·HTTP403 복구 후보는 로컬 준비만 했고 VM 전달·Caddy 변경·CA 요청은 하지 않았다. 정확한 실행물/hash·명령·제외/중단 범위는 PREPARATION §2, 실제 근거·로컬 모사 한계는 RESULT를 따른다.
 - 후속 보류: #143/#161/#165에서 반복된 squash Promotion 조상 연결의 브랜치 전략을 C 이후 별도 검토한다.
   현재 C의 차단 이슈로 취급하지 않고 #164 후보·파이프라인·브랜치 정책을 이번 작업에서 변경하지 않는다.
 - B 종료 시 진입점: **P06-B 완료 / 첫 정상 pair 유지 / preview 원복 완료 / 다음 단계 C**.

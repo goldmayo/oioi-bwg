@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-20"
 updated_at: "2026-10-20"
-revision: 10
+revision: 11
 ---
 
 # P06-C 구현 결과
 
-**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포와 DNS 전 HTTP 차단 완료 / 실제 VM·Cloudflare HTTPS 검증 대기. C 전체 완료가 아니다.**
+**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / origin 인증서·실제 제한 HTTPS 검증 대기. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
 구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 배포 호스트 보완 `16c317d`, 로컬 HTTPS/DB 검증 확장 `2a274cd`를 거쳤다.
 metadata의 source는 아래 실제 HTTP 공동 배포의 squash merge다. ARM64 후보 source와 초기 로컬 검증을 구분한다.
@@ -91,7 +91,7 @@ HTTPS 확장 중 드러난 기존 fixture의 모든 HTTPS 요청 차단과 단�
 ## 2026-10-19 Cloudflare 대시보드 사전 점검(사용자 확인)
 
 근거는 사용자가 이 대화에 제공한 대시보드 확인 결과다. 에이전트의 dashboard/API 재조회나
-실제 Cloudflare→Caddy 인증 성공 증거로 해석하지 않는다. **Cloudflare 설정 변경은 아직 없다.**
+실제 Cloudflare→Caddy 인증 성공 증거로 해석하지 않는다. **아래 표는 변경 전 사전 점검 이력이다. 이후 DNS/cache 변경과 공개 응답은 아래 2026-10-20 결과를 따른다.**
 
 | 항목 | 사용자 확인 상태 |
 | --- | --- |
@@ -106,7 +106,7 @@ HTTPS 확장 중 드러난 기존 fixture의 모든 HTTPS 요청 차단과 단�
 위 항목은 완료한 사전 점검으로 재사용한다. 남은 origin 인증서·서버 제한 경로와 최소 Cloudflare
 변경 요청·승인 순서는 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)가 소유한다.
 DNS 생성·Cache Rule 활성화는 Console 외부 차단과 기존 preview 보호를 실제 확인한 뒤 별도 승인받는다.
-#164 병합/VM 배포는 아래 별도 승인으로 실행했다. 서버 HTTPS 전환과 Cloudflare 변경은 여전히 별도 승인 대상이며 일반 공개는 F다.
+#164 병합/VM 배포는 아래 별도 승인으로 실행했다. 서버 HTTPS 전환은 별도 승인 대상이며 일반 공개는 F다. Cloudflare 두 항목의 후속 사용자 변경은 아래에 구분한다.
 
 ## 2026-10-19 제한 matcher 운영 실행물의 로컬 검증
 
@@ -197,13 +197,34 @@ DNS 생성·Cache Rule 활성화는 Console 외부 차단과 기존 preview 보�
 
 복구용 원본과 위 `deny-http.py restore` 명령을 보존했다. 성공해 실제 VM 원복은 실행하지 않았으며 로컬 복구 fixture 성공을 실제 VM 원복 성공으로 바꾸지 않는다. 새 백업 경로를 재사용/삭제하거나 임의 재시도하지 않는다. 실제 근거는 ignored `https-window/`의 `approved-operation-gates.json`, `staging-result.json`, `root-application-result.json`, `external-after-apply.json`, `vm-after-apply.json`과 두 CI 완료 로그다. #166은 Draft·미병합을 유지하며 다음 DNS/cache·인증서·HTTPS 창은 각각 별도 승인이다.
 
+## 2026-10-20 사용자 DNS/cache 변경과 공개 HTTP-01 경로 관찰
+
+사용자는 기존 `console-bypass-cache` 활성화 후 A `console=129.225.183.112`, Proxied, TTL Auto 생성을 완료했다고 보고했다. Full(strict)·Always Use HTTPS OFF·기존 다른 설정은 유지했다. 에이전트는 대시보드/API 설정을 재조사하거나 변경하지 않았고, 공개 DNS/HTTP/TLS와 SSH 읽기만 수행했다. 인증서 발급·Caddy 변경·일반 공개는 승인되지 않았다.
+
+| 실제 읽기 검사 | 결과와 한계 |
+| --- | --- |
+| Cloudflare·Google DoH의 A/AAAA | 두 resolver 모두 A `104.21.69.105`·`172.67.207.108`, AAAA `2606:4700:3034::6815:4569`·`2606:4700:3030::ac43:cf6c`, TTL300 응답. Proxied 주소이며 origin IP 직접 노출을 기대하지 않음. 전 세계 모든 resolver/CA 시점의 전파 보장은 아님 |
+| Console·부모 `oioibawige.com`·`com` CAA | 조회 성공·CAA 응답 없음. CA 실제 발급 결과로 대체하지 않음 |
+| Cloudflare HTTP `/` |403, 본문 `Console is not public`, Cache-Control/CDN-Cache-Control no-store, Server cloudflare·CF-Ray, CF-Cache-Status DYNAMIC |
+| Cloudflare HTTP `/.well-known/acme-challenge/p06-c-readonly-probe` | 같은403·Caddy 차단 본문·DYNAMIC/no-store. Location·cf-mitigated 없음. 임의 경로가 redirect/Edge challenge 없이 차단 origin 응답까지 도달한 증거이며 유효 ACME 토큰200/CA 검증 증거는 아님 |
+| 직접 origin HTTP `/`·같은 ACME 경로 | 모두 같은403 본문, 세 cache no-store 헤더 |
+| Cloudflare HTTPS `/` | Edge TLS 검증 후 HTTP525. SSH Console SNI도 SSL error로 거절되며 Console origin 인증서 미확보/HTTPS site 미적용 상태와 일치. SSL 설정 완화로 해결하지 않음 |
+| preview 직접 origin TLS `/`·`/healthz`·`/readyz` | 모두200. 기존 preview 공개 인증서 hash 유지 |
+| VM SSH 읽기 | main Caddyfile `cf202c96...`·PID926/active, Console 비프록시403 route만 존재, 두 앱 네 health/readiness200. 세 컨테이너 ID/시작 시각/이미지·healthy가 이전 고정 상태와 같고 기존 두 보호 디렉터리 root:root/0700 보존 |
+
+네트워크 근거는 ignored `.local/p06-c/certificate-window/network-preflight.json`, `dns-parent.json`과 SSH 읽기 출력이다. 일반 HTTP403의 DYNAMIC 관찰을 실제 인증 응답 캐시 방지 전체 검증으로 확대하지 않는다. 실제 Cloudflare 인증/IP/쿠키 검증은 이후 제한 HTTPS 창에 남긴다.
+
+다음 인증서 단계의 고정 실행/복구 후보는 같은 로컬 경로에만 준비했으며 **VM 전달·root 실행·Caddy 변경·CA 요청을 하지 않았다.** 정확한 archive/hash·신규 보호 경로·명령·제외 범위의 소유자는 [PREPARATION의 발급 승인 범위](P06-PREPARATION.md#2026-10-20-dns-연결-후-인증서-단계의-실행복구-승인-범위)다. 기존 승인 archive와 보호 백업을 덮어쓰지 않는다.
+
+로컬에서는 실제 Caddy2.6.2 `adapt`로 명시적 Let's Encrypt·HTTP-01 활성·Console만 TLS-ALPN 비활성·reverse_proxy 부재를 확인했다. Python AST·launcher `bash -n`·archive4개/전체 hash가 통과했다. 파일 복사/hash/권한과 제어 흐름 fixture7건(성공·첫 발급 error·시간 초과·validate 실패·main drift·미지 fragment 복구 거절·발급 인증서가 캐시에 남은 복구) 및 발급 오류 분류3건을 통과했다. root 소유권·Docker/Caddy/systemd/journal·CA/TLS 응답은 모사했으며 실제 발급/VM 복구 성공으로 기록하지 않는다. 근거는 `adapt-proof.json`, `operator-proof.json`, `bundle-proof.json`이다. 문서 상대 파일/anchor39개와 `git diff --check`를 통과했으며 앱 검사/build는 재실행하지 않았다.
+
 ## 남은 완료 게이트와 운영 승인 범위
 
 - 초기 Docker 연결 부재는 사용자의 연결 후 해소했다. 로컬 HTTP/HTTPS·격리 DB 전체 회귀와 위 CI의 두 이미지 검증이 통과했다. 이후 테스트/문서 커밋의 CI는 같은 PR에서 별도로 확인한다.
-- 초기 공개 조회에서 Console DNS는 해석되지 않았고 preview Cloudflare 경로는 challenge 403, VM preview 원본 TLS는 정상이었다. 이후 DNS/TLS/캐시 준비 상태는 위 사용자 확인으로 갱신했다. Console origin 인증서와 실제 캐시 제외 동작은 여전히 미검증이다.
+- 초기 공개 조회에서 Console DNS는 해석되지 않았고 preview Cloudflare 경로는 challenge 403, VM preview 원본 TLS는 정상이었다. 이후 사용자 DNS/cache 변경과 실제 공개 DNS·HTTP403/DYNAMIC을 위에 구분했다. Console origin 인증서·실제 인증 응답 캐시 제외는 여전히 미검증이다.
 - DNS 전 직접 origin HTTP 차단/TLS 거절을 완료했다. 실제 VM의 제한 HTTPS 브라우저 검증, 실제 Cloudflare client IP 두 개의 독립 제한, 제한 HTTPS에서의 직접 origin/위조 헤더 차단과 CDN 캐시 제외는 **미검증**이다. 로컬 모사 peer 성공으로 대체하지 않는다.
 - 1차 보호 백업·HTTP 공동 배포와 새 정상 pair 기준 DNS 전 보호 백업/HTTP 차단을 완료했다. 이후 인증서/HTTPS 창은 그 시점의 닫힌 Caddy/pair를 보존할 새 보호 경로·실행/복구 명령으로 별도 승인받는다. 기존 백업은 덮어쓰지 않는다. ACME 실패 시 현재 HTTP 전용 차단으로 복구·중단하며 Full(strict) 해제·DNS-only 전환·발급 무한 재시도는 하지 않는다.
 - loopback/SSH TLS 검증과 실제 Cloudflare→Caddy 경로 검증을 구분한다. 공개 403을 유지한 제한 matcher·origin 인증서·실행/복구 명령은 별도 승인 전 미적용이다. DNS 추가만으로 제한 완료라 하지 않는다.
-- #163/#165 병합·#164 HTTP 공동 배포와 HTTP 전용 차단 validate/reload만 완료했다. 후속 host asset 설치·HTTPS Origin 전환·ACME/제한 HTTPS Caddy 적용·인증서/DNS/Cloudflare 변경은 실행하지 않았다. 정확한 보호 파일 경로·실행 후보·복구 명령과 함께 각각 별도 승인받는다.
+- #163/#165 병합·#164 HTTP 공동 배포와 HTTP 전용 차단 validate/reload만 완료했다. 후속 host asset 설치·HTTPS Origin 전환·ACME/제한 HTTPS Caddy 적용·인증서 발급은 실행하지 않았다. DNS/cache 두 항목만 사용자가 완료했고 에이전트 Cloudflare 변경은 없다. 정확한 보호 파일 경로·실행 후보·복구 명령과 함께 각각 별도 승인받는다.
 
 위 게이트를 통과하기 전에는 C를 완료로 바꾸지 않는다. D 실물 MFA·CLI/키 복구, E Web 관리/가입 종료, F 공개/www 전환은 기존 단계에 남긴다.

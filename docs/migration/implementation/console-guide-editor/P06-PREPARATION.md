@@ -6,7 +6,7 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-20"
-revision: 7
+revision: 8
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -15,7 +15,7 @@ revision: 7
 확인 사실은 [P06-C RESULT](P06-C-RESULT.md#2026-10-19-cloudflare-대시보드-사전-점검사용자-확인)가 소유하며,
 추가 변경·승인 순서는 아래 §2를 따른다. 별도 사용자 승인으로 1차 보호 백업과 #164의 기존 HTTP 공동 배포를 완료했다.
 실행·receipt·VM 검증은 [C 운영 결과](P06-C-RESULT.md#2026-10-19-승인된-보호-백업과-http-공동-배포)가 소유한다.
-#166은 Draft·미병합이다. HTTP 전용 차단의 Caddy validate/reload만 별도 승인으로 완료했고 HTTPS Origin·인증서·Cloudflare 변경은 미실행이다.
+#166은 Draft·미병합이다. HTTP 전용 차단의 Caddy validate/reload만 별도 승인으로 완료했고 HTTPS Origin·인증서는 미실행이다. 이후 사용자가 Cloudflare 캐시 규칙 활성화·Proxied Console A 생성을 완료했다. 공개 DNS/HTTP 관찰과 다음 인증서 승인 범위는 아래 §2를 따른다.
 2026-10-20 인증서 읽기 관찰을 반영한 **기존 Caddy의 Let's Encrypt 우선 경로**는 아래 §2의 추가 안내를 따른다.
 아래 B0/Vault 등 초기 준비 안내를 새 실행 요청으로 해석하지 않는다.
 
@@ -58,7 +58,7 @@ HTTP 전용 host materializer를 유지하므로 DNS나 HTTPS Origin만 먼저 �
 
 대시보드의 DNS·SSL/TLS·Edge 인증서·Worker Custom Domain·관련 Rules/Managed Transforms는
 [사용자 확인 결과](P06-C-RESULT.md#2026-10-19-cloudflare-대시보드-사전-점검사용자-확인)를 재사용한다.
-같은 항목의 화면 확인이나 캐시 규칙 재생성을 다시 요청하지 않는다. Cloudflare 설정은 아직 변경하지 않았다.
+같은 항목의 화면 확인이나 캐시 규칙 재생성을 다시 요청하지 않는다. 이후 DNS/cache 두 항목은 사용자가 완료했다. 실제 공개 경로 관찰은 [C 결과](P06-C-RESULT.md#2026-10-20-사용자-dnscache-변경과-공개-http-01-경로-관찰)를 따른다.
 
 아래 1~2의 1차 보호 백업과 기존 HTTP 공동 배포는 별도 승인으로 실행했다. 이후 인증서 관찰로 구체화한 현재 진입점은 아래 Let's Encrypt 우선 경로와 운영 결과를 따른다. 이 문서 갱신은 다음 서버 변경을 승인하지 않는다.
 
@@ -85,7 +85,7 @@ Full (strict)는 유지하며 preview 인증서를 교체하지 않는다. Origi
 
 현재 인증서 SAN·ACME 기능·포트와 새 정상 pair 기준 실행물/검증 hash는 [C 결과](P06-C-RESULT.md#2026-10-20-기존-인증서acme-읽기-관찰과-dns-전-준비)가 소유한다.
 Console 인증서가 없고 HTTP-01은 공개 DNS와80 포트가 필요하다. 따라서 초기의 DNS 전 origin TLS403 가정은 그대로 실행할 수 없다.
-아래 순서는 준비 당시 미승인안이었으며 이후1만 별도 승인으로 완료했다. DNS·인증서·HTTPS 창을 구분한2~4는 여전히 미승인이다. 실제 인증서 발급 성공을 가정하지 않는다.
+아래 순서는 준비 당시 미승인안이었으며 이후1은 승인 실행,2는 사용자 Cloudflare 변경으로 완료했다. 인증서·HTTPS 창을 구분한3~4는 여전히 미승인이다. 실제 인증서 발급 성공을 가정하지 않는다.
 
 1. **별도 VM 승인:** 새 정상 pair/receipt·기존 보호 백업을 대조하고 새 `/var/lib/oioi-p06-c-before-https` 백업을 만든다.
    기존 preview 원문에 import만 추가하고 Console **HTTP 전용** 차단 조각을 validate/reload한다. 앱 env·host materializer·컨테이너·인증서는 변경하지 않는다.
@@ -98,7 +98,7 @@ Console 인증서가 없고 HTTP-01은 공개 DNS와80 포트가 필요하다. �
 4. **별도 HTTPS 검증 창 승인:** 새 인증서 SAN/체인/유효 기간·Full(strict)·직접 origin403·preview를 확인한 뒤 host materializer/HTTPS env와 제한 matcher의 정확한 실행물·hash·복구 명령을 최종 검토한다.
    env 전환부터 원래 HTTP env/configHash 복구까지 기존 deployment.lock을 유지하며 정상 snapshot은 바꾸지 않는다. 임시 헤더 제거·matcher 제거 후 실제 외부403·Web/DB 보존 계약은 유지한다.
 
-DNS 전 단계의 고정 archive와 root 실행/복구 명령은 RESULT에 연결한다. 이후 위1만 별도 사용자 승인으로 실행해 실제 외부 HTTP403/TLS 거절과 preview·세 컨테이너·snapshot 보존을 확인했다. [운영 결과](P06-C-RESULT.md#2026-10-20-승인된-dns-전-vm-차단-결과)를 따른다. 위2~4의 DNS/cache·인증서·HTTPS 창은 미실행·별도 승인이다. 사용자가 추가 확인한 Always Use HTTPS OFF도 재조사/변경하지 않는다.
+DNS 전 단계의 고정 archive와 root 실행/복구 명령은 RESULT에 연결한다. 이후 위1만 별도 사용자 승인으로 실행해 실제 외부 HTTP403/TLS 거절과 preview·세 컨테이너·snapshot 보존을 확인했다. [운영 결과](P06-C-RESULT.md#2026-10-20-승인된-dns-전-vm-차단-결과)를 따른다. 위2는 사용자가 완료했다. 3~4의 인증서·HTTPS 창은 미실행·별도 승인이다. 사용자가 추가 확인한 Always Use HTTPS OFF도 재조사/변경하지 않는다.
 [Caddy 자동 HTTPS/HTTP-01 조건](https://caddyserver.com/docs/automatic-https#http-challenge),
 [Let's Encrypt HTTP-01](https://letsencrypt.org/docs/challenge-types/#http-01-challenge).
 
@@ -114,9 +114,9 @@ loopback/SSH TLS 검증과 실제 Cloudflare 경로의 증거를 구분한다. �
 현재 pair snapshot과 runtime env를 일치시킨다. Web/DB는 재생성하지 않으며 Console env 전환/복원에 필요한 재생성만 별도 승인한다.
 운영 실행물의 로컬 검증과 첫 백업 범위는 [RESULT](P06-C-RESULT.md#2026-10-19-제한-matcher-운영-실행물의-로컬-검증)를 참조한다.
 
-### 서버 보호 확인 후 별도 요청할 Cloudflare 변경
+### 서버 보호 확인 후 사용자가 완료한 Cloudflare 변경
 
-아래 두 변경은 위 차단·preview 보호 증거를 제시한 **다음** 별도 승인받는다. 지금 실행하지 않는다.
+아래 두 변경은 차단·preview 보호 증거 확인 후 2026-10-20 사용자가 순서대로 완료했다. 에이전트가 설정을 다시 조사하거나 변경하지 않는다.
 
 | 순서 | 정확한 요청 | 범위 |
 | --- | --- | --- |
@@ -133,6 +133,41 @@ IP 변경 시 세션 유지를 검증한다. 인증 응답의 no-store·캐시 H
 edge challenge나 IP 변형 등 실제 실패가 나오면 그 요청/설정만 추가 조사한다. 공통 대시보드 점검을 반복하지 않는다.
 복구는 임시 허용 경로 닫기 → 승인한 Caddy/env/pair 복원·정상 확인 → 이번 Console DNS 제거/캐시 규칙 비활성화 순서로 준비한다.
 DNS 제거만으로 접근 차단이 보장된다고 판단하지 않는다. Console 일반 공개와 www 전환은 F에 남긴다.
+
+### 2026-10-20 DNS 연결 후 인증서 단계의 실행·복구 승인 범위
+
+현재 Cloudflare HTTP와 임의 ACME 경로는 Caddy의403 본문으로 도달하고 HTTPS는525다. 실제 토큰200/CA 검증은 미실행이다. HTTP-01은80 포트의 실제 challenge 응답으로 검증하므로 임의 경로403만으로 발급 성공을 선언하지 않는다([Let's Encrypt](https://letsencrypt.org/docs/challenge-types/#http-01-challenge)). **아래 묶음은 로컬 준비만 했으며 별도 승인 전 VM에 전달/실행하지 않는다.**
+
+- 고정 archive: `.local/p06-c/certificate-window/certificate-reviewed.tar.gz`, SHA-256 `62c6a1fa59e4767c9b7dde1888cafceacac81228eb92250105bcf6f5b3752c43`, 일반 파일4개.
+- 실행/복구 operator `certificate-phase.py`: SHA-256 `d6a6fd804c1125621239399453275eb9824d71d415d6163d56bf84d076890ab2`.
+- `closed-acme.Caddyfile`: SHA-256 `f2465b620ceb771eab46975c9e9e2cb2e4be153374da8d4bc6204a8422cdf0a9`. 앞서 검토한 같은 조각이며 일반 HTTP/HTTPS 모두403/no-store, upstream 없음.
+- 전체 범위·제외·중단 조건은 archive의 `APPROVALS.txt`, 항목 hash는 `SHA256SUMS.json`, 검토 root 본문은 같은 로컬 폴더의 `launch-reviewed.txt`다. 기존 root helper/전체 source manifest hash도 operator에서 고정 대조한다.
+
+승인받을 범위는 다음 다섯 가지다.
+
+1. 새 staging `/home/oioi/p06-c-certificate-preparation`의0700/파일0600 전달과 root 메모리 hash/항목 검증 후 새 `/var/lib/oioi-p06-c-certificate-launch`의0700/0600 보호 설치. 기존 경로 충돌 시 즉시 중단한다.
+2. 기존 deployment.lock 안에서 두 기존 보호 백업·정상 current/previous/receipt·컨테이너 ID/시작 시각/digest·env/snapshot 불변·health/preview와 현재 Caddyfile `cf202c96...`·HTTP403 조각 `d7dd2ffb...`를 대조한다. 새 `/var/lib/oioi-p06-c-before-certificate`를 root:root·전체 디렉터리0700/파일0600으로 생성해 현재 Caddy/fragment·host/env·두 snapshot/링크·preview 공개 인증서 hash를 보존한다. 기존 백업·preview 개인키/CA 계정/저장소는 덮어쓰지 않는다.
+3. 임시 candidate를 Caddy 권한으로 validate한 뒤 **main Caddyfile/import를 그대로 두고** `/etc/caddy/p06-c/active.caddy`만 root:caddy/0640의 고정 조각으로 교체·기존 Caddy reload한다. 기존 Caddy가 Console 전용 Let's Encrypt HTTP-01·인증서/키 저장을 수행한다. preview의 발급/갱신 설정은 그대로다. Console TLS-ALPN만 비활성이다.
+4. 최대180초 발급 상태를 관찰하고 첫 Console 발급 error/재시도 로그 또는 시간 초과면 즉시 복구한다. 이는 제어된 활성화 한 번이며 Caddy/CA 내부 HTTP 요청이 정확히 한 번임을 보장하지 않는다. 운영자 수동 재실행·무기한 내부 재시도는 허용하지 않는다.
+5. 성공 시 직접 origin의 CA 신뢰·Console SAN/Let's Encrypt issuer/만료와 origin/Cloudflare HTTPS403/no-store·HTTP403을 확인한다. Caddy PID·preview 인증서/세 경로200·두 앱 네 health/readiness200·세 컨테이너/env/snapshot 불변을 재검사한다. 성공한 비프록시 HTTPS403/인증서 갱신 설정은 유지하고 이후 제한 창을 별도 준비한다.
+
+해시 검증·보호 설치 이후의 **미승인 실행 후보**는 다음과 같다. 지금 실행하지 않는다.
+
+```bash
+sudo python3 -I -B /var/lib/oioi-p06-c-certificate-launch/certificate-phase.py apply
+```
+
+동일 묶음의 복구 명령은 다음과 같다.
+
+```bash
+sudo python3 -I -B /var/lib/oioi-p06-c-certificate-launch/certificate-phase.py restore
+```
+
+복구는 같은 잠금/백업 hash/현재 조각 허용 목록 대조 후 **현재 HTTP403 조각**만 복원·validate/reload하고 preview/pair/DB를 검사한다. DNS 전 `deny-http.py restore`는 차단/import 자체를 없애므로 이 단계에서 사용하지 않는다. 적용 후 실패의 자동 복구는 한 번이며 exit20=복구 성공 후 중단,21=복구 실패 후 중단이다. 사전 불일치는1, 정상은0이다. 기존 경로를 삭제하거나 apply를 반복하지 않는다.
+
+인증서 발급/CA 요청 이력은 설정 복원으로 취소되지 않는다. 새 인증서/키·캐시는 삭제/회수하지 않고 보호 보존한다. 복구 후 TLS 거절을 단정하지 않으며 실제 TLS 거절 또는 비프록시403/404를 관찰하고 외부 Cloudflare 응답도 재확인한다. main Caddyfile/기존 preview/HTTP 차단·정상 pair는 보존한다.
+
+HTTPS Origin/env/materializer·컨테이너/DB 재시작·배포/snapshot·임시 허용 matcher·Cloudflare DNS/cache/SSL/WAF/Rules·#166 병합은 제외한다. Full(strict) 해제·DNS-only 전환·Origin CA나 DNS plugin/token 추가도 제외한다. 일반 공개는 F다. 실패 후 원인 분석/새 승인을 받기 전 발급을 재시도하지 않는다. 문서 CI 성공과 실행 직전 전체 hash/상태 대조 후에만 승인 범위대로 실행한다.
 
 ## 3. OCI Vault: Console 키 두 개 보관
 
@@ -290,7 +325,7 @@ DNS 전환만으로 운영 활성화·MFA 검증·배포 완료를 기록하지 
 ## 8. 준비 완료 체크
 
 - [x] Cloudflare DNS/Worker/관련 규칙 기록 — 2026-10-19 사용자 대시보드 확인, RESULT 참조.
-- [x] Console 캐시 Bypass 규칙 준비·SSL mode/Edge 인증서 기록 — 규칙 비활성, origin 인증서·적용 검증은 별도.
+- [x] Console 캐시 Bypass 규칙 준비·SSL mode/Edge 인증서 기록 — 2026-10-20 사용자 규칙 활성화·Proxied DNS 생성 완료. origin 인증서·인증 응답 검증은 별도.
 - [ ] Console 키 두 개의 Vault OCID와 보호된 복구 사본 준비.
 - [ ] 기존 OCIR/GitHub 설정과 Stack 소스 SHA/path·주체/domain·세 compartment·정책 기록.
 - [ ] ARM64 빌드 전 승인된 B0 Plan/Apply·push/pull·새 secret 읽기·새 Run Command 증거 확보.
