@@ -6,7 +6,7 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-20"
-revision: 9
+revision: 10
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -168,6 +168,26 @@ sudo python3 -I -B /var/lib/oioi-p06-c-certificate-launch/certificate-phase.py r
 인증서 발급/CA 요청 이력은 설정 복원으로 취소되지 않는다. 새 인증서/키·캐시는 삭제/회수하지 않고 보호 보존한다. 복구 후 TLS 거절을 단정하지 않으며 실제 TLS 거절 또는 비프록시403/404를 관찰하고 외부 Cloudflare 응답도 재확인한다. main Caddyfile/기존 preview/HTTP 차단·정상 pair는 보존한다.
 
 HTTPS Origin/env/materializer·컨테이너/DB 재시작·배포/snapshot·임시 허용 matcher·Cloudflare DNS/cache/SSL/WAF/Rules·#166 병합은 제외한다. Full(strict) 해제·DNS-only 전환·Origin CA나 DNS plugin/token 추가도 제외한다. 일반 공개는 F다. 실패 후 원인 분석/새 승인을 받기 전 발급을 재시도하지 않는다. 문서 CI 성공과 실행 직전 전체 hash/상태 대조 후에만 승인 범위대로 실행한다.
+
+### 2026-10-20 Cloudflare 국가 챌린지 규칙의 ACME 예외(승인안)
+
+실제 CA 검증 요청에 사용자 지정 Managed Challenge가 적용된 화면과 사용자가 제공한 두 규칙 식은 [C 결과](P06-C-RESULT.md#2026-10-20-승인된-인증서-단계-실패와-http403-복구)를 따른다. 미국 검증 요청이 `(ip.src.country ne "KR")`에 해당하므로 이 식의 규칙 한 건만 변경 대상으로 지정한다. `/admin` 식은 변경하지 않는다. **아래는 미승인·미적용안이며 인증서 재시도 승인이 아니다.**
+
+변경 직전 국가 규칙의 이름/ID·원본 식·Action·활성 상태·순서를 보관한다. 원본 식이 정확히 `(ip.src.country ne "KR")`, Action이 Managed Challenge인지 대조하고 다르면 저장하지 않는다. Action·활성·순서는 보존하고 식만 다음으로 바꾸는 범위를 별도 승인받는다.
+
+```text
+(ip.src.country ne "KR") and not (
+  http.host eq "console.oioibawige.com"
+  and http.request.method eq "GET"
+  and starts_with(http.request.uri.path, "/.well-known/acme-challenge/")
+)
+```
+
+이 국가 규칙에서만 해당 host/GET/ACME prefix를 제외한다. 해외의 일반 Console 경로·다른 method·다른 host/preview에는 기존 국가 조건을 유지하고 `/admin` 규칙과 다른 보안 기능은 그대로 둔다. [Cloudflare starts_with](https://developers.cloudflare.com/ruleset-engine/rules-language/functions/#starts_with)와 [국가 필드](https://developers.cloudflare.com/ruleset-engine/rules-language/fields/reference/ip.src.country/)를 대조했다. 전체 WAF/남은 사용자 지정 규칙 Skip을 새로 만들지 않는다. 원본 Caddy의 일반403·upstream 격리도 유지한다.
+
+원복 식은 보관한 `(ip.src.country ne "KR")`다. 변경 후에는 외부 일반 HTTP403·미활성 임의 ACME403·preview/기존 pair 보존을 읽기 확인하며, 이것을 유효 토큰200/발급 성공으로 보고하지 않는다. **이번 요청은 국가 규칙 식 한 건 변경/원복과 상태 확인만**이다. Full(strict)·Always Use HTTPS OFF·DNS/cache·다른 규칙·Caddy/env/컨테이너·#166 병합은 포함하지 않는다.
+
+예외는 이후 HTTP-01 자동 갱신에도 사용할 **유지 범위**로 승인받는다. 변경/유지 또는 원복은 승인 범위대로 수행하고 임의로 전체 보안을 끄지 않는다. 인증서 재시도는 이미 실행한 archive62c6a1fa...를 반복하지 않으며 새 고정 실행물/보호 경로·복구 범위를 확정해 별도 승인받는다. 현재 HTTP403 복구 상태와 모든 백업은 보존한다.
 
 ## 3. OCI Vault: Console 키 두 개 보관
 
