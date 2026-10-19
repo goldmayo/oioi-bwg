@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-19"
-revision: 36
+revision: 37
 ---
 
 # P06 작업 인계
@@ -12,11 +12,13 @@ revision: 36
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- 현재 C 진입점: **HTTPS/쿠키/Origin·신뢰 IP 코드와 HTTP/HTTPS·DB·CI 검증 완료 / 운영 검증 대기**.
-  PR [#163](https://github.com/goldmayo/oioi-bwg/pull/163), 구현 `6ed4ece`, HTTPS Action 검증 `3822d13`, host 검증 보완 `16c317d`, HTTPS/DB 검증 `2a274cd`. 결과·실제 명령·남은 승인 게이트는 [P06-C RESULT](P06-C-RESULT.md)가 소유한다.
-  B의 정상 pair와 preview를 유지했다. Caddy 2.6.2/실제 설정을 SSH 읽기로 확인했으며 설치·reload·DNS·배포는 하지 않았다.
-  Docker 연결 후 로컬 HTTP/HTTPS의 전체 로그인·등록·CRUD·회수와 두 TCP IP 제한이 통과했다. 코드 head `d77d7c5`의 CI도 전체 성공했다.
-  실제 Cloudflare→VM의 비공개 HTTPS/IP·캐시 검증이 남았다. C 전체 완료로 해석하지 않는다.
+- 현재 C 진입점: **#163/#165 병합·#164 ARM64 후보 검증 완료 / 제한된 실제 운영 검증 승인 대기**.
+  #165 merge `ed19b6d` 후 두 merge 허용 설정을 원복했다. [#164](https://github.com/goldmayo/oioi-bwg/pull/164)는 Draft·미배포다.
+  검증 source/CI·후보 및 사용자의 Cloudflare 사전 점검 사실은 [P06-C RESULT](P06-C-RESULT.md)가 소유한다.
+  이미 확인된 Cloudflare 항목을 재조사하지 않는다. 남은 서버 조건과 최소 DNS/캐시 요청은 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)를 따른다.
+  B의 정상 pair/preview를 보존하고 새 Console 경로는 기본 403으로 제한·검증한다. 일반 공개는 F다. 서버 변경·#164 병합/배포와 DNS/캐시 활성화는 각각 별도 승인이다. C 전체 완료가 아니다.
+- 후속 보류: #143/#161/#165에서 반복된 squash Promotion 조상 연결의 브랜치 전략을 C 이후 별도 검토한다.
+  현재 C의 차단 이슈로 취급하지 않고 #164 후보·파이프라인·브랜치 정책을 이번 작업에서 변경하지 않는다.
 - B 종료 시 진입점: **P06-B 완료 / 첫 정상 pair 유지 / preview 원복 완료 / 다음 단계 C**.
   호스트 보호·백업/업그레이드·Console 설정과 승인된 기존 0005 적용, 첫 공동 배포와 기존 Web 복구,
   공동 rollback·실제 두 앱 IMDS 차단/host 양성 대조·두 앱 재생성·Docker/VM 재시작 지속성을 확인했다.

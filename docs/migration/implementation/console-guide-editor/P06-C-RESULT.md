@@ -2,17 +2,18 @@
 title: "P06-C Console HTTPS 및 인증 요청 보안 경계 구현 결과"
 kind: migration-result
 status: in-progress
-source_commit: 9475415caef65f4a1d930d600c704c9960eedb70
+source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 verified_at: "2026-10-19"
 updated_at: "2026-10-19"
-revision: 4
+revision: 5
 ---
 
 # P06-C 구현 결과
 
-**코드·로컬 HTTP/HTTPS·Docker PostgreSQL 및 CI 검증 완료 / 실제 VM·Cloudflare HTTPS 검증 대기. C 전체 완료가 아니다.**
+**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증 완료 / 실제 VM·Cloudflare HTTPS 검증 대기. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
-구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 배포 호스트 보완 `16c317d`, 로컬 HTTPS/DB 검증 확장은 metadata의 커밋이다.
+구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 배포 호스트 보완 `16c317d`, 로컬 HTTPS/DB 검증 확장 `2a274cd`를 거쳤다.
+metadata의 source는 아래 후속 ARM64 후보의 검증 source이며 초기 로컬 검증과 구분한다.
 검토 PR은 [#163](https://github.com/goldmayo/oioi-bwg/pull/163)이다.
 [P06-PLAN §6](P06-PLAN.md#6-https등록운영자-경계), active [Auth/Authz](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md),
 [B 완료 결과](P06-B2-3-RESULT.md#2026-10-18-b-운영-실증-완료와-최종-상태)를 따른다.
@@ -30,7 +31,8 @@ revision: 4
 Web 인증·Compose·배포/rollback·DB schema·Secret/키는 변경하지 않았다.
 Cloudflare CIDR과 CF-Connecting-IP의 의미는 [공식 IPv4](https://www.cloudflare.com/ips-v4),
 [IPv6](https://www.cloudflare.com/ips-v6), [헤더 문서](https://developers.cloudflare.com/fundamentals/reference/http-headers/)를 대조했다.
-Console 호스트의 Worker route·Pseudo IPv4·IP 제거 transform 여부는 실제 적용 전에 확인해야 한다.
+이후 사용자의 대시보드 사전 점검은 아래에 별도 근거로 기록했다. 확인된 항목을 다시 조사하지 않으며,
+IP 변형 등 실제 경로의 문제가 관찰되면 그 원인 설정만 추가 확인한다.
 
 ## 실제 수행한 검증
 
@@ -78,13 +80,40 @@ HTTPS 확장 중 드러난 기존 fixture의 모든 HTTPS 요청 차단과 단�
 
 이번 보완은 운영 적용이나 C 전체 완료를 뜻하지 않는다. 아래 실제 VM/Cloudflare 승인 게이트를 유지한다.
 
+## 2026-10-19 코드 병합과 Promotion 후보 검증
+
+- 사용자 승인 후 #163을 `5106876650670b819647344e5b1fae5ecdfa30b7`로 squash 병합했다.
+- 승인된 파일 변경 0개의 [#165](https://github.com/goldmayo/oioi-bwg/pull/165)를 `ed19b6d9f033009349708dc35cb7bed2cd7be5cd`로 일반 merge했다. 저장소/main의 merge 허용 설정은 즉시 원본으로 복원·대조했고 develop ruleset은 유지했다.
+- [#164](https://github.com/goldmayo/oioi-bwg/pull/164)의 [Verify 39183484581](https://github.com/goldmayo/oioi-bwg/actions/runs/39183484581) attempt 1 전체 성공. source는 metadata와 같고 source/virtual merge tree는 `5584c7569e5438b78f53eab101a63579b427134a`다.
+- candidate artifact `12156679197`을 다운로드해 PR/source/tree/run/attempt·실제 Environment repository·두 신규 ARM64 digest와 마지막 정상 배포 #158 receipt baseline을 대조했다. 두 이미지는 같은 source의 `origin=built`이며 동시 paired smoke를 통과했다. 정확한 digest/후보 hash는 고정 artifact와 #164 검증 본문을 참조한다.
+- #164는 Draft·미병합·미배포다. 현재 검증 head를 보존하며 배포 파이프라인을 변경하지 않는다.
+
+## 2026-10-19 Cloudflare 대시보드 사전 점검(사용자 확인)
+
+근거는 사용자가 이 대화에 제공한 대시보드 확인 결과다. 에이전트의 dashboard/API 재조회나
+실제 Cloudflare→Caddy 인증 성공 증거로 해석하지 않는다. **Cloudflare 설정 변경은 아직 없다.**
+
+| 항목 | 사용자 확인 상태 |
+| --- | --- |
+| Console DNS | `console.oioibawige.com` 레코드 없음 |
+| SSL/TLS·Edge | Full (strict), `*.oioibawige.com` Edge 인증서 활성 |
+| Worker Custom Domain | 기존 apex·www만 연결 |
+| Rules | Origin Rules·Redirect/Rewrite Rules·Request Header Transform Rules 없음 |
+| Managed Transforms | 모두 비활성, 방문자 IP 헤더 제거도 비활성 |
+| Cache Rule | `console-bypass-cache` 생성됨. 조건 `http.host eq "console.oioibawige.com"`, Bypass cache, 현재 비활성 |
+
+위 항목은 완료한 사전 점검으로 재사용한다. 남은 origin 인증서·서버 제한 경로와 최소 Cloudflare
+변경 요청·승인 순서는 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)가 소유한다.
+DNS 생성·Cache Rule 활성화는 Console 외부 차단과 기존 preview 보호를 실제 확인한 뒤 별도 승인받는다.
+#164 병합/VM 배포와 서버 HTTPS 전환도 별도 승인 대상이며 일반 공개는 F다.
+
 ## 남은 완료 게이트와 운영 승인 범위
 
 - 초기 Docker 연결 부재는 사용자의 연결 후 해소했다. 로컬 HTTP/HTTPS·격리 DB 전체 회귀와 위 CI의 두 이미지 검증이 통과했다. 이후 테스트/문서 커밋의 CI는 같은 PR에서 별도로 확인한다.
-- Console DNS는 조회 시 해석되지 않았다. preview의 공개 Cloudflare 경로는 challenge 403, VM의 preview 원본 TLS는 정상이다. 기존 인증서는 Let's Encrypt이며 console 인증서·Cloudflare 캐시 bypass 설정은 미확인이다.
+- 초기 공개 조회에서 Console DNS는 해석되지 않았고 preview Cloudflare 경로는 challenge 403, VM preview 원본 TLS는 정상이었다. 이후 DNS/TLS/캐시 준비 상태는 위 사용자 확인으로 갱신했다. Console origin 인증서와 실제 캐시 제외 동작은 여전히 미검증이다.
 - 실제 VM의 비공개 HTTPS 브라우저 검증, 실제 Cloudflare client IP 두 개의 독립 제한, 직접 원본 접근 거절과 CDN 캐시 제외는 **미검증**이다. 로컬 모사 peer 성공으로 대체하지 않는다.
 - 운영 적용 전 보호된 원본 Caddyfile·host materializer·Console public/runtime env·정상 pair/snapshot을 root-only 백업하고 복구 경로를 확정해야 한다. Caddy 조각은 기존 preview block을 보존해 합친 후 validate한다. 실패 시 원본 Caddyfile 복원→validate→reload, 기존 승인된 pair/env 복구→두 앱 네 health/readiness와 preview 원본 200 대조 순서다.
-- 제한 HTTPS 검증은 loopback listener와 SSH 전달을 우선 검토하며 공용 403을 유지한다. 기존 인증서 확장 또는 제한 listener의 인증서 방식을 실제 설정과 함께 확정하고 별도 승인받는다. DNS 추가만으로 제한 완료라 하지 않는다.
-- PR 병합, host asset 설치, runtime Origin 전환, Promotion/배포, Caddy reload, DNS/Cloudflare 변경은 아직 실행하지 않았다. 사용자 요청 §8에 따른 별도 운영 승인 대상이다. 실행 후보·정확한 보호 파일 경로와 복구 명령을 확정한 다음 승인받는다.
+- loopback/SSH TLS 검증과 실제 Cloudflare→Caddy 경로 검증을 구분한다. 공개 403을 유지한 제한 matcher·origin 인증서·실행/복구 명령은 별도 승인 전 미적용이다. DNS 추가만으로 제한 완료라 하지 않는다.
+- #163/#165의 코드·이력 병합과 #164 후보 검증만 완료했다. host asset 설치·runtime Origin 전환·#164 Promotion/VM 배포·Caddy reload·DNS/Cloudflare 변경은 실행하지 않았다. 정확한 보호 파일 경로·실행 후보·복구 명령과 함께 각각 별도 승인받는다.
 
 위 게이트를 통과하기 전에는 C를 완료로 바꾸지 않는다. D 실물 MFA·CLI/키 복구, E Web 관리/가입 종료, F 공개/www 전환은 기존 단계에 남긴다.

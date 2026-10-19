@@ -3,13 +3,18 @@ title: "P06 외부 환경 사전 준비 안내"
 kind: migration-plan
 status: draft
 authority: plan
-source_commit: 5135f6eb1a53782b86a3120b1d8b0134410bf4d4
+source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
-updated_at: "2026-10-11"
-revision: 2
+updated_at: "2026-10-19"
+revision: 3
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
+
+2026-10-19 C 추가 안내: Cloudflare 대시보드 사전 점검은 사용자 확인으로 완료됐다.
+확인 사실은 [P06-C RESULT](P06-C-RESULT.md#2026-10-19-cloudflare-대시보드-사전-점검사용자-확인)가 소유하며,
+추가 변경·승인 순서는 아래 §2를 따른다. #164 후보는 검증됐지만 Draft·미배포다.
+아래 B0/Vault 등 초기 준비 안내를 새 실행 요청으로 해석하지 않는다.
 
 **preview에서 만들어 둔 기존 관리자 계정을 그대로 사용한다.** 관리자 계정 생성·승격은
 사전 준비에서 제외한다. 일반 회원가입 페이지와 가입 API 세 개는 사용자 지시에 따라 P06에서 종료할 대상으로
@@ -39,46 +44,62 @@ apex는 www로 redirect하는 안이며 적용 절차는 P06 전환 시 확정�
 | VM         | Caddy 실행 방식·설정 경로·포트·자원 확인              | 두 앱 배포·HTTPS·MFA 등록/회수 검증               |
 | R2         | assets 연결·버킷 의존성 확인                          | 필요 시 파일 이관 후 이전 리소스 종료             |
 
-기준 코드의 Console은 HTTP loopback만 허용하고 쿠키 Secure=false이며 배포는 Web 한 앱만
-처리한다. 지금 DNS와 `CONSOLE_ORIGIN=https://console.oioibawige.com`만 넣으면 정상 실행되지 않는다.
-P06에서 이 경계를 구현한 뒤 적용한다. 아래 VM 명령은 조회용이며 배포·DB 변경 명령은 없다.
+초기 안내 기준 `5135f6e`에서는 Console이 HTTP loopback만 허용하고 쿠키 Secure=false이며 배포는 Web 한 앱이었다.
+이후 B의 공동 배포와 C의 HTTPS 코드·후보 검증을 마쳤다. 실제 VM은 기존 HTTP loopback 설정과
+HTTP 전용 host materializer를 유지하므로 DNS나 HTTPS Origin만 먼저 바꾸지 않는다.
+아래 VM 명령은 조회용이며 배포·DB 변경 명령은 없다.
 
-## 2. Cloudflare: 기존 설정 보관과 캐시 제외
+## 2. C의 제한된 Cloudflare HTTPS 검증 준비
 
-Cloudflare에서 `oioibawige.com`을 선택한다. 다음 화면을 캡처하거나 설정을 기록한다.
+### 사전 점검 완료와 남은 서버 조건
 
-- DNS → Records: preview의 A 대상, www/apex의 Worker 연결, staging·assets.
-- Workers & Pages → `oioibawige` 및 `oioibawige-staging` → Settings → Domains & Routes.
-- SSL/TLS → Overview 및 Edge Certificates: 현재 mode·인증서 Active 상태·hostname 범위.
-- Rules: Redirect/Origin/Transform/Cache 규칙. console까지 매칭되는 wildcard 규칙 확인.
+대시보드의 DNS·SSL/TLS·Edge 인증서·Worker Custom Domain·관련 Rules/Managed Transforms는
+[사용자 확인 결과](P06-C-RESULT.md#2026-10-19-cloudflare-대시보드-사전-점검사용자-확인)를 재사용한다.
+같은 항목의 화면 확인이나 캐시 규칙 재생성을 다시 요청하지 않는다. Cloudflare 설정은 아직 변경하지 않았다.
 
-지금 www/apex/staging 연결을 삭제하지 않는다. 복구용 설정 기록에 secret 원문을 넣지 않는다.
+1. 별도 서버 승인안에서 원본 Caddyfile·host materializer·Console public/runtime env·정상 pair/snapshot의
+   보호 백업과 정확한 복구 명령을 확정한다. 기존 preview block·Web/DB·loopback 포트를 보존한다.
+2. 별도 승인된 #164 Promotion으로 검증한 두 digest를 **기존 HTTP loopback 설정에서 먼저 배포·정상 확인**한다.
+   #164 병합과 실제 VM 배포는 이 문서 갱신이나 Cloudflare 사전 점검으로 승인되지 않는다.
+3. Console origin 인증서·제한 Caddy 경로를 준비하고 host materializer·HTTPS Origin 전환을 함께 검토·승인한다.
+   준비 중에는 검증 경로도 닫아 두고, 실패하면 설정과 기존 정상 pair를 함께 복구한다.
+4. DNS 요청 전에 일반 Console 요청/직접 origin/위조 헤더가 차단되는 증거와 기존 preview 원본 200,
+   두 앱의 네 health/readiness 200·DB healthy를 대조한다. DNS 부재 자체를 차단 근거로 쓰지 않는다.
 
-캐시 제외는 Caching → Cache Rules → Create rule에서 아래 값으로 준비한다.
+Edge의 `*.oioibawige.com` 인증서는 **Caddy의 origin 인증서를 대신하지 않는다**.
+남은 인증서 조건은 `console.oioibawige.com`을 포함한 유효한 origin 인증서다.
+기존 인증서로 충족하지 못할 때만 Console용 Origin CA 발급·보호 설치를 별도 요청한다.
+Full (strict)는 유지하며 preview 인증서를 교체하지 않는다. Origin CA를 사용하면 직접 origin 검사는
+해당 CA를 명시적으로 신뢰해 TLS와 HTTP 차단을 구분한다.
+[Full strict 조건](https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/full-strict/),
+[Origin CA](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/).
 
-| 필드 | 값 |
-| --- | --- |
-| Rule name | `console-bypass-cache` |
-| 요청 조건 | Custom filter expression |
-| Field / Operator / Value | Hostname / equals / `console.oioibawige.com` |
-| Cache eligibility | Bypass cache |
+현재 [Caddy 조각](../../../../ops/oci/console.Caddyfile)의 무조건 403으로는 실제 인증 경로를 검증할 수 없다.
+제한 경로의 **제안**은 Cloudflare TCP peer와 일회성 검증 헤더를 모두 만족하는 요청에만 proxy를 허용하고,
+나머지는 계속 403으로 응답하는 것이다. 고정 사용자 IP·VPN·새 인증 서비스는 요구하지 않는다.
+검증 헤더는 보호된 임시 값으로만 공급하고 지정 Console origin에만 보내며 로그·repo·artifact에 남기지 않는다.
+실제 Caddy 2.6.2의 matcher·설정 차이·검증 창·제거/복구 명령을 준비해 별도 승인받기 전에는 적용하지 않는다.
+loopback/SSH TLS 검증과 실제 Cloudflare 경로의 증거를 구분하고, 종료 시 임시 허용 matcher를 닫는다.
 
-Expression editor를 사용한다면 다음 식을 넣는다.
+### 서버 보호 확인 후 별도 요청할 Cloudflare 변경
 
-```text
-(http.host eq "console.oioibawige.com")
-```
+아래 두 변경은 위 차단·preview 보호 증거를 제시한 **다음** 별도 승인받는다. 지금 실행하지 않는다.
 
-같은 hostname에 캐시를 허용하는 기존 규칙보다 뒤에 두어 Bypass가 최종 적용되게 한다.
-Deploy로 저장할 수 있으며 DNS 생성이 요구되면 Save as Draft로 보관하고 DNS 연결 단계에서
-활성화한다. 지금 DNS를 먼저 추가하지 않는다. [생성 절차](https://developers.cloudflare.com/cache/how-to/cache-rules/create-dashboard/),
-[충돌 시 마지막 규칙 우선](https://developers.cloudflare.com/cache/how-to/cache-rules/order/).
+| 순서 | 정확한 요청 | 범위 |
+| --- | --- | --- |
+| 1 | 기존 `console-bypass-cache` 활성화 | 조건 `http.host eq "console.oioibawige.com"`, Bypass cache 유지. 새 규칙 생성 없음 |
+| 2 | DNS A `console` → `129.225.183.112`, Proxied, TTL Auto 생성 | 승인 직전 백업/대조한 같은 preview VM만 대상. DNS-only나 preview CNAME 사용 안 함 |
 
-SSL/TLS는 현재 mode와 인증서 범위만 기록한다. 목표는 Full (strict)이며 origin에 유효한
-www·console 인증서가 필요하다. 현재 zone mode를 확인 없이 바꾸거나 인증서를 교체하지 않는다.
-기존 Caddy 인증서 방식을 확인한 뒤 확장한다. [Full strict 조건](https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/full-strict/).
+캐시 제외를 먼저 활성화한 뒤 DNS를 연결한다. Full (strict)·Edge 인증서·기존 Worker/Rules/Managed
+Transforms·apex/www/staging/preview는 변경 요청 대상이 아니다.
+[Proxied DNS](https://developers.cloudflare.com/dns/proxy-status/),
+[Bypass cache](https://developers.cloudflare.com/cache/how-to/cache-rules/settings/).
 
-완료: 현재 설정 기록, Console 캐시 제외 규칙 또는 draft, 현재 SSL mode/인증서 범위 기록.
+적용 후 실제 HTTPS 브라우저 쿠키·Origin/authority·위조 IP 헤더 거절·서로 다른 실제 client IP의 제한과
+IP 변경 시 세션 유지를 검증한다. 인증 응답의 no-store·캐시 HIT 없음·응답 재사용 방지와 preview/Web/DB도 확인한다.
+edge challenge나 IP 변형 등 실제 실패가 나오면 그 요청/설정만 추가 조사한다. 공통 대시보드 점검을 반복하지 않는다.
+복구는 임시 허용 경로 닫기 → 승인한 Caddy/env/pair 복원·정상 확인 → 이번 Console DNS 제거/캐시 규칙 비활성화 순서로 준비한다.
+DNS 제거만으로 접근 차단이 보장된다고 판단하지 않는다. Console 일반 공개와 www 전환은 F에 남긴다.
 
 ## 3. OCI Vault: Console 키 두 개 보관
 
@@ -208,7 +229,8 @@ Cloudflare R2 → `oioibawige-r2-staging` → Settings → Custom Domains에서
 
 ## 7. P06 구현 후 적용할 DNS와 인증 설정
 
-이 절은 전환 시 사용할 값이다. 지금 Save/연결 해제/삭제하지 않는다.
+이 절은 F의 최종 전환 값이다. C에서는 §2의 **Console만** 별도 승인하며 www/apex/preview는 유지한다.
+지금 Save/연결 해제/삭제하지 않는다.
 Cloudflare → oioibawige.com → DNS → Records → Add record에서 다음으로 연결한다.
 
 | Type | Name | IPv4 | Proxy | TTL |
@@ -234,8 +256,8 @@ DNS 전환만으로 운영 활성화·MFA 검증·배포 완료를 기록하지 
 
 ## 8. 준비 완료 체크
 
-- [ ] 현재 Cloudflare DNS/Worker/관련 규칙 기록.
-- [ ] Console 캐시 Bypass 규칙 또는 draft, SSL mode·인증서 범위 기록.
+- [x] Cloudflare DNS/Worker/관련 규칙 기록 — 2026-10-19 사용자 대시보드 확인, RESULT 참조.
+- [x] Console 캐시 Bypass 규칙 준비·SSL mode/Edge 인증서 기록 — 규칙 비활성, origin 인증서·적용 검증은 별도.
 - [ ] Console 키 두 개의 Vault OCID와 보호된 복구 사본 준비.
 - [ ] 기존 OCIR/GitHub 설정과 Stack 소스 SHA/path·주체/domain·세 compartment·정책 기록.
 - [ ] ARM64 빌드 전 승인된 B0 Plan/Apply·push/pull·새 secret 읽기·새 Run Command 증거 확보.
