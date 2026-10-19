@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
-updated_at: "2026-10-19"
-revision: 5
+updated_at: "2026-10-20"
+revision: 6
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -16,6 +16,7 @@ revision: 5
 추가 변경·승인 순서는 아래 §2를 따른다. 별도 사용자 승인으로 1차 보호 백업과 #164의 기존 HTTP 공동 배포를 완료했다.
 실행·receipt·VM 검증은 [C 운영 결과](P06-C-RESULT.md#2026-10-19-승인된-보호-백업과-http-공동-배포)가 소유한다.
 #166은 Draft·미병합이며 HTTPS Origin·Caddy·인증서·Cloudflare 변경은 미실행이다.
+2026-10-20 인증서 읽기 관찰을 반영한 **기존 Caddy의 Let's Encrypt 우선 경로**는 아래 §2의 추가 안내를 따른다.
 아래 B0/Vault 등 초기 준비 안내를 새 실행 요청으로 해석하지 않는다.
 
 **preview에서 만들어 둔 기존 관리자 계정을 그대로 사용한다.** 관리자 계정 생성·승격은
@@ -73,11 +74,33 @@ HTTP 전용 host materializer를 유지하므로 DNS나 HTTPS Origin만 먼저 �
 
 Edge의 `*.oioibawige.com` 인증서는 **Caddy의 origin 인증서를 대신하지 않는다**.
 남은 인증서 조건은 `console.oioibawige.com`을 포함한 유효한 origin 인증서다.
-기존 인증서로 충족하지 못할 때만 Console용 Origin CA 발급·보호 설치를 별도 요청한다.
+2026-10-20 사용자 지시에 따라 기존 Caddy의 Let's Encrypt 자동 발급을 먼저 검토한다.
+현재 preview 인증서의 Console 미포함만으로 Origin CA를 요청하지 않는다. HTTP-01 실제 실패의 원인과 최소 대안을 확인한 뒤 꼭 필요할 때만 별도 발급을 요청한다.
 Full (strict)는 유지하며 preview 인증서를 교체하지 않는다. Origin CA를 사용하면 직접 origin 검사는
 해당 CA를 명시적으로 신뢰해 TLS와 HTTP 차단을 구분한다.
 [Full strict 조건](https://developers.cloudflare.com/ssl/origin-configuration/ssl-modes/full-strict/),
 [Origin CA](https://developers.cloudflare.com/ssl/origin-configuration/origin-ca/).
+
+### 2026-10-20 기존 Caddy의 Let's Encrypt 우선 경로
+
+현재 인증서 SAN·ACME 기능·포트와 새 정상 pair 기준 실행물/검증 hash는 [C 결과](P06-C-RESULT.md#2026-10-20-기존-인증서acme-읽기-관찰과-dns-전-준비)가 소유한다.
+Console 인증서가 없고 HTTP-01은 공개 DNS와80 포트가 필요하다. 따라서 초기의 DNS 전 origin TLS403 가정은 그대로 실행할 수 없다.
+아래는 외부 차단을 먼저 실증한 뒤 DNS·인증서·HTTPS 창을 구분하는 **미승인 실행안**이다. 실제 인증서 발급 성공을 가정하지 않는다.
+
+1. **별도 VM 승인:** 새 정상 pair/receipt·기존 보호 백업을 대조하고 새 `/var/lib/oioi-p06-c-before-https` 백업을 만든다.
+   기존 preview 원문에 import만 추가하고 Console **HTTP 전용** 차단 조각을 validate/reload한다. 앱 env·host materializer·컨테이너·인증서는 변경하지 않는다.
+   직접 origin의 HTTP403/no-store·Console SNI TLS 거절·preview 세 경로200·네 health/readiness200·DB healthy와 세 container ID/시작 시각 불변을 확인한다. DNS 부재 자체를 차단 증거로 쓰지 않는다.
+2. **별도 Cloudflare 승인:** 위 실제 보호 증거 이후에만 기존 캐시 규칙 활성화 → Console Proxied A 생성.
+   이때도 Console upstream은 없다. 인증서 확보 전 Full(strict)의 HTTPS 실패 가능성을 정상 인증 경로로 취급하지 않는다.
+3. **별도 VM 인증서 승인:** DNS 연결 뒤 Console을 계속 차단한 `closed-acme.Caddyfile` 적용·reload로 기존 Caddy의 Let's Encrypt HTTP-01 발급을 시도한다.
+   Console issuer에만 TLS-ALPN challenge를 끄고 preview 설정/갱신은 보존한다. Caddy는 실제 ACME challenge를 자체 처리하며 일반 HTTP/HTTPS는403이다.
+   실제 edge→origin의 HTTP challenge 도달·CA 검증은 아직 미검증이다. 제한된 시간 내 실패하면 HTTP 전용 차단으로 복구·중단하고 원인을 확인한다. 무조건 재시도·DNS-only 전환·새 DNS plugin/token 추가는 하지 않는다.
+4. **별도 HTTPS 검증 창 승인:** 새 인증서 SAN/체인/유효 기간·Full(strict)·직접 origin403·preview를 확인한 뒤 host materializer/HTTPS env와 제한 matcher의 정확한 실행물·hash·복구 명령을 최종 검토한다.
+   env 전환부터 원래 HTTP env/configHash 복구까지 기존 deployment.lock을 유지하며 정상 snapshot은 바꾸지 않는다. 임시 헤더 제거·matcher 제거 후 실제 외부403·Web/DB 보존 계약은 유지한다.
+
+DNS 전 단계의 고정 archive와 root 실행/복구 명령은 RESULT에 연결한다. VM 전달·설치/reload·DNS·발급·env 전환은 현재 어느 것도 승인/실행하지 않았다.
+[Caddy 자동 HTTPS/HTTP-01 조건](https://caddyserver.com/docs/automatic-https#http-challenge),
+[Let's Encrypt HTTP-01](https://letsencrypt.org/docs/challenge-types/#http-01-challenge).
 
 현재 [Caddy 조각](../../../../ops/oci/console.Caddyfile)의 무조건 403으로는 실제 인증 경로를 검증할 수 없다.
 제한 경로의 **제안**은 Cloudflare TCP peer와 일회성 검증 헤더를 모두 만족하는 요청에만 proxy를 허용하고,

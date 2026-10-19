@@ -2,8 +2,8 @@
 title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
-updated_at: "2026-10-19"
-revision: 40
+updated_at: "2026-10-20"
+revision: 41
 ---
 
 # P06 작업 인계
@@ -18,6 +18,7 @@ revision: 40
   이미 확인된 Cloudflare 항목을 재조사하지 않는다. 남은 서버 조건과 최소 DNS/캐시 요청은 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)를 따른다.
   임시 헤더의 upstream 제거·matcher 제거 후 403은 실제 로컬 Caddy에서 검증했다. 보호 백업과 HTTP 배포의 실제 결과/receipt·정확한 source와 digest는 RESULT에 기록했다. 실제 HTTPS VM/Cloudflare 실증은 아직 아니다.
   새 정상 HTTP pair와 preview, 사용자 root의 `p06_c_postdeploy_snapshot_verified`로 보호 백업·current/previous 복구 snapshot과 현재 env/config 일치·pending 부재를 확인했다. 정확한 링크 대상과 검증 범위는 RESULT를 따른다. 후속 host asset/HTTPS Origin·Caddy·인증서와 DNS/캐시 활성화는 별도 승인 대상이며 일반 공개는 F다. C 전체 완료가 아니다.
+  2026-10-20 기존 preview 인증서와 Caddy ACME를 읽기 전용 확인했고 Let's Encrypt 우선 경로의 DNS 전 백업/HTTP 차단·복구 묶음을 로컬 준비했다. 아직 전달/적용하지 않았다. 정확한 hash·검증 한계는 RESULT, DNS/인증서 순서와 다음 승인 범위는 PREPARATION §2를 따른다. DNS는 지금 추가하지 않는다.
 - 후속 보류: #143/#161/#165에서 반복된 squash Promotion 조상 연결의 브랜치 전략을 C 이후 별도 검토한다.
   현재 C의 차단 이슈로 취급하지 않고 #164 후보·파이프라인·브랜치 정책을 이번 작업에서 변경하지 않는다.
 - B 종료 시 진입점: **P06-B 완료 / 첫 정상 pair 유지 / preview 원복 완료 / 다음 단계 C**.

@@ -3,9 +3,9 @@ title: "P06-C Console HTTPS 및 인증 요청 보안 경계 구현 결과"
 kind: migration-result
 status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
-verified_at: "2026-10-19"
-updated_at: "2026-10-19"
-revision: 8
+verified_at: "2026-10-20"
+updated_at: "2026-10-20"
+revision: 9
 ---
 
 # P06-C 구현 결과
@@ -147,6 +147,29 @@ DNS 생성·Cache Rule 활성화는 Console 외부 차단과 기존 preview 보�
 이 검사는 기존 rollback 자료의 실제 보존·현재 상태 일치를 확인한 것이며 추가 rollback이나 재배포를 실행한 것은 아니다.
 
 재현 근거는 ignored `.local/p06-c/promotion164-deployment/`의 artifact/merge/deployment/VM proof와 사용자 root 완료 출력이다. root 전용 내용은 SSH에서 읽은 것으로 보고하지 않으며 Secret·env·manifest 원문은 기록하지 않았다. #166은 Draft·미병합을 유지한다. 문서 기록에는 앱 검사/build를 재실행하지 않는다.
+
+## 2026-10-20 기존 인증서·ACME 읽기 관찰과 DNS 전 준비
+
+사용자는 Console 전용 origin 인증서를 따로 발급/보관하지 않았다고 확인했고, 기존 Caddy의 Let's Encrypt를 우선 검토하도록 지시했다. 인증서 발급·설치·Caddy·DNS 변경은 승인하지 않았다. 같은 Cloudflare 대시보드 항목은 재조사하지 않았다.
+
+- SSH에서 실제127.0.0.1:443에 preview SNI로 TLS 연결해 CA 검증을 통과한 공개 인증서 metadata만 읽었다. issuer는 Let's Encrypt YE1, SAN은 `preview.oioibawige.com` 하나이며 Console/wildcard는 없다. 만료는2026-12-14 00:58:41 KST, 인증서 DER SHA-256은 `cd7ffa46bb5025da23015a4feccd10acc43f158f4252b6fba471f5ad9917a858`이다. 개인키/인증서 저장소 원문은 읽거나 출력하지 않았다.
+- Caddy2.6.2·caddy 서비스 active, `tls.issuance.acme` 있음·`dns.providers.cloudflare` 없음, 자동 HTTPS 비활성/On-Demand 설정 없음을 읽었다. 현재 Caddyfile hash는 기존 원본과 같고 preview만 포함한다. Console SNI TLS는 거절됐고 `/etc/caddy/p06-c`는 없다.
+- WSL에서 기존 VM80 포트로 preview Host를 직접 보낸 요청은308이었다. 이는80 포트의 현재 외부 도달 증거이며 Console DNS나 실제 Cloudflare/CA HTTP-01 성공을 증명하지 않는다. 정상 receipt artifact `12192252859`도 미만료다.
+- 기존 Caddy의 자동 발급 기능을 활용할 조건은 확인했지만 Console 공개 DNS와 실제 HTTP challenge 도달이 필요하다. 현재 인증서의 재사용은 불가능하며 새 인증서 발급 성공은 아직 미검증이다. Origin CA가 꼭 필요하다고 판단하거나 발급을 요청하지 않았다.
+
+새 정상 release/current/previous·세 container ID/시작 시각/digest를 고정한 로컬 실행물은 ignored `.local/p06-c/https-window/assets/`에 있다. 기존 승인 archive `4584d6c...`는 그대로 보존했다. **새 묶음은 DNS 전 백업·HTTP 차단 단계 전용이며 아직 전달/실행하지 않았다.**
+
+- archive: `.local/p06-c/https-window/https-dns-preparation-reviewed.tar.gz`, SHA-256 `c7f7f3968bb2d720442a54f3c769328095ebcb1f28a1aa6234ec13e85c9b2cb1`(일반 파일14개)
+- 새 백업 operator: `3c7f3f5b9fd08437d70dae1a72c94e871abce6405f2deb71d3bb17da506d7a66`, 차단/복구 operator: `8925f23452a3f55f217b1da2f3765a42185bfa07882ebe76490c6b6b286ef311`
+- 검토 본문 `.local/p06-c/https-window/launch-reviewed.txt`는 root 메모리에서 고정 archive hash·항목·전체 파일 hash를 확인한 뒤 신규 root launch에만 복사한다. 기존 경로 충돌 시 중단한다. 범위/제외/중단 조건은 묶음의 `APPROVALS.txt`에 고정했다.
+- 제안된 신규 경로는 사용자 staging `/home/oioi/p06-c-https-preparation`, root launch `/var/lib/oioi-p06-c-https-launch`, root-only 백업 `/var/lib/oioi-p06-c-before-https`, root:caddy의 `/etc/caddy/p06-c/active.caddy`다. 기존 deployment.lock 안에서 백업·원본 preview의 byte 보존·HTTP 전용 조각 validate/기존 reload·세 container/env/snapshot 불변·HTTP403/TLS 거절·preview를 검사한다. 인증서·host script·env·컨테이너·Cloudflare는 바꾸지 않는다.
+- DNS 전 단계의 승인 후 수동 복구 명령은 `sudo python3 -I -B /var/lib/oioi-p06-c-https-launch/deny-http.py restore`다. 고정 백업/현재 상태와 조각 내용 대조 뒤 원본 Caddy validate/복원/reload만 수행한다. 이후 ACME/제한 조각으로 바뀌면 내용 대조에서 거절한다. 적용 실패의 검토된 복구는 한 번뿐이며 exit20은 복구 성공,21은 복구 실패로 중단한다. 사전 불일치는1이다.
+
+새 백업 fixture8건과 차단 operator fixture8건(원복·validate/reload/postcheck 실패·복구 실패·충돌·drift·lock)을 통과했다. 실제 로컬 파일/lock/복사·원자 복구이며 root/Docker/Caddy 명령은 모사했다. 첫 operator fixture는 백업 경로 하드코딩과 로컬 caddy 그룹 부재로 실패했고 경로 도출·명시적 그룹 fixture로 보완한 뒤8건을 재실행해 통과했다. VM 실패가 아니다.
+
+실제 로컬 Caddy2.6.2·임시 fixture 인증서/preview backend에서는 GET/POST 여섯 요청403/no-store, Console TLS 거절, 같은 Caddy PID의 reload·원복 전/중/후 preview200을 확인했다. 인증서 자동화를 켜되 로컬의 닫힌 CA endpoint만 지정한 fixture에서도 HTTP 전용 Console 인증서 발급이 시작되지 않았다. `deny-http.Caddyfile`·후속 참고 `closed-acme.Caddyfile`은 실제2.6.2 adapt로 검사했고, 후자는 Console issuer의 Let's Encrypt·TLS-ALPN 비활성만 확인했다. 실제 발급은 하지 않았다. Python AST/CLI·root launcher `bash -n`·14개 archive hash도 통과했다.
+
+검증 근거는 같은 로컬 경로의 `certificate-preflight.json`, `adapter-proof.json`, `assets/local-proof.json`, `bundle-proof.json`이다. DNS 전 단계의 실제 외부 차단/preview 보호 후에만 DNS/cache 승인을 요청한다. 자동 발급 조건 때문에 필요한 DNS/인증서 순서와 후속 HTTPS 창의 별도 승인은 [PREPARATION §2](P06-PREPARATION.md#2026-10-20-기존-caddy의-lets-encrypt-우선-경로)를 따른다. HTTPS 창의 최종 실행물·hash·복구 명령은 실제 인증서/닫힌 HTTPS 경로 확보 후 확정하며 아직 실행 승인을 요청하지 않는다. 새 계획 PR·배포 파이프라인·브랜치 전략 변경은 없다.
 
 ## 남은 완료 게이트와 운영 승인 범위
 
