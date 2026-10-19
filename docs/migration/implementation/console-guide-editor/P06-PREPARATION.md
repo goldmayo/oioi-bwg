@@ -6,7 +6,7 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-20"
-revision: 11
+revision: 12
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -188,6 +188,38 @@ HTTPS Origin/env/materializer·컨테이너/DB 재시작·배포/snapshot·임�
 원복 식은 보관한 `(ip.src.country ne "KR")`다. 변경 후에는 외부 일반 HTTP403·미활성 임의 ACME403·preview/기존 pair 보존을 읽기 확인하며, 이것을 유효 토큰200/발급 성공으로 보고하지 않는다. **이번 요청은 국가 규칙 식 한 건 변경/원복과 상태 확인만**이다. Full(strict)·Always Use HTTPS OFF·DNS/cache·다른 규칙·Caddy/env/컨테이너·#166 병합은 포함하지 않는다.
 
 예외는 이후 HTTP-01 자동 갱신에도 사용할 **유지 범위**로 승인받아 적용했다. 변경/유지 또는 원복은 승인 범위대로 수행하고 임의로 전체 보안을 끄지 않는다. 인증서 재시도는 이미 실행한 archive62c6a1fa...를 반복하지 않으며 새 고정 실행물/보호 경로·복구 범위를 확정해 별도 승인받는다. 현재 HTTP403 복구 상태와 모든 백업은 보존한다.
+
+### 2026-10-20 인증서 재시도1 실행·복구 승인안
+
+**준비만 완료·별도 승인 대기다. 아래 새 묶음은 VM에 전달/실행하지 않았다.** 기존 실패 archive/launch·세 보호 백업은 보존하고 이전 인증서 controller의 apply/restore를 호출하지 않는다. 읽기 재확인과 로컬 검증의 실제 범위는 [C 결과](P06-C-RESULT.md#2026-10-20-인증서-재시도1-준비와-읽기-재확인)가 소유한다.
+
+| 새 고정 실행물(로컬 `.local/p06-c/certificate-retry1/`) | SHA-256 |
+| --- | --- |
+| `certificate-retry1-reviewed.tar.gz`(일반 파일4개) | `148c1b87ae1716d2c8e19933a34730ddf5296bc92be1fe78123481db9d37c895` |
+| `certificate-phase.py` | `97d79757daf5be8bd78c865c6ed1cf7aa23c7add5ef469dd98ef8dde9396259e` |
+| `launch-reviewed.txt`(root 검토 본문) | `8dfe8061cf47dc590b92efebb0b3b51dd88b19607d1bd91e6c4bd7e1300962c7` |
+
+archive에는 위 operator·기존 검토 `closed-acme.Caddyfile`(SHA f2465b62...)·`APPROVALS.txt`·`SHA256SUMS.json`만 포함한다. launcher는 archive 전체/내부 항목 hash를 root 메모리에서 대조하고 새 launch 경로에만 O_EXCL로 설치한다. 새 staging은 `/home/oioi/p06-c-certificate-retry1-preparation`(0700/파일0600), 새 launch는 `/var/lib/oioi-p06-c-certificate-retry1-launch`(root:root0700/0600)다. 기존 경로 충돌/불일치는 즉시 중단한다.
+
+승인받을 실행 범위는 다음과 같다.
+
+1. 최신 문서 CI 성공·정상 receipt12192252859/고정 후보·현재 HTTP403/main Caddyfile·Cloudflare GET ACME 예외·preview/앱/DB·보호 상태를 실행 직전 재대조하고 새 고정 묶음만 전달/보호 설치한다. 기존 deployment.lock 안에서 세 백업의 권한/사본 hash와 현재 정상 source/링크·컨테이너/preview/PID를 검증한다. 실패 전 백업은 새 operator의 읽기 함수로 검증한다.
+2. 새 `/var/lib/oioi-p06-c-before-certificate-retry1`에 현재 main Caddy/HTTP403 조각·host/env·current/previous snapshot/링크·컨테이너 metadata·preview 공개 인증서 hash를 root:root·전체 디렉터리0700/파일0600으로 보호 복사한다. 기존 백업/인증서/개인키/계정 저장소를 덮어쓰지 않는다.
+3. 새 `/etc/caddy/p06-c/certificate-retry1-candidate.caddy`와 `/etc/caddy/p06-c-certificate-retry1-check.Caddyfile`로 Caddy 권한 validate 후 임시 파일을 제거한다. main Caddyfile/import는 유지하고 active.caddy만 고정 closed-acme 조각으로 교체·reload한다. Console upstream 없이 일반 HTTP/HTTPS403·no-store를 유지한다.
+4. 기존 Caddy의 Console 전용 Let's Encrypt HTTP-01 **활성화 한 번·최대180초 관찰**로 한정한다. 첫 실제 Console 발급 오류/재시도 로그·시간 초과·후속 검증 실패 시 현재 HTTP403 조각으로 자동 복구 한 번 후 중단한다. Caddy/CA 내부 네트워크 요청이 정확히 하나임을 보장하지 않는다. 실패 exit20은 복구 검증 성공,21은 복구 검증 실패, 사전 불일치1·정상0이며 수동 반복/임의 재시도는 금지다.
+5. 성공 시 직접 origin의 CA 신뢰·Console SAN·Let's Encrypt issuer·만료일과 정확한403/no-store를 확인한다. Cloudflare HTTPS는 승인된 ACME 예외의 probe 경로로 **정확한 Caddy 차단 본문**까지 대조한다. Edge challenge403을 origin 성공으로 인정하지 않는다. 일반 공개HTTPS 차단도 외부에서 읽기 확인한다. preview 세 경로200/기존 인증서 hash·네 앱 health/readiness200·세 컨테이너 ID/start/image/healthy·env/snapshot/PID 보존을 검증하고 SAN/issuer/유효기간 metadata만 보고한다. 성공한 closed HTTPS403/자동 갱신 설정은 유지한다.
+
+별도 승인·hash 검증·신규 root 설치 후에만 아래 새 명령을 사용한다. `apply`는 실패 시 내부에서 `restore`를 한 번 호출한다. 자동 복구 후 아래 명령을 추가 실행하지 않는다.
+
+```bash
+sudo python3 -I -B /var/lib/oioi-p06-c-certificate-retry1-launch/certificate-phase.py apply
+# 같은 새 백업·fragment 허용 목록을 대조하는 복구 본문. 자동 복구와 중복 실행 금지.
+sudo python3 -I -B /var/lib/oioi-p06-c-certificate-retry1-launch/certificate-phase.py restore
+```
+
+복구는 새 보호 사본의 현재 HTTP403 조각만 validate/복원/reload하고 정상 pair/preview/DB·PID를 확인한다. main Caddyfile/import와 기존 백업은 유지한다. 발급/CA 요청 이력은 취소되지 않으며 발급된 인증서/키·캐시를 삭제/회수하지 않는다. 복구 후 TLS 거절 또는 비프록시403/404와 실제 외부 응답을 확인하고 중단한다.
+
+이번 승인안은 Cloudflare 추가 변경·Full(strict) 해제·DNS-only 전환·Origin CA/DNS plugin/token 추가·HTTPS Origin/env/materializer·임시 허용 matcher/인증 접근·컨테이너/DB 재시작/배포/snapshot 변경·preview 인증서 교체·#166 병합을 제외한다. 일반 공개는 F에 유지한다. 인증서/개인키 원문은 출력하지 않는다.
 
 ## 3. OCI Vault: Console 키 두 개 보관
 
