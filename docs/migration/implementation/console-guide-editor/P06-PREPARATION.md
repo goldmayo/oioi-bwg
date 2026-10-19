@@ -6,7 +6,7 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-20"
-revision: 13
+revision: 14
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -131,8 +131,8 @@ Transforms·apex/www/staging/preview는 변경 요청 대상이 아니다.
 적용 후 실제 HTTPS 브라우저 쿠키·Origin/authority·위조 IP 헤더 거절·서로 다른 실제 client IP의 제한과
 IP 변경 시 세션 유지를 검증한다. 인증 응답의 no-store·캐시 HIT 없음·응답 재사용 방지와 preview/Web/DB도 확인한다.
 edge challenge나 IP 변형 등 실제 실패가 나오면 그 요청/설정만 추가 조사한다. 공통 대시보드 점검을 반복하지 않는다.
-복구는 임시 허용 경로 닫기 → 승인한 Caddy/env/pair 복원·정상 확인 → 이번 Console DNS 제거/캐시 규칙 비활성화 순서로 준비한다.
-DNS 제거만으로 접근 차단이 보장된다고 판단하지 않는다. Console 일반 공개와 www 전환은 F에 남긴다.
+초기 전체 전환의 포괄 복구 참고 순서는 임시 허용 경로 닫기 → 승인한 Caddy/env/pair 복원·정상 확인 → Console DNS 제거/캐시 규칙 비활성화였다. 이는 현재 인증 검증 창의 자동 복구/승인 범위가 아니다.
+아래 최종 인증 창은 기존 DNS/cache·ACME 예외와 확보한 인증서/갱신을 보존하고 closed HTTPS403으로 복귀한다. DNS 제거만으로 접근 차단이 보장된다고 판단하지 않는다. Console 일반 공개와 www 전환은 F에 남긴다.
 
 ### 2026-10-20 DNS 연결 후 인증서 단계의 실행·복구 승인 범위
 
@@ -224,6 +224,60 @@ sudo python3 -I -B /var/lib/oioi-p06-c-certificate-retry1-launch/certificate-pha
 복구는 새 보호 사본의 현재 HTTP403 조각만 validate/복원/reload하고 정상 pair/preview/DB·PID를 확인한다. main Caddyfile/import와 기존 백업은 유지한다. 발급/CA 요청 이력은 취소되지 않으며 발급된 인증서/키·캐시를 삭제/회수하지 않는다. 복구 후 TLS 거절 또는 비프록시403/404와 실제 외부 응답을 확인하고 중단한다.
 
 이번 승인안은 Cloudflare 추가 변경·Full(strict) 해제·DNS-only 전환·Origin CA/DNS plugin/token 추가·HTTPS Origin/env/materializer·임시 허용 matcher/인증 접근·컨테이너/DB 재시작/배포/snapshot 변경·preview 인증서 교체·#166 병합을 제외한다. 일반 공개는 F에 유지한다. 인증서/개인키 원문은 출력하지 않는다.
+
+### 2026-10-20 제한 HTTPS 인증 검증 창 최종 실행·복구 승인안
+
+**준비만 완료·별도 승인 전 VM 전달/DB 조회/전환/개방 금지다.** 현재 정상 기준은 재시도1에서 확보한 인증서/closed HTTPS403과 #164의 HTTP pair·receipt다. 기존 인증서·LE HTTP-01 자동 갱신·Cloudflare GET ACME 예외·DNS/cache를 유지한다. 기존 실패/재시도1의 apply/restore는 호출하지 않는다. 사용자 확인과 로컬 검증의 실제 범위는 [C 결과](P06-C-RESULT.md#2026-10-20-제한-https-인증-창-최종-실행물-준비)가 소유한다.
+
+| 새 고정 실행물(로컬 `.local/p06-c/https-auth-window/`) | SHA-256 |
+| --- | --- |
+| `auth-window-reviewed.tar.gz`(일반 파일9개) | `6dc1453a0e6bfad6d9c2c07bbedd79e2825f8fae92b22c7d3c64d0f47bcd56e2` |
+| `window.py` | `e1ee3554ff210da5df83e017b116343ffdd77ec51c18d9a2cf96b6b5664cce6e` |
+| `launch-reviewed.txt`(보호 설치·읽기 조회까지만) | `593ea85d03a1ea7eb091260e127a25c4cb02ec60d67f2ea4e5348e0d599eb09c` |
+| `browser.mjs`(로컬 실제 브라우저) | `02fe66f0052e5576f34d1eaba937caa8768f1c5bb03cae3a856601c8c12e6fd4` |
+
+archive는 operator·renderer·기존 closed/source Caddy 조각·HTTPS 지원 materializer·MFA 자격 읽기 SQL·로컬 browser·`APPROVALS.txt`·`SHA256SUMS.json`이다. 입력 이메일/임시 token·인증서/키·env 원문을 포함하지 않는다. 전체/내부 hash·기존 정상 상태/권한을 실행 직전에 대조하고 충돌/불일치는 중단한다.
+
+**개방 선행 조건:** 사용자는 Console TOTP 등록/인증 앱 보유 여부를 기억하지 못한다고 답했다. 먼저 승인된 `eligibility`가 기존 `oioi_app` 자격으로 BEGIN READ ONLY·5초 statement timeout 안에서 대상 DB/비특권 role/PostgreSQL17과 입력 이메일의 존재·ACTIVE ADMIN·MFA enabled 여부 boolean만 확인한다. password hash·MFA secret/키/복구코드는 조회하지 않는다. DB 자격은 root 메모리→기존 DB 컨테이너 psql의 stdin으로만 전달하고 argv/출력에 넣지 않는다. **이 조회는 아직 실행하지 않았다.** 미등록/계정 부적격은 exit2·창 미개방이며 등록/reset·키/권한 변경으로 우회하지 않는다. eligible=true여도 사용자가 인증 앱/비밀번호와 PC의5G 핫스팟 전환 준비를 확인하기 전에는 `start --operator-ready`를 실행하지 않는다.
+
+승인받을 변경/검증 범위는 다음과 같다. 상세 단계·제외·중단 조건은 고정 `APPROVALS.txt`를 따른다.
+
+1. 새 staging `/home/oioi/p06-c-auth-window-preparation`(0700/0600)과 root launch `/var/lib/oioi-p06-c-auth-window-launch`(root:root0700/0600)에만 설치한다. 보호 입력2개(기존 이메일·256-bit token)는 별도로 검증/복사하며 로그·Git·archive에 넣지 않는다. launcher는 설치/읽기 자격 조회까지만 수행하고 자동으로 열지 않는다.
+2. 준비 확인 뒤 transient `oioi-p06-c-auth-window.service`를 한 번 시작한다. RuntimeMaxSec1800·TimeoutStopSec240·Restart=no·종료 후 collect이며 영구 service/timer/부팅 설정은 없다. service가 deployment.lock을 전환 전부터 종료/복구 검증까지 유지한다. 기존 네 보호 백업/현재 원본·current/previous/receipt·image/configHash를 대조한 뒤 새 `/var/lib/oioi-p06-c-before-auth-window`에 현재 closed Caddy·host/public/raw env·두 snapshot/링크·컨테이너 metadata를 root:root·전체 디렉터리0700/파일0600으로 보호 복사한다.
+3. Caddy를 닫아 둔 채 materializer를 검증된 HTTPS 지원 코드로 임시 교체하고 Console public/raw env의 `CONSOLE_ORIGIN` 한 줄만 HTTPS로 바꾼다. Secret·enrollment=false는 유지한다. 기존 digest/안정된 env 경로로 `docker compose up -d --no-deps --no-build --pull never --wait --wait-timeout 90 console`만 실행한다. Web/DB·이미지/pair/receipt/snapshot은 변경하지 않는다. Console ID/start는 전환/복원으로 바뀌며 보존 대상은 image·원래 env/configHash·snapshot이다.
+4. 앱 필수 Host 헤더 누락/위조 거절·health·Web/DB 불변을 확인하고 새 candidate 두 경로(`/etc/caddy/p06-c/auth-window-candidate.caddy`, `/etc/caddy/p06-c-auth-window-check.Caddyfile`)를 Caddy 권한으로 validate/제거한다. main Caddyfile/import·HTTP403·LE issuer/HTTP-01은 그대로 두고 HTTPS의 CF TCP peer AND 임시 header handle만 적용/reload한다. 임시 header는 검사 뒤 request_header/header_up에서 제거한다. 허용 handle의 `X-P06-Observed-Client-IP` 응답 header로 기존 CF client IP를 검증하고 종료 때 함께 제거한다. 일반 요청/직접 origin은403을 유지한다.
+5. 로컬 headed Chromium의 같은 context에서 사용자가 직접 입력해 실제 로그인/MFA·쿠키·Origin/CSRF·IP·캐시를 검증한다. CDP Fetch는 정확한 Console origin에만 token을 공급하고 redirect/다른 host에서는 제거한다. 비밀번호/TOTP는 브라우저/검증 프로세스 메모리에만 있고 trace/HAR/video/screenshot/storageState·Secret 로그를 만들지 않는다. 기존 `/admin` Cloudflare Challenge는 브라우저에서 완료하며 통과 불가 시 닫고 중단한다. WAF/규칙을 변경하지 않는다.
+6. 검증 성공은 password-only/잘못된OTP 거절·실제 UI+TOTP 성공/보호 GET·소모한OTP 재사용 거절, Secure/HttpOnly/Lax/host-only 쿠키와 Web 비전달, 누락/위조 Origin·CSRF 거절, forwarded 헤더 덮어쓰기/앱 Host 검사, 같은 URL의 no-store/캐시 HIT/다른 context 응답 재사용 없음·브라우저 logout/redirect를 포함한다. 정상 로그인은 기존 서비스 계약의 MFA last_used_step을 소비하며 이를 DB snapshot으로 되돌리지 않는다. MFA 등록/reset·새 계정/seed·컨텐츠 CRUD는 하지 않는다.
+7. 집 Wi-Fi에서 서로 다른 **미존재** 이메일로 최대22회 실패시켜 IP 제한과 위조 IP 헤더의 우회 불가를 확인한다. 동일 PC/브라우저를5G 핫스팟으로4분 안에 옮겨 실제 CF IP 변경·B의 독립 실패 처리·기존 세션 identity/보호 GET 유지를 확인한다. 알려진 unknown 공통 제한·동일 IP·시간 초과는 성공으로 대체하지 않는다. IP 변경 뒤의 기존 CF Challenge는 재로그인 없이 브라우저에서 완료한다.
+8. 브라우저 정상 종료는 staging에 `finish`, 실패/종료는 `abort`를 O_EXCL로 요청한다. 이 통로는 닫기만 허용한다. service는 최대30분/중단/오류 시 정해진 복구를 수행하고 ExecStopPost는 본체 비정상 종료 후 최종 결과가 없을 때만 보호 복구한다. **먼저 matcher/token/진단 header를 제거한 기존 closed-acme 원문으로 validate/복원/reload → 이전 token/헤더 없음의 외부403 → 원래 materializer/public/raw HTTP env 복원 → Console만 같은 digest로 재생성 → 원본 hash/current·previous/pending 부재·원래 configHash/두 digest·preview/앱/DB 검증** 순서다. 관련 없는 env drift도 known matcher부터 닫고 덮어쓰지 않으며 exit21로 중단한다. main 자체의 불일치는 임의 교정하지 않는다.
+
+검토 명령은 다음과 같다. 모두 승인·보호 설치/입력 준비 뒤에만 사용하며 현재는 실행하지 않는다.
+
+```bash
+# root launcher는 eligibility까지만 실행. 아래 개방은 eligible=true와 사용자 준비 확인 뒤 한 번만.
+sudo python3 -I -B /var/lib/oioi-p06-c-auth-window-launch/window.py start --operator-ready
+```
+
+```bash
+# 로컬 터미널: prepare는 입력2개만 생성, run은 실제 창/브라우저가 준비된 뒤 실행.
+node .local/p06-c/https-auth-window/browser.mjs prepare
+node .local/p06-c/https-auth-window/browser.mjs run
+```
+
+```bash
+# 수동 중단: service에 정상 종료를 요청해 정해진 복구를 수행한다.
+sudo systemctl stop oioi-p06-c-auth-window.service
+sudo python3 -I -B /var/lib/oioi-p06-c-auth-window-launch/window.py status
+```
+
+```bash
+# service가 이미 비활성이고 최종 결과가 없을 때만 사용하는 동일 보호 복구 본문.
+sudo python3 -I -B /var/lib/oioi-p06-c-auth-window-launch/window.py recover
+```
+
+eligibility0은 자격 확인/미개방,2는 부적격/미개방이다. window0은 정상 종료·원복 검증,20은 실패/중단/만료 후 복구 검증,21은 복구 검증 실패,1은 사전 불일치다. result21 뒤 수동 반복/재개방은 금지한다. **root exit0과 실제 browser proof가 모두 있어야 해당 인증 검증을 완료로 판단한다.** 종료 후 일반 외부/이전 token 모두403·진단 header 없음과 정상 HTTP pair/env/configHash·preview/Web/DB 보존을 실증한다.
+
+인증서/키·CA 계정/캐시·자동 갱신·Cloudflare ACME 예외/DNS/cache는 복구 대상이 아니다. 추가 Cloudflare 변경·인증서 재발급/삭제·MFA 등록/reset·계정/권한/키 변경·수동 DB 수정·Web/DB 재시작·새 배포/Promotion·snapshot 승격/수정·일반 공개·#166 병합·파이프라인 변경은 제외한다. 다음 실제 VM 실행은 이 고정 묶음/복구 범위의 별도 승인 대상이다.
 
 ## 3. OCI Vault: Console 키 두 개 보관
 

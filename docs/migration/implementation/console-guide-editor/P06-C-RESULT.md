@@ -5,7 +5,7 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-20"
 updated_at: "2026-10-20"
-revision: 16
+revision: 17
 ---
 
 # P06-C 구현 결과
@@ -315,6 +315,21 @@ SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 la
 성공한 Console 전용 closed HTTPS403/HTTP-01 자동 갱신 설정을 유지한다. 인증서/개인키·env·manifest 원문은 출력하지 않았다. HTTPS Origin/env/materializer·임시 허용 matcher·컨테이너/DB·배포/snapshot·preview 인증서·Cloudflare 설정·#166 병합은 변경하지 않았다. 실제 Console 인증/Secure 쿠키·신뢰 IP 브라우저 검증은 아직 아니며 다음 HTTPS 창을 실행하지 않는다.
 
 근거는 ignored `certificate-retry1/`의 `approval-received.json`, `staging-result.json`, `root-phase-result.json`, `vm-after-success.json`, `external-after-success.json`, `cloudflare-after-success.json`과 사용자 root 완료 출력이다. 새 재시도1 apply/restore의 수동 반복은 금지하고 기존 실패/복구 이력과 모든 보호 백업을 보존한다.
+
+## 2026-10-20 제한 HTTPS 인증 창 최종 실행물 준비
+
+사용자는 확보한 인증서/갱신·Cloudflare ACME 예외를 유지한 새 정상 기준 백업·HTTPS Origin 전환·임시 제한 matcher·실제 브라우저 인증 검증과 종료/원복안을 기존 Draft #166에 준비하도록 요청했다. [고정 hash·명령·최종 승인 범위](P06-PREPARATION.md#2026-10-20-제한-https-인증-검증-창-최종-실행복구-승인안)를 마련했으며 **새 묶음은 로컬 준비만 완료했다. VM 전달/설치·DB 조회·env/Caddy·service·컨테이너 변경은 실행하지 않았다.**
+
+- 사용자는 Console TOTP 등록/인증 앱 보유 여부를 기억하지 못하며 집 Wi-Fi(PC)·휴대전화5G를 사용할 수 있다고 답했다. 동일 PC를5G 핫스팟으로 옮기는 검증을 준비했다. MFA는 승인 후 제한된 읽기 자격 조회와 사용자 인증 앱 준비 확인을 선행 gate로 두며 미등록이면 env 전환 전에 중단한다. 계정 생성·MFA 등록/reset·키/권한 변경을 대안으로 실행하지 않는다.
+- SSH 읽기에서 새 Console 신뢰 인증서/closed HTTPS403·preview 세 경로200/기존 인증서 hash·네 앱 health/readiness200·세 컨테이너 healthy/ID/start/image·PID926/main/materializer hash 보존을 다시 확인했다. 실제 host materializer의 HTTP-only source hash를 읽어 검증했고 같은 #164 코드의 HTTPS 지원 파일을 임시 교체/원복 대상으로 고정했다. systemd255·기존 psql17 실행 파일 버전, 새 경로/임시 unit 부재도 확인했다. DB 자격으로 조회하거나 설정/서비스를 실행한 것은 아니다.
+- 기존 Cloudflare 대시보드는 재조사하지 않았다. renderer의 CF peer CIDR을 [공식 IPv4](https://www.cloudflare.com/ips-v4)·[IPv6](https://www.cloudflare.com/ips-v6)와 대조했다. 기존 closed-acme 원문/issuer/HTTP-01·HTTP403을 유지하며 임시 token/진단 응답 header는 제한 handle에만 둔다.
+- 실제 로컬 Caddy2.6.2/TLS/reload에서 일반/비신뢰 요청403·검증 header upstream 제거·client IP 덮어쓰기·matcher/token 제거와 제거 후 이전 값403·preview/PID 보존·token 로그 비노출을 통과했다. CF peer와 echo upstream은 모사이며 운영 실증이 아니다.
+- 실제 로컬 headless Chromium/TLS에서 CDP의 Console origin 한정 token 공급·다른 host/redirect로 token 비전달·host-only/Secure/HttpOnly/Lax cookie scope를 확인했다. 임시 fixture CA/SPKI만 신뢰했고 실제 운영 브라우저에는 기본 CA 검증을 사용한다. [Chrome Fetch](https://chromedevtools.github.io/devtools-protocol/tot/Fetch/)의 요청별 header 제어를 사용하며 운영 로그인/실제 Cloudflare 증거는 아직 아니다.
+- 로컬 파일 fixture13건으로 정상 종료·abort·만료·MFA 부적격·validate 실패·Console recreate 실패·reload 실패·env drift 전에 matcher 닫기·본체 비정상 종료 복구·변경 전 무복구·실패 복구의 반복 거절·중복 service 실행·service 밖 실행 거절을 검증했다. 자격 조회/Secret stdin fixture6건은 등록/미등록/비활성/미존재/대상 불일치/입력 오류를 확인했다. root·Docker/DB·systemd·CA/TLS는 모사다. SQL은 라이브 DB에서 실행하지 않았다. Python AST·Node/bash syntax·로컬 systemd-analyze verify·archive 일반 파일9개/전체 내부 hash/launcher hash를 확인했다.
+
+새 운영 창은 transient service 최대30분·deployment.lock·기존 네 백업 검증과 별도 새 보호 백업을 사용한다. Console만 같은 digest로 HTTPS 전환/원래 HTTP 복원을 하므로 Console ID/start가 바뀌는 점을 승인안에 명시했다. 정상 image pair/receipt/snapshot·원래 configHash와 Web/DB ID/start는 보존 대상이다. service 원복 성공만으로 인증 성공이라 하지 않고 root exit0과 실제 브라우저 proof를 함께 요구한다. 브라우저 비밀번호/TOTP·임시 token/cookie는 원문 기록하지 않고 MFA 소모 step의 정상 인증 변경을 되돌리지 않는다.
+
+근거는 ignored `https-auth-window/`의 `vm-preflight.json`, `paths-proof.json`, `cidr-proof.json`, `local-proof.json`, `browser-gate-proof.json`, `window-proof.json`, `eligibility-proof.json`, `static-proof.json`, `bundle-proof.json`이다. 별도 실행 승인과 MFA/인증 앱 준비 전 개방하지 않는다. #166은 Draft·미병합이며 배포 파이프라인·추가 Cloudflare·일반 공개는 변경하지 않았다.
 
 ## 남은 완료 게이트와 운영 승인 범위
 
