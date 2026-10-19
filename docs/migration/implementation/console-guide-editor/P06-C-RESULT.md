@@ -2,18 +2,18 @@
 title: "P06-C Console HTTPS 및 인증 요청 보안 경계 구현 결과"
 kind: migration-result
 status: in-progress
-source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
+source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-19"
 updated_at: "2026-10-19"
-revision: 6
+revision: 7
 ---
 
 # P06-C 구현 결과
 
-**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증 완료 / 실제 VM·Cloudflare HTTPS 검증 대기. C 전체 완료가 아니다.**
+**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증과 기존 HTTP 설정의 공동 VM 배포 완료 / 실제 VM·Cloudflare HTTPS 검증 대기. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
 구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 배포 호스트 보완 `16c317d`, 로컬 HTTPS/DB 검증 확장 `2a274cd`를 거쳤다.
-metadata의 source는 아래 후속 ARM64 후보의 검증 source이며 초기 로컬 검증과 구분한다.
+metadata의 source는 아래 실제 HTTP 공동 배포의 squash merge다. ARM64 후보 source와 초기 로컬 검증을 구분한다.
 검토 PR은 [#163](https://github.com/goldmayo/oioi-bwg/pull/163)이다.
 [P06-PLAN §6](P06-PLAN.md#6-https등록운영자-경계), active [Auth/Authz](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md),
 [B 완료 결과](P06-B2-3-RESULT.md#2026-10-18-b-운영-실증-완료와-최종-상태)를 따른다.
@@ -84,9 +84,9 @@ HTTPS 확장 중 드러난 기존 fixture의 모든 HTTPS 요청 차단과 단�
 
 - 사용자 승인 후 #163을 `5106876650670b819647344e5b1fae5ecdfa30b7`로 squash 병합했다.
 - 승인된 파일 변경 0개의 [#165](https://github.com/goldmayo/oioi-bwg/pull/165)를 `ed19b6d9f033009349708dc35cb7bed2cd7be5cd`로 일반 merge했다. 저장소/main의 merge 허용 설정은 즉시 원본으로 복원·대조했고 develop ruleset은 유지했다.
-- [#164](https://github.com/goldmayo/oioi-bwg/pull/164)의 [Verify 39183484581](https://github.com/goldmayo/oioi-bwg/actions/runs/39183484581) attempt 1 전체 성공. source는 metadata와 같고 source/virtual merge tree는 `5584c7569e5438b78f53eab101a63579b427134a`다.
+- [#164](https://github.com/goldmayo/oioi-bwg/pull/164)의 [Verify 39183484581](https://github.com/goldmayo/oioi-bwg/actions/runs/39183484581) attempt 1 전체 성공. source는 `ed19b6d9f033009349708dc35cb7bed2cd7be5cd`이고 source/virtual merge tree는 `5584c7569e5438b78f53eab101a63579b427134a`다.
 - candidate artifact `12156679197`을 다운로드해 PR/source/tree/run/attempt·실제 Environment repository·두 신규 ARM64 digest와 마지막 정상 배포 #158 receipt baseline을 대조했다. 두 이미지는 같은 source의 `origin=built`이며 동시 paired smoke를 통과했다. 정확한 digest/후보 hash는 고정 artifact와 #164 검증 본문을 참조한다.
-- #164는 Draft·미병합·미배포다. 현재 검증 head를 보존하며 배포 파이프라인을 변경하지 않는다.
+- 당시 #164는 Draft로 유지했다. 이후 별도 사용자 승인으로 병합·HTTP 배포한 결과는 아래 운영 결과를 참조한다. 배포 파이프라인은 변경하지 않았다.
 
 ## 2026-10-19 Cloudflare 대시보드 사전 점검(사용자 확인)
 
@@ -105,7 +105,7 @@ HTTPS 확장 중 드러난 기존 fixture의 모든 HTTPS 요청 차단과 단�
 위 항목은 완료한 사전 점검으로 재사용한다. 남은 origin 인증서·서버 제한 경로와 최소 Cloudflare
 변경 요청·승인 순서는 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)가 소유한다.
 DNS 생성·Cache Rule 활성화는 Console 외부 차단과 기존 preview 보호를 실제 확인한 뒤 별도 승인받는다.
-#164 병합/VM 배포와 서버 HTTPS 전환도 별도 승인 대상이며 일반 공개는 F다.
+#164 병합/VM 배포는 아래 별도 승인으로 실행했다. 서버 HTTPS 전환과 Cloudflare 변경은 여전히 별도 승인 대상이며 일반 공개는 F다.
 
 ## 2026-10-19 제한 matcher 운영 실행물의 로컬 검증
 
@@ -115,18 +115,39 @@ DNS 생성·Cache Rule 활성화는 Console 외부 차단과 기존 preview 보�
 - 실제 Caddy 2.6.2/TLS에서 일반·잘못된 헤더·비신뢰 peer의 403, echo upstream의 임시 헤더 부재, 같은 Caddy 프로세스의 reload 후 matcher 제거를 확인했다. 제거 뒤 이전 검증 헤더 포함/미포함 요청은 모두 403이고 추가 upstream 호출은 0이었다. preview 모사 backend는 다섯 번 200, 테스트 backend 인스턴스도 유지됐다.
 - 이 검증은 CF peer를 loopback으로 모사한 **로컬 증거**다. 실제 VM의 정상 Docker pair 보존·Cloudflare 경로·운영 제거 후 외부 403의 증거가 아니며 해당 실증은 운영 승인 후 남아 있다.
 - 첫 fixture는 site 주소 치환이 import 행까지 바뀌어 validate가 실패했다. fixture의 첫 site 항목만 치환하도록 수정한 후 재실행해 통과했다. VM 설정 실패는 아니다.
-- 1차 보호 백업 operator는 고정 후보/current baseline·원본 hash·잠금·health를 대조한 뒤 새 root-only 백업만 만든다. 로컬 파일/lock/복사와 모사 root/Docker/health를 사용한 drift·pending·외부 snapshot·기존 백업/lock 충돌 등 8개 fixture를 통과했다. Python 구문/CLI와 root launch 본문의 `bash -n`도 통과했다. 실제 root 실행·VM 전달은 하지 않았다.
+- 1차 보호 백업 operator는 고정 후보/current baseline·원본 hash·잠금·health를 대조한 뒤 새 root-only 백업만 만든다. 로컬 파일/lock/복사와 모사 root/Docker/health를 사용한 drift·pending·외부 snapshot·기존 백업/lock 충돌 등 8개 fixture를 통과했다. Python 구문/CLI와 root launch 본문의 `bash -n`도 통과했다. 이 로컬 검증 시점에는 실제 root 실행·VM 전달을 하지 않았으며, 이후 승인된 실제 결과는 아래에 구분한다.
 - 실행물 archive SHA-256은 `4584d6c335310afeeea439297e28a3519238e359f2fdfb77693633c7f69ac6f2`, renderer는 `524fa604c15f7eb5d07f8146da60350646c5261df3a346badb54d4e50c2638e8`, 백업 operator는 `4febe4244d98f555bd9d3006ddea3cc0e87f37fae4fa6694472f52645307c2aa`다. 세부 범위는 실행물의 `APPROVALS.txt`/`launch-backup.txt`와 #166 본문에 연결한다.
 
 첫 승인 요청은 staging `/home/oioi/p06-c-limited-https`, root launch `/var/lib/oioi-p06-c-launch`, 보호 백업 `/var/lib/oioi-p06-c-before-promotion`의 신규 생성·고정 파일 전달/검증·백업뿐이다. 활성 설정/컨테이너/DB는 변경하지 않는다. #164 병합·즉시 이어지는 HTTP pair 배포와 후속 HTTPS 검증 창, Cloudflare 인증서/DNS/cache는 각각 별도 승인이다.
+
+## 2026-10-19 승인된 보호 백업과 HTTP 공동 배포
+
+사용자는 고정 archive/hash와 `APPROVALS.txt`의 1차 보호 백업만 먼저 승인했고, 완료 보고 후 #164의 고정 후보 squash 병합과 기존 HTTP loopback 설정을 유지하는 공동 자동 배포를 별도로 승인했다. HTTPS Origin·Caddy 수정/reload·인증서·Cloudflare 변경·#166 병합은 두 승인에 포함되지 않았다.
+
+- 고정 archive를 신규 staging에 전달하고 전체 파일 hash를 대조했다. 기존 SSH의 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 보호 복사·고정 hash 확인 뒤 root operator를 실행했다. `p06_c_backup_phase_passed`·`backup_exit=0`과 전체 권한 검사가 성공했다.
+- 실제 보호 백업은 `/var/lib/oioi-p06-c-before-promotion`이다. 소유자는 `root:root`, 전체 디렉터리0700/파일0600이며 manifest와 complete도0600이다. 사용자 두 번째 실행은 기존 root launch 경로 충돌 검사에서 중단돼 덮어쓰지 않았다.
+- 병합 직전 사용자 root의 읽기 전용 검사 `p06_c_premerge_backup_verified`로 모든 백업/원본 hash·권한·current/previous snapshot·정상 baseline·기존 HTTP pair·DB·preview를 재대조했다. SSH에서도 기존 세 컨테이너의 ID/시작 시각/이미지·원본 Caddy/materializer hash와 일곱 앱/preview 응답200을 확인했다.
+- head/source 전체 SHA `ed19b6d9f033009349708dc35cb7bed2cd7be5cd`, 성공 Verify attempt1, 미만료 candidate artifact `12156679197`과 정상 baseline receipt artifact `12105120483`을 다시 조회·다운로드했다. ZIP digest와 후보 원문 SHA-256 `d833aeabc8d3f6c89cbaa16d1639840641e27f82f400977bfc2786d95bba3076`, baseline release ID·exit0과 두 exact image digest를 대조했다.
+- #164를 Draft 해제하고 고정 head를 지정해 `64dca4c23233b07f2136d89b5bd2d363e6bef47c`로 squash 병합했다. 부모는 하나이고 실제 merge tree는 검증된 source tree와 같다.
+- [Deploy 39265305904](https://github.com/goldmayo/oioi-bwg/actions/runs/39265305904) attempt1 전체 성공. OCI Run Command `SUCCEEDED`·remote exit0·deployment succeeded를 확인했다. 새 build나 임의 재시도·rollback은 없었다.
+- 정상 receipt artifact `12192252859`(`paired-deployment-39265305904-1`)를 다운로드해 ZIP digest와 `receipt.json`의 exit0·배포 run/attempt·merge SHA·candidate artifact ID를 대조했다. 동봉 후보는 검증 artifact와 byte 단위로 같고, 정상 release ID는 `18462a4004780a0b43bcadf77792ef8fa22b082390498774331ed2a704a31c1a`다.
+
+| 앱 | 실제 배포한 immutable digest |
+| --- | --- |
+| Web | `sha256:45ee4fbf952b1846001eb5a63a141c3d1d60228622a96d0fa645690919de8717` |
+| Console | `sha256:6ada86b1eff6cdd63e5e1ce1cc45def018a89ae708d6cd9d9d41b639e8990749` |
+
+배포 후 SSH 읽기 검사에서 두 앱이 위 digest로 healthy이고 네 health/readiness가200이었다. Console은 `http://127.0.0.1:3001`·등록 닫힘을 유지한다. DB의 ID/시작 시각/이미지는 배포 전과 같고 healthy이며, 기존 preview 원본 TLS의 `/`·`/healthz`·`/readyz` 모두200이다. Caddyfile과 기존 HTTP 전용 materializer hash, 보호 백업 디렉터리 소유권/권한도 유지됐다. root-only current/previous 복구 snapshot의 배포 후 내부 대조는 별도 사용자 읽기 검사 결과로 보완한다.
+
+재현 근거는 ignored `.local/p06-c/promotion164-deployment/`의 artifact/merge/deployment/VM proof와 사용자 root 완료 출력이다. root 전용 내용은 SSH에서 읽은 것으로 보고하지 않으며 Secret·env·manifest 원문은 기록하지 않았다. #166은 Draft·미병합을 유지한다. 문서 기록에는 앱 검사/build를 재실행하지 않는다.
 
 ## 남은 완료 게이트와 운영 승인 범위
 
 - 초기 Docker 연결 부재는 사용자의 연결 후 해소했다. 로컬 HTTP/HTTPS·격리 DB 전체 회귀와 위 CI의 두 이미지 검증이 통과했다. 이후 테스트/문서 커밋의 CI는 같은 PR에서 별도로 확인한다.
 - 초기 공개 조회에서 Console DNS는 해석되지 않았고 preview Cloudflare 경로는 challenge 403, VM preview 원본 TLS는 정상이었다. 이후 DNS/TLS/캐시 준비 상태는 위 사용자 확인으로 갱신했다. Console origin 인증서와 실제 캐시 제외 동작은 여전히 미검증이다.
 - 실제 VM의 비공개 HTTPS 브라우저 검증, 실제 Cloudflare client IP 두 개의 독립 제한, 직접 원본 접근 거절과 CDN 캐시 제외는 **미검증**이다. 로컬 모사 peer 성공으로 대체하지 않는다.
-- 운영 적용 전 보호된 원본 Caddyfile·host materializer·Console public/runtime env·정상 pair/snapshot을 root-only 백업하고 복구 경로를 확정해야 한다. Caddy 조각은 기존 preview block을 보존해 합친 후 validate한다. 실패 시 원본 Caddyfile 복원→validate→reload, 기존 승인된 pair/env 복구→두 앱 네 health/readiness와 preview 원본 200 대조 순서다.
+- 1차 보호 백업과 기존 HTTP 공동 배포를 완료했다. 후속 HTTPS 검증 창은 새 정상 receipt/pair 기준의 보호 백업·실행/복구 명령을 확정해 별도 승인받는다. Caddy 조각은 기존 preview block을 보존해 합친 후 validate한다. 실패 시 원본 Caddyfile 복원→validate→reload, 기존 승인된 pair/env 복구→두 앱 네 health/readiness와 preview 원본 200 대조 순서다.
 - loopback/SSH TLS 검증과 실제 Cloudflare→Caddy 경로 검증을 구분한다. 공개 403을 유지한 제한 matcher·origin 인증서·실행/복구 명령은 별도 승인 전 미적용이다. DNS 추가만으로 제한 완료라 하지 않는다.
-- #163/#165의 코드·이력 병합과 #164 후보 검증만 완료했다. host asset 설치·runtime Origin 전환·#164 Promotion/VM 배포·Caddy reload·DNS/Cloudflare 변경은 실행하지 않았다. 정확한 보호 파일 경로·실행 후보·복구 명령과 함께 각각 별도 승인받는다.
+- #163/#165의 코드·이력 병합, #164 후보 검증·승인된 HTTP Promotion/VM 배포를 완료했다. 후속 host asset 설치·HTTPS Origin 전환·Caddy reload·인증서/DNS/Cloudflare 변경은 실행하지 않았다. 정확한 보호 파일 경로·실행 후보·복구 명령과 함께 각각 별도 승인받는다.
 
 위 게이트를 통과하기 전에는 C를 완료로 바꾸지 않는다. D 실물 MFA·CLI/키 복구, E Web 관리/가입 종료, F 공개/www 전환은 기존 단계에 남긴다.

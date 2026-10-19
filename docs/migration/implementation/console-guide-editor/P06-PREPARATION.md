@@ -6,14 +6,16 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-19"
-revision: 4
+revision: 5
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
 
 2026-10-19 C 추가 안내: Cloudflare 대시보드 사전 점검은 사용자 확인으로 완료됐다.
 확인 사실은 [P06-C RESULT](P06-C-RESULT.md#2026-10-19-cloudflare-대시보드-사전-점검사용자-확인)가 소유하며,
-추가 변경·승인 순서는 아래 §2를 따른다. #164 후보는 검증됐지만 Draft·미배포다.
+추가 변경·승인 순서는 아래 §2를 따른다. 별도 사용자 승인으로 1차 보호 백업과 #164의 기존 HTTP 공동 배포를 완료했다.
+실행·receipt·VM 검증은 [C 운영 결과](P06-C-RESULT.md#2026-10-19-승인된-보호-백업과-http-공동-배포)가 소유한다.
+#166은 Draft·미병합이며 HTTPS Origin·Caddy·인증서·Cloudflare 변경은 미실행이다.
 아래 B0/Vault 등 초기 준비 안내를 새 실행 요청으로 해석하지 않는다.
 
 **preview에서 만들어 둔 기존 관리자 계정을 그대로 사용한다.** 관리자 계정 생성·승격은
@@ -56,6 +58,8 @@ HTTP 전용 host materializer를 유지하므로 DNS나 HTTPS Origin만 먼저 �
 대시보드의 DNS·SSL/TLS·Edge 인증서·Worker Custom Domain·관련 Rules/Managed Transforms는
 [사용자 확인 결과](P06-C-RESULT.md#2026-10-19-cloudflare-대시보드-사전-점검사용자-확인)를 재사용한다.
 같은 항목의 화면 확인이나 캐시 규칙 재생성을 다시 요청하지 않는다. Cloudflare 설정은 아직 변경하지 않았다.
+
+아래 1~2의 1차 보호 백업과 기존 HTTP 공동 배포는 별도 승인으로 실행했다. 다음 실행은 새 정상 receipt/pair를 기준으로 한 3의 보호 백업·HTTPS 검증 창 승인부터이며, 이 문서 갱신은 다음 서버 변경을 승인하지 않는다.
 
 1. 별도 서버 승인안에서 원본 Caddyfile·host materializer·Console public/runtime env·정상 pair/snapshot의
    보호 백업과 정확한 복구 명령을 확정한다. 기존 preview block·Web/DB·loopback 포트를 보존한다.
