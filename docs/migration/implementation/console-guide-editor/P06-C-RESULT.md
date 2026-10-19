@@ -5,7 +5,7 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-19"
 updated_at: "2026-10-19"
-revision: 7
+revision: 8
 ---
 
 # P06-C 구현 결과
@@ -137,7 +137,14 @@ DNS 생성·Cache Rule 활성화는 Console 외부 차단과 기존 preview 보�
 | Web | `sha256:45ee4fbf952b1846001eb5a63a141c3d1d60228622a96d0fa645690919de8717` |
 | Console | `sha256:6ada86b1eff6cdd63e5e1ce1cc45def018a89ae708d6cd9d9d41b639e8990749` |
 
-배포 후 SSH 읽기 검사에서 두 앱이 위 digest로 healthy이고 네 health/readiness가200이었다. Console은 `http://127.0.0.1:3001`·등록 닫힘을 유지한다. DB의 ID/시작 시각/이미지는 배포 전과 같고 healthy이며, 기존 preview 원본 TLS의 `/`·`/healthz`·`/readyz` 모두200이다. Caddyfile과 기존 HTTP 전용 materializer hash, 보호 백업 디렉터리 소유권/권한도 유지됐다. root-only current/previous 복구 snapshot의 배포 후 내부 대조는 별도 사용자 읽기 검사 결과로 보완한다.
+배포 후 SSH 읽기 검사에서 두 앱이 위 digest로 healthy이고 네 health/readiness가200이었다. Console은 `http://127.0.0.1:3001`·등록 닫힘을 유지한다. DB의 ID/시작 시각/이미지는 배포 전과 같고 healthy이며, 기존 preview 원본 TLS의 `/`·`/healthz`·`/readyz` 모두200이다. Caddyfile과 기존 HTTP 전용 materializer hash, 보호 백업 디렉터리 소유권/권한도 유지됐다.
+
+사용자가 기존 VM 터미널에서 배포 후 읽기 전용 root 검사를 실행해 `p06_c_postdeploy_snapshot_verified`를 확인했다. 고정 hash의 기존 helper를 대조한 뒤 보호 백업 전체의 권한/사본 hash·후보 identity, current/previous의 보호 경로와 여섯 파일, 이전 정상 snapshot의 백업 대비 hash, 현재 runtime env/Compose와 snapshot 일치, 두 앱의 실제 digest/Compose configHash를 검사했다. `pending-pair` 부재·DB ID/시작 시각 유지·HTTP loopback/등록 닫힘·health/preview와 원본 Caddy/materializer hash도 통과했다. 복구 snapshot 내부 대조 대기는 해소됐으며 실제 링크 대상은 다음과 같다.
+
+- `current-pair`: `/srv/oioibawige/deploy/18462a4004780a0b43bcadf77792ef8fa22b082390498774331ed2a704a31c1a-hxxkecl6`
+- `previous-pair`: `/srv/oioibawige/deploy/37bd0ae9184be182791fcdcab8c08270f08f1c77e331e0f404719bec7bef1874-n_vz9kcy`
+
+이 검사는 기존 rollback 자료의 실제 보존·현재 상태 일치를 확인한 것이며 추가 rollback이나 재배포를 실행한 것은 아니다.
 
 재현 근거는 ignored `.local/p06-c/promotion164-deployment/`의 artifact/merge/deployment/VM proof와 사용자 root 완료 출력이다. root 전용 내용은 SSH에서 읽은 것으로 보고하지 않으며 Secret·env·manifest 원문은 기록하지 않았다. #166은 Draft·미병합을 유지한다. 문서 기록에는 앱 검사/build를 재실행하지 않는다.
 
