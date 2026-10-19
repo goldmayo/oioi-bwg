@@ -5,7 +5,7 @@ status: in-progress
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 verified_at: "2026-10-19"
 updated_at: "2026-10-19"
-revision: 5
+revision: 6
 ---
 
 # P06-C 구현 결과
@@ -106,6 +106,19 @@ HTTPS 확장 중 드러난 기존 fixture의 모든 HTTPS 요청 차단과 단�
 변경 요청·승인 순서는 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)가 소유한다.
 DNS 생성·Cache Rule 활성화는 Console 외부 차단과 기존 preview 보호를 실제 확인한 뒤 별도 승인받는다.
 #164 병합/VM 배포와 서버 HTTPS 전환도 별도 승인 대상이며 일반 공개는 F다.
+
+## 2026-10-19 제한 matcher 운영 실행물의 로컬 검증
+
+#166을 Draft로 유지한 채 기존 C의 운영 실행물을 ignored `.local/p06-c/limited-https/`에 준비했다. 새 설계/계획 PR이나 파이프라인 변경은 없다.
+
+- renderer는 검토한 원본 Caddy 조각 hash를 고정하고 Cloudflare TCP peer AND 임시 검증 헤더에만 proxy를 허용한다. 검사 뒤 `request_header`와 `header_up`에서 검증 헤더를 제거한다. closed 출력에는 임시 matcher/값/proxy가 없다.
+- 실제 Caddy 2.6.2/TLS에서 일반·잘못된 헤더·비신뢰 peer의 403, echo upstream의 임시 헤더 부재, 같은 Caddy 프로세스의 reload 후 matcher 제거를 확인했다. 제거 뒤 이전 검증 헤더 포함/미포함 요청은 모두 403이고 추가 upstream 호출은 0이었다. preview 모사 backend는 다섯 번 200, 테스트 backend 인스턴스도 유지됐다.
+- 이 검증은 CF peer를 loopback으로 모사한 **로컬 증거**다. 실제 VM의 정상 Docker pair 보존·Cloudflare 경로·운영 제거 후 외부 403의 증거가 아니며 해당 실증은 운영 승인 후 남아 있다.
+- 첫 fixture는 site 주소 치환이 import 행까지 바뀌어 validate가 실패했다. fixture의 첫 site 항목만 치환하도록 수정한 후 재실행해 통과했다. VM 설정 실패는 아니다.
+- 1차 보호 백업 operator는 고정 후보/current baseline·원본 hash·잠금·health를 대조한 뒤 새 root-only 백업만 만든다. 로컬 파일/lock/복사와 모사 root/Docker/health를 사용한 drift·pending·외부 snapshot·기존 백업/lock 충돌 등 8개 fixture를 통과했다. Python 구문/CLI와 root launch 본문의 `bash -n`도 통과했다. 실제 root 실행·VM 전달은 하지 않았다.
+- 실행물 archive SHA-256은 `4584d6c335310afeeea439297e28a3519238e359f2fdfb77693633c7f69ac6f2`, renderer는 `524fa604c15f7eb5d07f8146da60350646c5261df3a346badb54d4e50c2638e8`, 백업 operator는 `4febe4244d98f555bd9d3006ddea3cc0e87f37fae4fa6694472f52645307c2aa`다. 세부 범위는 실행물의 `APPROVALS.txt`/`launch-backup.txt`와 #166 본문에 연결한다.
+
+첫 승인 요청은 staging `/home/oioi/p06-c-limited-https`, root launch `/var/lib/oioi-p06-c-launch`, 보호 백업 `/var/lib/oioi-p06-c-before-promotion`의 신규 생성·고정 파일 전달/검증·백업뿐이다. 활성 설정/컨테이너/DB는 변경하지 않는다. #164 병합·즉시 이어지는 HTTP pair 배포와 후속 HTTPS 검증 창, Cloudflare 인증서/DNS/cache는 각각 별도 승인이다.
 
 ## 남은 완료 게이트와 운영 승인 범위
 

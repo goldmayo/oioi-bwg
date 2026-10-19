@@ -6,7 +6,7 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-19"
-revision: 3
+revision: 4
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -61,6 +61,7 @@ HTTP 전용 host materializer를 유지하므로 DNS나 HTTPS Origin만 먼저 �
    보호 백업과 정확한 복구 명령을 확정한다. 기존 preview block·Web/DB·loopback 포트를 보존한다.
 2. 별도 승인된 #164 Promotion으로 검증한 두 digest를 **기존 HTTP loopback 설정에서 먼저 배포·정상 확인**한다.
    #164 병합과 실제 VM 배포는 이 문서 갱신이나 Cloudflare 사전 점검으로 승인되지 않는다.
+   현재 workflow는 병합 직후 배포를 시작하므로 병합 승인과 VM 배포 승인을 모두 받은 뒤 병합한다.
 3. Console origin 인증서·제한 Caddy 경로를 준비하고 host materializer·HTTPS Origin 전환을 함께 검토·승인한다.
    준비 중에는 검증 경로도 닫아 두고, 실패하면 설정과 기존 정상 pair를 함께 복구한다.
 4. DNS 요청 전에 일반 Console 요청/직접 origin/위조 헤더가 차단되는 증거와 기존 preview 원본 200,
@@ -77,9 +78,14 @@ Full (strict)는 유지하며 preview 인증서를 교체하지 않는다. Origi
 현재 [Caddy 조각](../../../../ops/oci/console.Caddyfile)의 무조건 403으로는 실제 인증 경로를 검증할 수 없다.
 제한 경로의 **제안**은 Cloudflare TCP peer와 일회성 검증 헤더를 모두 만족하는 요청에만 proxy를 허용하고,
 나머지는 계속 403으로 응답하는 것이다. 고정 사용자 IP·VPN·새 인증 서비스는 요구하지 않는다.
-검증 헤더는 보호된 임시 값으로만 공급하고 지정 Console origin에만 보내며 로그·repo·artifact에 남기지 않는다.
+검증 헤더는 Caddy matcher에서 검사한 뒤 `request_header`와 `header_up`에서 제거해 Console upstream에 전달하지 않는다.
+보호된 임시 값으로만 공급하고 지정 Console origin에만 보내며 로그·repo·artifact에 남기지 않는다.
 실제 Caddy 2.6.2의 matcher·설정 차이·검증 창·제거/복구 명령을 준비해 별도 승인받기 전에는 적용하지 않는다.
-loopback/SSH TLS 검증과 실제 Cloudflare 경로의 증거를 구분하고, 종료 시 임시 허용 matcher를 닫는다.
+loopback/SSH TLS 검증과 실제 Cloudflare 경로의 증거를 구분한다. 종료 시 임시 허용 matcher와 값을 제거하고,
+실제 Cloudflare 외부에서 헤더 없음·이전 검증 헤더 모두 403으로 돌아왔는지 다시 실증한다.
+기존 preview와 정상 digest pair를 보존한다. 검증 창의 HTTPS env는 종료 시 원래 HTTP env로 복원해
+현재 pair snapshot과 runtime env를 일치시킨다. Web/DB는 재생성하지 않으며 Console env 전환/복원에 필요한 재생성만 별도 승인한다.
+운영 실행물의 로컬 검증과 첫 백업 범위는 [RESULT](P06-C-RESULT.md#2026-10-19-제한-matcher-운영-실행물의-로컬-검증)를 참조한다.
 
 ### 서버 보호 확인 후 별도 요청할 Cloudflare 변경
 
