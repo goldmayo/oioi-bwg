@@ -6,7 +6,7 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-20"
-revision: 6
+revision: 7
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -15,7 +15,7 @@ revision: 6
 확인 사실은 [P06-C RESULT](P06-C-RESULT.md#2026-10-19-cloudflare-대시보드-사전-점검사용자-확인)가 소유하며,
 추가 변경·승인 순서는 아래 §2를 따른다. 별도 사용자 승인으로 1차 보호 백업과 #164의 기존 HTTP 공동 배포를 완료했다.
 실행·receipt·VM 검증은 [C 운영 결과](P06-C-RESULT.md#2026-10-19-승인된-보호-백업과-http-공동-배포)가 소유한다.
-#166은 Draft·미병합이며 HTTPS Origin·Caddy·인증서·Cloudflare 변경은 미실행이다.
+#166은 Draft·미병합이다. HTTP 전용 차단의 Caddy validate/reload만 별도 승인으로 완료했고 HTTPS Origin·인증서·Cloudflare 변경은 미실행이다.
 2026-10-20 인증서 읽기 관찰을 반영한 **기존 Caddy의 Let's Encrypt 우선 경로**는 아래 §2의 추가 안내를 따른다.
 아래 B0/Vault 등 초기 준비 안내를 새 실행 요청으로 해석하지 않는다.
 
@@ -60,7 +60,7 @@ HTTP 전용 host materializer를 유지하므로 DNS나 HTTPS Origin만 먼저 �
 [사용자 확인 결과](P06-C-RESULT.md#2026-10-19-cloudflare-대시보드-사전-점검사용자-확인)를 재사용한다.
 같은 항목의 화면 확인이나 캐시 규칙 재생성을 다시 요청하지 않는다. Cloudflare 설정은 아직 변경하지 않았다.
 
-아래 1~2의 1차 보호 백업과 기존 HTTP 공동 배포는 별도 승인으로 실행했다. 다음 실행은 새 정상 receipt/pair를 기준으로 한 3의 보호 백업·HTTPS 검증 창 승인부터이며, 이 문서 갱신은 다음 서버 변경을 승인하지 않는다.
+아래 1~2의 1차 보호 백업과 기존 HTTP 공동 배포는 별도 승인으로 실행했다. 이후 인증서 관찰로 구체화한 현재 진입점은 아래 Let's Encrypt 우선 경로와 운영 결과를 따른다. 이 문서 갱신은 다음 서버 변경을 승인하지 않는다.
 
 1. 별도 서버 승인안에서 원본 Caddyfile·host materializer·Console public/runtime env·정상 pair/snapshot의
    보호 백업과 정확한 복구 명령을 확정한다. 기존 preview block·Web/DB·loopback 포트를 보존한다.
@@ -85,7 +85,7 @@ Full (strict)는 유지하며 preview 인증서를 교체하지 않는다. Origi
 
 현재 인증서 SAN·ACME 기능·포트와 새 정상 pair 기준 실행물/검증 hash는 [C 결과](P06-C-RESULT.md#2026-10-20-기존-인증서acme-읽기-관찰과-dns-전-준비)가 소유한다.
 Console 인증서가 없고 HTTP-01은 공개 DNS와80 포트가 필요하다. 따라서 초기의 DNS 전 origin TLS403 가정은 그대로 실행할 수 없다.
-아래는 외부 차단을 먼저 실증한 뒤 DNS·인증서·HTTPS 창을 구분하는 **미승인 실행안**이다. 실제 인증서 발급 성공을 가정하지 않는다.
+아래 순서는 준비 당시 미승인안이었으며 이후1만 별도 승인으로 완료했다. DNS·인증서·HTTPS 창을 구분한2~4는 여전히 미승인이다. 실제 인증서 발급 성공을 가정하지 않는다.
 
 1. **별도 VM 승인:** 새 정상 pair/receipt·기존 보호 백업을 대조하고 새 `/var/lib/oioi-p06-c-before-https` 백업을 만든다.
    기존 preview 원문에 import만 추가하고 Console **HTTP 전용** 차단 조각을 validate/reload한다. 앱 env·host materializer·컨테이너·인증서는 변경하지 않는다.
@@ -98,7 +98,7 @@ Console 인증서가 없고 HTTP-01은 공개 DNS와80 포트가 필요하다. �
 4. **별도 HTTPS 검증 창 승인:** 새 인증서 SAN/체인/유효 기간·Full(strict)·직접 origin403·preview를 확인한 뒤 host materializer/HTTPS env와 제한 matcher의 정확한 실행물·hash·복구 명령을 최종 검토한다.
    env 전환부터 원래 HTTP env/configHash 복구까지 기존 deployment.lock을 유지하며 정상 snapshot은 바꾸지 않는다. 임시 헤더 제거·matcher 제거 후 실제 외부403·Web/DB 보존 계약은 유지한다.
 
-DNS 전 단계의 고정 archive와 root 실행/복구 명령은 RESULT에 연결한다. VM 전달·설치/reload·DNS·발급·env 전환은 현재 어느 것도 승인/실행하지 않았다.
+DNS 전 단계의 고정 archive와 root 실행/복구 명령은 RESULT에 연결한다. 이후 위1만 별도 사용자 승인으로 실행해 실제 외부 HTTP403/TLS 거절과 preview·세 컨테이너·snapshot 보존을 확인했다. [운영 결과](P06-C-RESULT.md#2026-10-20-승인된-dns-전-vm-차단-결과)를 따른다. 위2~4의 DNS/cache·인증서·HTTPS 창은 미실행·별도 승인이다. 사용자가 추가 확인한 Always Use HTTPS OFF도 재조사/변경하지 않는다.
 [Caddy 자동 HTTPS/HTTP-01 조건](https://caddyserver.com/docs/automatic-https#http-challenge),
 [Let's Encrypt HTTP-01](https://letsencrypt.org/docs/challenge-types/#http-01-challenge).
 
