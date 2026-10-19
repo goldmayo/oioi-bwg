@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-20"
 updated_at: "2026-10-20"
-revision: 15
+revision: 16
 ---
 
 # P06-C 구현 결과
 
-**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 새 인증서 재시도1 실행물 준비·별도 승인 대기. 인증서 재시도·실제 제한 HTTPS 검증은 미완료다. C 전체 완료가 아니다.**
+**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인. HTTPS Origin/env 전환·제한 인증 검증은 미실행이다. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
 구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 배포 호스트 보완 `16c317d`, 로컬 HTTPS/DB 검증 확장 `2a274cd`를 거쳤다.
 metadata의 source는 아래 실제 HTTP 공동 배포의 squash merge다. ARM64 후보 source와 초기 로컬 검증을 구분한다.
@@ -283,7 +283,7 @@ Cloudflare 도구/인증정보가 연결돼 있지 않아 에이전트가 API로
 
 ## 2026-10-20 인증서 재시도1 준비와 읽기 재확인
 
-사용자는 기존 실패 묶음을 반복하지 않고 최소한의 새 실행물·hash·복구 절차를 준비한 뒤 발급 재시도 승인을 요청하도록 지시했다. 기존 Draft #166을 유지하고 [새 실행 범위·hash·명령](P06-PREPARATION.md#2026-10-20-인증서-재시도1-실행복구-승인안)을 준비했다. **로컬 준비만 완료했으며 VM 전달·root 설치·새 백업 생성·Caddy 변경·CA 발급은 실행하지 않았다.**
+사용자는 기존 실패 묶음을 반복하지 않고 최소한의 새 실행물·hash·복구 절차를 준비한 뒤 발급 재시도 승인을 요청하도록 지시했다. 기존 Draft #166을 유지하고 [새 실행 범위·hash·명령](P06-PREPARATION.md#2026-10-20-인증서-재시도1-실행복구-승인안)을 준비했다. **이 절은 승인 전 로컬 준비 이력이며, 이후 승인·실행 결과는 다음 절에 구분한다.**
 
 - 기존 head `62c36ee`의 [Verify39290644695](https://github.com/goldmayo/oioi-bwg/actions/runs/39290644695) attempt1 completed/success를 확인했다. 정상 receipt artifact12192252859는 미만료이며 ZIP digest·receipt/고정 candidate 원문 byte를 다시 대조했다. 이전 archive62c6a1fa...의 hash도 불변이다.
 - SSH 읽기 관찰에서 현재 HTTP403/no-store/정확한 Caddy 본문·Console TLS 거절, main Caddyfile/materializer hash·PID926·preview 세 경로200/기존 인증서 hash·네 앱 health/readiness200·세 컨테이너 healthy/ID/start/image·HTTP loopback/등록 닫힘·비프록시403 route를 재확인했다. 기존 세 보호 백업의 디렉터리 metadata는 root:root0700이며 새 staging/launch/backup/candidate 경로는 없다. root-only 내부의 최신 검사는 SSH에서 실행하지 않았고 새 operator가 활성 변경 전에 권한·사본/원본 hash·links/containers/PID/preview를 대조하도록 했다.
@@ -293,13 +293,36 @@ Cloudflare 도구/인증정보가 연결돼 있지 않아 에이전트가 API로
 
 근거는 ignored `certificate-retry1/`의 `vm-preflight.json`, `cloudflare-preflight.json`, `receipt-preflight.json`, `operator-proof.json`, `guard-proof.json`, `static-proof.json`, `bundle-proof.json`이다. 인증서/개인키·env·manifest 원문은 출력하지 않았다. 기존 세 백업·정상 pair·receipt·preview를 유지하며 새 고정 범위의 별도 승인과 최신 문서 CI 성공 후에만 한 번 활성화할 수 있다.
 
+## 2026-10-20 승인된 인증서 재시도1 성공과 서비스 보존
+
+사용자는 새 고정 archive148c1b87...와 root launcher의 전달·보호 설치·백업·Console HTTP-01 활성화 한 번/최대180초·실패 시 한 번 복구만 승인했다. 기존 실패 묶음은 재실행하지 않았다. HTTPS Origin/env·임시 인증 접근·추가 Cloudflare 변경·일반 공개·#166 병합은 승인하지 않았다.
+
+실행 전 head `22ef82e518cd54e179cb6598e3a37a6c232bd04a`의 [Verify39292178618](https://github.com/goldmayo/oioi-bwg/actions/runs/39292178618) attempt1 completed/success·archive/전체 내부 hash·미만료 정상 receipt12192252859의 ZIP digest/receipt/고정 candidate 원문 byte를 재대조했다. 현재 HTTP403·GET ACME 예외/일반 Challenge·preview/앱/DB·기존 보호 디렉터리 metadata·새 경로 부재도 다시 통과했다. 새 staging0700/파일0600에 archive/launcher만 전달하고 원격 hash를 검증했다.
+
+SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 launcher SHA를 root 메모리로 검증한 뒤 한 번 실행했다. `p06_c_certificate_retry1_source_verified`·`p06_c_certificate_retry1_backup_passed`·metadata·`p06_c_certificate_retry1_phase_passed`와 **`certificate_retry1_exit=0`**을 확인했다. 새 operator가 기존 세 백업과 현재 source/pair·preview를 대조하고 새 백업을 검증한 뒤 closed-acme 조각만 validate/reload했다. 발급 활성화는 한 번이며 **복구는 실행하지 않았다.** Caddy/CA 내부 네트워크 요청 수를 한 개로 주장하지 않는다.
+
+| 성공 후 실제 검증 | 결과 |
+| --- | --- |
+| origin 인증서 신뢰/SAN/issuer | VM loopback·외부 직접 origin 모두 기본 CA 신뢰 검증 통과. SAN `console.oioibawige.com`, issuer Let's Encrypt YE2 |
+| 유효기간 | 2026-10-19 16:21:32 UTC~2027-01-17 16:21:31 UTC(2026-10-20 01:21:32~2027-01-18 01:21:31 KST). notBefore를 실제 실행 시각으로 해석하지 않음 |
+| 공개 인증서 DER SHA-256 | `7b3ec240c4867854b03d5eb954f4e9adfa9196c3d94de56e556f021fe1543ced` |
+| 실제 Cloudflare HTTPS 일반/임의 ACME GET | 외부 WSL에서 모두403·정확한 Caddy 차단 본문·no-store·캐시 HIT 없음·cf-mitigated 없음. root operator도 VM 발신 ACME 예외 HTTPS403을 검증 |
+| 직접 origin HTTP/HTTPS | 일반 HTTP·HTTPS 및 HTTPS CSRF 경로403/no-store·정확한 차단 본문. upstream 없음 |
+| preview | VM/외부 origin `/`·`/healthz`·`/readyz` 모두200, 기존 공개 인증서 hash 유지 |
+| 기존 pair/DB | 네 앱 health/readiness200·세 컨테이너 healthy. ID/start/image·Caddy PID926/active·main Caddyfile/materializer hash·HTTP loopback/등록 닫힘 유지. root operator에서 env/두 snapshot·링크·pending 부재까지 검증 |
+| 보호 백업 | 새 `/var/lib/oioi-p06-c-before-certificate-retry1`와 launch는 root:root0700. 내부 전체 디렉터리0700/파일0600·사본/원본 검사는 사용자 root operator, 디렉터리 metadata/임시 candidate 부재는 후속 SSH 관찰로 구분. 기존 세 백업 보존 |
+
+성공한 Console 전용 closed HTTPS403/HTTP-01 자동 갱신 설정을 유지한다. 인증서/개인키·env·manifest 원문은 출력하지 않았다. HTTPS Origin/env/materializer·임시 허용 matcher·컨테이너/DB·배포/snapshot·preview 인증서·Cloudflare 설정·#166 병합은 변경하지 않았다. 실제 Console 인증/Secure 쿠키·신뢰 IP 브라우저 검증은 아직 아니며 다음 HTTPS 창을 실행하지 않는다.
+
+근거는 ignored `certificate-retry1/`의 `approval-received.json`, `staging-result.json`, `root-phase-result.json`, `vm-after-success.json`, `external-after-success.json`, `cloudflare-after-success.json`과 사용자 root 완료 출력이다. 새 재시도1 apply/restore의 수동 반복은 금지하고 기존 실패/복구 이력과 모든 보호 백업을 보존한다.
+
 ## 남은 완료 게이트와 운영 승인 범위
 
 - 초기 Docker 연결 부재는 사용자의 연결 후 해소했다. 로컬 HTTP/HTTPS·격리 DB 전체 회귀와 위 CI의 두 이미지 검증이 통과했다. 이후 테스트/문서 커밋의 CI는 같은 PR에서 별도로 확인한다.
-- 초기 공개 조회에서 Console DNS는 해석되지 않았고 preview Cloudflare 경로는 challenge 403, VM preview 원본 TLS는 정상이었다. 이후 사용자 DNS/cache 변경과 실제 공개 DNS·HTTP403/DYNAMIC을 위에 구분했다. Console origin 인증서·실제 인증 응답 캐시 제외는 여전히 미검증이다.
+- 초기 공개 조회에서 Console DNS는 해석되지 않았고 preview Cloudflare 경로는 challenge 403, VM preview 원본 TLS는 정상이었다. 이후 사용자 DNS/cache 변경과 실제 공개 DNS·HTTP403/DYNAMIC을 위에 구분했다. Console origin 인증서와 닫힌 HTTPS403/no-store는 재시도1에서 검증했으며 실제 인증 응답 캐시 제외는 여전히 미검증이다.
 - DNS 전 직접 origin HTTP 차단/TLS 거절을 완료했다. 실제 VM의 제한 HTTPS 브라우저 검증, 실제 Cloudflare client IP 두 개의 독립 제한, 제한 HTTPS에서의 직접 origin/위조 헤더 차단과 CDN 캐시 제외는 **미검증**이다. 로컬 모사 peer 성공으로 대체하지 않는다.
-- 1차 보호 백업·HTTP 공동 배포와 새 정상 pair 기준 DNS 전 보호 백업/HTTP 차단을 완료했다. 인증서 단계는 새 보호 백업과 한 번 HTTP403 복구(exit20)를 완료했다. Cloudflare 국가 규칙의 ACME 예외는 별도 승인 후 사용자 적용·실제 경계 검증까지 완료했다. 새 VM 실행물/보호 경로·복구 범위 승인 전 발급을 재시도하지 않는다. 이후 HTTPS 창도 그 시점의 닫힌 Caddy/pair를 보존할 새 보호 경로·실행/복구 명령으로 별도 승인받는다. 기존 백업은 덮어쓰지 않는다. ACME 실패 시 현재 HTTP 전용 차단으로 복구·중단하며 Full(strict) 해제·DNS-only 전환·발급 무한 재시도는 하지 않는다.
-- loopback/SSH TLS 검증과 실제 Cloudflare→Caddy 경로 검증을 구분한다. 공개 403을 유지한 제한 matcher·origin 인증서·실행/복구 명령은 별도 승인 전 미적용이다. DNS 추가만으로 제한 완료라 하지 않는다.
-- #163/#165 병합·#164 HTTP 공동 배포와 HTTP 전용 차단 validate/reload만 완료했다. 후속 host asset 설치·HTTPS Origin 전환·Console ACME 조각은 한 번 적용했으나 검증403으로 HTTP403 조각에 복구했다. 제한 HTTPS Caddy/인증서 확보는 완료하지 않았다. DNS/cache 두 항목과 국가 규칙의 좁은 ACME 예외는 사용자가 승인 범위로 완료했고 에이전트 직접 Cloudflare 변경은 없다. 정확한 보호 파일 경로·실행 후보·복구 명령과 함께 각각 별도 승인받는다.
+- 1차 보호 백업·HTTP 공동 배포·DNS 전 HTTP 차단과 최초 인증서 실패 후 HTTP403 복구(exit20), Cloudflare ACME 예외를 거쳐 새 승인 재시도1의 백업·발급 성공(exit0)을 완료했다. 수동 발급/restore를 반복하지 않는다. 이후 HTTPS 창은 그 시점의 닫힌 Caddy/pair를 보존할 새 보호 경로·실행/복구 명령으로 별도 승인받는다. 기존 백업은 덮어쓰지 않는다. Full(strict) 해제·DNS-only 전환·무한 발급 재시도는 하지 않는다.
+- loopback/SSH TLS 검증과 실제 Cloudflare→Caddy 경로 검증을 구분한다. 닫힌 인증서/HTTPS403은 확보했지만 실제 인증 접근의 제한 matcher·HTTPS Origin/env와 실행/복구 명령은 별도 승인 전 미적용이다. DNS/인증서 확보만으로 C 완료라 하지 않는다.
+- #163/#165 병합·#164 HTTP 공동 배포·HTTP 전용 차단과 새 승인 재시도1의 Console ACME/closed HTTPS403을 완료했다. 후속 host asset 설치·HTTPS Origin/env·임시 허용 matcher는 미실행이다. DNS/cache 두 항목과 국가 규칙의 좁은 ACME 예외는 사용자가 승인 범위로 완료했고 에이전트 직접 Cloudflare 변경은 없다. 후속 작업은 정확한 보호 파일 경로·실행 후보·복구 명령과 함께 별도 승인받는다.
 
 위 게이트를 통과하기 전에는 C를 완료로 바꾸지 않는다. D 실물 MFA·CLI/키 복구, E Web 관리/가입 종료, F 공개/www 전환은 기존 단계에 남긴다.

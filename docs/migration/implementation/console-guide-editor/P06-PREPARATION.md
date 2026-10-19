@@ -6,7 +6,7 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-20"
-revision: 12
+revision: 13
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -15,7 +15,7 @@ revision: 12
 확인 사실은 [P06-C RESULT](P06-C-RESULT.md#2026-10-19-cloudflare-대시보드-사전-점검사용자-확인)가 소유하며,
 추가 변경·승인 순서는 아래 §2를 따른다. 별도 사용자 승인으로 1차 보호 백업과 #164의 기존 HTTP 공동 배포를 완료했다.
 실행·receipt·VM 검증은 [C 운영 결과](P06-C-RESULT.md#2026-10-19-승인된-보호-백업과-http-공동-배포)가 소유한다.
-#166은 Draft·미병합이다. HTTP 전용 차단의 Caddy validate/reload를 먼저 별도 승인으로 완료했고 HTTPS Origin은 미실행이다. 인증서 단계는 별도 승인으로 한 번 실행했으나 CA 검증403으로 HTTP403 복구(exit20) 후 중단했다. 원인 확인·새 승인 전 재시도하지 않는다. Cloudflare 캐시 규칙 활성화·Proxied Console A 생성은 앞서 사용자가 완료했다. 공개 DNS/HTTP 관찰과 검토했던 인증서 범위는 아래 §2, 실패/복구의 실제 순서는 [C 결과](P06-C-RESULT.md#2026-10-20-승인된-인증서-단계-실패와-http403-복구)를 따른다.
+#166은 Draft·미병합이다. HTTP 전용 차단의 Caddy validate/reload를 먼저 별도 승인으로 완료했고 HTTPS Origin은 미실행이다. 최초 인증서 단계는 CA 검증403으로 HTTP403 복구(exit20) 후 중단했다. 이후 Cloudflare 국가 규칙 예외 적용과 새 실행물 별도 승인으로 **재시도1 발급 성공(exit0)·closed HTTPS403·서비스 보존**을 확인했다. [실제 성공 결과](P06-C-RESULT.md#2026-10-20-승인된-인증서-재시도1-성공과-서비스-보존)를 따른다. 고정 묶음을 수동 반복하지 않는다. Cloudflare 캐시 규칙 활성화·Proxied Console A 생성은 앞서 사용자가 완료했다. 공개 DNS/HTTP 관찰과 검토했던 인증서 범위는 아래 §2, 최초 실패/복구 이력은 [C 결과](P06-C-RESULT.md#2026-10-20-승인된-인증서-단계-실패와-http403-복구)를 따른다.
 2026-10-20 인증서 읽기 관찰을 반영한 **기존 Caddy의 Let's Encrypt 우선 경로**는 아래 §2의 추가 안내를 따른다.
 아래 B0/Vault 등 초기 준비 안내를 새 실행 요청으로 해석하지 않는다.
 
@@ -191,7 +191,7 @@ HTTPS Origin/env/materializer·컨테이너/DB 재시작·배포/snapshot·임�
 
 ### 2026-10-20 인증서 재시도1 실행·복구 승인안
 
-**준비만 완료·별도 승인 대기다. 아래 새 묶음은 VM에 전달/실행하지 않았다.** 기존 실패 archive/launch·세 보호 백업은 보존하고 이전 인증서 controller의 apply/restore를 호출하지 않는다. 읽기 재확인과 로컬 검증의 실제 범위는 [C 결과](P06-C-RESULT.md#2026-10-20-인증서-재시도1-준비와-읽기-재확인)가 소유한다.
+**아래는 검토한 승인안의 이력이다. 이후 이 고정 묶음만 별도 승인받아 전달·사용자 root 실행했고 발급 성공(exit0), 복구 미실행·기존 서비스 보존을 확인했다. apply/restore를 수동 재실행하지 않는다.** [실제 결과](P06-C-RESULT.md#2026-10-20-승인된-인증서-재시도1-성공과-서비스-보존)를 따른다. 기존 실패 archive/launch·세 보호 백업은 보존하고 이전 인증서 controller를 호출하지 않았다. 승인 전 읽기 재확인/로컬 검증은 [C 결과](P06-C-RESULT.md#2026-10-20-인증서-재시도1-준비와-읽기-재확인)가 소유한다.
 
 | 새 고정 실행물(로컬 `.local/p06-c/certificate-retry1/`) | SHA-256 |
 | --- | --- |
@@ -201,7 +201,7 @@ HTTPS Origin/env/materializer·컨테이너/DB 재시작·배포/snapshot·임�
 
 archive에는 위 operator·기존 검토 `closed-acme.Caddyfile`(SHA f2465b62...)·`APPROVALS.txt`·`SHA256SUMS.json`만 포함한다. launcher는 archive 전체/내부 항목 hash를 root 메모리에서 대조하고 새 launch 경로에만 O_EXCL로 설치한다. 새 staging은 `/home/oioi/p06-c-certificate-retry1-preparation`(0700/파일0600), 새 launch는 `/var/lib/oioi-p06-c-certificate-retry1-launch`(root:root0700/0600)다. 기존 경로 충돌/불일치는 즉시 중단한다.
 
-승인받을 실행 범위는 다음과 같다.
+사용자가 승인한 재시도1 실행 범위는 다음과 같다. 아래 이력은 추가 실행 승인이 아니다.
 
 1. 최신 문서 CI 성공·정상 receipt12192252859/고정 후보·현재 HTTP403/main Caddyfile·Cloudflare GET ACME 예외·preview/앱/DB·보호 상태를 실행 직전 재대조하고 새 고정 묶음만 전달/보호 설치한다. 기존 deployment.lock 안에서 세 백업의 권한/사본 hash와 현재 정상 source/링크·컨테이너/preview/PID를 검증한다. 실패 전 백업은 새 operator의 읽기 함수로 검증한다.
 2. 새 `/var/lib/oioi-p06-c-before-certificate-retry1`에 현재 main Caddy/HTTP403 조각·host/env·current/previous snapshot/링크·컨테이너 metadata·preview 공개 인증서 hash를 root:root·전체 디렉터리0700/파일0600으로 보호 복사한다. 기존 백업/인증서/개인키/계정 저장소를 덮어쓰지 않는다.
@@ -209,11 +209,15 @@ archive에는 위 operator·기존 검토 `closed-acme.Caddyfile`(SHA f2465b62..
 4. 기존 Caddy의 Console 전용 Let's Encrypt HTTP-01 **활성화 한 번·최대180초 관찰**로 한정한다. 첫 실제 Console 발급 오류/재시도 로그·시간 초과·후속 검증 실패 시 현재 HTTP403 조각으로 자동 복구 한 번 후 중단한다. Caddy/CA 내부 네트워크 요청이 정확히 하나임을 보장하지 않는다. 실패 exit20은 복구 검증 성공,21은 복구 검증 실패, 사전 불일치1·정상0이며 수동 반복/임의 재시도는 금지다.
 5. 성공 시 직접 origin의 CA 신뢰·Console SAN·Let's Encrypt issuer·만료일과 정확한403/no-store를 확인한다. Cloudflare HTTPS는 승인된 ACME 예외의 probe 경로로 **정확한 Caddy 차단 본문**까지 대조한다. Edge challenge403을 origin 성공으로 인정하지 않는다. 일반 공개HTTPS 차단도 외부에서 읽기 확인한다. preview 세 경로200/기존 인증서 hash·네 앱 health/readiness200·세 컨테이너 ID/start/image/healthy·env/snapshot/PID 보존을 검증하고 SAN/issuer/유효기간 metadata만 보고한다. 성공한 closed HTTPS403/자동 갱신 설정은 유지한다.
 
-별도 승인·hash 검증·신규 root 설치 후에만 아래 새 명령을 사용한다. `apply`는 실패 시 내부에서 `restore`를 한 번 호출한다. 자동 복구 후 아래 명령을 추가 실행하지 않는다.
+별도 승인·hash 검증·신규 root 설치 후 아래 `apply`를 한 번 실행했고 exit0으로 종료했다. `apply`는 실패 시 내부에서 `restore`를 한 번 호출하지만 이번에는 복구하지 않았다. 아래 두 명령을 수동 반복/추가 실행하지 않는다.
 
 ```bash
 sudo python3 -I -B /var/lib/oioi-p06-c-certificate-retry1-launch/certificate-phase.py apply
-# 같은 새 백업·fragment 허용 목록을 대조하는 복구 본문. 자동 복구와 중복 실행 금지.
+```
+
+검토했던 복구 명령(이번 실행에서는 미사용):
+
+```bash
 sudo python3 -I -B /var/lib/oioi-p06-c-certificate-retry1-launch/certificate-phase.py restore
 ```
 
