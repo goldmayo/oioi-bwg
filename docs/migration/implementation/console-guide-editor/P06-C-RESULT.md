@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-20"
 updated_at: "2026-10-20"
-revision: 13
+revision: 14
 ---
 
 # P06-C 구현 결과
 
-**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 사용자 지정 Managed Challenge 확인·해당 규칙 식별/별도 승인 대기. 실제 제한 HTTPS 검증은 미완료다. C 전체 완료가 아니다.**
+**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료. 인증서 재시도·실제 제한 HTTPS 검증은 미완료다. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
 구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 배포 호스트 보완 `16c317d`, 로컬 HTTPS/DB 검증 확장 `2a274cd`를 거쳤다.
 metadata의 source는 아래 실제 HTTP 공동 배포의 squash merge다. ARM64 후보 source와 초기 로컬 검증을 구분한다.
@@ -259,13 +259,35 @@ DNS 생성·Cache Rule 활성화는 Console 외부 차단과 기존 preview 보�
 
 근거는 ignored `certificate-window/`의 `approval-received.json`, `receipt-preflight.json`, `staging-result.json`, `root-phase-result.json`, `root-diagnostic-result.json`, `vm-after-recovery.json`, `external-after-recovery.json`과 사용자 root 출력이다. root 원문/비공개 env/manifest는 공개 기록에 넣지 않는다. 기존 archive와 모든 보호 백업은 보존한다.
 
+## 2026-10-20 승인된 국가 규칙 ACME 예외 적용과 상태 확인
+
+사용자는 기존 비KR 국가 Managed Challenge 규칙 한 건에 Console 정확한 host·GET·ACME prefix만 제외하고 HTTP-01 갱신용으로 유지하는 범위를 별도 승인했다. 원복 식은 `(ip.src.country ne "KR")`이며 Action·활성 상태·순서·`/admin` 규칙과 나머지 설정은 보존하는 범위다. VM 변경·인증서 재시도는 승인하지 않았다. [정확한 식/범위](P06-PREPARATION.md#2026-10-20-cloudflare-국가-챌린지-규칙의-acme-예외승인안)를 따른다.
+
+Cloudflare 도구/인증정보가 연결돼 있지 않아 에이전트가 API로 설정을 조회·저장하지 않았다. 사용자에게 승인된 정확한 식과 사전 대조 조건을 제공했고 사용자가 대시보드 저장 완료를 확인했다. Action/활성/순서·다른 규칙 보존은 해당 지시 아래 사용자 완료 확인이며 독립 API 대조로 기록하지 않는다.
+
+저장 후 실제 네트워크 동작과 VM 상태를 읽기 확인했다.
+
+| 검사 | 결과 |
+| --- | --- |
+| 동일 OCI VM 발신 → Cloudflare, Console GET `/` |403·`cf-mitigated: challenge`, Caddy 차단 본문 아님. 일반 요청의 국가 Challenge 유지 |
+| 같은 발신 → Console GET `/.well-known/acme-challenge/p06-c-readonly-probe` |403·정확한 `Console is not public` 본문·no-store·DYNAMIC, cf-mitigated 없음. 해당 GET 경로가 Edge challenge를 통과해 닫힌 Caddy까지 도달 |
+| 같은 발신 → 동일 ACME 경로 POST |403·`cf-mitigated: challenge`, Caddy 차단 본문 아님. method 범위 제한 유지 |
+| WSL 외부 → Console 일반/임의 ACME HTTP GET | Caddy 차단 본문403·no-store·DYNAMIC |
+| 같은 외부 → Console HTTPS |525. 인증서 확보/Full(strict) 성공 경로로 보고하지 않음 |
+| preview 직접 origin TLS `/`·`/healthz`·`/readyz` | 모두200·기존 공개 인증서 hash 유지 |
+| VM 상태 | 두 앱 네 health/readiness200·세 컨테이너 healthy. ID/시작 시각/이미지·Caddy PID926/active·main Caddyfile/materializer hash·HTTP loopback/등록 닫힘·비프록시403 route 유지. 기존/신규 보호 디렉터리 metadata 보존·임시 candidate 부재 |
+
+이 비교는 **승인된 경로/메서드 예외와 기존 차단 보존의 실제 증거**다. 유효 ACME token200·CA 발급·Secure 쿠키/IP/인증 응답 cache 검증은 아니다. 에이전트는 설정/Caddy reload·apply/restore·컨테이너/DB·인증서 발급을 실행하지 않았다. 이전 archive62c6a1fa...와 모든 보호 백업은 보존했고 재실행하지 않았다.
+
+근거는 ignored `certificate-window/`의 `cloudflare-country-rule-approval.json`, `vm-egress-after-country-exception.json`, `external-after-country-exception.json`, `vm-after-country-exception.json`과 사용자 대시보드 완료 답변이다. 다음 인증서 재시도는 새 고정 실행물/보호 경로·복구 범위의 별도 승인이 필요하다. 현재 일반 HTTP403·정상 pair/preview 보호 상태를 유지한다.
+
 ## 남은 완료 게이트와 운영 승인 범위
 
 - 초기 Docker 연결 부재는 사용자의 연결 후 해소했다. 로컬 HTTP/HTTPS·격리 DB 전체 회귀와 위 CI의 두 이미지 검증이 통과했다. 이후 테스트/문서 커밋의 CI는 같은 PR에서 별도로 확인한다.
 - 초기 공개 조회에서 Console DNS는 해석되지 않았고 preview Cloudflare 경로는 challenge 403, VM preview 원본 TLS는 정상이었다. 이후 사용자 DNS/cache 변경과 실제 공개 DNS·HTTP403/DYNAMIC을 위에 구분했다. Console origin 인증서·실제 인증 응답 캐시 제외는 여전히 미검증이다.
 - DNS 전 직접 origin HTTP 차단/TLS 거절을 완료했다. 실제 VM의 제한 HTTPS 브라우저 검증, 실제 Cloudflare client IP 두 개의 독립 제한, 제한 HTTPS에서의 직접 origin/위조 헤더 차단과 CDN 캐시 제외는 **미검증**이다. 로컬 모사 peer 성공으로 대체하지 않는다.
-- 1차 보호 백업·HTTP 공동 배포와 새 정상 pair 기준 DNS 전 보호 백업/HTTP 차단을 완료했다. 인증서 단계는 새 보호 백업과 한 번 HTTP403 복구(exit20)를 완료했다. Cloudflare 사용자 지정 Managed Challenge는 확인했고 정확한 규칙/원본 식별과 새 승인 전 발급을 재시도하지 않는다. 이후 HTTPS 창도 그 시점의 닫힌 Caddy/pair를 보존할 새 보호 경로·실행/복구 명령으로 별도 승인받는다. 기존 백업은 덮어쓰지 않는다. ACME 실패 시 현재 HTTP 전용 차단으로 복구·중단하며 Full(strict) 해제·DNS-only 전환·발급 무한 재시도는 하지 않는다.
+- 1차 보호 백업·HTTP 공동 배포와 새 정상 pair 기준 DNS 전 보호 백업/HTTP 차단을 완료했다. 인증서 단계는 새 보호 백업과 한 번 HTTP403 복구(exit20)를 완료했다. Cloudflare 국가 규칙의 ACME 예외는 별도 승인 후 사용자 적용·실제 경계 검증까지 완료했다. 새 VM 실행물/보호 경로·복구 범위 승인 전 발급을 재시도하지 않는다. 이후 HTTPS 창도 그 시점의 닫힌 Caddy/pair를 보존할 새 보호 경로·실행/복구 명령으로 별도 승인받는다. 기존 백업은 덮어쓰지 않는다. ACME 실패 시 현재 HTTP 전용 차단으로 복구·중단하며 Full(strict) 해제·DNS-only 전환·발급 무한 재시도는 하지 않는다.
 - loopback/SSH TLS 검증과 실제 Cloudflare→Caddy 경로 검증을 구분한다. 공개 403을 유지한 제한 matcher·origin 인증서·실행/복구 명령은 별도 승인 전 미적용이다. DNS 추가만으로 제한 완료라 하지 않는다.
-- #163/#165 병합·#164 HTTP 공동 배포와 HTTP 전용 차단 validate/reload만 완료했다. 후속 host asset 설치·HTTPS Origin 전환·Console ACME 조각은 한 번 적용했으나 검증403으로 HTTP403 조각에 복구했다. 제한 HTTPS Caddy/인증서 확보는 완료하지 않았다. DNS/cache 두 항목만 사용자가 완료했고 에이전트 Cloudflare 변경은 없다. 정확한 보호 파일 경로·실행 후보·복구 명령과 함께 각각 별도 승인받는다.
+- #163/#165 병합·#164 HTTP 공동 배포와 HTTP 전용 차단 validate/reload만 완료했다. 후속 host asset 설치·HTTPS Origin 전환·Console ACME 조각은 한 번 적용했으나 검증403으로 HTTP403 조각에 복구했다. 제한 HTTPS Caddy/인증서 확보는 완료하지 않았다. DNS/cache 두 항목과 국가 규칙의 좁은 ACME 예외는 사용자가 승인 범위로 완료했고 에이전트 직접 Cloudflare 변경은 없다. 정확한 보호 파일 경로·실행 후보·복구 명령과 함께 각각 별도 승인받는다.
 
 위 게이트를 통과하기 전에는 C를 완료로 바꾸지 않는다. D 실물 MFA·CLI/키 복구, E Web 관리/가입 종료, F 공개/www 전환은 기존 단계에 남긴다.
