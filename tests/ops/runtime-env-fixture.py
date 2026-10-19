@@ -28,7 +28,9 @@ class RuntimeEnvTest(unittest.TestCase):
             if variant in {'missing', 'missing-auth'}:
                 key = 'AUTH_SECRET' if app == 'web' else ('CONSOLE_AUTH_SECRET' if variant == 'missing-auth' else 'CONSOLE_MFA_ENCRYPTION_KEY')
                 mapping = '\n'.join(line for line in mapping.splitlines() if not line.startswith(key + '='))
-            if variant == 'origin': public = 'CONSOLE_ORIGIN=https://console.example\n'
+            if variant == 'origin': public = 'CONSOLE_ORIGIN=http://console.example\n'
+            if variant == 'https': public = 'CONSOLE_ORIGIN=https://console.example\n'
+            if variant.startswith('bad-origin:'): public = 'CONSOLE_ORIGIN=' + variant.split(':', 1)[1] + '\n'
             if variant == 'short-auth': secrets['auth'] = 'short'
             if variant == 'invalid-mfa': secrets['mfa'] = MFA[:-1]
             if variant == 'same-key': secrets['auth'] = MFA
@@ -83,6 +85,20 @@ print(base64.b64encode(json.loads((root/'values').read_text())[key].encode()).de
                     self.assertEqual(result.returncode, 1)
                     self.assertEqual(output, 'previous-env')
                     if variant not in {'newline', 'oci-error'}: self.assertEqual(calls, [])
+
+    def test_https_origin(self):
+        result, output, _, _ = self.run_case('console', 'https')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('CONSOLE_ORIGIN=https://console.example\n', output)
+        for origin in ('https://user@console.example', 'https://console.example/admin',
+                       'https://console.example?', 'https://console.example#',
+                       'https://console.example:0', 'https:console.example',
+                       'https://console example', 'https://console.example\\evil',
+                       'https://%65xample.com'):
+            result, output, calls, _ = self.run_case('console', 'bad-origin:' + origin)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(output, 'previous-env')
+            self.assertEqual(calls, [])
 
     def test_console_contract(self):
         for variant in ('origin', 'short-auth', 'invalid-mfa', 'same-key', 'missing-auth'):

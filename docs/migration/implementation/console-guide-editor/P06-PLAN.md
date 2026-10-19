@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
-updated_at: "2026-10-17"
-revision: 9
+updated_at: "2026-10-18"
+revision: 10
 ---
 
 # P06 계획 초안
@@ -485,3 +485,17 @@ root 경로/asset 설치에는 container 교체·Caddy reload·Docker/VM 재시�
 
 최신 #142 Verify `38944025086`의 `test:ops`는 paired fixture 전체 timeout으로 실패했다.
 실패 원인 확인·보완과 최신 source 후보 검증이 운영 적용 전 선행 작업이다. B1의 과거 성공을 현재 후보로 재사용하지 않는다.
+
+
+## 2026-10-18 B 운영 실증 종료
+
+사용자가 한정한 두 운영 작업을 완료해 **B를 종료하고 다음 단계는 C**로 둔다.
+호스트 보호/백업·upgrade·Console 설정·승인된 기존 DB 0005 준비 후 첫 공동 배포와 기존 Web 복구,
+새 후보의 공동 rollback, 실제 두 앱 IMDS 차단·재생성/Docker/VM 재시작 지속성 및 preview 원복을 확인했다.
+상세 source/merge/digest·receipt·실행/관찰 증거와 한계는 [B2-3 최종 결과](P06-B2-3-RESULT.md#2026-10-18-b-운영-실증-완료와-최종-상태)가 소유한다.
+위 host 전환 준비의 실패/차단/대기는 당시 상태이며 #142는 병합 없이 CLOSED다.
+
+C의 제한된 HTTPS·Secure cookie·신뢰 IP, D의 실물 MFA/운영 CLI·키 복구, E의 Web 관리/가입 종료,
+F의 www 전환·레거시 종료를 B 완료 조건으로 끌어오지 않는다. 동시 CRUD/부하 상태 자원 관측 등
+§7의 제한 운영·공개 gate도 유지하며 이번 유휴 관찰로 통과했다고 하지 않는다.
+새 PR 병합·외부 운영 적용은 구체적인 변경과 복구안을 준비한 뒤 별도 승인한다.

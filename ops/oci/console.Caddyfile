@@ -1,0 +1,32 @@
+# 수동 검토용 조각. 기존 preview block은 보존한다. 자동 설치/reload하지 않는다.
+# Caddy 2.6.2 호환. import 시 host와 검증한 단일 client IP를 전달한다.
+(console_upstream) {
+	header Cache-Control "no-store"
+	header CDN-Cache-Control "no-store"
+	header Cloudflare-CDN-Cache-Control "no-store"
+	reverse_proxy 127.0.0.1:3001 {
+		header_up Host {args.0}
+		header_up X-Forwarded-Host {args.0}
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-For {args.1}
+		header_up X-Console-Client-IP {args.1}
+		header_up -X-Real-IP
+		header_up -CF-Connecting-IP
+		header_up -Forwarded
+	}
+}
+
+console.oioibawige.com {
+	route {
+		# DNS/TLS 준비와 무관하게 공개 차단 유지. 이 respond 제거는 F의 별도 승인 대상.
+		respond "Console is not public" 403
+		# Cloudflare 공식 ips-v4/ips-v6, 2026-10-18 대조. 사용자 IP allowlist가 아니다.
+		@cloudflare remote_ip 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		handle @cloudflare {
+			import console_upstream console.oioibawige.com {http.request.header.CF-Connecting-IP}
+		}
+		handle {
+			respond "Forbidden" 403
+		}
+	}
+}

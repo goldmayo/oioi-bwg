@@ -1,10 +1,10 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.4"
+version: "1.5"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-10"
+updated_at: "2026-10-19"
 depends_on:
   - "01"
   - "03"
@@ -21,7 +21,7 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.4
+# oioi-bwg Authentication / Authorization Architecture v1.5
 
 ## 1. 목적
 
@@ -194,7 +194,13 @@ P04는 접근이 제한된 loopback 실행 환경에서 기존 관리 흐름을 
 반환한다. 다음 요청마다 DB status/role을 다시 검사하고 기존 CASL/service 인가를 유지한다.
 Console에는 별도 `CONSOLE_AUTH_SECRET`과 전용 host-only cookie 이름을 사용한다.
 Web 세션을 Console 세션으로 받아들이거나 같은 secret을 기본값으로 대체하지 않는다.
-P04의 HTTP loopback cookie는 HttpOnly/SameSite=Lax를 유지하며 Secure는 HTTPS 전환 시 적용한다.
+HTTP loopback의 로컬 개발·비공개 등록은 유지한다. 세션·CSRF·callback cookie는 모두
+HttpOnly·SameSite=Lax·host-only(`Domain` 미설정)이며, 명시적 HTTPS `CONSOLE_ORIGIN`에서는 Secure를 적용한다.
+Auth.js callback/redirect의 기준 URL은 설정한 Console Origin으로 고정하고 요청 헤더로 결정하지 않는다.
+HTTPS 인증 요청은 Host·X-Forwarded-Host·X-Forwarded-Proto를 필수로 전달받아 설정 authority/protocol과
+정확히 일치하는지 검사한다. HTTP loopback에서는 해당 헤더의 누락을 허용하되 존재하는 값은 일치해야 한다.
+Auth.js 상태 변경·Console Server Action·MFA 및 관리 변경 요청은 Origin도 설정값과 정확히 일치해야 한다.
+이 검사는 기존 Auth.js/Next.js CSRF와 service 인증·인가를 함께 유지하며 별도 CSRF framework로 대체하지 않는다.
 
 공개 Console 인증은 P05의 TOTP 완료를 전제로 한다. 비밀번호·ACTIVE·ADMIN·TOTP를
 모두 확인한 뒤에만 identity를 발급하며, MFA 증명/version과 DB의 현재 상태를 공통 Console

@@ -1,11 +1,18 @@
 import { type NextRequest } from "next/server";
 
 import { toErrorResponse } from "@/server/http/api-response";
-import { assertConsoleOrigin } from "@/server/http/console-origin";
+import { assertConsoleHost, assertConsoleOrigin } from "@/server/http/console-origin";
 
 import { handlers } from "@/auth";
 
-export const GET = handlers.GET;
+export async function GET(request: NextRequest) {
+  try {
+    assertConsoleHost(request.headers);
+    return await handlers.GET(request);
+  } catch (error) {
+    return toErrorResponse(error);
+  }
+}
 export async function POST(request: NextRequest) {
   try {
     assertConsoleOrigin(request.headers);

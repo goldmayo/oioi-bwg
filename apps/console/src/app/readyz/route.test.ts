@@ -28,7 +28,7 @@ describe("Console readiness", () => {
     ["CONSOLE_AUTH_SECRET", "different-web-readiness-test-only-secret"],
     ["CONSOLE_MFA_ENCRYPTION_KEY", ""],
     ["CONSOLE_MFA_ENCRYPTION_KEY", "invalid-key"],
-    ["CONSOLE_ORIGIN", "https://console.example.test"],
+    ["CONSOLE_ORIGIN", "http://console.example.test"],
   ])("rejects unusable %s without accessing PostgreSQL", async (name, value) => {
     vi.stubEnv(name, value);
     const response = await GET();
