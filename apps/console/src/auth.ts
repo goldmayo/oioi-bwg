@@ -10,7 +10,14 @@ import { consoleSessionCallbacks } from "@/server/auth/console-session";
 import { assertConsoleOrigin } from "@/server/http/console-origin";
 import { reportAuthError } from "@/server/observability/auth-error-reporter";
 
-import { consoleCookies, getConsoleRuntimeConfig } from "@/shared/config/console-runtime";
+import {
+  getConsoleCookies,
+  getConsoleOrigin,
+  getConsoleRuntimeConfig,
+} from "@/shared/config/console-runtime";
+
+// Console은 Web과 별도 프로세스다. Auth.js URL 추론도 명시적 설정에 고정한다.
+process.env.AUTH_URL = getConsoleOrigin();
 
 export class LoginRateLimited extends CredentialsSignin {
   code = "rate_limited";
@@ -35,7 +42,7 @@ const {
   return {
     secret: config.secret,
     trustHost: true,
-    cookies: consoleCookies,
+    cookies: getConsoleCookies(config.origin),
     pages: { signIn: "/admin-login" },
     logger: { error: reportAuthError },
     providers: [
@@ -45,11 +52,11 @@ const {
           password: { label: "Password", type: "password" },
           otp: { label: "OTP", type: "text" },
         },
-        async authorize(credentials) {
+        async authorize(credentials, request) {
           const parsed = credentialsSchema.safeParse(credentials);
           if (!parsed.success) return null;
 
-          const refund = await reserveConsoleMfaAttempt(parsed.data.email).catch(
+          const refund = await reserveConsoleMfaAttempt(parsed.data.email, request.headers).catch(
             (error: unknown) => {
               if (error instanceof ConsoleMfaRateLimited)
                 throw new LoginRateLimited(error.retryAfterSeconds);

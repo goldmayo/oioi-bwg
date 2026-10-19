@@ -33,9 +33,51 @@ beforeEach(async () => {
   getHeaders.mockResolvedValue(new Headers({ Origin: "http://127.0.0.1:3001" }));
   limiter = await import("./console-mfa-limiter");
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+});
 
 describe("Console MFA 예약", () => {
+  const trusted = (ip: string) =>
+    new Headers({
+      host: "console.example.com",
+      "x-forwarded-host": "console.example.com",
+      "x-forwarded-proto": "https",
+      "x-console-client-ip": ip,
+    });
+  it("검증된 IP 두 개는 독립적이며 IP가 바뀌어도 계정 제한은 유지한다", async () => {
+    vi.stubEnv("CONSOLE_ORIGIN", "https://console.example.com");
+    for (let i = 0; i < 20; i++)
+      await limiter.reserveConsoleMfaAttempt(`${i}@example.test`, trusted("203.0.113.1"));
+    await expect(
+      limiter.reserveConsoleMfaAttempt("new@example.test", trusted("203.0.113.1")),
+    ).rejects.toBeInstanceOf(limiter.ConsoleMfaRateLimited);
+    for (let i = 0; i < 5; i++)
+      await limiter.reserveConsoleMfaAttempt("shared@example.test", trusted("203.0.113.2"));
+    await expect(
+      limiter.reserveConsoleMfaAttempt("shared@example.test", trusted("203.0.113.3")),
+    ).rejects.toBeInstanceOf(limiter.ConsoleMfaRateLimited);
+  });
+  it("IPv6 표현과 IPv4 mapped 주소를 정규화하고 임의 헤더는 사용하지 않는다", () => {
+    vi.stubEnv("CONSOLE_ORIGIN", "https://console.example.com");
+    expect(limiter.getConsoleClientIp(trusted("2001:0db8:0:0::1"))).toBe("2001:db8::1");
+    expect(limiter.getConsoleClientIp(trusted("::ffff:203.0.113.1"))).toBe("203.0.113.1");
+    for (const value of ["", "not-ip", "203.0.113.1, 203.0.113.2", "[::1]", "fe80::1%eth0"])
+      expect(limiter.getConsoleClientIp(trusted(value))).toBe("unknown");
+    expect(
+      limiter.getConsoleClientIp(
+        new Headers({
+          "x-forwarded-for": "203.0.113.1",
+          "cf-connecting-ip": "203.0.113.2",
+          "x-real-ip": "203.0.113.3",
+        }),
+      ),
+    ).toBe("unknown");
+    vi.stubEnv("CONSOLE_ORIGIN", "http://127.0.0.1:3001");
+    expect(limiter.getConsoleClientIp(trusted("203.0.113.1"))).toBe("unknown");
+  });
+
   it("정규화한 한 계정의 동시 요청은 정확히 다섯 건만 허용한다", async () => {
     const results = await Promise.allSettled(
       Array.from({ length: 12 }, (_, i) =>

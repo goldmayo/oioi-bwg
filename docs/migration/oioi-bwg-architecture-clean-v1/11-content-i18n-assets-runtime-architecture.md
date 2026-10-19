@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.7"
+version: "1.8"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-17"
+updated_at: "2026-10-19"
 depends_on:
   - "01"
   - "05"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.5
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.8
 
 ## 1. 목적
 
@@ -175,8 +175,11 @@ provider migration이 domain schema에 과도하게 스며들지 않게 한다.
 
 ## 11. Runtime Environment
 
-P04의 Console은 `apps/console`에 자동 탐색 설정과 `.env*`를 소유한다.
-`CONSOLE_ORIGIN`은 loopback HTTP origin만 허용하며 dev/start는 `127.0.0.1:3001`에 바인딩한다.
+P04부터 Console은 `apps/console`에 자동 탐색 설정과 `.env*`를 소유한다.
+`CONSOLE_ORIGIN`은 로컬 개발·비공개 등록용 HTTP loopback 또는 명시적으로 설정한 Console 전용 HTTPS origin을 허용한다.
+공개 HTTP host·사용자 정보·경로·query·fragment가 포함된 값은 거절하며 앱 runtime과 배포 env materializer에서 검증한다.
+요청 헤더로 HTTPS 주소나 신뢰 host를 추론하지 않는다. dev/start는 `127.0.0.1:3001`에 바인딩하고,
+Docker의 host publish도 loopback을 유지한다. 인증 쿠키와 HTTPS 요청 경계는 04 §4.1을 따른다.
 `CONSOLE_AUTH_SECRET`은 최소 32자이고 Web의 `AUTH_SECRET`으로 fallback하지 않는다.
 runtime 설정은 요청 시 검증해 build에 secret을 요구하지 않는다. 기존 Web 이미지와 배포 대상은
 P06 전까지 유지하고, CI/local에서는 두 앱 standalone을 독립 build한다.
