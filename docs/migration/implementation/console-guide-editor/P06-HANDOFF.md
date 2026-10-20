@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-21"
-revision: 52
+revision: 53
 ---
 
 # P06 작업 인계
@@ -21,7 +21,7 @@ revision: 52
   2026-10-20 Let's Encrypt 우선 경로의 DNS 전 백업/HTTP 차단 묶음을 사용자 승인 후 실행했다. root exit0·외부 HTTP403/TLS 거절·preview200·Caddy PID/세 컨테이너/env/snapshot 보존을 확인했다. 복구 백업/명령은 보존했고 실제 원복은 불필요해 실행하지 않았다. 정확한 hash·실행 결과는 RESULT, 다음 별도 승인 순서는 PREPARATION §2를 따른다. Always Use HTTPS OFF는 사용자 확인이며 재조사/변경하지 않았다. 당시 DNS/cache·인증서·HTTPS Origin은 미변경이었다. 이후 사용자가 캐시 규칙 활성화·Proxied Console A 생성을 완료했다. 공개 DNS 두 resolver·Cloudflare HTTP/임의 ACME 경로403/no-store/DYNAMIC·현재 HTTPS525와 preview/기존 pair 보존을 읽기 확인했다. 이후 head5756143·고정 archive62c6a1fa...의 인증서 단계만 별도 승인받아 Run API attempt1 success·정상 receipt/VM/hash 대조 후 전달했고 사용자가 고정 root 본문을 실행했다. CA HTTP-01 검증403 후 한 번 HTTP403 복구해 exit20으로 중단했다. 새 보호 백업/사본·권한·현재 원본 일치와 외부403/TLS 거절·preview/앱/DB·PID/컨테이너/snapshot 보존을 root/외부/SSH로 확인했다. CA 오류의 최종 URL은HTTPS였다. 이후 사용자의01:40:59 ACME 요청 상세에서 사용자 지정 규칙 Managed Challenge를 확인했다. 사용자가 `/admin` 경로 식과 비KR 국가 식을 제공했고 미국 CA 요청에 일치하는 비KR 국가 규칙을 변경 대상으로 식별했다. Console GET ACME prefix만 이 국가 식에서 제외하는 변경/원복·갱신용 유지를 별도 승인받아 사용자가 대시보드 적용 완료를 확인했다. 같은 VM 발신에서 일반GET/ACME POST는Edge challenge, ACME GET만 Caddy403까지 도달하고 기존 pair/preview/DB 보존을 읽기 확인했다. 정확한 설정은 PREPARATION, 증거/한계는 RESULT를 따른다. 이는 예외 적용 확인 시점의 이력이며 당시 발급 재시도/VM 변경은 하지 않았다. 이후 새 승인 재시도1의 실제 성공은 다음 항목을 따른다. 최초 실패의 HTTPS 전환 지점은 미확정 이력으로 보존하며 수동 발급/restore 반복이나 다음 HTTPS 창은 실행하지 않는다. 정확한 승인 범위 이력은 PREPARATION §2, 실제 실패/복구 근거와 남은 확인은 RESULT를 따른다.
 - 새 재시도1은 기존 실패 controller를 재실행하지 않고 별도 승인된 고정 archive148c1b87.../launcher로 한 번 실행해 인증서를 확보했다. source/backup/phase passed·exit0, 복구 미실행이며 외부/SSH 읽기로 신뢰 인증서·정확한 HTTPS403과 기존 서비스 보존을 확인했다. [실제 성공 결과](P06-C-RESULT.md#2026-10-20-승인된-인증서-재시도1-성공과-서비스-보존), [고정 범위/명령 이력](P06-PREPARATION.md#2026-10-20-인증서-재시도1-실행복구-승인안)을 따른다. 새/기존 보호 백업을 보존하고 수동 apply/restore는 반복하지 않는다. HTTPS Origin/env·임시 인증 접근·추가 Cloudflare 변경·일반 공개·#166 병합은 미실행이며 다음 창을 시작하지 않는다.
 - 제한 HTTPS archive6dc1453a...는 자격 조회 exit2에서 중단했다. VM 계정0을 직접 확인한 뒤 승인된 최초 운영자 launcher를 한 번 실행했으나 메일 수신/코드 검증 후 계정 단계 exit1로 중단했다. 직접 읽기에서 계정0·미소모 VERIFIED·등록 unit 부재·기존 서비스/closed403 보존을 확인했다. 비밀번호 오입력으로 원인을 단정하지 않는다. 사용자의 재시도 지시로 기존 실행물을 반복하지 않는 새 재개1을 준비했다. [최신 실행 결과/검증](P06-C-RESULT.md#2026-10-21-최초-운영자-메일인증-성공과-가입-중단재개1), [최소 재개·중단 범위](P06-PREPARATION.md#2026-10-21-인증된-가입의-재개1)를 따른다. MFA/HTTPS 창은 아직 미실행이며 등록 후 새 Console ID 기준으로 HTTPS 실행물을 다시 고정·별도 승인받는다. 인증서/갱신·ACME 예외·정상 snapshot/Web/DB·#166 Draft를 유지한다.
-- 최신 선행 작업: [가입 재개1 root 성공·SSH MFA 검증 진입](P06-C-RESULT.md#2026-10-21-가입-재개1-성공과-ssh-mfa-검증-진입). 계정 생성/ADMIN 준비와 등록 unit 시작은 각각 exit0이며 브라우저 실물 등록/새 OTP·등록 닫힘은 검증 중이다. HTTPS 창은 아직 시작하지 않는다.
+- 최신 선행 작업: [실물 MFA 등록·helper 중단/자동 USER 회수와 권한 복구안](P06-C-RESULT.md#2026-10-21-실물-mfa-등록과-브라우저-helper-중단자동-회수). 사용자 등록/로그인 보고 후 helper가 abort했고 직접 조회에서 USER/version2·MFA 활성 보존·등록 닫힘/정상 서비스 복구를 확인했다. 새 로그인 전용 helper와 대상 한 건의 ADMIN/version3 복구안을 준비·로컬 검증했으며 [재승격 범위](P06-PREPARATION.md#2026-10-21-등록된-mfa를-보존하는-권한-복구1)는 별도 승인 전 미실행이다. HTTPS 창도 아직 시작하지 않는다.
 - 후속 보류: #143/#161/#165에서 반복된 squash Promotion 조상 연결의 브랜치 전략을 C 이후 별도 검토한다.
   현재 C의 차단 이슈로 취급하지 않고 #164 후보·파이프라인·브랜치 정책을 이번 작업에서 변경하지 않는다.
 - B 종료 시 진입점: **P06-B 완료 / 첫 정상 pair 유지 / preview 원복 완료 / 다음 단계 C**.

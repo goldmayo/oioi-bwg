@@ -6,7 +6,7 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-21"
-revision: 16
+revision: 17
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -339,6 +339,17 @@ account0은 계정 준비/등록 미실행, account1은 중단/재실행 금지�
 - 계정 준비 성공 뒤에만 기존 승인된 `bootstrap.py enroll-start`를 한 번 시작한다. SSH 실물 MFA/다음 새 OTP 로그인과 원래 등록 닫기·실패 시 USER/version2 회수 계약을 유지한다. 등록 전 철회는 기존 `bootstrap.py revoke`, 열린 등록 unit 중단은 `sudo systemctl stop oioi-p06-c-enrollment.service`다.
 
 고정 hash는 RESULT를 따른다. 새 root 실행은 `sudo python3 -I -B /var/lib/oioi-p06-c-operator-resume1/resume.py`이며 설치 launcher는 성공 때만 원래 enroll-start를 이어 호출한다. Cloudflare/Caddy/HTTPS Origin/임시 허용·일반 공개·Web/DB 재시작·pair/snapshot·배포 파이프라인·#166 병합은 범위 밖이다. 등록 후 새 Console ID 기준으로 HTTPS 묶음을 다시 고정하고 별도 승인받는다.
+
+### 2026-10-21 등록된 MFA를 보존하는 권한 복구1
+
+실물 등록 후 helper 중단/자동 USER 회수와 현재 닫힌 VM 관찰은 [최신 결과](P06-C-RESULT.md#2026-10-21-실물-mfa-등록과-브라우저-helper-중단자동-회수)를 따른다. 기존 실패 승인 범위는 USER/version2 회수까지이므로 **재승격은 별도 승인**이다. ignored `operator-access-restore1/APPROVALS.txt`와 `run-reviewed.txt`에 고정했다.
+
+- 새 staging `/home/oioi/p06-c-operator-access-restore1-preparation`(UID1002/0700·파일0600)과 root `/var/lib/oioi-p06-c-operator-access-restore1`(root700/600)만 추가한다. archive/내부 hash·최신 CI/정상 receipt·복구 baseline/기존 보호 사본·현재 서비스/인증서·closed403을 대조한다. 기존 경로 충돌/불일치 시 중단한다.
+- deployment.lock 아래 root enrollment-result exit20·회수 marker version2·after-enrollment-baseline의 원본/링크/현재 container/PID·등록 닫힘을 확인한다. 방금 만든 account1/보호 입력 이메일의 USER/ACTIVE/version2·활성 MFA만 대상으로 원래 공통 service를 한 번 호출해 ADMIN/ACTIVE/version3으로 복구한다. 비밀값 없는 before-access metadata를 새 root에 보존한다. 기존 MFA secret·사용한 OTP step·비밀번호를 바꾸거나 version을 감소시키지 않는다.
+- root 실행은 `sudo python3 -I -B /var/lib/oioi-p06-c-operator-access-restore1/restore-access.py apply`다. 실패/불확실 응답은 phase/exit1로 중단하고 재실행/임의 SQL을 하지 않는다. 철회가 명시적으로 요청되면 같은 경로의 `revoke`가 새 승격 marker/현재 ADMIN3·동일 baseline을 확인한 뒤 USER4로 한 번 회수한다.
+- 승인된 재승격 후 로컬 `login-only.mjs`는 새 SSH localhost 브라우저에서 사용자 비밀번호/새 실물 OTP 로그인·관리 GET200·로그아웃·setup/confirm403/등록 버튼 부재만 검증한다. Enter/등록 완료 중간 화면에 의존하지 않는다. 등록 flag는 계속false이며 VM 설정·권한 변경/close.request 쓰기는 브라우저가 하지 않는다.
+
+고정 hash/검증은 RESULT를 따른다. 새 계정/메일·MFA reset/재등록·등록 unit 재개방·env/Origin/Caddy/Cloudflare 변경·컨테이너/DB 재시작·배포/pair/snapshot 변경·일반 공개·#166 병합은 범위 밖이다. 다음 제한 HTTPS 검증 창은 새 baseline/hash로 별도 승인받는다.
 
 ## 3. OCI Vault: Console 키 두 개 보관
 

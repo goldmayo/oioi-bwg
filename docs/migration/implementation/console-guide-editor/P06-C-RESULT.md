@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 20
+revision: 21
 ---
 
 # P06-C 구현 결과
 
-**최신 선행 조건:** 새 가입 재개1은 root exit0으로 계정 생성·ADMIN/version1 준비를 완료했고 등록 unit 시작도 exit0이다. SSH에서 HTTP loopback 등록 flag=true·서비스 보존을 확인해 제한 브라우저를 열었다. 실물 MFA 등록/새 OTP 로그인·등록 닫힘은 검증 중이다. [최신 운영 결과](#2026-10-21-가입-재개1-성공과-ssh-mfa-검증-진입)를 먼저 따른다. HTTPS 인증 창은 미실행이다.
+**최신 선행 조건:** 사용자가 실물 MFA 등록과 로그인을 완료했다고 알렸으나 브라우저 helper가 중단해 자동 복구가 등록을 닫고 계정을 USER/version2로 회수했다. 직접 DB 조회에서 MFA 활성/사용한 OTP 상태 보존과 기존 서비스 복구를 확인했다. [실제 중단 결과와 권한 복구안](#2026-10-21-실물-mfa-등록과-브라우저-helper-중단자동-회수)을 따른다. 재승격은 별도 승인 전 미실행이며 HTTPS 인증 창도 미실행이다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인. HTTPS Origin/env 전환·제한 인증 검증은 미실행이다. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
@@ -395,3 +395,16 @@ SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 la
 후속 직접 SSH에서 transient 등록 unit active/running·Console HTTP Origin 유지/등록 flag=true·같은 Console digest·세 컨테이너 healthy·네 health/readiness200을 확인했다. 승인된 등록 전환으로 Console ID는 `461e4579631bfe750c270eed9bab4bbb57347375d27dc4ac264e57385989f696`로 바뀌었으며 Web/DB ID·digest는 유지됐다. main Caddy/materializer hash·PID926·두 기존 인증서 hash·preview 세 경로200·Console TLS의 `/`와 `/api/auth/csrf` exact Caddy403/no-store도 읽기 재검증했다.
 
 기존 고정 `enroll.mjs`의 headed Chromium과 전용 SSH loopback forward를 에이전트가 열었다. 사용자가 직접 새 비밀번호와 실물 인증 앱으로 QR 등록/confirm을 진행하는 단계다. **실제 MFA 활성화·다음 새 OTP 로그인·로그아웃·등록 닫힘/복구 성공은 아직 보고하지 않는다.** 근거는 ignored `operator-resume1/root-execution-result.json`, `enrollment-readiness.json`, `enrollment-protection.json`과 실제 브라우저의 등록 대기 상태다. HTTPS Origin/env·Caddy/Cloudflare·일반 공개·#166 병합은 실행하지 않았다.
+
+
+## 2026-10-21 실물 MFA 등록과 브라우저 helper 중단·자동 회수
+
+사용자가 등록 확인 완료와 로그인을 알린 뒤 helper의 입력 대기를 진행시켰으나 `p06_operator_browser_failed`/exit1로 중단했다. helper는 승인된 abort를 제출했고 이후 직접 READ ONLY에서 대상 account1이 **USER/ACTIVE·MFA version2·enabled=true·OTP 사용 상태 있음**을 확인했다. MFA 등록은 보존됐으나 보호 API200/로그아웃/등록 닫힘까지의 원래 browser proof는 생성되지 않았다. 사용자 보고만으로 전체 인증 검증 성공을 주장하지 않는다.
+
+원래 helper는 채팅 완료 신호/Enter 뒤에 등록 완료 화면의 `로그인으로 돌아가기` 버튼을 기다린다. 사용자가 이미 다음 로그인 화면/관리 화면으로 진행하면 지나간 버튼을 기다리다 실패할 수 있는 결함을 실제 로컬 Chromium에서 재현했다. 원래 오류에는 phase가 없어 이번 실제 중단 경로 전체를 확정하지 못하지만, 사용자 완료 진행을 실패로 취급할 수 있는 helper를 에이전트가 만든 책임을 기록한다.
+
+후속 SSH에서 close.request=abort·등록 unit not-found/inactive·Console HTTP Origin/등록 flag=false·복구된 Console ID `6c0a009c095923f943417e05309df54f3b316366261913cea0ad7bcf79b7f004`와 같은 digest·세 컨테이너 healthy/네 health/readiness200·Web/DB ID/start 보존을 확인했다. Console/preview 신뢰 인증서·HTTP/HTTPS exact403/no-store·preview 세 경로200·Caddy PID926/main/materializer hash·비프록시403 route도 다시 통과했다. root-only 최종 enrollment-result/사본·전체 권한은 새 실행의 변경 전 guard에서 읽기 대조하도록 남겼으며, unprivileged 관찰만으로 root exit20 marker까지 읽었다고 주장하지 않는다. 기존 등록 unit/복구/계정 실행물을 재실행하지 않았다.
+
+별도 권한 복구1은 [최소 실행·철회 범위](P06-PREPARATION.md#2026-10-21-등록된-mfa를-보존하는-권한-복구1)를 따른다. 방금 생성한 계정 한 건의 USER/ACTIVE/version2·활성 MFA와 닫힌 복구 baseline을 대조한 뒤 기존 공통 service로 ADMIN/ACTIVE/version3 재승격 한 번만 준비했다. MFA reset/QR 재등록·비밀번호 변경·등록 창/env/컨테이너 전환은 없다. 새 로그인 전용 helper는 Enter나 중간 화면 대신 최종 admin URL/관리 GET200·로그아웃·등록 닫힘을 검사한다. 별도 승격 및 명시적 철회 명령은 서로 다른 O_EXCL marker와 기대 version을 사용하며 실패/불확실 응답은 반복하지 않는다.
+
+고정 archive SHA256 `af116ca7329cc9f8680c79ed3ed3f1a7810bfba8d015199fcdc0ced09dfb2706`, launcher `512489415dccf8bcc21bac3f87fda4ff6a9e78fdbc653ae31bf0d87818d6a4c3`다. 새 묶음은 ignored `operator-access-restore1/`에 보존했다. 공통 source8개를 #164와 대조했고 로컬 제어 fixture8건·격리 실제 Docker PostgreSQL17 권한 service5건·실제 Node size-prefixed loader의 변경 전 잘못된 명령 거절·실제 Chromium의 빠른 화면 진행 race 재현/최종 URL 수용을 통과했다. DB fixture에서 sentinel MFA/사용한 OTP 상태 보존·version3/명시적 회수4·중복 거절을 확인했으며 실제 VM 권한 변경/로그인 성공 증거는 아니다. 첫 fixture의 Date 객체 동일성 비교와 HTML charset 누락은 수정 후 재검증했다. Python/Node/bash syntax·archive 일반 파일6개/내부 hash도 확인했다. 신규 VM 전달/재승격은 별도 승인 전 미실행이다. #166 Draft·기존 인증서/자동 갱신·Cloudflare ACME 예외·공개403·정상 pair/snapshot·Web/DB를 유지하며 HTTPS 인증 창은 아직 열지 않는다.
