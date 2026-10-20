@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 24
+revision: 25
 ---
 
 # P06-C 구현 결과
 
-**최신 상태:** 승인된 최소 HTTPS 창2의 실제 전환·개방 후 browser helper가 중단됐고 root `exit20/aborted`로 원래 HTTP 설정·closed HTTPS403을 복원했다. [최소 창 실행·중단과 원복](#2026-10-21-최소-https-창2-실행중단과-원복)을 따른다. 실제 HTTPS 인증 성공 증거는 없으며 C는 미완료다. 두 실제 회선 실험은 사용자 지시로 필수 범위에서 제외하고 미실시로 남긴다.
+**최신 상태:** 최소 HTTPS 창2는 helper 중단 후 root `exit20/aborted`로 원복했다. [실제 실행 결과](#2026-10-21-최소-https-창2-실행중단과-원복)는 유지하고, [helper 보완과 창3 로컬 준비](#2026-10-21-helper-보완과-최소-https-창3-로컬-준비)를 완료했다. 사용자가 모바일만 사용 가능해 새 창은 미전달·미설치·미개방이며 PC 로그인 대기다. C는 미완료이고 두 회선 실험은 제외·미실시다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인 / 최소 HTTPS 창2 전환·개방 후 helper 중단·exit20 원복 완료. C 전체 완료가 아니다. 아래 미실행 표시는 각 기록 시점의 이력이다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
@@ -446,3 +446,13 @@ SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 la
 닫힌 상태의 GET으로 여섯 위조 헤더를 각각 분리한 후속 진단에서 **`CF-Connecting-IP` 단독과 전체 조합만 Cloudflare403/error1000**, 나머지 다섯 헤더는 정확한 Caddy 차단403을 확인했다. [Cloudflare 공식 설명](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1000/)도 클라이언트의 이 헤더 포함을 error1000 원인으로 명시한다. 따라서 모든 위조 헤더를 묶어200/동일 IP를 기대한 helper에는 결함이 있다. 다음 검증에서는 이 Edge 거절과 다른 forwarded 헤더의 Caddy 덮어쓰기를 분리하고, 검사 직전 단계·허용된 응답 metadata를 기록해야 한다. 후속 닫힌 상태 관찰을 당시 열린 창의 정확한 실패 위치나 실제 앱 IP 검증 성공으로 소급하지 않는다. Cloudflare 설정을 완화하지 않았다.
 
 근거는 ignored `https-auth-window2/minimal/`의 `transfer-proof.json`, `root-install-eligibility-execution.json`, `root-start-execution.json`, `browser-failure-proof.json`, `root-status-execution.json`, `vm-after-abort.json`, `external-after-abort.json`, `closed-header-diagnostic.json`과 실제 helper 출력이다. 설치/시작/복구를 반복하지 않고 모든 백업·실행물을 보존한다. 새 준비나 재개방 전에 helper 결함과 변경된 Console baseline을 반영해야 한다. 계정/역할/MFA reset·추가 배포·새 PR·파이프라인 변경은 없으며 #166은 Draft·미병합이다. 수정한 두 문서의 로컬 링크/anchor38개와 `git diff --check`를 통과했고, 앱 lint/typecheck/test/build와 기존 로컬 fixture는 재실행하지 않았다.
+
+## 2026-10-21 helper 보완과 최소 HTTPS 창3 로컬 준비
+
+사용자의 작업 지시 뒤 PC 로그인 가능 여부를 확인했고 모바일만 사용 가능하다는 답을 받았다. 기존 sudo 위임은 유지하며 ignored `https-auth-window3/`에 로컬 준비만 완료했다. 창2 실행물·백업·marker를 보존하고 새 경로·token을 사용한다. 설치 launcher는 보호 설치와 READ ONLY eligibility까지만 수행하도록 분리했으며 실제 start는 PC 로그인 준비 후에만 실행한다. 이번에는 VM 전달·설치·DB 자격 조회·개방을 하지 않았다.
+
+helper는 `CF-Connecting-IP` 위조를 Cloudflare403/error1000 검사로 분리하고 나머지 헤더5종은 각각/조합의200·기존 관찰 IP·CSRF/no-store를 요구한다. 검사 직전 phase와 실패 시 응답 상태·허용된 boolean만 남기며 원문 IP/헤더/본문/쿠키/로그인 입력은 저장하지 않는다. 헤더 검사를 마친 뒤 로그인 브라우저를 연다. 새 controller는 기존 운영자/배포/인증서 검사를 유지하고 창2의 고정 source/manifest·정확한 exit20 결과·marker·보호 백업·현재 원본/링크·Web/DB를 추가 대조한다. 원복 후 Console ID/start를 고정해 이전 ID를 단순 교체하거나 일회 marker를 초기화하지 않는다.
+
+archive SHA256은 `7d0483e342690f87a79c48c152557c64a3d25c4d645f96ea50a6948573656007`, 설치 launcher는 `2ed46a150ad0c7931ef1a3eff329909aae38e735d6ae76b1087ececef770774e`다. 실제 수행한 검사는 Python/내장 Python·Node·bash 문법, archive 일반 파일9개/내부 hash·진입점 hash 연결·입력0600, 전환/복구 포함 기존 controller23함수의 AST 동일·Caddy/renderer/materializer/SQL5파일 바이트 동일·창2 원본 보존이다. SSH 읽기 재확인에서 원복 후 컨테이너 ID/start/image·Caddy/materializer·인증서·403/health/preview와 창2/3 unit 부재·창3 신규 경로 부재를 확인했다. 근거는 새 `bundle-proof.json`·`vm-preflight.json`이며 sudo·VM 쓰기·로컬 runtime fixture·앱 테스트는 실행하지 않았다. 정적 준비는 실제 HTTPS 인증 성공이 아니며 남은 범위와 두 회선 제외는 그대로다.
+
+수정한 두 문서의 로컬 링크/anchor39개와 `git diff --check`를 통과했다. 준비 시 정상 receipt12192252859 미만료와 #166의 Draft·미병합 상태를 읽기 확인했으며, 실제 재개 직전에는 최신 상태를 다시 대조한다.
