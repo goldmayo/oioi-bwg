@@ -6,7 +6,7 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-20"
-revision: 14
+revision: 15
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -19,7 +19,9 @@ revision: 14
 2026-10-20 인증서 읽기 관찰을 반영한 **기존 Caddy의 Let's Encrypt 우선 경로**는 아래 §2의 추가 안내를 따른다.
 아래 B0/Vault 등 초기 준비 안내를 새 실행 요청으로 해석하지 않는다.
 
-**preview에서 만들어 둔 기존 관리자 계정을 그대로 사용한다.** 관리자 계정 생성·승격은
+**2026-10-20 전제 정정:** VM 직접 READ ONLY 조회에서 계정·비밀번호 credential·MFA가 모두0행이었다. 아래 기존 관리자 문구는 최초 준비 전제의 이력이며 현재 확인 사실이 아니다. [실측 결과](P06-C-RESULT.md#2026-10-20-vm-계정-실측과-최초-운영자-준비)와 [최초 운영자 선행 승인안](#2026-10-20-vm-최초-운영자-계정과-mfa-선행-승인안)을 먼저 따른다. 기존 HTTPS 창은 자격 조회 exit2에서 중단했으며 개방하지 않았다.
+
+**최초 전제: preview에서 만들어 둔 기존 관리자 계정을 그대로 사용한다.** 관리자 계정 생성·승격은
 사전 준비에서 제외한다. 일반 회원가입 페이지와 가입 API 세 개는 사용자 지시에 따라 P06에서 종료할 대상으로
 남기며 이 안내에서는 생성·수정·삭제하지 않는다. 공인 IP 등록·고정 IP·WAF 차단 규칙·
 Cloudflare Access 가입도 요구하지 않는다.
@@ -227,6 +229,8 @@ sudo python3 -I -B /var/lib/oioi-p06-c-certificate-retry1-launch/certificate-pha
 
 ### 2026-10-20 제한 HTTPS 인증 검증 창 최종 실행·복구 승인안
 
+**후속 상태:** 아래는 최초 고정 준비안이다. 이후 승인된 전달/보호 설치와 사용자 root 자격 조회를 수행해 exit2로 중단했다. 직접 VM 집계로 계정/MFA0행을 확인했다. 기존 묶음/설치는 보존하며 먼저 아래 [최초 운영자 선행 승인안](#2026-10-20-vm-최초-운영자-계정과-mfa-선행-승인안)을 검토한다. 등록 후 바뀐 Console ID를 이 묶음에 임의 대입해 재실행하지 않는다.
+
 **준비만 완료·별도 승인 전 VM 전달/DB 조회/전환/개방 금지다.** 현재 정상 기준은 재시도1에서 확보한 인증서/closed HTTPS403과 #164의 HTTP pair·receipt다. 기존 인증서·LE HTTP-01 자동 갱신·Cloudflare GET ACME 예외·DNS/cache를 유지한다. 기존 실패/재시도1의 apply/restore는 호출하지 않는다. 사용자 확인과 로컬 검증의 실제 범위는 [C 결과](P06-C-RESULT.md#2026-10-20-제한-https-인증-창-최종-실행물-준비)가 소유한다.
 
 | 새 고정 실행물(로컬 `.local/p06-c/https-auth-window/`) | SHA-256 |
@@ -278,6 +282,52 @@ sudo python3 -I -B /var/lib/oioi-p06-c-auth-window-launch/window.py recover
 eligibility0은 자격 확인/미개방,2는 부적격/미개방이다. window0은 정상 종료·원복 검증,20은 실패/중단/만료 후 복구 검증,21은 복구 검증 실패,1은 사전 불일치다. result21 뒤 수동 반복/재개방은 금지한다. **root exit0과 실제 browser proof가 모두 있어야 해당 인증 검증을 완료로 판단한다.** 종료 후 일반 외부/이전 token 모두403·진단 header 없음과 정상 HTTP pair/env/configHash·preview/Web/DB 보존을 실증한다.
 
 인증서/키·CA 계정/캐시·자동 갱신·Cloudflare ACME 예외/DNS/cache는 복구 대상이 아니다. 추가 Cloudflare 변경·인증서 재발급/삭제·MFA 등록/reset·계정/권한/키 변경·수동 DB 수정·Web/DB 재시작·새 배포/Promotion·snapshot 승격/수정·일반 공개·#166 병합·파이프라인 변경은 제외한다. 다음 실제 VM 실행은 이 고정 묶음/복구 범위의 별도 승인 대상이다.
+
+### 2026-10-20 VM 최초 운영자 계정과 MFA 선행 승인안
+
+현재 VM 계정/MFA 부재와 기존 Web 메일의 metadata 의존성·로컬 전용 CLI 확인은 [C 결과](P06-C-RESULT.md#2026-10-20-vm-계정-실측과-최초-운영자-준비)가 소유한다. 다음은 **신규 묶음의 준비안이며 VM 전달/설치·실제 메일/계정/등록/env 변경은 아직 승인·실행하지 않았다.** 기존 HTTPS 실행 승인에 계정 생성/승격·MFA 등록이 포함됐다고 해석하지 않는다.
+
+| 새 고정 실행물(로컬 `.local/p06-c/operator-bootstrap/`) | SHA-256 |
+| --- | --- |
+| `operator-bootstrap-reviewed.tar.gz`(일반 파일6개) | `bff853cfb9926876f391cfee5a04c9840b42f0d51c33ad3b20a6a1f54e2b9c38` |
+| `bootstrap.py` | `f519b516e712290eb0746aa83c770248c961090d673cf078c52b7d64c81f90e1` |
+| `worker.cjs` | `61f9a3c6f824d84ba6e40a7b75811bf1c4787adc0c3330d6495cd49adb188ed4` |
+| `enroll.mjs` | `6a904b6c606dd67f2776ac362cf4f85d4797276802ce7a645bd8981423616762` |
+| `launch-reviewed.txt` | `9a3b966b716ea1d543bf28a8ebcd2225c7a2898a3c60a5d371db04b351d5c219` |
+
+archive에는 operator·기존 서비스 bundle·로컬 등록 browser·`APPROVALS.txt`·source provenance·전체 내부 hash만 있다. 대상 이메일은 기존 root 보호 입력에서 읽고 비밀번호/메일 OTP/QR/키/코드를 archive·argv·로그·Git에 넣지 않는다. 새 비밀번호는 사용자 VM 터미널의 숨김 입력으로 받고 실물 TOTP는 본인 브라우저에만 입력한다. 채팅에 공유한 비밀번호를 사용하지 않는다.
+
+승인받을 정확한 범위는 다음과 같다. 상세 중단/제외는 고정 `APPROVALS.txt`를 따른다.
+
+1. 최신 문서 CI·#164 고정 source/정상 receipt12192252859·동일 두 digest와 현재 인증서/closed403·preview/앱/DB·네 보호 백업/원본·새 경로 부재를 대조한다. 사용자 staging `/home/oioi/p06-c-operator-bootstrap-preparation`(0700/파일0600)에 archive/launcher만 전달하고 root 메모리 전체/항목 hash 검증 후 새 `/var/lib/oioi-p06-c-operator-bootstrap`(root:root0700/0600)에 설치한다. 충돌/불일치는 중단한다.
+2. 기존 개인 SSH 사용자 UID1002의 sudo 실행과 deployment.lock·DB명/role/비특권/비owner/RLS/major17/DB 시작 epoch를 검사한다. 새 `/var/lib/oioi-p06-c-before-operator-account`에 원본 host/env·두 snapshot/링크·컨테이너/PID와 auth6개 테이블의 pg_dump17 data-only 사본/sha를 root-only 보존한다. 일반 deploy/ocarun 권한을 늘리거나 DB schema/role을 바꾸지 않는다.
+3. 기존 Console 이미지의 별도 `docker exec` Node process에서 기존 requestOtp/verifyOtp/completeSignup 서비스를 그대로 실행한다. 메일 transport만 root host로 위임하고 host가 현재 sender/region/compartment·Instance Principal로 **지정 이메일 한 곳에 인증 메일을 한 번** 제출한다. OCI CLI의 `--no-retry --from-json file:///dev/stdin`으로 payload/OTP를 메모리/pipe에만 두며 Web/Console metadata deny는 유지한다. suppressed·거절·불확실 제출·timeout은 수동 재시도 없이 중단한다. 이는 일반 Web 메일 경로 복구가 아니다. CLI 전송 옵션은 [OCI 공식 문서](https://docs.oracle.com/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/email-data-plane/email-submitted-response/submit-email.html)를 대조했다.
+4. 사용자의 이메일 OTP/새 비밀번호 숨김 입력 후 실제 가입 transaction으로 USER/ACTIVE Account/Profile/Argon2id credential 한 개를 만든다. nickname은 `oioi-operator`다. 이어 같은 ID의 USER/ACTIVE/version없음을 확인하고 기존 공통 변경·회수 service로 ADMIN/ACTIVE/version1만 승격한다. 운영 UID/시각/대상/결과/승인 연결의 root-only marker를 보존한다. 가입/OTP·MFA version을 직접 SQL로 우회하지 않는다. 계정 단계 실패/불확실 성공은 반복·자동 삭제·전체 DB restore 없이 중단한다.
+5. 계정 준비 성공 후 새 transient `oioi-p06-c-enrollment.service`를 한 번 실행한다(RuntimeMaxSec1800/Restart=no/TimeoutStopSec240/ExecStopPost 보호 복구). 새 `/var/lib/oioi-p06-c-before-enrollment`에 정상 파일/컨테이너를 보호 백업하고 잠금을 복구 검증까지 유지한다. Origin은 HTTP127.0.0.1:3001이며 Console public/raw env의 등록 flag만 true로 바꾸고 동일 digest로 Console만 `--no-deps --no-build --pull never --wait` 재생성한다. Caddy/metadata·인증서/갱신·Cloudflare·Web/DB·pair/snapshot은 바꾸지 않는다.
+6. 로컬 `enroll.mjs`가 자기 SSH localhost3001 포워드와 headed Chromium을 연다. 기존 포트 충돌은 중단하며 타 process를 종료하지 않는다. 기존 UI에서 실물 인증 앱 QR 등록→confirm→다음 새 OTP 로그인→보호 GET200→로그아웃을 사용자가 수행한다. 로컬 browser는 외부 요청을 차단하고 QR/password/OTP·trace/HAR/video/screenshot/storageState를 저장하지 않는다. 완료/실패는 staging의 finish/abort close.request로 닫기만 요청한다.
+7. 정상/중단/30분 만료·오류는 원래 public/raw env를 보호 사본으로 복원하고 Console만 같은 digest로 재생성한다. setup/confirm403·등록 버튼 제거, 원래 HTTP/configHash·모든 원본 hash/링크·pending 부재·Web/DB ID/start/image·네 앱 health/readiness·preview 세 경로200/인증서·Console 인증서/일반 외부403·Caddy PID를 확인한다. 등록 창 변경 후 실패는 설정 복구 다음에 새 ADMIN/version1을 기존 service로 USER/version2로 한 번 회수한다. account/MFA 행은 보존하며 secret 삭제/reset·소모한 step 되돌리기·전체 DB restore는 하지 않는다. 미지 drift/version 불일치·복구 실패는 exit21로 중단한다.
+
+승인·고정 hash·보호 설치 후 root launcher가 `account` 성공 때만 `enroll-start`로 연결한다. 다음은 검토 명령이며 현재 실행하지 않는다.
+
+```bash
+sudo python3 -I -B /var/lib/oioi-p06-c-operator-bootstrap/bootstrap.py account
+sudo python3 -I -B /var/lib/oioi-p06-c-operator-bootstrap/bootstrap.py enroll-start
+# 로컬 터미널: 실제 등록 창이 준비된 뒤 한 번 실행
+env -u DEBUG -u PWDEBUG node .local/p06-c/operator-bootstrap/enroll.mjs
+```
+
+```bash
+sudo systemctl stop oioi-p06-c-enrollment.service
+sudo python3 -I -B /var/lib/oioi-p06-c-operator-bootstrap/bootstrap.py status
+# service 비활성·최종 결과가 없을 때만 동일 보호 복구
+sudo python3 -I -B /var/lib/oioi-p06-c-operator-bootstrap/bootstrap.py recover
+# 계정만 만든 뒤 등록 시작 전 철회할 때의 고정 권한 회수
+sudo python3 -I -B /var/lib/oioi-p06-c-operator-bootstrap/bootstrap.py revoke
+```
+
+account0은 계정 준비/등록 미실행, account1은 중단/재실행 금지다. enrollment0은 정상 등록/종료·설정 복구,20은 실패/중단/만료 후 복구와 권한 회수,21은 복구/회수 검증 실패로 중단이다. root0과 실제 browser proof가 모두 있어야 등록 검증을 완료로 판단한다. 사전 불일치는 창을 열지 않으며 생성한 계정은 별도 고정 revoke 명령으로 회수할 수 있다.
+
+등록 후 Console ID/start가 바뀌므로 기존 HTTPS archive6dc1453a...를 그대로 실행하지 않는다. 새 보호 baseline과 실제 ID/configHash를 읽기 대조해 HTTPS 실행물의 새 hash/복구안을 제시하고 별도 승인받는다. 인증서·자동 갱신·ACME 예외·원래 image/configHash/pair/snapshot은 유지한다. 이 단계는 C 완료나 D 전체 완료가 아니다. 일반 Web 메일 경로 변경·metadata 차단 해제·새 IAM/token/SMTP·Cloudflare/Caddy/HTTPS Origin·임시 인증 matcher·일반 공개·Web/DB 재시작·새 이미지/배포·#166 병합·새 PR/파이프라인 변경은 제외한다.
 
 ## 3. OCI Vault: Console 키 두 개 보관
 

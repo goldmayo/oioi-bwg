@@ -5,10 +5,12 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-20"
 updated_at: "2026-10-20"
-revision: 17
+revision: 18
 ---
 
 # P06-C 구현 결과
+
+**최신 선행 조건:** 승인된 보호 설치/자격 조회는 exit2로 중단했고, 이후 직접 READ ONLY 조회에서 VM 계정·비밀번호 credential·MFA가 모두0행임을 확인했다. 기존 관리자 전제는 해소되지 않았다. 아래 [VM 실측과 최초 운영자 준비](#2026-10-20-vm-계정-실측과-최초-운영자-준비)를 먼저 따른다. HTTPS 창은 열지 않았다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인. HTTPS Origin/env 전환·제한 인증 검증은 미실행이다. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
@@ -341,3 +343,33 @@ SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 la
 - #163/#165 병합·#164 HTTP 공동 배포·HTTP 전용 차단과 새 승인 재시도1의 Console ACME/closed HTTPS403을 완료했다. 후속 host asset 설치·HTTPS Origin/env·임시 허용 matcher는 미실행이다. DNS/cache 두 항목과 국가 규칙의 좁은 ACME 예외는 사용자가 승인 범위로 완료했고 에이전트 직접 Cloudflare 변경은 없다. 후속 작업은 정확한 보호 파일 경로·실행 후보·복구 명령과 함께 별도 승인받는다.
 
 위 게이트를 통과하기 전에는 C를 완료로 바꾸지 않는다. D 실물 MFA·CLI/키 복구, E Web 관리/가입 종료, F 공개/www 전환은 기존 단계에 남긴다.
+
+## 2026-10-20 VM 계정 실측과 최초 운영자 준비
+
+사용자가 작업 재개와 계속 진행을 지시한 뒤 고정 HTTPS archive6dc1453a.../launcher·최신 문서 CI·정상 receipt와 VM closed 인증서/403·preview/앱/DB를 재대조했다. 신규 사용자 staging0700/파일0600에 전달했고 사용자가 고정 launcher를 root 메모리에서 검증해 실행했다. `p06_c_auth_source_verified` 후 `targetVerified=true, found=false, activeAdmin=false, registered=false, eligible=false`와 **`auth_eligibility_exit=2`**를 보고했다. 보호 설치만 완료했으며 env/Caddy·등록/인증 창은 열지 않았다. 에이전트의 후속 SSH에서도 root launch0700·새 창 백업/candidate/임시 unit 부재를 확인했다.
+
+처음에는 사용자에게 기존 계정/로그인 방식을 되물었으나, 이후 사용자의 직접 확인 지시에 따라 같은 VM DB를 에이전트가 조회했다. 현재 고정 Console/DB ID와 HTTP Origin/등록 닫힘을 검사한 뒤 기존 app credential을 메모리→psql stdin으로만 공급했다. `BEGIN READ ONLY`, statement_timeout5초/lock_timeout2초, DB명·oioi_app·PostgreSQL17·비특권·SELECT 권한/RLS 비활성을 대조해 행 필터링이나 잘못된 DB/role 때문에0으로 보인 경우를 배제했다. 모든 조회 뒤 ROLLBACK했다.
+
+| 직접 확인한 집계 | VM 결과 |
+| --- | --- |
+| account / password_credential / admin_mfa | 각각0행 |
+| ACTIVE ADMIN·비밀번호 보유 ADMIN·활성 MFA/Console 적격 ADMIN | 모두0 |
+| 지정 이메일의 password credential |0 |
+| account/password_credential/admin_mfa SELECT·RLS | 조회 권한 있음·세 테이블 RLS 꺼짐 |
+
+이메일·password hash·MFA secret/키/복구코드는 조회 결과/공개 증거에 넣지 않았다. 실제 row 생성/수정·OTP/메일 발송은 하지 않았다. 사용자는 로컬 Docker에만 MFA가 있고 VM에는 없다고 정정했으며 인증 앱 준비를 확인했다. 로컬 상태를 VM에 복제하거나 기존 관리자 전제를 계속 사용하지 않는다.
+
+별도 읽기에서 Web의 OCI 메일 설정 존재·production/oci 모드, 배포 JS 안의 Instance Principal/IMDS/메일 경로와 컨테이너→metadata TCP 실패를 확인했다. 따라서 기존 Web 가입 메일 경로와 B0 metadata deny의 의존성 충돌이 있다. **가입 POST/실제 발송 실패를 실행해 확인한 증거는 아니다.** 메일/OTP 요청은 DB 상태와 외부 발송을 만들므로 읽기 관찰로 대체하지 않았다. 기존 `console:mfa`의 local-compose guard와 #164 source의 동일 제한도 확인했다. 일반 Web 메일 경로 복구나 D 전체 완료로 보고하지 않는다.
+
+새 로컬 일회성 실행물은 [최초 운영자 승인 범위](P06-PREPARATION.md#2026-10-20-vm-최초-운영자-계정과-mfa-선행-승인안)에 고정했다. **이 신규 묶음의 VM 전달·root 설치·실제 메일 제출·계정 생성/승격·MFA/env/컨테이너 변경은 아직 실행하지 않았다.** 기존 앱 서비스13개 파일의 hash를 #164 source와 대조해 그대로 묶고, 메일 transport만 root host의 OCI CLI로 위임하도록 준비했다. 지정 이메일 OTP 검증→USER 생성→공통 권한 변경 service의 ADMIN/version1 승격→SSH localhost 기존 화면의 실물 등록·다음 새 OTP 로그인→등록 닫힘의 경로다. metadata deny·공개403·기존 키/이미지/pair/snapshot·Web/DB는 유지한다. 정상/실패 시 원래 env/configHash로 Console만 재생성하며 Console ID/start는 보존 대상이 아니다. 실패한 등록 창은 설정 복구 후 USER/version2로 회수하며 계정/행을 삭제하거나 DB 전체를 복원하지 않는다. 계정 단계의 불확실한 성공·사전 불일치는 반복/임의 SQL 없이 중단한다.
+
+실제 수행한 로컬 검증은 다음과 같다.
+
+- 격리 Docker PostgreSQL17·별도 app/migrator role에서 기존 가입/권한 변경 서비스12건 통과: 대상 DB/시작 시각 guard, suppressed/불확실 발송·잘못된OTP·잘못된 비밀번호의 계정 미생성, 실제 OTP 검증/소모·USER/Profile/Argon2id 생성, ADMIN/version1 원자 승격·중복 거절·version 불일치 거절·USER/version2 회수. 메일 제출은 모사했고 임시 DB/role은 삭제했다.
+- 로컬 파일/제어 fixture10건 통과: 정상·abort·만료·Console 교체 실패·미승인 env drift 보존/exit21·service 밖/중복 실행 거절·비정상 종료 복구·result21 반복 거절·변경 전 무복구. root/Docker/systemd/DB/브라우저는 모사다.
+- 실제 로컬 Node의 size-prefixed stdin loader와 기존 ARM64 Argon2 native binding hash를 대조해 잘못된 init을 DB 접속 전에 거절했다. host 메일 stdin/비밀값 argv 비노출·suppressed/거절 분류 fixture3건도 통과했다. 기존 VM native binding의 hash/load 가능 여부와 host CLI의 submit-email 입력 필드는 읽기 검증했으며 서명/실제 메일은 하지 않았다.
+- Python AST·Node syntax·launcher bash-n·로컬 systemd-analyze verify·archive 일반 파일6개/내부 hash를 확인했다. 문서 상대 링크/anchor61개와 git diff-check도 통과했으며 문서만 변경하므로 앱 lint/typecheck/test/build는 재실행하지 않았다. 첫 로컬 bundle alias가 메일 template까지 가리킨 오류와 로컬 ARM64에서 x64 binding을 선택한 fixture 오류는 수정 후 재검증했다. VM 실패가 아니다. 실제 headed MFA 등록/VM 복구는 아직 검증하지 않았다.
+
+직접 VM 관찰 근거는 ignored `https-auth-window/`의 `eligibility-runtime-result.json`, `account-inventory-readonly.json`, `account-visibility-readonly.json`, `deployed-mail-code-readonly.json`, `signup-prerequisite-proof.json`과 사용자 root 출력이다. 새 실행물/로컬 근거는 ignored `operator-bootstrap/`의 `APPROVALS.txt`, `source-provenance.json`, `worker-proof.json`, `controller-proof.json`, `transport-proof.json`, `bundle-proof.json`이다. Caddy PID926·기존 세 컨테이너 ID/start/image·네 앱 health/readiness200·preview 세 경로200/인증서·Console 인증서/closed403은 후속 SSH에서 보존을 확인했다.
+
+기존 archive6dc1453a...와 root 설치를 보존하되, 이후 MFA 등록으로 Console을 재생성하면 고정 container ID가 달라지므로 그대로 실행하지 않는다. 등록 성공 후 새 보호 baseline과 실제 ID/configHash를 읽기 대조해 HTTPS 창의 새 hash/복구안을 제시하고 별도 승인받는다. 새 PR·배포 파이프라인·#164 후보는 변경하지 않으며 #166은 Draft·미병합이다. C는 아직 미완료다.
