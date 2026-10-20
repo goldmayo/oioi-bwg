@@ -392,7 +392,9 @@ jobs:
       - name: Restore this run's verified apps
         run: tar -xzf "${{ runner.temp }}/ci-build/standalone.tar.gz"
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Complete existing admin flows on both private standalone origins
+      - name: Verify Web retirement routing and rollback guard locally
+        run: node tests/ops/web-retirement-proxy-smoke.mjs
+      - name: Verify Console management and Web access boundaries
         run: pnpm test:integration:admin
         env:
           M7_TEST_POSTGRES_ADMIN_URL: postgresql://postgres@127.0.0.1:5432/postgres

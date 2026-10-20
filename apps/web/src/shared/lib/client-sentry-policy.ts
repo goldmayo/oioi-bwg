@@ -4,7 +4,7 @@ import { toSafeSentryBuildMetadata, toSafeSentryBuildPath } from "./sentry-build
 
 export const SENTRY_ERROR_SOURCES = [
   "admin-error-boundary",
-  "admin-login-form",
+  "login-form",
   "global-error-boundary",
   "mutation-cache",
   "query-cache",

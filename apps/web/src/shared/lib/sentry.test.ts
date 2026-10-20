@@ -31,7 +31,7 @@ describe("Sentry error reporter", () => {
 
     expect(
       captureClientException(new Error("TOKEN_MARKER", { cause: "PASSWORD_MARKER" }), {
-        source: "admin-login-form",
+        source: "login-form",
       }),
     ).toBeNull();
 
