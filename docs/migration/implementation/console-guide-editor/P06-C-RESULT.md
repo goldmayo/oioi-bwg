@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 19
+revision: 20
 ---
 
 # P06-C 구현 결과
 
-**최신 선행 조건:** 최초 운영자 실행에서 이메일 수신·OTP 검증 후 계정 단계가 exit1로 중단했다. 후속 직접 조회에서 계정0·미소모 VERIFIED를 확인했고 등록 창은 열리지 않았다. [실행 결과와 가입 재개1](#2026-10-21-최초-운영자-메일인증-성공과-가입-중단재개1)을 먼저 따른다. HTTPS 창은 미실행이다.
+**최신 선행 조건:** 새 가입 재개1은 root exit0으로 계정 생성·ADMIN/version1 준비를 완료했고 등록 unit 시작도 exit0이다. SSH에서 HTTP loopback 등록 flag=true·서비스 보존을 확인해 제한 브라우저를 열었다. 실물 MFA 등록/새 OTP 로그인·등록 닫힘은 검증 중이다. [최신 운영 결과](#2026-10-21-가입-재개1-성공과-ssh-mfa-검증-진입)를 먼저 따른다. HTTPS 인증 창은 미실행이다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인. HTTPS Origin/env 전환·제한 인증 검증은 미실행이다. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
@@ -386,3 +386,12 @@ SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 la
 사용자의 재시도 지시에 따라 **기존 일회성 launcher/account를 다시 실행하지 않는** 새 가입 재개1을 준비했다. [정확한 실행·중단 범위](P06-PREPARATION.md#2026-10-21-인증된-가입의-재개1)를 따른다. 동일한 미소모 VERIFIED의 생성/검증 시각·대상·유일성·계정0과 기존 보호 백업/원본을 재대조하고, 기존 completeSignup과 changeConsoleAccountAccess를 각 한 번만 호출한다. 기존 repository의 VERIFIED 소비 계약을 그대로 사용하며 OTP 상태를 직접 바꾸거나 expires_at을 연장하지 않는다. 비밀번호 형식/두 입력 일치는 변경 전 최대3회 숨김 입력으로 교정하며 값 대신 이유 코드만 표시한다. 가입 실패 시 현재 phase를 알리고 자동 재시도 없이 중단한다.
 
 새 archive SHA256 `c00e4a6658743c8c52fdc236a0abb7b625ba1f39c87f45a53288fd8179c71241`, launcher `e685a79ed02267dcdb578618318aa02ac35ecf00c1786ef813640d2c028e68aa`, resume.py `c2e84f0666c71d15673790047ed3278ab7cfe8800d3b9ea4744099e8da852b81`다. 로컬 실제 파일/제어 fixture9건(정상·입력 교정/3회 실패·기존 계정/marker·challenge 변경·가입 응답 불확실·승격 실패·중복 시작)을 통과했다. root/DB/Worker는 모사이고 실제 VM 가입 성공 증거가 아니다. 기존 서비스/worker source는 변경하지 않았다. 새 계정 준비 성공 때만 기존 승인된 SSH 등록 unit을 한 번 시작하고 기존 등록 닫기/설정 복구·실패 시 USER/version2 회수 계약을 사용한다. 현재 재개1 root 실행/MFA 등록·HTTPS 인증 창은 아직 미실행이며 #166은 Draft·미병합이다.
+
+
+## 2026-10-21 가입 재개1 성공과 SSH MFA 검증 진입
+
+사용자가 새 고정 launcher `e685a79e...`를 root 메모리에서 검증해 실행했다. source verified·새 보호 backup passed·email-verified USER created·ADMIN/ACTIVE version1 account prepared와 **operator_resume1_exit=0**, 이어 **operator_enrollment_start_exit=0**을 확인했다. 메일 재발송은 없고 원래 일회성 account 단계를 반복하지 않았다. 최초 실패가 비밀번호 오입력 때문이었다고 소급 확정하지 않는다.
+
+후속 직접 SSH에서 transient 등록 unit active/running·Console HTTP Origin 유지/등록 flag=true·같은 Console digest·세 컨테이너 healthy·네 health/readiness200을 확인했다. 승인된 등록 전환으로 Console ID는 `461e4579631bfe750c270eed9bab4bbb57347375d27dc4ac264e57385989f696`로 바뀌었으며 Web/DB ID·digest는 유지됐다. main Caddy/materializer hash·PID926·두 기존 인증서 hash·preview 세 경로200·Console TLS의 `/`와 `/api/auth/csrf` exact Caddy403/no-store도 읽기 재검증했다.
+
+기존 고정 `enroll.mjs`의 headed Chromium과 전용 SSH loopback forward를 에이전트가 열었다. 사용자가 직접 새 비밀번호와 실물 인증 앱으로 QR 등록/confirm을 진행하는 단계다. **실제 MFA 활성화·다음 새 OTP 로그인·로그아웃·등록 닫힘/복구 성공은 아직 보고하지 않는다.** 근거는 ignored `operator-resume1/root-execution-result.json`, `enrollment-readiness.json`, `enrollment-protection.json`과 실제 브라우저의 등록 대기 상태다. HTTPS Origin/env·Caddy/Cloudflare·일반 공개·#166 병합은 실행하지 않았다.
