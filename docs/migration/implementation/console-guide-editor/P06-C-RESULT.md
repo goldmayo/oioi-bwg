@@ -5,7 +5,7 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 22
+revision: 23
 ---
 
 # P06-C 구현 결과
@@ -422,7 +422,7 @@ SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 la
 
 새 browser는 UI credentials callback의 필요한 값을 프로세스 메모리로만 받아 실제 UI 로그인 뒤 부정/재사용 인증을 검사하고 버린다. 중간 폼을 뒤늦게 읽거나 Enter를 기다리지 않는다. 집 Wi-Fi 제한 후 같은 PC의5G 핫스팟 전환을4분 안에 자동 감지하고 같은 세션의 관리 접근/독립 IP 제한을 확인한다. 외부 서비스/보안 설정을 바꾸거나 MFA/권한을 다시 수정하지 않는다. 최종 matcher 제거/이전 token·일반403·HTTP env/configHash/동일 pair·서비스/복구 검증은 그대로다.
 
-고정 archive SHA256 `cb3f5c7a5a3599d8c097eaba503947ae87ef20ef04eb0412fef95dad1bf49e2b`, launcher `6c40fa40b4cd8bd2f7a761b5e80fc6890de22fe1469c9036bb88f3c1f572c9bf`, window.py `71fe65378526581a82cd64ae8337f2b7411a892f9b61fe2cb8adb3ecd2832f37`다. 신규 VM 전달/전환/개방은 아직 하지 않았다. 실제 브라우저 인증·Secure cookie/Origin/CSRF·Cloudflare IP 두 개/캐시 및 제거 후403을 다음 별도 승인 창에서 검증해야 하므로 C는 아직 미완료다.
+고정 archive SHA256 `8f89317f3a3e7b529e381c59ee63463e6ec824dbf9187d2e3b4ba5cd7056715f`, launcher `f981882abdbad75384bcce91378c941a185e5e293dc84621a49e3c73d628b529`, window.py `effc21fb961465c4a6fe73ca8b657fce211fab8f56f181c1b78f606ae308d242`다. 신규 VM 전달/전환/개방은 아직 하지 않았다. 실제 브라우저 인증·Secure cookie/Origin/CSRF·Cloudflare IP 두 개/캐시 및 제거 후403을 다음 별도 승인 창에서 검증해야 하므로 C는 아직 미완료다.
 
 실제 수행한 새 로컬 검증:
 
@@ -431,4 +431,4 @@ SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 la
 - 새 eligibility stdin/대상 fixture8건과 실제 격리 Docker PostgreSQL17 SQL6건 통과. 실제 schema/app role에서 계정 없음·ADMIN2·USER3·정지·미등록 거절과 활성 ADMIN3 수용을 확인했다. DB/role identity literal만 폐기용 fixture에 맞췄으며 임시 DB/role은 삭제했다.
 - 실제 로컬 Caddy2.6.2/TLS/reload에서 header upstream 제거·일반/비신뢰403·matcher 제거/이전 값403·preview/PID 보존·token 로그 비노출을 통과했다. CF peer만 모사했다. 실제 Chromium/TLS의 origin 한정 gate/다른 호스트 redirect에서 token·Console cookie 비전달도 통과했다.
 - 새 browser 전체 흐름11그룹을 실제 로컬 Chromium/TLS에서 통과했다. 빠른 UI 진행·부정/재사용 인증·CSRF·Console 쿠키/CF cookie 구분·인증 세션의 익명 context 비공유·두 IP 자동 감지·logout·제거 후403을 검사했지만 auth/CF/회선 전환/VM 닫기는 모사다. 실제 VM HTTPS/두 회선 성공 증거가 아니다. 처음 fixture의 DEBUG 거절과 예상 그룹 수 보정 후 통과했다.
-- Python/Node/bash syntax와 archive 일반 파일9개/내부 hash를 고정했다. 앱/이미지/배포 파이프라인·Cloudflare·기존 인증서/갱신·#166 Draft 상태는 그대로다.
+- Python/Node/bash syntax·로컬 systemd unit verify·기본 경로와 launcher 일치·archive 일반 파일9개/내부 hash를 고정했다. 신규 경로 생성기의 중복 치환을 로컬 대조에서 수정했으며 미승인 준비 archive는 ignored 하위 경로에 보존했다. 최종 해시를 반영하는 과정의 작업 디렉터리 오류는 문서 후속 커밋으로 정정하며, 이전 준비 해시의 실행/승인을 요청하지 않는다. 앱/이미지/배포 파이프라인·Cloudflare·기존 인증서/갱신·#166 Draft 상태는 그대로다.
