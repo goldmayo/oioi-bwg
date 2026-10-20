@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
-updated_at: "2026-10-20"
-revision: 15
+updated_at: "2026-10-21"
+revision: 16
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -328,6 +328,17 @@ sudo python3 -I -B /var/lib/oioi-p06-c-operator-bootstrap/bootstrap.py revoke
 account0은 계정 준비/등록 미실행, account1은 중단/재실행 금지다. enrollment0은 정상 등록/종료·설정 복구,20은 실패/중단/만료 후 복구와 권한 회수,21은 복구/회수 검증 실패로 중단이다. root0과 실제 browser proof가 모두 있어야 등록 검증을 완료로 판단한다. 사전 불일치는 창을 열지 않으며 생성한 계정은 별도 고정 revoke 명령으로 회수할 수 있다.
 
 등록 후 Console ID/start가 바뀌므로 기존 HTTPS archive6dc1453a...를 그대로 실행하지 않는다. 새 보호 baseline과 실제 ID/configHash를 읽기 대조해 HTTPS 실행물의 새 hash/복구안을 제시하고 별도 승인받는다. 인증서·자동 갱신·ACME 예외·원래 image/configHash/pair/snapshot은 유지한다. 이 단계는 C 완료나 D 전체 완료가 아니다. 일반 Web 메일 경로 변경·metadata 차단 해제·새 IAM/token/SMTP·Cloudflare/Caddy/HTTPS Origin·임시 인증 matcher·일반 공개·Web/DB 재시작·새 이미지/배포·#166 병합·새 PR/파이프라인 변경은 제외한다.
+
+### 2026-10-21 인증된 가입의 재개1
+
+최초 운영자 실행의 메일 수신·OTP 검증 성공과 계정 단계 exit1, 계정0·VERIFIED 관찰은 [최신 결과](P06-C-RESULT.md#2026-10-21-최초-운영자-메일인증-성공과-가입-중단재개1)를 따른다. 기존 launcher/account는 재실행하지 않는다. 사용자가 재시도를 지시했으며 ignored `operator-resume1/APPROVALS.txt`·`run-reviewed.txt`에 다음 최소 실행 범위를 고정했다.
+
+- 새 staging `/home/oioi/p06-c-operator-resume1-preparation`(UID1002/0700·파일0600), root `/var/lib/oioi-p06-c-operator-resume1`(root700/600), 보호 백업 `/var/lib/oioi-p06-c-before-operator-resume1`만 추가한다. archive/내부 hash·기존 bootstrap 고정 hash·최신 CI/정상 receipt·기존 백업/원본·현재 pair/서비스·닫힌 인증서를 먼저 대조한다.
+- 기존 이메일·생성/검증 시각에 정확히 일치하는 유일한 미소모 VERIFIED와 계정0·DB 시작 시각·미생성 계정/승격/등록 marker를 확인한다. 새 메일/OTP·TTL 변경은 없다. 비밀번호10~32자·영문/숫자/특수문자·두 입력 일치를 숨김 입력으로 검사하고 값 대신 이유를 표시한다. 변경 전 입력 교정은 최대3회다.
+- deployment.lock을 유지하며 설정/snapshot·auth6개 테이블을 새로 보호 복사한 뒤 기존 signup 한 번·공통 ADMIN/version1 승격 한 번만 수행한다. 감사 marker는 원래 root의 미생성 경로에 O_EXCL로 추가한다. 실패/불확실 응답은 phase와 exit1로 중단하고 재실행/직접 SQL/DB 전체 복원은 하지 않는다.
+- 계정 준비 성공 뒤에만 기존 승인된 `bootstrap.py enroll-start`를 한 번 시작한다. SSH 실물 MFA/다음 새 OTP 로그인과 원래 등록 닫기·실패 시 USER/version2 회수 계약을 유지한다. 등록 전 철회는 기존 `bootstrap.py revoke`, 열린 등록 unit 중단은 `sudo systemctl stop oioi-p06-c-enrollment.service`다.
+
+고정 hash는 RESULT를 따른다. 새 root 실행은 `sudo python3 -I -B /var/lib/oioi-p06-c-operator-resume1/resume.py`이며 설치 launcher는 성공 때만 원래 enroll-start를 이어 호출한다. Cloudflare/Caddy/HTTPS Origin/임시 허용·일반 공개·Web/DB 재시작·pair/snapshot·배포 파이프라인·#166 병합은 범위 밖이다. 등록 후 새 Console ID 기준으로 HTTPS 묶음을 다시 고정하고 별도 승인받는다.
 
 ## 3. OCI Vault: Console 키 두 개 보관
 

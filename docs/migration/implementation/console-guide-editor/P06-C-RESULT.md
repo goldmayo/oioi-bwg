@@ -3,14 +3,14 @@ title: "P06-C Console HTTPS 및 인증 요청 보안 경계 구현 결과"
 kind: migration-result
 status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
-verified_at: "2026-10-20"
-updated_at: "2026-10-20"
-revision: 18
+verified_at: "2026-10-21"
+updated_at: "2026-10-21"
+revision: 19
 ---
 
 # P06-C 구현 결과
 
-**최신 선행 조건:** 승인된 보호 설치/자격 조회는 exit2로 중단했고, 이후 직접 READ ONLY 조회에서 VM 계정·비밀번호 credential·MFA가 모두0행임을 확인했다. 기존 관리자 전제는 해소되지 않았다. 아래 [VM 실측과 최초 운영자 준비](#2026-10-20-vm-계정-실측과-최초-운영자-준비)를 먼저 따른다. HTTPS 창은 열지 않았다.
+**최신 선행 조건:** 최초 운영자 실행에서 이메일 수신·OTP 검증 후 계정 단계가 exit1로 중단했다. 후속 직접 조회에서 계정0·미소모 VERIFIED를 확인했고 등록 창은 열리지 않았다. [실행 결과와 가입 재개1](#2026-10-21-최초-운영자-메일인증-성공과-가입-중단재개1)을 먼저 따른다. HTTPS 창은 미실행이다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인. HTTPS Origin/env 전환·제한 인증 검증은 미실행이다. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
@@ -373,3 +373,16 @@ SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 la
 직접 VM 관찰 근거는 ignored `https-auth-window/`의 `eligibility-runtime-result.json`, `account-inventory-readonly.json`, `account-visibility-readonly.json`, `deployed-mail-code-readonly.json`, `signup-prerequisite-proof.json`과 사용자 root 출력이다. 새 실행물/로컬 근거는 ignored `operator-bootstrap/`의 `APPROVALS.txt`, `source-provenance.json`, `worker-proof.json`, `controller-proof.json`, `transport-proof.json`, `bundle-proof.json`이다. Caddy PID926·기존 세 컨테이너 ID/start/image·네 앱 health/readiness200·preview 세 경로200/인증서·Console 인증서/closed403은 후속 SSH에서 보존을 확인했다.
 
 기존 archive6dc1453a...와 root 설치를 보존하되, 이후 MFA 등록으로 Console을 재생성하면 고정 container ID가 달라지므로 그대로 실행하지 않는다. 등록 성공 후 새 보호 baseline과 실제 ID/configHash를 읽기 대조해 HTTPS 창의 새 hash/복구안을 제시하고 별도 승인받는다. 새 PR·배포 파이프라인·#164 후보는 변경하지 않으며 #166은 Draft·미병합이다. C는 아직 미완료다.
+
+
+## 2026-10-21 최초 운영자 메일·인증 성공과 가입 중단·재개1
+
+사용자가 최초 운영자 실행을 승인한 뒤 head `f355f77f65db0fdb48ee419fa0540c38d0ab8653`의 [Verify39441734469](https://github.com/goldmayo/oioi-bwg/actions/runs/39441734469) attempt1 success·정상 receipt12192252859/고정 candidate·archive429657cf.../내부 hash를 대조하고 새 staging에 전달했다. 사용자가 고정 launcher `b9fcd0fe...`를 root로 한 번 실행했다. source verified와 설정/snapshot·auth6개 테이블의 새 root-only backup passed 후 메일 제출 marker·이메일 코드/비밀번호 입력을 거쳐 **operator_account_exit=1**로 중단했다. enrollment-start는 호출되지 않았다. 사용자는 실제 메일 수신을 확인했다.
+
+에이전트가 기존 app credential을 stdin으로만 공급한 READ ONLY/ROLLBACK으로 직접 재조회했다. account는0행, 대상 challenge는 생성 `2026-10-21 01:14:49.326940+09:00`·검증 `01:15:07.177+09:00`의 미소모 VERIFIED·실패횟수0이었다. 따라서 이메일 코드 검증까지 성공했으며 계정/권한/MFA는 생성되지 않았다. 첫 실행물이 비밀번호 불일치·정책 위반·가입 서비스 실패를 같은 일반 오류로 숨겨 **정확한 최초 원인은 확정할 수 없다**. 사용자의 비밀번호 오입력으로 단정하지 않는다. 기존 Web API의500과 이번 host 경유 메일의 실제 수신/검증 성공은 별개 관찰이다.
+
+후속 SSH 읽기에서 기존 세 컨테이너 ID/start/image/healthy·네 health/readiness200·preview 세 경로200/기존 공개 인증서·Console 신뢰 인증서/HTTP·HTTPS403/no-store·Caddy PID926/main/materializer hash 보존을 통과했다. HTTP Origin과 등록 flag=false, enrollment unit not-found다. 계정 생성 재호출·추가 메일·env/Caddy 변경은 하지 않았다. 근거는 ignored `operator-bootstrap/account-failure-readonly.json`, `certificate-retry1/vm-after-success.json`과 사용자 root 출력이다.
+
+사용자의 재시도 지시에 따라 **기존 일회성 launcher/account를 다시 실행하지 않는** 새 가입 재개1을 준비했다. [정확한 실행·중단 범위](P06-PREPARATION.md#2026-10-21-인증된-가입의-재개1)를 따른다. 동일한 미소모 VERIFIED의 생성/검증 시각·대상·유일성·계정0과 기존 보호 백업/원본을 재대조하고, 기존 completeSignup과 changeConsoleAccountAccess를 각 한 번만 호출한다. 기존 repository의 VERIFIED 소비 계약을 그대로 사용하며 OTP 상태를 직접 바꾸거나 expires_at을 연장하지 않는다. 비밀번호 형식/두 입력 일치는 변경 전 최대3회 숨김 입력으로 교정하며 값 대신 이유 코드만 표시한다. 가입 실패 시 현재 phase를 알리고 자동 재시도 없이 중단한다.
+
+새 archive SHA256 `c00e4a6658743c8c52fdc236a0abb7b625ba1f39c87f45a53288fd8179c71241`, launcher `e685a79ed02267dcdb578618318aa02ac35ecf00c1786ef813640d2c028e68aa`, resume.py `c2e84f0666c71d15673790047ed3278ab7cfe8800d3b9ea4744099e8da852b81`다. 로컬 실제 파일/제어 fixture9건(정상·입력 교정/3회 실패·기존 계정/marker·challenge 변경·가입 응답 불확실·승격 실패·중복 시작)을 통과했다. root/DB/Worker는 모사이고 실제 VM 가입 성공 증거가 아니다. 기존 서비스/worker source는 변경하지 않았다. 새 계정 준비 성공 때만 기존 승인된 SSH 등록 unit을 한 번 시작하고 기존 등록 닫기/설정 복구·실패 시 USER/version2 회수 계약을 사용한다. 현재 재개1 root 실행/MFA 등록·HTTPS 인증 창은 아직 미실행이며 #166은 Draft·미병합이다.
