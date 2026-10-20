@@ -1,10 +1,10 @@
 ---
 title: "Architecture Document Index"
 document_id: "00"
-version: "1.25"
+version: "1.26"
 status: "active"
 authority: "index"
-updated_at: "2026-10-19"
+updated_at: "2026-10-21"
 tags:
   - "architecture"
   - "documentation"
@@ -55,7 +55,7 @@ migration / implementation plan
 | 01 | Architecture Constitution | 2.14 | active | 전체 시스템 헌법 |
 | 02 | Frontend Architecture | 1.10 | active | FSD, UI/model/lib, Query 사용 원칙 |
 | 03 | API / Error Architecture | 1.4 | active | HTTP / AppError / ApiError / error mapping |
-| 04 | Auth / Authz Architecture | 1.5 | active | Auth.js, RequestContext, CASL, Console MFA 회수 |
+| 04 | Auth / Authz Architecture | 1.6 | active | Auth.js, RequestContext, CASL, Console MFA 회수 |
 | 05 | Contract / Validation Architecture | 1.7 | active | Zod contract / DTO / boundary validation |
 | 06 | Server / Data Access Architecture | 1.2 | active | Service, Repository, Drizzle, transaction |
 | 07 | Rendering / Query / Cache Architecture | 1.2 | active | RSC / Query / hydration / cache / retry 전략 |
