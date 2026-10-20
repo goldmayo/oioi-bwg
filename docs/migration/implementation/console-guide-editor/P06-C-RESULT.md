@@ -5,14 +5,14 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 23
+revision: 24
 ---
 
 # P06-C 구현 결과
 
-**최신 선행 조건:** 별도 승인된 권한 복구1 root exit0과 실제 SSH Chromium의 새 OTP 로그인·관리 API200·로그아웃·등록 차단 검증을 완료했다. 현재 ADMIN/ACTIVE/version3·활성 MFA·등록false·원래 HTTP pair/closed HTTPS403을 유지한다. [실제 성공과 새 HTTPS 창2 준비](#2026-10-21-권한-복구1실제-로그인-검증-성공과-https-창2-준비)를 따른다. 제한 HTTPS 전환·Cloudflare/두 회선 인증 검증은 별도 승인 전 미실행이다.
+**최신 상태:** 승인된 최소 HTTPS 창2의 실제 전환·개방 후 browser helper가 중단됐고 root `exit20/aborted`로 원래 HTTP 설정·closed HTTPS403을 복원했다. [최소 창 실행·중단과 원복](#2026-10-21-최소-https-창2-실행중단과-원복)을 따른다. 실제 HTTPS 인증 성공 증거는 없으며 C는 미완료다. 두 실제 회선 실험은 사용자 지시로 필수 범위에서 제외하고 미실시로 남긴다.
 
-**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인. HTTPS Origin/env 전환·제한 인증 검증은 미실행이다. C 전체 완료가 아니다.**
+**코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인 / 최소 HTTPS 창2 전환·개방 후 helper 중단·exit20 원복 완료. C 전체 완료가 아니다. 아래 미실행 표시는 각 기록 시점의 이력이다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
 구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 배포 호스트 보완 `16c317d`, 로컬 HTTPS/DB 검증 확장 `2a274cd`를 거쳤다.
 metadata의 source는 아래 실제 HTTP 공동 배포의 squash merge다. ARM64 후보 source와 초기 로컬 검증을 구분한다.
@@ -432,3 +432,17 @@ SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 la
 - 실제 로컬 Caddy2.6.2/TLS/reload에서 header upstream 제거·일반/비신뢰403·matcher 제거/이전 값403·preview/PID 보존·token 로그 비노출을 통과했다. CF peer만 모사했다. 실제 Chromium/TLS의 origin 한정 gate/다른 호스트 redirect에서 token·Console cookie 비전달도 통과했다.
 - 새 browser 전체 흐름11그룹을 실제 로컬 Chromium/TLS에서 통과했다. 빠른 UI 진행·부정/재사용 인증·CSRF·Console 쿠키/CF cookie 구분·인증 세션의 익명 context 비공유·두 IP 자동 감지·logout·제거 후403을 검사했지만 auth/CF/회선 전환/VM 닫기는 모사다. 실제 VM HTTPS/두 회선 성공 증거가 아니다. 처음 fixture의 DEBUG 거절과 예상 그룹 수 보정 후 통과했다.
 - Python/Node/bash syntax·로컬 systemd unit verify·기본 경로와 launcher 일치·archive 일반 파일9개/내부 hash를 고정했다. 신규 경로 생성기의 중복 치환을 로컬 대조에서 수정했으며 미승인 준비 archive는 ignored 하위 경로에 보존했다. 최종 해시를 반영하는 과정의 작업 디렉터리 오류는 문서 후속 커밋으로 정정하며, 이전 준비 해시의 실행/승인을 요청하지 않는다. 앱/이미지/배포 파이프라인·Cloudflare·기존 인증서/갱신·#166 Draft 상태는 그대로다.
+
+## 2026-10-21 최소 HTTPS 창2 실행·중단과 원복
+
+사용자가 두 실제 회선의 제한 분리·IP 변경 후 세션 유지·실패 반복에 의한 한도 소진을 이번 필수 검증에서 제외했다. 해당 항목은 미실시이며 IP 제한 구현은 유지한다. 앞선 전체 창2 계획과 archive8f89317f...는 이력으로 보존하고, 로그인 입력값 수집·부정/재사용 로그인 검사도 뺀 `https-auth-window2/minimal/`을 승인받았다. archive SHA256은 `12229f0fc384180f1078a44abaed90df2252401c1a402f255a0dde6b6865cc44`, launcher는 `779f334200c9da55752efaefa43655d2ddd7d02224404b7b8fc2d8d221f7bfc5`이며 controller와 복구 파일은 기존 고정본 그대로다.
+
+문서 head `0bbcac493920513e94a2901dd3e41791886aeddb`의 Verify39467639498 필수 scope/verify 성공·정상 receipt12192252859 미만료·현재 닫힌 서비스를 대조한 뒤 네 보호 파일만 신규 staging에 전달했다. 사용자 sudo 위임 후 고정 launcher의 설치·eligibility 부분을 실행해 모두 exit0을 확인했다. 이후 사용자 진행 지시로 설치된 controller/manifest 해시를 검증하고 `start --operator-ready`를 한 번 실행했다. start exit0·opened marker·transient unit active를 직접 확인했다. 새 root-only 백업은 `/var/lib/oioi-p06-c-before-auth-window2`이며 같은 Console digest로 HTTPS Origin 전환·제한 matcher를 적용했다.
+
+실제 headed Chromium helper는 새 CSRF 토큰 두 개의 비공유·no-store·캐시 HIT 부재까지 통과한 뒤 전달 IP·Origin·위조 헤더 검사 구간에서 exit1로 중단했다. 마지막 기록은 `fresh_csrf_not_shared_or_cached`이며 세부 assertion/응답을 기록하지 않아 당시 정확한 실패 지점은 확정하지 못한다. helper는 `close.request=abort`를 제출했고 **root 최종 결과 `exitCode=20`, `result=aborted`와 unit not-found/inactive**를 읽어 확인했다. 실제 HTTPS MFA 로그인·Secure 세션 쿠키·인증 캐시 격리·로그아웃 성공 proof는 없으며 통과로 기록하지 않는다.
+
+원복 후 독립 SSH/외부 검사에서 원래 HTTP Origin·등록false·Console configHash/동일 digest·정상 pair/snapshot·Caddy/materializer hash와 기존 인증서를 보존했다. root controller가 보호 파일/링크/configHash를 검사했고, 독립 관찰에서 Web/DB ID/start/image 불변·네 health/readiness200·preview 세 경로200·일반/이전 token의 정확한 Caddy403/no-store·진단 IP 응답 헤더 제거를 확인했다. Console은 전환/복원으로 재생성돼 현재 ID가 `ff863e7aed935c179fe23d34f0d8d8909477043f9f879631f2d6c4a3d5b4da62`다.
+
+닫힌 상태의 GET으로 여섯 위조 헤더를 각각 분리한 후속 진단에서 **`CF-Connecting-IP` 단독과 전체 조합만 Cloudflare403/error1000**, 나머지 다섯 헤더는 정확한 Caddy 차단403을 확인했다. [Cloudflare 공식 설명](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1000/)도 클라이언트의 이 헤더 포함을 error1000 원인으로 명시한다. 따라서 모든 위조 헤더를 묶어200/동일 IP를 기대한 helper에는 결함이 있다. 다음 검증에서는 이 Edge 거절과 다른 forwarded 헤더의 Caddy 덮어쓰기를 분리하고, 검사 직전 단계·허용된 응답 metadata를 기록해야 한다. 후속 닫힌 상태 관찰을 당시 열린 창의 정확한 실패 위치나 실제 앱 IP 검증 성공으로 소급하지 않는다. Cloudflare 설정을 완화하지 않았다.
+
+근거는 ignored `https-auth-window2/minimal/`의 `transfer-proof.json`, `root-install-eligibility-execution.json`, `root-start-execution.json`, `browser-failure-proof.json`, `root-status-execution.json`, `vm-after-abort.json`, `external-after-abort.json`, `closed-header-diagnostic.json`과 실제 helper 출력이다. 설치/시작/복구를 반복하지 않고 모든 백업·실행물을 보존한다. 새 준비나 재개방 전에 helper 결함과 변경된 Console baseline을 반영해야 한다. 계정/역할/MFA reset·추가 배포·새 PR·파이프라인 변경은 없으며 #166은 Draft·미병합이다. 수정한 두 문서의 로컬 링크/anchor38개와 `git diff --check`를 통과했고, 앱 lint/typecheck/test/build와 기존 로컬 fixture는 재실행하지 않았다.
