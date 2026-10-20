@@ -6,7 +6,7 @@ authority: plan
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-10"
 updated_at: "2026-10-21"
-revision: 17
+revision: 18
 ---
 
 # P06 사전 준비: 지금 할 일과 전환 때 할 일
@@ -350,6 +350,19 @@ account0은 계정 준비/등록 미실행, account1은 중단/재실행 금지�
 - 승인된 재승격 후 로컬 `login-only.mjs`는 새 SSH localhost 브라우저에서 사용자 비밀번호/새 실물 OTP 로그인·관리 GET200·로그아웃·setup/confirm403/등록 버튼 부재만 검증한다. Enter/등록 완료 중간 화면에 의존하지 않는다. 등록 flag는 계속false이며 VM 설정·권한 변경/close.request 쓰기는 브라우저가 하지 않는다.
 
 고정 hash/검증은 RESULT를 따른다. 새 계정/메일·MFA reset/재등록·등록 unit 재개방·env/Origin/Caddy/Cloudflare 변경·컨테이너/DB 재시작·배포/pair/snapshot 변경·일반 공개·#166 병합은 범위 밖이다. 다음 제한 HTTPS 검증 창은 새 baseline/hash로 별도 승인받는다.
+
+### 2026-10-21 실제 MFA 검증 후 제한 HTTPS 창2
+
+선행 작업의 root 권한 복구와 실제 SSH 새 OTP 로그인·관리 접근/로그아웃·등록 닫힘 성공은 [최신 결과](P06-C-RESULT.md#2026-10-21-권한-복구1실제-로그인-검증-성공과-https-창2-준비)를 따른다. 기존 HTTPS archive6dc1453a...는 과거 Console ID에 고정돼 보존만 하며 재실행하지 않는다. 새 ignored `https-auth-window2/APPROVALS.txt`·`run-reviewed.txt`에 현재 상태의 정확한 창을 고정했다. **이 창의 VM 전달/전환/개방은 별도 승인 전 미실행**이다.
+
+- 대상은 account1·ADMIN/ACTIVE/version3·활성 MFA·등록false와 현재 Console6c0a.../동일 digest·원래 pair다. 새 local inputs0700/파일0600의 기존 보호 이메일과 새256-bit token은 archive/Git/출력에 포함하지 않는다.
+- 새 staging `/home/oioi/p06-c-auth-window2-preparation`, root `/var/lib/oioi-p06-c-auth-window2-launch`, 보호 백업 `/var/lib/oioi-p06-c-before-auth-window2`, unit `oioi-p06-c-auth-window2.service`, candidate/check 파일도 새 경로만 쓴다. 기존 백업/실행물/nonce를 덮어쓰지 않는다.
+- 최신 문서 CI/정상 receipt·고정 source/digest·archive/내부 hash·현재 원본/보호 사본·DB 시작 시각·after-enrollment/권한 복구1 checkpoint·닫힌 인증서/403·preview/앱/DB·새 경로 부재를 대조한다. 새 root launcher는 보호 설치→READ ONLY eligibility→성공 시 `start --operator-ready` 한 번을 수행한다. 실행 승인에는 인증 앱/새 비밀번호와 **같은 PC의 집 Wi-Fi→5G 핫스팟 전환 준비**를 포함한다.
+- 최대30분 transient service가 deployment.lock과 새 root-only 백업을 유지하고, Caddy를 닫은 채 HTTPS 지원 materializer/Console Origin만 임시 전환해 같은 digest로 Console만 재생성한다. root health/Host guard 뒤 CF peer AND 임시 header matcher를 validate/reload한다. header는 검사 후 upstream에서 제거하고 일반/직접 origin403과 인증서/HTTP-01 갱신을 유지한다.
+- 실제 HTTPS Chromium에서 UI MFA 로그인·Secure/HttpOnly/SameSite/host-only/Web 분리 쿠키·password-only/잘못된OTP/소모OTP 거절·Origin/CSRF·전달 헤더 덮어쓰기·no-store/캐시 공유/HIT 없음·동일 PC 두 공인 IP의 독립 제한/세션 유지·로그아웃/redirect를 검증한다. 필요한 credentials callback 값은 메모리만 사용하고 곧 버리며 Enter/중간 화면에 의존하지 않는다. Wi-Fi 제한 뒤5G 전환은4분 안에 자동 감지하며 `/admin` Cloudflare Challenge는 사용자 브라우저에서 완료한다.
+- 정상 finish·실패 abort·만료/비정상 종료는 기존 closed-acme matcher부터 닫고 이전 token/일반403을 검사한 뒤 원래 materializer/HTTP env와 Console configHash/동일 digest를 복구한다. Web/DB ID/start·preview/인증서·snapshot/링크·pending 부재·health를 검증한다. Console ID/start는 바뀌며 정상 MFA 사용 step은 되돌리지 않는다. 재시도/재개방·기존 인증서/DNS restore 호출은 없다. exit21이면 반복하지 않고 중단한다.
+
+명령은 새 root의 `window.py start --operator-ready`/`status`, 수동 중단은 `sudo systemctl stop oioi-p06-c-auth-window2.service`다. `window.py recover`는 unit 비활성·최종 result 부재인 비정상 종료 때만 사용하며 result21 뒤 반복하지 않는다. root exit0과 실제 browser proof·matcher 제거 후 외부403/기존 서비스 보존이 모두 있어야 C 인증 검증 완료다. 추가 Cloudflare/인증서/권한/MFA 등록·reset·Web/DB 재시작·새 image/배포/pair/snapshot·일반 공개·#166 병합·Promotion 전략은 범위 밖이다. 고정 hash와 모사/실제 구분은 RESULT를 따른다.
 
 ## 3. OCI Vault: Console 키 두 개 보관
 

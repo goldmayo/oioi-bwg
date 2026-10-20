@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 21
+revision: 22
 ---
 
 # P06-C 구현 결과
 
-**최신 선행 조건:** 사용자가 실물 MFA 등록과 로그인을 완료했다고 알렸으나 브라우저 helper가 중단해 자동 복구가 등록을 닫고 계정을 USER/version2로 회수했다. 직접 DB 조회에서 MFA 활성/사용한 OTP 상태 보존과 기존 서비스 복구를 확인했다. [실제 중단 결과와 권한 복구안](#2026-10-21-실물-mfa-등록과-브라우저-helper-중단자동-회수)을 따른다. 재승격은 별도 승인 전 미실행이며 HTTPS 인증 창도 미실행이다.
+**최신 선행 조건:** 별도 승인된 권한 복구1 root exit0과 실제 SSH Chromium의 새 OTP 로그인·관리 API200·로그아웃·등록 차단 검증을 완료했다. 현재 ADMIN/ACTIVE/version3·활성 MFA·등록false·원래 HTTP pair/closed HTTPS403을 유지한다. [실제 성공과 새 HTTPS 창2 준비](#2026-10-21-권한-복구1실제-로그인-검증-성공과-https-창2-준비)를 따른다. 제한 HTTPS 전환·Cloudflare/두 회선 인증 검증은 별도 승인 전 미실행이다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인. HTTPS Origin/env 전환·제한 인증 검증은 미실행이다. C 전체 완료가 아니다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
@@ -408,3 +408,27 @@ SSH 비대화 sudo가 거절돼 사용자가 기존 VM 터미널에서 고정 la
 별도 권한 복구1은 [최소 실행·철회 범위](P06-PREPARATION.md#2026-10-21-등록된-mfa를-보존하는-권한-복구1)를 따른다. 방금 생성한 계정 한 건의 USER/ACTIVE/version2·활성 MFA와 닫힌 복구 baseline을 대조한 뒤 기존 공통 service로 ADMIN/ACTIVE/version3 재승격 한 번만 준비했다. MFA reset/QR 재등록·비밀번호 변경·등록 창/env/컨테이너 전환은 없다. 새 로그인 전용 helper는 Enter나 중간 화면 대신 최종 admin URL/관리 GET200·로그아웃·등록 닫힘을 검사한다. 별도 승격 및 명시적 철회 명령은 서로 다른 O_EXCL marker와 기대 version을 사용하며 실패/불확실 응답은 반복하지 않는다.
 
 고정 archive SHA256 `af116ca7329cc9f8680c79ed3ed3f1a7810bfba8d015199fcdc0ced09dfb2706`, launcher `512489415dccf8bcc21bac3f87fda4ff6a9e78fdbc653ae31bf0d87818d6a4c3`다. 새 묶음은 ignored `operator-access-restore1/`에 보존했다. 공통 source8개를 #164와 대조했고 로컬 제어 fixture8건·격리 실제 Docker PostgreSQL17 권한 service5건·실제 Node size-prefixed loader의 변경 전 잘못된 명령 거절·실제 Chromium의 빠른 화면 진행 race 재현/최종 URL 수용을 통과했다. DB fixture에서 sentinel MFA/사용한 OTP 상태 보존·version3/명시적 회수4·중복 거절을 확인했으며 실제 VM 권한 변경/로그인 성공 증거는 아니다. 첫 fixture의 Date 객체 동일성 비교와 HTML charset 누락은 수정 후 재검증했다. Python/Node/bash syntax·archive 일반 파일6개/내부 hash도 확인했다. 신규 VM 전달/재승격은 별도 승인 전 미실행이다. #166 Draft·기존 인증서/자동 갱신·Cloudflare ACME 예외·공개403·정상 pair/snapshot·Web/DB를 유지하며 HTTPS 인증 창은 아직 열지 않는다.
+
+
+## 2026-10-21 권한 복구1·실제 로그인 검증 성공과 HTTPS 창2 준비
+
+사용자가 archive `af116ca7...`의 대상 한 건 USER2→ADMIN3 복구와 SSH 로그인 검증을 별도 승인했다. 최신 문서 [Verify39462047372](https://github.com/goldmayo/oioi-bwg/actions/runs/39462047372) attempt1 success·정상 receipt12192252859/고정 candidate·archive/전체 내부 hash와 현재 닫힌 서비스를 대조해 새 staging0700/파일0600에 전달했다. 사용자가 launcher `51248941...`를 root로 한 번 실행했고 source verified·phase passed와 **operator_access_restore1_exit=0**을 확인했다. 원래 공통 권한 service의 ADMIN/ACTIVE/version3 복구, 등록된 MFA 보존·등록 flag 닫힘·정상 pair/preview 불변을 root가 검증했다. 명시적 USER4 철회는 실행하지 않았다.
+
+직접 READ ONLY 재조회에서 account1·ADMIN/ACTIVE/version3·enabled MFA와 원래 세 컨테이너 ID/start/image/healthy·HTTP Origin/등록false를 확인한 뒤 새 로그인 전용 headed Chromium/SSH forward를 열었다. **실제 새 OTP 로그인→관리 GET200→로그아웃/세션 cookie 제거→setup/confirm403·등록 버튼 부재**가 자동 검증돼 helper exit0/proof를 남기고 정상 종료했다. 중간 화면/Enter 신호에 의존하지 않았고 등록 창을 다시 열거나 VM 설정을 바꾸지 않았다. 비밀번호/OTP·QR/키·Cookie 원문/trace/HAR/storageState는 저장·출력하지 않았다. 근거는 ignored `operator-access-restore1/root-execution-result.json`, `after-root-readiness.json`, `login-browser-proof.json`이다.
+
+후속 직접 SSH에서 세 컨테이너 ID/start/image/healthy·네 health/readiness200·preview 세 경로200/기존 인증서·Console 신뢰 인증서/HTTP·HTTPS exact403/no-store·Caddy PID926/main/materializer hash·비프록시403 route 보존을 다시 통과했다. `after-login-closed-state.json`에 비밀값 없는 결과를 보존했다. Console ID는 `6c0a009c095923f943417e05309df54f3b316366261913cea0ad7bcf79b7f004`이며 새로운 재생성은 없었다. 기존 등록 실패 이력과 USER2 회수/ADMIN3 복구 marker·모든 보호 백업을 보존한다.
+
+이 기준으로 **새 HTTPS 창2**를 ignored `https-auth-window2/`에 준비했다. [정확한 전환·종료/복구 범위](P06-PREPARATION.md#2026-10-21-실제-mfa-검증-후-제한-https-창2)를 따른다. 기존 archive6dc1453a.../자격 exit2 설치를 반복하지 않고 새 경로·새 token과 현재 Console/운영자 baseline을 사용한다. 원래 인증서/배포 네 백업에 더해 계정/재개/등록의 세 백업·auth dump hash·after-enrollment와 권한 복구1 before/complete·DB 시작 시각을 검사한다. 새 eligibility는 보호된 기존 이메일/account1·ADMIN/ACTIVE/version3·활성 MFA만 허용한다.
+
+새 browser는 UI credentials callback의 필요한 값을 프로세스 메모리로만 받아 실제 UI 로그인 뒤 부정/재사용 인증을 검사하고 버린다. 중간 폼을 뒤늦게 읽거나 Enter를 기다리지 않는다. 집 Wi-Fi 제한 후 같은 PC의5G 핫스팟 전환을4분 안에 자동 감지하고 같은 세션의 관리 접근/독립 IP 제한을 확인한다. 외부 서비스/보안 설정을 바꾸거나 MFA/권한을 다시 수정하지 않는다. 최종 matcher 제거/이전 token·일반403·HTTP env/configHash/동일 pair·서비스/복구 검증은 그대로다.
+
+고정 archive SHA256 `cb3f5c7a5a3599d8c097eaba503947ae87ef20ef04eb0412fef95dad1bf49e2b`, launcher `6c40fa40b4cd8bd2f7a761b5e80fc6890de22fe1469c9036bb88f3c1f572c9bf`, window.py `71fe65378526581a82cd64ae8337f2b7411a892f9b61fe2cb8adb3ecd2832f37`다. 신규 VM 전달/전환/개방은 아직 하지 않았다. 실제 브라우저 인증·Secure cookie/Origin/CSRF·Cloudflare IP 두 개/캐시 및 제거 후403을 다음 별도 승인 창에서 검증해야 하므로 C는 아직 미완료다.
+
+실제 수행한 새 로컬 검증:
+
+- 새 baseline fixture10건: 현재 ADMIN3/새 Console 수용, 역할/version/등록 재개방·이전 Console ID·원본 drift·DB 재시작·auth dump/체크포인트/링크 불일치 거절. 실제 로컬 파일/함수이며 root/DB/helper는 모사다.
+- 기존 전환/복구 fixture13건을 새 경로에서 통과했다. eligibility 미충족/validate·compose/reload 실패·abort/만료/중복/비service·drift 우선 닫힘/exit21·비정상 복구 포함. 실제 VM/systemd 실행은 아니다.
+- 새 eligibility stdin/대상 fixture8건과 실제 격리 Docker PostgreSQL17 SQL6건 통과. 실제 schema/app role에서 계정 없음·ADMIN2·USER3·정지·미등록 거절과 활성 ADMIN3 수용을 확인했다. DB/role identity literal만 폐기용 fixture에 맞췄으며 임시 DB/role은 삭제했다.
+- 실제 로컬 Caddy2.6.2/TLS/reload에서 header upstream 제거·일반/비신뢰403·matcher 제거/이전 값403·preview/PID 보존·token 로그 비노출을 통과했다. CF peer만 모사했다. 실제 Chromium/TLS의 origin 한정 gate/다른 호스트 redirect에서 token·Console cookie 비전달도 통과했다.
+- 새 browser 전체 흐름11그룹을 실제 로컬 Chromium/TLS에서 통과했다. 빠른 UI 진행·부정/재사용 인증·CSRF·Console 쿠키/CF cookie 구분·인증 세션의 익명 context 비공유·두 IP 자동 감지·logout·제거 후403을 검사했지만 auth/CF/회선 전환/VM 닫기는 모사다. 실제 VM HTTPS/두 회선 성공 증거가 아니다. 처음 fixture의 DEBUG 거절과 예상 그룹 수 보정 후 통과했다.
+- Python/Node/bash syntax와 archive 일반 파일9개/내부 hash를 고정했다. 앱/이미지/배포 파이프라인·Cloudflare·기존 인증서/갱신·#166 Draft 상태는 그대로다.
