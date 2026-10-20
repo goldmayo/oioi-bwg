@@ -289,18 +289,18 @@ eligibility0은 자격 확인/미개방,2는 부적격/미개방이다. window0�
 
 | 새 고정 실행물(로컬 `.local/p06-c/operator-bootstrap/`) | SHA-256 |
 | --- | --- |
-| `operator-bootstrap-reviewed.tar.gz`(일반 파일6개) | `bff853cfb9926876f391cfee5a04c9840b42f0d51c33ad3b20a6a1f54e2b9c38` |
-| `bootstrap.py` | `f519b516e712290eb0746aa83c770248c961090d673cf078c52b7d64c81f90e1` |
-| `worker.cjs` | `61f9a3c6f824d84ba6e40a7b75811bf1c4787adc0c3330d6495cd49adb188ed4` |
+| `operator-bootstrap-reviewed.tar.gz`(일반 파일6개) | `429657cf64d9ec0e93acc8dfa8dbb70a49e54dffe202eb8a292100047cd2abce` |
+| `bootstrap.py` | `cb04eaf769a032e5778a5fc62d461577cb0084a0f4321d59a8970074c3bee75c` |
+| `worker.cjs` | `fc6bbaff96a35f9172589e2cb03362e1cc0b45712ecae20d9fef404ddd5191a3` |
 | `enroll.mjs` | `6a904b6c606dd67f2776ac362cf4f85d4797276802ce7a645bd8981423616762` |
-| `launch-reviewed.txt` | `9a3b966b716ea1d543bf28a8ebcd2225c7a2898a3c60a5d371db04b351d5c219` |
+| `launch-reviewed.txt` | `b9fcd0fe5c78759f948ec0e1fa8b2551dd0d6234ba39912c8d78999ce4d5a9e3` |
 
 archive에는 operator·기존 서비스 bundle·로컬 등록 browser·`APPROVALS.txt`·source provenance·전체 내부 hash만 있다. 대상 이메일은 기존 root 보호 입력에서 읽고 비밀번호/메일 OTP/QR/키/코드를 archive·argv·로그·Git에 넣지 않는다. 새 비밀번호는 사용자 VM 터미널의 숨김 입력으로 받고 실물 TOTP는 본인 브라우저에만 입력한다. 채팅에 공유한 비밀번호를 사용하지 않는다.
 
 승인받을 정확한 범위는 다음과 같다. 상세 중단/제외는 고정 `APPROVALS.txt`를 따른다.
 
 1. 최신 문서 CI·#164 고정 source/정상 receipt12192252859·동일 두 digest와 현재 인증서/closed403·preview/앱/DB·네 보호 백업/원본·새 경로 부재를 대조한다. 사용자 staging `/home/oioi/p06-c-operator-bootstrap-preparation`(0700/파일0600)에 archive/launcher만 전달하고 root 메모리 전체/항목 hash 검증 후 새 `/var/lib/oioi-p06-c-operator-bootstrap`(root:root0700/0600)에 설치한다. 충돌/불일치는 중단한다.
-2. 기존 개인 SSH 사용자 UID1002의 sudo 실행과 deployment.lock·DB명/role/비특권/비owner/RLS/major17/DB 시작 epoch를 검사한다. 새 `/var/lib/oioi-p06-c-before-operator-account`에 원본 host/env·두 snapshot/링크·컨테이너/PID와 auth6개 테이블의 pg_dump17 data-only 사본/sha를 root-only 보존한다. 일반 deploy/ocarun 권한을 늘리거나 DB schema/role을 바꾸지 않는다.
+2. 기존 개인 SSH 사용자 UID1002의 sudo 실행·실제 TTY와 deployment.lock·DB명/role/비특권/비owner/RLS/major17/DB 시작 epoch를 검사한다. TTY 부재는 메일/DB 변경 전에 거절하고 operator 전용 DB pool1·statement_timeout10초/lock_timeout5초를 적용한다. 새 `/var/lib/oioi-p06-c-before-operator-account`에 원본 host/env·두 snapshot/링크·컨테이너/PID와 auth6개 테이블의 pg_dump17 data-only 사본/sha를 root-only 보존한다. 일반 deploy/ocarun 권한을 늘리거나 DB schema/role을 바꾸지 않는다.
 3. 기존 Console 이미지의 별도 `docker exec` Node process에서 기존 requestOtp/verifyOtp/completeSignup 서비스를 그대로 실행한다. 메일 transport만 root host로 위임하고 host가 현재 sender/region/compartment·Instance Principal로 **지정 이메일 한 곳에 인증 메일을 한 번** 제출한다. OCI CLI의 `--no-retry --from-json file:///dev/stdin`으로 payload/OTP를 메모리/pipe에만 두며 Web/Console metadata deny는 유지한다. suppressed·거절·불확실 제출·timeout은 수동 재시도 없이 중단한다. 이는 일반 Web 메일 경로 복구가 아니다. CLI 전송 옵션은 [OCI 공식 문서](https://docs.oracle.com/iaas/tools/oci-cli/latest/oci_cli_docs/cmdref/email-data-plane/email-submitted-response/submit-email.html)를 대조했다.
 4. 사용자의 이메일 OTP/새 비밀번호 숨김 입력 후 실제 가입 transaction으로 USER/ACTIVE Account/Profile/Argon2id credential 한 개를 만든다. nickname은 `oioi-operator`다. 이어 같은 ID의 USER/ACTIVE/version없음을 확인하고 기존 공통 변경·회수 service로 ADMIN/ACTIVE/version1만 승격한다. 운영 UID/시각/대상/결과/승인 연결의 root-only marker를 보존한다. 가입/OTP·MFA version을 직접 SQL로 우회하지 않는다. 계정 단계 실패/불확실 성공은 반복·자동 삭제·전체 DB restore 없이 중단한다.
 5. 계정 준비 성공 후 새 transient `oioi-p06-c-enrollment.service`를 한 번 실행한다(RuntimeMaxSec1800/Restart=no/TimeoutStopSec240/ExecStopPost 보호 복구). 새 `/var/lib/oioi-p06-c-before-enrollment`에 정상 파일/컨테이너를 보호 백업하고 잠금을 복구 검증까지 유지한다. Origin은 HTTP127.0.0.1:3001이며 Console public/raw env의 등록 flag만 true로 바꾸고 동일 digest로 Console만 `--no-deps --no-build --pull never --wait` 재생성한다. Caddy/metadata·인증서/갱신·Cloudflare·Web/DB·pair/snapshot은 바꾸지 않는다.
