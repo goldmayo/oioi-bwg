@@ -452,3 +452,68 @@ DB journal/schema·app 권한 확인 및 필요한 migration은 별도 승인 �
 실제 첫 전환·rollback·중단 수동 복구는 아직 미검증이다. 적용 전에는 해당 snapshot의 경로·digest·env를 대조한
 실행 명령과 복구 완료 판정을 확정한다. OCI API/agent 오류 원문·runtime env·Secret은 CI/공개 기록으로 보내지 않는다.
 실제 두 앱의 container ID/StartedAt·health/readiness·IMDS 차단/host 양성 대조와 재시작 지속성까지 확인한 뒤 B2를 완료한다.
+
+## 10. Console 운영자 CLI (P06-D, 운영 실증 전)
+
+공통 계약은 [P06 계획 §6](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#6-https등록운영자-경계)과
+[AUTH-009](../../docs/migration/DOMAIN_SPECIFICATION.md#auth-009-console-mfa-등록과-회수)를 따른다.
+기존 `pnpm console:mfa`는 로컬 Compose 전용으로 유지한다.
+운영 경로는 개인 SSH 운영자가 검토한 요청을 sudo로 실행하며 배포·HTTP 경로에 연결하지 않는다.
+
+1. 검토한 source에서 `pnpm build:console-operator`를 실행한다.
+   `.local/console-operator/`의 bundle과 provenance를 함께 검토한다. provenance의 서버 소스는
+   candidate의 Console `buildSourceSha`에 있는 서비스·스키마와 대조한다. 차이가 있으면 설치하지 않는다.
+2. 개인 운영자가 launcher를 root 소유의 `/usr/local/lib/oioibawige/console-operator.py`(0755),
+   bundle을 같은 디렉터리의 `console-operator.cjs`(0600)로 설치한다. 부모는 root 소유·그룹/기타 쓰기 금지다.
+   일반 host installer·ocarun sudoers·배포 workflow에는 이 설치나 실행을 추가하지 않는다.
+3. Console 외부 HTTP/HTTPS가 모두 403이고 등록 flag가 false인 상태에서 아래 값을 직접 대조해
+   `/etc/oioibawige/console-operator.json`을 root:root 0600으로 작성한다. 운영 DB 자격 증명은 넣지 않는다.
+   machine ID 원문은 기록하지 않고 SHA-256만 보관한다. Caddy 값은 admin API의 전체 JSON을
+   Python `json.dumps(value, sort_keys=True, separators=(',', ':'))`로 직렬화한 SHA-256이다.
+   공개 접근이 닫힌 설정임을 확인한 뒤 해당 hash를 승인한다. 컨테이너·배포·DB 재시작·Caddy 변경 시 다시 대조한다.
+
+   ```json
+   {
+     "operatorUid": 1002,
+     "machineIdSha256": "<해당 VM machine-id를 strip한 SHA-256>",
+     "containerId": "<현재 Console의 64자리 ID>",
+     "image": "<현재 Console repository>@sha256:<digest>",
+     "databaseStartedAt": "<READ ONLY 조회한 postmaster epoch, 소수점 6자리>",
+     "bundleSha256": "<검토한 bundle SHA-256>",
+     "releaseId": "<current-pair candidate identity>",
+     "caddyConfigSha256": "<승인한 전체 닫힌 Caddy 설정 SHA-256>"
+   }
+   ```
+
+4. 개인 운영자가 소유한 0600 일반 파일에 요청을 준비한다. hardlink·symlink는 거부한다.
+   사유에는 secret을 넣지 않는다. `approvalReference`는 승인자와 승인 내용을 확인할 수 있는 변경 기록을 가리킨다.
+   계정 ID와 현재 version을 먼저 READ ONLY로 대조하고 `--expected-version`에 명시한다.
+
+   ```json
+   {
+     "args": ["mfa-reset", "--account-id", "1", "--expected-version", "3", "--apply"],
+     "approvalReference": "P06-D/approved-change-id",
+     "reason": "승인된 MFA 회수와 재등록 검증"
+   }
+   ```
+
+   `account-access`는 같은 인자에 `--expected-role`, `--expected-status`, `--role`, `--status`를 추가한다.
+   위 예시의 계정·version은 실행 지시가 아니다. 모든 기대값은 실제 승인 대상으로 치환한다.
+
+5. 개인 운영자의 sudo로 다음 고정 entry point를 호출한다.
+
+   ```sh
+   sudo python3 -I -B /usr/local/lib/oioibawige/console-operator.py --request /절대/요청.json --apply
+   ```
+
+실행은 기존 deployment lock을 공유하고 현재 release·건강한 non-root Console·loopback binding·등록 닫힘을
+검사한다. pin한 컨테이너 안에서만 기존 app DB 자격 증명을 사용한다. DB명·role·PostgreSQL 17·재시작 시각·
+비소유자/비특권 역할을 확인한 뒤 기존 service의 version 조건부 transaction을 실행한다.
+배포 계정 `ocarun`과 root 직접 호출은 거부한다. 이 도구를 위한 새 sudo/docker 권한을 부여하지 않는다.
+
+`/var/lib/oioi-console-operator`(root 0700)의 0600 attempt/result에는 개인 UID·UTC·승인 참조·요청 hash가 남는다.
+attempt에 사유·변경 인자를 기록하고 파일과 디렉터리를 fsync한 뒤 mutation한다. 같은 요청은 재실행할 수 없다.
+`OUTCOME_UNCERTAIN`이나 result 부재는 실패 확정이 아니다. Console을 닫은 채 DB version과 감사 기록을
+READ ONLY로 대조해 실제 결과를 판단한다. 요청 내용을 바꾸어 자동 재시도하거나 version을 되돌리지 않는다.
+MFA reset은 암호문을 폐기하므로 새 등록이 필요하다. 이전 JWT 401·실제 OTP 재등록·새 로그인·등록 재차단·
+관리 CRUD 검증을 마친 뒤 공개 접근을 복원한다. 설치/호출 자체가 D 완료를 뜻하지 않는다.
