@@ -63,3 +63,23 @@ www 전환·레거시 종료·Console 공개를 포함한 F는 사용자 귀가 
 CI가 복원한 standalone 산출물 경로를 읽도록 수정했다. 일반 로컬 build 폴더가 없는 임시 디렉터리에서
 복원 artifact만으로 검사하며, 제거 대상 Action이 들어 있으면 DB 접근 전에 거부하는 회귀 검사 두 건을 추가했다.
 앱 runtime 변경은 없다. 재검증 결과와 최종 head는 PR에서 추적한다.
+
+
+## 2026-10-21 보안 패치 통합 후 Action 거절 계약 보완
+
+보안 배포를 포함한 `migration_main` f675033을 merge한 head는 `0404651c1e4849d73567bf69f73e085743abc00f`다.
+이 head의 Verify39534367022에서 품질·unit419건/ops213건·PostgreSQL·두 앱 build는 성공했지만,
+실제 관리 브라우저 검사는 이전 upload Action의 응답409를404와 비교해 실패했다.
+
+설치된 Next16.4.1의 action-handler와 [공식 변경 #98123](https://github.com/vercel/next.js/pull/98123)을 대조했다.
+현재 배포에 없는 정상 형식 Action ID는409와 `x-nextjs-action-not-found: 1`,
+`text/plain`의 `Server Action unavailable.`로 거절한다. 이전404 기대값을 이 정확한 상태·헤더·본문
+검사로 교체했다. 제거된 관리 route/API의404, manifest의 Action 부재, Album/Song 불변 검사는 유지한다.
+앱 동작이나 Caddy403 차단 정책을 변경하지 않았다. 위 최초404 기록은 당시16.3.3 결과다.
+
+같은 CI head의 성공한 `ci-standalone` artifact12316128962를 내려받아 경로/멤버를 대조하고,
+실제 Web runtime이16.4.1임을 확인한 뒤 수정한 smoke로 `pnpm test:integration:admin:local`을 실행했다.
+guest/USER/ADMIN의 이전 Action 거절·일반 로그인, Console MFA/CRUD·가사 저장·세션 회수와
+공개 조회 회귀가 모두 성공했다. 임시 DB/역할 정리, 연결/잠금0을 확인했다.
+근거는 ignored `.local/p06-e2-security-refresh/admin-recheck.log`와 실제 브라우저 산출물이다.
+이 보완의 최종 source/CI head는 기존 PR #169에서 추적하며 운영 VM의 E 적용은 계속 보류한다.

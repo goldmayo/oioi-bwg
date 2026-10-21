@@ -30,7 +30,9 @@ HTTP hostname도 같은 차단을 적용하거나 HTTPS로만 redirect하는지 
 ## E 적용·rollback 공통 불변 조건
 
 - Web 관리·가입 URL은 403이다. 새 Web에 직접 도달한 제거된 관리 route는 404다.
-- 모든 `Next-Action` 요청은 URL과 관계없이 403이다.
+- 모든 `Next-Action` 요청은 URL과 관계없이 host에서 403이다.
+  새 Next16.4.1 Web에 직접 보낸 이전의 정상 형식 Action ID는409와
+  `x-nextjs-action-not-found: 1`·`Server Action unavailable.`로 거절한다. 이를 관리 route의404와 구분한다.
   헤더 없는 multipart `$ACTION_ID_...` form도 GET/HEAD 외 요청 차단으로 거부한다.
 - 현재 Web에서 허용하는 쓰기는 Auth.js의 `POST /api/auth/callback/credentials`와
   `POST /api/auth/signout` 두 경로뿐이다. 이 경로의 인증/CSRF 검증은 Auth.js가 유지한다.

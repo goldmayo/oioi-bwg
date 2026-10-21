@@ -79,7 +79,12 @@ export async function assertWebAdminRetired(browser, origin, sql, artifacts) {
         multipart: { 0: '["$K1"]' },
         maxRedirects: 0,
       });
-      assert.equal(response.status(), 404, "retired upload Action at " + route);
+      // Next 16.4.1 reports unavailable, well-formed Action IDs as 409.
+      // Require its explicit rejection marker/body, not an arbitrary conflict response.
+      assert.equal(response.status(), 409, "retired upload Action at " + route);
+      assert.equal(response.headers()["x-nextjs-action-not-found"], "1");
+      assert.match(response.headers()["content-type"], /^text\/plain\b/);
+      assert.equal(await response.text(), "Server Action unavailable.");
     }
     if (email?.startsWith("admin@")) admin = { context, cookies: await context.cookies() };
     else await context.close();
