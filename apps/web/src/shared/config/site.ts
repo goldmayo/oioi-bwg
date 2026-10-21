@@ -4,7 +4,7 @@ export const SITE_CONFIG = {
   name: "어이어이바위게",
   shortName: "OIOIBWG",
   description: "QWER 비공식 응원법 가이드. 바위게야 오늘은 응원을 하자!",
-  url: "https://oioibawige.com",
+  url: "https://www.oioibawige.com",
   ogImage: "/images/og_oioibawige.webp", // OG 이미지 경로
   author: "CheerRockCrab Team",
   links: {

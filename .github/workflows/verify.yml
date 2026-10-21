@@ -181,7 +181,7 @@ jobs:
           context: .
           target: verification-cache
           platforms: linux/amd64
-          build-args: NEXT_PUBLIC_APP_ENV=staging
+          build-args: NEXT_PUBLIC_APP_ENV=production
           outputs: type=cacheonly
           cache-from: type=local,src=${{ runner.temp }}/buildx-cache
           cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
@@ -193,7 +193,7 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: oioi-bwg:workspace-check
-          build-args: NEXT_PUBLIC_APP_ENV=staging
+          build-args: NEXT_PUBLIC_APP_ENV=production
           cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
       - name: Archive verified container
         run: |
@@ -207,7 +207,7 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: oioi-bwg-console:workspace-check
-          build-args: NEXT_PUBLIC_APP_ENV=staging
+          build-args: NEXT_PUBLIC_APP_ENV=production
           cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
       - name: Archive verified Console container
         run: docker save --output "${{ runner.temp }}/ci-build/console-image.tar" oioi-bwg-console:workspace-check
@@ -393,7 +393,7 @@ jobs:
       NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
-      NEXT_PUBLIC_APP_ENV: staging
+      NEXT_PUBLIC_APP_ENV: production
       NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
       SENTRY_SOURCE_MAPS_ENABLED: "true"
       IMAGE_REPOSITORY: ${{ vars.OCIR_REGISTRY }}/${{ vars.OCIR_NAMESPACE }}/${{ vars.OCIR_REPOSITORY }}
@@ -480,7 +480,7 @@ jobs:
           tags: ${{ env.IMAGE_REPOSITORY }}:candidate-${{ steps.source.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: |
             BUILD_APP=web
-            NEXT_PUBLIC_APP_ENV=staging
+            NEXT_PUBLIC_APP_ENV=production
             NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
             SENTRY_ORG=${{ env.SENTRY_ORG }}
@@ -506,7 +506,7 @@ jobs:
           tags: ${{ env.CONSOLE_IMAGE_REPOSITORY }}:candidate-${{ steps.source.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: |
             BUILD_APP=console
-            NEXT_PUBLIC_APP_ENV=staging
+            NEXT_PUBLIC_APP_ENV=production
             NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
             SENTRY_ORG=${{ env.SENTRY_ORG }}
