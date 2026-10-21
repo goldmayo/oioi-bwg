@@ -260,6 +260,11 @@ Web readiness·DNS/일반 outbound, container 재생성·Docker/VM 재시작·�
 
 ## 8. P06-B0 권한 probe
 
+> **완료된 과거 절차 — 2026-10-21 자동 실행 경로 폐기.** 아래는 B0 당시의 실행 이력 설명이다.
+> 실제 통과 증거는 [B0 결과](../../docs/migration/implementation/console-guide-editor/P06-B0-2-RESULT.md)가 소유한다.
+> `B0 publish probe` job과 `p06-b0-command` workflow는 제거했으므로 label을 추가해 재실행하지 않는다.
+> 현재 release는 이 문서 §3·§6의 정상 Promotion을 따른다. helper와 기존 증거는 보존한다.
+
 [B0 계획](../../docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의 실제 Web 차단·
 재시작 증거와 검토한 Stack Plan/Apply·게시 정책 교체를 완료한 뒤, 별도 승인된 probe만 실행한다.
 일반 feature PR은 OCI credential을 사용하지 않는다. B0 동안 전체 ARM64 candidate는 비활성이고

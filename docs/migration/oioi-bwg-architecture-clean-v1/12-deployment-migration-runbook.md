@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.15"
+version: "1.18"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-17"
+updated_at: "2026-10-21"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.9
+# oioi-bwg Deployment / Migration Runbook v1.17
 
 ## 1. 목적
 
@@ -477,12 +477,21 @@ feature/* → PR → migration_main (통합, 배포 없음)
 migration_main → Promotion PR → migration_develop (OCI Development 배포 대상)
 ```
 
-일반 feature PR은 기존 verify(정적 검사·unit/ops/PostgreSQL·Next build)를 수행한다.
+일반 feature PR의 verify는 정적 검사·unit/ops/PostgreSQL·Next build와 컨테이너 smoke를 수행한다.
+관리자 전체 Playwright E2E(`Admin migration integration`)는 자동 workflow job과 required verify에서 제외한다.
+일반 PR·기존 push·Promotion 모두 동일하며 `pnpm test:integration:admin` 계열 명령으로 필요 시 직접 실행한다.
+관리자 E2E 제외는 container native/readiness·간단한 화면 smoke나 아래 Promotion exact digest 검증을 생략하는 조건이 아니다.
 단, `migration_main` 대상 전체 PR diff가 일반 파일 `.md` 변경뿐이면 scope 판정과 필수 `verify`만 실행한다.
 이력 누락·빈 diff·symlink/실행 mode·MDX·코드 혼합은 전체 검증이다. Git raw diff의 삭제/추가 양쪽을
 검사해 code→md rename과 API 파일 수 제한에 의한 누락을 방지한다. workflow 자체를 path filter로 생략하지 않는다.
 Promotion은 문서만 달라도 전체 검증·후보 계약을 유지하며 이 예외로 과거 candidate를 재사용하지 않는다.
 `migration_main` merge push와 `migration_develop` push에서는 무거운 검증·image build를 반복하지 않는다.
+두 push에서는 성공한 동일 저장소 PR의 head/tree·검증 job·입력 key·미만료 artifact를 확인한 뒤
+검증용 BuildKit 캐시만 base branch에 발행할 수 있다. 캐시 누락은 직접 빌드로 복구하며
+다른 run의 cache를 verify 통과·검증 image·배포 candidate 증거로 사용하지 않는다.
+일반 CI는 같은 builder의 두 runtime image만 후속 smoke에 전달한다. 사용하지 않는 standalone tar는 별도로 생성·전송하지 않는다.
+Docker builder는 다음 변경 build에 복원하지 않는 Next 파일시스템 cache와 Turbo output archive를 쓰지 않으며,
+의존성·빌드 레이어의 BuildKit cache와 로컬 개발 cache는 유지한다.
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
 `promotion` check가 실패한다.
 

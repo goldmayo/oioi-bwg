@@ -36,3 +36,12 @@ created_at: "2026-10-21"
 
 Web 관리 화면/API/Action 제거와 image rollback 시 외부 차단은 E의 다른 concern이다.
 이 PR만으로 E 전체 완료나 실제 공개 가입 중단을 보고하지 않는다. F는 보류한다.
+
+
+## 2026-10-21 최신 통합선 반영
+
+기준 `e2631de9161dd58612706151dc9517f3fe8d8910`의 로그인 UX·캐시 축소·관리자 자동 E2E 제외와
+임시 workflow 정리를 반영했다. 가입 종료의403/no-store·service 미호출·기존 계정 보존 계약은 변경하지 않았다.
+frozen lockfile 설치는 성공했다. 최종 통합 기준과 새 CI의 head/결과는 #168 본문에서 추적한다.
+코드 병합은 VM 배포가 아니며, 실제 E 적용은 D 운영 실증·지속적인 Web 차단·안전한 previous pair 확인 뒤
+별도 Promotion으로 진행한다. 현재 VM의 가입 경로·Caddy·계정·MFA는 이번 작업에서 변경하지 않는다.

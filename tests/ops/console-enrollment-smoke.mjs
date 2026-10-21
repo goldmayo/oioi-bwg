@@ -208,9 +208,27 @@ export async function assertConsoleEnrollment(browser, origin, sql, artifacts) {
     await page.getByLabel("인증 코드").waitFor();
     assert.equal(uiPosts.length, count, "first login step makes no server request");
     await page.getByLabel("인증 코드").fill(token);
+    if (success) {
+      await page.evaluate(() => {
+        window.loginErrorShown = false;
+        const observer = new MutationObserver(() => {
+          if (document.querySelector('form [role="alert"]')?.textContent?.trim())
+            window.loginErrorShown = true;
+        });
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+        window.stopLoginObservation = () => observer.disconnect();
+      });
+    }
     await page.getByRole("button", { name: "로그인", exact: true }).click();
-    if (success) await page.waitForURL(`${origin}/admin/albums`);
-    else await page.getByText("인증 정보를 확인해주세요.", { exact: true }).waitFor();
+    if (success) {
+      await page.waitForURL(`${origin}/admin/albums`);
+      assert.equal(
+        await page.evaluate(() => window.loginErrorShown),
+        false,
+        "successful login must not flash an authentication error",
+      );
+      await page.evaluate(() => window.stopLoginObservation());
+    } else await page.getByText("인증 정보를 확인해주세요.", { exact: true }).waitFor();
   }
   async function nextOtp(secret) {
     const [row] =
