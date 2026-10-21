@@ -6,10 +6,13 @@ authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
 updated_at: "2026-10-21"
-revision: 11
+revision: 12
 ---
 
 # P06 계획 초안
+
+**Web 범위 정정:** [비로그인 공개 Web 개정](#2026-10-21-web-인증-종료-개정)이 아래 일반 로그인 유지 문구를 대체한다.
+관리·가입 종료에 더해 Web 인증 제거까지 E에서 완료하며 F로 미루지 않는다.
 
 **최신 실행 순서:** [회사 검증용 Console 공개 유지 개정](#2026-10-21-회사-검증용-console-공개-유지-개정)을 우선한다.
 Console의 지속적인 HTTPS 접속을 C에서 먼저 제공하고, www 전환·레거시 종료는 F에 남긴다.
@@ -607,3 +610,24 @@ Caddy/VM/Cloudflare/DB·기존 고정 실행물을 변경하거나 Console을 �
 별도 reviewable concern으로 검증하고, 과거 `APPROVALS.txt`·PREPARATION·인계의 30분 창이나
 `Console 공개는 F` 문구를 현재 결정으로 적용하지 않는다. 그 파일들은 당시 범위와 결과의 이력이다.
 세션이 바뀌어도 PLAN의 이 개정과 HANDOFF 상단에서 시작한다. 결과는 기존 P06-C/D/E RESULT가 소유한다.
+
+
+## 2026-10-21 Web 인증 종료 개정
+
+사용자가 Web은 회원가입·로그인 없는 공개 조회 전용으로 확정하고 회원 기능은 나중에 추가하도록 지시했다.
+초기 §4/§5/§9와 C 공개 유지 표의 일반 로그인 유지·관리/가입만 종료한다는 범위는 이 개정으로 대체한다.
+기존 실행 결과는 당시 범위의 증거로 보존한다. 기준은 헌법 §5, Auth §4.0, Domain AUTH-001이다.
+
+- E3: `/login`, Web Auth.js handler/proxy, 세션/권한 API, 계정 context와 인증 전용 연결·의존성을 제거한다.
+  공개 콘텐츠·조회 API와 Console MFA, 공통 server/contracts, 기존 계정/DB는 보존한다.
+- host의 `/login`·`/api/auth` 전체를 차단하고 callback/signout POST 예외를 제거한다.
+  기존 가입 API의 부작용 없는 거절은 유지한다. image/env rollback으로 이 경계가 풀리지 않아야 한다.
+- 새 앱은 인증 secret 없이 public 페이지·정적 자산을 제공하고 인증 endpoint는 세션 발급 없이 거절한다.
+  기존 쿠키·유효한 과거 JWT도 Web identity로 사용하지 않는다. Console 인증 계약은 회귀 검사한다.
+- 배포 전 host `SMOKE_PATHS`를 인증 URL 대신 `/ /more`로 갱신한다. 이전/새 pair 모두 공개 조회와
+  인증 거절을 확인한 뒤 같은 검증 digest로 정상 Promotion한다. 적용 결과가 없으면 E 완료로 보고하지 않는다.
+- 이전 이미지의 안전한 복구를 위해 기존 host secret mapping/필수 키와 보호된 env snapshot은 유지한다.
+  새 Web 앱은 해당 키를 읽지 않는다. Vault 값 폐기·runtime materializer 정리는 과거 이미지 지원 종료 때 다룬다.
+- F의 www 검증도 일반 로그인 대신 공개 조회·인증 거절로 바꾼다. 전체 관리자 E2E는 재도입하지 않는다.
+
+구현·실제 검사·운영 적용 여부는 [E3 결과](P06-E3-RESULT.md)가 소유한다.

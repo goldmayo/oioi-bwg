@@ -1,7 +1,7 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.15"
+version: "2.16"
 status: "active"
 authority: "constitution"
 updated_at: "2026-10-21"
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.15
+# oioi-bwg Architecture Constitution v2.16
 
 ## 1. 목적
 
@@ -154,7 +154,9 @@ P04부터 `apps/console`은 별도의 Next 프로세스인 관리자 앱이다. 
 동일한 contracts/server 소스를 소비하지만 다른 앱의 파일을 직접 import하지 않는다.
 각 앱의 FSD root와 request/session/HTTP adapter, 자동 탐색 설정은 해당 앱이 소유한다.
 P06-E부터 관리 화면·API·upload Action은 Console만 제공한다. Web의 기존 관리 진입점은 제거하며,
-일반 로그인은 /login과 기존 Auth.js 경로로 유지한다. Console의 인증은 04 §4.1을 따른다.
+Web은 회원가입·로그인 없는 공개 조회 전용이다. `/login`·Auth.js handler·세션/권한 API와
+Web 인증 adapter를 두지 않는다. 인증·관리는 Console만 제공하며 04 §4.1을 따른다.
+이전 일반 로그인 유지 전제는 사용자 범위 정정으로 폐기한다. 향후 회원 기능은 별도 요구로 추가한다.
 E 코드의 운영 적용은 Console 운영 검증 완료 후 별도 Promotion으로 수행한다.
 공용 UI/domain/api-client package를 선생성하지 않고 실제 이관에 필요한 UI만 앱 내부에 둔다.
 

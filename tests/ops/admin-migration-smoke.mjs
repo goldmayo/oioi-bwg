@@ -61,7 +61,7 @@ async function start(app, port, append = false, enrollmentEnabled = false) {
       DATABASE_URL: process.env.DATABASE_URL,
       NEXT_PUBLIC_APP_ENV: "staging",
       ...(app === "web"
-        ? { AUTH_SECRET: "p04-web-private-browser-fixture-secret", AUTH_TRUST_HOST: "true" }
+        ? {}
         : {
             CONSOLE_AUTH_SECRET: "p04-console-private-browser-fixture-secret",
             CONSOLE_ORIGIN: origin,
@@ -483,8 +483,11 @@ try {
     const session = from.cookies.find((cookie) => cookie.name.includes("session-token"));
     await context.addCookies([{ ...session, name: target, domain: "127.0.0.1" }]);
     if (to === origins.web) {
-      const session = await (await context.request.get(`${to}/api/auth/session`)).json();
-      assert.ok(!session?.user, "Console identity must not authenticate Web");
+      assert.equal(
+        (await context.request.get(`${to}/api/auth/session`)).status(),
+        404,
+        "Web has no session endpoint even with a Console cookie",
+      );
     } else {
       assert.equal(
         (await context.request.get(`${to}/api/admin/songs`)).status(),
@@ -507,7 +510,7 @@ try {
     "role demotion invalidates Console identity on the next request",
   );
   console.log(
-    "Private admin migration smoke passed: Console CRUD and revocation, Web admin retirement and ordinary login/read",
+    "Private admin migration smoke passed: Console CRUD and revocation, Web auth/admin retirement and public reads",
   );
   assertConsoleLogsSafe(artifacts, enrollmentValues);
 } catch (error) {
