@@ -1,7 +1,7 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.6"
+version: "1.7"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-21"
@@ -21,7 +21,7 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.6
+# oioi-bwg Authentication / Authorization Architecture v1.7
 
 ## 1. 목적
 
@@ -186,6 +186,15 @@ CASL rules
 이 값들은 변경 가능하며 세션 lifetime과 authorization lifetime을 결합시키기 때문이다.
 
 ---
+
+## 4.0. 공개 Web의 인증 범위
+
+P06-E부터 Web은 비로그인 공개 조회만 제공한다. 로그인·가입 화면, Auth.js handler,
+세션/권한 API와 Web 요청의 계정 조회를 제거한다. 기존 Web 쿠키가 있어도 identity로 해석하지 않는다.
+인증이 필요한 관리 기능은 Console의 독립 세션과 MFA로만 제공한다. Account·credential·MFA 데이터와
+공통 domain service는 보존하며 일반 회원 기능은 별도 요구가 생길 때 다시 설계·추가한다.
+아래 인증/인가 계약은 Console 및 향후 승인된 인증 consumer에 적용하며 Web 인증 구현을 요구하지 않는다.
+이전 이미지 rollback에서도 Web 로그인·인증 경로를 host에서 차단한다. 운영 절차는 P06 계획을 따른다.
 
 ## 4.1. Console의 단계적 전환
 

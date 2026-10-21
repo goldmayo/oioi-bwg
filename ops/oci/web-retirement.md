@@ -1,8 +1,9 @@
-# Web 관리·가입 종료의 배포와 복구 경계
+# Web 관리·가입·인증 종료의 배포와 복구 경계
 
 이 절차는 [P06 계획의 안전한 rollback](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#web-관리-종료-이후의-안전한-rollback)을 구현한다.
 C/D의 실제 Console 운영 검증 완료 후 E Promotion에 적용한다. 실제 host 설치와 이전/새 pair 검증 결과는
-[P06-E2 결과](../../docs/migration/implementation/console-guide-editor/P06-E2-RESULT.md)가 소유한다.
+[P06-E2 결과](../../docs/migration/implementation/console-guide-editor/P06-E2-RESULT.md)가 기존 관리/가입 종료를,
+[E3 결과](../../docs/migration/implementation/console-guide-editor/P06-E3-RESULT.md)가 인증 종료 변경을 소유한다.
 
 ## 적용 전
 
@@ -32,22 +33,24 @@ HTTP hostname도 같은 차단을 적용하거나 HTTPS로만 redirect하는지 
 
 ## E 적용·rollback 공통 불변 조건
 
-- Web 관리·가입 URL은 403이다. 새 Web에 직접 도달한 제거된 관리 route는 404다.
+- Web 관리·가입·`/login`·`/api/auth` 전체 URL은 host에서 403이다.
+  새 Web에 직접 도달한 제거된 관리/로그인/인증 route는 404이며, 가입 API 세 개의 POST는 기존 403을 유지한다.
 - 모든 `Next-Action` 요청은 URL과 관계없이 host에서 403이다.
   새 Next16.4.1 Web에 직접 보낸 이전의 정상 형식 Action ID는409와
   `x-nextjs-action-not-found: 1`·`Server Action unavailable.`로 거절한다. 이를 관리 route의404와 구분한다.
   헤더 없는 multipart `$ACTION_ID_...` form도 GET/HEAD 외 요청 차단으로 거부한다.
-- 현재 Web에서 허용하는 쓰기는 Auth.js의 `POST /api/auth/callback/credentials`와
-  `POST /api/auth/signout` 두 경로뿐이다. 이 경로의 인증/CSRF 검증은 Auth.js가 유지한다.
-  새 Web 로그인 UI는 Auth.js HTTP 흐름을 사용하므로 Server Action 허용 예외가 필요하지 않다.
-- 조회·정적 파일·Auth.js CSRF/session GET은 유지한다.
-  향후 Web 사용자 mutation 추가 시 이 허용 목록을 같은 변경에서 명시적으로 검토해야 한다.
-- 과거 이미지에서도 외부에서 관리 API/Action과 가입 POST가 upstream에 도달하지 않아야 한다.
+- Web은 GET/HEAD 외 모든 요청을 거절한다. 기존 callback/signout POST 예외는 제거한다.
+- 공개 조회·정적 파일·health/readiness GET/HEAD는 유지한다. Auth.js CSRF/session 조회는 차단한다.
+  향후 Web 회원 기능을 추가할 때 인증·쓰기 정책을 별도 요구로 다시 검토한다.
+- 과거 이미지에서도 외부에서 관리 API/Action과 가입·인증 요청이 upstream에 도달하지 않아야 한다.
   이미지/env rollback이 이 host 파일 또는 Caddy 접근 제한을 복구본으로 덮어쓰면 안 된다.
 
 E 배포 전에 위 조건을 실제 hostname에서 확인하고, 새 candidate와 안전한 previous pair 각각에서
-일반 Credentials 로그인/로그아웃·공개 조회 및 차단 요청을 검증한다.
-과거 Web에는 /login 화면이 없을 수 있으므로 복구 시 일반 로그인은 기존 Auth.js /api/auth/signin으로 확인한다.
+공개 조회와 로그인/가입/인증 요청 거절을 검증한다. 기존 쿠키가 있는 요청도 동일하게 거절해야 한다.
+보호된 `deploy.conf`의 `SMOKE_PATHS`를 `/ /more`로 갱신한다. 기존 `/api/auth/session` 검사는
+새 이미지에서 404이므로 Promotion 전에 교체하고, 이전 pair에도 공개 조회 검사가 통과하는지 확인한다.
+기존 host secret mapping/필수 키·protected env snapshot은 이전 이미지 복구 호환성을 위해 유지한다.
+새 Web 앱은 인증 키를 사용하지 않으며 Vault 폐기·materializer 정리는 이번 배포에 섞지 않는다.
 차단 경계가 실제 검증되지 않은 previous pair는 E 이후 자동 rollback 대상으로 승인하지 않는다.
 경계 hash/권한/동작이 달라졌거나 안전한 pair가 없으면 maintenance를 유지하고 수동 복구한다.
 
@@ -58,7 +61,7 @@ E 배포 전에 위 조건을 실제 hostname에서 확인하고, 새 candidate�
 host network를 붙여 같은 localhost라고 가정하지 않는다. 동적 임시 포트와 가짜 이전 upstream을 사용하고
 종료 시 프로세스·생성한 container·파일을 정리한다. VM 또는 운영 DB에 연결하지 않는다.
 
-이 검사는 관리/가입/임의 Action 요청이 이전 upstream에 도달하지 않음과 일반 인증/조회 통과를 증명한다.
-`test:integration:admin`은 새 Web의 일반 로그인·실제 이전 upload Action ID 거부와
+이 검사는 관리/가입/임의 Action 요청이 이전 upstream에 도달하지 않음과 공개 조회 통과를 증명한다.
+`test:integration:admin`은 새 Web의 인증 거절·유효한 과거 Web JWT 비사용·실제 이전 upload Action ID 거부와
 Console CRUD·회수·공개 Web 조회를 격리 DB/브라우저에서 검증한다.
 실제 host 설치·공개 hostname·paired rollback 실증은 별도 운영 증거가 필요하다.

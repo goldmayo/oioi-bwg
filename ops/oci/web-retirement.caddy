@@ -1,14 +1,10 @@
 # Import inside every Web hostname's route, before reverse_proxy.
 # Keep this host-owned guard in place across all image/env rollback.
-@retired_paths path /admin /admin/* /admin-login /admin-login/* /api/admin /api/admin/* /signup /signup/* /api/auth/signup /api/auth/signup/*
+@retired_paths path /admin /admin/* /admin-login /admin-login/* /api/admin /api/admin/* /signup /signup/* /login /login/* /api/auth /api/auth/*
 respond @retired_paths 403
 @web_action header Next-Action *
 respond @web_action 403
 @unsupported_write {
     not method GET HEAD
-    not {
-        method POST
-        path /api/auth/callback/credentials /api/auth/signout
-    }
 }
 respond @unsupported_write 403
