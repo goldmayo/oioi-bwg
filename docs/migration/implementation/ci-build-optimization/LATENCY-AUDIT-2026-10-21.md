@@ -144,3 +144,24 @@ Terraform 검증이 한 군데 남고 FSD가 두 앱 lint에 포함되는 것도
 
 이 항목들의 단축 효과를 합산해 목표 시간으로 제시하지 않는다. 각 변경 후 최장 직렬 경로와
 cold cache·다른 PR·동일 PR 재실행을 구분해 측정해야 한다.
+
+## 통합 브랜치 캐시 발행 구현
+
+후속 기준은 #178의 squash `b9044601a934ba61dd31f1437f1bad517ceb3168`이다.
+[#178 실제 CI](https://github.com/goldmayo/oioi-bwg/actions/runs/39553267013)는 8분 7초에 통과했다.
+ops step은 24초, app build는 246초였다. 관리자 전체 E2E job은 생성되지 않았다.
+ops 개선만으로 전체 CI의 빌드·컨테이너 검증 병목이 해결된 것은 아니다.
+
+[계획의 2026-10-21 보완](PLAN.md)에 따라 캐시 전송 artifact와 별도 push 발행 workflow를 추가했다.
+성공한 같은 저장소 PR의 source/tree와 입력 key를 확인하고, migration_main 또는 migration_develop
+ref에서 actions/cache에 저장한다. 검증 job이나 앱 build를 병합 후 다시 실행하지 않는다.
+기존 검증 image/standalone은 같은 run 안에서만 전달한다. cache 자료의 보관은 1일이며
+병합이 늦어 만료됐으면 발행을 생략하고 다음 PR에서 직접 빌드한다.
+
+로컬 회귀 26건은 정상 발행 두 경로와 다른 source/tree/저장소/trigger, 실패·미완료 실행,
+문서 전용 skipped build, 다른 입력 key, 누락·중복·만료 artifact 거절을 통과했다.
+`pnpm verify`도 통과했다. root 타입·lint·harness 18건·ops 258건·format을 실행했고,
+앱/package 12 task와 두 앱 build는 동일 입력의 기존 Turbo cache를 재사용했다.
+두 workflow YAML 파싱과 `git diff --check`를 확인했다.
+base cache 생성과 별개 PR의 실제 적중·시간 측정은 아직 미실시이며 병합 후 확인한다.
+ARM64 후보의 별도 GHA cache는 이번 amd64 발행 경로의 검증 대상이 아니다.

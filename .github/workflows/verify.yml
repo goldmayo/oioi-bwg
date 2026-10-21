@@ -165,9 +165,7 @@ jobs:
           cleanup: false # The GitHub-hosted VM is discarded after this job.
       - name: Identify verification cache inputs
         id: cache-key
-        run: |
-          source_digest=$(git ls-files -s -- . ':(exclude)docs/**' | sha256sum | cut -d ' ' -f 1)
-          echo "key=${RUNNER_OS}-verify-amd64-v2-${source_digest}" >> "${GITHUB_OUTPUT}"
+        run: node scripts/verification-cache.mjs >> "${GITHUB_OUTPUT}"
       - name: Restore verification layer cache
         id: build-cache
         uses: actions/cache/restore@v4
@@ -246,6 +244,19 @@ jobs:
         with:
           path: ${{ runner.temp }}/buildx-cache
           key: ${{ steps.build-cache.outputs.cache-primary-key }}
+      - name: Export cache for publication after merge
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          contains(fromJSON('["migration_main", "migration_develop"]'), github.base_ref)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-cache-${{ steps.cache-key.outputs.key }}
+          path: ${{ runner.temp }}/buildx-cache
+          overwrite: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
 
   build:
     name: build
