@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 26
+revision: 27
 ---
 
 # P06-C 구현 결과
 
-**최신 상태:** [보안 패치의 두 앱 배포](P06-NEXT-SECURITY-RESULT.md) 후, 회사 브라우저용 창4를 root 설치·사전 검사·개방했다. [창4 실행 결과](#2026-10-21-창4-설치개방과-실제-ingress-검증)에 실제 자동 검사13항목과 인증 쿠키 속성 성공을 기록했다. 사용자의 HTTPS MFA 로그인·세션 쿠키·로그아웃과 최종 원복 확인은 진행 중이며 C는 미완료다. 창2는 종료 이력, 창3은 이전 배포 기준이라 실행하지 않는다. 두 회선 실험은 제외·미실시다.
+**최신 상태:** 보안 패치 후 회사 브라우저용 창4에서 실제 전달 IP·위조 헤더 방어 등 ingress13항목과 CSRF/callback 쿠키 속성을 확인했다. [30분 자동 종료·원복](#2026-10-21-창4-자동-종료원복과-남은-인증-검증)도 root 결과·독립 SSH·외부 요청으로 확인했으며 Console은 다시 외부403이다. 사용자의 실제 HTTPS MFA 로그인·세션 쿠키·로그아웃 결과는 아직 확인되지 않아 C는 미완료다. 창2/3/4를 재실행하지 않는다. 두 회선 실험은 제외·미실시다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인 / 최소 HTTPS 창2 전환·개방 후 helper 중단·exit20 원복 완료. C 전체 완료가 아니다. 아래 미실행 표시는 각 기록 시점의 이력이다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
@@ -517,5 +517,33 @@ Caddy403/no-store까지 도달해 변경된 경계를 확인했다. 현재 닫�
 
 근거는 창4의 `edge-after-rule.json`, `transfer-proof.json`, `root-install-execution.json`,
 `root-start-execution.json`, `ingress-proof.json`, `anonymous-cookie-proof.json`이다.
-현재 인간 브라우저 검증과 종료/원복 증거는 아직 미완료이며 아래 후속 기록이 있을 때만 상태를 갱신한다.
+개방 직후에는 인간 브라우저 검증과 종료/원복 증거가 미완료였다. 이후 상태는 아래 후속 기록을 따른다.
 D/E 보안 패치 통합은 기존 PR #167/#168/#169에서 진행하며 별도 배포나 F 전환을 수행하지 않았다.
+
+
+## 2026-10-21 창4 자동 종료·원복과 남은 인증 검증
+
+창4는 11:37 KST에 개방했고 systemd의 30분 RuntimeMaxSec에 따라 12:07:12 KST에 종료됐다.
+보호된 journal의 `runtime_time_limit`·`systemd_timeout` 이벤트를 READ ONLY로 확인했다.
+controller의 실제 결과는 `exitCode=20`, `result=failed_or_interrupted`이며, 타이머의 종료 신호를 받은 뒤
+원복을 마친 결과다. 인증 성공을 뜻하는 exit0/finished로 기록하지 않는다. 종료 unit은 not-found다.
+
+root 원복 검사와 별도의 SSH/외부 요청에서 다음을 대조했다.
+
+- 원래 Caddy 설정·PID·materializer, Console HTTP loopback Origin과 configHash, 같은 보안 이미지 복원.
+- Web/DB의 ID·시작 시각·이미지·health 보존, 두 앱 health/readiness와 preview 정상 응답.
+- Console/preview 인증서 보존, current/previous pair 링크·보호 파일 및 pending 부재 확인.
+- Console 일반 요청과 이전 진단 token 요청 모두 정확한403/no-store, 진단 IP 헤더 제거.
+
+원복으로 Console 컨테이너 ID는 바뀌었다. 새 작업은 `vm-after-close.json`의 현재 기준을 대조하며
+창4를 다시 start하거나 기존 marker/백업을 초기화하지 않는다. 원복 실패(exit21)는 발생하지 않았다.
+근거는 ignored 창4의 `root-status-execution.json`, `systemd-stop-proof.json`, `vm-after-close.json`이다.
+일반 계정의 journal 조회에는 종료 이벤트가 보이지 않아 sudo 읽기 조회로 확인했으며 설정을 바꾸지 않았다.
+
+사용자는 회사 브라우저/인증 앱 사용 가능과 Cloudflare 규칙 적용을 확인했지만, 이번 창에서의
+실제 로그인·관리 목록·세션 쿠키/preview 격리·로그아웃 결과는 아직 회신하지 않았다.
+따라서 ingress13항목과 익명 CSRF/callback 쿠키 검증만 완료이고 실제 인증 검증은 미확인이다.
+사용자 확인을 받거나 필요할 때 새 현재 상태 기준의 창을 준비한다. C 전체 완료·#166 병합으로 확대하지 않는다.
+두 회선 전환·IP 변경 후 세션 실험·한도 소진 실험은 계속 제외·미실시이며 IP 제한 구현은 유지한다.
+D/E의 보안 base 통합과 최종 검증은 기존 #167/#168/#169에서 추적한다. D 운영 설치/실물 복구,
+E host 차단/Promotion과 F 전환은 이번 창에서 수행하지 않았다.

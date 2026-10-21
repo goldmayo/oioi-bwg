@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-21"
-revision: 57
+revision: 58
 ---
 
 # P06 작업 인계
@@ -12,7 +12,7 @@ revision: 57
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- 현재 C 진입점: **보안 배포 후 창4 개방 / 실제 ingress13항목 성공 / 사용자 로그인·쿠키·로그아웃 및 최종 원복 확인 진행 중**. [실행 결과](P06-C-RESULT.md#2026-10-21-창4-설치개방과-실제-ingress-검증)를 따른다. CF 수정 적용을 확인했고 일반 브라우저 전용 헤더는 없다. 11:37 KST 개방 후 최대30분 자동 원복이다. 원복 성공 전 작업을 완료로 보고하지 않는다. 창2/3은 재실행하지 않으며 두 회선 실험 제외·F 보류를 유지한다. 아래 설명은 각 기록 시점의 이력이다.
+- 현재 C 진입점: **창4 ingress13항목·CSRF/callback 쿠키 확인 / 30분 자동 종료·원복 확인 / 실제 사용자 로그인 결과 미확인**. [종료 결과와 남은 범위](P06-C-RESULT.md#2026-10-21-창4-자동-종료원복과-남은-인증-검증)를 따른다. Console은 외부403이며 Web/DB·보안 이미지·인증서를 보존했다. C는 미완료이고 기존 창2/3/4를 재실행하지 않는다. 사용자 로그인 결과 확인 후 필요한 다음 창은 현재 baseline에서 준비한다. 두 회선 실험 제외·F 보류를 유지한다. 아래 설명은 각 기록 시점의 이력이다.
   #165 merge `ed19b6d` 후 두 merge 허용 설정을 원복했다. [#164](https://github.com/goldmayo/oioi-bwg/pull/164)는 승인된 고정 후보를 `64dca4c`로 squash 병합했고 정상 receipt가 발행됐다. #166은 Draft·미병합이다.
   검증 source/CI·후보 및 사용자의 Cloudflare 사전 점검 사실은 [P06-C RESULT](P06-C-RESULT.md)가 소유한다.
   이미 확인된 Cloudflare 항목을 재조사하지 않는다. 남은 서버 조건과 인증서 단계 승인 범위는 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)를 따른다.
@@ -22,6 +22,13 @@ revision: 57
 - 새 재시도1은 기존 실패 controller를 재실행하지 않고 별도 승인된 고정 archive148c1b87.../launcher로 한 번 실행해 인증서를 확보했다. source/backup/phase passed·exit0, 복구 미실행이며 외부/SSH 읽기로 신뢰 인증서·정확한 HTTPS403과 기존 서비스 보존을 확인했다. [실제 성공 결과](P06-C-RESULT.md#2026-10-20-승인된-인증서-재시도1-성공과-서비스-보존), [고정 범위/명령 이력](P06-PREPARATION.md#2026-10-20-인증서-재시도1-실행복구-승인안)을 따른다. 새/기존 보호 백업을 보존하고 수동 apply/restore는 반복하지 않는다. HTTPS Origin/env·임시 인증 접근·추가 Cloudflare 변경·일반 공개·#166 병합은 미실행이며 다음 창을 시작하지 않는다.
 - 제한 HTTPS archive6dc1453a...는 자격 조회 exit2에서 중단했다. VM 계정0을 직접 확인한 뒤 승인된 최초 운영자 launcher를 한 번 실행했으나 메일 수신/코드 검증 후 계정 단계 exit1로 중단했다. 직접 읽기에서 계정0·미소모 VERIFIED·등록 unit 부재·기존 서비스/closed403 보존을 확인했다. 비밀번호 오입력으로 원인을 단정하지 않는다. 사용자의 재시도 지시로 기존 실행물을 반복하지 않는 새 재개1을 준비했다. [최신 실행 결과/검증](P06-C-RESULT.md#2026-10-21-최초-운영자-메일인증-성공과-가입-중단재개1), [최소 재개·중단 범위](P06-PREPARATION.md#2026-10-21-인증된-가입의-재개1)를 따른다. MFA/HTTPS 창은 아직 미실행이며 등록 후 새 Console ID 기준으로 HTTPS 실행물을 다시 고정·별도 승인받는다. 인증서/갱신·ACME 예외·정상 snapshot/Web/DB·#166 Draft를 유지한다.
 - 선행 로그인 성공은 [권한 복구1·SSH 로그인 결과](P06-C-RESULT.md#2026-10-21-권한-복구1실제-로그인-검증-성공과-https-창2-준비)를 유지한다. 이후 최소 창2는 사용자 승인·sudo 위임으로 실행·원복했다. [새 준비](P06-C-RESULT.md#2026-10-21-helper-보완과-최소-https-창3-로컬-준비)는 error1000 기대값·실패 단계 기록·복원 후 baseline을 보완했다. 당시 다음 작업은 창3 실행이었으나 보안 패치 배포 후에는 위 창4 준비로 대체한다. #166 Draft·미병합을 유지한다.
+- D/E 보안 base 갱신: 최신 main f675033을 기존 브랜치에 반영했고 세 PR의 최종 필수 CI가 모두 성공했다.
+  [D #167](https://github.com/goldmayo/oioi-bwg/pull/167) head2c7bc67·Verify39533783736 attempt2,
+  [E1 #168](https://github.com/goldmayo/oioi-bwg/pull/168) head452a705·Verify39534068664,
+  [E2 #169](https://github.com/goldmayo/oioi-bwg/pull/169) head83c09fa·Verify39535876409다.
+  E2의 Next16.4.1 이전 Action 응답409 검증 보완과 로컬/원격 실제 관리 회귀는 해당 PR의 RESULT를 따른다.
+  D 운영 CLI 설치·실물 MFA 회수/재등록/복구, E host 차단·previous pair 검증·Promotion은 남았다.
+  세 PR은 Draft·미병합이며 C의 실제 사용자 결과를 성공으로 추정하지 않는다.
 - 후속 보류: #143/#161/#165에서 반복된 squash Promotion 조상 연결의 브랜치 전략을 C 이후 별도 검토한다.
   현재 C의 차단 이슈로 취급하지 않고 #164 후보·파이프라인·브랜치 정책을 이번 작업에서 변경하지 않는다.
 - B 종료 시 진입점: **P06-B 완료 / 첫 정상 pair 유지 / preview 원복 완료 / 다음 단계 C**.
