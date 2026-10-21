@@ -2,20 +2,20 @@
 title: "P06-C Console HTTPS 및 인증 요청 보안 경계 구현 결과"
 kind: migration-result
 status: in-progress
-source_commit: 3a98e8ddf4e8e61e71b35d83fc1aa93ba9d16b92
+source_commit: 07639caac10e5c826e14fd415372e841c6c2d52f
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 31
+revision: 32
 ---
 
 # P06-C 구현 결과
 
-**최신 상태:** [정상 HTTPS 배포·지속 공개](#2026-10-21-정상-https-배포와-console-지속-공개)를 완료했다. 회사 브라우저의 [Console 로그인](https://console.oioibawige.com/admin-login)을 자동 종료 없이 유지한다. 실제 IP 전달·위조 헤더 방어·직접 origin 차단·등록 거절과 익명 쿠키 검사는 통과했다. 사용자가 후속 실제 로그인 성공을 확인했다. 성공 직전 오류 표시와 인증 코드 입력 중 오류 상태는 아래 [로그인 UX 보완](#2026-10-21-로그인-성공-전환과-인증-코드-검증-시점-보완)에서 추적한다. 관리 조회·세션 쿠키/preview 격리·로그아웃은 별도 미확인이므로 C 전체는 미완료다. 국가 보호 규칙은 변경하지 않았다. 두 회선 실험은 제외·미실시이며 D/E/F도 별도 미완료다. 아래 창2/3/4의 개방·종료 표시는 당시 이력이다.
+**최신 상태:** [정상 HTTPS 배포·지속 공개](#2026-10-21-정상-https-배포와-console-지속-공개)를 완료했다. 회사 브라우저의 [Console 로그인](https://console.oioibawige.com/admin-login)을 자동 종료 없이 유지한다. 실제 IP 전달·위조 헤더 방어·직접 origin 차단·등록 거절과 익명 쿠키 검사는 통과했다. 사용자가 후속 실제 로그인 성공을 확인했다. 성공 직전 오류 표시와 인증 코드 입력 중 오류 상태를 수정하고 [정상 Promotion 배포](#2026-10-21-로그인-ux-정상-promotion-배포-완료)까지 완료했다. 새 UI의 사용자 재확인은 별도다. 관리 조회·세션 쿠키/preview 격리·로그아웃은 별도 미확인이므로 C 전체는 미완료다. 국가 보호 규칙은 변경하지 않았다. 두 회선 실험은 제외·미실시이며 D/E/F도 별도 미완료다. 아래 창2/3/4의 개방·종료 표시는 당시 이력이다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인 / 최소 HTTPS 창2 전환·개방 후 helper 중단·exit20 원복 완료. C 전체 완료가 아니다. 아래 미실행 표시는 각 기록 시점의 이력이다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
 구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 배포 호스트 보완 `16c317d`, 로컬 HTTPS/DB 검증 확장 `2a274cd`를 거쳤다.
-metadata의 source는 최신 정상 HTTPS Promotion #175의 squash merge다. 아래 초기 HTTP 배포 #164와 ARM64 후보 source·로컬 검증은 각 실행 시점의 이력으로 구분한다.
+metadata의 source는 최신 로그인 UX Promotion #182의 squash merge다. #175는 최초 정상 HTTPS 배포 이력이다. 아래 초기 HTTP 배포 #164와 ARM64 후보 source·로컬 검증은 각 실행 시점의 이력으로 구분한다.
 검토 PR은 [#163](https://github.com/goldmayo/oioi-bwg/pull/163)이다.
 [P06-PLAN §6](P06-PLAN.md#6-https등록운영자-경계), active [Auth/Authz](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md),
 [B 완료 결과](P06-B2-3-RESULT.md#2026-10-18-b-운영-실증-완료와-최종-상태)를 따른다.
@@ -716,5 +716,41 @@ Impeccable `detect --json`은 변경 UI/model 두 파일에서 발견 사항0개
   테스트 TLS 인증서는 새 로컬 fixture이며 운영 인증서/키는 사용하지 않았다. 모든 테스트 앱/Caddy를 종료했다.
 - 추가 변경한 ingress 테스트의 ESLint/Prettier, C 결과 문서 상대 링크/anchor26개와 `git diff --check`를 통과했다.
 
-실제 VM에는 아직 이 수정이 배포되지 않았다. 현재 공개/계정/MFA 상태는 정상 #175 배포 그대로다.
+이 로컬 검증 시점에는 VM 미배포였으며 공개/계정/MFA는 #175 상태였다. 이후 실제 배포는 아래 후속 기록을 따른다.
 이전 자동 시간/새 코드 요청은 로그인 실패 당시 진단 질문이며 로그인 성공 후 재시도를 요구하는 조건이 아니다.
+
+
+## 2026-10-21 로그인 UX 정상 Promotion 배포 완료
+
+[UX #177](https://github.com/goldmayo/oioi-bwg/pull/177)의 수정은
+[Promotion #182](https://github.com/goldmayo/oioi-bwg/pull/182)로 배포됐다.
+[공개 유지 계획](P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)과 active 배포 runbook §21을 따른다.
+#180에 한정해 승인된 파일 변경 없는 이력 연결 merge60ad66ed6055a74c5c5cef1178b210d696f47c11 뒤
+저장소 merge 설정과 main ruleset을 원복·원본 대조했다. 이후 #182는 정상 squash 경로다.
+
+- source: `9e09077ac4949b4b105582a1c3c759a3f9515e48`, source/merge tree: `2c0b0444fd67749fd1c6c804250472d1478f72ae`.
+- squash: `07639caac10e5c826e14fd415372e841c6c2d52f`.
+- [Verify39559787686](https://github.com/goldmayo/oioi-bwg/actions/runs/39559787686) 성공, candidate artifact12327049503.
+- [Deploy39561479091](https://github.com/goldmayo/oioi-bwg/actions/runs/39561479091) 성공, receipt artifact12328235954.
+- release: `fc0724f78cde54ac4096b90951a104e45f2bc27792564cb3bf88e4c76b38b2f8`.
+- Web digest: `sha256:2c431470dfb5deab61b284582ae7b1e02983bee0c7f439cdee41acdacf416159`.
+- Console digest: `sha256:cb155a1b21c016963aa78d692014a3377bea34cf15b20d48218eb9537966b571`.
+
+두 이미지의 build source는 위 source다. candidate/receipt의 run·attempt·artifact·merge/source/tree·release와
+성공한 원래 검증을 canonical `validateBaseline`으로 대조했다. 2026-10-21T07:32Z의 배포 후 SSH 읽기에서
+실행 중 두 image/revision 일치·Next16.4.1/sharp0.35.5/vips8.18.7·healthy·health/readiness200을 확인했다.
+PostgreSQL 컨테이너 ID/시작 시각/health와 Caddy config hash는 배포 전후 같고 preview도200이다.
+Console HTTPS Origin·등록 비활성 상태를 유지하며 계정/MFA를 초기화하지 않았다.
+
+국내 작업 PC의 일반 HTTPS 요청에서 로그인 페이지200, HTML Accept의 페이지 또는 기존 Cloudflare challenge,
+익명 관리 API 거절(추가 challenge 없음), 새 CSRF 값/no-store/비캐시, 익명 CSRF·callback 쿠키의
+Secure/HttpOnly/SameSite=Lax/host-only/Path=/, 익명 session null/no-store와 진단 IP 헤더 부재를 확인했다.
+기존 실제 IP·위조 헤더 검증은 앞선 지속 공개 실증의 증거이고 이번에 다시 실행한 것으로 기록하지 않는다.
+
+재현 도구와 값 없는 결과는 ignored `.local/p06-login-ux/promotion/`의
+verify-deployment-receipt.mjs/deployment-verified.json, observe-vm.py/vm-after.json,
+public-http.mjs/public-browser-proof.json에 보존했다. 쿠키·OTP·비밀번호·DB 값은 기록하지 않았다.
+관리자 전체 E2E는 사용자 결정으로 자동 CI에서 제외됐으며 이번 배포 후 사용자 로그인을 대신 실행하지 않았다.
+사용자 로그인 성공 보고는 수정 전 공개 pair의 결과다. 새 UI 사용자 확인·관리 조회·인증 세션 쿠키/preview 격리·
+로그아웃은 미확인이므로 C 전체는 미완료다. 두 회선 실험은 제외·미실시, D/E/F의 보류 범위도 유지한다.
+Console 공개에는 자동 종료가 없으며 Cloudflare 보호 규칙을 변경하지 않았다.

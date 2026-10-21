@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-21"
-revision: 62
+revision: 63
 ---
 
 # P06 작업 인계
@@ -12,15 +12,15 @@ revision: 62
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- **현재 상태: 정상 HTTPS 배포 완료 / Console 공개 유지 / 실제 인증 확인 대기.**
-  [최신 C 실행 결과](P06-C-RESULT.md#2026-10-21-정상-https-배포와-console-지속-공개)가 source/digest/receipt와 검증 증거를 소유한다.
-  #166/#173/#174/#175는 병합 완료이며 #174의 한시 merge-method 설정은 원복했다.
+- **현재 상태: 로그인 UX 정상 Promotion #182 배포 완료 / Console 공개 유지 / 인증 후속 확인 대기.**
+  [최신 C 실행 결과](P06-C-RESULT.md#2026-10-21-로그인-ux-정상-promotion-배포-완료)가 source/digest/receipt와 검증 증거를 소유한다.
+  #166/#173/#174/#175/#177/#180/#182는 병합 완료이며 #174/#180의 한시 merge-method 설정은 각각 원복했다.
   회사 브라우저는 [Console 로그인](https://console.oioibawige.com/admin-login)에서 특수 헤더 없이 접속한다.
   자동 종료·사용자 회신 지연/채팅 종료 시 원복은 없다. 국가 보호 규칙은 변경하지 않았다.
 - 사용자는 읽기 진단 뒤 실제 로그인 성공을 확인했다. 계정/MFA 초기화는 하지 않았다.
-  다음은 성공 직전 오류 표시와 필드 포커스 오류 상태의 별도 UX 수정이다. 관리 조회·세션 쿠키/preview 격리·로그아웃도 미확인이다.
+  성공 직전 오류와 OTP 첫 입력 오류는 수정·배포됐다. 새 UI의 사용자 재확인·관리 조회·세션 쿠키/preview 격리·로그아웃은 미확인이다.
   D reset은 사용자의 실물 인증기와 SSH loopback 준비 전 실행하지 않는다. D 완료 뒤 E를 별도 Promotion하고 F는 보류한다.
-  새 실행은 #175 HTTPS pair를 기준으로 대조한다. HTTP previous pair 복구 시에는 공개를 닫아야 한다.
+  새 실행은 #182 HTTPS pair와 실제 receipt를 기준으로 대조한다. 이전 pair도 HTTPS인 #175다. 더 오래된 HTTP pair로 복구할 때는 공개를 닫아야 한다.
   기존 창2/3/4의 start/marker/30분 종료 경로를 재사용하지 않는다. 두 회선 실험은 제외·미실시다.
 
 아래는 이전 진행 이력이며 최신 실행 지시와 구분한다.
