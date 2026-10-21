@@ -29,12 +29,16 @@ const browser = await chromium.launch();
 try {
   const page = await browser.newPage();
   const errors = [];
+  const rateLimitAlert = page.getByRole("alert").filter({ hasText: "요청 횟수를 초과했습니다." });
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(new URL("/admin", origin).href);
   await page.waitForURL(new URL("/admin-login", origin).href);
   await page.getByRole("button", { name: "다음", exact: true }).waitFor();
   await expect(page.getByLabel("Email")).toHaveCount(1);
   await expect(page.getByLabel("Password")).toHaveCount(1);
+  await expect(rateLimitAlert).toHaveCount(0);
+  await page.goto(new URL("/admin-login?code=rate_limited", origin).href);
+  await expect(rateLimitAlert).toHaveText("요청 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요.");
   const posts = [];
   page.on("request", (request) => {
     if (request.method() === "POST") posts.push(request.url());
@@ -43,6 +47,7 @@ try {
   await page.getByLabel("Password").fill("Standalone-fixture-1!");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByLabel("인증 코드").waitFor();
+  await expect(rateLimitAlert).toHaveCount(0);
   await page.getByRole("button", { name: "로그인", exact: true }).waitFor();
   assert.equal(posts.length, 0, "first step does not authenticate or call an enrollment endpoint");
   assert.ok(
