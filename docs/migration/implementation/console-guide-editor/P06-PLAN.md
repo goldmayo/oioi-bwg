@@ -6,7 +6,7 @@ authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
 updated_at: "2026-10-21"
-revision: 11
+revision: 12
 ---
 
 # P06 계획 초안
@@ -607,3 +607,13 @@ Caddy/VM/Cloudflare/DB·기존 고정 실행물을 변경하거나 Console을 �
 별도 reviewable concern으로 검증하고, 과거 `APPROVALS.txt`·PREPARATION·인계의 30분 창이나
 `Console 공개는 F` 문구를 현재 결정으로 적용하지 않는다. 그 파일들은 당시 범위와 결과의 이력이다.
 세션이 바뀌어도 PLAN의 이 개정과 HANDOFF 상단에서 시작한다. 결과는 기존 P06-C/D/E RESULT가 소유한다.
+
+
+## 2026-10-21 F 이후 G 계정 관리 계획 추가
+
+사용자 요청으로 F의 운영 전환 완료 뒤 [P06-G 계정 관리](P06-G-PLAN.md)를 후속 기능으로 계획한다.
+계정 조회·관리자 초대/수락·HTTPS MFA 등록과 복구·권한/상태 변경·감사 이력이 범위다.
+A~F의 완료 조건과 기존 비공개 등록/운영 CLI 계약은 유지하며, G를 기존 D·E·F 완료의 선행 조건으로 추가하지 않는다.
+위 §8에서 보류한 Web 전체 Session 회수는 G의 정지·비밀번호 재설정 기능에 필요한 범위로 G0/G2b에서 다룬다.
+초대 기반 계정 생성과 공개 HTTPS 등록은 현재 Domain/Auth 계약 변경이 필요하므로 G0에서 먼저 개정한다.
+이 추가는 계획 작성만 반영한다. active 계약·앱·DB·VM·Cloudflare 설정을 변경하거나 G 구현/배포를 실행하지 않는다.
