@@ -48,7 +48,7 @@ function authenticationErrorMessage(error: unknown) {
 }
 
 /** 입력/QR은 이 폼의 메모리만 소유하며 완료·취소·이탈 시 폐기한다. */
-export function useConsoleLoginForm() {
+export function useConsoleLoginForm(initialRateLimited = false) {
   // SSR 폼은 비활성으로 렌더하고, hydration 후에만 민감 입력을 받는다.
   const isHydrated = useSyncExternalStore(
     subscribeToHydration,
@@ -56,7 +56,9 @@ export function useConsoleLoginForm() {
     () => false,
   );
   const [step, setStep] = useState<LoginStep>({ kind: "credentials" });
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(
+    initialRateLimited ? "요청 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요." : null,
+  );
   const [loading, setLoading] = useState(false);
   const request = useRef<AbortController | null>(null);
   const form = useForm({ resolver: standardSchemaResolver(loginSchema), defaultValues: empty });
@@ -78,8 +80,6 @@ export function useConsoleLoginForm() {
     // 뒤로 가기 복원 시에도 QR/입력을 남기지 않으며, unmount는 진행 중 HTTP 요청을 취소한다.
     const discard = () => reset();
     window.addEventListener("pagehide", discard);
-    if (new URLSearchParams(window.location.search).get("code") === "rate_limited")
-      setServerError("요청 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요.");
     return () => {
       window.removeEventListener("pagehide", discard);
       request.current?.abort();
