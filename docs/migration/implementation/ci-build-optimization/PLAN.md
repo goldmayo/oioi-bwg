@@ -103,3 +103,14 @@ fallback/미스일 때만 새 cache를 export·저장한다. 기존 v1 fallback�
 [Turbo cache 쓰기 제어](https://turborepo.com/docs/reference/run#--cache-options),
 [Docker cacheonly exporter](https://docs.docker.com/build/exporters/#cache-only-export).
 ARM64 후보에도 같은 builder 정책이 적용되지만 GHA cache의 별도 접근 범위 개선은 이 변경에 포함하지 않는다.
+
+## 완료된 임시 workflow 정리 — 2026-10-21
+
+사용자의 미사용 workflow 식별·제거 요청에 따라 캐시 축소 병합 뒤 최신 통합선에서 진행한다.
+active 배포 runbook §21의 Verify/Promotion/cache 발행 계약은 유지한다.
+
+- 실제 실행 이력·현재 파일·소비자를 함께 확인하고 완료된 Development Image/P02 bootstrap/B0 probe만 폐기한다.
+- B0 command workflow와 항상 false인 publish job을 제거하고 운영 README의 당시 절차를 과거 기록으로 표시한다.
+- GitHub의 해당 세 workflow는 비활성화하되 증거로 참조되는 기존 run은 삭제하지 않는다.
+- F 전환 전인 기존 Cloudflare Production/Staging은 유지한다. helper·IAM·secret·VM 설정 정리는 포함하지 않는다.
+- 남는 YAML/필수 gate와 기본 검사·실제 PR CI를 확인한다. 실행 결과와 식별 근거는 [지연 조사](LATENCY-AUDIT-2026-10-21.md)에 남긴다.

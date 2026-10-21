@@ -309,3 +309,68 @@ Next의 standalone 생성 자체를 제거해서는 안 된다. 후속 변경은
 그만큼 다운로드가 줄어든다고 주장하지 않는다.** 제거 후 실제 압축 cache 크기와 cold build,
 동일 입력 restore, source 변경 build, 후속 image smoke 전체 시간을 비교해야 절감량을 확정할 수 있다.
 ARM64 후보의 GHA 캐시는 별도 경로이므로 이 amd64 표본을 그대로 적용하지 않는다.
+
+## 캐시 용량 축소 구현과 실제 재사용 — 2026-10-21
+
+[계획](PLAN.md#캐시-용량-축소--2026-10-21)에 따른 구현은
+[#183](https://github.com/goldmayo/oioi-bwg/pull/183)의 `22e6b4d4c0f82ce1e52f99cccd53f5a56207f294`이며,
+통합 커밋은 `97ea968fb9e519f1178dd75af0184d440a0cf855`다. Docker builder에서만 Next의 Turbopack 파일시스템 build cache와
+Turbo output archive 쓰기를 끄고, 두 runtime을 참조하는 cacheonly target으로 standalone tar 중복을 제거했다.
+로컬 cache·Next standalone 출력·의존성/앱 BuildKit 레이어와 두 image smoke는 유지했다.
+
+| 저장 항목 | 변경 전 | 변경 후 | 확인 위치 |
+| --- | --- | --- | --- |
+| Actions Cache | 1,298,396,369바이트 | 480,296,068바이트 | cache id9260156050 → 9261804114 |
+| base 발행용 artifact ZIP | 1,308,788,491바이트 | 481,693,867바이트 | artifact12326230222 → 12329015256 |
+| OCI build 레이어 | 804,172,528바이트 | 82,073,723바이트 | 새 digest095ef091ca2ed04e2d6cfc0ccb7239a0954fee9fe7c44b9f2dc3515f54fddcdb |
+
+Actions Cache·artifact 모두 약63% 감소했다. MB는10진수다. UI가480,296,068바이트를 약458MiB로
+표시할 수 있다. [Actions / Caches](https://github.com/goldmayo/oioi-bwg/actions/caches)의
+`refs/pull/183/merge`·key `Linux-verify-amd64-v2-8dac91326c30bd9131e4f48cac080b30c925617899f5593c4f129ca0c513f480`가
+실제 cache 항목이다. [실행 artifact](https://github.com/goldmayo/oioi-bwg/actions/runs/39561253202/artifacts/12329015256)는
+병합 후 base cache로 전달하는 별도 사본이다. 최초 artifact12328031644는 같은 입력 재실행의 overwrite로 교체됐고
+두 ZIP 크기는 같다. 저장소 전체 cache 사용량과 단일 항목 크기를 혼동하지 않는다.
+
+새 build 레이어82,073,723바이트를 끝까지 스트리밍하여 전송 크기·SHA-256·tar7,328개 entry를 대조했다.
+일반 파일416,359,545바이트 중 server219.18MB·standalone178.41MB는 유지됐다. Turbopack 파일시스템
+cache와 Turbo archive는 없어졌지만 `.next/cache`에는 tsbuildinfo 등10.91MB가 남는다.
+의존성 레이어264,418,056바이트는 동일 digest3ad6c21c…로 보존됐다. 분석 자료는 ignored
+`.local/ci-cache-size/`의 cache-size/layer-analysis 및 전체 파일 목록에 있고 비밀값을 포함하지 않는다.
+
+- `OIOI_EPHEMERAL_BUILD=true pnpm verify`와 push hook 통과: type/lint/FSD·unit487·harness18·ops258·format,
+  두 앱 실제 build. config ESM 읽기로 로컬true/Dockerfalse를 대조했다. YAML·diff 검사도 성공했다.
+- [Verify39561253202 첫 실행](https://github.com/goldmayo/oioi-bwg/actions/runs/39561253202/attempts/1) 전체 성공.
+  app build204초 중 첫 target154초, 후속 image build smoke199초. 이전 key fallback에서 의존성을 재사용하고
+  새 builder 정책으로 앱을 빌드했다. 관리자 전체 E2E는 실행하지 않았다.
+- [동일 입력 attempt2](https://github.com/goldmayo/oioi-bwg/actions/runs/39561253202/attempts/2)의
+  app build74초, cache 복원6초, 첫 target4초. 첫 target과 두 image load의 install/build/runtime CACHED를
+  확인했고 cache 재export/save는 skipped다. 재실행은 app build와 종속 job에 한정했다.
+  기존에 성공한 unit/quality/PostgreSQL/infra를 다시 실행하지 않았다. 후속 build smoke와 최종 verify도 성공했다.
+
+병합 후 [Publish39563382114](https://github.com/goldmayo/oioi-bwg/actions/runs/39563382114)의
+선택·다운로드·save가 모두 성공했고 main ref의 새 cache9262444221, 480,308,753바이트를 API로 확인했다.
+새 PR이 공유할 작은 base cache가 실제 생성됐다. Actions 압축 패키징 차이로 PR cache와12,685바이트 차이가 난다.
+
+기존1.3GB 항목은 삭제하지 않았다. 2026-10-21 조회에서 전체 cache는25개·5,933,493,281바이트였고
+main/develop/이전 PR에 큰 항목이 함께 있었다. [GitHub 공식 보존 정책](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#usage-limits-and-eviction-policy)은
+마지막 접근 후7일 초과 미사용 시 삭제하며, 새 key가 기존 항목을 덮어쓰지 않는다. 새 base 발행/다음 사용이 먼저이며
+기존 항목 전체 삭제나 저장 용량 상향은 하지 않는다. ARM64 GHA cache의 별도 접근 범위 개선은 이번 결과에 포함하지 않는다.
+
+## 미사용 workflow 식별과 폐기 — 2026-10-21
+
+검토 기준은 `97ea968fb9e519f1178dd75af0184d440a0cf855`다. GitHub workflow API·최근 run·현재 YAML·코드 참조와
+[P06 로드맵](../console-guide-editor/ROADMAP.md), [B0 통과 결과](../console-guide-editor/P06-B0-2-RESULT.md)를 함께 대조했다.
+오래 실행되지 않았다는 이유만으로 사용 중인 배포 경로를 제거하지 않았다.
+
+| 대상 | 식별 근거 | 조치 |
+| --- | --- | --- |
+| Development Image353263607 | 2026-09-08 run34245521768 cancelled, 현재 통합선 파일 없음, 정상 Promotion으로 대체 | GitHub disabled_manually |
+| P02 Bootstrap Validation375623717 | 2026-10-05 run37386630281 성공, 현재 파일 없음, 상시 검증은 Verify 소유 | GitHub disabled_manually |
+| P06 B0 command probe384570847 | run38601706992 성공으로 실제 권한 실증 완료, 현 배포 consumer 없음 | workflow 파일 제거·GitHub disabled_manually |
+| Verify의 B0 publish probe | `if: false`인 일회성 marker 게시 job, 필수 gate가 의존하지 않음 | job 제거 |
+| Verify / Deploy promotion / Publish build cache | 일반 검증·현 배포·새 캐시 공유에 사용 | 유지 |
+| Cloudflare Production / Staging | default main의 tag/staging push 배포, P06-F의 기존 Worker 종료 전 | 유지 |
+
+세 GitHub 비활성화 상태를2026-10-21T07:33:40Z에 API로 다시 확인했다. 과거 run을 삭제하지 않아 UI에
+이력이 남을 수 있다. 운영 README의 B0 절차는 폐기된 과거 기록으로 표시하고 helper·테스트·IAM·secret은 유지한다.
+상시 job 삭제로 절감되는 시간이라고 주장하지 않는다. 기존 B0 게시 job은 이미 skipped였다.
