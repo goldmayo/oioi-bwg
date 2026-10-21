@@ -178,6 +178,24 @@ describe("Console MFA 예약", () => {
 });
 
 describe("로그인/로그아웃 Action 경계", () => {
+  it("로그인 성공은 쿠키 발급 후 반환하고 이동 옵션은 서버가 고정한다", async () => {
+    const { signIn } = await import("@/auth");
+    authSignIn.mockResolvedValue("http://127.0.0.1:3001/admin");
+    const data = new FormData();
+    data.set("email", "admin@example.test");
+    data.set("password", "fixture-password");
+    data.set("otp", "123456");
+    data.set("redirectTo", "https://evil.invalid");
+    data.set("redirect", "true");
+    await expect(signIn(data)).resolves.toBeUndefined();
+    expect(authSignIn).toHaveBeenCalledExactlyOnceWith("credentials", {
+      email: "admin@example.test",
+      password: "fixture-password",
+      otp: "123456",
+      redirectTo: "/admin",
+      redirect: false,
+    });
+  });
   it("예상 제한을 일반 credentials 실패보다 먼저 대기 응답으로 번역한다", async () => {
     const { signIn, LoginRateLimited } = await import("@/auth");
     authSignIn.mockRejectedValue(new LoginRateLimited(2));

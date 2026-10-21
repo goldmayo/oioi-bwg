@@ -83,3 +83,14 @@ guest/USER/ADMIN의 이전 Action 거절·일반 로그인, Console MFA/CRUD·�
 공개 조회 회귀가 모두 성공했다. 임시 DB/역할 정리, 연결/잠금0을 확인했다.
 근거는 ignored `.local/p06-e2-security-refresh/admin-recheck.log`와 실제 브라우저 산출물이다.
 이 보완의 최종 source/CI head는 기존 PR #169에서 추적하며 운영 VM의 E 적용은 계속 보류한다.
+
+
+## 2026-10-21 최신 CI 정책 반영
+
+통합 기준 `e2631de9161dd58612706151dc9517f3fe8d8910`을 반영했다. workflow 충돌은
+기존 E2의 관리자 E2E 뒤 Caddy 검사 연결과 사용자가 요청한 해당 job 제거가 겹친 부분이다.
+현재 통합선의 workflow를 유지해 관리자 전체 E2E를 다시 추가하지 않는다. Caddy 검사 도구와
+이전 실제 통과 증거는 유지하며 필요할 때 명시적으로 실행한다. 캐시 축소·임시 B0 job 폐기도 유지한다.
+Web 관리 종료 코드·일반 로그인·Console 기능·host 차단 정책은 변경하지 않았다.
+새 CI의 고정 head/결과는 #169 본문에서 추적하며 이전 통과를 새 기준의 통과로 대신하지 않는다.
+VM/Caddy 적용·계정/MFA 변경·Promotion은 실행하지 않았다. D 실물 운영 검증과 E 배포 조건은 남아 있다.

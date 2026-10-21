@@ -181,14 +181,9 @@ export async function assertConsoleAuthIngress(browser, origin, sql, artifacts) 
   positiveFields.set(emailField, "admin@p04.example.test");
   positiveFields.set(`${emailField.slice(0, -5)}otp`, await nextConsoleOtp(sql));
   const signedIn = await action(positive, origin, "signIn", origin, positiveFields);
-  const actionRedirect = signedIn.headers()["x-action-redirect"];
-  assert.ok(
-    actionRedirect,
-    `successful Action redirect: HTTP ${signedIn.status()}, cookie=${Boolean(sessionCookie(await positive.cookies()))}`,
-  );
-  const target = new URL(actionRedirect.split(";")[0], origin);
-  assert.equal(target.origin, origin);
-  assert.equal(target.pathname, "/admin");
+  // 성공 Action은 쿠키를 발급하고 반환한다. 실제 화면 이동은 enrollment UI 회귀에서 확인한다.
+  assert.equal(signedIn.status(), 200);
+  assert.equal(signedIn.headers()["x-action-redirect"], undefined);
   assert.ok(sessionCookie(await positive.cookies()));
   assert.equal((await positive.request.get(`${origin}/api/admin/songs`)).status(), 200);
   await positive.close();

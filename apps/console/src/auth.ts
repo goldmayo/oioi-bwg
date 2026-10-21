@@ -90,8 +90,14 @@ export { auth, handlers };
 export async function signIn(formData: FormData) {
   try {
     assertConsoleOrigin(await headers());
-    formData.set("redirectTo", "/admin");
-    await authSignIn("credentials", formData);
+    // 성공 시 쿠키를 발급하고 반환한다. 폼은 redirect 예외 없이 고정된 관리 화면으로 이동한다.
+    await authSignIn("credentials", {
+      email: formData.get("email"),
+      password: formData.get("password"),
+      otp: formData.get("otp"),
+      redirectTo: "/admin",
+      redirect: false,
+    });
   } catch (error) {
     if (error instanceof LoginRateLimited) {
       return {

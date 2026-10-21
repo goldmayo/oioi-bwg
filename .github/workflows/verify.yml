@@ -83,9 +83,6 @@ jobs:
       - name: ESLint
         run: pnpm lint
 
-      - name: FSD architecture lint
-        run: pnpm lint:fsd
-
       - name: Format check
         run: pnpm format:check
 
@@ -148,17 +145,6 @@ jobs:
           node-version: 22.16.0
           cache: pnpm
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.5.7
-
-      - name: Validate Terraform
-        run: |
-          terraform version
-          terraform -chdir=infra/oci fmt -check -diff
-          terraform -chdir=infra/oci init -backend=false
-          terraform -chdir=infra/oci validate
-
       - run: pnpm install --frozen-lockfile
 
       - name: PostgreSQL integration
@@ -179,9 +165,7 @@ jobs:
           cleanup: false # The GitHub-hosted VM is discarded after this job.
       - name: Identify verification cache inputs
         id: cache-key
-        run: |
-          source_digest=$(git ls-files -s -- . ':(exclude)docs/**' | sha256sum | cut -d ' ' -f 1)
-          echo "key=${RUNNER_OS}-verify-amd64-v2-${source_digest}" >> "${GITHUB_OUTPUT}"
+        run: node scripts/verification-cache.mjs >> "${GITHUB_OUTPUT}"
       - name: Restore verification layer cache
         id: build-cache
         uses: actions/cache/restore@v4
@@ -191,14 +175,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-verify-amd64-v2-
             ${{ runner.os }}-verify-amd64-v1-
-      - name: Build and export both standalone apps
+      - name: Build both runtime targets and cache
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: verification-artifacts
+          target: verification-cache
           platforms: linux/amd64
           build-args: NEXT_PUBLIC_APP_ENV=staging
-          outputs: type=local,dest=${{ runner.temp }}/ci-build
+          outputs: type=cacheonly
           cache-from: type=local,src=${{ runner.temp }}/buildx-cache
           cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
       - name: Load standalone container from the same builder
@@ -212,7 +196,9 @@ jobs:
           build-args: NEXT_PUBLIC_APP_ENV=staging
           cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
       - name: Archive verified container
-        run: docker save --output "${{ runner.temp }}/ci-build/web-image.tar" oioi-bwg:workspace-check
+        run: |
+          mkdir -p "${{ runner.temp }}/ci-build"
+          docker save --output "${{ runner.temp }}/ci-build/web-image.tar" oioi-bwg:workspace-check
       - name: Load Console container from the same builder
         uses: docker/build-push-action@v6
         with:
@@ -225,14 +211,6 @@ jobs:
           cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
       - name: Archive verified Console container
         run: docker save --output "${{ runner.temp }}/ci-build/console-image.tar" oioi-bwg-console:workspace-check
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ci-standalone
-          path: ${{ runner.temp }}/ci-build/standalone.tar.gz
-          overwrite: true
-          compression-level: 0
-          if-no-files-found: error
-          retention-days: 1
       - uses: actions/upload-artifact@v4
         with:
           name: ci-web-image
@@ -260,6 +238,19 @@ jobs:
         with:
           path: ${{ runner.temp }}/buildx-cache
           key: ${{ steps.build-cache.outputs.cache-primary-key }}
+      - name: Export cache for publication after merge
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          contains(fromJSON('["migration_main", "migration_develop"]'), github.base_ref)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-cache-${{ steps.cache-key.outputs.key }}
+          path: ${{ runner.temp }}/buildx-cache
+          overwrite: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
 
   build:
     name: build
@@ -295,10 +286,6 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: ci-standalone
-          path: ${{ runner.temp }}/ci-build
-      - uses: actions/download-artifact@v4
-        with:
           name: ci-web-image
           path: ${{ runner.temp }}/ci-build
       - uses: actions/download-artifact@v4
@@ -307,7 +294,6 @@ jobs:
           path: ${{ runner.temp }}/ci-build
       - name: Restore this run's verified build
         run: |
-          tar -xzf "${{ runner.temp }}/ci-build/standalone.tar.gz"
           docker load --input "${{ runner.temp }}/ci-build/web-image.tar"
           docker load --input "${{ runner.temp }}/ci-build/console-image.tar"
 
@@ -356,56 +342,6 @@ jobs:
       - name: Verify paired Compose container preservation and recovery
         run: bash tests/ops/paired-compose-smoke.sh
 
-  admin_integration:
-    name: Admin migration integration
-    needs: app_build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_DB: postgres
-          POSTGRES_HOST_AUTH_METHOD: trust
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.1
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.16.0
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v4
-        with:
-          name: ci-standalone
-          path: ${{ runner.temp }}/ci-build
-      - name: Restore this run's verified apps
-        run: tar -xzf "${{ runner.temp }}/ci-build/standalone.tar.gz"
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Verify Web retirement routing and rollback guard locally
-        run: node tests/ops/web-retirement-proxy-smoke.mjs
-      - name: Verify Console management and Web access boundaries
-        run: pnpm test:integration:admin
-        env:
-          M7_TEST_POSTGRES_ADMIN_URL: postgresql://postgres@127.0.0.1:5432/postgres
-          P04_ARTIFACT_DIR: .local/p04-admin-smoke
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: p04-admin-smoke
-          path: .local/p04-admin-smoke
-          if-no-files-found: ignore
-
   verify:
     name: verify
     if: always()
@@ -415,7 +351,6 @@ jobs:
       - quality
       - unit
       - postgres_integration
-      - admin_integration
       - app_build
       - build
     runs-on: ubuntu-latest
@@ -427,47 +362,6 @@ jobs:
         env:
           VERIFICATION_NEEDS: ${{ toJSON(needs) }}
         run: node scripts/verification-scope.mjs --gate
-
-  b0-publish:
-    name: B0 publish probe
-    if: >-
-      false &&
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.base.ref == 'migration_develop' &&
-      github.event.pull_request.head.ref == 'migration_main' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    needs: verify
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 5
-    environment: oci-development-image
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Validate source and verification tree
-        id: source
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
-            await promotion.prepare({ github, context, core });
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ vars.OCIR_REGISTRY }}
-          username: ${{ secrets.OCIR_USERNAME }}
-          password: ${{ secrets.OCIR_AUTH_TOKEN }}
-      - name: Publish tiny images with existing publisher credentials
-        env:
-          SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
-          OCIR_REGISTRY: ${{ vars.OCIR_REGISTRY }}
-          OCIR_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
-        run: python3 -I ops/oci/b0-ci-probe.py publish
-      - uses: actions/upload-artifact@v4
-        with:
-          name: b0-publish-${{ steps.source.outputs.source_sha }}-${{ github.run_attempt }}
-          path: b0-proof.json
-          if-no-files-found: error
-          retention-days: 14
 
   # One release verification; build only affected apps using proven paired deployment evidence.
   promotion-candidate:
@@ -568,6 +462,8 @@ jobs:
             const reuse = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/release-baseline.mjs');
             await reuse.selectImages({ github, context, core });
       - uses: docker/setup-buildx-action@v3
+        with:
+          cleanup: false # The GitHub-hosted VM is discarded after this job.
       - name: Log in to OCIR
         uses: docker/login-action@v3
         with:
