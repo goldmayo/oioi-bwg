@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-21"
-revision: 61
+revision: 62
 ---
 
 # P06 작업 인계
@@ -17,8 +17,8 @@ revision: 61
   #166/#173/#174/#175는 병합 완료이며 #174의 한시 merge-method 설정은 원복했다.
   회사 브라우저는 [Console 로그인](https://console.oioibawige.com/admin-login)에서 특수 헤더 없이 접속한다.
   자동 종료·사용자 회신 지연/채팅 종료 시 원복은 없다. 국가 보호 규칙은 변경하지 않았다.
-- 사용자가 실제 로그인의 인증정보 거절을 보고했다. 읽기 조회에서 계정/ACTIVE ADMIN/MFA version3 보존과 정상 서버 시간을 확인했다.
-  다음은 휴대폰 시간·VM용 인증기 항목 확인 결과와 인증 실패 원인 확인이다. 관리 조회·세션 쿠키/preview 격리·로그아웃도 미확인이다.
+- 사용자는 읽기 진단 뒤 실제 로그인 성공을 확인했다. 계정/MFA 초기화는 하지 않았다.
+  다음은 성공 직전 오류 표시와 필드 포커스 오류 상태의 별도 UX 수정이다. 관리 조회·세션 쿠키/preview 격리·로그아웃도 미확인이다.
   D reset은 사용자의 실물 인증기와 SSH loopback 준비 전 실행하지 않는다. D 완료 뒤 E를 별도 Promotion하고 F는 보류한다.
   새 실행은 #175 HTTPS pair를 기준으로 대조한다. HTTP previous pair 복구 시에는 공개를 닫아야 한다.
   기존 창2/3/4의 start/marker/30분 종료 경로를 재사용하지 않는다. 두 회선 실험은 제외·미실시다.
