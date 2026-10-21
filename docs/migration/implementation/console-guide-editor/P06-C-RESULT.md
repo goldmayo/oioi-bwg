@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 3a98e8ddf4e8e61e71b35d83fc1aa93ba9d16b92
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 30
+revision: 31
 ---
 
 # P06-C 구현 결과
 
-**최신 상태:** [정상 HTTPS 배포·지속 공개](#2026-10-21-정상-https-배포와-console-지속-공개)를 완료했다. 회사 브라우저의 [Console 로그인](https://console.oioibawige.com/admin-login)을 자동 종료 없이 유지한다. 실제 IP 전달·위조 헤더 방어·직접 origin 차단·등록 거절과 익명 쿠키 검사는 통과했다. 사용자가 후속 실제 로그인 성공을 확인했다. 성공 직전 오류 표시와 필드 포커스의 오류 상태 UX는 별도 수정 대상으로 확인 중이다. 관리 조회·세션 쿠키/preview 격리·로그아웃은 별도 미확인이므로 C 전체는 미완료다. 국가 보호 규칙은 변경하지 않았다. 두 회선 실험은 제외·미실시이며 D/E/F도 별도 미완료다. 아래 창2/3/4의 개방·종료 표시는 당시 이력이다.
+**최신 상태:** [정상 HTTPS 배포·지속 공개](#2026-10-21-정상-https-배포와-console-지속-공개)를 완료했다. 회사 브라우저의 [Console 로그인](https://console.oioibawige.com/admin-login)을 자동 종료 없이 유지한다. 실제 IP 전달·위조 헤더 방어·직접 origin 차단·등록 거절과 익명 쿠키 검사는 통과했다. 사용자가 후속 실제 로그인 성공을 확인했다. 성공 직전 오류 표시와 인증 코드 입력 중 오류 상태는 아래 [로그인 UX 보완](#2026-10-21-로그인-성공-전환과-인증-코드-검증-시점-보완)에서 추적한다. 관리 조회·세션 쿠키/preview 격리·로그아웃은 별도 미확인이므로 C 전체는 미완료다. 국가 보호 규칙은 변경하지 않았다. 두 회선 실험은 제외·미실시이며 D/E/F도 별도 미완료다. 아래 창2/3/4의 개방·종료 표시는 당시 이력이다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인 / 최소 HTTPS 창2 전환·개방 후 helper 중단·exit20 원복 완료. C 전체 완료가 아니다. 아래 미실행 표시는 각 기록 시점의 이력이다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
@@ -670,3 +670,51 @@ VM은 직접 origin 거절·인증서·preview·서버 상태를 검사했다. �
 동시에 성공 직전 오류 표시가 잠깐 나타나고 이메일·비밀번호 필드가 포커스 시 오류 상태처럼 보인다고 보고했다.
 이 두 현상은 별도 로그인 UX 수정 concern으로 재현·검증한다. 인증 성공을 관리 목록 조회·세션 쿠키의 실제 속성과
 preview 격리·로그아웃 성공까지 확대하지 않으며 Console 공개와 등록 닫힘은 유지한다.
+
+
+## 2026-10-21 로그인 성공 전환과 인증 코드 검증 시점 보완
+
+사용자는 최초 필드 보고를 **이메일·비밀번호는 정상이고 인증 코드 입력을 시작할 때 빨간 테두리/문구가 나타남**으로 정정했다.
+`feature/p06-c-login-feedback`는 `migration_main` `5f4b1f9b804f6aba4057c9b261d63db8ee24ffd3`에서 분기했다.
+사용자가 지정한 Impeccable4.3.1의 `harden` 지침을 적용해 기존 화면을 유지하며 두 오류 처리만 수정한다.
+active [폼 상태](../../oioi-bwg-architecture-clean-v1/08-form-state-architecture.md)와
+[오류 UX](../../oioi-bwg-architecture-clean-v1/09-error-ux-observability.md)를 따른다.
+
+- **재현:** 로컬 Chromium 데스크톱/모바일 에뮬레이션에서 OTP focus만으로는 오류가 없지만 첫 자리 입력부터 6자리 오류가 발생했다.
+  RHF의 앞 단계 `handleSubmit`이 기록한 제출 상태 때문에 새 단계에서도 `onChange` 재검증이 실행됐다.
+- **입력 수정:** `handleSubmit` 완료 후 입력값은 유지하고 제출/오류 상태를 초기화한 다음 OTP 단계로 이동한다.
+  인증기 등록의 QR→확인 단계에도 같은 전환을 적용한다. 첫 입력·부분 입력은 오류 없이 진행하고,
+  잘못된 제출에는 기존 inline 오류를 표시하며 6자리 교정 후 해제한다.
+- **성공 수정:** Auth.js에 boolean `redirect: false`와 고정된 `/admin` 목적지를 전달해 쿠키를 발급하고,
+  클라이언트는 입력을 폐기한 이동 안내 후 `router.replace`로 이동한다. 성공 redirect를 일반 인증 오류로 표시하지 않는다.
+  클라이언트가 보낸 redirect 옵션/외부 목적지는 전달하지 않는다. 실제 실패·Origin·MFA·limiter 계약은 유지한다.
+- **검증 기준:** 단위 테스트뿐 아니라 실제 PostgreSQL/standalone/TLS 로그인 성공 중 DOM 오류 표시를 관찰한다.
+  운영 DB·계정·MFA·Cloudflare·VM 설정은 이 코드 검증에서 변경하지 않는다. 새 배포는 정상 Promotion을 따른다.
+
+데스크톱/모바일 수정 확인에서 부분 입력 오류 없음, 잘못된 제출의 오류, 6자리 수정 후 오류 해제와 가로 넘침 없음을 확인했다.
+아래 화면은 로컬 fixture의 비밀값이 아닌 `123` 입력이며 운영 로그인/운영 OTP 증거가 아니다.
+
+| 환경 | 수정 전 | 수정 후 |
+| --- | --- | --- |
+| 데스크톱 | [부분 입력 오류](evidence/login-feedback/otp-desktop-before.png) | [부분 입력 정상](evidence/login-feedback/otp-desktop-after.png) |
+| 모바일 | [부분 입력 오류](evidence/login-feedback/otp-mobile-before.png) | [부분 입력 정상](evidence/login-feedback/otp-mobile-after.png) |
+
+Impeccable `detect --json`은 변경 UI/model 두 파일에서 발견 사항0개였다. 이는 전체 접근성 인증을 의미하지 않는다.
+구현 커밋은 `995d6c6b8fe781b75e9ae2340d584649a5ab9330`이다. 실제 수행 결과는 다음과 같다.
+
+- `pnpm verify` 통과: 패키지/루트 type-check·lint/FSD, unit487건(Console226), harness18건,
+  ops211건, format check, Web/Console Next16.4.1 standalone build. 초기 테스트 matcher 타입과 import 정렬 오류는 수정했다.
+- `node tests/ops/console-standalone-smoke.mjs http://127.0.0.1:3212` 통과:
+  별도 fixture 프로세스에서 OTP 부분 입력/잘못된 제출/교정, 익명 쿠키·hydration을 확인했다.
+- ignored `.local/p06-login-ux/run-https.mjs`로 Caddy2.6.2·loopback TLS·Chromium과
+  `pnpm exec tsx scripts/run-postgres-integration-tests.ts --local --admin-smoke` 통과.
+  실제 TOTP 로그인 성공부터 `/admin/albums`까지 DOM에 인증 오류가 나타나지 않음을 확인했다.
+  등록/재등록·공유 계정/IP 제한·Origin/CSRF·로그아웃·관리 CRUD/편집·세션 권한 회수와 두 앱 쿠키 격리도 통과했다.
+- 기존 ingress 검사의 성공 redirect 헤더 기대는 새 Action의200 반환/쿠키 발급/관리 API200 계약으로 갱신했다.
+  실제 화면 이동은 별도 UI 로그인으로 검증했다. 첫 통합 실행의 이 계약 불일치는 수정 후 재실행해 통과했다.
+- 기존 Docker Compose PostgreSQL17의 격리 임시 DB만 사용했고 연결/잠금 잔여0·DB 삭제를 확인했다.
+  테스트 TLS 인증서는 새 로컬 fixture이며 운영 인증서/키는 사용하지 않았다. 모든 테스트 앱/Caddy를 종료했다.
+- 추가 변경한 ingress 테스트의 ESLint/Prettier, C 결과 문서 상대 링크/anchor26개와 `git diff --check`를 통과했다.
+
+실제 VM에는 아직 이 수정이 배포되지 않았다. 현재 공개/계정/MFA 상태는 정상 #175 배포 그대로다.
+이전 자동 시간/새 코드 요청은 로그인 실패 당시 진단 질문이며 로그인 성공 후 재시도를 요구하는 조건이 아니다.
