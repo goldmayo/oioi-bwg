@@ -1,7 +1,8 @@
 # Web 관리·가입 종료의 배포와 복구 경계
 
 이 절차는 [P06 계획의 안전한 rollback](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#web-관리-종료-이후의-안전한-rollback)을 구현한다.
-코드와 로컬 검증 준비이며 실제 VM 적용 기록은 아니다. C/D의 실제 Console 운영 검증 완료 후 E Promotion에 적용한다.
+C/D의 실제 Console 운영 검증 완료 후 E Promotion에 적용한다. 실제 host 설치와 이전/새 pair 검증 결과는
+[P06-E2 결과](../../docs/migration/implementation/console-guide-editor/P06-E2-RESULT.md)가 소유한다.
 
 ## 적용 전
 
