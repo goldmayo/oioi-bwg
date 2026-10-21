@@ -5,11 +5,16 @@ status: draft
 authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
-updated_at: "2026-10-18"
-revision: 10
+updated_at: "2026-10-21"
+revision: 11
 ---
 
 # P06 계획 초안
+
+**최신 실행 순서:** [회사 검증용 Console 공개 유지 개정](#2026-10-21-회사-검증용-console-공개-유지-개정)을 우선한다.
+Console의 지속적인 HTTPS 접속을 C에서 먼저 제공하고, www 전환·레거시 종료는 F에 남긴다.
+이 개정은 아래 초기 §4~9의 공개 시점과 과거 임시 검증 창의 자동 종료 조건을 명시적으로 대체한다.
+과거 실행 결과는 그대로 보존한다. 이번 요청은 계획 작성이며 VM 설정 변경·재개방을 실행하지 않는다.
 
 **기존 단일 VM·Promotion 파이프라인을 유지하고 Web·Console을 하나의 배포 단위로 확장한다.**
 이 문서는 구현 순서와 검증 기준의 제안이다. 구현·Promotion 병합·OCI 변경·공개 배포 승인이 아니다.
@@ -114,10 +119,10 @@ flowchart LR
 | P06-B0 IAM 검증      | 동일 Stack·주체/정책 inventory, 최소 probe와 권한 증거, metadata 사전 차단                                           | §4.1 실제 Plan/Apply·두 repo push/pull·새 secret 읽기·새 Run Command exit 0. 실패 시 ARM64 빌드 중단                                                       |
 | P06-B1 후보 계약     | Promotion candidate JSON/검증, ARM64 publish/pull, summary/Slack                                                     | 두 ARM64 **게시 digest 자체**로 container smoke 통과 후 artifact 기록. 한쪽 누락·다른 head/run/registry·실패 시 promotion 거절                             |
 | P06-B2 host 배포     | Compose, Run Command, deploy/installer/preflight, env 예시                                                           | 두 이미지/설정 모두 사전 검증, 변경 없는 container 유지·두 앱 성공 후 상태 확정. 한쪽 실패 시 두 앱과 env 복구, lock·exit code·로그 비밀 미노출 및 실제 두 앱 metadata 차단 검증    |
-| P06-C HTTPS 경계     | Console runtime/cookies/Origin/auth ingress, 신뢰 IP limiter, Caddy routing 절차                                     | 제한된 HTTPS에서 host-only Secure 쿠키, 직접 callback/Action/등록의 같은 limiter, 위조 forwarded header·다른 Origin 거절                                   |
-| P06-D 제한 운영 검증 | production용 CLI 실행 경계, migration/키 복구·최초 등록 절차, 기존 smoke 확장                                        | 비공개 Console에서 실물 인증기 등록·새 OTP 로그인·CLI reset/회수·관리 작업·복구 검증. 공개 endpoint로 등록 불가                                            |
+| P06-C HTTPS 경계     | Console runtime/cookies/Origin/auth ingress, 신뢰 IP limiter, Caddy routing 절차                                     | 회사 브라우저용 HTTPS 접속 유지와 실제 host-only Secure 쿠키 검증, 직접 callback/Action/등록의 같은 limiter, 위조 forwarded header·다른 Origin 거절                                   |
+| P06-D 제한 운영 검증 | production용 CLI 실행 경계, migration/키 복구·최초 등록 절차, 기존 smoke 확장                                        | 필요한 작업 동안만 Console을 닫고 실물 인증기 등록·CLI reset/회수·관리·복구 검증. 공개 endpoint 등록 금지, 종료 후 HTTPS 공개 복귀                                            |
 | P06-E Web 관리 종료  | Web `/admin`, `/admin-login`, `/api/admin/*`, 관리 upload Action/연결 UI·테스트, 회원가입 페이지·가입 API 세 개 종료 | Console 작업 검증 후 제거. Web의 직접 관리 호출/이전 Action ID 거절, 일반 로그인·조회 유지, 가입 API 직접 POST 거절·부작용 없음. 안전한 rollback 기준 수립 |
-| P06-F 운영 전환      | 운영 build/승격 계약, www routing 전환·레거시 종료 runbook/RESULT                                                    | 검증한 동일 두 digest로 preview의 Web을 www로 전환. 데이터·HTTPS·회수·복구 확인 후 Console 공개, 기존 Web Worker·staging·preview 경로 종료                 |
+| P06-F 운영 전환      | 운영 build/승격 계약, www routing 전환·레거시 종료 runbook/RESULT                                                    | 검증한 동일 두 digest로 preview의 Web을 www로 전환. Console 공개 유지와 최종 hostname·데이터·HTTPS·복구 확인, 기존 Web Worker·staging·preview 경로 종료                 |
 
 B0의 IAM 실증 전에는 전체 ARM64 후보 빌드를 시작하지 않는다.
 B1과 B2는 계약 producer/consumer이므로 **둘 다 병합·host upgrade 확인 전에는 Promotion을 실행하지 않는다.**
@@ -342,9 +347,10 @@ SSH 포워딩과 Caddy 차단/전환의 실제 경로, Console OCIR/Vault/IAM �
 operator 실행 경계와 key 복구 보관 방식, 실측 pool/메모리/디스크 여유다.
 이 값들을 추측한 production 명령은 계획에 넣지 않았다.
 
-다음 구현은 P06-A부터이며 ARM64 빌드 전 B0를 완료한다. B1/B2 연결과 host upgrade, C/D의 제한 운영 proof를 건너뛰고
-Web Admin을 제거하거나 Console을 공개하지 않는다. 외부 환경 적용은 구체적인 변경·대상·복구
-절차를 review 가능하게 만든 후 별도 승인으로 진행한다. 현재 요청으로 production DB/credential을 사용하지 않는다.
+초안 당시 다음 구현은 P06-A였으며 ARM64 빌드 전 B0를 요구했다. B 완료 결과는 아래 실행 이력을 따른다.
+현재 Console 공개 시점은 2026-10-21 개정을 따르며, Web Admin 제거는 C/D의 실제 운영 검증 뒤 E에서 진행한다.
+외부 환경 적용 전 구체적인 변경·대상·복구 절차를 review 가능하게 준비한다. 기존 사용자 실행 승인과
+sudo 위임은 유지하고 새 범위가 생길 때만 그 차이를 설명한다. 이번 계획 작성에서는 production DB/credential을 사용하지 않는다.
 VM 분리, 무중단 배포, 범용 release framework, shared limiter 저장소, DB role hardening,
 Web 전체 Session 회수 미구현 해결, Waveform/Guide는 별도 관심사로 보류한다.
 
@@ -499,3 +505,105 @@ C의 제한된 HTTPS·Secure cookie·신뢰 IP, D의 실물 MFA/운영 CLI·키 
 F의 www 전환·레거시 종료를 B 완료 조건으로 끌어오지 않는다. 동시 CRUD/부하 상태 자원 관측 등
 §7의 제한 운영·공개 gate도 유지하며 이번 유휴 관찰로 통과했다고 하지 않는다.
 새 PR 병합·외부 운영 적용은 구체적인 변경과 복구안을 준비한 뒤 별도 승인한다.
+
+
+## 2026-10-21 회사 검증용 Console 공개 유지 개정
+
+### 결정과 적용 범위
+
+사용자는 회사 브라우저에서 preview·console에 접속해 검증할 수 있도록 공개하는 방향을 제시했고,
+보안 패치와 Cloudflare 규칙 보완 후 작업 재개를 요청했다. 에이전트가 과거의 30분 자동 원복 절차를
+유지해 접속이 다시403으로 닫혔다. 이번 개정은 그 실행 범위 오류를 바로잡는다.
+
+**목표는 `https://console.oioibawige.com/admin-login`을 일반 회사 브라우저에서 계속 사용할 수 있게 하는 것이다.**
+공개는 로그인 화면의 인터넷 접근 허용이며, 관리 권한은 기존 비밀번호·ACTIVE ADMIN·TOTP·요청별 인가로 보호한다.
+특수 헤더·사용자 IP 등록·새 인증 프록시를 요구하지 않는다. 성공 후 공개 기간을 30분 등으로 제한하지 않으며,
+사용자 응답 지연·채팅 종료·자동 검사 완료를 이유로 닫지 않는다. 정상 상태의 종료 시점은 사용자 지시로 정한다.
+
+| 대상 | 이번 실행 목표 | 후속 범위 |
+| --- | --- | --- |
+| Console HTTPS | C에서 지속 개방, 실제 로그인 검증 전에는 `공개 유지 / 인증 확인 대기`로 기록 | 확인 후에도 공개 유지 |
+| preview Web | 현재 동작·데이터·라우팅 보존 | E에서 관리·가입 경로만 종료 |
+| MFA 등록/재등록 | 공개 endpoint는 계속 닫힘, enrollment=false | D의 SSH loopback 작업 때만 필요한 중단을 안내하고 비공개 등록 |
+| D/E | 기존 준비 PR과 실제 검증을 순서대로 진행 | 미완료를 이유로 C의 일반 접속을 일괄 F까지 보류하지 않음 |
+| F | www 전환·Worker/staging/preview 종료·데이터 전환은 보류 | 사용자의 귀가 후 실행 지시에 따라 별도 진행 |
+
+Auth §4.1·Runtime §11·Domain AUTH-009의 MFA/쿠키/Origin/비공개 등록 계약은 유지한다.
+§5의 동일 키 실제 복구 증거와 §7의 전체 운영 전환 gate는 D 및 P06/F 완료 조건으로 유지한다.
+회사 검증용 개방 전에는 기존 보호 백업·키 보존과 실패 복구 경로를 확인한다. 이번 변경으로 D/E·최종 운영 전환을
+완료했다고 해석하지 않는다. 기존 Web 관리/가입 경로가 E 전까지 남는 상태도 숨기지 않는다.
+
+### 확인된 기준과 실행 직전 대조
+
+문서 기준은 #166의 `e50eda60349886981d5d3933f0a43b9097ba6912`와 main `f675033`이다.
+[보안 배포 결과](P06-NEXT-SECURITY-RESULT.md)의 #171 정상 pair/receipt와
+[C 창4 결과](P06-C-RESULT.md#2026-10-21-창4-자동-종료원복과-남은-인증-검증)를 재사용한다.
+Next16.4.1·sharp0.35.5 배포, 실제 ingress13항목과 CSRF/callback 쿠키 검사, 종료 후 원복은 확인됐다.
+실제 회사 브라우저 로그인·세션 쿠키·로그아웃, D의 실물 회수/복구, E 적용은 미확인/미실행이다.
+
+다음 실행에서는 정확한 current/previous pair·정상 receipt·두 digest·Console의 새 ID/configHash,
+보호 파일·배포 lock/pending 부재·건강 상태를 읽기 대조한다. 이전 창의 준비 전 ID를 재사용하지 않는다.
+Cloudflare 적용 확인을 사용자에게 반복 요구하지 않고 실제 요청으로 drift를 확인한다.
+관찰이 달라졌다면 원인을 분류하고 실행 기준을 갱신한다. 비밀값·원문 cookie/IP는 기록하지 않는다.
+
+### 실행 순서와 완료 조건
+
+1. **지속 설정과 실패 복구안을 먼저 준비한다.** 기존 창2/3/4의 start/installer/marker를 재사용하지 않는다.
+   저장소 `ops/oci/console.Caddyfile`의 F 전용 공개 주석과 운영 절차를 이 개정에 맞춰 정리하고,
+   검토한 HTTPS 지원 `materialize-runtime-env.py`와 보호된 `console-runtime-public.env`를 준비한다.
+   Origin은 `https://console.oioibawige.com`, enrollment는 false다. diagnostic token/응답 헤더를 운영 설정에 남기지 않는다.
+   현재 root-only 백업의 존재·접근 경로와 closed 복구 설정을 확인·보존하며 DB·계정·MFA key/version은 바꾸지 않는다.
+2. **정상 배포 경로에 HTTPS 설정을 정착시킨다.** host materializer의 검토된 최소 upgrade와 public env 변경을
+   배포 lock 아래 순서대로 수행한다. runtime env·과거 snapshot·성공 receipt를 직접 고쳐 성공한 것으로 만들지 않는다.
+   `migration_main → migration_develop`의 별도 Promotion으로 검증한 candidate를 적용해 새 HTTPS snapshot과
+   정상 receipt를 만든다. 재사용 조건을 만족하면 기존 보안 digest를 새 후보에서 재검증해 재사용한다.
+   추가 코드/공통 설정 변경이 새 build를 요구하면 정상 후보 절차를 따르고 임의 우회 배포하지 않는다.
+   공개 설정만 바꾼다는 이유로 D/E 구현을 함께 배포하지 않는다. public env 준비 후 Promotion 실패 시
+   앱/환경 복구와 함께 원본 설정 source도 복구하고 중단 상태를 기록한다.
+3. **Cloudflare를 통과한 Console 접속을 계속 허용한다.** 두 앱의 정상 상태와 HTTPS runtime을 확인한 뒤
+   검증한 Caddy 조각을 원자적으로 적용·validate/reload한다. 신뢰한 Cloudflare 연결 peer, 전달 헤더 덮어쓰기,
+   직접 origin 거절, cache bypass/no-store, HTTPS 쿠키·Origin 경계, 기존 로그인 limiter를 유지한다.
+   로그인 HTML GET의 Managed Challenge는 유지하고 로그인 POST/관리 API에 challenge가 끼지 않는지 확인한다.
+   앱/DB port를 직접 공개하거나 TLS/WAF/MFA 검사를 완화하지 않는다.
+4. **자동 검사 후 바로 접속 주소와 현재 상태를 알린다.** 기존 ingress 검사를 변경된 설정으로 재실행하고,
+   인증되지 않은 관리 요청·등록 거절, 두 앱 health/readiness·preview·직접 origin 차단을 확인한다.
+   검증된 공개 설정은 영속 파일로 확정하고 적용용 작업의 lock을 해제한다. 성공한 뒤에는 transient unit의
+   RuntimeMaxSec/ExecStopPost·shell trap·채팅 종료가 접근을 닫거나 HTTP로 원복하는 경로가 없어야 한다.
+   적용 도중의 실패 복구와 개별 명령 timeout은 유지하되, 성공한 서비스의 공개 기한으로 사용하지 않는다.
+5. **공개 상태를 유지하면서 사용자 검증을 받는다.** 사용자는 회사 브라우저에서 Cloudflare 확인을 거친 뒤
+   비밀번호·OTP를 직접 입력하고 관리 목록 조회, host-only Secure/HttpOnly/Lax 세션 쿠키,
+   preview로 Console cookie가 전달되지 않음, 로그아웃 후 관리 접근 거절을 확인한다.
+   cookie 확인에 지원이 필요하면 가능한 방법을 안내하고 미확인 항목만 남긴다. 계정·OTP·cookie 값을 요구하지 않는다.
+   회신 전에는 `공개 유지 / 인증 확인 대기`, 확인 후에는 `공개 유지 / C 검증 완료`로 보고한다.
+6. **D와 E를 진행하고 F는 보류한다.** D의 CLI 설치·회수/reset·재등록·키/서비스 복구는 기존 PR #167과
+   비공개 SSH loopback 절차를 따른다. 사용자가 실물 인증기를 재등록할 수 있기 전에는 reset하지 않는다.
+   중단할 범위와 이유를 먼저 알리고, 끝나면 HTTPS 공개 상태로 복귀해 새 로그인·등록 닫힘을 확인한다.
+   D 완료 뒤 E #168/#169의 지속적인 Web 차단·안전한 previous pair를 확인하고 별도 Promotion으로 적용한다.
+   이때도 HTTPS 설정이 유지돼야 한다. www 전환과 레거시 종료를 자동으로 진행하지 않는다.
+
+### 공개 유지와 복구의 합격 기준
+
+- 일반 브라우저가 Cloudflare 확인 후 로그인 화면에 접근하고, 유효한 비밀번호·OTP로만 관리 기능을 사용한다.
+  인증되지 않은 관리 요청의401/403과 정상 Cloudflare challenge를 서비스 장애로 오인하지 않는다.
+- 자동 검사 완료·사용자 회신 대기·작업 프로세스 종료 뒤에도 접속을 유지한다. 문서/실행물에서 공개 TTL,
+  무조건적인 finally/ExecStopPost 원복, 성공 후 남는 종료 timer를 정적 검사하고 실제 적용 후 잔여 unit/timer를 확인한다.
+- Caddy reload와 Console 재생성 뒤에도 HTTPS Origin·enrollment=false·정상 로그인 화면이 유지되는지 확인한다.
+  다음 Promotion에서 같은 설정을 다시 생성할 수 있어야 한다. 불필요한 VM 전체 재시작은 추가하지 않는다.
+- HTTPS 이전의 HTTP snapshot을 복구하면 접근에 영향이 있다. 최초 전환 실패는 closed403으로 안전하게 복구하고
+  명시적으로 보고한다. HTTPS 기준이 확정된 뒤의 정상 배포/복구는 검증한 HTTPS snapshot을 사용한다.
+  과거 HTTP pair를 수정하거나 정상 복구로 가장하지 않으며, HTTPS 복구를 보장할 수 없으면 실제 장애로 분류한다.
+- 비밀번호만으로 인증·인가 우회, 공개 MFA 등록, cookie/Origin/IP 신뢰 경계 훼손, 확인된 비밀 유출,
+  지속적인 health/readiness 실패·설정 적용 실패가 확인되면 Console을 닫고 검증한 상태로 복구한 뒤 이유를 알린다.
+  사용자 응답 지연·정상401/403·시간 경과는 긴급 차단 조건이 아니다. 예정된 D 작업은 위 안내된 중단 절차를 따른다.
+- 상태는 항상 **배포 / Console 접속 / 실제 인증 검증 / D·E·F 진행**으로 구분해 기록한다.
+  `배포 완료`만으로 접속 가능·로그인 성공을 암시하지 않는다. scope를 바꿔야 할 새 근거가 생기면
+  이유·영향·대안을 먼저 설명하고 사용자 지시를 반영한다. 이미 받은 실행/sudo 위임을 다시 요구하지 않는다.
+
+### 이번 문서 작업과 다음 실행의 구분
+
+이번에는 이 계획과 ROADMAP/HANDOFF/로컬 재개 메모를 갱신하고 문서 링크·diff·문서 전용 CI를 확인한다.
+Caddy/VM/Cloudflare/DB·기존 고정 실행물을 변경하거나 Console을 다시 열지 않는다.
+다음 실행 전에 위 순서의 실제 diff·검증 가능한 명령·실패 복구안을 완성한다. 필요한 코드 보완은
+별도 reviewable concern으로 검증하고, 과거 `APPROVALS.txt`·PREPARATION·인계의 30분 창이나
+`Console 공개는 F` 문구를 현재 결정으로 적용하지 않는다. 그 파일들은 당시 범위와 결과의 이력이다.
+세션이 바뀌어도 PLAN의 이 개정과 HANDOFF 상단에서 시작한다. 결과는 기존 P06-C/D/E RESULT가 소유한다.
