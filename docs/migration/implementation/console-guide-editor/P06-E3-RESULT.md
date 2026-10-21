@@ -12,6 +12,7 @@ created_at: "2026-10-21"
 사용자가 공개 Web의 인증 기능을 제거하고 회원 기능은 나중에 추가하도록 확정했다.
 [P06 범위 개정](P06-PLAN.md#2026-10-21-web-인증-종료-개정), 헌법 §5, Auth §4.0,
 Domain AUTH-001을 같은 변경 단위로 반영한다. 기준은 fetch한 `origin/migration_main`의 `1ae99bb`다.
+구현·검증 코드 commit은 `70b17910e8a5f49bfaf43200555de234145c845e`다.
 로컬 `migration_main`은 `5135f6e`여서 사용하지 않았다. 독립 `feature/p06-web-public-only`에서 작업했다.
 
 ## 변경
@@ -48,11 +49,14 @@ tests/ops/paired-run-command.test.ts` 24건을 재실행해 모두 성공했다.
   실제 이전 upload Action ID를 `/`·`/login`·`/admin/albums`에 보내 409와 명시적 거절 header/body를 확인했다.
 - `node tests/ops/web-retirement-proxy-smoke.mjs`: 로컬 Caddy 2.10.2의 인증/관리/가입/Action 거부,
   encoded path/HEAD/OPTIONS 거부와 이전 upstream 도달 0, 공개 GET/HEAD 통과 성공.
-- Console standalone smoke 결과는 마지막 검사 후 기록한다. Console 소스·공통 서버/package·DB schema diff는 없다.
+- `node tests/ops/console-standalone-smoke.mjs http://127.0.0.1:3218`: 전용 host-only 쿠키,
+  로그인 redirect·hydration·OTP 입력/오류 UX 성공. 실제 관리자 로그인·CRUD를 실행한 검사는 아니다.
+  Console 소스·공통 서버/package·DB schema diff는 없다.
 - 전체 관리자 E2E·운영 DB/VM 검증은 실행하지 않았다. `git diff --check` 성공.
 
 로컬 로그·화면은 이 worktree의 `.local/p06-e3/`에 보관한다. `web-public-home.png`와
 `web-login-removed.png`는 공개 조회 및 제거된 로그인 경로의 실제 브라우저 화면이다.
+`console-login-preserved.png`는 기존 Console OTP 입력 화면이다.
 
 ## 운영 적용
 
