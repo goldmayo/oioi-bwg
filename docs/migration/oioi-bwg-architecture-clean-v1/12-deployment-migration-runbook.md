@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.17"
+version: "1.18"
 status: "active"
 authority: "runbook"
 updated_at: "2026-10-21"
@@ -488,7 +488,10 @@ Promotion은 문서만 달라도 전체 검증·후보 계약을 유지하며 �
 `migration_main` merge push와 `migration_develop` push에서는 무거운 검증·image build를 반복하지 않는다.
 두 push에서는 성공한 동일 저장소 PR의 head/tree·검증 job·입력 key·미만료 artifact를 확인한 뒤
 검증용 BuildKit 캐시만 base branch에 발행할 수 있다. 캐시 누락은 직접 빌드로 복구하며
-다른 run의 cache를 verify 통과·검증 image/standalone·배포 candidate 증거로 사용하지 않는다.
+다른 run의 cache를 verify 통과·검증 image·배포 candidate 증거로 사용하지 않는다.
+일반 CI는 같은 builder의 두 runtime image만 후속 smoke에 전달한다. 사용하지 않는 standalone tar는 별도로 생성·전송하지 않는다.
+Docker builder는 다음 변경 build에 복원하지 않는 Next 파일시스템 cache와 Turbo output archive를 쓰지 않으며,
+의존성·빌드 레이어의 BuildKit cache와 로컬 개발 cache는 유지한다.
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
 `promotion` check가 실패한다.
 

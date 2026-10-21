@@ -175,14 +175,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-verify-amd64-v2-
             ${{ runner.os }}-verify-amd64-v1-
-      - name: Build and export both standalone apps
+      - name: Build both runtime targets and cache
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: verification-artifacts
+          target: verification-cache
           platforms: linux/amd64
           build-args: NEXT_PUBLIC_APP_ENV=staging
-          outputs: type=local,dest=${{ runner.temp }}/ci-build
+          outputs: type=cacheonly
           cache-from: type=local,src=${{ runner.temp }}/buildx-cache
           cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
       - name: Load standalone container from the same builder
@@ -196,7 +196,9 @@ jobs:
           build-args: NEXT_PUBLIC_APP_ENV=staging
           cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
       - name: Archive verified container
-        run: docker save --output "${{ runner.temp }}/ci-build/web-image.tar" oioi-bwg:workspace-check
+        run: |
+          mkdir -p "${{ runner.temp }}/ci-build"
+          docker save --output "${{ runner.temp }}/ci-build/web-image.tar" oioi-bwg:workspace-check
       - name: Load Console container from the same builder
         uses: docker/build-push-action@v6
         with:
@@ -209,14 +211,6 @@ jobs:
           cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
       - name: Archive verified Console container
         run: docker save --output "${{ runner.temp }}/ci-build/console-image.tar" oioi-bwg-console:workspace-check
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ci-standalone
-          path: ${{ runner.temp }}/ci-build/standalone.tar.gz
-          overwrite: true
-          compression-level: 0
-          if-no-files-found: error
-          retention-days: 1
       - uses: actions/upload-artifact@v4
         with:
           name: ci-web-image
@@ -292,10 +286,6 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: ci-standalone
-          path: ${{ runner.temp }}/ci-build
-      - uses: actions/download-artifact@v4
-        with:
           name: ci-web-image
           path: ${{ runner.temp }}/ci-build
       - uses: actions/download-artifact@v4
@@ -304,7 +294,6 @@ jobs:
           path: ${{ runner.temp }}/ci-build
       - name: Restore this run's verified build
         run: |
-          tar -xzf "${{ runner.temp }}/ci-build/standalone.tar.gz"
           docker load --input "${{ runner.temp }}/ci-build/web-image.tar"
           docker load --input "${{ runner.temp }}/ci-build/console-image.tar"
 

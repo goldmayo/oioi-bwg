@@ -9,7 +9,10 @@ const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: ["@oioi-bwg/contracts", "@oioi-bwg/server"],
   outputFileTracingRoot: path.resolve(import.meta.dirname, "../.."),
-  experimental: { authInterrupts: true },
+  experimental: {
+    authInterrupts: true,
+    turbopackFileSystemCacheForBuild: process.env.OIOI_EPHEMERAL_BUILD !== "true",
+  },
   reactCompiler: true,
   allowedDevOrigins: ["localhost", "127.0.0.1"],
   images: {
