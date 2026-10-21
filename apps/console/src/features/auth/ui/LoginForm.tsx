@@ -24,6 +24,7 @@ const screens = {
   setup: { description: "관리자 인증기 등록", submitLabel: "QR 생성" },
   confirm: { description: "관리자 인증기 등록", submitLabel: "등록 확인" },
   complete: { description: "인증기 등록 완료", submitLabel: "로그인으로 돌아가기" },
+  navigating: { description: "로그인 완료", submitLabel: "이동 중..." },
 };
 
 export default function LoginForm({
@@ -49,7 +50,11 @@ export default function LoginForm({
         <CardDescription className="text-muted-foreground">{screen.description}</CardDescription>
       </CardHeader>
       <CardContent>
-        {step.kind === "complete" ? (
+        {step.kind === "navigating" ? (
+          <p role="status" className="text-muted-foreground text-center text-sm">
+            관리 화면으로 이동 중입니다.
+          </p>
+        ) : step.kind === "complete" ? (
           <div className="space-y-4" role="status">
             <p>다음 코드로 로그인하세요. 비밀번호를 다시 입력해주세요.</p>
             <Button className="h-11 w-full" onClick={() => reset()}>
@@ -58,7 +63,7 @@ export default function LoginForm({
           </div>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(submit)} className="space-y-4">
+            <form onSubmit={submit} className="space-y-4">
               {serverError && (
                 <p role="alert" className="text-destructive text-sm">
                   {serverError}

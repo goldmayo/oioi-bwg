@@ -5,11 +5,13 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import LoginForm from "./LoginForm";
 
-const { signIn, setupMfa, confirmMfa } = vi.hoisted(() => ({
+const { signIn, setupMfa, confirmMfa, replace } = vi.hoisted(() => ({
   signIn: vi.fn(),
+  replace: vi.fn(),
   setupMfa: vi.fn(),
   confirmMfa: vi.fn(),
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 vi.mock("../api/actions", () => ({ signIn }));
 vi.mock("../api/api", () => ({ setupMfa, confirmMfa }));
 let root: Root | undefined;
@@ -35,6 +37,8 @@ it("등록 confirmation은 저장 version을 사용하며 완료 후 QR과 입�
   fillCredentials();
   fireEvent.click(screen.getByRole("button", { name: "QR 생성" }));
   await screen.findByAltText("인증기 등록 QR 코드");
+  fireEvent.change(screen.getByLabelText("인증 코드"), { target: { value: "1" } });
+  expect(screen.getByLabelText("인증 코드").getAttribute("aria-invalid")).toBe("false");
   fireEvent.change(screen.getByLabelText("인증 코드"), { target: { value: "123456" } });
   fireEvent.click(screen.getByRole("button", { name: "등록 확인" }));
   await screen.findByText("다음 코드로 로그인하세요. 비밀번호를 다시 입력해주세요.");
@@ -122,3 +126,56 @@ it.each([false, true])(
     expect(submitted.get("otp")).toBe("123456");
   },
 );
+
+it("성공하면 입력과 오류를 버리고 관리 화면 이동 안내를 유지한다", async () => {
+  signIn.mockResolvedValue(undefined);
+  render(<LoginForm />);
+  fillCredentials();
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  await screen.findByLabelText("인증 코드");
+  fireEvent.change(screen.getByLabelText("인증 코드"), { target: { value: "123456" } });
+  fireEvent.click(screen.getByRole("button", { name: /^로그인$/ }));
+  await screen.findByRole("status");
+  expect(replace).toHaveBeenCalledExactlyOnceWith("/admin");
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByLabelText("Email")).toBeNull();
+  expect(screen.queryByLabelText("Password")).toBeNull();
+  expect(screen.queryByLabelText("인증 코드")).toBeNull();
+  expect(screen.queryByRole("button", { name: "다음" })).toBeNull();
+});
+
+it("입력 전 포커스와 단계 취소만으로 필드 오류를 표시하지 않는다", async () => {
+  render(<LoginForm />);
+  for (const label of ["Email", "Password"]) {
+    fireEvent.focus(screen.getByLabelText(label));
+    fireEvent.blur(screen.getByLabelText(label));
+    expect(screen.getByLabelText(label).getAttribute("aria-invalid")).toBe("false");
+  }
+  expect(screen.queryByText("올바른 이메일 형식을 입력해주세요.")).toBeNull();
+  expect(screen.queryByText("비밀번호는 최소 6자 이상이어야 합니다.")).toBeNull();
+  fillCredentials();
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  await screen.findByLabelText("인증 코드");
+  fireEvent.click(screen.getByRole("button", { name: "취소" }));
+  fireEvent.focus(screen.getByLabelText("Email"));
+  expect(screen.getByLabelText("Email").getAttribute("aria-invalid")).toBe("false");
+  expect(screen.getByLabelText("Password").getAttribute("aria-invalid")).toBe("false");
+});
+
+it("인증 코드 입력 중에는 오류를 표시하지 않고 제출 후 검증한다", async () => {
+  render(<LoginForm />);
+  fillCredentials();
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  const otp = await screen.findByLabelText("인증 코드");
+  fireEvent.focus(otp);
+  fireEvent.change(otp, { target: { value: "1" } });
+  fireEvent.blur(otp);
+  expect(otp.getAttribute("aria-invalid")).toBe("false");
+  expect(screen.queryByText("인증 코드 6자리를 입력해주세요.")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /^로그인$/ }));
+  await screen.findByText("인증 코드 6자리를 입력해주세요.");
+  expect(otp.getAttribute("aria-invalid")).toBe("true");
+  expect(signIn).not.toHaveBeenCalled();
+  fireEvent.change(otp, { target: { value: "123456" } });
+  await waitFor(() => expect(otp.getAttribute("aria-invalid")).toBe("false"));
+});

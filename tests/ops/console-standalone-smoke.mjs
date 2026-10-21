@@ -48,7 +48,17 @@ try {
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByLabel("인증 코드").waitFor();
   await expect(rateLimitAlert).toHaveCount(0);
-  await page.getByRole("button", { name: "로그인", exact: true }).waitFor();
+  const otp = page.getByLabel("인증 코드");
+  await otp.focus();
+  await otp.pressSequentially("123");
+  await expect(otp).toHaveAttribute("aria-invalid", "false");
+  await expect(page.locator('[data-slot="form-message"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+  await expect(otp).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText("인증 코드 6자리를 입력해주세요.", { exact: true })).toBeVisible();
+  await otp.fill("123456");
+  await expect(otp).toHaveAttribute("aria-invalid", "false");
+  await expect(page.locator('[data-slot="form-message"]')).toHaveCount(0);
   assert.equal(posts.length, 0, "first step does not authenticate or call an enrollment endpoint");
   assert.ok(
     (await page.context().cookies()).every(

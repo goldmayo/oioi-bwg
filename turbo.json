@@ -62,6 +62,7 @@
       "passThroughEnv": ["SENTRY_AUTH_TOKEN"],
       "env": [
         "NODE_ENV",
+        "OIOI_EPHEMERAL_BUILD",
         "NEXT_PUBLIC_APP_ENV",
         "NEXT_PUBLIC_GTM_ID",
         "NEXT_PUBLIC_SENTRY_DSN",

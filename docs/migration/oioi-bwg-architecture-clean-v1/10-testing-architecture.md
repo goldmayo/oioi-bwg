@@ -1,10 +1,10 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.3"
+version: "1.4"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-17"
+updated_at: "2026-10-21"
 depends_on:
   - "01"
   - "02"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.3
+# oioi-bwg Testing Architecture v1.4
 
 ## 1. 목적
 
@@ -248,6 +248,11 @@ login flow 자체를 검증하는 test를 제외하면
 각 test가 UI login을 prerequisite로 반복하지 않는다.
 
 Target은 production-like Next standalone + PostgreSQL 조합을 우선한다.
+
+관리자 전체 사용자 흐름(`pnpm test:integration:admin`, 로컬은
+`pnpm test:integration:admin:local`)은 필요 시 명시적으로 실행하는 E2E다.
+일반 PR·push·Promotion의 자동 CI 및 required `verify`에는 포함하지 않는다.
+실행하지 않은 관리자 E2E를 자동 검증 통과로 기록하지 않는다.
 
 구체 CI orchestration은 12가 소유한다.
 
