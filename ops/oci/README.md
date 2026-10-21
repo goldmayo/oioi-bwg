@@ -453,12 +453,13 @@ DB journal/schema·app 권한 확인 및 필요한 migration은 별도 승인 �
 실행 명령과 복구 완료 판정을 확정한다. OCI API/agent 오류 원문·runtime env·Secret은 CI/공개 기록으로 보내지 않는다.
 실제 두 앱의 container ID/StartedAt·health/readiness·IMDS 차단/host 양성 대조와 재시작 지속성까지 확인한 뒤 B2를 완료한다.
 
-## 10. Console 운영자 CLI (P06-D, 운영 실증 전)
+## 10. Console 운영자 CLI (P06-D)
 
 공통 계약은 [P06 계획 §6](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#6-https등록운영자-경계)과
 [AUTH-009](../../docs/migration/DOMAIN_SPECIFICATION.md#auth-009-console-mfa-등록과-회수)를 따른다.
 기존 `pnpm console:mfa`는 로컬 Compose 전용으로 유지한다.
 운영 경로는 개인 SSH 운영자가 검토한 요청을 sudo로 실행하며 배포·HTTP 경로에 연결하지 않는다.
+실제 설치·실물 MFA 회수/재등록·HTTPS 복구 증거는 [P06-D 결과](../../docs/migration/implementation/console-guide-editor/P06-D1-RESULT.md)를 따른다.
 
 1. 검토한 source에서 `pnpm build:console-operator`를 실행한다.
    `.local/console-operator/`의 bundle과 provenance를 함께 검토한다. provenance의 서버 소스는

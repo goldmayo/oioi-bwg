@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-21"
-revision: 14
+revision: 15
 ---
 
 # 구현 순서와 PR 단위
@@ -94,8 +94,13 @@ D의 실물 회수/비공개 재등록·복구 → E의 Web 관리/가입 종료
 [공개 유지 개정](P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)이 정확한 범위와 실패 복구 조건을 소유한다.
 Console 접속에 30분 자동 종료를 적용하지 않는다. D 작업에 필요한 비공개 등록은 그대로 유지한다.
 2026-10-21 정상 HTTPS 지속 공개 후 사용자가 로그인 성공을 확인했고, 후속 로그인 UX 수정도 #182로 배포했다.
-새 UI 사용자 확인·관리 조회·인증 세션/preview 격리·로그아웃은 남았다.
-현재 실행 증거와 남은 범위는 [C 결과](P06-C-RESULT.md#2026-10-21-로그인-ux-정상-promotion-배포-완료)를 따른다.
+사용자는 D 실물 MFA 회수·새 등록 뒤 HTTPS 새 로그인·관리 조회·로그아웃 후 재접근 차단을 확인했다.
+[D 운영 결과](P06-D1-RESULT.md#2026-10-21-실물-mfa-회수재등록과-https-설정-복원)를 따르며,
+기존 범위의 E host 차단과 #189 배포는 성공했으나, 사용자가 공개 Web의 일반 로그인도 제거하도록 정정했다.
+E 전체 완료 보고는 철회했고, 상위 문서 정합성을 맞춘 뒤 Web 인증 제거를 E에서 마친다.
+[E 운영 결과](P06-E2-RESULT.md#2026-10-21-e-정상-promotion과-최종-검증-완료)가 배포 상태를 소유한다.
+실제로 관찰하지 못한 인증 cookie 속성/preview 격리는 최종 hostname 검증에서 대조한다.
+F의 www 전환·레거시 종료는 아직 시작하지 않았다.
 현재 preview의 OCI Web이 최종 www가 되며 Console은 같은 VM을 사용한다. 상시 staging을 추가하지 않고
 전환 검증 후 기존 Web Worker·staging·preview 경로를 종료한다. assets/R2·메일은 실제 의존성 확인 후 정리한다.
 단일 VM의 기존 Promotion·OCI Run Command를 유지하는 세부 PR 분할과 두 앱 복구 계획은

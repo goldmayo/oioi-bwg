@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-21"
-revision: 63
+revision: 64
 ---
 
 # P06 작업 인계
@@ -12,7 +12,22 @@ revision: 63
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- **현재 상태: 로그인 UX 정상 Promotion #182 배포 완료 / Console 공개 유지 / 인증 후속 확인 대기.**
+- **최신 상태: D 실물 회수·재등록·HTTPS 복구 완료 / #189 배포 성공 / E는 Web 일반 인증 제거가 남아 미완료.**
+  [D 결과](P06-D1-RESULT.md#2026-10-21-실물-mfa-회수재등록과-https-설정-복원)와
+  [E 결과](P06-E2-RESULT.md#2026-10-21-e-정상-promotion과-최종-검증-완료)가 실제 증거를 소유한다.
+  사용자가 Web은 비로그인 공개 조회라고 정정했다. E 완료 보고를 철회하며 `/login`·Web Auth.js 제거를 E에서 처리한다.
+  [범위 정정](P06-E2-RESULT.md#2026-10-21-사용자-범위-정정--e-완료-보고-철회)을 우선하고 F로 미루지 않는다.
+  새 MFA version 4를 유지한다. 이전 인증기·이전 version을 복원하거나 D reset을 반복하지 않는다.
+  Console HTTPS는 공개 유지·등록 false다. D의 Chromium/SSH 터널은 종료했고 사용한 운영자 pin config는 퇴역했다.
+  #188 한정 일반 merge 뒤 두 보호 설정을 원복했다. #189 source `4ca2e43`·merge `36af6b6`,
+  Verify `39609292177`·Deploy `39611154318` exit 0와 실제 current pair를 대조했다.
+  이전/새 Web의 일반 로그인·로그아웃, 새 `/login` 홈 조회는 사용자 확인 완료다. 이전 pair는 검증한 #182다.
+  F의 www 전환·레거시 종료는 시작하지 않았다. G 계정 관리 계획은 별도 PR #187에서 검토한다.
+  전체 관리자 E2E와 두 회선 실험 제외를 유지한다. C의 미관찰 인증 cookie 속성/preview 격리는 최종 hostname 검사에 남긴다.
+
+아래 #182 상태는 이번 D/E 실행 전 이력이다.
+
+- **이전 상태: 로그인 UX 정상 Promotion #182 배포 완료 / Console 공개 유지 / 인증 후속 확인 대기.**
   [최신 C 실행 결과](P06-C-RESULT.md#2026-10-21-로그인-ux-정상-promotion-배포-완료)가 source/digest/receipt와 검증 증거를 소유한다.
   #166/#173/#174/#175/#177/#180/#182는 병합 완료이며 #174/#180의 한시 merge-method 설정은 각각 원복했다.
   회사 브라우저는 [Console 로그인](https://console.oioibawige.com/admin-login)에서 특수 헤더 없이 접속한다.
