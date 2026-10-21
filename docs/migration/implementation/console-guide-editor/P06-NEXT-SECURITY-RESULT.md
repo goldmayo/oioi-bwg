@@ -1,7 +1,7 @@
 ---
 title: "P06 Next.js 보안 패치 구현 및 검증 결과"
 kind: migration-result
-status: implemented
+status: deployed
 source_commit: 6d3f4d485dd1dc791bf4c1fcd5d721d3f5bcd7a1
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
@@ -12,7 +12,7 @@ updated_at: "2026-10-21"
 [승인 계획](P06-NEXT-SECURITY-PLAN.md)에 따라 두 앱의 보안 패치와 로컬 검증을 완료했다.
 기준은 `origin/migration_main`의 `ed19b6d9f033009349708dc35cb7bed2cd7be5cd`,
 구현 커밋은 `6d3f4d485dd1dc791bf4c1fcd5d721d3f5bcd7a1`이다.
-통합 PR·CI와 실제 Promotion 배포를 구분하며, 이 로컬 결과만으로 운영 패치 완료나 P06-C 완료를 선언하지 않는다.
+통합 PR·CI와 실제 Promotion 배포를 구분한다. 아래 로컬 기록 이후 **2026-10-21 실제 보안 패치 배포를 완료**했으며 마지막 절에 증거를 기록했다. P06-C의 실제 HTTPS 검증 완료와는 별개다.
 
 ## 변경
 
@@ -71,7 +71,7 @@ high 20·moderate 16·low 2가 남았다. audit가 10월 공지를 누락했던 
 스크린샷은 같은 폴더의 `admin/`에 두며 테스트용 계정만 사용했다. GitHub CI·PR의 최신 결과와
 컨테이너/ARM64 증거는 해당 PR 및 Promotion의 Actions artifact에 연결한다.
 
-## 남은 운영 단계
+## 로컬 검증 당시 남은 운영 단계
 
 통합·Promotion 전까지 운영 VM의 패치는 미적용이다. 두 앱 candidate를 새로 만들고
 정상 Promotion의 동일 digest 검증·배포·receipt를 확인해야 한다. 실패 시 이전 pair로
@@ -81,3 +81,42 @@ high 20·moderate 16·low 2가 남았다. audit가 10월 공지를 누락했던 
 그대로 재실행하지 않는다. 필요한 CF 규칙 수정과 Caddy HTTPS 설정은 구체 변경안으로
 분리하고, 사용자 브라우저 로그인·실제 전달 IP·위조 헤더 방어를 검증한다.
 Wi-Fi→5G 실험은 미실시·필수 범위 제외를 유지하며 F의 www 전환도 포함하지 않는다.
+
+## 2026-10-21 실제 Promotion 배포 완료
+
+- 구현 [#170](https://github.com/goldmayo/oioi-bwg/pull/170)의
+  [Verify 39528845842](https://github.com/goldmayo/oioi-bwg/actions/runs/39528845842) 전체 성공 후
+  `461e00725bc20361d56b2385e3b34eae95b8f0b4`로 squash 통합했다.
+- 정상 Promotion [#171](https://github.com/goldmayo/oioi-bwg/pull/171)의
+  [Verify 39529791956](https://github.com/goldmayo/oioi-bwg/actions/runs/39529791956) 전체 성공.
+  두 ARM64 이미지를 새로 빌드·게시하고 같은 digest로 native/readiness/브라우저를 검증했다.
+  ARM64 컨테이너 두 앱의 출력도 Next 16.4.1 / sharp 0.35.5다. candidate artifact는 `12315630507`이다.
+- source `461e00725bc20361d56b2385e3b34eae95b8f0b4`와 실제 squash
+  `3e8bbfcfeb536aeda0aed80d677cd6e0e2b3843d`의 tree는
+  `9a25944ef1d3413bbf0ab56a935bac44fa9149b0`로 같다.
+- [Deploy 39531272992](https://github.com/goldmayo/oioi-bwg/actions/runs/39531272992) 성공,
+  receipt `12315426663`의 **exit 0**과 candidate 동일성·source/merge/run/attempt를 대조했다.
+  [정상 배포 receipt artifact](https://github.com/goldmayo/oioi-bwg/actions/runs/39531272992/artifacts/12315426663).
+
+| 실제 배포 대상 | Immutable digest |
+| --- | --- |
+| web | `sha256:c28385816060e272221c466ca7f075ffdfa70ee24f3ab85da748b9eba9b47c45` |
+| console | `sha256:734816e75d3b6017e49d7a17182854f44f1d71fbca05cf6d31a009f6a7143173` |
+
+정상 release ID는 `114cf13556fc9c52657ccaf6c8461d11a99bbde848ca9b97f7dafb5174faecfb`다.
+
+배포 후 SSH 읽기 조회에서 두 실행 컨테이너의 digest·OCI revision이 candidate와 일치하고,
+실제 Next 16.4.1 / sharp 0.35.5, 두 앱 health/readiness 네 경로 200을 확인했다.
+DB 컨테이너 ID·시작 시각·healthy, Caddy 설정 SHA256, Console HTTP loopback Origin과
+MFA 등록 비활성 설정은 배포 전과 같다. 외부 preview 홈·health·readiness는 200이며
+Console은 기존 403/no-store 차단을 유지한다. 운영 DB migration이나 CF/Caddy 변경은 없었다.
+
+로컬 증거는 `.local/p06-next-security/`의 `candidate.json`, `deployment-receipt/`,
+`arm64-candidate.log`, `vm-before-promotion.json`, `vm-db-before-promotion.json`,
+`vm-after-promotion.json`이다. 위 로컬 결과는 운영 패치 미적용으로 남겨 두었던 사항을
+이번 실제 배포로 해소한 이력이며, HTTPS 공개·사용자 실제 로그인 검증 완료를 뜻하지 않는다.
+
+다음 C 작업에서는 새 release/container를 기준으로 HTTPS 검증 준비물을 다시 만든다.
+기존 창3 묶음은 이전 컨테이너에 고정돼 있으므로 재사용하지 않는다. D/E PR #167~#169는
+이번 배포에 포함되지 않았고 이후 통합 전 최신 보안 패치 base를 포함해 검증해야 한다.
+F의 www 전환과 두 실제 회선 실험 제외 조건도 유지한다.
