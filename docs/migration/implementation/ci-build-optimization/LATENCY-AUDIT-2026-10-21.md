@@ -207,7 +207,7 @@ app build는257→75초, 약71% 단축됐다. 같은 빌드 입력의 두 표본
 
 #179의 cache artifact12326230222 ZIP 중앙 디렉터리·OCI manifest와 큰 레이어의 제한된 tar 표본을 읽었다.
 전체 파일36개의 합계는1,308,780,015바이트이며 ZIP artifact는1,308,788,491바이트다.
-전체1.31GB를 다운로드하거나 실행하지 않았다. 아래 MB는10진수이고 압축된 blob 크기다.
+이 첫 표본 조사는 전체1.31GB를 다운로드하거나 실행하지 않았다. 아래 MB는10진수이고 압축된 blob 크기다.
 
 | 구성 | 크기 | 확인 근거 |
 | --- | --- | --- |
@@ -216,7 +216,96 @@ app build는257→75초, 약71% 단축됐다. 같은 빌드 입력의 두 표본
 | standalone 압축본을 담은 두 레이어 | 105.17MB | digestd0b0c9fd…·34baf91e…; /tmp/standalone.tar.gz와 scratch의 standalone.tar.gz, 각 파일52,585,094바이트 |
 | Node·OS·runtime 등 나머지 | 135.02MB | 전체 파일 합계에서 위 레이어 제외 |
 
-레이어 내부 전체 파일별 합계는 미측정이므로804MB 전체를 `.next/cache`로 단정하지 않는다.
+이 첫 표본 조사만으로는 레이어 내부 전체 파일별 합계를 알 수 없어804MB 전체를 `.next/cache`로 단정하지 않았다.
 확인된 중복 archive는 용량 축소 검토 대상이다. 삭제 시에는 실제 consumer와 Docker cache graph를 함께
 검증해야 하며 이번 PR 간 캐시 발행 수정에 추측으로 포함하지 않았다. ARM64 후보 cache와 Next 증분
 캐시 분리·용량 축소는 이 결과가 완료했다고 주장하는 범위에 포함되지 않는다.
+
+
+## 캐시 용량 전수 분석 — 2026-10-21 후속 실측
+
+같은 artifact의 빌드·의존성 레이어 두 개, 합계1,068,590,584바이트를 HTTP Range로 끝까지
+스트리밍하여 zstd 해제 후 tar 파일 헤더를 집계했다. 두 압축 blob의 SHA-256과 전송 바이트 수가
+OCI digest·크기와 일치했다. 파일을 추출하거나 실행하지 않았으며 압축본 전체를 디스크에 저장하지 않았다.
+빌드 레이어7,436개, 의존성 레이어192,151개 entry를 확인했다. 아래는 일반 파일의 크기 합계이며
+디렉터리·symlink는 제외한다. 압축 전 파일 크기와 앞 표의 압축 blob 크기를 합산하지 않는다.
+
+분석 대상 코드/tree는 #179/#180의 `9dc714d6287cae97590a9f4a4d209ad1633a350d`다.
+재현 스크립트와 전체 파일 목록은 작업 worktree의 `.local/ci-base-cache/analyze-layers.py`,
+`<digest>-files.json`, `layer-analysis.json`에 보존했다. 인증 토큰·서명 URL은 기록하지 않았다.
+
+### 804.17MB 빌드 레이어의 실제 내용
+
+| 구성 | 압축 전 크기 | 판단 |
+| --- | --- | --- |
+| Web `.next/cache` | 533.75MB | Turbopack 파일시스템 캐시 |
+| Console `.next/cache` | 172.29MB | Turbopack 파일시스템 캐시 |
+| 두 앱 `.next/server` | 219.18MB | 서버 빌드 출력 및 source map |
+| 두 앱 `.next/standalone` | 178.41MB | 실행용 파일·추적 의존성 복사본 |
+| Turbo 로컬 cache | 89.70MB | `.tar.zst` 두 개87.23MB와 JSON2.46MB |
+| static·build·manifest 등 나머지 | 7.87MB | 실제 빌드 출력 등 |
+| 합계 | 1,201.19MB | 압축 후804.17MB인 한 레이어 |
+
+`.next/cache` 합계706.03MB는 빌드 레이어 일반 파일의58.78%다. 원인은 다음과 같이 확인했다.
+
+- 설치된 Next16.4.1의 `config-shared.js`에서 `turbopackFileSystemCacheForBuild: true`를 확인했다.
+  앱 config는 이를 재정의하지 않는다. [Next 공식 문서](https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopackFileSystemCache)는
+  16.3.0부터 build 기본 활성화이며 컨테이너에서 다음 빌드에 보존하지 않으면 비활성화하도록 안내한다.
+- 현재 Dockerfile은 dependencies → source COPY → build RUN이다. `.dockerignore`가 host의
+  `.next`와 `node_modules`를 제외하고 Next/Turbo cache mount·별도 복원도 없다.
+  따라서 동일 입력이면 BuildKit이 RUN 전체를 건너뛰고, 소스가 바뀌면 이전 RUN 출력의
+  `.next/cache`나 Turbo cache를 새 RUN의 입력으로 넘기지 않는다. 이 경로 판단은 코드와
+  [Next CI cache 요구사항](https://nextjs.org/docs/app/guides/ci-build-caching)을 대조한 결과다.
+- `turbo.json`의 `.next/cache` 제외는 **Turbo archive의 outputs 범위만** 줄인다.
+  Docker `mode=max`가 저장하는 build RUN 파일시스템에서는 해당 폴더가 제외되지 않는다.
+  [Turbo 캐시 문서](https://turborepo.com/docs/crafting-your-repository/caching)의 output 저장 동작과 일치한다.
+- Turbo archive87.23MB는 이미 생성된 `.next` 출력을 다시 압축해 같은 RUN 안에 보관한 것이다.
+  현재 Docker 경로에는 다음 변경 빌드가 이 cache를 복원하는 단계가 없다. 로컬 개발의 Turbo cache는
+  별개로 유효하므로 전역 `turbo.json`에서 caching을 끄는 처방은 적절하지 않다.
+
+### 264.42MB 의존성 레이어
+
+압축 전 일반 파일 합계는1,313.47MB다. 상위 항목은 Next192.51MB, SWC gnu100.92MB와
+musl98.44MB, Turbo41.10MB, lucide-react36.63MB, TypeScript23.63MB다.
+Rolldown gnu/musl 합계46.05MB와 libvips gnu/musl 합계37.63MB도 함께 설치돼 있다.
+현재 builder는 Debian glibc지만 lockfile·optional dependency 동작과 앱의 native smoke를
+확인하기 전에 musl 패키지를 임의 삭제하지 않는다. 이들은 캐시 압축 후 크기와도 다르다.
+
+의존성 레이어는 manifest/lockfile이 같으면 source 변경에도 재사용할 수 있어 보존 가치가 있다.
+개발 도구·타입·빌드 도구가 필요한 builder에서 무조건 production install로 바꾸는 것도 맞지 않는다.
+standalone에 두 앱 각각 gnu/musl libvips가 들어간 사실은 추가 추적 최적화 후보이며,
+현재 런타임 의존성을 안전하게 제거할 수 있다는 결론은 아니다.
+
+### 105.17MB 중복 standalone archive
+
+`verification-archive`의 `/tmp/standalone.tar.gz`와 scratch 출력의 `/standalone.tar.gz`가
+각52,585,094바이트 파일을 담는다. max export에 서로 다른 두 레이어가 들어간다.
+현재 build job은 이 artifact를 다운로드·해제하지만 이후 실행은 전달받은 두 Docker image와
+HTTP URL을 사용한다. native/readiness/Web·Console 화면 smoke 및 paired Compose 스크립트의
+실제 호출 경로를 확인했다. 전체 관리자 E2E 제거 뒤 남은 전달 경로다.
+
+로컬 `console-https-smoke`·`console-auth-ingress-smoke`는 standalone을 사용하므로
+Next의 standalone 생성 자체를 제거해서는 안 된다. 후속 변경은 CI archive 전달과 Docker
+검증 target에 한정하고 동일 builder에서 만든 두 image의 검증 계약을 보존해야 한다.
+
+### 개선 우선순위와 검증 기준
+
+1. **Docker build에서 소비하지 않는 Next·Turbo 내부 cache부터 줄인다.** Next 파일시스템 cache를
+   Docker build에 한정해 비활성화하거나 별도 mount로 레이어 밖에 두는 안을 비교한다.
+   Turbo도 Docker 호출에 한정한 cache write 제어를 검토한다.
+   [공식 `--cache` 옵션](https://turborepo.com/docs/reference/run#--cache-options)을 사용하고 로컬 cache는 유지한다.
+   이후에 별도 증분 캐시 복원을 도입한다면 저장·전송 비용을 포함해 다시 측정한다.
+2. **불필요한 CI standalone archive 전달을 제거한다.** 위105.17MB 두 blob과 별도 artifact
+   업로드·다운로드·해제 비용이 대상이다. 두 image 생성·검증은 유지한다.
+3. **의존성·native 중복은 별도 범위로 검토한다.** 크기만 보고 삭제하거나 lockfile을 정리하지 않는다.
+   현재 최대 낭비는 다시 읽지 않는 build 내부 cache이며 dependency layer는 실제 재사용된다.
+
+`mode=max`를 무조건 `min`으로 바꾸는 안은 우선하지 않는다. 현재 최종 target은 archive 한 개를
+담은 scratch여서 min으로 바꾸면 유용한 install/build 중간 캐시까지 잃을 수 있다.
+[Docker 공식 문서](https://docs.docker.com/build/cache/backends/#cache-mode)도 용량과 적중률을 함께 실측하도록 안내한다.
+또한 현재 cache 디렉터리는 매 export마다 새 폴더로 교체하므로 오래된 blob의 무한 누적이 이번1.31GB의 원인은 아니다.
+
+이 분석 변경에서는 빌드 설정을 수정하지 않았다. **706.03MB+89.70MB는 압축 전 수치이며
+그만큼 다운로드가 줄어든다고 주장하지 않는다.** 제거 후 실제 압축 cache 크기와 cold build,
+동일 입력 restore, source 변경 build, 후속 image smoke 전체 시간을 비교해야 절감량을 확정할 수 있다.
+ARM64 후보의 GHA 캐시는 별도 경로이므로 이 amd64 표본을 그대로 적용하지 않는다.
