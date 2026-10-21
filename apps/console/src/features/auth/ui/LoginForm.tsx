@@ -26,9 +26,16 @@ const screens = {
   complete: { description: "인증기 등록 완료", submitLabel: "로그인으로 돌아가기" },
 };
 
-export default function LoginForm({ enrollmentEnabled = false }: { enrollmentEnabled?: boolean }) {
+export default function LoginForm({
+  enrollmentEnabled = false,
+  initialRateLimited = false,
+}: {
+  enrollmentEnabled?: boolean;
+  initialRateLimited?: boolean;
+}) {
   // 모델은 인증 요청/폐기를 소유하고, 이 컴포넌트는 현재 단계에 맞는 입력과 안내만 표시한다.
-  const { form, step, serverError, loading, isHydrated, submit, reset } = useConsoleLoginForm();
+  const { form, step, serverError, loading, isHydrated, submit, reset } =
+    useConsoleLoginForm(initialRateLimited);
   const screen = screens[step.kind];
   const disabled = !isHydrated || loading;
   const showCredentials = step.kind === "credentials" || step.kind === "setup";
