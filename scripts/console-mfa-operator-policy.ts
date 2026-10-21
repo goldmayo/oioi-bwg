@@ -97,6 +97,7 @@ export function readOperatorConfiguration(file: string) {
     if (
       Object.keys(data).sort().join() !== "databaseUrl,operatorUid,scope,serverStartedAt" ||
       data.scope !== "local-compose" ||
+      typeof process.getuid !== "function" ||
       data.operatorUid !== process.getuid() ||
       typeof data.databaseUrl !== "string" ||
       typeof data.serverStartedAt !== "string" ||
