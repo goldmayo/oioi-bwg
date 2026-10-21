@@ -356,54 +356,6 @@ jobs:
       - name: Verify paired Compose container preservation and recovery
         run: bash tests/ops/paired-compose-smoke.sh
 
-  admin_integration:
-    name: Admin migration integration
-    needs: app_build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_DB: postgres
-          POSTGRES_HOST_AUTH_METHOD: trust
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.1
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.16.0
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v4
-        with:
-          name: ci-standalone
-          path: ${{ runner.temp }}/ci-build
-      - name: Restore this run's verified apps
-        run: tar -xzf "${{ runner.temp }}/ci-build/standalone.tar.gz"
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Complete existing admin flows on both private standalone origins
-        run: pnpm test:integration:admin
-        env:
-          M7_TEST_POSTGRES_ADMIN_URL: postgresql://postgres@127.0.0.1:5432/postgres
-          P04_ARTIFACT_DIR: .local/p04-admin-smoke
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: p04-admin-smoke
-          path: .local/p04-admin-smoke
-          if-no-files-found: ignore
-
   verify:
     name: verify
     if: always()
@@ -413,7 +365,6 @@ jobs:
       - quality
       - unit
       - postgres_integration
-      - admin_integration
       - app_build
       - build
     runs-on: ubuntu-latest

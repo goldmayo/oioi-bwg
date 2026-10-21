@@ -106,13 +106,26 @@ package 타입·린트·단위 487건에 대응하는 Turbo 12 task와 두 앱 b
 GitHub의 수정 후 실측과 자동 push hook 결과는 해당 PR에서 이어서 기록한다.
 VM에 설치된 운영 스크립트는 이 로컬 변경만으로 갱신되지 않는다.
 
+## 사용자 결정 — 관리자 전체 E2E 자동 실행 제외
+
+2026-10-21 사용자의 명시적 요청으로 `Admin migration integration` job을 Verify workflow에서 제거하고
+required gate의 needs·검증 목록도 함께 갱신했다. 일반 PR·기존 push·Promotion 모두 자동 실행하지 않는다.
+테스트 코드와 `pnpm test:integration:admin:local` 명령은 필요 시 직접 실행할 수 있도록 남겼다.
+Testing §12.1 및 배포 runbook §21을 같은 변경에서 갱신했다.
+컨테이너 시작·native/readiness·간단한 화면 smoke와 Promotion의 exact digest 검증은 기존대로다.
+
+#175 실측에서는 app_build 뒤 관리자 job 233초와 build smoke 188초가 병렬이었다.
+따라서 관리자 job 제거만으로 전체 시간이 233초 줄어드는 것이 아니라 이 표본 기준 약 45초가 줄어드는 구조다.
+브라우저 job 자체의 실행 비용·OTP 대기·해당 job의 실패 후 재실행 비용은 제거된다.
+수정 후 실제 CI 전체 시간은 새 실행 결과로 확인한다.
+
 ## 후속 개선 순서
 
 1. 이번 정규식 수정으로 ops 지연과 반복 timeout을 제거한다. 전체 CI의 최장 경로는 별도로 측정한다.
 2. 검증을 통과한 통합 기준의 캐시를 새 PR에서 읽을 수 있도록 캐시 발행 경로를 설계한다.
    migration_main push에서 무거운 검증·빌드를 반복하지 않는 기존 계약을 고려하고,
    검증된 입력·산출물 근거를 확인하는 방식과 필요 시 runbook 개정을 별도 PR에서 다룬다.
-3. 브라우저 시나리오별 계정 격리로 OTP 재사용 대기를 줄인다. 실제 재전송 차단·시간 경계 검증은 유지한다.
+3. 관리자 E2E는 자동 CI에서 제외됐다. 시나리오별 계정 격리는 수동 E2E가 필요할 때 검토할 별도 항목이다.
 4. 일회성 ARM64 runner의 builder 정리와 중복 Terraform/FSD 실행을 정리한다.
 5. squash Promotion의 이력 연결 반복을 줄이는 merge 전략은 repository 보호 설정·runbook과 함께 별도 검토한다.
    파일 변경 없는 PR의 전체 검증을 현재 규칙 아래에서 임의로 생략하지 않는다.

@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.15"
+version: "1.16"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-17"
+updated_at: "2026-10-21"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.9
+# oioi-bwg Deployment / Migration Runbook v1.16
 
 ## 1. 목적
 
@@ -477,7 +477,10 @@ feature/* → PR → migration_main (통합, 배포 없음)
 migration_main → Promotion PR → migration_develop (OCI Development 배포 대상)
 ```
 
-일반 feature PR은 기존 verify(정적 검사·unit/ops/PostgreSQL·Next build)를 수행한다.
+일반 feature PR의 verify는 정적 검사·unit/ops/PostgreSQL·Next build와 컨테이너 smoke를 수행한다.
+관리자 전체 Playwright E2E(`Admin migration integration`)는 자동 workflow job과 required verify에서 제외한다.
+일반 PR·기존 push·Promotion 모두 동일하며 `pnpm test:integration:admin` 계열 명령으로 필요 시 직접 실행한다.
+관리자 E2E 제외는 container native/readiness·간단한 화면 smoke나 아래 Promotion exact digest 검증을 생략하는 조건이 아니다.
 단, `migration_main` 대상 전체 PR diff가 일반 파일 `.md` 변경뿐이면 scope 판정과 필수 `verify`만 실행한다.
 이력 누락·빈 diff·symlink/실행 mode·MDX·코드 혼합은 전체 검증이다. Git raw diff의 삭제/추가 양쪽을
 검사해 code→md rename과 API 파일 수 제한에 의한 누락을 방지한다. workflow 자체를 path filter로 생략하지 않는다.
