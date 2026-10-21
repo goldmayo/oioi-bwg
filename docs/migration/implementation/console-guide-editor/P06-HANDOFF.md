@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-21"
-revision: 59
+revision: 60
 ---
 
 # P06 작업 인계
@@ -12,12 +12,19 @@ revision: 59
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- **현재 실행 목표:** [Console 공개 유지 개정](P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정).
-  회사 검증용 Console을 C에서 계속 열고 F의 www/레거시 전환은 보류한다. 성공 후 30분 자동 종료,
-  회신 대기/채팅 종료 시 원복을 다시 적용하지 않는다. 과거 PREPARATION·APPROVALS·아래 F 공개 문구는 당시 이력이다.
-  현재 실제 상태는 closed403이며 이번 요청은 계획 작성이다. 다음은 지속 HTTPS 설정·정상 Promotion·실패 복구안 준비다.
-  배포/접속/실제 인증 결과를 구분하고, 새 위험에 따른 차단과 D의 비공개 등록 중단은 개정의 조건을 따른다.
-- 현재 C 진입점: **창4 ingress13항목·CSRF/callback 쿠키 확인 / 30분 자동 종료·원복 확인 / 실제 사용자 로그인 결과 미확인**. [종료 결과와 남은 범위](P06-C-RESULT.md#2026-10-21-창4-자동-종료원복과-남은-인증-검증)를 따른다. Console은 외부403이며 Web/DB·보안 이미지·인증서를 보존했다. C는 미완료이고 기존 창2/3/4를 재실행하지 않는다. 다음 적용은 위 공개 유지 개정과 현재 baseline을 따르며 시간 제한 창을 새로 만들지 않는다. 두 회선 실험 제외·F 보류를 유지한다. 아래 설명은 각 기록 시점의 이력이다.
+- **현재 상태: 정상 HTTPS 배포 완료 / Console 공개 유지 / 실제 인증 확인 대기.**
+  [최신 C 실행 결과](P06-C-RESULT.md#2026-10-21-정상-https-배포와-console-지속-공개)가 source/digest/receipt와 검증 증거를 소유한다.
+  #166/#173/#174/#175는 병합 완료이며 #174의 한시 merge-method 설정은 원복했다.
+  회사 브라우저는 [Console 로그인](https://console.oioibawige.com/admin-login)에서 특수 헤더 없이 접속한다.
+  자동 종료·사용자 회신 지연/채팅 종료 시 원복은 없다. 국가 보호 규칙은 변경하지 않았다.
+- 다음은 사용자 MFA 로그인·관리 조회·세션 쿠키/preview 격리·로그아웃 확인이다. 자동 검사를 실제 인증 성공으로 확대하지 않는다.
+  D reset은 사용자의 실물 인증기와 SSH loopback 준비 전 실행하지 않는다. D 완료 뒤 E를 별도 Promotion하고 F는 보류한다.
+  새 실행은 #175 HTTPS pair를 기준으로 대조한다. HTTP previous pair 복구 시에는 공개를 닫아야 한다.
+  기존 창2/3/4의 start/marker/30분 종료 경로를 재사용하지 않는다. 두 회선 실험은 제외·미실시다.
+
+아래는 이전 진행 이력이며 최신 실행 지시와 구분한다.
+
+- 창4 당시 C 진입점: **창4 ingress13항목·CSRF/callback 쿠키 확인 / 30분 자동 종료·원복 확인 / 실제 사용자 로그인 결과 미확인**. [종료 결과와 남은 범위](P06-C-RESULT.md#2026-10-21-창4-자동-종료원복과-남은-인증-검증)를 따른다. Console은 외부403이며 Web/DB·보안 이미지·인증서를 보존했다. C는 미완료이고 기존 창2/3/4를 재실행하지 않는다. 다음 적용은 위 공개 유지 개정과 현재 baseline을 따르며 시간 제한 창을 새로 만들지 않는다. 두 회선 실험 제외·F 보류를 유지한다. 아래 설명은 각 기록 시점의 이력이다.
   #165 merge `ed19b6d` 후 두 merge 허용 설정을 원복했다. [#164](https://github.com/goldmayo/oioi-bwg/pull/164)는 승인된 고정 후보를 `64dca4c`로 squash 병합했고 정상 receipt가 발행됐다. #166은 Draft·미병합이다.
   검증 source/CI·후보 및 사용자의 Cloudflare 사전 점검 사실은 [P06-C RESULT](P06-C-RESULT.md)가 소유한다.
   이미 확인된 Cloudflare 항목을 재조사하지 않는다. 남은 서버 조건과 인증서 단계 승인 범위는 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)를 따른다.
