@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 25
+revision: 26
 ---
 
 # P06-C 구현 결과
 
-**최신 상태:** 최소 HTTPS 창2는 helper 중단 후 root `exit20/aborted`로 원복했다. [실제 실행 결과](#2026-10-21-최소-https-창2-실행중단과-원복)는 유지하고, [helper 보완과 창3 로컬 준비](#2026-10-21-helper-보완과-최소-https-창3-로컬-준비)를 완료했다. 사용자가 모바일만 사용 가능해 새 창은 미전달·미설치·미개방이며 PC 로그인 대기다. C는 미완료이고 두 회선 실험은 제외·미실시다.
+**최신 상태:** [보안 패치의 두 앱 배포](P06-NEXT-SECURITY-RESULT.md) 후, 회사 브라우저용 창4를 root 설치·사전 검사·개방했다. [창4 실행 결과](#2026-10-21-창4-설치개방과-실제-ingress-검증)에 실제 자동 검사13항목과 인증 쿠키 속성 성공을 기록했다. 사용자의 HTTPS MFA 로그인·세션 쿠키·로그아웃과 최종 원복 확인은 진행 중이며 C는 미완료다. 창2는 종료 이력, 창3은 이전 배포 기준이라 실행하지 않는다. 두 회선 실험은 제외·미실시다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인 / 최소 HTTPS 창2 전환·개방 후 helper 중단·exit20 원복 완료. C 전체 완료가 아니다. 아래 미실행 표시는 각 기록 시점의 이력이다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
@@ -456,3 +456,66 @@ helper는 `CF-Connecting-IP` 위조를 Cloudflare403/error1000 검사로 분리�
 archive SHA256은 `7d0483e342690f87a79c48c152557c64a3d25c4d645f96ea50a6948573656007`, 설치 launcher는 `2ed46a150ad0c7931ef1a3eff329909aae38e735d6ae76b1087ececef770774e`다. 실제 수행한 검사는 Python/내장 Python·Node·bash 문법, archive 일반 파일9개/내부 hash·진입점 hash 연결·입력0600, 전환/복구 포함 기존 controller23함수의 AST 동일·Caddy/renderer/materializer/SQL5파일 바이트 동일·창2 원본 보존이다. SSH 읽기 재확인에서 원복 후 컨테이너 ID/start/image·Caddy/materializer·인증서·403/health/preview와 창2/3 unit 부재·창3 신규 경로 부재를 확인했다. 근거는 새 `bundle-proof.json`·`vm-preflight.json`이며 sudo·VM 쓰기·로컬 runtime fixture·앱 테스트는 실행하지 않았다. 정적 준비는 실제 HTTPS 인증 성공이 아니며 남은 범위와 두 회선 제외는 그대로다.
 
 수정한 두 문서의 로컬 링크/anchor39개와 `git diff --check`를 통과했다. 준비 시 정상 receipt12192252859 미만료와 #166의 Draft·미병합 상태를 읽기 확인했으며, 실제 재개 직전에는 최신 상태를 다시 대조한다.
+
+
+## 2026-10-21 보안 패치 후 회사 브라우저용 HTTPS 창4 준비
+
+사용자가 보안 패치 후 나머지 작업 재개를 지시했다. [보안 배포 결과](P06-NEXT-SECURITY-RESULT.md)의
+Promotion #171 candidate와 정상 release `114cf13556fc9c52657ccaf6c8461d11a99bbde848ca9b97f7dafb5174faecfb`를
+기준으로 SSH 읽기 전용 대조를 수행했다. 현재 Web/Console/DB ID·시작 시각·이미지와 닫힌 Caddy 설정이
+배포 후 증거와 일치하고, 네 health/readiness와 preview 세 경로는200, Console HTTP/HTTPS는403이다.
+인증서와 이전 보호 경로 metadata도 유지됐다. sudo·DB 조회·VM 쓰기는 하지 않았다.
+
+기존 창3은 이전 release/container에 묶여 있어 재사용하지 않는다. ignored
+`.local/p06-c/https-auth-window4/`의 새 준비물은 현재 배포 candidate·컨테이너와 Caddy 상태를 고정한다.
+회사 브라우저에는 전용 헤더 없이 Cloudflare TCP peer를 거친 HTTPS 접근을 최대30분 허용하고,
+진단 token은 CSRF 경로의 임시 IP 관찰 헤더에만 사용한다. 기존 MFA 로그인·IP 제한·등록false를 유지한다.
+검증 종료/실패/만료 때 먼저 접근을 닫은 뒤 원래 HTTP env/materializer와 동일 digest/configHash를 복구한다.
+보호 백업·deployment lock·단일 실행/원복 경계를 유지하며 www 전환/F 공개 완료를 뜻하지 않는다.
+
+Python/내장 Python·Node·Bash 문법, 실제 Caddy2.6.2 adapt, archive 일반 파일11개/내부 hash 연결을 확인했다.
+전환/백업/복구 등의 기존 controller20함수 AST와 materializer/SQL/닫힌 Caddy/전달 설정4파일 byte를 보존했다.
+새 baseline은 과거 배포 링크를 현재 값으로 억지 대조하지 않고 #171 candidate와 현재/직전 보호 snapshot을 검사한다.
+archive SHA256은 `47cecf83e8d746dd841b8dd90234806961b7e9f7cabc4511a39312970bae3170`,
+설치 launcher는 `36131e0a3f82afc0693e6a50f18b2bf97b27b99c401db56e53a4b0220375c8cc`다.
+정적 준비이며 실제 runtime/인증 성공 증거가 아니다. 이전 실행물·백업·marker를 수정하지 않았다.
+
+사용자가 제공한 `Protect Admin Path`의 `(http.request.uri.path contains "/admin")`는
+관리 API에도 적용된다. 실제 GET `/admin-login`과 `/api/admin/albums`가 CF challenge403,
+`/api/auth/csrf`가 Caddy403/no-store인 것을 확인했다. 다른 호스트의 기존 보호는 유지하고 Console만
+로그인 화면의 HTML GET에 Managed Challenge를 적용하는 식을 사용자에게 전달했다.
+표현식은 [Cloudflare 헤더 배열 문법](https://developers.cloudflare.com/ruleset-engine/rules-language/fields/reference/http.request.headers/)을 대조했다.
+사용자가 보낸 재입력 식의 `eg`, `anv`, 배열 표기와 `text/ html` 오타를 바로잡았다.
+브라우저/인증 앱 이용 가능은 확인됐지만 저장·배포 완료는 아직 미확인이다.
+
+실제 실행 전에는 수정된 CF 경계와 최신 배포를 다시 대조한다. 인간 로그인·관리 조회·세션 쿠키 속성/호스트 분리·
+로그아웃은 회사 브라우저의 확인 결과로 기록하고 자동 ingress 증거와 구분한다.
+D의 운영 CLI reset/재등록·복구, E의 host 차단과 Promotion은 후속 단계이며 F는 보류한다.
+근거는 ignored 창4의 `vm-preflight.json`, `edge-before-window.json`, `bundle-proof.json`과 보호 실행물이다.
+
+
+## 2026-10-21 창4 설치·개방과 실제 ingress 검증
+
+사용자가 교정한 CF 식 저장·배포 완료와 회사 브라우저/인증 앱 입력 가능을 확인했다.
+실제 HTML 로그인 GET은 CF challenge403, 관리 API·JSON 로그인 GET·CSRF GET은
+Caddy403/no-store까지 도달해 변경된 경계를 확인했다. 현재 닫힌 배포와 새 경로 부재를 재대조한 뒤
+위 고정 archive/launcher와 보호 입력을 신규 staging0700/파일0600으로 전달하고 해시를 검사했다.
+기존 sudo 위임에 따라 숨김 TTY 입력 경로로 root 설치·READ ONLY eligibility와 start를 각각 한 번 실행했다.
+설치 exit0, start exit0·opened marker·unit active를 확인했다. 11:37 KST 개방, 최대30분 후 자동 원복이다.
+
+실제 Cloudflare→Caddy→Console HTTPS에서 다음13항목을 통과했다.
+
+- 두 CSRF 토큰 비공유·no-store/HIT 부재, 유효한 동일 실제 전달 IP
+- 누락/위조 Origin 거절, 클라이언트 CF-Connecting-IP의 Edge403/error1000
+- X-Forwarded-Host/Proto/For·X-Console-Client-IP·Forwarded 각각과 조합의 덮어쓰기
+- 진단 token 없는 일반 브라우저 요청 허용·진단 IP 헤더 부재, 익명 관리 API의 인증 거절
+
+별도 HTTPS 응답에서 CSRF/callback 쿠키의 Secure·HttpOnly·Lax·Domain 속성 부재·Path=/를 확인했다.
+첫 Python 기본 User-Agent 요청은403이었고, 브라우저 User-Agent 요청은200이었다.
+이 관찰만으로 그403의 WAF 규칙을 특정하지 않으며, 자동 ingress의 일반 무헤더 요청도200을 확인했다.
+실제 세션 쿠키의 검증이나 인간 로그인 성공으로 확대하지 않는다. Cookie 값·IP 원문·인증 입력은 저장하지 않았다.
+
+근거는 창4의 `edge-after-rule.json`, `transfer-proof.json`, `root-install-execution.json`,
+`root-start-execution.json`, `ingress-proof.json`, `anonymous-cookie-proof.json`이다.
+현재 인간 브라우저 검증과 종료/원복 증거는 아직 미완료이며 아래 후속 기록이 있을 때만 상태를 갱신한다.
+D/E 보안 패치 통합은 기존 PR #167/#168/#169에서 진행하며 별도 배포나 F 전환을 수행하지 않았다.
