@@ -308,8 +308,6 @@ jobs:
             --add-host host.docker.internal:host-gateway \
             --publish 127.0.0.1:3000:3000 \
             --env DATABASE_URL=postgresql://postgres@host.docker.internal:5432/image_smoke \
-            --env AUTH_SECRET=workspace-smoke-local-only-secret \
-            --env AUTH_TRUST_HOST=true \
             oioi-bwg:workspace-check
           trap 'docker logs web-workspace-check; docker rm --force web-workspace-check' EXIT
           for attempt in $(seq 1 30); do

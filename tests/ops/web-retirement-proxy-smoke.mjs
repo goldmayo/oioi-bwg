@@ -82,6 +82,17 @@ try {
     "/admin",
     "/admin/albums",
     "/admin-login",
+    "/login",
+    "/login/",
+    "/%6cogin",
+    "/api/auth",
+    "/api/auth/signin",
+    "/api/auth/signout",
+    "/api/auth/session",
+    "/api/auth/csrf",
+    "/api/auth/ability",
+    "/api/auth/callback/credentials",
+    "/api/%61uth/session",
     "/api/admin/songs",
     "/api/%61dmin/songs",
     "/api/auth/signup/otp",
@@ -89,7 +100,7 @@ try {
     "/api/auth/signup/complete",
     "/signup",
   ]) {
-    for (const method of ["GET", "POST", "PATCH", "DELETE"]) {
+    for (const method of ["GET", "HEAD", "POST", "PATCH", "DELETE", "OPTIONS"]) {
       assert.equal((await fetch(origin + route, { method })).status, 403, method + route);
     }
   }
@@ -114,14 +125,15 @@ try {
   for (const [method, route] of [
     ["GET", "/"],
     ["HEAD", "/"],
-    ["GET", "/login"],
-    ["GET", "/api/auth/csrf"],
-    ["POST", "/api/auth/callback/credentials"],
-    ["POST", "/api/auth/signout"],
+    ["GET", "/more"],
+    ["GET", "/api/songs"],
+    ["GET", "/healthz"],
+    ["GET", "/readyz"],
+    ["GET", "/_next/static/fixture.js"],
   ])
     assert.equal((await fetch(origin + route, { method })).status, 203, method + route);
   console.log(
-    "Caddy 2.10.2: closed admin/signup/Action requests never reach upstream; read and Auth.js POST allowed",
+    "Caddy 2.10.2: closed admin/auth/signup/Action requests never reach upstream; public reads allowed",
   );
 } finally {
   if (caddy && caddy.exitCode === null && caddy.signalCode === null) {

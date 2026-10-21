@@ -3,7 +3,7 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-21"
-revision: 64
+revision: 65
 ---
 
 # P06 작업 인계
@@ -12,7 +12,8 @@ revision: 64
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- **최신 상태: D 실물 회수·재등록·HTTPS 복구 완료 / #189 배포 성공 / E는 Web 일반 인증 제거가 남아 미완료.**
+- **Web 인증 제거 후속:** `feature/p06-web-public-only`에서 E3를 구현한다. [E3 결과](P06-E3-RESULT.md)가 변경·검증·운영 적용 상태를 소유한다.
+- **직전 배포 상태: D 실물 회수·재등록·HTTPS 복구 완료 / #189 배포 성공 / E는 Web 일반 인증 제거가 남아 미완료.**
   [D 결과](P06-D1-RESULT.md#2026-10-21-실물-mfa-회수재등록과-https-설정-복원)와
   [E 결과](P06-E2-RESULT.md#2026-10-21-e-정상-promotion과-최종-검증-완료)가 실제 증거를 소유한다.
   사용자가 Web은 비로그인 공개 조회라고 정정했다. E 완료 보고를 철회하며 `/login`·Web Auth.js 제거를 E에서 처리한다.
