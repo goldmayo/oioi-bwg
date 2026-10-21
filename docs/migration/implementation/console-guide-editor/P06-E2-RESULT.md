@@ -52,10 +52,10 @@ created_at: "2026-10-21"
 
 ## 적용 대기
 
-C HTTPS의 실제 사용자 로그인과 D의 실물 인증기 reset/재등록/회수·관리·복구 증거가 남았다.
+C의 사용자 로그인 성공은 확인됐다. 후속 관리 조회·인증 세션/preview 격리·로그아웃과 D의 실물 인증기 reset/재등록/회수·관리·복구 증거가 남았다.
 이후 실제 host에 지속적인 Web 차단을 설치하고 current/previous pair 모두에서 검증한 뒤 E Promotion을 진행한다.
 안전한 previous pair가 없으면 maintenance를 유지한다. 지금은 코드/로컬 검증 준비이며 E 운영 완료가 아니다.
-www 전환·레거시 종료·Console 공개를 포함한 F는 사용자 귀가 후로 보류한다.
+www 전환·레거시 종료의 F는 사용자 귀가 후로 보류한다. Console은 C에서 승인한 HTTPS 공개를 유지한다.
 
 ## 원격 CI의 artifact 경로 보완
 
@@ -94,3 +94,7 @@ guest/USER/ADMIN의 이전 Action 거절·일반 로그인, Console MFA/CRUD·�
 Web 관리 종료 코드·일반 로그인·Console 기능·host 차단 정책은 변경하지 않았다.
 새 CI의 고정 head/결과는 #169 본문에서 추적하며 이전 통과를 새 기준의 통과로 대신하지 않는다.
 VM/Caddy 적용·계정/MFA 변경·Promotion은 실행하지 않았다. D 실물 운영 검증과 E 배포 조건은 남아 있다.
+
+최신화 검토에서 E 운영 안내의 과거 Console 외부 차단 문구도 C 지속 공개 계획에 맞췄다.
+D 실증 후 승인된 Console 공개를 유지하며 E의 Web 차단을 Console route에 적용하지 않는다.
+실제 host 설정은 변경하지 않았다.

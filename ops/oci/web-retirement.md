@@ -8,7 +8,9 @@
 - 기존 Web은 host loopback 3000에만 publish하고, 외부 접근은 확인한 Caddy hostname을 거쳐야 한다.
   별도 공개 origin 또는 우회 포트가 있으면 먼저 차단한다.
 - 현재 Caddy 설정과 두 앱 candidate/env 복구본을 보호된 경로에 보관한다.
-  Console의 외부 차단·등록 false와 MFA 키/버전은 유지한다.
+  D 실증을 마친 Console의 승인된 HTTPS 공개 상태·등록 false·MFA 키/버전은 유지한다.
+  Web 차단 파일을 적용하면서 Console route를 닫거나 등록을 열지 않는다.
+  [C 지속 공개 계획](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)을 따른다.
 - [web-retirement.caddy](web-retirement.caddy)를 root 소유, 그룹/기타 쓰기 불가인 host 파일로 설치한다.
   앱 image/env 또는 paired release 디렉터리에 넣지 않는다.
 - 각 Web hostname의 기존 `route`에서 reverse_proxy **앞**에 이 파일을 import한다.
