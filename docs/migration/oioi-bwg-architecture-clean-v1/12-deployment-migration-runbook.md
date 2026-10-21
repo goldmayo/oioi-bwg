@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.16"
+version: "1.17"
 status: "active"
 authority: "runbook"
 updated_at: "2026-10-21"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.16
+# oioi-bwg Deployment / Migration Runbook v1.17
 
 ## 1. 목적
 
@@ -486,6 +486,9 @@ migration_main → Promotion PR → migration_develop (OCI Development 배포 �
 검사해 code→md rename과 API 파일 수 제한에 의한 누락을 방지한다. workflow 자체를 path filter로 생략하지 않는다.
 Promotion은 문서만 달라도 전체 검증·후보 계약을 유지하며 이 예외로 과거 candidate를 재사용하지 않는다.
 `migration_main` merge push와 `migration_develop` push에서는 무거운 검증·image build를 반복하지 않는다.
+두 push에서는 성공한 동일 저장소 PR의 head/tree·검증 job·입력 key·미만료 artifact를 확인한 뒤
+검증용 BuildKit 캐시만 base branch에 발행할 수 있다. 캐시 누락은 직접 빌드로 복구하며
+다른 run의 cache를 verify 통과·검증 image/standalone·배포 candidate 증거로 사용하지 않는다.
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
 `promotion` check가 실패한다.
 
