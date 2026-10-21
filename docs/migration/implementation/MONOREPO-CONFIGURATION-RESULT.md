@@ -79,3 +79,19 @@ created_at: "2026-10-22"
 - 리팩토링 점검: 앱 간 import와 앱 policy 로딩 결합을 제거했고 공통 factory 입력은 실제 root 경로뿐이다.
   앱별 예외·인가 정책·runtime business code는 바꾸지 않았다. 테스트의 임시 파일은 종료 후 제거됐다.
 - 다음 단계: CFG-04/05의 browser API 공개 경계. 전체 runtime/build 검증과 최종 PR은 아직 미실행이다.
+
+### 1단계 push 검증
+
+- 구현 commit: `bb9a0c99cb0d9d71154530ffcd7c18ffb638af95`. 체크리스트의 38개 ID가
+  모두 고유함을 검사했고 CFG-01/02/03/06의 4개를 완료 처리했다. 나머지 34개는 대기다.
+- root Steiger entry로도 Web/Console 각각 `pnpm exec steiger <앱 src> --config steiger.config.ts` 성공.
+- `git push -u origin feature/monorepo-configuration-cleanup` 성공.
+  pre-push hook이 실행한 workspace type-check/lint/test 12개 task, repo 타입/lint,
+  harness 19건, ops 262건, format:check 모두 성공했다. workspace unit은
+  contracts 3 + server 88 + Web 93 + Console 226 = 410건이다.
+- 기존 로컬 jq 경로 `.local/p06-c/bin`을 push 프로세스 PATH에 추가했다.
+  hook을 생략하지 않았고 실제 실행 결과를 별도 계획 검증으로 바꾸어 기록하지 않는다.
+- 최종 커밋 범위 diff 검사에서 계획 문서 끝의 불필요한 빈 줄을 발견해 제거했다.
+  이는 실행 증적 기록과 함께 후속 문서 commit으로 보정하며 구현 commit은 합치지 않는다.
+- 현재 단계에서는 build·standalone smoke·운영 연결을 실행하지 않았다.
+  전체 작업 완료 후 하나의 PR로 제출하는 계획을 유지한다.

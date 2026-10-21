@@ -103,4 +103,3 @@ fetch한 origin/migration_main의 위 source_commit에서 feature/monorepo-confi
 - R2/메일 외부 전송, VM/Vault/GitHub 설정·secret 변경은 실행하지 않는다.
   외부 서비스 권한의 유효성은 예제·형식 검증과 구분해 미검증으로 남긴다.
 - 관리자 전체 E2E는 active Testing 문서의 수동 실행 정책을 유지한다.
-
