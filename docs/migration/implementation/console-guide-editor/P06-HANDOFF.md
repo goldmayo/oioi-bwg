@@ -2,8 +2,8 @@
 title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
-updated_at: "2026-10-19"
-revision: 36
+updated_at: "2026-10-21"
+revision: 59
 ---
 
 # P06 작업 인계
@@ -12,11 +12,30 @@ revision: 36
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- 현재 C 진입점: **HTTPS/쿠키/Origin·신뢰 IP 코드와 HTTP/HTTPS·DB·CI 검증 완료 / 운영 검증 대기**.
-  PR [#163](https://github.com/goldmayo/oioi-bwg/pull/163), 구현 `6ed4ece`, HTTPS Action 검증 `3822d13`, host 검증 보완 `16c317d`, HTTPS/DB 검증 `2a274cd`. 결과·실제 명령·남은 승인 게이트는 [P06-C RESULT](P06-C-RESULT.md)가 소유한다.
-  B의 정상 pair와 preview를 유지했다. Caddy 2.6.2/실제 설정을 SSH 읽기로 확인했으며 설치·reload·DNS·배포는 하지 않았다.
-  Docker 연결 후 로컬 HTTP/HTTPS의 전체 로그인·등록·CRUD·회수와 두 TCP IP 제한이 통과했다. 코드 head `d77d7c5`의 CI도 전체 성공했다.
-  실제 Cloudflare→VM의 비공개 HTTPS/IP·캐시 검증이 남았다. C 전체 완료로 해석하지 않는다.
+- **현재 실행 목표:** [Console 공개 유지 개정](P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정).
+  회사 검증용 Console을 C에서 계속 열고 F의 www/레거시 전환은 보류한다. 성공 후 30분 자동 종료,
+  회신 대기/채팅 종료 시 원복을 다시 적용하지 않는다. 과거 PREPARATION·APPROVALS·아래 F 공개 문구는 당시 이력이다.
+  현재 실제 상태는 closed403이며 이번 요청은 계획 작성이다. 다음은 지속 HTTPS 설정·정상 Promotion·실패 복구안 준비다.
+  배포/접속/실제 인증 결과를 구분하고, 새 위험에 따른 차단과 D의 비공개 등록 중단은 개정의 조건을 따른다.
+- 현재 C 진입점: **창4 ingress13항목·CSRF/callback 쿠키 확인 / 30분 자동 종료·원복 확인 / 실제 사용자 로그인 결과 미확인**. [종료 결과와 남은 범위](P06-C-RESULT.md#2026-10-21-창4-자동-종료원복과-남은-인증-검증)를 따른다. Console은 외부403이며 Web/DB·보안 이미지·인증서를 보존했다. C는 미완료이고 기존 창2/3/4를 재실행하지 않는다. 다음 적용은 위 공개 유지 개정과 현재 baseline을 따르며 시간 제한 창을 새로 만들지 않는다. 두 회선 실험 제외·F 보류를 유지한다. 아래 설명은 각 기록 시점의 이력이다.
+  #165 merge `ed19b6d` 후 두 merge 허용 설정을 원복했다. [#164](https://github.com/goldmayo/oioi-bwg/pull/164)는 승인된 고정 후보를 `64dca4c`로 squash 병합했고 정상 receipt가 발행됐다. #166은 Draft·미병합이다.
+  검증 source/CI·후보 및 사용자의 Cloudflare 사전 점검 사실은 [P06-C RESULT](P06-C-RESULT.md)가 소유한다.
+  이미 확인된 Cloudflare 항목을 재조사하지 않는다. 남은 서버 조건과 인증서 단계 승인 범위는 [사전 준비 §2](P06-PREPARATION.md#2-c의-제한된-cloudflare-https-검증-준비)를 따른다.
+  임시 헤더의 upstream 제거·matcher 제거 후 403은 실제 로컬 Caddy에서 검증했다. 보호 백업과 HTTP 배포의 실제 결과/receipt·정확한 source와 digest는 RESULT에 기록했다. 실제 VM/Cloudflare 인증서와 closed HTTPS403은 재시도1에서 확인했으며 임시 인증 matcher/브라우저 검증은 아직 아니다.
+  새 정상 HTTP pair와 preview, 사용자 root의 `p06_c_postdeploy_snapshot_verified`로 보호 백업·current/previous 복구 snapshot과 현재 env/config 일치·pending 부재를 확인했다. 정확한 링크 대상과 검증 범위는 RESULT를 따른다. 인증서/closed HTTPS403은 아래 재시도1에서 확보했으며 후속 host asset·HTTPS Origin/env·제한 Caddy 전환은 별도 승인 대상이다. 일반 공개는 F다. C 전체 완료가 아니다.
+  2026-10-20 Let's Encrypt 우선 경로의 DNS 전 백업/HTTP 차단 묶음을 사용자 승인 후 실행했다. root exit0·외부 HTTP403/TLS 거절·preview200·Caddy PID/세 컨테이너/env/snapshot 보존을 확인했다. 복구 백업/명령은 보존했고 실제 원복은 불필요해 실행하지 않았다. 정확한 hash·실행 결과는 RESULT, 다음 별도 승인 순서는 PREPARATION §2를 따른다. Always Use HTTPS OFF는 사용자 확인이며 재조사/변경하지 않았다. 당시 DNS/cache·인증서·HTTPS Origin은 미변경이었다. 이후 사용자가 캐시 규칙 활성화·Proxied Console A 생성을 완료했다. 공개 DNS 두 resolver·Cloudflare HTTP/임의 ACME 경로403/no-store/DYNAMIC·현재 HTTPS525와 preview/기존 pair 보존을 읽기 확인했다. 이후 head5756143·고정 archive62c6a1fa...의 인증서 단계만 별도 승인받아 Run API attempt1 success·정상 receipt/VM/hash 대조 후 전달했고 사용자가 고정 root 본문을 실행했다. CA HTTP-01 검증403 후 한 번 HTTP403 복구해 exit20으로 중단했다. 새 보호 백업/사본·권한·현재 원본 일치와 외부403/TLS 거절·preview/앱/DB·PID/컨테이너/snapshot 보존을 root/외부/SSH로 확인했다. CA 오류의 최종 URL은HTTPS였다. 이후 사용자의01:40:59 ACME 요청 상세에서 사용자 지정 규칙 Managed Challenge를 확인했다. 사용자가 `/admin` 경로 식과 비KR 국가 식을 제공했고 미국 CA 요청에 일치하는 비KR 국가 규칙을 변경 대상으로 식별했다. Console GET ACME prefix만 이 국가 식에서 제외하는 변경/원복·갱신용 유지를 별도 승인받아 사용자가 대시보드 적용 완료를 확인했다. 같은 VM 발신에서 일반GET/ACME POST는Edge challenge, ACME GET만 Caddy403까지 도달하고 기존 pair/preview/DB 보존을 읽기 확인했다. 정확한 설정은 PREPARATION, 증거/한계는 RESULT를 따른다. 이는 예외 적용 확인 시점의 이력이며 당시 발급 재시도/VM 변경은 하지 않았다. 이후 새 승인 재시도1의 실제 성공은 다음 항목을 따른다. 최초 실패의 HTTPS 전환 지점은 미확정 이력으로 보존하며 수동 발급/restore 반복이나 다음 HTTPS 창은 실행하지 않는다. 정확한 승인 범위 이력은 PREPARATION §2, 실제 실패/복구 근거와 남은 확인은 RESULT를 따른다.
+- 새 재시도1은 기존 실패 controller를 재실행하지 않고 별도 승인된 고정 archive148c1b87.../launcher로 한 번 실행해 인증서를 확보했다. source/backup/phase passed·exit0, 복구 미실행이며 외부/SSH 읽기로 신뢰 인증서·정확한 HTTPS403과 기존 서비스 보존을 확인했다. [실제 성공 결과](P06-C-RESULT.md#2026-10-20-승인된-인증서-재시도1-성공과-서비스-보존), [고정 범위/명령 이력](P06-PREPARATION.md#2026-10-20-인증서-재시도1-실행복구-승인안)을 따른다. 새/기존 보호 백업을 보존하고 수동 apply/restore는 반복하지 않는다. HTTPS Origin/env·임시 인증 접근·추가 Cloudflare 변경·일반 공개·#166 병합은 미실행이며 다음 창을 시작하지 않는다.
+- 제한 HTTPS archive6dc1453a...는 자격 조회 exit2에서 중단했다. VM 계정0을 직접 확인한 뒤 승인된 최초 운영자 launcher를 한 번 실행했으나 메일 수신/코드 검증 후 계정 단계 exit1로 중단했다. 직접 읽기에서 계정0·미소모 VERIFIED·등록 unit 부재·기존 서비스/closed403 보존을 확인했다. 비밀번호 오입력으로 원인을 단정하지 않는다. 사용자의 재시도 지시로 기존 실행물을 반복하지 않는 새 재개1을 준비했다. [최신 실행 결과/검증](P06-C-RESULT.md#2026-10-21-최초-운영자-메일인증-성공과-가입-중단재개1), [최소 재개·중단 범위](P06-PREPARATION.md#2026-10-21-인증된-가입의-재개1)를 따른다. MFA/HTTPS 창은 아직 미실행이며 등록 후 새 Console ID 기준으로 HTTPS 실행물을 다시 고정·별도 승인받는다. 인증서/갱신·ACME 예외·정상 snapshot/Web/DB·#166 Draft를 유지한다.
+- 선행 로그인 성공은 [권한 복구1·SSH 로그인 결과](P06-C-RESULT.md#2026-10-21-권한-복구1실제-로그인-검증-성공과-https-창2-준비)를 유지한다. 이후 최소 창2는 사용자 승인·sudo 위임으로 실행·원복했다. [새 준비](P06-C-RESULT.md#2026-10-21-helper-보완과-최소-https-창3-로컬-준비)는 error1000 기대값·실패 단계 기록·복원 후 baseline을 보완했다. 당시 다음 작업은 창3 실행이었으나 보안 패치 배포 후에는 위 창4 준비로 대체한다. #166 Draft·미병합을 유지한다.
+- D/E 보안 base 갱신: 최신 main f675033을 기존 브랜치에 반영했고 세 PR의 최종 필수 CI가 모두 성공했다.
+  [D #167](https://github.com/goldmayo/oioi-bwg/pull/167) head2c7bc67·Verify39533783736 attempt2,
+  [E1 #168](https://github.com/goldmayo/oioi-bwg/pull/168) head452a705·Verify39534068664,
+  [E2 #169](https://github.com/goldmayo/oioi-bwg/pull/169) head83c09fa·Verify39535876409다.
+  E2의 Next16.4.1 이전 Action 응답409 검증 보완과 로컬/원격 실제 관리 회귀는 해당 PR의 RESULT를 따른다.
+  D 운영 CLI 설치·실물 MFA 회수/재등록/복구, E host 차단·previous pair 검증·Promotion은 남았다.
+  세 PR은 Draft·미병합이며 C의 실제 사용자 결과를 성공으로 추정하지 않는다.
+- 후속 보류: #143/#161/#165에서 반복된 squash Promotion 조상 연결의 브랜치 전략을 C 이후 별도 검토한다.
+  현재 C의 차단 이슈로 취급하지 않고 #164 후보·파이프라인·브랜치 정책을 이번 작업에서 변경하지 않는다.
 - B 종료 시 진입점: **P06-B 완료 / 첫 정상 pair 유지 / preview 원복 완료 / 다음 단계 C**.
   호스트 보호·백업/업그레이드·Console 설정과 승인된 기존 0005 적용, 첫 공동 배포와 기존 Web 복구,
   공동 rollback·실제 두 앱 IMDS 차단/host 양성 대조·두 앱 재생성·Docker/VM 재시작 지속성을 확인했다.
