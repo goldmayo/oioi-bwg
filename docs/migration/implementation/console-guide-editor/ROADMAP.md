@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-21"
-revision: 13
+revision: 14
 ---
 
 # 구현 순서와 PR 단위
@@ -93,6 +93,8 @@ P06 초기 순서는 Web 관리 종료 뒤 Console 공개였으나, 2026-10-21 �
 D의 실물 회수/비공개 재등록·복구 → E의 Web 관리/가입 종료 → F의 www·레거시 전환**이다.
 [공개 유지 개정](P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)이 정확한 범위와 실패 복구 조건을 소유한다.
 Console 접속에 30분 자동 종료를 적용하지 않는다. D 작업에 필요한 비공개 등록은 그대로 유지한다.
+2026-10-21 정상 HTTPS 배포와 지속 공개를 완료했고 실제 사용자 인증 확인을 기다린다.
+현재 실행 증거와 남은 범위는 [C 결과](P06-C-RESULT.md#2026-10-21-정상-https-배포와-console-지속-공개)를 따른다.
 현재 preview의 OCI Web이 최종 www가 되며 Console은 같은 VM을 사용한다. 상시 staging을 추가하지 않고
 전환 검증 후 기존 Web Worker·staging·preview 경로를 종료한다. assets/R2·메일은 실제 의존성 확인 후 정리한다.
 단일 VM의 기존 Promotion·OCI Run Command를 유지하는 세부 PR 분할과 두 앱 복구 계획은

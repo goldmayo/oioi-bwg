@@ -2,20 +2,20 @@
 title: "P06-C Console HTTPS 및 인증 요청 보안 경계 구현 결과"
 kind: migration-result
 status: in-progress
-source_commit: 64dca4c23233b07f2136d89b5bd2d363e6bef47c
+source_commit: 3a98e8ddf4e8e61e71b35d83fc1aa93ba9d16b92
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 27
+revision: 30
 ---
 
 # P06-C 구현 결과
 
-**최신 상태:** 보안 패치 후 회사 브라우저용 창4에서 실제 전달 IP·위조 헤더 방어 등 ingress13항목과 CSRF/callback 쿠키 속성을 확인했다. [30분 자동 종료·원복](#2026-10-21-창4-자동-종료원복과-남은-인증-검증)도 root 결과·독립 SSH·외부 요청으로 확인했으며 Console은 다시 외부403이다. 사용자의 실제 HTTPS MFA 로그인·세션 쿠키·로그아웃 결과는 아직 확인되지 않아 C는 미완료다. 창2/3/4를 재실행하지 않는다. 두 회선 실험은 제외·미실시다.
+**최신 상태:** [정상 HTTPS 배포·지속 공개](#2026-10-21-정상-https-배포와-console-지속-공개)를 완료했다. 회사 브라우저의 [Console 로그인](https://console.oioibawige.com/admin-login)을 자동 종료 없이 유지한다. 실제 IP 전달·위조 헤더 방어·직접 origin 차단·등록 거절과 익명 쿠키 검사는 통과했다. 사용자가 후속 실제 로그인 성공을 확인했다. 성공 직전 오류 표시와 필드 포커스의 오류 상태 UX는 별도 수정 대상으로 확인 중이다. 관리 조회·세션 쿠키/preview 격리·로그아웃은 별도 미확인이므로 C 전체는 미완료다. 국가 보호 규칙은 변경하지 않았다. 두 회선 실험은 제외·미실시이며 D/E/F도 별도 미완료다. 아래 창2/3/4의 개방·종료 표시는 당시 이력이다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인 / 최소 HTTPS 창2 전환·개방 후 helper 중단·exit20 원복 완료. C 전체 완료가 아니다. 아래 미실행 표시는 각 기록 시점의 이력이다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
 구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 배포 호스트 보완 `16c317d`, 로컬 HTTPS/DB 검증 확장 `2a274cd`를 거쳤다.
-metadata의 source는 아래 실제 HTTP 공동 배포의 squash merge다. ARM64 후보 source와 초기 로컬 검증을 구분한다.
+metadata의 source는 최신 정상 HTTPS Promotion #175의 squash merge다. 아래 초기 HTTP 배포 #164와 ARM64 후보 source·로컬 검증은 각 실행 시점의 이력으로 구분한다.
 검토 PR은 [#163](https://github.com/goldmayo/oioi-bwg/pull/163)이다.
 [P06-PLAN §6](P06-PLAN.md#6-https등록운영자-경계), active [Auth/Authz](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md),
 [B 완료 결과](P06-B2-3-RESULT.md#2026-10-18-b-운영-실증-완료와-최종-상태)를 따른다.
@@ -547,3 +547,126 @@ root 원복 검사와 별도의 SSH/외부 요청에서 다음을 대조했다.
 두 회선 전환·IP 변경 후 세션 실험·한도 소진 실험은 계속 제외·미실시이며 IP 제한 구현은 유지한다.
 D/E의 보안 base 통합과 최종 검증은 기존 #167/#168/#169에서 추적한다. D 운영 설치/실물 복구,
 E host 차단/Promotion과 F 전환은 이번 창에서 수행하지 않았다.
+
+
+## 2026-10-21 정상 HTTPS 배포와 Console 지속 공개
+
+[회사 검증용 공개 유지 개정](P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)에 대한
+사용자의 실행·sudo 위임과 #174 한정 이력 연결 승인에 따라 진행했다. 공개 설정은 13:48:26 KST에 확정됐다.
+상태는 **배포 완료 / Console 공개 유지 / 실제 인증 확인 대기 / D·E 미실행·F 보류**다.
+기존 시간 제한 창의 실행물·백업·marker는 보존했고 재사용하지 않았다.
+
+### 소스와 정상 배포 증거
+
+- 계획 #166은 `4136d84`로 병합했다. [운영 절차 #173](https://github.com/goldmayo/oioi-bwg/pull/173)은
+  `992c236`으로 병합했고 [지속 공개 운영 문서](../../../../ops/oci/console-https.md)를 추가했다.
+  Caddy template 변경은 과거 F 전용 주석의 정정이며 자동 개방 동작은 추가하지 않았다.
+- [이력 연결 #174](https://github.com/goldmayo/oioi-bwg/pull/174)는 파일 변경 없이 `193dd5d`로 일반 merge했다.
+  사용자가 승인한 두 merge-method 설정만 일시 변경했으며 병합 직후 원본 전체 대조로 복원을 확인했다.
+  `allow_merge_commit=false`, main `allowed_merge_methods=[squash]`이며 필수 검증·PR·최신 base 보호는 유지했다.
+- [Promotion #175](https://github.com/goldmayo/oioi-bwg/pull/175)의 source는
+  `193dd5d6784857c52d37a112852e63e310bb28af`, source/검증 merge/실제 squash tree는 모두
+  `a034286ca518ad543b9ea135d9bd5a9c130dc9ff`다. 실제 squash는
+  `3a98e8ddf4e8e61e71b35d83fc1aa93ba9d16b92`이며 parent는 하나다.
+- [Verify 39543479896](https://github.com/goldmayo/oioi-bwg/actions/runs/39543479896) attempt1의 전체 검사와
+  두 ARM64 candidate pull/smoke·promotion이 성공했다. 후보 artifact는 `12321485383`이다.
+  공통 변경 판단에 따라 두 앱을 새로 빌드했으며 같은 digest를 실제 배포에 사용했다.
+- [Deploy 39545543065](https://github.com/goldmayo/oioi-bwg/actions/runs/39545543065) attempt1은 exit0이다.
+  성공 receipt artifact `12321423398`의 candidate ID·source·merge·run/attempt·미만료·검증 선행 시점을
+  기존 `validateBaseline`으로 대조했다. 새 release는
+  `b17425f1ba64ee34f099703d39043be643b0e8c9a8f424cc2969f1b8f74de215`다.
+
+| 앱 | 정상 배포한 immutable digest |
+| --- | --- |
+| Web | `ap-osaka-1.ocir.io/axnfkf6phqlo/oioi-bwg@sha256:14c6fa19b8ac1510ad73187e883f4565b77165670daa64d444b1bcc179518c1b` |
+| Console | `ap-osaka-1.ocir.io/axnfkf6phqlo/oioi-bwg-console@sha256:941d8676245d1344ac1c96ad21cccdf3d024802c340bfa46e29636ddd8694da6` |
+
+두 이미지의 build source/revision은 위 source와 일치한다. VM에서 두 앱 Next16.4.1·sharp0.35.5·vips8.18.7,
+네 health/readiness200·preview 세 경로200을 확인했다. DB ID·시작 시각과 healthy는 보존했다.
+
+### 실제 설정 변경과 보호 경계
+
+기존 정상 #171 pair/receipt를 기준으로 root 보호 백업과 current/previous snapshot·env·컨테이너·Caddy를 대조했다.
+등록된 ACTIVE ADMIN의 MFA 적격도 읽기 확인했다. 배포 lock 아래 검토한 HTTPS materializer와
+protected public env source만 준비하고 enrollment=false를 유지했다. 병합 직전 읽기 대조에서
+기존 runtime env·snapshot·컨테이너·Caddy closed403이 그대로인 것을 확인했다.
+
+정상 Promotion이 새 runtime env와 HTTPS snapshot을 만들었으며 과거 snapshot/receipt를 직접 고치지 않았다.
+실제 공개 전 새 digest/configHash·runtime/snapshot 일치, HTTPS Origin과 기존 secret 값 보존을 root에서 대조했다.
+Caddy만 validate 후 원자적으로 교체·reload했다. 기존 인증서·preview·HTTP403을 보존하고,
+Cloudflare TCP peer만 Console upstream에 허용했다. Host·forwarded authority/IP 덮어쓰기와 불필요한
+전달 헤더 제거·no-store를 유지한다. 설정 확정 후 임시 진단 token/matcher/응답 IP 헤더는 제거했다.
+최종 active Caddy SHA256은 `db65f794a2de87f580062425f593858c66f5c7d28df7ec98a1d91a65fe2b176e`다.
+
+### 실제 검증과 검증 위치
+
+일본 VM의 Cloudflare 요청은 기존 국가 보호 규칙의 challenge에 걸렸다. 국가/로그인 보호 규칙을 변경하지 않고
+국내 작업 PC가 고정 Console HTTPS 호스트로 요청하도록 했다. 임시 relay는 PC loopback에만 바인딩했고,
+SSH loopback forwarding으로 root 검증기에 응답을 전달했다. 허용한 다섯 경로만 요청하며 upstream TLS를 검증했다.
+Cookie/Authorization은 전달하지 않았고 인증정보·실제 IP·응답 cookie 원문은 증거에 기록하지 않았다.
+VM은 직접 origin 거절·인증서·preview·서버 상태를 검사했다. 실제 운영 접속은 이 relay에 의존하지 않는다.
+
+- 진단 설정에서17항목 통과: fresh CSRF/no-store, 유효하고 일관된 실제 CF IP,
+  X-Forwarded-Host/Proto/For·X-Console-Client-IP·Forwarded·X-Real-IP 각각 및 조합 요청의 덮어쓰기,
+  위조 CF-Connecting-IP의 Edge403/error1000, 누락/외부 Origin POST403,
+  익명 관리 API 거절, 유효한 형식의 공개 MFA setup/confirm403·FORBIDDEN, 일반 요청 허용,
+  위조 헤더를 넣어도 직접 origin403.
+- 최종 설정에서16항목을 다시 통과했다. IP 진단 헤더 부재와 같은 요청 경계의 정상 응답을 확인했다.
+  이 단계는 진단 응답을 제거한 확인이며 실제 IP 관찰값은 앞선17항목의 증거를 따른다.
+- 별도 국내 HTTPS 요청에서 특수 헤더 없는 로그인 화면200, HTML 로그인 GET200 또는 정상 CF challenge,
+  익명 관리 거절에 challenge가 없음, 익명 session=null/no-store를 확인했다.
+  CSRF/callback 쿠키의 Secure·HttpOnly·SameSite=Lax·Path=/·Domain 부재와 HTTPS callback Origin도 통과했다.
+  이는 실제 인증 세션 쿠키의 검증을 대신하지 않는다.
+- 공개 명령 종료 후 별도 `verify` 프로세스가 deployment lock을 획득하고 같은 pair/HTTPS snapshot·공개 설정을 확인했다.
+  임시 relay와 SSH forwarding을 종료한 뒤에도 일반 로그인 화면·preview200을 독립 확인했다.
+  창2/3/4 service/timer 및 P06-C timer 부재, 실제 설정의 진단 헤더 부재와 두 앱/DB 컨테이너 보존도 확인했다.
+
+공개 작업에는 성공 후 종료 timer·RuntimeMaxSec·ExecStopPost·무조건적인 finally 원복이 없다.
+실패 시 closed403 복구 경로는 유지하지만 이번 공개는 exit0이고 원복을 실행하지 않았다.
+최초 HTTPS 전환의 previous pair는 HTTP다. 그 pair로 복구할 때는 공개를 닫고 실제 상태를 보고해야 한다.
+과거 snapshot을 수정해 HTTPS 복구가 가능한 것으로 간주하지 않는다.
+
+원본 증거는 ignored `.local/p06-c/persistent-https1/`의 `candidate-verified.json`,
+`history-merge-result.json`, `root-{preflight,prepare,premerge}-execution.json`, `deployment-verified.json`,
+`vm-after-deploy-before-open.json`, `root-public3-{open,verify}-execution.json`, `public-browser-proof.json`,
+`persistent-observation.json`에 있다. 고정 V3 controller SHA256은
+`5c7d876c8fa2d13083d37c911ec03ebaaaedd6badfc5cb50d1e692013f4d2e40`다.
+공개 전 검증 입력을 유효한 MFA JSON으로 맞췄고 외부 요청 위치를 국내 PC로 변경했으며,
+기존 prepare/controller 증거는 덮어쓰지 않았다.
+
+### 남은 범위
+
+접속 주소를 안내하고 사용자에게 회사 브라우저의 비밀번호·실물 OTP 로그인, 관리 목록 조회와 로그아웃 결과를 요청했다.
+회신과 실제 인증 세션 쿠키의 속성·preview 격리 확인 전에는 **공개 유지 / 인증 확인 대기**다.
+사용자 지연·채팅 종료는 공개 종료 조건이 아니다. D의 실물 reset/비공개 재등록·키/서비스 복구는 아직 실행하지 않았다.
+#167~#169의 현재 실제 배포 기준을 새 HTTPS pair로 대조한 뒤 D, E 순서로 진행한다. F는 계속 보류한다.
+두 회선 전환·IP 변경 후 세션·live limiter 한도 소진 실험은 제외·미실시이고 IP 제한 구현은 유지한다.
+
+
+### 지속 공개 후 사용자 로그인 거절과 읽기 진단
+
+사용자가 인증기의 두 항목으로 로그인했으나 `인증 정보를 확인해주세요.`가 표시된다고 보고했다.
+오늘 새벽 VM 가입 정보가 맞다는 사용자 확인도 받았다. 이 메시지는 CredentialsSignin의 공통 거절이며,
+이메일·비밀번호·OTP 중 어느 입력이 원인인지 구분하지 않는다. 현재 로그인 거절을 성공으로 기록하지 않는다.
+
+지정된 기존 관리자 한 건을 `BEGIN READ ONLY`·statement_timeout5초·lock_timeout2초로 조회하고 ROLLBACK했다.
+정확한 DB/app role·PostgreSQL17·비특권 identity를 검증했으며, 계정 삭제 없음·ACTIVE ADMIN·MFA version3 활성·
+암호화 secret 존재·이메일 검증·Argon2id 형식·가입 이후 비밀번호 변경 없음이 확인됐다.
+이전에 성공한 OTP 사용 시점은 이번 공개 이전이고 미래 step으로 잠긴 상태가 아니다.
+배포 전후 runtime secret 값은 동일하며 NTP 동기화·host/container 시간이 일치했다.
+계정/비밀번호/MFA/limiter를 변경하거나 공개 enrollment를 열지 않았다.
+
+배포 이후 Console의 stdout/stderr 최근1000줄에서 auth.failure 이벤트가 없는 것도 별도로 확인했다.
+정상 credentials 거절은 설계상 내부 오류로 기록하지 않으므로, 이 사실만으로 입력별 실패 원인을 확정하지 않는다.
+비밀값·OTP·원문 로그는 출력하지 않았다. 근거는 ignored `root-auth-audit-execution.json`과 안전한 집계 출력이다.
+사용자에게 휴대폰 자동 시간과 VM용 인증기 항목을 확인한 뒤 새 코드 한 번의 결과를 요청했다.
+회신 전 공개는 유지하고, 원인 미확정 상태에서 MFA reset·반복 로그인·D/E 전환을 실행하지 않는다.
+
+
+### 후속 로그인 성공 보고와 UX 수정 분리
+
+읽기 진단 뒤 사용자가 실제 로그인 성공과 화면 이동을 확인했다. 계정/MFA 초기화나 앱/서버 변경 없이 성공한 결과다.
+어떤 입력 차이가 앞선 거절을 해소했는지는 확인하지 못했으므로 원인을 특정하지 않는다.
+동시에 성공 직전 오류 표시가 잠깐 나타나고 이메일·비밀번호 필드가 포커스 시 오류 상태처럼 보인다고 보고했다.
+이 두 현상은 별도 로그인 UX 수정 concern으로 재현·검증한다. 인증 성공을 관리 목록 조회·세션 쿠키의 실제 속성과
+preview 격리·로그아웃 성공까지 확대하지 않으며 Console 공개와 등록 닫힘은 유지한다.
