@@ -163,5 +163,60 @@ ref에서 actions/cache에 저장한다. 검증 job이나 앱 build를 병합 �
 `pnpm verify`도 통과했다. root 타입·lint·harness 18건·ops 258건·format을 실행했고,
 앱/package 12 task와 두 앱 build는 동일 입력의 기존 Turbo cache를 재사용했다.
 두 workflow YAML 파싱과 `git diff --check`를 확인했다.
-base cache 생성과 별개 PR의 실제 적중·시간 측정은 아직 미실시이며 병합 후 확인한다.
+base cache 생성과 별개 PR의 실제 적중·시간 측정은 아래 후속 실측에서 확인했다.
 ARM64 후보의 별도 GHA cache는 이번 amd64 발행 경로의 검증 대상이 아니다.
+
+## PR 간 캐시 재사용 검증 및 공식 근거
+
+구현 `efb5a762fe5440f0910808a99b86136ec2367464`는 [#179](https://github.com/goldmayo/oioi-bwg/pull/179)에서
+`639e6d7fd66ab48ee46806f472b07c4dcb8f78a2`로 squash 병합됐다.
+검증 대상은 cache key `Linux-verify-amd64-v2-2aee60bdbec7ce2dbbbeeb844f0d74e7a0cc644b90e32256558ee7e46ea8bf83`다.
+
+- [#179 Verify 39555786963](https://github.com/goldmayo/oioi-bwg/actions/runs/39555786963):
+  캐시 없음, 전체483초 성공. app build257초 중 build/export209초, 공유 artifact 업로드7초.
+- [Publish 39556873505](https://github.com/goldmayo/oioi-bwg/actions/runs/39556873505):
+  전체74초 성공. artifact 다운로드58초, cache save5초. cache id9260156050,
+  `refs/heads/migration_main`, 1,298,396,369바이트 저장을 API로 확인했다. build/test 재실행은 없다.
+- 다른 [#180 Verify 39557334782](https://github.com/goldmayo/oioi-bwg/actions/runs/39557334782),
+  head `d669a443ee85567fec8da719ea501f067bc766a9`: 위 key 복원 성공9초, app build75초,
+  첫 build/export8초. 첫 target에서 의존성 설치·앱 build·archive가 CACHED이며
+  cache 재export/save는 skipped다. 같은 PR 재실행 결과가 아니다.
+
+app build는257→75초, 약71% 단축됐다. 같은 빌드 입력의 두 표본이며 새 소스 변경까지
+같은 단축률을 보장하지 않는다. 새 입력에서는 fallback cache와 BuildKit의 내용 검사를 사용한다.
+전체 CI도 #179의483초(8분3초)에서 #180의309초(5분9초)로 약36% 줄었고 전부 성공했다.
+#180의 후속 container build job은214초다. 발행 workflow74초는 위 Verify 시간과 별도이며
+병합 후 비동기로 실행된다. 다음 PR이 같은 key를 읽은 사례의 전체 시간과 구분해서 기록한다.
+
+판단 근거는 다음 공식 문서와 실제 설정·실행 기록이다.
+
+- [GitHub cache 접근 제한](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache):
+  다른 PR의 merge ref 캐시는 읽을 수 없고 base branch의 cache는 읽을 수 있다.
+  이번 push 발행은 이 범위를 따른다. 보호 설정이나 cache-mode 우회는 추가하지 않았다.
+- [Docker cache mode](https://docs.docker.com/build/cache/backends/#cache-mode): max는 중간 단계까지 저장하고
+  min은 최종 결과에 포함된 레이어만 저장한다. 문서가 제시하는 전송 비용·적중률 실측 기준을 따른다.
+  이번 수정에서 mode를 바꾸지 않았다.
+- [Docker local cache](https://docs.docker.com/build/ci/github-actions/cache/#local-cache): 과거 blob 누적을 방지해야 한다.
+  현재 workflow는 새 디렉터리에 export한 뒤 교체하므로 이전 export를 계속 덧붙이는 구조는 아니다.
+- [Next.js CI caching](https://nextjs.org/docs/app/guides/ci-build-caching): `.next/cache`의 build 간 보존을 안내한다.
+  현재 Docker layer의 동일 입력 재사용과 소스 변경 후 Next 증분 캐시 재사용은 별개다.
+  [standalone 출력](https://nextjs.org/docs/app/api-reference/config/next-config-js/output)은 추적된 실행 파일을
+  복사한 배포 산출물이므로 빌드 중간 데이터와 역할을 구분한다.
+
+## 캐시 용량 실측
+
+#179의 cache artifact12326230222 ZIP 중앙 디렉터리·OCI manifest와 큰 레이어의 제한된 tar 표본을 읽었다.
+전체 파일36개의 합계는1,308,780,015바이트이며 ZIP artifact는1,308,788,491바이트다.
+전체1.31GB를 다운로드하거나 실행하지 않았다. 아래 MB는10진수이고 압축된 blob 크기다.
+
+| 구성 | 크기 | 확인 근거 |
+| --- | --- | --- |
+| 두 앱 빌드 RUN 레이어 | 804.17MB | digest62d4539d…; 표본의 app/apps/console/.next 및 Dockerfile build RUN |
+| 의존성 설치 레이어 | 264.42MB | digest3ad6c21c…; 표본의 app/apps/*/node_modules 및 install RUN |
+| standalone 압축본을 담은 두 레이어 | 105.17MB | digestd0b0c9fd…·34baf91e…; /tmp/standalone.tar.gz와 scratch의 standalone.tar.gz, 각 파일52,585,094바이트 |
+| Node·OS·runtime 등 나머지 | 135.02MB | 전체 파일 합계에서 위 레이어 제외 |
+
+레이어 내부 전체 파일별 합계는 미측정이므로804MB 전체를 `.next/cache`로 단정하지 않는다.
+확인된 중복 archive는 용량 축소 검토 대상이다. 삭제 시에는 실제 consumer와 Docker cache graph를 함께
+검증해야 하며 이번 PR 간 캐시 발행 수정에 추측으로 포함하지 않았다. ARM64 후보 cache와 Next 증분
+캐시 분리·용량 축소는 이 결과가 완료했다고 주장하는 범위에 포함되지 않는다.
