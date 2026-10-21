@@ -175,14 +175,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-verify-amd64-v2-
             ${{ runner.os }}-verify-amd64-v1-
-      - name: Build and export both standalone apps
+      - name: Build both runtime targets and cache
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: verification-artifacts
+          target: verification-cache
           platforms: linux/amd64
           build-args: NEXT_PUBLIC_APP_ENV=staging
-          outputs: type=local,dest=${{ runner.temp }}/ci-build
+          outputs: type=cacheonly
           cache-from: type=local,src=${{ runner.temp }}/buildx-cache
           cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
       - name: Load standalone container from the same builder
@@ -196,7 +196,9 @@ jobs:
           build-args: NEXT_PUBLIC_APP_ENV=staging
           cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
       - name: Archive verified container
-        run: docker save --output "${{ runner.temp }}/ci-build/web-image.tar" oioi-bwg:workspace-check
+        run: |
+          mkdir -p "${{ runner.temp }}/ci-build"
+          docker save --output "${{ runner.temp }}/ci-build/web-image.tar" oioi-bwg:workspace-check
       - name: Load Console container from the same builder
         uses: docker/build-push-action@v6
         with:
@@ -209,14 +211,6 @@ jobs:
           cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
       - name: Archive verified Console container
         run: docker save --output "${{ runner.temp }}/ci-build/console-image.tar" oioi-bwg-console:workspace-check
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ci-standalone
-          path: ${{ runner.temp }}/ci-build/standalone.tar.gz
-          overwrite: true
-          compression-level: 0
-          if-no-files-found: error
-          retention-days: 1
       - uses: actions/upload-artifact@v4
         with:
           name: ci-web-image
@@ -292,10 +286,6 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: ci-standalone
-          path: ${{ runner.temp }}/ci-build
-      - uses: actions/download-artifact@v4
-        with:
           name: ci-web-image
           path: ${{ runner.temp }}/ci-build
       - uses: actions/download-artifact@v4
@@ -304,7 +294,6 @@ jobs:
           path: ${{ runner.temp }}/ci-build
       - name: Restore this run's verified build
         run: |
-          tar -xzf "${{ runner.temp }}/ci-build/standalone.tar.gz"
           docker load --input "${{ runner.temp }}/ci-build/web-image.tar"
           docker load --input "${{ runner.temp }}/ci-build/console-image.tar"
 
@@ -373,47 +362,6 @@ jobs:
         env:
           VERIFICATION_NEEDS: ${{ toJSON(needs) }}
         run: node scripts/verification-scope.mjs --gate
-
-  b0-publish:
-    name: B0 publish probe
-    if: >-
-      false &&
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.base.ref == 'migration_develop' &&
-      github.event.pull_request.head.ref == 'migration_main' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    needs: verify
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 5
-    environment: oci-development-image
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Validate source and verification tree
-        id: source
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
-            await promotion.prepare({ github, context, core });
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ vars.OCIR_REGISTRY }}
-          username: ${{ secrets.OCIR_USERNAME }}
-          password: ${{ secrets.OCIR_AUTH_TOKEN }}
-      - name: Publish tiny images with existing publisher credentials
-        env:
-          SOURCE_SHA: ${{ steps.source.outputs.source_sha }}
-          OCIR_REGISTRY: ${{ vars.OCIR_REGISTRY }}
-          OCIR_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
-        run: python3 -I ops/oci/b0-ci-probe.py publish
-      - uses: actions/upload-artifact@v4
-        with:
-          name: b0-publish-${{ steps.source.outputs.source_sha }}-${{ github.run_attempt }}
-          path: b0-proof.json
-          if-no-files-found: error
-          retention-days: 14
 
   # One release verification; build only affected apps using proven paired deployment evidence.
   promotion-candidate:

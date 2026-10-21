@@ -35,7 +35,9 @@ ARG SENTRY_PROJECT
 ARG SENTRY_RELEASE
 ARG SENTRY_SOURCE_MAPS_ENABLED=false
 
+# This builder does not restore compiler/task caches between changed builds.
 ENV NODE_ENV=production \
+    OIOI_EPHEMERAL_BUILD=true \
     NEXT_PUBLIC_APP_ENV=${NEXT_PUBLIC_APP_ENV} \
     NEXT_PUBLIC_GTM_ID=${NEXT_PUBLIC_GTM_ID} \
     NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
@@ -52,9 +54,9 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
       SENTRY_PROJECT="${SENTRY_PROJECT}" \
       SENTRY_RELEASE="${SENTRY_RELEASE}" \
       SENTRY_SOURCE_MAPS_ENABLED=true \
-      pnpm exec turbo run build "$@"; \
+      pnpm exec turbo run build "$@" --cache=local:r; \
     else \
-      pnpm exec turbo run build "$@"; \
+      pnpm exec turbo run build "$@" --cache=local:r; \
     fi
 
 FROM node:${NODE_VERSION} AS runtime-base
@@ -97,18 +99,11 @@ COPY --from=builder --chown=node:node /app/apps/console/.next/static ./apps/cons
 
 CMD ["node", "apps/console/server.js"]
 
-# CI exports the same builder output used by the production runner.
-FROM builder AS verification-archive
-COPY --from=runtime /app/apps/web/server.js /tmp/runtime-server.js
-COPY --from=runner-console /app/apps/console/server.js /tmp/console-server.js
-RUN cmp /tmp/runtime-server.js apps/web/.next/standalone/apps/web/server.js \
-    && cmp /tmp/console-server.js apps/console/.next/standalone/apps/console/server.js \
-    && tar -czf /tmp/standalone.tar.gz \
-    apps/web/.next/standalone apps/web/.next/static \
-    apps/console/.next/standalone apps/console/.next/static
-
-FROM scratch AS verification-artifacts
-COPY --from=verification-archive /tmp/standalone.tar.gz /standalone.tar.gz
+# Reference both runtime targets so one cache export includes their shared builder.
+# CI transfers the two runnable images; no second standalone tarball is needed.
+FROM scratch AS verification-cache
+COPY --from=runtime /app/apps/web/server.js /web-server.js
+COPY --from=runner-console /app/apps/console/server.js /console-server.js
 
 # Keep the production runner as the default target.
 FROM runtime AS runner

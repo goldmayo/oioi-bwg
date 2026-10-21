@@ -24,9 +24,9 @@ for (const path of ["/web-app-manifest-192x192.png", "/apple-icon.png", "/favico
   assert.equal((await get(path)).status, 200, path);
 }
 
-assert.equal((await get("/api/admin/songs")).status, 401);
+assert.equal((await get("/api/admin/songs")).status, 404);
 
-for (const path of ["/admin-login", "/more"]) {
+for (const path of ["/login", "/more"]) {
   const response = await get(path);
   assert.equal(response.status, 200, path);
   const html = await response.text();
@@ -43,8 +43,9 @@ try {
   const page = await browser.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto(new URL("/admin", baseUrl).href);
-  await page.waitForURL(new URL("/admin-login", baseUrl).href);
+  assert.equal((await page.goto(new URL("/admin", baseUrl).href)).status(), 404);
+  await page.goto(new URL("/login", baseUrl).href);
+  await page.getByLabel("Email").waitFor();
   await page.goto(new URL("/more", baseUrl).href);
   await page.waitForLoadState("networkidle");
   assert.equal(new URL(page.url()).pathname, "/more");
@@ -53,4 +54,6 @@ try {
   await browser.close();
 }
 
-console.log("Standalone smoke passed: health, public assets, admin auth, user URLs, JS/CSS");
+console.log(
+  "Standalone smoke passed: health, public assets, retired admin, login, user URLs, JS/CSS",
+);

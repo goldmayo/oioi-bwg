@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.14"
+version: "2.15"
 status: "active"
 authority: "constitution"
-updated_at: "2026-10-07"
+updated_at: "2026-10-21"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.14
+# oioi-bwg Architecture Constitution v2.15
 
 ## 1. 목적
 
@@ -153,11 +153,14 @@ RSC는 같은 프로세스 안의 service를 직접 호출한다. 서버 내부�
 P04부터 `apps/console`은 별도의 Next 프로세스인 관리자 앱이다. Web과 Console은
 동일한 contracts/server 소스를 소비하지만 다른 앱의 파일을 직접 import하지 않는다.
 각 앱의 FSD root와 request/session/HTTP adapter, 자동 탐색 설정은 해당 앱이 소유한다.
-Web 관리 경로는 P06 전환 전까지 유지하며, Console의 비공개 단계 인증은 04 §4.1을 따른다.
+P06-E부터 관리 화면·API·upload Action은 Console만 제공한다. Web의 기존 관리 진입점은 제거하며,
+일반 로그인은 /login과 기존 Auth.js 경로로 유지한다. Console의 인증은 04 §4.1을 따른다.
+E 코드의 운영 적용은 Console 운영 검증 완료 후 별도 Promotion으로 수행한다.
 공용 UI/domain/api-client package를 선생성하지 않고 실제 이관에 필요한 UI만 앱 내부에 둔다.
 
 현재 Next 앱의 루트는 `apps/web`이다. 아래 구조와 active 문서의 `src/...` 경로는
-별도 명시가 없으면 이 앱 루트를 기준으로 한다. `/admin`을 포함한 기존 route와 서버 boundary는 유지한다.
+별도 명시가 없으면 이 앱 루트를 기준으로 한다. 일반 사용자 route와 서버 boundary는 유지하고,
+`/admin`·`/admin-login`·`/api/admin/*` 및 관리 upload Action은 Web에 두지 않는다.
 저장소 루트에는 workspace 진입점, 기존 검증 도구, 운영 스크립트와 migration 이력을 유지한다.
 
 클라이언트와 서버가 함께 소비하는 serializable HTTP contract는 `packages/contracts`가 소유한다.

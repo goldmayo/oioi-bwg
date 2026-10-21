@@ -79,3 +79,38 @@ fallback/미스일 때만 새 cache를 export·저장한다. 기존 v1 fallback�
 
 [GitHub cache 접근 범위](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache)를
 따라 push의 base ref에 저장한다. cache-mode 권한 우회나 pull_request_target은 사용하지 않는다.
+
+
+## 캐시 용량 축소 — 2026-10-21
+
+사용자의 명시적 축소 요청에 따라 `9e09077ac4949b4b105582a1c3c759a3f9515e48`에서 진행한다.
+[전수 분석](LATENCY-AUDIT-2026-10-21.md#캐시-용량-전수-분석--2026-10-21-후속-실측)의
+재사용되지 않는 내부 cache와 standalone archive 중복을 제거한다.
+
+- Docker builder에만 `OIOI_EPHEMERAL_BUILD=true`를 설정하고 두 앱의 공식
+  `experimental.turbopackFileSystemCacheForBuild`를 false로 만든다. Turbo build env 목록에 포함해
+  strict env 전달과 hash를 유지한다. 로컬 dev/build는 기존 파일시스템 cache를 사용한다.
+- Docker의 Turbo 호출만 `--cache=local:r`로 실행해 별도 output archive 쓰기를 중단한다.
+  전역 task cache와 BuildKit install/build 중간 레이어의 max cache는 유지한다.
+- CI는 두 runtime target을 참조하는 작은 `verification-cache` target을 `type=cacheonly`로 빌드한다.
+  두 image는 같은 builder/cache에서 load·전달·검증한다. standalone tar 생성/중복 COPY/별도 artifact
+  업로드·다운로드·해제를 제거한다. 앱의 standalone 출력과 로컬 수동 HTTPS 검증은 유지한다.
+- 기본 검사와 실제 Docker CI를 통과하고 새 cache artifact의 압축 크기를 이전1,308,788,491바이트와
+  비교한다. restore된 install 레이어의 재사용, 두 image native/readiness·화면·paired smoke를 확인한다.
+  실제 동일 입력 재실행에서는 첫 target과 두 load target의 CACHED 여부도 확인한다.
+
+근거: [Next의 컨테이너 build cache 안내](https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopackFileSystemCache),
+[Turbo cache 쓰기 제어](https://turborepo.com/docs/reference/run#--cache-options),
+[Docker cacheonly exporter](https://docs.docker.com/build/exporters/#cache-only-export).
+ARM64 후보에도 같은 builder 정책이 적용되지만 GHA cache의 별도 접근 범위 개선은 이 변경에 포함하지 않는다.
+
+## 완료된 임시 workflow 정리 — 2026-10-21
+
+사용자의 미사용 workflow 식별·제거 요청에 따라 캐시 축소 병합 뒤 최신 통합선에서 진행한다.
+active 배포 runbook §21의 Verify/Promotion/cache 발행 계약은 유지한다.
+
+- 실제 실행 이력·현재 파일·소비자를 함께 확인하고 완료된 Development Image/P02 bootstrap/B0 probe만 폐기한다.
+- B0 command workflow와 항상 false인 publish job을 제거하고 운영 README의 당시 절차를 과거 기록으로 표시한다.
+- GitHub의 해당 세 workflow는 비활성화하되 증거로 참조되는 기존 run은 삭제하지 않는다.
+- F 전환 전인 기존 Cloudflare Production/Staging은 유지한다. helper·IAM·secret·VM 설정 정리는 포함하지 않는다.
+- 남는 YAML/필수 gate와 기본 검사·실제 PR CI를 확인한다. 실행 결과와 식별 근거는 [지연 조사](LATENCY-AUDIT-2026-10-21.md)에 남긴다.

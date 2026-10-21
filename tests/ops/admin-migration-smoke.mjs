@@ -9,6 +9,8 @@ import path from "node:path";
 import { chromium } from "playwright";
 import postgres from "postgres";
 
+import { assertWebSignupClosed } from "./web-signup-closed-smoke.mjs";
+
 import { assertConsoleAuthIngress } from "./console-auth-ingress-smoke.mjs";
 import { assertConsoleEnrollment, assertEnrollmentClosed } from "./console-enrollment-smoke.mjs";
 
@@ -20,6 +22,7 @@ import {
   assertConsoleSessionBoundary,
   assertConsoleLogsSafe,
 } from "./console-mfa-smoke.mjs";
+import { assertWebAdminRetired } from "./web-admin-retired-smoke.mjs";
 
 // 운영/복원 DB에서 fixture를 만들지 않는다. 기존 runner가 생성한 격리 DB만 허용한다.
 for (const name of ["DATABASE_URL", "M7_TEST_POSTGRES_VERIFICATION_URL"]) {
@@ -135,16 +138,8 @@ async function assertHttpsClientLimits(origin) {
 
 async function login(context, origin, email = "admin@p04.example.test") {
   const page = await context.newPage();
-  if (origin === origins.console) {
-    await loginConsole(context, origin, sql, email);
-    await page.goto(`${origin}/admin/albums`);
-    return page;
-  }
-  await page.goto(`${origin}/admin-login`);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "로그인", exact: true }).click();
-  await page.waitForURL(`${origin}/admin/albums`);
+  await loginConsole(context, origin, sql, email);
+  await page.goto(`${origin}/admin/albums`);
   return page;
 }
 
@@ -458,6 +453,7 @@ try {
   }
   await enrollConsoleFixture();
   origins = { web: await start("web", 3200), console: await start("console", 3201) };
+  await assertWebSignupClosed(origins.web, sql);
   browser = await chromium.launch({
     args: process.env.P06_TLS_KEY_PIN
       ? [`--ignore-certificate-errors-spki-list=${process.env.P06_TLS_KEY_PIN}`]
@@ -476,7 +472,7 @@ try {
   enrollmentConsole.kill("SIGTERM");
   await once(enrollmentConsole, "exit");
   origins.console = await start("console", 3201, true);
-  const web = await journey(origins.web, "web");
+  const web = await assertWebAdminRetired(browser, origins.web, sql, artifacts);
   const consoleApp = await journey(origins.console, "console");
   await assertConsoleSessionBoundary(browser, origins.console, sql);
   for (const [from, to, target] of [
@@ -486,11 +482,16 @@ try {
     const context = await browser.newContext();
     const session = from.cookies.find((cookie) => cookie.name.includes("session-token"));
     await context.addCookies([{ ...session, name: target, domain: "127.0.0.1" }]);
-    assert.equal(
-      (await context.request.get(`${to}/api/admin/songs`)).status(),
-      401,
-      "another app's session must fail even after cookie renaming",
-    );
+    if (to === origins.web) {
+      const session = await (await context.request.get(`${to}/api/auth/session`)).json();
+      assert.ok(!session?.user, "Console identity must not authenticate Web");
+    } else {
+      assert.equal(
+        (await context.request.get(`${to}/api/admin/songs`)).status(),
+        401,
+        "Web identity must not authenticate Console",
+      );
+    }
     await context.close();
   }
   for (const email of ["user", "disabled", "unregistered"]) {
@@ -506,7 +507,7 @@ try {
     "role demotion invalidates Console identity on the next request",
   );
   console.log(
-    "Private admin migration smoke passed: both apps, isolated secrets/cookies, non-admin/inactive rejection and role revocation",
+    "Private admin migration smoke passed: Console CRUD and revocation, Web admin retirement and ordinary login/read",
   );
   assertConsoleLogsSafe(artifacts, enrollmentValues);
 } catch (error) {

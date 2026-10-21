@@ -1,10 +1,10 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.5"
+version: "1.6"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-19"
+updated_at: "2026-10-21"
 depends_on:
   - "01"
   - "03"
@@ -21,7 +21,7 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.5
+# oioi-bwg Authentication / Authorization Architecture v1.6
 
 ## 1. 목적
 
@@ -224,6 +224,11 @@ lock 순서는 Account → credential → MFA이며 비싼 password/crypto/QR �
 탈퇴는 secret을 제거하고 증가한 version 행과 Account tombstone을 보존한다.
 전체 Session 회수의 도메인 요구는 유지한다. Console version만으로 Web 회수 완료를 주장하지 않는다.
 P05-A는 persistence 기반만 제공하며 위 service/guard/CLI 연결과 인증 runtime 검증은 P05-B~D에 속한다.
+
+P06-E의 공개 가입 접수 중단은 Domain AUTH-001을 따른다. Web의 가입 OTP 발송·검증·완료 POST는
+본문 처리와 service 호출 전에 403 FORBIDDEN/no-store로 거부한다. 기존 검증 증명의 재전송에도
+메일·OTP·Account 부작용이 없어야 한다. 일반 Credentials 로그인과 기존 Account는 보존한다.
+적용은 Console 운영 검증 이후의 별도 Promotion이며, 과거 이미지 복구 시에도 가입 차단을 유지한다.
 
 ---
 

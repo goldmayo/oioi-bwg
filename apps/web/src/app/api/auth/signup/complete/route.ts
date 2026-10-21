@@ -1,14 +1,9 @@
-import { completeSignupResponseSchema, completeSignupSchema } from "@oioi-bwg/contracts/signup";
-import { completeSignup } from "@oioi-bwg/server/services/signup-service";
+import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 
-import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
-
-export async function POST(request: Request) {
-  try {
-    const input = await parseJsonRequest(request, completeSignupSchema);
-    const result = await completeSignup(input.challengeId, input.password, input.nickname);
-    return jsonResponse(completeSignupResponseSchema, result, { status: 201 });
-  } catch (error) {
-    return toErrorResponse(error);
-  }
+// P06-E: 공개 가입 접수를 종료한다. 본문·OTP·메일·계정 service에 접근하지 않는다.
+export function POST() {
+  return Response.json(
+    apiErrorResponseSchema.parse({ code: "FORBIDDEN", message: "현재 회원가입을 받지 않습니다." }),
+    { status: 403, headers: { "Cache-Control": "no-store" } },
+  );
 }
