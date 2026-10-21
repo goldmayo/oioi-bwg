@@ -7,7 +7,6 @@ export const verificationJobs = [
   "quality",
   "unit",
   "postgres_integration",
-  "admin_integration",
   "app_build",
   "build",
 ];

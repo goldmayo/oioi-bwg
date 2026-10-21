@@ -6,7 +6,7 @@ fail() { printf '%s\n' "$1" >&2; exit 1; }
 [[ "$#" -eq 3 ]] || fail paired_digests_and_candidate_required
 [[ "${M9_DEPLOY_TEST_MODE:-0}" == 1 || "${EUID}" == 0 ]] || fail root_required
 [[ "$1" =~ ^sha256:[0-9a-f]{64}$ && "$2" =~ ^sha256:[0-9a-f]{64}$ ]] || fail invalid_digest
-[[ "$3" =~ ^[A-Za-z0-9_-]{1,16000}$ ]] || fail invalid_candidate_payload
+[[ ${#3} -le 16000 && "$3" =~ ^[A-Za-z0-9_-]+$ ]] || fail invalid_candidate_payload
 runtime_root="${OIOI_RUNTIME_ROOT:-/srv/oioibawige}"
 config_root="${OIOI_CONFIG_ROOT:-/etc/oioibawige}"
 state_dir="${OIOI_STATE_DIR:-${runtime_root}/deploy}"

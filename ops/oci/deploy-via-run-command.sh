@@ -7,7 +7,8 @@ CANDIDATE_PAYLOAD="${3:-}"
 if [[ "$#" -ne 3 ]] ||
   [[ ! "${WEB_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
   [[ ! "${CONSOLE_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] ||
-  [[ ! "${CANDIDATE_PAYLOAD}" =~ ^[A-Za-z0-9_-]{1,16000}$ ]]; then
+  [[ ${#CANDIDATE_PAYLOAD} -gt 16000 ]] ||
+  [[ ! "${CANDIDATE_PAYLOAD}" =~ ^[A-Za-z0-9_-]+$ ]]; then
   echo "Two immutable digests and one bounded candidate payload are required" >&2
   exit 2
 fi

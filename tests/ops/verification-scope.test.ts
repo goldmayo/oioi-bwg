@@ -20,6 +20,21 @@ import {
   verificationPassed,
 } from "../../scripts/verification-scope.mjs";
 
+test("manual admin E2E is absent while remaining build evidence stays required", () => {
+  const needs: Record<string, { result: string; outputs?: { docs_only: string } }> = {
+    changes: { result: "success", outputs: { docs_only: "false" } },
+    infra: { result: "success" },
+    quality: { result: "success" },
+    unit: { result: "success" },
+    postgres_integration: { result: "success" },
+    app_build: { result: "success" },
+    build: { result: "success" },
+  };
+  expect(verificationPassed(needs)).toBe(true);
+  delete needs.app_build;
+  expect(verificationPassed(needs)).toBe(false);
+});
+
 test.each(["success", "failure", "cancelled", "skipped", "missing"])(
   "gate requires exact evidence: %s",
   (result) => {

@@ -1,9 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import type { ConsoleMfaSetupResponse } from "@oioi-bwg/contracts/console-mfa";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 
 import { captureClientErrorOnce } from "@/shared/api/capture-client-error";
@@ -28,7 +36,7 @@ export type ConsoleLoginValues = z.infer<typeof loginSchema>;
 // 등록: setup → confirm(QR/version) → complete → credentials에서 별도 로그인.
 // QR/version을 confirm 상태에 묶어 등록 정보 없이 확인 단계에 진입하지 못하게 한다.
 type LoginStep =
-  | { kind: "credentials" | "login" | "setup" | "complete" }
+  | { kind: "credentials" | "login" | "setup" | "complete" | "navigating" }
   | { kind: "confirm"; enrollment: ConsoleMfaSetupResponse };
 
 function withRetryMessage(message: string, seconds?: number) {
@@ -49,6 +57,7 @@ function authenticationErrorMessage(error: unknown) {
 
 /** 입력/QR은 이 폼의 메모리만 소유하며 완료·취소·이탈 시 폐기한다. */
 export function useConsoleLoginForm(initialRateLimited = false) {
+  const router = useRouter();
   // SSR 폼은 비활성으로 렌더하고, hydration 후에만 민감 입력을 받는다.
   const isHydrated = useSyncExternalStore(
     subscribeToHydration,
@@ -65,7 +74,7 @@ export function useConsoleLoginForm(initialRateLimited = false) {
 
   // 취소·완료·페이지 이탈은 같은 폐기 경로를 사용한다. Query/URL/storage로 옮기지 않는다.
   const reset = useCallback(
-    (next: "credentials" | "setup" | "complete" = "credentials") => {
+    (next: "credentials" | "setup" | "complete" | "navigating" = "credentials") => {
       request.current?.abort();
       request.current = null;
       form.reset(empty);
@@ -86,14 +95,13 @@ export function useConsoleLoginForm(initialRateLimited = false) {
     };
   }, [reset]);
 
-  async function submit(values: ConsoleLoginValues) {
+  async function authenticate(values: ConsoleLoginValues): Promise<LoginStep | undefined> {
     setServerError(null);
     if (step.kind === "credentials") {
       // '다음'은 입력 검증과 화면 전환만 한다. 비밀번호 검증/세션 발급 요청은 아직 보내지 않는다.
-      setStep({ kind: "login" });
-      return;
+      return { kind: "login" };
     }
-    if (step.kind === "complete") return;
+    if (step.kind === "complete" || step.kind === "navigating") return;
     if (step.kind !== "setup" && !values.otp) {
       form.setError("otp", { message: "인증 코드 6자리를 입력해주세요." }, { shouldFocus: true });
       return;
@@ -109,7 +117,7 @@ export function useConsoleLoginForm(initialRateLimited = false) {
             { email: values.email, password: values.password },
             controller.signal,
           );
-          if (!controller.signal.aborted) setStep({ kind: "confirm", enrollment });
+          if (!controller.signal.aborted) return { kind: "confirm", enrollment };
           break;
         }
         case "confirm": {
@@ -133,7 +141,10 @@ export function useConsoleLoginForm(initialRateLimited = false) {
               ),
             );
             form.setValue("otp", "");
-          } else if (!result) reset();
+          } else if (!result) {
+            reset("navigating");
+            router.replace("/admin");
+          }
           break;
         }
       }
@@ -147,6 +158,18 @@ export function useConsoleLoginForm(initialRateLimited = false) {
         request.current = null;
         setLoading(false);
       }
+    }
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    let nextStep: LoginStep | undefined;
+    await form.handleSubmit(async (values) => {
+      nextStep = await authenticate(values);
+    })(event);
+    if (nextStep) {
+      // handleSubmit이 제출 상태를 기록한 뒤 초기화한다. 새 단계의 입력을 재제출로 검증하지 않는다.
+      form.reset({ ...form.getValues(), otp: "" });
+      setStep(nextStep);
     }
   }
 

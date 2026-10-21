@@ -60,3 +60,22 @@ tracked index(mode/blob/path)의 digest로 정한다. workflow/Dockerfile/ignore
 설정·lockfile·테스트가 모두 key에 포함되며 문서 commit은 같은 key를 사용한다.
 exact hit에서는 재export·교체·save를 생략하고 두 target 모두 기존 cache를 import한다.
 fallback/미스일 때만 새 cache를 export·저장한다. 기존 v1 fallback은 전환 시 한 번 활용한다.
+
+## 새 PR의 캐시 재사용 보완 — 2026-10-21
+
+기준은 `b9044601a934ba61dd31f1437f1bad517ceb3168`이다. 사용자가 캐시 문제 해결을 명시했다.
+[최근 실측](LATENCY-AUDIT-2026-10-21.md)의 서로 다른 PR 캐시 미스를 해결한다.
+
+- app_build가 기존 local BuildKit 캐시를 1일 artifact로 전달한다.
+- migration_main/migration_develop의 신뢰된 push에서 병합 PR·동일 저장소/head/tree·성공한 Verify와
+  app build·같은 입력 key·병합 전 생성 및 미만료 artifact를 대조해 base branch 캐시로 저장한다.
+- 병합 후에는 build/test/이미지 발행을 반복하지 않는다. 다운로드한 캐시는 코드로 실행하지 않는다.
+  증거가 없으면 발행을 건너뛰며 다음 PR은 기존처럼 직접 빌드한다. API/전송 실패는 별도 workflow에 표시한다.
+- 검증용 image/standalone은 계속 같은 run의 것만 소비한다. 캐시는 검증 통과나 배포 증거가 아니다.
+  ARM64 후보의 별도 cache와 exact digest 계약은 이번 amd64 캐시 발행 변경에 포함하지 않는다.
+- source/실패/만료/다른 tree 거절 회귀와 기본 검증을 실행한다. 병합 후 base cache 생성과
+  **다른 PR**에서 실제 restore 및 BuildKit CACHED를 확인해야 완료로 기록한다.
+  같은 PR 재실행만으로 검증을 대신하지 않는다. 전송 시간과 전체 CI 시간을 함께 기록한다.
+
+[GitHub cache 접근 범위](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache)를
+따라 push의 base ref에 저장한다. cache-mode 권한 우회나 pull_request_target은 사용하지 않는다.
