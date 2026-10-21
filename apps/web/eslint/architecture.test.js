@@ -128,11 +128,7 @@ test("rejects invalid route-private and shared segments", () => {
 
 test("enforces promoted slice public APIs", () => {
   assert.deepEqual(
-    lint("apps/web/src/app/page.js", 'import { songQueries } from "@/entities/song/api";'),
-    ["deepSliceImport"],
-  );
-  assert.deepEqual(
-    lint("apps/web/src/app/page.js", 'import { songQueries } from "@/entities/song";'),
+    lint("apps/web/src/app/page.js", 'import { songQueryKeys } from "@/entities/song";'),
     [],
   );
   assert.deepEqual(lint("apps/web/src/app/page.js", 'import x from "@/features/auth/ui/form";'), [
@@ -151,6 +147,32 @@ test("enforces promoted slice public APIs", () => {
   ]);
 });
 
+test("allows entity API entries while rejecting internal paths in both apps", () => {
+  for (const app of ["web", "console"]) {
+    for (const entry of ["@/entities/song", "../entities/song"]) {
+      for (const statement of [
+        (source) => `import { songQueries } from "${source}";`,
+        (source) => `export { songQueries } from "${source}";`,
+        (source) => `export * from "${source}";`,
+        (source) => `import("${source}");`,
+      ]) {
+        assert.deepEqual(lint(`apps/${app}/src/app/page.js`, statement(`${entry}/api`)), []);
+        for (const internal of ["api/queries", "api/mutations", "api/index", "model/song"]) {
+          assert.deepEqual(lint(`apps/${app}/src/app/page.js`, statement(`${entry}/${internal}`)), [
+            "deepSliceImport",
+          ]);
+        }
+      }
+    }
+    for (const layer of ["features", "widgets"]) {
+      assert.deepEqual(
+        lint(`apps/${app}/src/app/page.js`, `import x from "@/${layer}/example/api";`),
+        ["deepSliceImport"],
+      );
+    }
+  }
+});
+
 test("blocks same-layer cross-slice imports through aliases and relative paths", () => {
   assert.deepEqual(
     lint("apps/web/src/features/alpha/ui/a.js", 'import x from "@/features/beta";'),
@@ -159,6 +181,18 @@ test("blocks same-layer cross-slice imports through aliases and relative paths",
   assert.deepEqual(lint("apps/web/src/features/alpha/ui/a.js", 'import x from "../../beta";'), [
     "crossSliceImport",
   ]);
+  for (const app of ["web", "console"]) {
+    for (const entry of ["@/entities/song", "../../song"]) {
+      assert.deepEqual(
+        lint(`apps/${app}/src/entities/album/model/a.js`, `import x from "${entry}/api";`),
+        ["crossSliceImport"],
+      );
+      assert.deepEqual(
+        lint(`apps/${app}/src/entities/album/model/a.js`, `import x from "${entry}/api/queries";`),
+        ["crossSliceImport", "deepSliceImport"],
+      );
+    }
+  }
 });
 
 test("requires relative imports inside one slice", () => {

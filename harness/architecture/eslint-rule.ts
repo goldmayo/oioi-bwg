@@ -46,7 +46,7 @@ export const architectureRule: Rule.RuleModule = {
       invalidSharedSegment:
         "shared segment '{{segment}}'은 허용되지 않습니다. ui/model/api/lib/config/contracts 중 책임에 맞게 이동하세요.",
       deepSliceImport:
-        "승격된 slice 내부를 직접 import하지 마세요. '{{layer}}/{{slice}}'의 index.ts public API를 사용하세요.",
+        "승격된 slice 내부를 직접 import하지 마세요. '{{layer}}/{{slice}}'의 index.ts 또는 entities slice의 api/index.ts public API를 사용하세요.",
       crossSliceImport:
         "같은 '{{layer}}' 레이어의 다른 slice('{{slice}}')를 참조하지 마세요. 공통 책임은 하위 레이어로 내리세요.",
       sameSliceAlias:
@@ -153,13 +153,22 @@ export const architectureRule: Rule.RuleModule = {
         }
       }
 
-      const match = source.match(/^@\/(widgets|features|entities)\/([^/]+)\/(.+)$/);
+      const isEntityApiEntry =
+        importedLayer === "entities" && importedParts?.length === 3 && importedParts[2] === "api";
 
-      if (match && !(layer === match[1] && slice === match[2])) {
+      if (
+        importedLayer &&
+        importedSlice &&
+        SLICED_LAYERS.has(importedLayer) &&
+        importedParts &&
+        importedParts.length > 2 &&
+        !(layer === importedLayer && slice === importedSlice) &&
+        !isEntityApiEntry
+      ) {
         context.report({
           node: sourceNode,
           messageId: "deepSliceImport",
-          data: { layer: match[1], slice: match[2] },
+          data: { layer: importedLayer, slice: importedSlice },
         });
       }
     };

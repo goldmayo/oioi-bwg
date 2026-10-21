@@ -35,8 +35,8 @@ created_at: "2026-10-22"
 | [x] | CFG-01 | 공통 app policy에서 규칙 11개를 한 번 정의하고 두 앱이 같은 factory를 사용한다. |
 | [x] | CFG-02 | 앱별 ESLint 진입점과 실행 cwd를 분리했다. root는 앱 policy 파일 대신 공통 factory만 조합한다. |
 | [x] | CFG-03 | Node 기본 규칙은 typescript-eslint 8.56.1을 직접 소비하고 Next preset은 앱에만 적용한다. |
-| [ ] | CFG-04 | 대기 |
-| [ ] | CFG-05 | 대기 |
+| [x] | CFG-04 | entities/*/api 공개 entry를 허용한다. alias·상대 경로의 내부 파일 우회와 같은 레이어의 다른 slice 참조는 회귀 검사로 차단한다. |
+| [x] | CFG-05 | 네 Album/Song root에서 browser Query/Mutation을 분리하고 양쪽 HTTP transport에 client-only를 적용했다. RSC 거절 검사·정상 build·standalone browser smoke로 검증했다. |
 | [x] | CFG-06 | root/pre-commit/package가 동일한 server/contracts 경계 규칙을 적용한다. 실제 lintText 회귀로 확인했다. |
 | [ ] | CFG-07 | 대기 |
 | [ ] | TEST-01 | 대기 |
@@ -128,3 +128,51 @@ created_at: "2026-10-22"
 - 리팩토링 점검: 공통 설정 디렉터리의 JS 잔존 0개, 오래된 import/캐시 입력 연결 없음,
   `any`·`as unknown`·타입 검사 억제 지시 없이 통과했다. 기존 JS 테스트/ops 도구는 범위 밖이며 유지한다.
 - 이번 변경은 검사 도구의 설정/타입/loader에 한정된다. build·standalone smoke·운영 연결은 미실행이다.
+
+### 2단계 — CFG-04/05 브라우저 API 공개 경계
+
+- 진입 기준: `9f8ade404b9b53df63015fefab55819e846e6d18`. fetch 후 로컬 HEAD와
+  `origin/feature/monorepo-configuration-cleanup`이 같고 작업 트리가 깨끗함을 확인했다.
+  `origin/migration_main`은 원문 재판정 기준인 `4d5e42d`를 유지했다.
+- Notion 원문의 최신 편집 시각과 현행 재판정 기준이 기존 계획과 같음을 확인했다.
+  원문 38개 ID를 유지하며 CFG-04/05를 추가 완료했다. 누적 완료 6개, 대기 32개다.
+- 공통 architecture rule은 `entities/*/api`만 두 번째 공개 entry로 허용한다.
+  `api/queries`, `api/mutations`, `api/index`, model 내부 우회는 alias와 상대 경로 모두 거절한다.
+  같은 레이어의 다른 slice 참조와 feature/widget의 내부 segment 참조 금지는 유지했다.
+  import·named/star export·dynamic import를 두 앱의 경로로 회귀 검사했다.
+- Web/Console의 Album/Song root에서 browser Query/Mutation 재수출을 제거했다.
+  model/UI와 server-safe query key는 root에 유지하고 Console consumer 3곳은 `api` 공개 entry로
+  연결했다. 기존 query key·hydration·invalidation identity와 DTO 계약은 바꾸지 않았다.
+- 양쪽 HTTP transport에 `import "client-only"`를 적용하고 이를 생략했던 과거 주석을 수정했다.
+  네 API 회귀 테스트도 root의 query key와 API entry의 query options를 실제로 비교하도록 갱신했다.
+- 새 import graph harness는 tree shaking 없이 두 앱의 root export 전체를 따라가 browser acquisition이
+  포함되지 않음을 확인한다. API entry에서 HTTP transport와 `client-only` marker에 도달함도 검사한다.
+  Vitest의 marker mock과 구분한 정적 검사이며 실제 Next compiler 검증은 아래처럼 별도로 수행했다.
+
+실행한 로컬 검증:
+
+- `pnpm type-check`(repo/config 포함), `pnpm lint`, `pnpm lint:fsd`: 성공.
+  최종 API 테스트 import와 정상 build가 재생성한 Next 타입을 포함해 타입/lint를 재검사했다.
+- `pnpm test:harness`: 24건 성공. `pnpm test:unit:run`: contracts 3 + server 88 + Web 93 +
+  Console 226 = 410건 성공. 기존 consumer의 HTTP 오류·mutation 후 invalidation 회귀도 포함된다.
+- 두 앱에 각각 임시 RSC route를 만들고 `pnpm --filter @oioi-bwg/<앱> exec next build`를 실행했다.
+  RSC → HTTP transport 참조가 두 앱 모두 `client-only` compiler error로 거절됐다.
+  직접 만든 임시 route만 제거한 뒤 `pnpm build`로 두 앱이 모두 성공했다(캐시 사용 0개).
+- 정상 standalone 산출물을 임시 loopback 포트에 띄워 기존 `web-standalone-smoke.mjs`와
+  `console-standalone-smoke.mjs`를 실행했다. Web 공개 URL·인증/관리 종료·정적 asset,
+  Console 전용 cookie·로그인 redirect·hydration 및 브라우저 runtime 오류 검사가 성공했다.
+- build/smoke 프로세스는 local 환경, Sentry 업로드 비활성화, 접속 불가능한 loopback DB 주소와
+  임시 인증 입력을 사용했다. DB 연동 관리자 전체 E2E·운영 서비스 연결 검증은 실행하지 않았다.
+- `pnpm format:check`, `git diff --check`: 성공. 검증 로그와 임시 검증 runner는
+  `.local/monorepo-config/browser-api/`에 보존한다.
+
+리팩토링 점검:
+
+- 기존 경로 resolver를 재사용해 alias·상대 경로를 같은 조건으로 판정한다.
+  새 wrapper·설정 계층·의존성 없이 공개 entry 예외만 추가했다.
+- 네 root export의 browser acquisition 유입, consumer의 내부 파일 우회, 같은 레이어 참조를 확인했다.
+  서버 key와 browser options를 이중 정의하지 않고 기존 key를 공유한다.
+- API 테스트는 공개 entry의 query identity와 기존 HTTP/DTO 계약을 검사하며,
+  import graph와 Next 음성 검증이 서로 다른 경계 실패를 검출한다.
+- Next/Vitest/DB 설정, 개인 env·볼륨·MFA 키, 운영 DB·VM·Vault·secret은 변경하지 않았다.
+  다음 단계는 CFG-07 및 TEST-01~04의 검사 범위와 테스트 책임 정리다. 최종 PR은 전체 작업 후 생성한다.

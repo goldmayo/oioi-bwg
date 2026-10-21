@@ -1,9 +1,10 @@
 import { expect, test, vi } from "vitest";
 const http = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock("@/shared/api/http-client", () => ({ http }));
+import { albumQueryKeys } from "../index";
+
 import { getAlbumDetail } from "./api";
-import { albumQueries } from "./queries";
-import { albumQueryKeys } from "./query-keys";
+import { albumQueries } from "./index";
 
 test("public album requests keep the encoded slug, cancellation and query identity", async () => {
   const signal = new AbortController().signal;

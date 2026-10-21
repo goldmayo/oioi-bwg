@@ -118,3 +118,16 @@ fetch한 origin/migration_main의 위 source_commit에서 feature/monorepo-confi
   운영 스크립트 전체의 기존 CFG-07 검토는 별도 단계로 유지한다.
 - 변경 전후 실효 규칙과 경계 판정, root/app/package 경로, Turbo 입력을 비교하고
   기본 로컬 검사 후 후속 commit/push한다. 기존 JS 테스트·ops 도구 전체의 언어 전환은 포함하지 않는다.
+
+## 2단계 실행 범위 — CFG-04/05
+
+기준은 `9f8ade404b9b53df63015fefab55819e846e6d18`이다. 헌법 §9, Frontend §3·7,
+Rendering/Query §29.2·35에 맞춰 다음 변경을 한 단위로 검증한다.
+
+- `entities/*/api` 공개 진입점만 추가 허용한다. alias·상대 경로의 내부 파일 우회와 같은 레이어의
+  다른 slice 참조는 거절한다. feature/widget의 임의 segment 공개 예외는 만들지 않는다.
+- 네 Album/Song root에서 browser Query/Mutation 재수출을 제거하고 Console consumer 3곳을
+  API entry로 연결한다. RSC의 model/UI/query key와 기존 hydration·invalidation identity는 유지한다.
+- Web/Console HTTP transport에 `client-only`를 선언한다. 실제 import graph 회귀와 기존 API·
+  consumer 테스트, 타입/lint/FSD/harness/unit/format, 양쪽 Next build로 경계를 검증한다.
+- Next/Vitest/DB 설정·운영 스크립트 전체 TS 검사·운영 자원은 이 단계에서 변경하지 않는다.
