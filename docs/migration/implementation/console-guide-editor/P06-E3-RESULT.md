@@ -58,6 +58,28 @@ tests/ops/paired-run-command.test.ts` 24건을 재실행해 모두 성공했다.
 `web-login-removed.png`는 공개 조회 및 제거된 로그인 경로의 실제 브라우저 화면이다.
 `console-login-preserved.png`는 기존 Console OTP 입력 화면이다.
 
+## PR #191 CI 보정
+
+최초 [Verify #474](https://github.com/goldmayo/oioi-bwg/actions/runs/39616570442)의
+두 앱 빌드·quality·unit/ops·PostgreSQL·infra는 성공했지만 `build` job의 Web native smoke가
+`Expected one traced Argon2 package`로 실패했다. Web 인증 제거로 standalone tracing에서
+Argon2가 빠진 것이 정상인데 공통 smoke가 여전히 두 앱에 Argon2를 필수로 요구했다.
+로컬 standalone HTTP 검사만으로는 이 컨테이너 전용 조건을 확인하지 못했다.
+
+- `tests/ops/container-native-smoke.mjs`의 Argon2 필수 로드·hash/verify는 Console에만 적용한다.
+  두 앱의 Sharp 버전·실제 이미지 변환 검사는 유지하고 native 실패 원인을 로그에 남긴다.
+  같은 스크립트를 사용하는 Verify와 Promotion candidate smoke에 함께 적용된다.
+- 실패 run의 `ci-web-image`, `ci-console-image`를 내려받고 GitHub artifact SHA-256과 일치함을 확인했다.
+  동일 Web 이미지에서 변경 전 스크립트의 Argon2 오류를 재현하고 변경 후 native smoke 성공을 확인했다.
+  동일 Console 이미지도 Argon2를 포함한 native smoke에 성공했다.
+- 두 CI 이미지를 실제 실행해 `container-readiness-smoke`와 각 `web/console-standalone-smoke`도 성공했다.
+  Web에는 인증 키를 전달하지 않았다. 기존 로컬 Compose PostgreSQL만 사용했다.
+  첫 host network 시도는 WSL에서 접근되지 않아 종료하고 localhost 포트 공개 방식으로 재실행했다.
+  검사용 두 컨테이너는 종료·제거했다.
+- `pnpm type-check`, `pnpm test:harness`(18건), `pnpm lint`, `pnpm lint:fsd`,
+  `pnpm test:unit:run`(410건, 기존 성공 캐시), `pnpm test:ops`(262건), `pnpm format:check` 성공.
+  문법·단일 파일 ESLint/Prettier 검사도 성공했다. 로컬 로그는 `.local/p06-e3/p191-*`에 보관한다.
+
 ## 운영 적용
 
 이번 변경의 host guard 설치·`deploy.conf`의 `SMOKE_PATHS` 갱신·새 정상 Promotion은 미실행이다.
