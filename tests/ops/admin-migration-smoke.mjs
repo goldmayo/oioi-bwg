@@ -9,6 +9,8 @@ import path from "node:path";
 import { chromium } from "playwright";
 import postgres from "postgres";
 
+import { assertWebSignupClosed } from "./web-signup-closed-smoke.mjs";
+
 import { assertConsoleAuthIngress } from "./console-auth-ingress-smoke.mjs";
 import { assertConsoleEnrollment, assertEnrollmentClosed } from "./console-enrollment-smoke.mjs";
 
@@ -451,6 +453,7 @@ try {
   }
   await enrollConsoleFixture();
   origins = { web: await start("web", 3200), console: await start("console", 3201) };
+  await assertWebSignupClosed(origins.web, sql);
   browser = await chromium.launch({
     args: process.env.P06_TLS_KEY_PIN
       ? [`--ignore-certificate-errors-spki-list=${process.env.P06_TLS_KEY_PIN}`]
