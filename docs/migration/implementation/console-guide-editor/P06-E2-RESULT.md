@@ -11,7 +11,7 @@ created_at: "2026-10-21"
 
 [P06 계획](P06-PLAN.md#4-pr별-구현-순서와-완료-조건)의 Web 관리 종료 checkpoint를 구현했다.
 기준은 위 integration commit, 구현 commit은 이 결과가 포함된 PR head다.
-가입 API 종료는 별도 [E1 결과](P06-E1-RESULT.md)/PR #168이다. 두 PR과 C/D 운영 증거가 갖춰진 후 실제 E를 적용한다.
+가입 API 종료는 별도 [E1 PR #168](https://github.com/goldmayo/oioi-bwg/pull/168)이다. 두 PR과 C/D 운영 증거가 갖춰진 후 실제 E를 적용한다.
 
 ## 변경
 
@@ -56,3 +56,10 @@ C HTTPS의 실제 사용자 로그인과 D의 실물 인증기 reset/재등록/�
 이후 실제 host에 지속적인 Web 차단을 설치하고 current/previous pair 모두에서 검증한 뒤 E Promotion을 진행한다.
 안전한 previous pair가 없으면 maintenance를 유지한다. 지금은 코드/로컬 검증 준비이며 E 운영 완료가 아니다.
 www 전환·레거시 종료·Console 공개를 포함한 F는 사용자 귀가 후로 보류한다.
+
+## 원격 CI의 artifact 경로 보완
+
+첫 Verify 39517768992는 로컬 전체 build 디렉터리를 참조한 Web manifest 검사에서 ENOENT로 실패했다.
+CI가 복원한 standalone 산출물 경로를 읽도록 수정했다. 일반 로컬 build 폴더가 없는 임시 디렉터리에서
+복원 artifact만으로 검사하며, 제거 대상 Action이 들어 있으면 DB 접근 전에 거부하는 회귀 검사 두 건을 추가했다.
+앱 runtime 변경은 없다. 재검증 결과와 최종 head는 PR에서 추적한다.

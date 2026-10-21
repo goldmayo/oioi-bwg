@@ -8,7 +8,10 @@ const retiredUploadId = "404b2752601764e93253b9698b2f44db9c54fc3ac8";
 
 export async function assertWebAdminRetired(browser, origin, sql, artifacts) {
   const manifest = JSON.parse(
-    fs.readFileSync("apps/web/.next/server/server-reference-manifest.json", "utf8"),
+    fs.readFileSync(
+      "apps/web/.next/standalone/apps/web/.next/server/server-reference-manifest.json",
+      "utf8",
+    ),
   );
   for (const entry of Object.values(manifest.node ?? {})) {
     assert.notEqual(entry.exportedName, "uploadAlbumImageAction");
