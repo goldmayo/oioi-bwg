@@ -1,5 +1,13 @@
-import nextTs from "eslint-config-next/typescript";
+import tseslint from "typescript-eslint";
 
-export const baseConfig = [...nextTs];
+export const baseConfig = [
+  ...tseslint.configs.recommended,
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-expressions": "warn",
+    },
+  },
+];
 
 export default baseConfig;

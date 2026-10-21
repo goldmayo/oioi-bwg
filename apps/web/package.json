@@ -7,8 +7,8 @@
     "dev": "next dev",
     "build": "next build && cp -R public .next/standalone/apps/web/ && cp -R .next/static .next/standalone/apps/web/.next/",
     "start": "node .next/standalone/apps/web/server.js",
-    "lint": "pnpm --dir ../.. exec eslint apps/web && pnpm lint:fsd",
-    "lint:fsd": "pnpm --dir ../.. exec steiger apps/web/src",
+    "lint": "eslint . && pnpm lint:fsd",
+    "lint:fsd": "steiger src --config steiger.config.ts",
     "type-check": "tsc --noEmit --incremental false",
     "test": "pnpm --dir ../.. exec vitest run"
   },

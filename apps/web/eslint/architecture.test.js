@@ -31,6 +31,10 @@ test("keeps typed lint and alias dependency boundaries from both repository and 
       path.join(webRoot, "src/app/admin-login/page.tsx"),
     );
     assert.equal(effective.settings.next.rootDir, webRoot, `${app} must own its Next lint root`);
+    const appEffective = await new ESLint({ cwd: webRoot }).calculateConfigForFile(
+      path.join(webRoot, "src/app/admin-login/page.tsx"),
+    );
+    assert.deepEqual(effective.rules, appEffective.rules);
     const filename = path.join(
       webRoot,
       `src/shared/config/eslint-policy-regression-${process.pid}.ts`,

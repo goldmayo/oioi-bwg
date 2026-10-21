@@ -1,24 +1,17 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import type { Linter } from "eslint";
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "eslint/config";
 
-import consolePolicy from "./apps/console/eslint/policy.mjs";
-import webPolicy from "./apps/web/eslint/policy.mjs";
-import nextConfig from "./config/eslint/next.mjs";
+import { createAppConfig } from "./config/eslint/app.mjs";
+import { createContractsConfig } from "./config/eslint/contracts.mjs";
+import nodeConfig from "./config/eslint/node.mjs";
+import { createServerConfig } from "./config/eslint/server.mjs";
 
-const typedWebPolicy = webPolicy as unknown as Linter.Config[];
+const root = (relativePath: string) => fileURLToPath(new URL(relativePath, import.meta.url));
 
 export default defineConfig([
-  ...nextConfig,
-  ...typedWebPolicy,
-  ...(consolePolicy as unknown as Linter.Config[]),
-  globalIgnores([
-    "**/.next/**",
-    "out/**",
-    "build/**",
-    "coverage/**",
-    ".agents/**",
-    ".local/**",
-    "docs/migration/harness/**",
-    "**/next-env.d.ts",
-  ]),
+  ...nodeConfig,
+  ...createAppConfig(root("./apps/web/")),
+  ...createAppConfig(root("./apps/console/")),
+  ...createServerConfig(root("./packages/server/")),
+  ...createContractsConfig(root("./packages/contracts/")),
 ]);

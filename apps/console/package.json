@@ -7,7 +7,7 @@
     "dev": "next dev --hostname 127.0.0.1 --port 3001",
     "build": "next build && mkdir -p .next/standalone/apps/console/.next && cp -R .next/static .next/standalone/apps/console/.next/",
     "start": "HOSTNAME=127.0.0.1 PORT=3001 node .next/standalone/apps/console/server.js",
-    "lint": "pnpm --dir ../.. exec eslint apps/console && pnpm lint:fsd",
+    "lint": "eslint . && pnpm lint:fsd",
     "lint:fsd": "steiger src --config steiger.config.ts",
     "type-check": "tsc --noEmit --incremental false",
     "test": "vitest run --config vitest.config.ts"
