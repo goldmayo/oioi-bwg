@@ -5,12 +5,12 @@ status: in-progress
 source_commit: 3a98e8ddf4e8e61e71b35d83fc1aa93ba9d16b92
 verified_at: "2026-10-21"
 updated_at: "2026-10-21"
-revision: 28
+revision: 29
 ---
 
 # P06-C 구현 결과
 
-**최신 상태:** [정상 HTTPS 배포·지속 공개](#2026-10-21-정상-https-배포와-console-지속-공개)를 완료했다. 회사 브라우저의 [Console 로그인](https://console.oioibawige.com/admin-login)을 자동 종료 없이 유지한다. 실제 IP 전달·위조 헤더 방어·직접 origin 차단·등록 거절과 익명 쿠키 검사는 통과했다. 실제 사용자 MFA 로그인·관리 조회·세션 쿠키/preview 격리·로그아웃은 확인 대기이므로 C 전체는 미완료다. 국가 보호 규칙은 변경하지 않았다. 두 회선 실험은 제외·미실시이며 D/E/F도 별도 미완료다. 아래 창2/3/4의 개방·종료 표시는 당시 이력이다.
+**최신 상태:** [정상 HTTPS 배포·지속 공개](#2026-10-21-정상-https-배포와-console-지속-공개)를 완료했다. 회사 브라우저의 [Console 로그인](https://console.oioibawige.com/admin-login)을 자동 종료 없이 유지한다. 실제 IP 전달·위조 헤더 방어·직접 origin 차단·등록 거절과 익명 쿠키 검사는 통과했다. 사용자가 실제 로그인에서 인증 거절을 보고해 원인을 확인 중이며 관리 조회·세션 쿠키/preview 격리·로그아웃도 미확인이다. C 전체는 미완료다. 국가 보호 규칙은 변경하지 않았다. 두 회선 실험은 제외·미실시이며 D/E/F도 별도 미완료다. 아래 창2/3/4의 개방·종료 표시는 당시 이력이다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인 / 최소 HTTPS 창2 전환·개방 후 helper 중단·exit20 원복 완료. C 전체 완료가 아니다. 아래 미실행 표시는 각 기록 시점의 이력이다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),
@@ -641,3 +641,23 @@ VM은 직접 origin 거절·인증서·preview·서버 상태를 검사했다. �
 사용자 지연·채팅 종료는 공개 종료 조건이 아니다. D의 실물 reset/비공개 재등록·키/서비스 복구는 아직 실행하지 않았다.
 #167~#169의 현재 실제 배포 기준을 새 HTTPS pair로 대조한 뒤 D, E 순서로 진행한다. F는 계속 보류한다.
 두 회선 전환·IP 변경 후 세션·live limiter 한도 소진 실험은 제외·미실시이고 IP 제한 구현은 유지한다.
+
+
+### 지속 공개 후 사용자 로그인 거절과 읽기 진단
+
+사용자가 인증기의 두 항목으로 로그인했으나 `인증 정보를 확인해주세요.`가 표시된다고 보고했다.
+오늘 새벽 VM 가입 정보가 맞다는 사용자 확인도 받았다. 이 메시지는 CredentialsSignin의 공통 거절이며,
+이메일·비밀번호·OTP 중 어느 입력이 원인인지 구분하지 않는다. 현재 로그인 거절을 성공으로 기록하지 않는다.
+
+지정된 기존 관리자 한 건을 `BEGIN READ ONLY`·statement_timeout5초·lock_timeout2초로 조회하고 ROLLBACK했다.
+정확한 DB/app role·PostgreSQL17·비특권 identity를 검증했으며, 계정 삭제 없음·ACTIVE ADMIN·MFA version3 활성·
+암호화 secret 존재·이메일 검증·Argon2id 형식·가입 이후 비밀번호 변경 없음이 확인됐다.
+이전에 성공한 OTP 사용 시점은 이번 공개 이전이고 미래 step으로 잠긴 상태가 아니다.
+배포 전후 runtime secret 값은 동일하며 NTP 동기화·host/container 시간이 일치했다.
+계정/비밀번호/MFA/limiter를 변경하거나 공개 enrollment를 열지 않았다.
+
+배포 이후 Console의 stdout/stderr 최근1000줄에서 auth.failure 이벤트가 없는 것도 별도로 확인했다.
+정상 credentials 거절은 설계상 내부 오류로 기록하지 않으므로, 이 사실만으로 입력별 실패 원인을 확정하지 않는다.
+비밀값·OTP·원문 로그는 출력하지 않았다. 근거는 ignored `root-auth-audit-execution.json`과 안전한 집계 출력이다.
+사용자에게 휴대폰 자동 시간과 VM용 인증기 항목을 확인한 뒤 새 코드 한 번의 결과를 요청했다.
+회신 전 공개는 유지하고, 원인 미확정 상태에서 MFA reset·반복 로그인·D/E 전환을 실행하지 않는다.
