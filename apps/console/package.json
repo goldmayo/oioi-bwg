@@ -8,7 +8,7 @@
     "build": "next build && mkdir -p .next/standalone/apps/console/.next && cp -R .next/static .next/standalone/apps/console/.next/",
     "start": "HOSTNAME=127.0.0.1 PORT=3001 node .next/standalone/apps/console/server.js",
     "lint": "eslint . && pnpm lint:fsd",
-    "lint:fsd": "steiger src --config steiger.config.ts",
+    "lint:fsd": "NODE_OPTIONS=\"${NODE_OPTIONS:+$NODE_OPTIONS }--import tsx\" steiger src --config steiger.config.ts",
     "type-check": "tsc --noEmit --incremental false",
     "test": "vitest run --config vitest.config.ts"
   },

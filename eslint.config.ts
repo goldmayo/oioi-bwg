@@ -1,10 +1,10 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "eslint/config";
 
-import { createAppConfig } from "./config/eslint/app.mjs";
-import { createContractsConfig } from "./config/eslint/contracts.mjs";
-import nodeConfig from "./config/eslint/node.mjs";
-import { createServerConfig } from "./config/eslint/server.mjs";
+import { createAppConfig } from "./config/eslint/app.ts";
+import { createContractsConfig } from "./config/eslint/contracts.ts";
+import nodeConfig from "./config/eslint/node.ts";
+import { createServerConfig } from "./config/eslint/server.ts";
 
 const root = (relativePath: string) => fileURLToPath(new URL(relativePath, import.meta.url));
 

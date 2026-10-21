@@ -1,8 +1,7 @@
 import fsd from "@feature-sliced/steiger-plugin";
 import { defineConfig } from "steiger";
 
-/** @param {string} sourceRoot */
-export function createSteigerConfig(sourceRoot) {
+export function createSteigerConfig(sourceRoot: string) {
   return defineConfig([
     ...fsd.configs.recommended,
     {

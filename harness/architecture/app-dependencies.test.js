@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { getSourceParts, resolveImportedParts } from "./import-path.js";
+import { getSourceParts, resolveImportedParts } from "./import-path.ts";
 
 const dependencyFields = [
   "dependencies",
@@ -151,8 +151,8 @@ test("shared mocks and source packages select and invalidate both apps verificat
 
   for (const filename of [
     "tests/mocks/server-only.ts",
-    "config/eslint/app.mjs",
-    "config/steiger.mjs",
+    "config/eslint/app.ts",
+    "config/steiger.ts",
     "packages/contracts/src/song.ts",
     "packages/server/src/services/song-service.ts",
   ]) {

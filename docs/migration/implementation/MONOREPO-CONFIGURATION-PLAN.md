@@ -103,3 +103,18 @@ fetch한 origin/migration_main의 위 source_commit에서 feature/monorepo-confi
 - R2/메일 외부 전송, VM/Vault/GitHub 설정·secret 변경은 실행하지 않는다.
   외부 서비스 권한의 유효성은 예제·형식 검증과 구분해 미검증으로 남긴다.
 - 관리자 전체 E2E는 active Testing 문서의 수동 실행 정책을 유지한다.
+
+## 2026-10-22 추가 지시 — 공유 설정 TS 통일
+
+사용자가 1단계 확인 후 JS/TS 혼재를 먼저 정리하고 TS로 통일하도록 요청했다.
+기준은 `88920c7509fe4d779cc5914e64d463c17716a834`이며 CFG-04/05보다 앞서 수행한다.
+1단계에서 선택한 Steiger `.mjs` fallback은 이 후속 변경으로 대체하고 당시 검증 이력은 보존한다.
+
+- 공유 ESLint/Steiger 설정, 관련 자동 탐색 entry, 공통 architecture rule/path 구현을 `.ts`로 통일한다.
+- 기존 jiti는 ESLint TS entry를, 기존 tsx는 Steiger와 Node harness의 TS import를 로드한다.
+  설정의 JS 빌드 산출물·호환 wrapper·새 의존성을 추가하지 않는다.
+- `config/tsconfig.json`의 strict 검사에 공유 구현과 workspace entry를 포함하고
+  `type-check:repo`에 연결해 수동 실행·CI·push hook 모두 실제 타입을 검사하게 한다.
+  운영 스크립트 전체의 기존 CFG-07 검토는 별도 단계로 유지한다.
+- 변경 전후 실효 규칙과 경계 판정, root/app/package 경로, Turbo 입력을 비교하고
+  기본 로컬 검사 후 후속 commit/push한다. 기존 JS 테스트·ops 도구 전체의 언어 전환은 포함하지 않는다.

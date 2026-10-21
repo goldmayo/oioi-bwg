@@ -1,6 +1,7 @@
+import type { Linter } from "eslint";
 import { defineConfig } from "eslint/config";
 
-import nodeConfig from "./node.mjs";
+import nodeConfig from "./node.ts";
 
 const appPatterns = [
   "@/**",
@@ -19,15 +20,16 @@ const frameworkPatterns = [
   "next/**",
   "@sentry/nextjs",
 ];
-const restricted = (patterns) => [
+const restricted = (patterns: string[]): Linter.RuleEntry => [
   "error",
   { patterns: [{ group: patterns, message: "공통 서버의 앱·framework 및 계층 경계를 지키세요." }] },
 ];
 
-export function createServerConfig(rootDir) {
+export function createServerConfig(rootDir: string) {
   return defineConfig([
     {
       basePath: rootDir,
+      languageOptions: { parserOptions: { tsconfigRootDir: rootDir } },
       files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
       extends: [
         ...nodeConfig,

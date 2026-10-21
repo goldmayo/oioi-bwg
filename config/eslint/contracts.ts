@@ -1,11 +1,12 @@
 import { defineConfig } from "eslint/config";
 
-import nodeConfig from "./node.mjs";
+import nodeConfig from "./node.ts";
 
-export function createContractsConfig(rootDir) {
+export function createContractsConfig(rootDir: string) {
   return defineConfig([
     {
       basePath: rootDir,
+      languageOptions: { parserOptions: { tsconfigRootDir: rootDir } },
       files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
       extends: [
         ...nodeConfig,

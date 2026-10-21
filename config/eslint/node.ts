@@ -1,8 +1,10 @@
+import path from "node:path";
+
 import { defineConfig, globalIgnores } from "eslint/config";
 import prettierConfig from "eslint-config-prettier";
 import globals from "globals";
 
-import { baseConfig } from "./base.mjs";
+import { baseConfig } from "./base.ts";
 
 export const nodeConfig = defineConfig([
   ...baseConfig,
@@ -10,6 +12,7 @@ export const nodeConfig = defineConfig([
     files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
     languageOptions: {
       globals: globals.node,
+      parserOptions: { tsconfigRootDir: path.resolve(import.meta.dirname, "../..") },
     },
   },
   globalIgnores([

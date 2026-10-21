@@ -1,6 +1,7 @@
+import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 
-export const baseConfig = [
+export const baseConfig = defineConfig([
   ...tseslint.configs.recommended,
   {
     rules: {
@@ -8,6 +9,6 @@ export const baseConfig = [
       "@typescript-eslint/no-unused-expressions": "warn",
     },
   },
-];
+]);
 
 export default baseConfig;

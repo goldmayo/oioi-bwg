@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { ESLint, Linter } from "eslint";
 
-import { architectureRule } from "./architecture.js";
+import { architectureRule } from "./architecture.ts";
 
 const linter = new Linter({ configType: "flat" });
 const config = [

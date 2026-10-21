@@ -1,14 +1,15 @@
 import path from "node:path";
 
+import type { Linter } from "eslint";
 import { defineConfig } from "eslint/config";
 import boundariesPlugin from "eslint-plugin-boundaries";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import unusedImports from "eslint-plugin-unused-imports";
 
-import { architectureRule } from "../../harness/architecture/eslint-rule.js";
-import nextConfig from "./next.mjs";
+import { architectureRule } from "../../harness/architecture/eslint-rule.ts";
+import nextConfig from "./next.ts";
 
-export function createAppConfig(rootDir) {
+export function createAppConfig(rootDir: string) {
   const appRoot = path.resolve(rootDir);
   const tsconfigPath = path.join(appRoot, "tsconfig.json");
 
@@ -18,7 +19,7 @@ export function createAppConfig(rootDir) {
     },
   };
 
-  const policy = [
+  const policy: Linter.Config[] = [
     { files: ["**/*.{js,mjs,cjs,ts,mts,tsx}"], settings: { next: { rootDir: appRoot } } },
     {
       files: ["src/**/*.{ts,tsx}"],
@@ -141,6 +142,11 @@ export function createAppConfig(rootDir) {
   ];
 
   return defineConfig([
-    { basePath: appRoot, files: ["**/*.{js,mjs,cjs,ts,mts,tsx}"], extends: [nextConfig, policy] },
+    {
+      basePath: appRoot,
+      languageOptions: { parserOptions: { tsconfigRootDir: appRoot } },
+      files: ["**/*.{js,mjs,cjs,ts,mts,tsx}"],
+      extends: [nextConfig, policy],
+    },
   ]);
 }

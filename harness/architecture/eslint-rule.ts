@@ -1,6 +1,7 @@
 import path from "node:path";
+import type { Rule } from "eslint";
 
-import { getSourceParts, resolveImportedParts } from "./import-path.js";
+import { getSourceParts, resolveImportedParts } from "./import-path.ts";
 
 const PROJECT_LAYERS = new Set(["app", "widgets", "features", "entities", "shared", "server"]);
 const SLICED_LAYERS = new Set(["widgets", "features", "entities"]);
@@ -8,11 +9,11 @@ const SLICE_SEGMENTS = new Set(["ui", "model", "api", "lib", "config"]);
 const SHARED_SEGMENTS = new Set(["ui", "model", "api", "lib", "config", "contracts"]);
 const ROUTE_SEGMENTS = new Set(["_ui", "_model", "_lib", "_config"]);
 
-function isHookFile(filename) {
+function isHookFile(filename: string) {
   return /^use(?:-|[A-Z]).*\.[jt]sx?$/.test(filename);
 }
 
-function getPrivateRouteOwner(parts) {
+function getPrivateRouteOwner(parts: readonly string[]) {
   if (parts[0] !== "app") return null;
 
   const privateIndex = parts.findIndex((part, index) => index > 0 && part.startsWith("_"));
@@ -20,7 +21,9 @@ function getPrivateRouteOwner(parts) {
   return privateIndex === -1 ? null : parts.slice(0, privateIndex);
 }
 
-export const architectureRule = {
+type DependencySource = Extract<Rule.Node, { type: "ImportExpression" }>["source"];
+
+export const architectureRule: Rule.RuleModule = {
   meta: {
     type: "problem",
     docs: {
@@ -67,15 +70,19 @@ export const architectureRule = {
     const [layer, slice, segment] = parts;
     const fileName = parts.at(-1) ?? "";
     const isClient = context.sourceCode.ast.body.some(
-      (node) => node.type === "ExpressionStatement" && node.directive === "use client",
+      (node) =>
+        node.type === "ExpressionStatement" &&
+        "directive" in node &&
+        node.directive === "use client",
     );
 
-    const reportAtProgram = (messageId, data) => {
+    const reportAtProgram = (messageId: string, data?: Record<string, string>) => {
       context.report({ loc: { line: 1, column: 0 }, messageId, data });
     };
 
-    const checkDependency = (sourceNode) => {
-      const source = sourceNode?.value;
+    const checkDependency = (sourceNode: DependencySource | null | undefined) => {
+      if (sourceNode?.type !== "Literal") return;
+      const source = sourceNode.value;
 
       if (typeof source !== "string") return;
 
