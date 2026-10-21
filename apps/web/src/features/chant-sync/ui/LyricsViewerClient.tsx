@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
+import type { LyricLine } from "@oioi-bwg/contracts/song";
 import { cva } from "class-variance-authority";
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
@@ -10,7 +11,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import type { Album } from "@/entities/album";
-import type { LyricLine } from "@/entities/cheer-guide";
 
 import { analytics } from "@/shared/lib/analytics";
 import { cn } from "@/shared/lib/utils";
