@@ -9,6 +9,9 @@ created_at: "2026-10-21"
 
 # P06-E2 결과
 
+**최신 상태(2026-10-21 17:44 KST):** #168/#169 코드는 통합됐고, VM Caddy 2.6.2에서 차단 후보의
+설정 검증과 임시 loopback 프록시 요청 검사를 통과했다. 활성 차단 설치·E Promotion은 미실행이다.
+
 [P06 계획](P06-PLAN.md#4-pr별-구현-순서와-완료-조건)의 Web 관리 종료 checkpoint를 구현했다.
 기준은 위 integration commit, 구현 commit은 이 결과가 포함된 PR head다.
 가입 API 종료는 별도 [E1 PR #168](https://github.com/goldmayo/oioi-bwg/pull/168)이다. 두 PR과 C/D 운영 증거가 갖춰진 후 실제 E를 적용한다.
@@ -98,3 +101,27 @@ VM/Caddy 적용·계정/MFA 변경·Promotion은 실행하지 않았다. D 실�
 최신화 검토에서 E 운영 안내의 과거 Console 외부 차단 문구도 C 지속 공개 계획에 맞췄다.
 D 실증 후 승인된 Console 공개를 유지하며 E의 Web 차단을 Console route에 적용하지 않는다.
 실제 host 설정은 변경하지 않았다.
+
+
+## 2026-10-21 VM의 차단 후보 검증
+
+통합 source `70bfe32e844c08291f964c00677f0d39c45079eb`의 `web-retirement.caddy`를
+root 보호 검토 디렉터리 `/var/lib/oioi-p06-de-20261021/source`에 보관했다.
+파일 SHA-256은 `c68aeb730949f899eca96c3062d6b432022e7fc1169bf63419c1c5b66a70bb82`다.
+
+- 실제 Caddyfile의 preview 블록만 차단 import → 기존 reverse_proxy 순서로 바꾼 후보를 만들었다.
+  Console import는 유지했다. VM의 Caddy 2.6.2에서 `caddy validate`와 `caddy adapt`가 성공했다.
+- 별도 임시 Caddy를 127.0.0.1의 임시 포트에만 실행하고 현재 Web으로 전달했다. 관리 로그인/API,
+  가입 OTP/완료 POST, Next-Action POST, form Action POST의 6종 요청은 모두 403이었다.
+  `/`, `/healthz`, `/readyz`, `/api/auth/csrf`, `/api/auth/session`은 모두 200이었다.
+  기존 `/api/auth/signin`도 200이며 차단된 `/admin-login`으로 리다이렉트하지 않았다.
+- 검증 프로세스는 종료했다. 활성 Caddy 설정 hash와 실제 두 앱은 바뀌지 않았다.
+  `/etc/caddy/web-retirement.caddy` 설치·Caddy reload·회원가입/관리 mutation·E Promotion은 하지 않았다.
+  이 검사는 전체 관리자 브라우저 E2E가 아니며 해당 자동 CI job을 다시 추가하지 않았다.
+- 08:44:14Z exit 0 증거는 root의 `/var/lib/oioi-p06-de-20261021/private-guard-proof.json`과
+  운영 worktree의 ignored `.local/p06-de-operations/preview-guard-*.json`에 있다.
+
+검사한 이전 Web 후보는 현재 정상 release `fc0724f78cde54ac4096b90951a104e45f2bc27792564cb3bf88e4c76b38b2f8`다.
+실제 hostname의 차단 및 current/previous pair 로그인·복구 확인을 완료했다고 주장하지 않는다.
+[D 실제 설치 결과](P06-D1-RESULT.md#2026-10-21-실제-vm-설치와-보호-백업-키-복원-검증)의
+비공개 재등록·회수 실증을 마친 뒤 활성 차단과 정상 Promotion을 진행한다. F는 보류한다.

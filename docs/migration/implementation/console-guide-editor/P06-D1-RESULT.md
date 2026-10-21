@@ -9,9 +9,14 @@ created_at: "2026-10-21"
 
 # P06-D1 결과
 
+**최신 상태(2026-10-21 17:44 KST):** 운영 VM에 CLI 실행 파일·번들을 설치하고 보호 백업 키의
+복원·실제 MFA 암호문 복호화를 확인했다. 운영자 config 생성·MFA reset·실물 재등록·회수 검증은 미실행이다.
+현재 계정/MFA와 Console HTTPS 공개를 유지한다. D 전체는 여전히 미완료이며 아래 실제 설치 결과를 따른다.
+
 [P06 계획 §6](P06-PLAN.md#6-https등록운영자-경계)의 운영자 CLI 경계를 구현했다.
 기준은 위 integration commit이며 실제 구현·검증 commit은 이 결과를 포함한 PR head다.
-실제 VM 설치·MFA reset·공개 접근 변경·Promotion은 수행하지 않았다. D 전체는 미완료다.
+초기 구현에서는 실제 VM 설치·MFA reset·공개 접근 변경·Promotion을 수행하지 않았다.
+이 문장의 설치 상태는 아래 2026-10-21 실제 설치 결과로 갱신한다. 당시 검증 이력은 보존한다.
 
 - 기존 로컬 전용 CLI의 DB 검증과 mutation 실행을 추출해 운영 worker가 같은 service를 사용한다.
   로컬 scope/URL 제한과 예상 version·role·status 기반 transaction은 유지한다.
@@ -53,3 +58,33 @@ E 코드는 별도 PR에서 준비하되 실제 적용은 Console 운영 검증 
 frozen lockfile 설치와 새 bundle 생성은 성공했다. 새 head/CI 결과는 #167 본문에서 추적한다.
 코드 통합 검증과 실제 운영 실증은 구분한다. 이번 최신화는 VM 설치·MFA reset/재등록·서비스 차단을 실행하지 않으며
 D 전체 완료 조건은 기존 실물 회수·재등록·복구 증거 그대로다.
+
+
+## 2026-10-21 실제 VM 설치와 보호 백업 키 복원 검증
+
+사용자의 D/E 완료 작업 지시로 통합 source `70bfe32e844c08291f964c00677f0d39c45079eb`의
+운영자 CLI를 설치했다. 실제 앱은 Promotion #182의 source `9e09077ac4949b4b105582a1c3c759a3f9515e48`,
+release `fc0724f78cde54ac4096b90951a104e45f2bc27792564cb3bf88e4c76b38b2f8`를 유지한다.
+
+- 설치 전 bundle provenance의 공통 서버 파일 8개를 실제 배포 source와 대조해 모두 일치했다.
+  bundle SHA-256은 `c6d20f910a2a3a4acab2ad147a1a95b1c2803d9815eccb1aadab91bea14144a6`이다.
+- 개인 운영자의 sudo로 `/usr/local/lib/oioibawige/console-operator.py`(root, 0755),
+  `console-operator.cjs`(root, 0600), 감사 디렉터리 `/var/lib/oioi-console-operator`(root, 0700)를 설치했다.
+  launcher SHA-256은 `3caf4293104e991fd3eb4182f08dd26def63b57c6f7df6a34412de63ad82380d`다.
+  설치 전 파일 부재·현재 release/container/Caddy hash·pending 부재를 확인하고 배포 lock 아래 작업했다.
+- 보호된 기존 backup의 Console 키 두 개가 현재 키와 일치했다. backup에서 별도 root 0600 임시 파일로
+  키를 복원하고, 실제 배포 source와 동일한 crypto 구현으로 현재 활성 MFA 암호문 복호화에 성공했다.
+  복원 임시 파일은 제거했다. 키·암호문·복호화 결과·비밀번호는 로그나 로컬 증거에 기록하지 않았다.
+- DB 조회는 non-owner app role의 `BEGIN READ ONLY`와 statement/lock timeout을 사용했다.
+  전후 계정·MFA 대조가 같았고 MFA는 활성/version 3이다. DB mutation·runtime key 교체·OTP 생성은 하지 않았다.
+- 설치와 복원 검증은 각각 08:38:57Z, 08:41:54Z에 exit 0이었다.
+  root 증거는 `/var/lib/oioi-p06-de-20261021/installation.json`과 `recovery-validation.json`,
+  로컬 증거는 운영 worktree의 ignored `.local/p06-de-operations/`에 있다.
+
+회사 PC의 브라우저·인증 앱은 사용 가능하나 해당 PC에서 VM SSH는 불가능하다고 사용자가 확인했다.
+비공개 재등록 화면에 도달할 경로가 확정되기 전에는 MFA를 초기화하지 않는다.
+`/etc/oioibawige/console-operator.json`도 아직 만들지 않았다. 실제 중단 시점의 release/container/DB/Caddy를
+다시 대조해 생성해야 하며, 현재 공개 Caddy hash를 닫힌 상태의 승인값으로 기록하지 않는다.
+다음은 SSH 터널을 사용하는 브라우저 접근 확보 → 예정된 Console 중단 안내 → 고정 config → CLI reset →
+이전 JWT 거절·실물 재등록·새 로그인 → 등록 닫힘·HTTPS 복귀·관리/서비스 복구 확인이다.
+이번 키 파일 복원·복호화 성공을 위 전체 흐름이나 실행 중 서비스의 복구 완료로 대신하지 않는다.
