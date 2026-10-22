@@ -554,3 +554,17 @@ workspace node_modules 보존만 수정한다. production 이미지·운영 Comp
 - 앱/공통 package/build 입력이 불변이면 #206의 타입/unit/두 앱 build/standalone 결과를 재사용하고
   변경 YAML·Docker 동작을 직접 검증한다. 필수 hook·최종 head CI·리뷰 후 squash한다. 이후 Worker가
   workspace로 추가되면 manifest/volume 영향은 해당 단위에서 재점검한다. 다른 lifecycle/UI/배포는 제외한다.
+
+## 2026-10-23 다음 단위 — UI-01/02 앱별 scaffold 설정
+
+RUN-01 #207의 squash 결과 `78d5d5e0ccd95a2b807c0367229446ff03c29f2a`를 fetch하고 검증 head와
+전체 tree 일치를 확인한 뒤 분기한다. Frontend/FSD와 헌법의 앱별 자동 탐색 entry 소유권을 따른다.
+
+- Web의 잘못된 utils/lib/hooks·shared root 생성 alias를 실제 shared/lib·shared/ui로 맞춘다.
+  Console에도 동일한 앱 소유 설정을 추가한다. 각 앱의 CSS/cn 경로와 @ alias를 사용한다.
+- 기존 Web style·Tailwind v4·RSC/TSX·icon 설정을 유지한다. 컴포넌트 생성/덮어쓰기·primitive 교체·
+  Base UI 전환·공통 UI package 추출은 하지 않는다. UI-03은 별도 후속이다.
+- 완료 조건은 설치된 shadcn 3.8.5의 두 앱 `info`가 설정을 인식하고 모든 resolved path가 해당 앱에
+  속하며 실제 CSS/cn/디렉터리가 존재하는 것이다. 공식 components.json schema/CLI와 대조한다.
+  CLI info는 경로 존재를 보장하지 않으므로 별도로 확인한다. 포맷·diff와 불변 runtime 입력을 대조하고
+  #207의 기존 앱 검사/build 결과를 재사용하며 필수 hook·최종 CI/리뷰 후 squash한다.

@@ -47,8 +47,8 @@ created_at: "2026-10-22"
 | [x] | TEST-04 | Web adapter를 쓰는 foundation만 Web 소유 project로 한정했다. 서버 세 파일에는 Web alias가 없으며 실제 PostgreSQL 4파일·33건과 직렬 Node 실행·DB 정리를 검증했다. |
 | [x] | RUN-01 | 개발 이미지의 전체 workspace manifest와 bind mount 이후 의존성 volume을 보완했다. 별도 임시 프로젝트의 clean install·native 해석·config 검사·Web dev/metadata/browser와 자원 정리를 확인했다. |
 | [x] | RUN-02 | Web 관리 route·forbidden consumer 제거로 적용 제외한다. Console의 실제 admin layout consumer와 authInterrupts 옵션은 유지했고 공통 experimental 옵션의 보존도 검증했다. |
-| [ ] | UI-01 | 대기 |
-| [ ] | UI-02 | 대기 |
+| [x] | UI-01 | Web CLI의 utils/lib/hooks·shared root alias를 실제 shared/lib·shared/ui로 맞췄다. 설치된 CLI의 앱별 해석과 실제 경로 존재를 확인했다. |
+| [x] | UI-02 | Console에 앱 소유 components.json을 추가했다. 두 앱의 기존 style·CSS·primitive·소스는 유지하고 실제 CLI와 경로를 확인했다. UI 추출은 별도다. |
 | [ ] | DOC-01 | 대기 |
 | [ ] | ROOT-01 | 대기 |
 | [ ] | ROOT-02 | 대기 |
@@ -59,7 +59,7 @@ created_at: "2026-10-22"
 
 ## 2026-10-22 추가 논의 체크리스트
 
-현재 원문 38개는 **처리 27개·대기 11개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01·ENV-10·DB-01/02·RUN-01을 더했다.
+현재 원문 38개는 **처리 29개·대기 9개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01·ENV-10·DB-01/02·RUN-01·UI-01/02를 더했다.
 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
 별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01·CFG-08/09/10·TEST-05는 처리됐으며 나머지 3개는 검토/대기다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
@@ -1161,3 +1161,24 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 원문 처리 27/대기 11, 추가 처리 5/대기 3이다. 다음은 scaffold alias·사용 종료 도구와 수명주기/
   소유권·안내를 각각 구분해 대조한다. Worker를 새 workspace로 추가하면 manifest/volume 영향은
   해당 단위에서 재점검한다. #199 F 전환·production/www·운영 배포·미래 계정·UI 추출은 보류다.
+
+## 2026-10-23 UI-01/02 — 앱별 scaffold 경로
+
+- 개발 Docker [#207](https://github.com/goldmayo/oioi-bwg/pull/207)은 최종 head
+  `3f9156b38e30425371afea3d3fd50f40f2bad473`의 [CI #503](https://github.com/goldmayo/oioi-bwg/actions/runs/39852149720)
+  전체 성공과 리뷰/보호 조건 확인 후 `78d5d5e0ccd95a2b807c0367229446ff03c29f2a`로 squash 병합했다.
+  fetch한 병합 tree와 검증 head의 일치 확인 후 `feature/monorepo-ui-scaffold`를 분기했다.
+- Web components.json의 components/ui는 shared/ui, utils는 실제 shared/lib/utils, lib/hooks는 shared/lib로
+  맞췄다. Console에도 같은 앱 소유 설정을 추가했다. 기존 new-york·Tailwind v4·RSC/TSX·icon 설정과
+  앱별 globals.css를 유지했다. primitive 교체·Base UI 전환·컴포넌트 생성/덮어쓰기·공통 UI 추출은 없다.
+- [공식 components.json 안내](https://ui.shadcn.com/docs/components-json)와
+  [schema](https://ui.shadcn.com/schema.json)를 대조했다. 설치된 shadcn 3.8.5의 두 앱 `info`가
+  Next App Router·Tailwind v4·설정을 인식했다. 각각 cwd·tailwindCss·utils·components·ui·lib·hooks의
+  7 resolved path를 앱 root와 대조하고 실제 파일/디렉터리 존재를 확인했다. 기존 Console의 null 설정과
+  Web의 존재하지 않는 utils/libs/hooks 해석을 수정한 것이다. info 자체의 성공만으로 완료로 판정하지 않았다.
+- 앱 src·공용 package/config·harness/ops/scripts/tests·root manifest/lock/Turbo·Docker/Compose 무변경을
+  대조했다. #207의 타입/lint/unit·harness 38·ops 312·PG 33·두 앱 build/standalone 결과를 불변 소스에 한해
+  재사용하며 같은 검사를 직접 반복하지 않았다. 변경 JSON은 실제 CLI로 검증했다. format과 필수 hook·
+  최종 head CI/리뷰 결과는 PR에 기록한다. rendered UI 변경이 없어 별도 스크린샷은 만들지 않았다.
+- 원문 처리 29/대기 9, 추가 처리 5/대기 3이다. 이후 사용 종료/휴면 설정과 수명주기·소유권·안내를
+  구분한다. UI-03 추출·미래 계정·운영 배포·#199 F 전환은 별도 보류다.
