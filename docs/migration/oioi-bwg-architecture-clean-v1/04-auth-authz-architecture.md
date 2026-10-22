@@ -1,10 +1,10 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.7"
+version: "1.8"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-21"
+updated_at: "2026-10-23"
 depends_on:
   - "01"
   - "03"
@@ -21,7 +21,7 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.7
+# oioi-bwg Authentication / Authorization Architecture v1.8
 
 ## 1. 목적
 
@@ -236,7 +236,9 @@ P05-A는 persistence 기반만 제공하며 위 service/guard/CLI 연결과 인�
 
 P06-E의 공개 가입 접수 중단은 Domain AUTH-001을 따른다. Web의 가입 OTP 발송·검증·완료 POST는
 본문 처리와 service 호출 전에 403 FORBIDDEN/no-store로 거부한다. 기존 검증 증명의 재전송에도
-메일·OTP·Account 부작용이 없어야 한다. 일반 Credentials 로그인과 기존 Account는 보존한다.
+메일·OTP·Account 부작용이 없어야 한다. 초기 P06-E의 일반 Credentials 로그인 보존 전제는
+사용자 범위 정정에 따라 폐기한다. 현재 Web은 §4.0처럼 로그인·Auth.js callback·세션 발급을 제공하지
+않는다. 기존 Account·credential 데이터와 공통 service는 보존하며 회원 기능은 별도 요구로 다시 설계한다.
 적용은 Console 운영 검증 이후의 별도 Promotion이며, 과거 이미지 복구 시에도 가입 차단을 유지한다.
 
 ---

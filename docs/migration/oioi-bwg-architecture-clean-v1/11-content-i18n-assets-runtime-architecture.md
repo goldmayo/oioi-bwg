@@ -1,7 +1,7 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.10"
+version: "1.11"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-23"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.10
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.11
 
 ## 1. 목적
 
@@ -244,6 +244,9 @@ www URL 전환은 P06-F의 보류 범위다. 이름에 staging이 있는 버킷�
 공유 서버의 휴면 메일 provider도 명시적 앱 환경을 검증하고 NODE_ENV로 전송 모드를 추론하지 않는다.
 기본 모드는 local의 no-send dev, production의 OCI이며 production에서 dev 모드는 거절한다.
 이 값 계약은 메일 기능 재활성화나 실제 전송·OCI 인증/IMDS 정책 변경을 승인하지 않는다.
+휴면 provider의 Instance Principal 인증은 metadata 접근을 전제로 하므로 현재 컨테이너 IMDS 차단과
+충돌한다. 차단은 유지한다. 메일 재활성화 전에 이를 유지하는 인증·권한·비밀 관리와 전송 실패 계약을
+별도 요구와 승인 범위에서 설계·검증한다. legacy host 예제의 메일 키를 실제 발송 가능성의 증거로 삼지 않는다.
 
 Web의 기본 metadata와 곡/앨범 metadata helper는 같은 site URL을 사용한다. `local`에서는
 `http://localhost:3000`, `production`에서는 기존 `https://oioibawige.com`을 사용한다.

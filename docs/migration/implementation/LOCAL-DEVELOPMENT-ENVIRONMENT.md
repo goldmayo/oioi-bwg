@@ -12,11 +12,19 @@ Next.js development container     Caddy -> Next.js standalone container
 ```
 
 - Database: 로컬 Docker PostgreSQL
-- Auth: 기존 원격 Supabase Auth
-- Assets: `assets.oioibawige.com`
+- Auth: Web 비로그인 공개 조회 / Console의 독립 Auth.js Credentials + TOTP MFA
+- Assets: 기존 `assets.oioibawige.com` 유지, 업로드 credential은 Console consumer만 준비
 - 운영 DB 연결 및 변경: 금지
 
+현재 workspace는 Web·Console·독립 relay와 config·contracts·server다. 로컬 개발·production build·검증은
+`NEXT_PUBLIC_APP_ENV=local`, VM Promotion 입력은 production이며 NODE_ENV로 대체하지 않는다.
+별도 staging 환경을 운영하지 않지만 기존 외부 host/bucket 식별자는 보존한다.
+Web metadata는 localhost이며 local Sentry 전송은 비활성이다. 이 문서는 실제 운영 배포 승인을 뜻하지 않는다.
+
 ## Analysis
+
+아래 발견/해결과 Schema decision은 2026-08-29 최초 baseline의 이력이다. 현재 실행은 이어지는
+DB 도구 입력·Local development workflow를 따른다. 과거 Supabase Auth 설명은 현재 전제에서 제외한다.
 
 ### 발견한 문제
 
@@ -63,6 +71,10 @@ Compose·Console launcher·격리 테스트가 이미 process URL을 명시하�
 schema와 dialect이며 이 명령으로 DB에 접속하거나 migration을 적용하지 않는다.
 
 ## Schema decision
+
+이 절은 최초 운영 관찰값과 로컬 baseline을 맞춘 이력이며 현재 운영 schema를 자동 canonical로 삼는
+규칙이 아니다. 이후 변경은 Domain Specification·active Server/Data Access·명시적 migration과 검증을
+따른다. 운영 schema 재확인·변경은 별도 승인 범위다.
 
 ### 기준
 
@@ -244,6 +256,19 @@ pnpm db:restore-local
 
 `down -v`는 로컬 개발 데이터와 cache를 복구 불가능하게 삭제한다. 운영 volume에는 사용할 수 없다.
 
+## 현재 검사와 실행 소유권 (2026-10-23)
+
+root `pnpm type-check`·`pnpm lint`(양 앱 FSD 포함)·`pnpm test:unit:run`은 workspace 검사를 모은다.
+`pnpm test:harness`·`pnpm test:ops`·`pnpm format:check`와 repo 타입 검사는 root가 소유한다.
+양 앱 local env 준비 후 `NEXT_PUBLIC_APP_ENV=local pnpm build`는 두 Next 앱을 빌드한다.
+Worker는 자체 Node unit/type/lint만 연결하며 Next build·OCI runtime에는 포함하지 않는다.
+
+`pnpm test:integration:postgres --local`은 실행 중인 Compose PG17에서 격리 DB/역할을 만들어
+직렬 테스트 후 연결·lock·DB·역할을 정리한다. 서버 전용 두 테스트의 소스/타입은 packages/server,
+Web foundation/HTTP 409와 operator CLI는 root 소유다. 기존 개발 데이터 reset이나 임의 seed는 하지 않는다.
+root k6는 Web의 외부 대상에 수동 부하를 주는 별도 도구이며 일반 unit/verify에 포함하지 않는다.
+검증 증거와 현재 보류 항목은 [정상화 RESULT](MONOREPO-CONFIGURATION-RESULT.md)를 따른다.
+
 ## Verification
 
 2026-08-29에 다음을 실제 Docker Desktop/WSL 환경에서 확인했다.
@@ -268,6 +293,9 @@ pnpm db:restore-local
 ESLint에는 M2에서 식별된 장문 함수 warning 4건이 남아 있으며 이번 로컬 환경 작업의 오류는 아니다.
 
 ## Production impact
+
+아래는 2026-08-29 최초 로컬 환경 구성 당시 영향 기록이다. 현재 인증 범위는 위의 Web/Console 구분을
+따르며 Supabase Auth 보존을 현행 요구로 사용하지 않는다.
 
 이번 작업의 production 직접 영향은 **0**이다.
 
