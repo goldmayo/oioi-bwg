@@ -41,7 +41,7 @@ created_at: "2026-10-22"
 | [x] | CFG-07 | 누락된 운영 .ts 8개를 strict 타입 검사에 포함했다. 기존 .mts NodeNext 검사는 유지하고 repo/CI/push 경로의 실제 오류 검출과 소스별 검사 소속을 검증했다. |
 | [x] | TEST-01 | 두 앱이 각자의 Vitest root·alias·include를 소유한다. 공통 browser preset/setup과 root의 프로젝트 선택 책임을 분리하고 수집 파일·환경 보존을 검증했다. |
 | [x] | TEST-02 | root unit·coverage의 실행 대상을 네 workspace로 맞췄다. Turbo와 같은 81파일·410건을 실행하며 환경·제외·alias를 보존한다. coverage 측정 경로는 TEST-03에서 수정한다. |
-| [ ] | TEST-03 | 대기 |
+| [x] | TEST-03 | 없는 Web 경로를 실제 네 workspace src 경로로 교체했다. coverage 276개 소스를 추적 목록과 대조했고 미실행 소스의 0회 기록과 테스트·선언 제외를 확인했다. |
 | [ ] | TEST-04 | 대기 |
 | [ ] | RUN-01 | 대기 |
 | [ ] | RUN-02 | 대기 |
@@ -342,3 +342,51 @@ created_at: "2026-10-22"
   TEST-04의 Web HTTP adapter alias와 consumer도 유지했다.
 - 다음 단위는 TEST-03의 실제 coverage 측정 경로다. TEST-04는 별도로 유지하고 이번 단위에서
   PR 생성·병합·배포는 하지 않는다.
+
+### 4단계 세 번째 단위 — TEST-03 coverage 측정 경로
+
+- 진입 기준: `6a6e90d760086a3d215c6464bf77b0aec3912772`. fetch 후 로컬과 같은 이름의 원격
+  작업 브랜치가 같고 작업 트리가 깨끗함을 확인했다. `origin/migration_main`은 `4d5e42d`다.
+  [세 번째 단위 계획](MONOREPO-CONFIGURATION-PLAN.md#4단계-세-번째-단위--test-03-coverage-측정-경로)에
+  따라 TEST-03을 완료했다. 원문 38개 중 완료 10개, 대기 28개다. 구현과 이 기록은 같은 커밋에
+  포함하며 과거의 coverage 0개 관찰과 PLAN 원문 매핑은 보존했다.
+- 기존의 없는 Web 경로 대신 `apps/*/src/**/*.{ts,tsx}`·`packages/*/src/**/*.{ts,tsx}`를 측정한다.
+  단위 테스트가 보호하는 앱 HTTP adapter·hook·API 및 공통 contract/service를 포함하며
+  미실행 소스도 숨기지 않는다. 기존 test/선언 제외·V8 provider·text/html reporter는 유지했다.
+  프로젝트별 test include·alias·환경·globals·setup·timeout은 바꾸지 않았다.
+- [공식 v4 coverage 문서](https://v4.vitest.dev/guide/coverage#including-and-excluding-files-from-coverage-report)의
+  include 동작과 설치된 Vitest 4.1.2의 실제 출력으로 측정 범위를 확인했다.
+
+실행한 로컬 검증:
+
+- 변경 전후 `pnpm test:coverage`에 테스트 JSON reporter·coverage JSON reporter·별도 출력 경로를
+  지정해 실제 실행했다. 양쪽 모두 81파일·410건 성공이며 파일·이름별 테스트 결과도 동일하다.
+  수집 목록과 실행 환경도 동일하다. 자동 병합 coverage exclude는 순서가 달라 집합으로 대조했고
+  내용이 같았다. 명시적 제외 규칙은 변경하지 않았다.
+- 실제 측정 소스는 0개에서 276개로 바뀌었다. Web 111 + Console 133 + contracts 6 + server 26개로
+  추적 중인 src TypeScript 목록에서 test/선언을 제외한 집합과 정확히 일치한다. 누락·예상 밖 파일은
+  모두 0개다. 테스트되지 않은 앨범 상세 RSC 페이지도 statement 실행 0회로 보고됨을 확인했다.
+- 승인한 병렬 방식인 `pnpm exec turbo run type-check lint test --concurrency=4`를 실제 적용했다.
+  workspace 12개 task 성공·캐시 사용 0개, unit은 contracts 3 + server 88 + Web 93 + Console 226 =
+  410건이다. `pnpm type-check:repo`(root/config/scripts)와 `pnpm lint:repo`도 병행해 통과했다.
+  기존 verify/CI/hook의 task 의존 관계와 검사 범위를 바꾸거나 새 runner를 추가하지 않았다.
+- workspace 검사 후 `pnpm lint:fsd`·`pnpm test:harness` 29건 성공.
+  harness의 임시 소스가 coverage나 타입 검사에 섞이지 않도록 별도 순서로 실행했다.
+- `pnpm build --force`와 `pnpm build --force --env-mode=loose`에서 모두 두 앱의 컴파일·타입 검사·
+  정적 페이지 생성·standalone 구성이 성공했다. 각각 Turbo 2개 task 성공·캐시 사용 0개다.
+  후자는 임시 입력이 Turbo 자식 프로세스에도 전달되도록 실행 모드를 명시해 추가 확인했다.
+  Sentry 업로드·telemetry를 끄고 local 앱 환경·접속 불가능한 loopback DB·임시 Console 인증 입력을
+  사용했다. env 파일과 runtime 설정은 변경하지 않았다. 실제 DB·standalone smoke는 미실행이다.
+- 수집/설정 비교, 변경 전후 coverage JSON, 측정 소스 목록, 검사·build 로그는
+  `.local/monorepo-config/coverage-scope/`에 보존한다.
+- `pnpm format:check`, `git diff --check`: 성공.
+
+리팩토링 점검:
+
+- 실제 workspace src를 가리키는 두 glob으로 정리했다. test 수집 정책·앱 alias를 root에 복제하지
+  않았고 provider·dependency/lockfile·기존 JS 도구를 바꾸지 않았다. 측정 비율 목표를 추가하거나
+  비율을 높이려고 미실행 파일을 제외하지 않았다. JSON 측정 목록 자체를 검증했다.
+- Next/Sentry/DB/env 코드·개인 env·DB 볼륨·MFA 키·운영 자원은 변경하지 않았다.
+  TEST-04의 PostgreSQL Web adapter alias와 consumer도 유지했다.
+- 다음 단위는 TEST-04의 PostgreSQL integration 의존 책임이다. 이번 단위에서는 PR 생성·병합·배포를
+  하지 않는다.

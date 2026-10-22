@@ -183,3 +183,24 @@ workspace/repo 검사 책임을 유지하며 누락된 운영 `.ts` 스크립트
   구분해 기록한다. API·DB·앱 runtime 설정은 바꾸지 않고 TEST-04 alias도 유지한다.
 - 기본 타입/lint/FSD/harness/unit/format과 두 앱 build를 실제 실행한다.
   결과 기록·리팩토링 점검 후 같은 브랜치에 새 커밋을 만들고 hook을 생략하지 않고 push한다.
+
+## 4단계 세 번째 단위 — TEST-03 coverage 측정 경로
+
+기준은 `6a6e90d760086a3d215c6464bf77b0aec3912772`다. Testing §17·18을 따라 기존 81파일의
+테스트 실행은 보존하고 실제 소스가 측정되도록 coverage include만 정리한다.
+
+- 기존 include는 없는 Web shared/hooks·shared/utils 및 Web feature hook만 가리킨다.
+  변경 전 수집/환경과 추적 소스 목록을 `.local/monorepo-config/coverage-scope/before.json`에
+  기록했다. 테스트·선언을 제외한 현재 소스 후보는 Web 111·Console 133·contracts 6·server 26개다.
+- 두 앱과 두 package의 `src/**/*.{ts,tsx}`를 명시적으로 측정한다. 실행하지 않은 소스도 보고서에
+  드러내고 기존 test/선언 제외 규칙은 유지한다. 단위 테스트 include·alias·환경과 V8 provider·
+  기본 text/html reporter는 바꾸지 않는다. 새 coverage 수치 목표나 도메인 테스트를 추가하지 않는다.
+- 변경 전후 실제 coverage를 실행해 측정 파일을 추적 소스 목록과 대조하고 테스트 파일·이름별
+  결과도 비교한다. 파일 목록에 차이가 있으면 실행 코드와 provider 동작을 확인해 기록한다.
+  ops·PostgreSQL·관리자 E2E 및 TEST-04의 Web adapter alias는 이번 단위에 포함하지 않는다.
+- 사용자가 승인한 병렬 검증을 이번 실행부터 적용한다. workspace 검사는
+  `pnpm exec turbo run type-check lint test --concurrency=4`로 묶고 repo 타입/lint는 별도로 실행한다.
+  임시 소스를 만드는 harness는 workspace 검사 후, `.next`를 갱신하는 build는 타입 검사 후 실행한다.
+  기존 verify/CI/hook의 검사 범위와 task 의존 관계는 유지하고 실행 도구를 새로 만들지 않는다.
+- coverage·workspace/repo 검사·harness/FSD/format 및 두 앱 build를 실제 실행하고 결과를 기록한다.
+  같은 브랜치에 새 커밋을 push한 뒤 브리핑하며 PR·병합·배포는 하지 않는다.
