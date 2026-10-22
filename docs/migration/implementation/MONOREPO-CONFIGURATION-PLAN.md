@@ -620,3 +620,22 @@ private apps/sentry-slack-relay로 이관한다. TEST-06 중 이 Worker unit 이
   Worker source의 보수적 양 앱 image 영향 판정을 유지한다. production Docker/CI 구조는 바꾸지 않는다.
 - 완료 조건은 위 로컬 검증·기본 gate·최종 head CI/리뷰와 squash다. Next product 소스/공통 DB가 불변이면
   앞선 실제 build/standalone·격리 PG 결과를 재사용한다. server DB/k6 소유권은 후속이며 외부 배포·전송은 제외한다.
+
+## 2026-10-23 다음 단위 — TEST-06 서버 DB 테스트 소유권과 수동 도구 판정
+
+RUN-03 #211의 squash `e6d8126bd8e9284f1bc7ba8a727e5ca73b083ab2`를 fetch하고 최종 검증 tree 일치 후
+분기한다. 서버 repository/service만 검증하는 p05a/p05b2 두 파일을 packages/server/tests/integration으로
+옮기고 서버 strict 타입 프로그램이 소유하게 한다. fixture/SQL·guard·assertion은 유지하고 otplib 해석의
+package-relative 기준만 맞춘다. runtime·migration·DB schema·의존성은 변경하지 않는다.
+
+- root PostgreSQL project는 새 경로를 한 번씩 수집한다. foundation의 Web alias/HTTP 409와 root
+  operator CLI 테스트, guarded runner의 PG17·격리 DB/역할 생성·직렬 실행/정리는 유지한다. 일반 서버
+  unit에는 integration을 포함하지 않는다. harness로 타입 소속·수집/alias 격리·중복 부재를 확인한다.
+- 완료 조건은 기본 검사와 실제 local runner의 동일 4파일/33건·연결/lock·임시 DB/역할 정리다.
+  불변 제품/설치 입력의 build/standalone은 #211 최종 CI를 재사용한다. 필수 hook·최종 CI/리뷰 후 squash한다.
+- k6 네 파일은 Web URL/song slug를 사용하는 dependency 없는 수동 외부 검증 도구다. app import·unit
+  환경·일반 CI가 소비하지 않고 root의 test:load/stress/spike가 실행 진입점을 소유한다. 실행 책임을
+  명시하고 root에 보존한다. 폴더 미관만으로 이동하지 않으며 기존 외부 hostname·대상을 바꾸거나 부하
+  테스트를 실행하지 않는다. 현재 Runtime은 Next이며 과거 Wrangler/staging 설명은 DOC-01에서 구분한다.
+- 공통 marker는 #206, Worker unit은 #211로 소유권 이관을 마쳤다. tests/ops의 배포/호스트/이미지/
+  두 앱 smoke·fixture는 root 소유를 유지한다. 개발 안내와 보존 결정의 최종 정리는 다음 문서 단위다.

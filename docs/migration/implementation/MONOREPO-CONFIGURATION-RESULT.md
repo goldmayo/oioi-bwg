@@ -73,7 +73,7 @@ created_at: "2026-10-22"
 | [x] | CFG-10 | 루트 설정 TS 검사 | Drizzle·ops Vitest 두 설정을 기존 config 타입 프로그램에 포함했다. 실제 TS2322 검출과 repo/CI/hook 공통 entry를 확인했다. |
 | [x] | TEST-05 | 루트 tests TS 검사 | 최초 29개를 Node/Web으로 분리했고 현재 marker 2개는 config 자체 검사로 이동했다. root 27개는 Node 26·Web 1개로 strict 검사·단일 소속·alias 격리를 확인한다. |
 | [x] | RUN-03 | Worker workspace 소유권 | private apps/sentry-slack-relay가 소스·Node type/lint/unit을 소유한다. root 수집·coverage·runtime 경계와 일곱 workspace 개발 Docker를 검증했다. 기존 handler/Wrangler 설정과 독립 수동 배포 계약은 유지하며 실제 배포는 하지 않았다. |
-| [ ] | TEST-06 | tests 위치·책임 정리 | 공통 marker는 #206에서 config로, Worker unit은 RUN-03에서 앱으로 이관했다. root 통합 검증을 유지하며 server 전용 DB 두 파일과 Web k6의 소유권은 후속이다. |
+| [x] | TEST-06 | tests 위치·책임 정리 | marker는 #206의 config, Worker unit은 #211의 앱, 서버 전용 DB 두 파일은 server tests/타입 프로그램이 소유한다. foundation·operator·ops/smoke/fixture와 앱 import 없는 수동 k6는 root 실행 책임으로 보존한다. 실제 PG 4파일/33건·격리 정리와 unit 중복 부재를 확인했다. |
 | [ ] | UI-03 | 정상화 이후 공통 UI | 정상화와 최종 통합 검증 뒤 별도로 실제 재사용을 조사한다. 패키지 선생성·일괄 이관을 승인하거나 완료한 상태가 아니다. |
 
 재개 순서와 각 ID의 완료 조건은 [PLAN의 추가 논의](MONOREPO-CONFIGURATION-PLAN.md#2026-10-22-추가-논의-반영--재개-순서와-소유권),
@@ -1273,3 +1273,30 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   성공했다. unit 694 + ops 280 = 974건으로 이관 전 662 + 312 = 974건과 같아 중복/소실이 없다.
 - 원문 처리 32/대기 6, 추가 처리 6/대기 2다. TEST-06의 server DB/k6와 최종 안내 정리는 후속이다.
   UI 추출·미래 계정·운영/Worker 배포·외부 전송·#199 F 전환은 보류하며 최종 hook·CI·리뷰는 PR에 기록한다.
+
+## 2026-10-23 TEST-06 — 서버 DB 테스트의 실행·타입 소유권
+
+- RUN-03 [#211](https://github.com/goldmayo/oioi-bwg/pull/211)은 최종 head
+  `e3a0cad1f56293493965072ef8a82e8f49f6d960`의 [Verify #507](https://github.com/goldmayo/oioi-bwg/actions/runs/39861684336)
+  전체 성공 후 `e6d8126bd8e9284f1bc7ba8a727e5ca73b083ab2`로 squash 병합했다. fetch한 병합 tree와
+  검증 head 일치 확인 후 `feature/monorepo-server-test-ownership`를 분기했다.
+- 서버 repository/service 전용 p05a/p05b2는 packages/server/tests/integration으로 옮기고 서버 strict
+  타입 프로그램에 포함했다. p05a는 byte 불변, p05b2는 otplib의 package-relative 기준만 수정했다.
+  SQL/fixture/assertion·local isolated DB guard는 보존했다. root PostgreSQL project가 두 새 경로를 한
+  번씩 수집하며 일반 서버 unit에는 포함하지 않는다. active Testing 1.8과 index에 소유권을 기록했다.
+- foundation의 Web adapter/HTTP 409·Web alias는 root 통합 검증으로 유지한다. operator CLI와
+  tests/ops의 호스트·배포·이미지·두 앱 smoke/fixture도 root 소유다. 공통 marker/Worker는 각각 #206/#211
+  소유권을 유지한다. 앱 import/unit 환경/일반 CI 소비가 없는 Web k6 네 파일은 수동 외부 검증 도구이며
+  root test:load/stress/spike 실행 진입점과 함께 보존한다. 폴더 미관만으로 옮기거나 기존 hostname을
+  APP_ENV로 해석하지 않았고 실제 외부 부하 테스트·접속 대상 변경은 하지 않았다.
+- `pnpm type-check`·`pnpm lint`(양 앱 FSD 포함)·`pnpm test:unit:run` 성공. workspace type/lint 각
+  6작업·unit 5작업 cache 0이며 unit 96파일/694건으로 일반 unit에 PG가 섞이지 않았다. harness **40건**과
+  ops **21파일/280건**도 성공했다. 추적 테스트의 타입 소유권·root/Web alias 격리·새 경로의 직렬 수집을
+  실제 config로 확인했다.
+- 개인 credential 없이 local 앱 환경·빈 DSN·telemetry OFF에서
+  `pnpm test:integration:postgres --local`을 실행했다. 실제 PG17의 같은 **4파일/33건**이 통과했고
+  runner의 임시 DB/역할/연결/advisory lock 정리도 성공했다. migration·runtime/service·schema·의존성/
+  설치 입력은 불변이며 #211의 최종 두 앱 build/standalone·개발 Docker 결과를 재사용한다.
+- 원문 처리 32/대기 6, 추가 처리 7/대기 1이다. 남은 추가 UI-03은 사용자 보류 범위다. 다음은 현재
+  개발 안내·legacy 예제/수동 도구·생성 파일/메일 인증 보존·Auth 문서 충돌을 정리하는 문서 단위다.
+  운영/Worker 배포·외부 전송·미래 계정·UI 추출·#199 F 전환은 보류한다. 필수 hook·최종 CI/리뷰는 PR에 기록한다.

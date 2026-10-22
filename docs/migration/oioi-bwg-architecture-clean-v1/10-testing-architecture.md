@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.7"
+version: "1.8"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-23"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.7
+# oioi-bwg Testing Architecture v1.8
 
 ## 1. 목적
 
@@ -324,6 +324,11 @@ P04의 두 앱 로그인 회귀는 P06-E에서 Console 인증/관리와 Web 비�
 Web은 로그인 화면·세션/권한 API·Credentials callback 부재와 기존 쿠키의 비사용을 검증한다.
 Console의 MFA·인가 계약은 유지한다. 전체 관리자 E2E의 수동 실행 원칙은 §12.1을 따른다.
 CI의 PostgreSQL fixture는 격리된 test DB에만 만들고 정리한다.
+서버 repository/service 전용 DB 테스트는 packages/server/tests/integration과 서버 strict 타입
+프로그램이 소유한다. 실제 실행은 root guarded runner와 직렬 Node project를 사용하며 일반 package
+unit에는 수집하지 않는다. Web HTTP adapter를 검증하는 foundation과 operator CLI 통합은 root에 유지한다.
+수동 k6는 앱 import/테스트 환경 없는 외부 Web 검증 도구로 root에 유지하고 unit/일반 verify와 분리한다.
+기존 target 식별자를 APP_ENV로 해석하거나 승인 없이 변경·호출하지 않는다.
 
 독립 relay Worker는 자체 Node unit/type/lint workspace다. root unit·coverage와 Turbo가 동일한
 테스트를 한 번씩 수집하며 browser/Web alias를 적용하지 않는다. 해당 unit을 root ops에서 중복 실행하지
