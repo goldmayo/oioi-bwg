@@ -4,13 +4,16 @@ interface Env {
 }
 
 interface RelayEvent {
+  app?: "web" | "console";
   environment: "local" | "staging" | "production" | "unknown";
+  failureKind?: "contract" | "delivery" | "system" | "unknown";
   issueId: string;
   issueUrl: string;
   level: "fatal" | "error" | "warning" | "info" | "debug";
   message: string;
   occurredAt: string;
   projectId: string;
+  release?: string;
   title: string;
 }
 
@@ -76,6 +79,12 @@ const readEnvironment = (event: Record<string, unknown>): RelayEvent["environmen
   }
 
   return "unknown";
+};
+
+const readUniqueTag = (event: Record<string, unknown>, key: string): unknown => {
+  if (!Array.isArray(event.tags)) return undefined;
+  const matches = event.tags.filter((tag) => Array.isArray(tag) && tag[0] === key);
+  return matches.length === 1 && matches[0].length === 2 ? matches[0][1] : undefined;
 };
 
 const readLevel = (value: unknown): RelayEvent["level"] => {
@@ -153,15 +162,26 @@ const parseRelayEvent = (rawBody: string): RelayEvent | null => {
   const metadata = isRecord(event.metadata) ? event.metadata : null;
   const title = redactDiagnosticText(event.title, "Unexpected Sentry issue");
   const message = redactDiagnosticText(metadata?.value ?? event.message, title);
+  const app = readUniqueTag(event, "app");
+  const failureKind = readUniqueTag(event, "failure.kind");
+  const release = isRecord(event.release) ? event.release.version : event.release;
 
   return {
+    ...(app === "web" || app === "console" ? { app } : {}),
     environment: readEnvironment(event),
+    ...(failureKind === "contract" ||
+    failureKind === "delivery" ||
+    failureKind === "system" ||
+    failureKind === "unknown"
+      ? { failureKind }
+      : {}),
     issueId,
     issueUrl,
     level: readLevel(event.level),
     message,
     occurredAt,
     projectId,
+    ...(typeof release === "string" && /^oioi-bwg@[0-9a-f]{40}$/.test(release) ? { release } : {}),
     title,
   };
 };
@@ -207,13 +227,22 @@ const buildSlackPayload = (event: RelayEvent) => {
   const repeatedMessage =
     event.message === event.title || event.title.endsWith(`: ${event.message}`);
   const showMessage = heading !== event.title || !repeatedMessage;
-  const levelLabel = {
-    fatal: "치명적 오류",
-    error: "오류",
-    warning: "경고",
-    info: "정보",
-    debug: "디버그",
-  }[event.level];
+  const diagnostics = {
+    ...(event.app ? { app: event.app } : {}),
+    ...(event.failureKind ? { kind: event.failureKind } : {}),
+    ...(event.release ? { release: event.release } : {}),
+  };
+  const diagnosticEntries = Object.entries(diagnostics);
+  const tagText = Object.entries({
+    environment: event.environment,
+    level: event.level,
+    ...diagnostics,
+  })
+    .map(
+      ([key, value]) =>
+        `${key}: \`${key === "release" ? value.replace("oioi-bwg@", "").slice(0, 12) : value}\``,
+    )
+    .join("   ");
   const occurredAt = event.occurredAt.replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
   const timestamp = Math.floor(Date.parse(event.occurredAt) / 1_000);
 
@@ -221,26 +250,28 @@ const buildSlackPayload = (event: RelayEvent) => {
     text: [
       `[Sentry][${event.environment}][${event.level}] ${escapeSlackMrkdwn(event.title)}`,
       ...(repeatedMessage ? [] : [escapeSlackMrkdwn(event.message)]),
+      ...(diagnosticEntries.length
+        ? [diagnosticEntries.map(([key, value]) => `${key}=${value}`).join(" · ")]
+        : []),
       `발생 ${occurredAt}`,
       event.issueUrl,
     ].join("\n"),
     unfurl_links: false,
     unfurl_media: false,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: heading, emoji: false } },
       {
-        type: "context",
+        type: "rich_text",
         elements: [
           {
-            type: "plain_text",
-            text: `${event.environment.toUpperCase()} · ${levelLabel}`,
-            emoji: false,
+            type: "rich_text_section",
+            elements: [{ type: "link", url: event.issueUrl, text: heading, style: { bold: true } }],
           },
         ],
       },
       ...(showMessage
         ? [{ type: "section", text: { type: "plain_text", text: event.message, emoji: false } }]
         : []),
+      { type: "context", elements: [{ type: "mrkdwn", text: tagText, verbatim: true }] },
       {
         type: "section",
         text: {

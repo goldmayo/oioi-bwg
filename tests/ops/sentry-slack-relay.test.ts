@@ -252,16 +252,19 @@ describe("Slack message layout", () => {
   it("puts the title first and keeps metadata, local time and the issue link compact", async () => {
     const payload = await captureSlackPayload();
     expect(payload.blocks.map((block: { type: string }) => block.type)).toEqual([
-      "header",
+      "rich_text",
       "context",
       "section",
     ]);
-    expect(payload.blocks[0].text).toEqual({
-      type: "plain_text",
-      text: "TypeError: Failed to fetch",
-      emoji: false,
-    });
-    expect(payload.blocks[1].elements[0].text).toBe("STAGING · 오류");
+    expect(payload.blocks[0].elements[0].elements).toEqual([
+      {
+        type: "link",
+        text: "TypeError: Failed to fetch",
+        url: payload.blocks[2].accessory.url,
+        style: { bold: true },
+      },
+    ]);
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `staging`   level: `error`");
     expect(payload.blocks[2].text.text).toBe(
       "발생 <!date^1789895411^{date_num} {time_secs}|2026-09-20 09:10:11 UTC>",
     );
@@ -300,12 +303,12 @@ describe("Slack message layout", () => {
   );
 
   it.each(["가".repeat(150), "가".repeat(151), "😀".repeat(120)])(
-    "fits the header limit without breaking Unicode or losing the full fallback title",
+    "fits the display title budget without breaking Unicode or losing the full fallback title",
     async (title) => {
       const event = structuredClone(baseEvent);
       event.data.event.title = title;
       const payload = await captureSlackPayload(event);
-      const heading = payload.blocks[0].text.text;
+      const heading = payload.blocks[0].elements[0].elements[0].text;
       expect(heading.length).toBeLessThanOrEqual(150);
       expect(() => encodeURIComponent(heading)).not.toThrow();
       expect(payload.text).toContain(title);
@@ -319,7 +322,7 @@ describe("Slack message layout", () => {
     event.data.event.tags = [["environment", "unrecognized"]];
     event.data.event.level = "unrecognized";
     const payload = await captureSlackPayload(event);
-    expect(payload.blocks[1].elements[0].text).toBe("UNKNOWN · 오류");
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `unknown`   level: `error`");
   });
 
   it("keeps a truncated title available without repeating it in the accessible fallback", async () => {
@@ -328,7 +331,77 @@ describe("Slack message layout", () => {
     event.data.event.title = title;
     event.data.event.metadata.value = title;
     const payload = await captureSlackPayload(event);
-    expect(payload.blocks[2].text).toMatchObject({ type: "plain_text", text: title });
+    expect(payload.blocks[1].text).toMatchObject({ type: "plain_text", text: title });
     expect(payload.text.split(title)).toHaveLength(2);
+  });
+});
+
+describe("Slack diagnostic tags and linked title", () => {
+  const release = `oioi-bwg@${"abcdef0123".repeat(4)}`;
+
+  it.each([
+    ["web", release],
+    ["console", { version: release, owner: "PRIVATE_OWNER_MARKER" }],
+  ] as const)(
+    "shows validated %s metadata and preserves the full release in the fallback",
+    async (app, incomingRelease) => {
+      const event = structuredClone(baseEvent);
+      event.data.event.tags.push(["app", app], ["failure.kind", "delivery"]);
+      Object.assign(event.data.event, { release: incomingRelease });
+      const payload = await captureSlackPayload(event);
+      expect(payload.blocks[1].elements[0].text).toBe(
+        `environment: \`staging\`   level: \`error\`   app: \`${app}\`   kind: \`delivery\`   release: \`abcdef0123ab\``,
+      );
+      expect(payload.text).toContain(`app=${app} · kind=delivery · release=${release}`);
+      expect(JSON.stringify(payload)).not.toContain("PRIVATE_OWNER_MARKER");
+    },
+  );
+
+  it.each([
+    undefined,
+    null,
+    "latest-PRIVATE_RELEASE_MARKER",
+    { version: "PRIVATE_RELEASE_MARKER" },
+  ])("omits invalid or absent diagnostic values without guessing", async (incomingRelease) => {
+    const event = structuredClone(baseEvent);
+    event.data.event.tags.push(
+      ["app", "private@example.test"],
+      ["failure.kind", "<!channel>"],
+      ["surface", "PRIVATE_SURFACE_MARKER"],
+    );
+    Object.assign(event.data.event, { release: incomingRelease });
+    const payload = await captureSlackPayload(event);
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `staging`   level: `error`");
+    expect(JSON.stringify(payload)).not.toMatch(
+      /private@example|<!channel>|PRIVATE_RELEASE_MARKER|PRIVATE_SURFACE_MARKER/,
+    );
+  });
+
+  it("omits ambiguous and malformed optional tags", async () => {
+    const event = structuredClone(baseEvent);
+    event.data.event.tags.push(
+      ["app", "web"],
+      ["app", "console"],
+      ["failure.kind", "contract", "EXTRA_VALUE_MARKER"],
+    );
+    const payload = await captureSlackPayload(event);
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `staging`   level: `error`");
+    expect(payload.text).not.toMatch(/app=|kind=|EXTRA_VALUE_MARKER/);
+  });
+
+  it("keeps link labels as literal text instead of interpreting markup or mentions", async () => {
+    const event = structuredClone(baseEvent);
+    const title = "App_Error: *bold* `code` | <@U123> <!channel> &";
+    event.data.event.title = title;
+    const payload = await captureSlackPayload(event);
+    expect(payload.blocks[0].elements[0].elements).toEqual([
+      {
+        type: "link",
+        text: title,
+        style: { bold: true },
+        url: payload.blocks.at(-1).accessory.url,
+      },
+    ]);
+    expect(payload.text).toContain("&lt;!channel&gt;");
   });
 });

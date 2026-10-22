@@ -23,6 +23,9 @@ Slack에는 다음 값만 새 객체로 구성해 전달한다.
 - issue ID와 project ID
 - event 경로와 query/hash를 제거한 `https://*.sentry.io/.../issues/<issue-id>/?project=<validated-project-id>` 링크
 - ISO 8601 발생 시각
+- 선택적 `app` tag: `web`, `console`
+- 선택적 `failure.kind` tag: `contract`, `delivery`, `system`, `unknown`
+- 선택적 release: `oioi-bwg@<소문자 40자리 Git SHA>`
 
 Sentry payload의 user/email, request, headers, body, cookie/token, raw cause, arbitrary extras,
 exception/전체 stack trace는 읽어서 Slack payload로 복사하지 않는다. application Sentry sanitizer가
@@ -30,15 +33,30 @@ exception/전체 stack trace는 읽어서 Slack payload로 복사하지 않는�
 
 ## 알림 표시
 
-오류 제목을 가장 먼저 크게 표시하고 `STAGING · 오류`처럼 환경과 심각도를 한 줄에 묶는다.
+오류 제목은 [Slack rich text link](https://docs.slack.dev/reference/block-kit/block-elements/link-element/)로
+굵게 표시하고 누르면 검증된 Sentry 이슈로 이동한다. 제목과 URL을 별도 필드로 보내므로 문구의 `|`,
+backtick, mention 표기가 링크 문법이나 실제 mention으로 해석되지 않는다.
 title과 같은 내용이거나 `오류 타입: message`의 반복인 message는 생략한다. 별도의 진단 내용은 본문에
 유지하며 제목이 150자를 넘으면 Unicode를 끊지 않고 줄인다. 기존 240자 제한의 전체 정제 제목은
-알림/스크린 리더용 fallback에 유지한다. 제목과 진단 본문은 `plain_text`로 보내 임의 markup을 실행하지 않는다.
+알림/스크린 리더용 fallback에 유지한다. 150자는 간결한 표시를 위한 자체 기준이며 rich text의 API 한도가 아니다.
+진단 본문은 `plain_text`로 보내 임의 markup을 실행하지 않는다.
+
+설명 아래에 `environment: staging`, `level: error`를 기본으로, 유효한 `app`, `kind`, `release`를
+inline code 값으로 묶는다. `app`/`failure.kind`는 event의 tuple 배열 tags에서 해당 key가 한 번만
+나오고 위 enum과 일치할 때만 사용한다. 누락·중복·형식 오류는 추정해서 채우지 않고 생략한다.
+다른 시스템의 임의 `kind`나 raw URL·사용자 정보·함수명·경로를 추가로 가져오지 않는다.
+
+release는 `event.release` 문자열 또는 `event.release.version`에서 정해진 형식만 읽는다.
+본문에는 SHA 앞 12자, fallback에는 전체 release를 남긴다. Worker의 Git HEAD·현재 배포 SHA로 대체하지 않는다.
+일반 제목/설명 redaction으로 release를 우회 전달하지 않고 별도 검증된 필드만 사용한다.
+앱 producer가 아직 전달하지 않는 값은 표시되지 않는다. 이 Worker 변경은 앱의 Sentry 수집 코드를 수정하지 않는다.
 
 발생 시각은 [Slack 날짜 형식](https://docs.slack.dev/messaging/formatting-message-text/#date-formatting)으로
 보는 사람의 기기 시간대에 표시한다. 해석하지 못하는 client에는 UTC가 명시된 fallback을 제공한다.
 숫자 project/issue ID는 본문에서 빼고 검증된 상세 링크에 유지한다. `Sentry에서 보기` 버튼으로 이동한다.
-불필요한 링크 preview는 끄고 환경·level·제목·추가 메시지·시각·링크는 top-level fallback에도 남긴다.
+불필요한 링크 preview는 끄고 위 진단 정보·제목·추가 메시지·시각·링크는 top-level fallback에도 남긴다.
+이 relay의 action은 이슈 열기다. Resolve·Archive·담당자 선택은 공식 Sentry Slack 연동의 관리 기능이며,
+이번 형식에 동작하지 않는 관리 버튼이나 새 관리 API/token을 넣지 않는다.
 
 화면의 `SLACK_SENTRY_WEBHOOK_URL` 발신자 이름과 아이콘은 payload로 바꿀 수 없다.
 [Incoming Webhook 규격](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/)에 따라

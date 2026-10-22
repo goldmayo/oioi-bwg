@@ -1,7 +1,7 @@
 ---
 title: "Sentry 오류 알림 Slack relay 구현 결과"
 document_id: "SENTRY-SLACK-RELAY-RESULT"
-version: "1.3"
+version: "1.4"
 status: "completed"
 authority: "result"
 updated_at: "2026-10-22"
@@ -175,3 +175,52 @@ P1-A의 추가 회귀는 별도 미병합 branch에 있으므로 이 기준선 u
 commit/push 대상은 위 코드·test와 README·이 결과의 네 파일이다. 새 PR·배포·알림 전송은 보류한다.
 기존 §6의 수신 성공을 새 형식의 수신 결과로 재사용하지 않는다. P1-B 인증 UX, 신규 분류 전달,
 Slack 규칙과 원격 소스맵 검증도 이 표시 변경에 합치지 않았다.
+
+## 9. 2026-10-22 제목 링크와 핵심 진단 태그 — 코드 완료, 미배포
+
+사용자가 추가한 Sentry 공식 연동 형태의 예시와 적용 요청에 따라 같은 branch에 새 변경을 쌓았다.
+시작 HEAD·origin·실제 원격은 모두 `fd114097baff4dcaf0cb2324941cb70215b4271f`였고 작업 트리는 깨끗했다.
+`migration_main`은 계속 `4d5e42dac37aeb13b3279b47a7907fbb7bc91be2`였다. §8은 `fd11409` 당시의
+검증 기록으로 보존하며 아래 결과를 이전 단위의 검증으로 소급하지 않는다.
+
+- 제목을 굵은 Sentry 이슈 링크로 바꿨다. Slack `rich_text`의 link element를 사용해 URL과 표시 문구를
+  분리했다. `|`, backtick, `<@…>` 같은 문구가 새 링크/mention으로 파싱되지 않는 회귀를 추가했다.
+- 추가 설명이 있을 때만 본문을 남기고 그 아래 환경·level·선택적 app/kind/release를 inline code로 묶었다.
+  제목의 150자 표시는 읽기 위한 자체 기준으로 유지하고 전체 정제 제목은 fallback에 보존한다.
+- `app`은 web/console, `failure.kind`는 contract/delivery/system/unknown만 읽는다. tuple 배열에서
+  key가 중복되거나 형태·값이 잘못되면 생략한다. 다른 app 이름·임의 kind·surface·URL·사용자 정보는 읽지 않는다.
+- release는 문자열 또는 release object의 version에서 기존 `oioi-bwg@<소문자 SHA 40자>`만 허용한다.
+  본문에는 SHA 12자, 알림/스크린 리더 fallback에는 전체 release를 남긴다. Git HEAD로 추측하지 않는다.
+- 앱의 Sentry producer/sanitizer는 바꾸지 않았다. 실제 event가 전달하지 않은 선택 값은 표시하지 않는다.
+  P1-A/P2의 구현·배포나 실제 원격 metadata 수신이 완료됐다는 뜻이 아니다.
+- Resolve/Archive/담당자 변경은 공식 연동의 기능이다. 이번 relay는 이슈 열기만 제공하며 관리 API·token·
+  인터랙션 endpoint나 동작하지 않는 관리 버튼을 추가하지 않았다. HMAC·timeout·body·secret 경계도 유지했다.
+
+표시와 입력 계약의 현재 안내는 Worker README가 소유한다. 새 프로젝트 문서·범용 telemetry abstraction,
+dependency나 config 변경은 추가하지 않았다. 모노레포 정리·인증 UX·알림 규칙·소스맵 gate는 별도다.
+
+| 이번 단위의 실제 검사 | 결과 |
+| --- | --- |
+| relay 단독 Vitest | 변경 전 21건, 변경 후 29건 성공 |
+| `pnpm exec turbo run type-check lint test --concurrency=4` | 12 task 성공, 12개 캐시. 기존 unit 81파일·410건 대상 |
+| `pnpm type-check:repo`, `pnpm lint:repo` | 새 Worker 타입 검사와 repo lint 성공, 경고 없음 |
+| workspace lint의 양쪽 `lint:fsd` | 위 캐시 결과에 포함 |
+| `pnpm test:harness` | 18건 성공 |
+| `pnpm test:ops` | 21파일·280건 성공 |
+| `pnpm build --force --env-mode=loose` | 두 앱 컴파일·타입 검사·정적 생성·standalone 구성 성공, 2 task·캐시 0개 |
+| README의 Wrangler 4.135.0 dry-run | Worker bundle 생성 성공, 업로드/배포 없이 종료 |
+| `pnpm format:check`, `git diff --check` | 성공 |
+
+검증한 Worker blob은 `ca52ab8776ed3c7ffcdbd9148c46c816ff495d61`,
+test blob은 `1808ec5d72784e697f437d1d48d64819269abcc4`이며 이 절을 포함한 커밋이 변경 범위다.
+실행 로그·서명한 가상 event·fake fetch가 받은 최종 JSON·로컬 모형은 `.local/observability/slack-linked/`에 있다.
+Playwright로 390px/1120px, light/dark를 한 번에 캡처해 가로 넘침이 없음을 확인했다.
+추가 태그 예시는 가상 값으로 명시했다. detector 0건은 규격/실제 Slack renderer 검증을 대신하지 않는다.
+
+앱 build 입력은 source map upload·Sentry를 끈 local 환경, loopback origin, 임시 Console secret과
+접근 불가 loopback DB URL이었다. 개인 env·MFA key·DB volume·운영 DB/VM/Vault는 수정하지 않았다.
+실제 앱 DB/관리자 E2E·Slack 앱 설정·이슈 상태 변경·외부 알림 전송·Worker 배포·새 PR 생성은 하지 않았다.
+실제 채널의 새 형식과 metadata 수신은 별도 배포 뒤 확인해야 한다.
+
+branch 누적 diff의 400줄 목표 초과는 같은 알림 표시의 두 단위와 privacy 회귀·역사 기록을 함께
+검토하기 위한 것이다. 리뷰 순서는 README 입력/표시 계약 → Worker → ops 회귀 → §8/§9 결과다.
