@@ -1,7 +1,7 @@
 ---
 title: "오류 원인과 처리 결과 추적 개선 결과"
 document_id: "OBSERVABILITY-ERROR-TRACKING-RESULT"
-version: "1.3"
+version: "1.4"
 status: "active"
 authority: "result"
 updated_at: "2026-10-22"
@@ -25,11 +25,11 @@ depends_on:
 헌법·도메인 code·HTTP status·인증 판정은 그대로다.
 
 - [x] P1-A: Console server 오류 분류와 최종 정제, 대응 규범·회귀 검사
-- [ ] P1-B: Console RSC 인증 전달과 실제 로그인/거부 UX 검증
+- [x] P1-B: Console RSC 인증 전달과 실제 로그인/거부 UX 검증
 - [x] P2-A: Console app·경로 template·operation·breadcrumb
 - [x] P2-B: Web의 실제 consumer 적용
 - [x] P3: 기존 인증 판정 기반 typed rejection log
-- [ ] P4-A: Console 서버 생성 request ID와 두 sink 연결
+- [x] P4-A: Console 서버 생성 request ID와 두 sink 연결
 - [ ] P4-B: Web dynamic/API 요청 연결
 - [ ] 계획 §11: 기존 Slack 규칙 보완과 이미지별 소스맵 운영 검증
 
@@ -324,3 +324,47 @@ HTTP의 공개 body/DTO는 바꾸지 않고 response header ID를 브라우저 E
   새 auth/DB cache·전역 request context·데이터 재조회·dependency·API envelope는 추가하지 않았다.
 - 로그: ignored `.local/observability/finish/console-correlation/`. 실제 Next 요청의 header→hook 연결과
   장애 주입은 다음 runtime 기록에서 판정하며, 통과 전에는 §1 P4-A를 완료 표시하지 않는다.
+
+### 실제 Next 장애·오류 화면·요청 연결 — 1·5번 로컬 완료
+
+기준 `af824641784bda88188ea46fbeee521da8043a31`부터 이 기록을 포함한 커밋까지다.
+로컬 검증이 발견한 scope의 이전 선택 필드 잔류를 수정했다. server/browser reporter는 매번 code·route·
+operation·request 종류·digest와 correlation의 없는 값도 지운다. 다른 오류/요청의 값을 상속하지 않는다.
+최종 event의 code와 같은 ID의 JSON descriptor가 일치하는 것을 실제 수신 payload에서 검사했다.
+
+- 실제 Next 16.4.1 standalone·Chromium·PostgreSQL 17과 실제 Sentry SDK를 사용했다.
+  DSN은 `127.0.0.1:3219`의 임시 collector뿐이고 browser 외부 요청은 이 검증 구간에서 차단했다.
+  collector가 받은 **35개 로컬 event**를 최종 정제/민감 marker 검사했다. 외부 Sentry 수신이 아니다.
+- 기존 albums 페이지/API에만 임시 source overlay를 넣어 검증용 두 앱 build를 만들었다.
+  AppError 탈출, unknown render, 실제 service의 제한된 context 거부, 잘못된 output DTO와 HTTP body를 주입했다.
+  실제 격리 DB의 임시 app 역할에서 Album SELECT를 잠시 회수하고 finally에서 복구해 DB 읽기 실패도 확인했다.
+  모든 app source는 build 직후 복구하고 임시 smoke 연결도 종료 시 복구했다. 상시 실패 endpoint/flag는 추가하지 않았다.
+- 탈출 오류와 DB 실패에서 오류 화면 mount와 server hook 이벤트, 원본 frame 보존을 확인했다.
+  같은 digest/stack을 가진 서로 다른 요청은 각각 다른 request/event ID를 유지했다.
+  HTTP 응답 ID→JSON request ID/SDK 제출 ID→로컬 event ID가 일치했다. 위조한 public/internal ID는 덮어썼다.
+- malformed HTTP 오류의 Query 선행 보고 뒤 최초 boundary 보고를 별도 event로 확인했다.
+  두 browser event와 서버 output-contract event의 request ID는 같고 event ID는 각각 달랐다.
+  정상 ApiError는 기존 Query 정책상 별도 보고하지 않으므로 이 동작을 변경하지 않았다.
+  StrictMode/재렌더 억제는 §6의 실제 React fixture와 현재 unit 회귀 범위다.
+- 실제 service의 UNAUTHENTICATED는 로그인 route 이동을 요청했고 FORBIDDEN은 실제 Next 거부 화면을 만들었다.
+  이 검증은 제한된 context를 주입한 service 경로다. 실제 계정 권한 회수는 AUTH-009의 guest/로그인 이동이며
+  이를 실제 계정의 403 검증으로 합산하지 않는다. 정상 RSC 인증 구간의 request_error 0건도 유지했다.
+- 이 build의 Next hook에서는 주입한 AppError/DB Error의 클래스 identity가 유지되지 않아 unknown으로 수집됐다.
+  render_error_captured/unhandled와 원본 frame은 유지했다. 이름/code를 보고 원래 클래스를 복원하지 않았다.
+  알려진 AppError delivery 분류는 unit 검증이며 이를 실제 runtime delivery 판별 성공으로 기록하지 않는다.
+  serialized RSC Error에 없는 request ID도 browser에 추정해서 붙이지 않는다.
+
+`node .local/observability/finish/runtime/run.mjs`가 기존 격리 DB runner를 실행해 관리자 전체 smoke를 완료했다.
+로그인/MFA·등록·Origin/CSRF·권한 회수·JWT·CRUD·가사 편집/재인증·Web 인증 제거/공개 조회와 로그 민감정보
+회귀가 성공했다. 종료 시 연결 0개·advisory lock 0개, 임시 DB·역할 정리가 성공했다.
+초기 fixture의 dynamic re-export/필수 props, Next에서의 클래스 손실, 정상 ApiError의 Query 비보고와
+이미 로그인한 세션의 login→admin 재이동 때문에 검증이 실패한 기록은 성공으로 세지 않았다.
+클래스 손실/정상 거부 정책은 유지하고 fixture 기대를 고쳤으며, 실제로 발견한 scope 잔류만 수정했다.
+
+현재 코드의 workspace 12 task(9개 캐시)·unit 91파일 543건(Console 325, Web 127, server 88, contracts 3),
+repo 타입/lint·harness 18건·ops 21파일 262건이 성공했다. 주입 없는 두 앱 정상 build도 2 task·캐시 0개로 성공했고 format/FSD/diff도 성공했다. 검증 source overlay/collector와 결과는 ignored `.local/observability/finish/runtime/`다.
+fixture SHA-256은 run `347e68bf7e87293f546607b86bef2941471516af1978142fcead050e0b6e6ef7`,
+assert `a9ad680378bbc3c901e774238996f4eaa24715593cd80774b4ac4a8b411713b2`다.
+
+운영 알림·이미지별 실제 Debug ID/소스맵 복원과 외부 Sentry/Slack 수신은 7번 배포 대기다.
+**Slack 알림 디자인도 미배포**이며 사용자 수동 Worker 배포 보류를 유지한다.

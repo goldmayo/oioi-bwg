@@ -44,20 +44,20 @@ export function captureServerException(error: unknown, context: ServerErrorConte
       event,
       app: "console",
       runtime: "node",
-      ...(route ? { "route.template": route.template } : {}),
+      "route.template": route?.template,
       source,
-      ...(operation ? { operation } : {}),
+      operation,
       "error.type": descriptor.type,
       "failure.kind": failure.kind,
       handling: failure.handling,
       outcome: failure.outcome,
-      ...(descriptor.code ? { "error.code": descriptor.code } : {}),
-      ...(request?.method ? { "request.method": request.method } : {}),
-      ...(request?.routerKind ? { "next.router_kind": request.routerKind } : {}),
-      ...(request?.routeType ? { "next.route_type": request.routeType } : {}),
+      "error.code": descriptor.code,
+      "request.method": request?.method,
+      "next.router_kind": request?.routerKind,
+      "next.route_type": request?.routeType,
     });
     const requestId = toSafeRequestId(context.requestId);
-    if (requestId) scope.setContext("correlation", { request_id: requestId });
+    scope.setContext("correlation", requestId ? { request_id: requestId } : null);
     eventId = Sentry.captureException(capturedError);
   });
 

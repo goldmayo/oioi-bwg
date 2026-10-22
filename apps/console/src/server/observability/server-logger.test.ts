@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const sentryMocks = vi.hoisted(() => ({
   captureException: vi.fn<(error: unknown) => string>(() => "safe-event-id"),
   init: vi.fn(),
+  setContext: vi.fn(),
   setTags: vi.fn<(tags: NonNullable<ErrorEvent["tags"]>) => void>(),
   withScope: vi.fn(),
 }));
@@ -14,10 +15,13 @@ vi.mock("@sentry/nextjs", () => ({
   captureException: sentryMocks.captureException,
   init: sentryMocks.init,
   withScope: (
-    callback: (scope: { setTags: (tags: NonNullable<ErrorEvent["tags"]>) => void }) => void,
+    callback: (scope: {
+      setContext: typeof sentryMocks.setContext;
+      setTags: (tags: NonNullable<ErrorEvent["tags"]>) => void;
+    }) => void,
   ) => {
     sentryMocks.withScope(callback);
-    callback({ setTags: sentryMocks.setTags });
+    callback({ setTags: sentryMocks.setTags, setContext: sentryMocks.setContext });
   },
 }));
 
@@ -334,7 +338,7 @@ describe("application failure classification", () => {
         outcome: "render_error_captured",
       }),
     );
-    expect(sentryMocks.setTags.mock.calls[0]?.[0]).not.toHaveProperty("error.code");
+    expect(sentryMocks.setTags.mock.calls[0]?.[0]).toHaveProperty("error.code", undefined);
   });
 
   it("keeps render failure classification in the actual hook log when Sentry is off", async () => {
@@ -617,4 +621,26 @@ it("preserves only verified request correlation in the final server event", () =
       contexts: { correlation: { request_id: "private" } },
     })?.contexts?.correlation,
   ).toBeUndefined();
+});
+
+it("clears optional scope fields before capturing an unrelated error", () => {
+  vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+  vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "http://public@localhost/1");
+  sentryMocks.setTags.mockClear();
+  sentryMocks.setContext.mockClear();
+  captureServerException(new Error(), {
+    event: "api.unexpected_error",
+    source: "api-route-handler",
+  });
+  expect(sentryMocks.setTags).toHaveBeenCalledWith(
+    expect.objectContaining({
+      "error.code": undefined,
+      "route.template": undefined,
+      operation: undefined,
+      "request.method": undefined,
+      "next.route_type": undefined,
+    }),
+  );
+  expect(sentryMocks.setContext).toHaveBeenCalledWith("correlation", null);
+  vi.unstubAllEnvs();
 });

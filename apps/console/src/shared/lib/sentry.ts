@@ -31,14 +31,15 @@ export async function captureClientException(
     scope.setTags({
       app: "console",
       runtime: "browser",
-      ...(route ? { "route.template": route.template, operation: route.operation } : {}),
+      "route.template": route?.template,
+      operation: route?.operation,
       source: safeContext.source,
       outcome: safeContext.outcome,
       "error.type": errorType,
-      ...(safeContext.digest ? { "error.digest": safeContext.digest } : {}),
+      "error.digest": safeContext.digest,
     });
     const requestId = getErrorRequestId(error);
-    if (requestId) scope.setContext("correlation", { request_id: requestId });
+    scope.setContext("correlation", requestId ? { request_id: requestId } : null);
     const errorObject = error instanceof Error ? error : new Error("Unexpected client error");
     // 원본 frame은 SDK가 만든다. originalException hint를 다시 붙이면 SDK의 객체 중복 제거가
     // Query 보고 이후의 별도 boundary 관측까지 버리므로, 관측별 중복은 호출 경계가 소유한다.
