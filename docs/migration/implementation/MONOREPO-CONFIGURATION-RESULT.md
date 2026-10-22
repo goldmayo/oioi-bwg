@@ -11,16 +11,18 @@ created_at: "2026-10-22"
 [계획과 원문 매핑](MONOREPO-CONFIGURATION-PLAN.md)을 따른다.
 아래 체크는 구현뿐 아니라 적용 제외·보존 판단까지 근거를 점검했다는 의미다.
 운영 상태나 외부 전송 성공을 뜻하지 않는다.
+2026-10-23 재개 판정은 #198과 #200의 각 구현 head를 함께 추적한다. 체크된 미병합 구현이
+`migration_main`에 이미 통합됐다는 의미는 아니다. PR별 ref와 이번 실행은 마지막 재개 절을 따른다.
 
 ## 원문 항목 체크리스트
 
 | 점검 | ID | 결과와 근거 |
 | --- | --- | --- |
-| [ ] | ENV-01 | 대기 |
-| [ ] | ENV-02 | 대기 |
-| [ ] | ENV-03 | 대기 |
-| [ ] | ENV-04 | 대기 |
-| [ ] | ENV-05 | 대기 |
+| [x] | ENV-01 | #198에서 Console R2 예제·launcher 필수 입력 검사가 구현·검증됨. 미병합이며 실제 업로드는 미검증이다. |
+| [x] | ENV-02 | #198의 host 공개 입력·Vault 매핑 예제와 누락 거절 fixture가 완료됨. 미병합이며 운영 주입은 미검증이다. |
+| [x] | ENV-03 | fd66161에서 Console readiness와 업로드의 R2 입력 검사를 공유한다. 설정 오류 시 DB/외부 쓰기 전 거절하며 503/no-store·값 비노출을 검증했다. #200 미병합이다. |
+| [x] | ENV-04 | #198에서 Web DATABASE_URL 예제를 추가했다. 개인 env 변경 없이 회수 코드·검증 증거를 재판정했다. |
+| [x] | ENV-05 | 개인 비추적 env의 값 유무는 브랜치 결함에서 제외한다. 두 앱 추적 예제는 local을 명시하며 개인 파일을 수정하지 않았다. |
 | [ ] | ENV-06 | 대기 |
 | [ ] | ENV-07 | 대기 |
 | [ ] | ENV-08 | 대기 |
@@ -28,8 +30,8 @@ created_at: "2026-10-22"
 | [ ] | ENV-10 | 대기 |
 | [ ] | MAIL-01 | 대기 |
 | [ ] | MAIL-02 | 대기 |
-| [ ] | OBS-01 | 대기 |
-| [ ] | OBS-02 | 대기 |
+| [x] | OBS-01 | #198의 Runtime §12.1·앱 예제·배포 안내가 공용 Sentry 프로젝트 유지와 앱별 입력 책임을 명시한다. 프로젝트 분리·외부 변경 없음. |
+| [x] | OBS-02 | #198에서 Console NEXT_PUBLIC_SENTRY_DSN 예제와 local 전송 비활성 안내를 추가했다. 미병합이다. |
 | [ ] | DB-01 | 대기 |
 | [ ] | DB-02 | 대기 |
 | [x] | CFG-01 | 공통 app policy에서 규칙 11개를 한 번 정의하고 두 앱이 같은 factory를 사용한다. |
@@ -52,19 +54,20 @@ created_at: "2026-10-22"
 | [ ] | ROOT-02 | 대기 |
 | [ ] | ROOT-03 | 대기 |
 | [ ] | ROOT-04 | 대기 |
-| [ ] | MAIN-01 | 대기 |
+| [x] | MAIN-01 | #198에서 Web 예제의 종료된 인증·메일·업로드 입력을 제거했다. host rollback 매핑과 개인 env는 보존한다. |
 | [ ] | MAIN-02 | 대기 |
 
 ## 2026-10-22 추가 논의 체크리스트
 
-원문 38개는 **처리 12개·대기 26개**로 유지한다. 여기에 정상화 추가 항목 7개와 후속 UI 검토 1개를
+현재 원문 38개는 **처리 20개·대기 18개**다. 회수 구현/적용 제외 재판정 7개와 이번 ENV-03 1개를
+기존 12개에 더했다. 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
 별도로 등록한다. 총 추적 ID는 46개이며 추가 8개는 모두 미구현·검토/대기다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
 이번 문서 반영은 아래 작업의 구현 승인이나 완료 표시가 아니다.
 
 | 점검 | ID | 범위 | 현재 상태와 후속 기준 |
 | --- | --- | --- | --- |
-| [ ] | BASE-01 | Sentry 통합 기준선 | 앱 코드·로컬 검증 완료 문서를 확인했다. main 미병합이며 합쳐진 소스의 검사는 대기다. Slack Worker의 별도 배포·실수신 완료와 앱 이미지의 운영 검증을 구분한다. |
+| [ ] | BASE-01 | Sentry 통합 기준선 | #197/#200은 미병합 Draft다. 실제 통합·합쳐진 소스 검사는 승인된 병합 후에 수행한다. 독립 ENV-03 구현은 진행했으며 Worker 실수신과 앱 운영 검증은 별개다. |
 | [ ] | CFG-08 | 공통 config workspace 패키지 | packages/config 한 개로 시작하는 구조 제안이다. manifest·exports·소비자 의존성·도구 소유권·실행 호환성 검토와 구현은 대기다. |
 | [ ] | CFG-09 | workspace 간 import 계약 | 명시적 package entry로 상대경로를 대체하는 제안이다. 앱 내부 alias·slice 내부 상대경로·파일시스템 경로 계산은 구분하며 변경은 대기다. |
 | [ ] | CFG-10 | 루트 설정 TS 검사 | drizzle.config.ts와 vitest.ops.config.ts가 현재 타입 프로그램에 없음을 확인했다. CFG-07의 운영 스크립트 8개 완료와 별도로 보완한다. |
@@ -750,3 +753,67 @@ squash ancestry나 `git cherry`의 단독 결과로 미반영을 단정하지 �
 | `refactor/arch@e2e711d` | 고유한 변경이 남아 판단 필요 | 옛 ViewModel/Repository·인가·UI 46파일 변경. 책임은 현행 contracts/server/FSD로 재구성됐으나 개별 UI 동작까지 모두 포함됐다고 단정하지 않음. 별도 요구 없이 회수하지 않음 |
 | `worker@69b0794` | 대체된 과거 작업 | legacy Worker/Vinext 배포 문서 6파일 변경이며 Sentry relay가 아님. 현행 헌법의 Next 단일 스택과 배포 문서가 대체함 |
 | `backup/pr73-before-m9-reconstruction-20260910@9e04ce2` | 대체된 과거 작업 | [#73](https://github.com/goldmayo/oioi-bwg/pull/73) merged의 재구성된 M9·후속 Run Command/paired 배포가 대체함. 초기 직접 배포 기반을 재적용하지 않음 |
+
+## 2026-10-23 정상화 재개 — ENV-03
+
+### 기준과 선정
+
+- fetch 후 원격 `migration_main`은 `aa4e814f9fdbfd1c69b8b3af8934e5c99b80277c`, 로컬 main은
+  `5135f6e`였다. 새 분기를 만들지 않고 clean 상태의 기존 모노레포 branch/#200을 이어 사용했다.
+  진입 HEAD와 #200 원격 head는 `80fa15d460e8b39ae3fca1f15577805d7c19b170`으로 일치했다.
+- 원격 재조회한 #196 `0748915`, #197 `7ed3246`, #198 `e1f7a1e`, #199 `80af73d`,
+  #200 `80fa15d`는 모두 open Draft·미병합이었다. main #195는 오류 추적 계획이며 구현 통합이 아니다.
+  #200의 진입 head CI는 run `39809865502` 성공을 확인했다. 이번 변경 CI와 구분한다.
+- #198의 R2 예제·launcher·host mapping·Web/Sentry 예제와 회수 결과를 실제 diff로 대조했다.
+  ENV-01/02/04, OBS-01/02, MAIN-01은 해당 ref에서 구현·검증 완료·미병합으로 재판정했고,
+  ENV-05는 개인 설정 관찰의 적용 제외로 점검했다. 해당 코드를 복사하거나 다시 구현하지 않았다.
+  #198의 검증 수치·실행은 [회수 결과 고정본](https://github.com/goldmayo/oioi-bwg/blob/e1f7a1e74319d458bf3f0db7e5e8214a3d293f46/docs/migration/implementation/ENVIRONMENT-CONFIGURATION-RECOVERY-RESULT.md)을 따른다.
+- 최초 남은 기능은 ENV-03이었다. Console `/readyz`가 인증/MFA와 DB만 검사해 R2 누락을 탐지하지
+  못했다. #198은 readiness를 구현하지 않았으며 이 단위는 그 PR의 병합 없이 검증할 수 있다.
+  BASE-01의 실제 통합은 미병합 대기로 남기고 독립 구현을 진행했다.
+
+### 변경과 의존 관계
+
+- 구현 커밋: `fd6616132d2d0f45b2ac451066bd8105680fe70a`, [기존 Draft #200](https://github.com/goldmayo/oioi-bwg/pull/200).
+  `getPublicAssetConfig()`가 기존 storage 공개 entry에서 필수 다섯 입력과 HTTPS URL을 검증한다.
+  Console readiness와 업로드가 같은 함수를 호출하며 invalid public base URL도 외부 쓰기 전에 거절한다.
+  readiness는 S3 client 생성·R2 요청 없이 검사하며 Web은 R2 설정을 요구하지 않는다.
+- 인증/MFA·기존 503/no-store 응답·원인/값 비노출은 유지했다. 설정 검사는 lazy하게 호출되며
+  build 단계나 공용 package import만으로 실행하지 않는다. 범용 env framework·새 dependency는 없다.
+- CI container·Promotion pair·Compose recovery smoke의 Console에 `.test` URL과 가짜 R2 문자열을
+  추가했다. Web·운영 env 파일·Vault/secret·MFA key/volume는 변경하지 않았다.
+  active 배포 runbook §17을 v1.19로 개정해 설정 검사와 외부 권한 검증의 차이를 명시했다.
+- #198 병합 후에는 launcher/materializer 검사와 이 runtime 검사가 함께 적용된다. 실제 host 입력 준비와
+  R2 권한 검증은 별도 승인된 배포 절차다. Sentry #197의 runtime 분류와 합친 검증은 BASE-01에 남는다.
+  #199와 workflow 파일이 겹치지만 수정 구간은 별개다. 그 PR의 production/www 전환 보류는 유지한다.
+
+### 이번 직접 실행과 한계
+
+- `pnpm type-check` 성공: 최종 workspace 4 task 중 캐시 2개, repo/config/scripts 검사 성공.
+  최초 실행은 신규 회귀 테이블의 tuple 추론 TS2345로 실패했다. tuple 타입을 명시한 뒤 재검증했다.
+  테스트를 실행한 성공과 타입 검사 성공을 구분한다.
+- `pnpm lint` 4 task·캐시 0개, `pnpm lint:fsd`, `pnpm test:unit:run` 4 task·캐시 0개 성공.
+  unit은 81파일·441건(contracts 3/server 94/Web 93/Console 251)이다.
+  관련 readiness 32건·storage 7건도 별도로 실행해 성공했다.
+- 위 workspace 검사 종료 후 `pnpm test:harness` 34건, 기존 jq PATH를 사용한 `pnpm test:ops`
+  21파일·262건, `pnpm format:check`, 변경 shell 두 개의 `bash -n`, `git diff --check` 성공.
+  harness의 임시 파일을 type-check/build와 겹쳐 실행하지 않았다.
+- `pnpm build --force --env-mode=loose --concurrency=1`로 두 앱 실제 build 2 task·캐시 0개 성공.
+  임시 local 입력·빈 DSN·Sentry 업로드/telemetry OFF·접속 불가능한 loopback DB와 가짜 R2/Console
+  입력을 사용했다. 개인 env를 덮어쓰지 않았다.
+- 두 standalone에서 기존 Web/Console browser smoke 성공. 추가 실제 HTTP 검사에서 두 앱의
+  503/no-store·정제된 응답을 확인했다. 임시 TCP listener로 Console은 R2 누락 시 DB 연결 0회,
+  Web은 R2 없이 DB 연결을 시도함을 확인했다. TCP listener는 PostgreSQL 성공 검증이 아니다.
+- 로그·안전 입력 runner·standalone 경계 검사는 `.local/monorepo-config/readiness/`에 보존한다.
+  실제 PostgreSQL integration·정상 DB의 로컬 readiness 200·관리자 전체 E2E·R2 업로드·Vault 주입·
+  외부 Sentry 전송·운영 배포/권한/소스맵은 이번 로컬 실행에서 미검증이다.
+- 구현 commit hook은 lint-staged의 ESLint/Prettier와 commitlint 성공이다. push hook과 최신 CI는
+  PR 본문·Notion에 별도 기록하며 위 직접 실행 결과에 합산하지 않는다. 과거 결과도 재실행으로 세지 않는다.
+
+### 다음 한 단위
+
+**ENV-06 — 앱별 APP_ENV 값 계약과 Web local metadata**가 다음 독립 구현이다. local/staging/production
+consumer와 예제·Sentry·site metadata를 대조해 `development` 비교 불일치를 정리한다. ENV-10의 Console
+GTM 전달은 여전히 남아 있으며 회수 #198이 CI 변경을 제외했으므로 완료로 표시하지 않는다.
+DB-01/02는 환경 계약 다음 순서이며 미확정 ENV-2 전체 credential 전환·개인 env 자동 이관은 포함하지 않는다.
+BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한 단위만 구현하고 멈춘다.
