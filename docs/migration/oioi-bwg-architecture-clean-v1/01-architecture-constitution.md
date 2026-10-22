@@ -1,7 +1,7 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.17"
+version: "2.18"
 status: "active"
 authority: "constitution"
 updated_at: "2026-10-23"
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.17
+# oioi-bwg Architecture Constitution v2.18
 
 ## 1. 목적
 
@@ -170,6 +170,12 @@ consumer는 명시적 package export와 workspace 개발 의존성을 사용한�
 각 root/app에 유지하며 env 해석·request/instrumentation adapter는 앱에 둔다. 앱과 공용 서버·계약의
 runtime에서 tooling package를 import하지 않는다. package는 root harness/test 구현을 역으로
 참조하지 않으며 harness가 package의 공개 경계를 검증한다.
+
+기존 Sentry → Slack relay는 private `apps/sentry-slack-relay` workspace가 소유하는 독립 Cloudflare
+Worker다. Web/Console·공통 서버·tooling runtime을 import하지 않으며 FSD나 Next build·OCI Promotion에
+합치지 않는다. 자체 Node 타입/lint/unit 검사는 root 검증과 연결하고 수동 Wrangler 배포·secret은 별도로
+유지한다. workspace 경로 이관은 실제 Worker 배포나 외부 전송을 뜻하지 않는다. Cloudflare 앱 runtime
+제거 규칙은 Next 제품 앱의 이전 Vinext/Worker 의존성에 적용하며 이 독립 relay를 삭제하는 근거가 아니다.
 
 클라이언트와 서버가 함께 소비하는 serializable HTTP contract는 `packages/contracts`가 소유한다.
 `@oioi-bwg/contracts/<domain>`의 명시적 export로 소비하며 Zod schema/DTO/enum만 둔다.

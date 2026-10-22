@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.6"
+version: "1.7"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-23"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.6
+# oioi-bwg Testing Architecture v1.7
 
 ## 1. 목적
 
@@ -324,6 +324,11 @@ P04의 두 앱 로그인 회귀는 P06-E에서 Console 인증/관리와 Web 비�
 Web은 로그인 화면·세션/권한 API·Credentials callback 부재와 기존 쿠키의 비사용을 검증한다.
 Console의 MFA·인가 계약은 유지한다. 전체 관리자 E2E의 수동 실행 원칙은 §12.1을 따른다.
 CI의 PostgreSQL fixture는 격리된 test DB에만 만들고 정리한다.
+
+독립 relay Worker는 자체 Node unit/type/lint workspace다. root unit·coverage와 Turbo가 동일한
+테스트를 한 번씩 수집하며 browser/Web alias를 적용하지 않는다. 해당 unit을 root ops에서 중복 실행하지
+않는다. `.mts` runtime도 coverage 대상에 포함한다. Wrangler dry-run 번들과 실제 배포·Slack 수신은
+별도 증거이며 일반 검증은 외부 secret·전송을 요구하지 않는다.
 
 최소 후보:
 

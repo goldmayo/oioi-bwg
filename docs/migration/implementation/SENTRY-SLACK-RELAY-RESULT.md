@@ -1,10 +1,10 @@
 ---
 title: "Sentry 오류 알림 Slack relay 구현 결과"
 document_id: "SENTRY-SLACK-RELAY-RESULT"
-version: "1.6"
+version: "1.7"
 status: "completed"
 authority: "result"
-updated_at: "2026-10-22"
+updated_at: "2026-10-23"
 depends_on:
   - "OBSERVABILITY-AUDIT"
   - "OBSERVABILITY-CLIENT-SENTRY-RESULT"
@@ -20,7 +20,7 @@ tags:
 # Sentry 오류 알림 Slack relay 구현 결과
 
 **현재 상태: 2026-10-22 새 알림 형식의 Worker 배포·실제 Slack 수신 완료.**
-현재 판정은 §11이 소유하며, §8~10의 미배포·사용자 수동 배포 대기는 당시 기록으로 보존한다.
+마지막 실제 배포/수신 판정은 §11, 현재 소스 경로·검사 소유권은 §12가 소유하며, §8~10의 미배포·사용자 수동 배포 대기는 당시 기록으로 보존한다.
 
 ## 1. 범위와 기존 구조 조사
 
@@ -247,7 +247,7 @@ branch 누적 diff의 400줄 목표 초과는 같은 알림 표시의 두 단위
 배포하지 않는다. 다른 PC에서는 위 원격 작업 branch의 코드를 먼저 확보하고 배포 대상 ref를 확인한다.
 
 실행 명령과 기존 secret·일반 변수 보존 방법은
-[Worker README의 기존 Worker 코드 업데이트](../../../workers/sentry-slack-relay/README.md#기존-worker-코드-업데이트)가
+[Worker README의 기존 Worker 코드 업데이트](../../../apps/sentry-slack-relay/README.md#기존-worker-코드-업데이트)가
 소유한다. 최초 설치·secret 회전·Sentry 규칙 재생성은 이번 코드 업데이트에 필요하지 않다.
 실제 배포나 외부 알림 전송은 이 기록을 작성하면서 실행하지 않았다. 문서만 수정했으므로 앱 build·
 타입·lint·test는 별도로 재실행하지 않으며 commit/push hook이 실행한 검사는 해당 실행 결과로 구분한다.
@@ -309,3 +309,19 @@ OCI 앱 배포·PR 생성/병합은 변경하지 않았다. 앱 release/Debug ID
 문서만 갱신했으므로 두 앱 build·전체 검사 세트를 별도로 다시 실행하지 않았다. 문서 format/diff와
 commit/push hook의 실제 결과는 각각의 실행 로그로 구분한다. 증거는 이 worktree의 ignored
 `.local/observability/slack-deploy/`에 있으며 secret/원문 webhook payload를 포함하지 않는다.
+
+## 12. 2026-10-23 소스와 검사 소유권 이관 — 실제 배포 없음
+
+모노레포 RUN-03에서 기존 handler·wrangler.toml을 내용 변경 없이 private
+`apps/sentry-slack-relay` workspace로 옮겼다. 배포·secret·Worker 이름/주소·Slack/Sentry 설정은 변경하지
+않았다. 이 절은 소스와 로컬 검사 소유권이며 마지막 실제 배포/수신 관찰은 §11의 당시 ref/version이다.
+ENV-06 이후 source 계약과 workspace 이관을 기존 배포에 자동 반영됐다고 주장하지 않는다.
+
+root ops의 단위 테스트는 앱 tests가 소유하며 root unit/coverage와 Turbo에서 Node 환경으로 한 번씩
+수집한다. 자체 strict type/lint·runtime 의존 경계와 개발 Docker의 일곱 workspace manifest/volume을
+연결했다. Wrangler는 기존 dlx 4.135.0 계약을 유지하고 Next build·OCI runtime에 추가하지 않았다.
+
+검증 명령·현재 수동 배포 위치는 [Worker README](../../../apps/sentry-slack-relay/README.md),
+실행 결과·범위는 [정상화 RESULT](MONOREPO-CONFIGURATION-RESULT.md)의 RUN-03 절을 따른다.
+credential·개인 env가 없는 임시 source에서 API loopback·metrics/error reports OFF로 Wrangler
+`deploy --dry-run` 번들만 검증했으며, login/whoami/실제 deploy·secret 등록·외부 전송은 실행하지 않았다.
