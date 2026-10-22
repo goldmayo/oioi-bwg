@@ -72,8 +72,8 @@ created_at: "2026-10-22"
 | [x] | CFG-09 | workspace 간 import 계약 | root·두 앱·server/contracts가 workspace 개발 의존성과 공개 subpath로 소비한다. 실제 Next/ESLint/Steiger/Vitest/tsx·cwd·Turbo/hash·두 앱 build/standalone을 확인했다. |
 | [x] | CFG-10 | 루트 설정 TS 검사 | Drizzle·ops Vitest 두 설정을 기존 config 타입 프로그램에 포함했다. 실제 TS2322 검출과 repo/CI/hook 공통 entry를 확인했다. |
 | [x] | TEST-05 | 루트 tests TS 검사 | 최초 29개를 Node/Web으로 분리했고 현재 marker 2개는 config 자체 검사로 이동했다. root 27개는 Node 26·Web 1개로 strict 검사·단일 소속·alias 격리를 확인한다. |
-| [ ] | RUN-03 | Worker workspace 소유권 | 독립 배포 서비스의 apps/sentry-slack-relay 이동·패키지 등록 제안이다. 기존 workers 위치도 유효하며 경로·검사·배포 경계 정리는 대기다. |
-| [ ] | TEST-06 | tests 위치·책임 정리 | 총 52개 파일의 검증 대상을 분류했다. root 통합 검증은 유지하고 Worker·server 전용 테스트·Web 성능 테스트·공통 mock의 소유권 분리는 검토 대기다. |
+| [x] | RUN-03 | Worker workspace 소유권 | private apps/sentry-slack-relay가 소스·Node type/lint/unit을 소유한다. root 수집·coverage·runtime 경계와 일곱 workspace 개발 Docker를 검증했다. 기존 handler/Wrangler 설정과 독립 수동 배포 계약은 유지하며 실제 배포는 하지 않았다. |
+| [ ] | TEST-06 | tests 위치·책임 정리 | 공통 marker는 #206에서 config로, Worker unit은 RUN-03에서 앱으로 이관했다. root 통합 검증을 유지하며 server 전용 DB 두 파일과 Web k6의 소유권은 후속이다. |
 | [ ] | UI-03 | 정상화 이후 공통 UI | 정상화와 최종 통합 검증 뒤 별도로 실제 재사용을 조사한다. 패키지 선생성·일괄 이관을 승인하거나 완료한 상태가 아니다. |
 
 재개 순서와 각 ID의 완료 조건은 [PLAN의 추가 논의](MONOREPO-CONFIGURATION-PLAN.md#2026-10-22-추가-논의-반영--재개-순서와-소유권),
@@ -1237,3 +1237,39 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 원문 처리 32/대기 6, 추가 처리 5/대기 3이다. Worker·server 전용 테스트 소유권은 별도 단위이며
   운영 배포·외부 전송·미래 계정·UI 추출·#199 F 전환은 보류다. 필수 hook과 최종 head CI/리뷰·병합
   증거는 PR에 기록한다.
+
+## 2026-10-23 RUN-03 — 독립 relay의 workspace 소유권
+
+- ROOT-01 [#210](https://github.com/goldmayo/oioi-bwg/pull/210)은 최종 head
+  `c8e61c38673603991fbc547c3a0c8b12b70d1e91`의 [Verify #506](https://github.com/goldmayo/oioi-bwg/actions/runs/39859304520)
+  전체 성공 후 `aeb9336c9e6aa2e39b4c15dd7c17c8506bd80987`로 squash 병합했다. fetch한 병합 tree와
+  검증 head 일치 확인 후 `feature/monorepo-relay-workspace`를 분기했다.
+- 기존 relay handler·wrangler.toml은 byte 단위 불변으로 apps/sentry-slack-relay에 이관했다. private
+  package가 Node strict 타입/lint/unit을 소유하며 root ops의 32건을 앱 tests로 옮겼다. root unit/coverage·
+  Turbo 수집은 같은 파일을 한 번씩 실행한다. browser/Web alias를 주입하지 않고 root `.mts` 타입
+  프로그램의 중복 소유도 제거했다. 기존 package/snapshot/importer는 불변이며 새 lock importer 15줄만 추가했다.
+- 공통 tooling의 Worker lint factory와 root 진입점을 연결했다. workspace/Next/Node import와 동적 우회,
+  Worker src 밖으로 해석되는 상대/절대 경로를 막는다. 첫 harness가 다른 앱의 상대 경로 우회를 발견해
+  단순 문자열 패턴에 경로 해석 검사를 보완했다. 정상 내부 상대 경로도 허용하는 회귀 검사를 추가했다.
+  Constitution 2.18·Testing 1.7과 index에 기존 독립 relay의 소유권·Next 제품 runtime과의 경계를 명시했다.
+- type/lint workspace 각 6작업·unit 5작업이 성공했다. `pnpm test:coverage`에서 **96파일·694건**이
+  통과했고 285개 source의 coverage에 Worker index.mts와 실행 statement 168개가 포함됐다. 기존
+  95파일/662건에 Worker 1파일/32건이 더해진 것이다. root ops에서는 같은 32건만 빠지며 중복/소실을 검증한다.
+- [공식 Wrangler dry-run](https://developers.cloudflare.com/workers/wrangler/commands/workers/)과
+  [metrics 입력](https://developers.cloudflare.com/workers/wrangler/system-environment-variables/)을 대조했다.
+  기존 dlx 4.135.0을 유지하며 tracked handler/config만 복사한 임시 폴더에서 credential·개인 env 없이
+  API loopback·metrics/error reports OFF로 deploy --dry-run을 실행했다. index.js/map 번들 성공 후 임시
+  폴더를 정리했다. login/whoami/실제 deploy·secret 등록·외부 전송은 실행하지 않았다.
+- 개발 Docker의 새 manifest·relay node_modules volume과 일곱 의존성 volume 안내를 연결했다.
+  고유 project `oioi-run03-8665a597beaa`의 clean frozen install·빈 volume+bind mount·7 workspace 해석·
+  argon2 native·config/Worker 타입·Web dev health/metadata/browser가 성공했다. image
+  `sha256:e442f3a39a1c018aac96c718c9639fc6e2316ffb26287849055d02fe700159ca`와 임시 volume·fixture를
+  정리했고 기존 PG container `b1efbdd60ec2`의 실행을 보존했다. 개인 env/로컬 상태는 자동 이동하지 않았다.
+- 실제 Turbo dry graph의 실행 가능한 build는 Web/Console 둘뿐이다. production Docker·CI 구조는
+  바꾸지 않았고 실제 Git/Turbo image selection fixture에 Worker 변경의 보수적 양 앱 판정을 추가했다.
+  불변 Web/Console·server/contracts·Next factory/PG preset의 #210 build/standalone·PG 결과를 재사용한다.
+  기존 실제 배포/수신 증거는 Sentry relay RESULT §11, 현재 소스 이관·미배포 경계는 새 §12가 소유한다.
+- 보완 후 config strict 타입/lint와 Worker lint, harness **40건**, ops **21파일/280건**, format/diff가
+  성공했다. unit 694 + ops 280 = 974건으로 이관 전 662 + 312 = 974건과 같아 중복/소실이 없다.
+- 원문 처리 32/대기 6, 추가 처리 6/대기 2다. TEST-06의 server DB/k6와 최종 안내 정리는 후속이다.
+  UI 추출·미래 계정·운영/Worker 배포·외부 전송·#199 F 전환은 보류하며 최종 hook·CI·리뷰는 PR에 기록한다.

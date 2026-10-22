@@ -17,12 +17,20 @@ function readProject(filename) {
 }
 
 test("repo type programs cover every tracked operational TypeScript source", () => {
-  const projects = [readProject("tsconfig.json"), readProject("scripts/tsconfig.json")];
+  const projects = [
+    readProject("tsconfig.json"),
+    readProject("scripts/tsconfig.json"),
+    readProject("apps/sentry-slack-relay/tsconfig.json"),
+  ];
   const included = new Set(projects.flatMap(({ fileNames }) => fileNames));
-  const sources = execFileSync("git", ["ls-files", "-z", "--", "scripts", "workers"], {
-    cwd: root,
-    encoding: "utf8",
-  })
+  const sources = execFileSync(
+    "git",
+    ["ls-files", "-z", "--", "scripts", "apps/sentry-slack-relay"],
+    {
+      cwd: root,
+      encoding: "utf8",
+    },
+  )
     .split("\0")
     .filter((filename) => /\.[cm]?ts$/.test(filename) && !filename.endsWith(".d.ts"));
   assert.ok(sources.length > 0);
@@ -31,6 +39,10 @@ test("repo type programs cover every tracked operational TypeScript source", () 
   }
   assert.ok(projects.every(({ options }) => options.strict && options.noEmit));
   assert.equal(projects[1].options.allowJs, false);
+  assert.equal(projects[2].options.paths, undefined);
+  const worker = path.join(root, "apps/sentry-slack-relay/src/index.mts");
+  assert.ok(projects[2].fileNames.includes(worker));
+  assert.ok(!projects[0].fileNames.includes(worker));
 });
 
 test("root settings and tests have strict type owners without leaking Web aliases", () => {

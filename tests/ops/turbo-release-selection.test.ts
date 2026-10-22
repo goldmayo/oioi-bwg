@@ -35,6 +35,7 @@ test("uses the installed Turbo graph and real Git history for each app and share
       ...[
         "apps/web",
         "apps/console",
+        "apps/sentry-slack-relay",
         "packages/server",
         "packages/contracts",
         "packages/config",
@@ -70,7 +71,7 @@ test("uses the installed Turbo graph and real Git history for each app and share
     git(["init", "-q"]);
     expect(git(["rev-parse", "--show-toplevel"])).toBe(root);
     let sourceSha = commit();
-    for (const app of ["web", "console", "shared", "config", "rename"]) {
+    for (const app of ["web", "console", "shared", "config", "sentry-slack-relay", "rename"]) {
       const baseline = {
         prNumber: 142,
         sourceSha,

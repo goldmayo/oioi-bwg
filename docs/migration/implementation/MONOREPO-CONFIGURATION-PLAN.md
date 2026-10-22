@@ -600,3 +600,23 @@ ENV-08/09 #209의 squash `0018902f60108606f6ac7ad11cfde1a8f31e8375`를 fetch하�
 - 완료 조건은 frozen install, 현재 script/CI/CLI 경로에 dangling 참조 부재, 기본 검사 및 변경된 설치
   입력에서 실제 local 양 앱 build 성공이다. 불변 서버/DB 검증은 재사용한다. 최종 head CI·리뷰 후 squash한다.
   release 실행·tag/Release 생성·배포와 Worker/다른 테스트 소유권 변경은 포함하지 않는다.
+
+## 2026-10-23 다음 단위 — RUN-03 독립 relay workspace
+
+ROOT-01 #210의 squash `aeb9336c9e6aa2e39b4c15dd7c17c8506bd80987`를 fetch하고 최종 검증 tree 일치 후
+분기한다. 실제 독립 서비스가 소스·타입/lint/unit·도구 실행 위치를 소유하도록 기존 relay를
+private apps/sentry-slack-relay로 이관한다. TEST-06 중 이 Worker unit 이관만 함께 완료한다.
+
+- handler·Wrangler 설정과 required secret/Worker 이름·주소는 byte 단위로 보존한다. root ops의 unit을
+  앱 tests로 옮기고 root unit/coverage·Turbo의 같은 파일 수집, Node 환경/alias 격리와 `.mts` coverage를
+  확인한다. Worker 자체 strict 타입/lint와 root/pre-commit의 runtime import 경계를 연결한다.
+- Wrangler는 기존 고정 4.135.0 dlx 수동 계약을 유지한다. Next build task·OCI runtime에 넣지 않는다.
+  tracked source만 복사한 임시 디렉터리에서 credential 없이 API loopback·metrics OFF로 dry-run만 한다.
+  과거 배포/수신 증거와 현재 소스 이관·미배포는 구분한다. 개인 env/로컬 상태를 자동 이동하지 않는다.
+- 새 workspace manifest와 개발 node_modules volume을 함께 연결하고 안내를 갱신한다. 고유 임시
+  Compose 프로젝트에서 clean frozen install·7 workspace 해석/native·빈 volume+bind mount·Web dev
+  health/metadata/browser를 검증하고 임시 자원만 정리한다. 원래 PG·데이터·cache는 보존한다.
+- lock은 새 importer만 추가하고 기존 package/snapshot/importer 해석을 보존한다. 실제 Turbo/Git fixture로
+  Worker source의 보수적 양 앱 image 영향 판정을 유지한다. production Docker/CI 구조는 바꾸지 않는다.
+- 완료 조건은 위 로컬 검증·기본 gate·최종 head CI/리뷰와 squash다. Next product 소스/공통 DB가 불변이면
+  앞선 실제 build/standalone·격리 PG 결과를 재사용한다. server DB/k6 소유권은 후속이며 외부 배포·전송은 제외한다.

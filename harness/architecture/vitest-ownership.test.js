@@ -8,6 +8,34 @@ import { createVitest, parseCLI } from "vitest/node";
 
 const root = path.resolve(import.meta.dirname, "../..");
 
+test("relay workspace owns its Node unit test without browser or application aliases", async () => {
+  const directory = path.join(root, "apps/sentry-slack-relay");
+  const ctx = await createVitest("test", {
+    config: path.join(directory, "vitest.config.ts"),
+    watch: false,
+  });
+  try {
+    const files = await ctx.globTestSpecifications();
+    assert.deepEqual(
+      files.map(({ moduleId }) => moduleId),
+      [path.join(directory, "tests/sentry-slack-relay.test.ts")],
+    );
+    assert.equal(ctx.projects.length, 1);
+    const project = ctx.projects[0];
+    assert.equal(project.config.root, directory);
+    assert.equal(project.config.environment, "node");
+    assert.equal(project.config.globals, false);
+    assert.deepEqual(project.config.setupFiles, []);
+    assert.ok(
+      !project.vite.config.resolve.alias.some(({ find }) =>
+        ["@", "server-only", "client-only"].includes(find),
+      ),
+    );
+  } finally {
+    await ctx.close();
+  }
+});
+
 for (const app of ["web", "console"]) {
   test(`${app} Vitest entry owns its source root and collects only its unit files`, async () => {
     const appRoot = path.join(root, "apps", app);

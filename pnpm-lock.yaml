@@ -257,6 +257,21 @@ importers:
         specifier: ^4.1.2
         version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@20.19.37)(jsdom@29.0.1(@noble/hashes@2.4.0))(msw@2.12.10(@types/node@20.19.37)(typescript@5.9.3))(vite@8.0.2(@types/node@20.19.37)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.2))
 
+  apps/sentry-slack-relay:
+    devDependencies:
+      '@oioi-bwg/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@types/node':
+        specifier: ^20
+        version: 20.19.37
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.2
+        version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@20.19.37)(jsdom@29.0.1(@noble/hashes@2.4.0))(msw@2.12.10(@types/node@20.19.37)(typescript@5.9.3))(vite@8.0.2(@types/node@20.19.37)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.2))
+
   apps/web:
     dependencies:
       '@casl/ability':

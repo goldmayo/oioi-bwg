@@ -5,6 +5,45 @@ import test from "node:test";
 
 import { ESLint } from "eslint";
 
+test("independent Worker runtime boundaries match in repository and workspace lint", async () => {
+  const root = path.resolve(import.meta.dirname, "../..");
+  const workspace = path.join(root, "apps/sentry-slack-relay");
+  for (const source of [
+    'export * from "@oioi-bwg/config/next";',
+    'export * from "@oioi-bwg/server/db";',
+    'export * from "../../web/src/auth";',
+    'export * from "../../../packages/server/src/db";',
+    'export * from "next/server";',
+    'export * from "node:fs";',
+    'export const load = () => import("@oioi-bwg/config/next");',
+  ]) {
+    const configs = [];
+    for (const cwd of [root, workspace]) {
+      const eslint = new ESLint({ cwd });
+      const filePath = path.join(workspace, "src/boundary-probe.mts");
+      configs.push((await eslint.calculateConfigForFile(filePath)).rules);
+      const [{ messages }] = await eslint.lintText(source, { filePath });
+      assert.ok(
+        messages.some(({ ruleId }) =>
+          [
+            "no-restricted-imports",
+            "no-restricted-syntax",
+            "worker-boundary/local-import",
+          ].includes(ruleId),
+        ),
+        `${cwd}: ${source}`,
+      );
+    }
+    assert.deepEqual(configs[0]["no-restricted-imports"], configs[1]["no-restricted-imports"]);
+  }
+  for (const cwd of [root, workspace]) {
+    const [{ errorCount }] = await new ESLint({ cwd }).lintText('export * from "../index.mts";', {
+      filePath: path.join(workspace, "src/nested/probe.mts"),
+    });
+    assert.equal(errorCount, 0);
+  }
+});
+
 test("contracts lint rejects platform and implementation dependencies", async () => {
   const repositoryRoot = path.resolve(import.meta.dirname, "../..");
   const eslint = new ESLint({ cwd: path.join(repositoryRoot, "packages/contracts") });

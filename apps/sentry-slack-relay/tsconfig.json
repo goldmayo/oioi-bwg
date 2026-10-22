@@ -1,0 +1,9 @@
+{
+  "extends": "@oioi-bwg/config/typescript/node.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*.mts", "tests/**/*.ts", "vitest.config.ts", "eslint.config.ts"]
+}

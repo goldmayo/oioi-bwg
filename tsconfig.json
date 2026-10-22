@@ -1,5 +1,5 @@
 {
   "extends": "@oioi-bwg/config/typescript/node.json",
   "include": ["**/*.mts"],
-  "exclude": ["**/node_modules", "**/.next/**"]
+  "exclude": ["**/node_modules", "**/.next/**", "apps/**"]
 }
