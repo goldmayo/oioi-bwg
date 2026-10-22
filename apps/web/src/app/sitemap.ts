@@ -1,6 +1,8 @@
 import { listVisibleSongsForSitemap } from "@oioi-bwg/server/services/song-service";
 import { MetadataRoute } from "next";
 
+import { SITE_CONFIG } from "@/shared/config/site";
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -8,7 +10,7 @@ export const dynamic = "force-dynamic";
  * 모든 곡 상세 페이지를 검색 엔진에 노출시킵니다.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://oioibawige.com";
+  const baseUrl = SITE_CONFIG.url;
 
   // 1. 모든 곡 데이터 가져오기
   const songs = await listVisibleSongsForSitemap();
