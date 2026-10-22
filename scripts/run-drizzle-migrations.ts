@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import postgres, { type TransactionSql } from "postgres";
 
+import { loadLocalDatabaseUrl } from "./local-database-environment";
+
 const MIGRATIONS_FOLDER = resolve(fileURLToPath(new URL("../drizzle", import.meta.url)));
 const MIGRATIONS_SCHEMA = "drizzle";
 const MIGRATIONS_TABLE = "__drizzle_migrations";
@@ -73,8 +75,7 @@ export async function runDrizzleMigrations(databaseUrl: string) {
 }
 
 async function main() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL is required");
+  const databaseUrl = loadLocalDatabaseUrl(process.argv.slice(2));
   await runDrizzleMigrations(databaseUrl);
 }
 

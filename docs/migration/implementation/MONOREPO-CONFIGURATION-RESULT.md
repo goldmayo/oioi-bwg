@@ -32,8 +32,8 @@ created_at: "2026-10-22"
 | [ ] | MAIL-02 | 대기 |
 | [x] | OBS-01 | #198의 Runtime §12.1·앱 예제·배포 안내가 공용 Sentry 프로젝트 유지와 앱별 입력 책임을 명시한다. 프로젝트 분리·외부 변경 없음. |
 | [x] | OBS-02 | #198의 Console NEXT_PUBLIC_SENTRY_DSN 예제와 local 전송 비활성 안내가 ef0e122에 병합됐다. |
-| [ ] | DB-01 | 대기 |
-| [ ] | DB-02 | 대기 |
+| [x] | DB-01 | 공통 loader·guard가 검증한 URL을 migrate/pull/studio child에 전달한다. 값 비노출·입력 충돌·원격/override 거절과 실제 격리 PostgreSQL migration을 검증했다. 아래 DB 실행 절 참조. |
+| [x] | DB-02 | Web env 자동 탐색을 제거했다. process 또는 명시한 파일의 DB URL만 선택하고 Drizzle dotenv 재입력을 막는다. generator는 DB 없이 실행한다. |
 | [x] | CFG-01 | 공통 app policy에서 규칙 11개를 한 번 정의하고 두 앱이 같은 factory를 사용한다. |
 | [x] | CFG-02 | 앱별 ESLint 진입점과 실행 cwd를 분리했다. root는 앱 policy 파일 대신 공통 factory만 조합한다. |
 | [x] | CFG-03 | Node 기본 규칙은 typescript-eslint 8.56.1을 직접 소비하고 Next preset은 앱에만 적용한다. |
@@ -59,7 +59,7 @@ created_at: "2026-10-22"
 
 ## 2026-10-22 추가 논의 체크리스트
 
-현재 원문 38개는 **처리 24개·대기 14개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01·ENV-10을 더했다.
+현재 원문 38개는 **처리 26개·대기 12개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01·ENV-10·DB-01/02를 더했다.
 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
 별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01은 처리됐으며 나머지 7개는 검토/대기다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
@@ -1025,3 +1025,38 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   최종 head CI는 별도로 확인해 PR에 기록한다. 새 VM build 입력의 실제 운영 적용 성공을 뜻하지 않는다.
 - 원문 처리 24/대기 14, 추가 항목 처리 1/대기 7이다. 다음은 DB-01/02의 도구 입력 경로 통일이다.
   미확정 ENV-2 credential 체계·개인 env 자동 이관·메일/계정 기능·UI 추출·#199 F 전환은 보류한다.
+
+## 2026-10-23 DB-01/02 — 도구 입력과 실제 실행의 일치
+
+- ENV-10 [#203](https://github.com/goldmayo/oioi-bwg/pull/203)은 최종 head
+  `71d1554a4eac10cd125c8314d4d02c6679039bf1`의 [CI](https://github.com/goldmayo/oioi-bwg/actions/runs/39834295742)
+  성공과 보호 조건을 확인한 뒤 `7e535753ebd1949fc185318ef7361d6a32f5fd0f`로 squash 병합했다.
+  fetch한 main과 검증한 head의 전체 tree가 같음을 확인하고 여기서
+  `feature/monorepo-database-tool-inputs`를 분기했다. #199와 운영 배포는 보류다.
+- root package의 DB 진입점은 process DATABASE_URL 또는 `--env-file` 한 파일에서 URL만 읽는다.
+  Web env 자동 탐색·전체 env 주입을 제거하고 선택 파일의 누락/읽기 실패·process 충돌은 중단한다.
+  local PostgreSQL host·protocol·query/fragment 거절을 동일 helper에서 검증한다. migrate/pull/studio는
+  그 URL을 child에 그대로 넘기며 `--url`·`--config` 등 대상 override를 받지 않는다.
+- Drizzle Kit 0.31.9의 내장 dotenv/config를 확인했다. child의 DOTENV_CONFIG_*·DOTENV_KEY를 정리하고
+  입력 파일을 OS devNull로 고정해 guard 이후 숨은 env가 덮어쓰지 못하게 했다. generator는 DB URL을
+  전달하지 않고 기존 생성 옵션을 유지한다. root Drizzle 자동 탐색 위치·schema·SQL·migration 실행
+  함수와 lock/transaction 순서는 유지했다. Compose credential·개인 env·ENV-2 전체 체계는 바꾸지 않았다.
+- Node 22.16의 native `--env-file` 처리가 파일 오류를 먼저 가로채는 최소 재현을 확인해 package
+  진입점에 `node --import tsx --` 구분자를 적용했다. 실제 child를 실행하는 ops 회귀 21건이
+  process/선택 파일 일치·누락/충돌/원격/override 거절·다른 키 미주입·값 비노출·종료 코드 보존을 검증했다.
+- `pnpm db:generate --config <임시 config>`를 최종 진입점으로 실행해 1개 SQL을 임시 디렉터리에만
+  생성했다. 가짜 remote process URL과 숨은 dotenv override를 주어도 DB 입력 없이 성공했고
+  credential marker가 출력되지 않았다. 출력/config는 정리하고 추적 `drizzle/` 무변경을 확인했다.
+- 기존 healthy Compose PostgreSQL 17에서 `pnpm exec tsx scripts/run-postgres-integration-tests.ts --local`을
+  실행했다. 별도 생성 DB에서 새 `pnpm db:migrate` 경로·기존 migration hash·실제 권한/동시성 회귀
+  **4파일·33건**이 통과했다. 종료 시 연결 0·advisory lock 0·테스트 DB 삭제를 확인했다.
+  기존 local DB/볼륨은 보존했으며 운영 credential을 사용하지 않았다.
+- `pnpm type-check`·`pnpm lint`·`pnpm test:unit:run`은 성공했다. workspace 작업은 각각 4개 모두
+  동일 입력 캐시를 재사용했다(unit 95파일·662건). repo/config/scripts 타입·repo lint는 실제 실행했다.
+  아직 CFG-10/TEST-05의 전역 검사 보완은 별도이므로 변경 root config/test에는 추가 strict tsc를
+  직접 실행해 성공했다. 앱/패키지/config/harness/Dockerfile/Turbo/lockfile 무변경을 대조했으며
+  #202의 실제 두 앱 local build 결과를 이 불변 입력에 한해 재사용한다.
+- `pnpm test:harness` 35건·`pnpm test:ops` 22파일·312건과 `pnpm format:check`가 성공했다.
+  필수 push hook·최종 head CI/리뷰 결과는 PR에 기록한다. 원문 처리 26/대기 12,
+  추가 처리 1/대기 7이다. 다음 후보는 공유 설정 package/entry와 root config/tests 타입 검사 책임이며,
+  DB credential 체계 전환·운영 DB·메일/계정 재활성화·Worker 배포·UI 추출은 이번 단위에서 제외한다.
