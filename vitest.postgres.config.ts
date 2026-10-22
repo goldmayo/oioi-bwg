@@ -15,7 +15,10 @@ export default defineConfig({
         test: {
           ...postgresProject.test,
           name: "server-postgres",
-          include: ["tests/integration/*.postgres.test.ts"],
+          include: [
+            "tests/integration/*.postgres.test.ts",
+            "packages/server/tests/integration/*.postgres.test.ts",
+          ],
           exclude: [...configDefaults.exclude, "tests/integration/m7-foundation.postgres.test.ts"],
         },
       },
