@@ -2,6 +2,18 @@
 
 이 디렉터리는 Sentry issue alert를 Slack Incoming Webhook으로 전달하는 독립 Cloudflare Worker다.
 OCI의 Next.js application runtime, application Sentry SDK, GitHub Actions 배포 알림과 별도로 배포한다.
+private `@oioi-bwg/sentry-slack-relay` workspace가 소스·Node unit/type/lint를 소유한다. root의 unit/coverage와
+Turbo 검증에서 한 번씩 수집하며 Web alias·browser 환경·Next build를 사용하지 않는다. 기존 handler와
+Wrangler 설정·Worker 이름/URL·secret은 경로 이관으로 바뀌지 않는다. 실제 Worker 배포는 별도 승인 사항이다.
+
+```bash
+pnpm --filter @oioi-bwg/sentry-slack-relay type-check
+pnpm --filter @oioi-bwg/sentry-slack-relay lint
+pnpm --filter @oioi-bwg/sentry-slack-relay test
+```
+
+기존 `workers/` 아래 개인 `.dev.vars`·로컬 상태는 자동 이동하지 않는다. 필요할 때 소유자가 보호된 값을
+직접 준비하며 추적 소스 이관이나 로컬 unit 검사에 실제 secret이 필요하지 않다.
 
 ```text
 Sentry new-issue alert
@@ -106,7 +118,7 @@ body는 Content-Length 사전 검사와 실제 stream byte 누적 제한(1,000,0
 secret 값은 명령 인자, shell history, GitHub, Wrangler vars에 기록하지 않는다.
 
 ```bash
-cd workers/sentry-slack-relay
+cd apps/sentry-slack-relay
 pnpm dlx wrangler@4.135.0 login
 python3 - <<'PYTHON'
 import getpass
@@ -141,7 +153,7 @@ PYTHON
 ```bash
 git status --short --branch
 git log -1 --oneline
-cd workers/sentry-slack-relay
+cd apps/sentry-slack-relay
 pnpm dlx wrangler@4.135.0 whoami
 pnpm dlx wrangler@4.135.0 deploy --keep-vars
 ```
@@ -216,9 +228,9 @@ alert rule이 소유한다. Sentry의 실패 재시도로 동일 alert가 다시
 로컬 자동 검증은 repository root에서 실행한다.
 
 ```bash
-pnpm exec vitest run --config vitest.ops.config.ts tests/ops/sentry-slack-relay.test.ts
+pnpm --filter @oioi-bwg/sentry-slack-relay test
 pnpm dlx wrangler@4.135.0 deploy --dry-run \
-  --cwd workers/sentry-slack-relay \
+  --cwd apps/sentry-slack-relay \
   --outdir /tmp/oioi-sentry-slack-relay
 ```
 

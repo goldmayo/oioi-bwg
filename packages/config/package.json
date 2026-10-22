@@ -21,7 +21,8 @@
     "./vitest/server-only": "./vitest/server-only.ts",
     "./typescript/base.json": "./typescript/base.json",
     "./typescript/next.json": "./typescript/next.json",
-    "./typescript/node.json": "./typescript/node.json"
+    "./typescript/node.json": "./typescript/node.json",
+    "./eslint/worker": "./eslint/worker.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",

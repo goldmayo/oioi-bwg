@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import worker, { handleSentryWebhook } from "../../workers/sentry-slack-relay/src/index.mts";
+import worker, { handleSentryWebhook } from "../src/index.mts";
 
 const SENTRY_SECRET = "test-sentry-webhook-secret";
 const SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/T000/B000/test-secret";
