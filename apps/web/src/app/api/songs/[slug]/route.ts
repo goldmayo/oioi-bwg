@@ -14,6 +14,6 @@ export async function GET(_request: Request, context: SongRouteContext) {
 
     return jsonResponse(songDetailSchema, song);
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/songs/[slug]" });
   }
 }

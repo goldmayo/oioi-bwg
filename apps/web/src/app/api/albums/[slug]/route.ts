@@ -14,6 +14,6 @@ export async function GET(_request: Request, context: AlbumRouteContext) {
 
     return jsonResponse(albumDetailSchema, album);
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/albums/[slug]" });
   }
 }

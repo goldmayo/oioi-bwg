@@ -27,7 +27,7 @@ depends_on:
 - [x] P1-A: Console server 오류 분류와 최종 정제, 대응 규범·회귀 검사
 - [ ] P1-B: Console RSC 인증 전달과 실제 로그인/거부 UX 검증
 - [x] P2-A: Console app·경로 template·operation·breadcrumb
-- [ ] P2-B: Web의 실제 consumer 적용
+- [x] P2-B: Web의 실제 consumer 적용
 - [ ] P3: 기존 인증 판정 기반 typed rejection log
 - [ ] P4-A: Console 서버 생성 request ID와 두 sink 연결
 - [ ] P4-B: Web dynamic/API 요청 연결
@@ -258,3 +258,21 @@ unknown 경로·동적 slug/id·URL query/hash·host를 fallback으로 보내지
 - producer·최종 정제·privacy 회귀와 각 HTTP/Action consumer를 함께 검토해 20파일 목표를 넘었다.
   공용 package·범용 wrapper·서버 사용자 상태 cache를 추가하지 않았다.
 - 로그: ignored `.local/observability/finish/console-metadata/`. remote 수신·배포 검증 결과가 아니다.
+
+
+### Web의 같은 관측 정책과 실제 consumer — 3번 완료
+
+기준 `5785f7f2fd1b1224c595dcc163ae3ef3a6c8177e`부터 이 기록을 포함한 커밋까지다.
+공개 Web의 server/client 분류·outcome·원본 frame 보존과 boundary 관측별 중복 처리를 Console과 맞췄다.
+Web 소유 route 목록만 template/operation으로 바꾸고 두 공개 API catch와 Next hook, global 오류 화면을 연결했다.
+최종 beforeSend의 app은 web으로 고정하고 breadcrumb의 동적 값도 제거한다. Web 인증/UI/API는 복구하지 않았다.
+Next hook은 두 앱 모두 정제한 template만 reporter로 전달하도록 확인했다. unknown 경로와 health/auth 경로는 생략한다.
+
+- 실제 검사: workspace type/lint/unit 성공(89파일·509건; Web 127, Console 291, server 88, contracts 3;
+  12 task 중 6개 캐시), repo 타입/lint, harness 18건, 두 앱 FSD, ops 21파일·262건, format/diff 성공.
+- 두 앱 실제 build 성공(2 task·캐시 0). Console 단위와 같은 Sentry/업로드 OFF·local 입력을 사용했다.
+- 기존 Web instrumentation 테스트가 raw route를 reporter에 넘기는 것을 검출해 producer에서 먼저 정제했다.
+  기존 local OFF·staging/production 활성화 회귀는 유지하고 Dedupe 제외를 같은 검사에 추가했다.
+- producer·server 분류·최종 정제·browser 중복과 privacy 회귀의 결합으로 400줄 목표를 넘는다.
+  앱 간 import·공용 telemetry package·기능/UI/데이터 정리는 추가하지 않았다.
+- 로그: ignored `.local/observability/finish/web-metadata/`. 운영 배포·원격 수신·실제 소스맵 복원은 미실행이다.

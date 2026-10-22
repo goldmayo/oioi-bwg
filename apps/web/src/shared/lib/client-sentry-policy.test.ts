@@ -20,7 +20,7 @@ function serialized(value: unknown) {
   return JSON.stringify(value);
 }
 
-describe("client Sentry privacy policy", () => {
+describe("client Sentry capture context", () => {
   it("normalizes capture context to the source and a bounded digest", () => {
     expect(
       toSafeSentryErrorContext({
@@ -28,16 +28,52 @@ describe("client Sentry privacy policy", () => {
         digest: "safe_digest-123",
         token: MARKERS.token,
       }),
-    ).toEqual({ source: "admin-error-boundary", digest: "safe_digest-123" });
+    ).toEqual({ source: "admin-error-boundary", outcome: "unknown", digest: "safe_digest-123" });
 
     expect(
       toSafeSentryErrorContext({
         source: "UNSAFE_SOURCE",
         digest: `unsafe?${MARKERS.query}`,
       }),
-    ).toEqual({ source: "sentry-auto-capture" });
+    ).toEqual({ source: "sentry-auto-capture", outcome: "unknown" });
+  });
+});
+
+describe("client Sentry observed outcome", () => {
+  it.each([
+    ["admin-error-boundary", "error_boundary_mounted", "error_boundary_mounted"],
+    ["global-error-boundary", "error_boundary_mounted", "error_boundary_mounted"],
+    ["admin-error-boundary", undefined, "unknown"],
+    ["admin-error-boundary", MARKERS.token, "unknown"],
+    ["query-cache", "error_boundary_mounted", "unknown"],
+    ["sentry-auto-capture", "error_boundary_mounted", "unknown"],
+  ])("validates the observed outcome for %s (%s)", (source, outcome, expected) => {
+    const safeEvent = sanitizeClientSentryEvent({
+      type: undefined,
+      tags: { source, outcome },
+    });
+    expect(safeEvent.tags?.outcome).toBe(expected);
+    expect(serialized(safeEvent)).not.toContain(MARKERS.token);
   });
 
+  it("treats hostile context getters as unknown without dropping the event", () => {
+    const tags = {
+      source: "admin-error-boundary",
+      get outcome(): string {
+        throw new Error(MARKERS.token);
+      },
+    };
+    expect(toSafeSentryErrorContext(tags)).toEqual({
+      source: "admin-error-boundary",
+      outcome: "unknown",
+    });
+    expect(sanitizeClientSentryEvent({ type: undefined, tags }).tags).toMatchObject({
+      outcome: "unknown",
+    });
+  });
+});
+
+describe("client Sentry privacy policy", () => {
   it("classifies client boundary errors without reading their cause", () => {
     expect(describeClientError({ name: "ClientContractError", cause: MARKERS.zod })).toBe(
       "client-contract",
@@ -54,15 +90,15 @@ describe("client Sentry privacy policy", () => {
         category: "navigation",
         message: MARKERS.token,
         data: {
-          from: `/admin?email=${MARKERS.email}`,
-          to: `/songs#${MARKERS.query}`,
+          from: `/?email=${MARKERS.email}`,
+          to: `/unknown#${MARKERS.query}`,
         },
       }),
     ).toEqual({
       category: "navigation",
       type: "navigation",
       level: "info",
-      data: { from: "/admin", to: "/songs" },
+      data: { from: "/" },
     });
 
     expect(
@@ -173,7 +209,8 @@ describe("client Sentry privacy policy", () => {
       user: { email: MARKERS.email },
       extra: { zod: MARKERS.zod },
       tags: {
-        source: "query-cache",
+        source: "admin-error-boundary",
+        outcome: "error_boundary_mounted",
         "error.type": "client-contract",
         "error.digest": "safe-digest_123",
         unsafe: MARKERS.token,
@@ -203,7 +240,7 @@ describe("client Sentry privacy policy", () => {
         {
           category: "navigation",
           message: MARKERS.auth,
-          data: { from: `/login?email=${MARKERS.email}`, to: "/admin#private" },
+          data: { from: `/login?email=${MARKERS.email}`, to: "/#private" },
         },
       ],
     } as unknown as ErrorEvent;
@@ -249,7 +286,10 @@ describe("client Sentry privacy policy", () => {
         ],
       },
       tags: {
-        source: "query-cache",
+        app: "web",
+        runtime: "browser",
+        source: "admin-error-boundary",
+        outcome: "error_boundary_mounted",
         "error.type": "client-contract",
         "error.digest": "safe-digest_123",
       },
@@ -262,7 +302,7 @@ describe("client Sentry privacy policy", () => {
           category: "navigation",
           type: "navigation",
           level: "info",
-          data: { from: "/login", to: "/admin" },
+          data: { to: "/" },
         },
       ],
     });

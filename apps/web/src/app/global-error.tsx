@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { captureClientException } from "@/shared/lib/sentry";
+import { captureClientErrorOnce } from "@/shared/api/capture-client-error";
 
 /**
  * 전역 에러 핸들러 (App Router 전용)
@@ -16,7 +16,11 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    captureClientException(error, { source: "global-error-boundary", digest: error.digest });
+    captureClientErrorOnce(error, {
+      source: "global-error-boundary",
+      outcome: "error_boundary_mounted",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (
