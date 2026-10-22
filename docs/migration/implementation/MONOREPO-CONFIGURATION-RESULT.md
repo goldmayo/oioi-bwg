@@ -783,6 +783,7 @@ squash ancestry나 `git cherry`의 단독 결과로 미반영을 단정하지 �
 - CI container·Promotion pair·Compose recovery smoke의 Console에 `.test` URL과 가짜 R2 문자열을
   추가했다. Web·운영 env 파일·Vault/secret·MFA key/volume는 변경하지 않았다.
   active 배포 runbook §17을 v1.19로 개정해 설정 검사와 외부 권한 검증의 차이를 명시했다.
+  active 문서 인덱스의 해당 버전도 1.19로 맞췄다. 다른 영역의 문서 버전/상태는 변경하지 않았다.
 - #198 병합 후에는 launcher/materializer 검사와 이 runtime 검사가 함께 적용된다. 실제 host 입력 준비와
   R2 권한 검증은 별도 승인된 배포 절차다. Sentry #197의 runtime 분류와 합친 검증은 BASE-01에 남는다.
   #199와 workflow 파일이 겹치지만 수정 구간은 별개다. 그 PR의 production/www 전환 보류는 유지한다.
