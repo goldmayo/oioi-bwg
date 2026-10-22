@@ -1339,3 +1339,26 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - #199는 2026-10-23 재조회에서도 Draft/open·동일 head
   `80af73d7fdc7432fb5e46f7a9a04840f1b81e819`다. F/www 전환·운영/Worker 배포·외부 알림/실제 mail·
   미래 계정·UI 추출은 별도 결정/승인 범위로 남긴다. 이번 완료는 승인된 저장소 정상화 범위의 완료다.
+
+## 2026-10-23 후속 — 루트 배치 정리 1: 저장소 도구
+
+- [추가 승인 계획](MONOREPO-CONFIGURATION-PLAN.md#사용자-후속-승인--루트-배치-정리)을 따른다.
+  기준 `1a5be78eddd12e0c83bfe17d7839dbfa017526dc`에서 시작한 작업을 사용자 설명 요청으로 중단한 뒤
+  Before/After 승인에 따라 재개했다. code commit은 TS 이동 `c9b1e64`와 검증/수동 도구 `f149097`이다.
+- config/tsconfig.json을 root tsconfig.config.json으로 옮겼다. 두 Vitest config를 tests/ops와
+  tests/integration으로 옮기고 명시적 repo root·runner·타입 소유권을 연결했다. module/strict/noEmit
+  옵션과 직접 검사 entry 23개는 이전 경로 두 개를 새 경로로 대응하면 같다. 기존 root NodeNext는 유지한다.
+- architecture harness는 실제 ops/PG 설정·Web alias 격리·직렬 수집 및 새 root 입력 변경 시 양 앱
+  Turbo task 선택/hash 무효화를 검증한다. root unit/coverage 진입점은 그대로다. 수동 이슈 도구는
+  scripts/manual로 byte 불변 이동했으며 bash -n만 실행하고 이슈를 발행하지 않았다.
+- k6는 성능 테스트로 tests/k6의 네 파일을 유지한다. 세 package 명령의 경로와 baseline 대비 diff 0을
+  확인했다. 외부 target 변경·부하 실행은 없다. [최초 파일별 근거와 현재 경로](ROOT-FILE-INVENTORY.md)를
+  기록했으며 이 단위 후 root 추적 파일은 27개다. 최초 정상화 완료 누계는 다시 열지 않는다.
+- 최종 코드에서 pnpm type-check·pnpm lint(양 앱 FSD 포함)·format:check와 harness 40건, 새 경로의
+  ops 21파일/280건이 성공했다. 개인 credential 없이 APP_ENV local·빈 DSN·telemetry OFF에서 guarded
+  PG runner의 실제 PG17 4파일/33건이 통과했고 임시 DB·역할·연결·advisory lock 정리를 확인했다.
+- 초기 TS 이동 검증에서 unit 96파일/694건이 성공했다. 그 뒤 앱/package runtime·unit source는
+  불변이다. 첫 ops는 jq 경로 누락으로 실패했으며 기존 로컬 도구 경로를 적용한 재실행과 최종 ops는
+  성공했다. 필수 push hook의 최종 unit 및 CI·리뷰·squash/tree 대조는 PR 본문에 추가한다.
+- 다음은 운영 자산의 source 경로 이관, 이후 앱 Dockerfile 분리다. 후속 구현을 미리 쌓지 않는다.
+  #199·F/www·실제 운영/Worker 배포·외부 전송·메일/계정 재활성화·UI 추출은 계속 보류한다.

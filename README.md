@@ -167,11 +167,15 @@ pnpm start # Web standalone
 
 ### 설정·호환 자산의 소유권
 
+[루트 파일별 소비자·배치 근거](docs/migration/implementation/ROOT-FILE-INVENTORY.md)에 자동 탐색 설정,
+명시적으로 참조하는 운영 자산, 수동 도구·생성 파일을 구분했습니다. 설정 entry의 타입 검사는
+루트 `tsconfig.config.json`이 소유하며 `pnpm type-check:config`로 실행합니다.
+
 - `.env.oci-development.example`은 이전 단일 앱 release.env 형식의 호환 예제입니다. 현재 paired
   candidate 입력이나 로컬 앱 env가 아닙니다. `app.env.oci-development.example`과 `.env.oci-secrets.example`은
   host installer가 누락된 보호 설정의 초기 예제로 아직 소비하므로 rollback 지원과 함께 보존합니다.
   현재 배포 입력은 [active runbook §21](docs/migration/oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md#21-cicd)을 따릅니다.
-- `create_issues.sh`는 `gh issue create`를 수행하는 기존 수동 도구입니다. 실제 발행할 내용·대상을
+- `scripts/manual/create_issues.sh`는 `gh issue create`를 수행하는 기존 수동 도구입니다. 실제 발행할 내용·대상을
   확인하고 별도 요청이 있을 때만 실행하며 install·CI·정상화 과정에서 자동 실행하지 않습니다.
 - root `next-env.d.ts`·`tsconfig.tsbuildinfo`는 비추적 생성/개인 산출물입니다. 앱의 현재 설정 소유권과
   혼동하지 않으며 자동 삭제하지 않습니다.
