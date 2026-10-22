@@ -60,6 +60,7 @@ export async function handleConsoleMfaEnrollment(request: Request, operation: "s
   } catch (error) {
     response = toErrorResponse(
       error instanceof ConsoleMfaRateLimited ? new AppError("OTP_RATE_LIMITED") : error,
+      { route: operation === "setup" ? "/api/auth/mfa/setup" : "/api/auth/mfa/confirm" },
     );
     if (error instanceof ConsoleMfaRateLimited)
       response.headers.set("Retry-After", String(error.retryAfterSeconds));

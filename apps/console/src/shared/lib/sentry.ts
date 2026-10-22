@@ -7,6 +7,7 @@ import {
   type SentryErrorContext,
   toSafeSentryErrorContext,
 } from "./client-sentry-policy";
+import { getSentryRouteMetadata } from "./sentry-route-metadata";
 
 /** Client unexpected exception만 Sentry로 전송하는 error tracking 경계다. */
 export async function captureClientException(
@@ -14,6 +15,9 @@ export async function captureClientException(
   context: SentryErrorContext,
 ): Promise<string | null> {
   const safeContext = toSafeSentryErrorContext(context);
+  const route = getSentryRouteMetadata(
+    safeContext.route ?? (typeof window === "undefined" ? undefined : window.location.pathname),
+  );
   const errorType = describeClientError(error);
 
   if (!getSentryRuntimeConfig().enabled) return null;
@@ -24,6 +28,9 @@ export async function captureClientException(
   try {
     const scope = Sentry.getCurrentScope().clone();
     scope.setTags({
+      app: "console",
+      runtime: "browser",
+      ...(route ? { "route.template": route.template, operation: route.operation } : {}),
       source: safeContext.source,
       outcome: safeContext.outcome,
       "error.type": errorType,

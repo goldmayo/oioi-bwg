@@ -20,7 +20,7 @@ export async function PATCH(request: Request, context: SongRouteContext) {
     const song = await editSong(await getRequestContext(), id, input);
     return jsonResponse(adminSongMutationResultSchema, song);
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/admin/songs/[id]" });
   }
 }
 
@@ -31,6 +31,6 @@ export async function DELETE(request: Request, context: SongRouteContext) {
     await deleteSong(await getRequestContext(), id);
     return new Response(null, { status: 204 });
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/admin/songs/[id]" });
   }
 }

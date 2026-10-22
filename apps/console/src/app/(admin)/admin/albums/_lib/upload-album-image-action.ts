@@ -32,6 +32,7 @@ export async function uploadAlbumImageAction(formData: FormData) {
       event: "upload.failure",
       source: "upload-album-image-action",
       operation: "album-image-upload",
+      route: "/admin/albums",
       request: { routerKind: "App Router", routeType: "action" },
     });
     return { success: false, error: FALLBACK_ERROR_MESSAGE };

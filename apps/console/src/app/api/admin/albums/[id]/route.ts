@@ -20,7 +20,7 @@ export async function PATCH(request: Request, context: AlbumRouteContext) {
     const album = await editAlbum(await getRequestContext(), id, input);
     return jsonResponse(albumSummarySchema, album);
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/admin/albums/[id]" });
   }
 }
 
@@ -31,6 +31,6 @@ export async function DELETE(request: Request, context: AlbumRouteContext) {
     await deleteAlbum(await getRequestContext(), id);
     return new Response(null, { status: 204 });
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/admin/albums/[id]" });
   }
 }

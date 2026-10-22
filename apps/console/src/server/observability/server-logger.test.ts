@@ -76,6 +76,8 @@ describe("independent server logging and Sentry sinks", () => {
     const output = call?.[0] as string;
     expect(output).not.toMatch(/[\r\n]/);
     expect(JSON.parse(output)).toEqual({
+      app: "console",
+      runtime: "node",
       timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       level: "error",
       event: "api.unexpected_error",
@@ -448,6 +450,8 @@ describe("sanitizeServerSentryEvent", () => {
       extra: { params: Object.values(MARKERS) },
       breadcrumbs: [{ message: MARKERS.token, data: { otp: MARKERS.otpHash } }],
       tags: {
+        app: "console",
+        runtime: "node",
         event: "api.unexpected_error",
         source: "api-route-handler",
         "error.type": "database",
@@ -508,6 +512,8 @@ describe("sanitizeServerSentryEvent", () => {
         ],
       },
       tags: {
+        app: "console",
+        runtime: "node",
         event: "api.unexpected_error",
         source: "api-route-handler",
         "error.type": "database",
@@ -530,6 +536,8 @@ describe("sanitizeServerSentryEvent", () => {
 
     expect(serialized(safeEvent)).not.toMatch(/TOKEN_MARKER|PASSWORD_HASH_MARKER/);
     expect(safeEvent.tags).toEqual({
+      app: "console",
+      runtime: "node",
       event: "server.unhandled_error",
       source: "sentry-auto-capture",
       "error.type": "unknown",
@@ -561,6 +569,8 @@ describe("sanitizeServerSentryEvent", () => {
 
     expect(serialized(safeEvent)).not.toMatch(/TOKEN_MARKER|PASSWORD_HASH_MARKER/);
     expect(safeEvent.tags).toEqual({
+      app: "console",
+      runtime: "node",
       event: "upload.failure",
       source: "upload-album-image-action",
       operation: "album-image-upload",

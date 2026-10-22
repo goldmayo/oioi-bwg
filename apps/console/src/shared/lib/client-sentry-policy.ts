@@ -1,6 +1,7 @@
 import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
 
 import { toSafeSentryBuildMetadata, toSafeSentryBuildPath } from "./sentry-build-metadata";
+import { getSentryRouteMetadata } from "./sentry-route-metadata";
 
 export const SENTRY_ERROR_SOURCES = [
   "admin-error-boundary",
@@ -67,6 +68,7 @@ export type ClientErrorType = (typeof CLIENT_ERROR_TYPES)[number];
 export interface SentryErrorContext {
   source: SentryErrorSource;
   digest?: string;
+  route?: string;
   outcome?: "error_boundary_mounted" | "unknown";
 }
 
@@ -235,7 +237,13 @@ export function toSafeSentryErrorContext(value: unknown): SentryErrorContext {
       ? outcomeValue
       : "unknown";
 
-  return { source, outcome, ...(digest ? { digest } : {}) };
+  const route = getSentryRouteMetadata(readProperty(value, "route"));
+  return {
+    source,
+    outcome,
+    ...(digest ? { digest } : {}),
+    ...(route ? { route: route.template } : {}),
+  };
 }
 
 export function describeClientError(error: unknown): ClientErrorType {
@@ -245,12 +253,12 @@ export function describeClientError(error: unknown): ClientErrorType {
   return "runtime";
 }
 
-/** URL, DOM, console, network payload는 버리고 query/hash가 제거된 navigation만 남긴다. */
+/** URL, DOM, console, network payload는 버리고 앱 소유 template으로 축약한 navigation만 남긴다. */
 export function sanitizeClientBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
   if (breadcrumb.category !== "navigation") return null;
 
-  const from = stripUrlDetails(readProperty(breadcrumb.data, "from"));
-  const to = stripUrlDetails(readProperty(breadcrumb.data, "to"));
+  const from = getSentryRouteMetadata(readProperty(breadcrumb.data, "from"))?.template;
+  const to = getSentryRouteMetadata(readProperty(breadcrumb.data, "to"))?.template;
   if (!from && !to) return null;
 
   return {
@@ -267,11 +275,18 @@ export function sanitizeClientBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | n
 
 /** Browser SDK가 보강한 event도 전송 직전에 allowlist field만 남긴다. */
 export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
-  const { source, outcome, digest } = toSafeSentryErrorContext({
+  const {
+    source,
+    outcome,
+    digest,
+    route: routeTemplate,
+  } = toSafeSentryErrorContext({
     source: safeTag(event, "source"),
+    route: safeTag(event, "route.template"),
     outcome: safeTag(event, "outcome"),
     digest: safeTag(event, "error.digest"),
   });
+  const route = getSentryRouteMetadata(routeTemplate);
   const errorTypeValue = safeTag(event, "error.type");
   const errorType = isOneOf(errorTypeValue, CLIENT_ERROR_TYPES) ? errorTypeValue : "runtime";
   const values = readProperty(readProperty(event, "exception"), "values");
@@ -315,6 +330,9 @@ export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
       ],
     },
     tags: {
+      app: "console",
+      runtime: "browser",
+      ...(route ? { "route.template": route.template, operation: route.operation } : {}),
       source,
       outcome,
       "error.type": errorType,

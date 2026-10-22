@@ -55,6 +55,8 @@ describe("Sentry error reporter", () => {
     expect(sentryMocks.eventFromException).toHaveBeenCalledWith(error);
     expect(sentryMocks.captureEvent).toHaveBeenCalledWith({ type: undefined });
     expect(sentryMocks.setTags).toHaveBeenCalledWith({
+      app: "console",
+      runtime: "browser",
       source: "admin-error-boundary",
       outcome: "error_boundary_mounted",
       "error.type": "client-contract",

@@ -19,6 +19,6 @@ export async function PATCH(request: Request, context: SongLyricsRouteContext) {
     const song = await saveSongLyrics(await getRequestContext(), id, input);
     return jsonResponse(adminSongMutationResultSchema, song);
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/admin/songs/[id]/lyrics" });
   }
 }

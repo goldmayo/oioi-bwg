@@ -13,7 +13,7 @@ export async function GET() {
     const albums = await listAdminAlbums(await getRequestContext());
     return jsonResponse(adminAlbumListSchema, albums);
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/admin/albums" });
   }
 }
 
@@ -23,6 +23,6 @@ export async function POST(request: Request) {
     const album = await createAlbum(await getRequestContext(), input);
     return jsonResponse(albumSummarySchema, album, { status: 201 });
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/admin/albums" });
   }
 }

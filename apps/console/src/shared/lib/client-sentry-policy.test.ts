@@ -98,7 +98,7 @@ describe("client Sentry privacy policy", () => {
       category: "navigation",
       type: "navigation",
       level: "info",
-      data: { from: "/admin", to: "/songs" },
+      data: { from: "/admin" },
     });
 
     expect(
@@ -286,6 +286,8 @@ describe("client Sentry privacy policy", () => {
         ],
       },
       tags: {
+        app: "console",
+        runtime: "browser",
         source: "admin-error-boundary",
         outcome: "error_boundary_mounted",
         "error.type": "client-contract",
@@ -300,7 +302,7 @@ describe("client Sentry privacy policy", () => {
           category: "navigation",
           type: "navigation",
           level: "info",
-          data: { from: "/login", to: "/admin" },
+          data: { to: "/admin" },
         },
       ],
     });

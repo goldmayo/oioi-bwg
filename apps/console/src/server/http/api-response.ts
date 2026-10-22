@@ -4,6 +4,7 @@ import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { AppError, type AppErrorCode } from "@oioi-bwg/server/errors/app-error";
 import { z } from "zod";
 
+import type { ServerErrorContext } from "@/server/observability/safe-server-event";
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
 import { assertConsoleOrigin } from "./console-origin";
@@ -75,7 +76,10 @@ export function jsonResponse<T>(
 }
 
 /** Route Handler boundary에서만 application error를 HTTP failure contract로 변환한다. */
-export function toErrorResponse(error: unknown): Response {
+export function toErrorResponse(
+  error: unknown,
+  context: Pick<ServerErrorContext, "route"> = {},
+): Response {
   if (error instanceof InvalidJsonBodyError) {
     return Response.json(
       apiErrorResponseSchema.parse({
@@ -115,6 +119,7 @@ export function toErrorResponse(error: unknown): Response {
   reportServerError(error, {
     event: isOutputContractError ? "api.output_contract_violation" : "api.unexpected_error",
     source: "api-route-handler",
+    ...context,
     ...(isOutputContractError
       ? { error: { type: "output-contract" as const, code: "OUTPUT_CONTRACT_VIOLATION" } }
       : {}),

@@ -1,7 +1,7 @@
 ---
 title: "오류 원인과 처리 결과 추적 개선 결과"
 document_id: "OBSERVABILITY-ERROR-TRACKING-RESULT"
-version: "1.2"
+version: "1.3"
 status: "active"
 authority: "result"
 updated_at: "2026-10-22"
@@ -26,7 +26,7 @@ depends_on:
 
 - [x] P1-A: Console server 오류 분류와 최종 정제, 대응 규범·회귀 검사
 - [ ] P1-B: Console RSC 인증 전달과 실제 로그인/거부 UX 검증
-- [ ] P2-A: Console app·경로 template·operation·breadcrumb
+- [x] P2-A: Console app·경로 template·operation·breadcrumb
 - [ ] P2-B: Web의 실제 consumer 적용
 - [ ] P3: 기존 인증 판정 기반 typed rejection log
 - [ ] P4-A: Console 서버 생성 request ID와 두 sink 연결
@@ -232,3 +232,29 @@ policy `5dd64d5a605798801a9231f080d8aa9416bc8774`다. 실행 로그·브라우�
 이 worktree의 ignored `.local/observability/browser-boundary/`에 보존하며 원격에 push하는 파일은 아니다.
 
 새 PR·병합·배포는 보류한다. **Sentry Slack 알림 디자인은 미배포**이며 §5의 수동 배포 대기를 유지한다.
+
+
+## 7. 남은 7개 항목의 고정 실행 범위
+
+2026-10-22 사용자가 기존 7개 항목 완료를 요청했다. 추가 확인에서 **코드·로컬 검증만 진행하고,
+7번 운영 알림·실수신·소스맵 운영 검증은 배포 대기**로 확정했다. 새 PR·병합·배포·외부 전송은 하지 않는다.
+Slack Worker 디자인의 사용자 수동 배포 대기는 별도이며, 모노레포·환경변수·기능 로드맵 작업을 섞지 않는다.
+§1의 기존 계획 항목만 수행하고 새 개선을 추가하지 않는다. 아래 기록의 task/test 수는 검사 수이며 작업 완료 수가 아니다.
+
+### Console 앱·경로·작업 정보와 breadcrumb — 2번 완료
+
+기준 `faccbbd9721b3cf4b5e95e6882356059d2bb5037`부터 이 기록을 포함한 커밋까지다.
+Console이 소유한 정적 경로 목록과 구체적인 동적 route 패턴만 고정 template/operation으로 바꾼다.
+Next hook, API catch, Auth.js reporter, upload Action, browser reporter의 실제 consumer를 연결했다.
+최종 server/client beforeSend에 app/runtime/template/operation이 남고, navigation도 같은 template만 남긴다.
+unknown 경로·동적 slug/id·URL query/hash·host를 fallback으로 보내지 않는다. 원본 frame·release·Debug ID는 유지한다.
+
+- 실제 검사: workspace type/lint/unit 성공(87파일·475건; Console 291, Web 93, server 88, contracts 3),
+  repo 타입/lint, harness 18건, 두 앱 FSD, ops 21파일·262건, format, diff 검사 성공.
+- 두 앱 실제 build 성공(Next 16.4.1, Turbo build 2개·캐시 0). Sentry/업로드 OFF·빈 DSN·local 환경과
+  기존 접근 불가 loopback DB/임시 Console 입력을 사용했다. 운영·개인 설정과 DB 데이터는 변경하지 않았다.
+- 최초 focused 검사는 새 app/runtime/route가 기존 정확 일치 fixture에 추가돼 실패했다.
+  예상 payload를 새 계약으로 갱신했고 검사 억제 없이 전체 검사를 통과했다.
+- producer·최종 정제·privacy 회귀와 각 HTTP/Action consumer를 함께 검토해 20파일 목표를 넘었다.
+  공용 package·범용 wrapper·서버 사용자 상태 cache를 추가하지 않았다.
+- 로그: ignored `.local/observability/finish/console-metadata/`. remote 수신·배포 검증 결과가 아니다.

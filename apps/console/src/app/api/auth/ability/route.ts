@@ -8,6 +8,6 @@ export async function GET() {
     const context = await getRequestContext();
     return jsonResponse(serializedAbilityResponseSchema, { rules: context.ability.rules });
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/auth/ability" });
   }
 }

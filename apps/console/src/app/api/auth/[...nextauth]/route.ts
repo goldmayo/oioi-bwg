@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     assertConsoleHost(request.headers);
     return await handlers.GET(request);
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/auth/[...nextauth]" });
   }
 }
 export async function POST(request: NextRequest) {
@@ -18,6 +18,6 @@ export async function POST(request: NextRequest) {
     assertConsoleOrigin(request.headers);
     return await handlers.POST(request);
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/auth/[...nextauth]" });
   }
 }

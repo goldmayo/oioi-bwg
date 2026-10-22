@@ -13,7 +13,7 @@ export async function GET() {
     const songs = await listAdminSongs(await getRequestContext());
     return jsonResponse(adminSongListSchema, songs);
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/admin/songs" });
   }
 }
 
@@ -23,6 +23,6 @@ export async function POST(request: Request) {
     const song = await createSong(await getRequestContext(), input);
     return jsonResponse(adminSongMutationResultSchema, song, { status: 201 });
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, { route: "/api/admin/songs" });
   }
 }

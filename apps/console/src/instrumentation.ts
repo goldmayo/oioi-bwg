@@ -40,6 +40,10 @@ export async function onRequestError(
   reportServerError(error, {
     event: "next.request_error",
     source: "next-instrumentation",
+    route:
+      typeof readContextValue(context, "routePath") === "string"
+        ? String(readContextValue(context, "routePath"))
+        : undefined,
     request: {
       method: toSafeMethod(request.method),
       routerKind: toSafeRouterKind(readContextValue(context, "routerKind")),

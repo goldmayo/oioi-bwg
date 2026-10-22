@@ -9,6 +9,7 @@ import {
   toSafeSentryBuildMetadata,
   toSafeSentryBuildPath,
 } from "@/shared/lib/sentry-build-metadata";
+import { getSentryRouteMetadata, SENTRY_OPERATIONS } from "@/shared/lib/sentry-route-metadata";
 
 export const SERVER_ERROR_EVENTS = [
   "api.unexpected_error",
@@ -27,7 +28,7 @@ export const SERVER_ERROR_SOURCES = [
   "upload-album-image-action",
 ] as const;
 
-export const SERVER_OPERATIONS = ["album-image-upload"] as const;
+export { SENTRY_OPERATIONS as SERVER_OPERATIONS } from "@/shared/lib/sentry-route-metadata";
 
 export const SAFE_ERROR_TYPES = [
   "application",
@@ -55,7 +56,7 @@ const SAFE_ROUTE_TYPES = ["action", "proxy", "render", "route"] as const;
 
 export type ServerErrorEvent = (typeof SERVER_ERROR_EVENTS)[number];
 export type ServerErrorSource = (typeof SERVER_ERROR_SOURCES)[number];
-export type ServerOperation = (typeof SERVER_OPERATIONS)[number];
+export type ServerOperation = (typeof SENTRY_OPERATIONS)[number];
 export type SafeErrorType = (typeof SAFE_ERROR_TYPES)[number];
 export type SafeMethod = (typeof SAFE_METHODS)[number];
 export type SafeRouterKind = (typeof SAFE_ROUTER_KINDS)[number];
@@ -84,6 +85,7 @@ export interface ServerErrorContext {
   event: ServerErrorEvent;
   source: ServerErrorSource;
   operation?: ServerOperation;
+  route?: string;
   error?: Partial<SafeErrorDescriptor>;
   request?: SafeRequestMetadata;
   handling?: (typeof ERROR_HANDLINGS)[number];
@@ -205,7 +207,7 @@ export function toSafeServerErrorSource(value: unknown): ServerErrorSource {
 }
 
 export function toSafeServerOperation(value: unknown): ServerOperation | undefined {
-  return isOneOf(value, SERVER_OPERATIONS) ? value : undefined;
+  return isOneOf(value, SENTRY_OPERATIONS) ? value : undefined;
 }
 
 export function toSafeRequestMetadata(value: unknown): SafeRequestMetadata | undefined {
@@ -305,7 +307,8 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
   const errorTypeTag = safeTag(event, "error.type");
   const eventName = toSafeServerErrorEvent(eventTag);
   const source = toSafeServerErrorSource(sourceTag);
-  const operation = toSafeServerOperation(safeTag(event, "operation"));
+  const route = getSentryRouteMetadata(safeTag(event, "route.template"));
+  const operation = toSafeServerOperation(safeTag(event, "operation")) ?? route?.operation;
   const errorCode = safeTag(event, "error.code");
   const errorType =
     errorTypeTag === "application" && !isOneOf(errorCode, appErrorCodeSchema.options)
@@ -332,6 +335,9 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
   const stacktrace = safeStacktrace(event);
 
   const tags = {
+    app: "console",
+    runtime: "node",
+    ...(route ? { "route.template": route.template } : {}),
     event: eventName,
     source,
     ...(operation ? { operation } : {}),

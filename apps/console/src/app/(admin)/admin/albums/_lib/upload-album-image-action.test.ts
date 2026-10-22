@@ -86,6 +86,7 @@ describe("uploadAlbumImageAction", () => {
       event: "upload.failure",
       source: "upload-album-image-action",
       operation: "album-image-upload",
+      route: "/admin/albums",
       request: { routerKind: "App Router", routeType: "action" },
     });
   });

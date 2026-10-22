@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getSentryRouteMetadata } from "@/shared/lib/sentry-route-metadata";
+
 import {
   describeServerError,
   describeServerFailure,
@@ -17,13 +19,17 @@ export function logServerError(error: unknown, context: ServerErrorContext): voi
   if (descriptor.type === "application" && failure.handling === "handled") return;
   const event = toSafeServerErrorEvent(context.event);
   const source = toSafeServerErrorSource(context.source);
-  const operation = toSafeServerOperation(context.operation);
+  const route = getSentryRouteMetadata(context.route);
+  const operation = toSafeServerOperation(context.operation) ?? route?.operation;
   const request = toSafeRequestMetadata(context.request);
   console.error(
     JSON.stringify({
       timestamp: new Date().toISOString(),
       level: "error",
       event,
+      app: "console",
+      runtime: "node",
+      ...(route ? { route: { template: route.template } } : {}),
       source,
       ...(operation ? { operation } : {}),
       error: descriptor,

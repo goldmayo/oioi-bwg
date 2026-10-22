@@ -17,6 +17,7 @@ export function reportAuthError(error: Error) {
   reportServerError(error, {
     event: "auth.failure",
     source: "auth-js",
+    route: "/api/auth/[...nextauth]",
     error: { type: "auth", code: "AUTH_FAILURE" },
   });
 }
