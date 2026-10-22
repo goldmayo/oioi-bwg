@@ -468,3 +468,24 @@ ENV-06 [#202](https://github.com/goldmayo/oioi-bwg/pull/202)의 squash 결과
   타입·unit·lint/FSD·두 앱 build 결과를 재사용하고 필수 push hook·최종 PR CI는 그대로 실행한다.
 - 실제 이미지 게시·운영 배포·GTM 외부 요청은 실행하지 않는다. 다음 후보 DB-01/02는 별도 단위이며
   미확정 ENV-2 credential 전환과 개인 env 자동 이관은 포함하지 않는다.
+
+## 2026-10-23 다음 단위 — DB-01/02 도구 입력 통일
+
+ENV-10 #203의 squash 결과 `7e535753ebd1949fc185318ef7361d6a32f5fd0f`를 fetch한 뒤 분기한다.
+헌법 §11, Runtime §12~14와 runbook의 local database guard를 따른다. DB schema·SQL·transaction·
+권한/역할·Compose credential·개인 env·ENV-2 전체 설정 체계는 바꾸지 않는다.
+
+- process DATABASE_URL 또는 명시적인 `--env-file` 한 파일에서 DB URL만 선택한다. 두 입력이
+  다르거나 선택 파일에 값이 없으면 값 비노출 오류로 중단한다. Web env 자동 탐색은 제거한다.
+- migrate/pull/studio는 선택·검증한 URL을 같은 child 환경에 전달한다. 연결 대상 override 인자는
+  받지 않는다. 기존 local host 세 개와 PostgreSQL protocol을 확인하고 query/fragment는 거절한다.
+- 설치된 Drizzle Kit 0.31.9는 root dotenv/config를 내장한다. child는 dotenv 자동 입력을 devNull로
+  격리해 검증 후 다른 파일이 URL을 덮어쓰지 못하게 한다. migration generator는 DB 입력 없이 유지한다.
+- root Drizzle entry는 그대로 두고 명시적 process URL만 사용한다. 독립 migration CLI와 기존 guard도
+  같은 validator를 소비한다. SQL 실행 함수·lock·migration 순서는 바꾸지 않는다.
+- package 진입점은 `node --import tsx --`로 실행해 Node가 사용자 `--env-file`을 native 옵션으로
+  가로채지 않게 한다. loader만으로는 부족하며 명시적 옵션 구분자가 필요함을 최소 재현으로 확인했다.
+  파일 오류·누락도 DB 도구의 동일한 값 비노출 경계에서 처리한다.
+- 실제 CLI child의 입력 일치·누락/충돌/원격/override 거절·값 비노출·설정 loader를 검증한다.
+  기본 gate와 local Compose의 격리 PostgreSQL runner를 실행하며 개인 DB/볼륨은 보존한다.
+  불변 앱 소스의 build 결과는 재사용할 수 있는지 확인하고 최종 hook·CI·리뷰 후 squash 병합한다.

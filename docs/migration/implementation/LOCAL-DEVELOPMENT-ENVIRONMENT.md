@@ -39,6 +39,29 @@ postgres
 
 `drizzle-kit push` script는 제거했다. 이 가드는 편의 안전장치이며 운영 credential 관리와 네트워크 격리를 대체하지 않는다.
 
+### DB 도구 입력 (2026-10-23)
+
+호스트의 `db:migrate`, `db:pull`, `db:studio`는 process의 `DATABASE_URL` 또는 명시한 env 파일 한 개를
+사용한다. Web 파일을 자동 탐색하지 않는다. 기존 앱 파일을 선택할 때도 DB URL만 읽고 나머지 키는
+실행 환경으로 복사하지 않는다. 예를 들어 다음처럼 파일을 직접 선택한다.
+
+```bash
+pnpm db:migrate --env-file apps/console/.env.local
+pnpm db:pull --env-file apps/console/.env.local
+pnpm db:studio --env-file apps/console/.env.local
+```
+
+작업에 필요한 권한이 있는 로컬 URL을 선택한다. process와 선택 파일의 값이 다르거나 파일에 값이
+없으면 중단하며 credential을 출력하지 않는다. `--env-file=경로`도 허용한다. 이 세 명령은 대상 변경을
+우회하는 `--url`·`--config` 등 다른 인자를 받지 않는다. URI는 postgres/postgresql protocol과 위 local
+host만 허용하고 query/fragment를 거절한다. guard가 확인한 URL을 같은 실행 환경에 전달하며
+Drizzle Kit가 다른 env 파일로 다시 덮어쓰지 않게 한다.
+
+Compose·Console launcher·격리 테스트가 이미 process URL을 명시하면 기존 명령 그대로 사용한다.
+개인 env·credential·볼륨은 자동 이관하거나 바꾸지 않는다. `db:generate`는 DB 입력을 사용하지 않고
+기존 생성 옵션을 전달한다. [Drizzle generate의 필수 입력](https://orm.drizzle.team/docs/drizzle-kit-generate)은
+schema와 dialect이며 이 명령으로 DB에 접속하거나 migration을 적용하지 않는다.
+
 ## Schema decision
 
 ### 기준
