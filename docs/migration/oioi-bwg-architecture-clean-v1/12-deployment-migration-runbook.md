@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.18"
+version: "1.19"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-21"
+updated_at: "2026-10-23"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.17
+# oioi-bwg Deployment / Migration Runbook v1.19
 
 ## 1. 목적
 
@@ -362,6 +362,14 @@ application business logic을 proxy config에 넣지 않는다.
 
 모든 external dependency를 deep-check해서 health endpoint 자체를 불안정하게 만들지 않는다.
 Response에 secret, connection string, raw DB error를 노출하지 않는다.
+
+Console `/readyz`는 인증·MFA 키에 더해 업로드의 R2 필수 입력 다섯 개를 DB 접근 전에 검사한다.
+`R2_ENDPOINT`·`ASSETS_PUBLIC_BASE_URL`은 credential·query·fragment 없는 HTTPS URL이어야 하며,
+`R2_BUCKET`·`R2_ACCESS_KEY_ID`·`R2_SECRET_ACCESS_KEY`는 공백뿐인 값을 허용하지 않는다.
+업로드도 같은 검사를 쓰며 설정이 잘못되면 외부 쓰기 전에 실패한다. readiness는 R2 client를 만들거나
+R2/asset 요청을 보내지 않는다. 권한·버킷 존재·실제 업로드 성공은 별도 운영 검증이다.
+실패는 원인이나 입력 값 없이 기존 503/no-store 응답을 유지한다. Web readiness는 R2 입력을 요구하지 않는다.
+CI·Promotion smoke에는 실제 credential 대신 `.test` HTTPS URL과 임시 문자열을 전달한다.
 
 `restart: unless-stopped`는 process/container 종료 후 재시작 정책이다. Docker healthcheck가
 `unhealthy` 상태만으로 container를 자동 restart한다고 가정하지 않는다. Runtime health failure는

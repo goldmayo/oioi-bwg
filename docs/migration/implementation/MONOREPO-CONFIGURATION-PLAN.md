@@ -365,3 +365,20 @@ Worker 위치와 루트 tests 조사까지 Notion 및 저장소 체크리스트�
 Draft 생성은 원문/추가 ID의 완료 조건을 바꾸지 않는다. BASE-01은 승인된 코드 통합과 합쳐진 소스 검증이
 남으며, 앱 배포·운영 알림·이미지별 소스맵 확인은 전체 작업 뒤 최종 배포 단계에 유지한다.
 정리 종료 후 다음 한 단위는 BASE-01의 검토·통합 기준선 확정이다. env를 새로 중복 구현하지 않는다.
+
+## 2026-10-23 정상화 재개 — ENV-03
+
+이번 승인은 다음 미완료 한 단위의 구현·검증·문서·commit/push·PR/Notion 반영이며 병합·배포는 제외한다.
+기준은 `feature/monorepo-configuration-cleanup@80fa15d460e8b39ae3fca1f15577805d7c19b170`,
+원격 `migration_main@aa4e814f9fdbfd1c69b8b3af8934e5c99b80277c`다. 기존 재개 기록은 당시 이력으로 보존한다.
+BASE-01은 #197/#200 미병합으로 대기하며 독립 구현을 막지 않는다. #198의 R2 예제·launcher·host 입력과
+Web 예제는 이미 구현·검증됐으므로 복사하거나 재구현하지 않는다. 해당 ID의 분기별 상태는 RESULT가 소유한다.
+
+- ENV-03만 기존 #200 브랜치에서 완료한다. Console readiness가 업로드와 동일한 R2 필수 입력·HTTPS 검사를
+  사용하도록 하고, 입력 오류는 DB/외부 쓰기 전에 거절한다. Web의 공개 조회 readiness는 유지한다.
+- 헌법 §5·11, Runtime §8·12.1·14, Testing §4·14·17과 배포 runbook §17을 따른다.
+  외부 dependency deep-check가 아닌 설정 검사임을 runbook에 명시하고 secret/raw 오류 비노출을 보존한다.
+- unit·기본 gate·두 앱 실제 build와 standalone browser smoke를 실행한다. CI·Promotion·Compose smoke의
+  Console fixture에 가짜 R2 입력을 보완한다. harness는 type-check/build와 순차 실행한다.
+- ENV-06(APP_ENV)의 앱별 값 계약과 local metadata가 다음 독립 단위다. DB-01/02와 config/Docker,
+  휴면 메일·미사용 flag, UI/Worker는 이번에 변경하지 않는다. #198 병합·운영 R2/Vault 검증도 대기다.

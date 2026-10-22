@@ -27,6 +27,9 @@ docker run --detach --name console-promotion-smoke \
   --env CONSOLE_AUTH_SECRET=console-promotion-smoke-local-only-secret \
   --env CONSOLE_ORIGIN=http://127.0.0.1:3001 \
   --env CONSOLE_MFA_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
+  --env R2_ENDPOINT=https://r2.example.test --env R2_BUCKET=smoke \
+  --env R2_ACCESS_KEY_ID=smoke-only --env R2_SECRET_ACCESS_KEY=smoke-only \
+  --env ASSETS_PUBLIC_BASE_URL=https://assets.example.test \
   "${CONSOLE_IMAGE_REPOSITORY}@${CONSOLE_IMAGE_DIGEST}"
 for port in 3000 3001; do
   for attempt in $(seq 1 60); do
