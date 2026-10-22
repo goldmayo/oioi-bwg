@@ -4,13 +4,16 @@ interface Env {
 }
 
 interface RelayEvent {
+  app?: "web" | "console";
   environment: "local" | "staging" | "production" | "unknown";
+  failureKind?: "contract" | "delivery" | "system" | "unknown";
   issueId: string;
   issueUrl: string;
   level: "fatal" | "error" | "warning" | "info" | "debug";
   message: string;
   occurredAt: string;
   projectId: string;
+  release?: string;
   title: string;
 }
 
@@ -76,6 +79,12 @@ const readEnvironment = (event: Record<string, unknown>): RelayEvent["environmen
   }
 
   return "unknown";
+};
+
+const readUniqueTag = (event: Record<string, unknown>, key: string): unknown => {
+  if (!Array.isArray(event.tags)) return undefined;
+  const matches = event.tags.filter((tag) => Array.isArray(tag) && tag[0] === key);
+  return matches.length === 1 && matches[0].length === 2 ? matches[0][1] : undefined;
 };
 
 const readLevel = (value: unknown): RelayEvent["level"] => {
@@ -153,15 +162,26 @@ const parseRelayEvent = (rawBody: string): RelayEvent | null => {
   const metadata = isRecord(event.metadata) ? event.metadata : null;
   const title = redactDiagnosticText(event.title, "Unexpected Sentry issue");
   const message = redactDiagnosticText(metadata?.value ?? event.message, title);
+  const app = readUniqueTag(event, "app");
+  const failureKind = readUniqueTag(event, "failure.kind");
+  const release = isRecord(event.release) ? event.release.version : event.release;
 
   return {
+    ...(app === "web" || app === "console" ? { app } : {}),
     environment: readEnvironment(event),
+    ...(failureKind === "contract" ||
+    failureKind === "delivery" ||
+    failureKind === "system" ||
+    failureKind === "unknown"
+      ? { failureKind }
+      : {}),
     issueId,
     issueUrl,
     level: readLevel(event.level),
     message,
     occurredAt,
     projectId,
+    ...(typeof release === "string" && /^oioi-bwg@[0-9a-f]{40}$/.test(release) ? { release } : {}),
     title,
   };
 };
@@ -192,41 +212,80 @@ const verifySignature = async (
   return crypto.subtle.verify("HMAC", key, signatureBytes, rawBody);
 };
 
+const toSlackHeading = (title: string): string => {
+  if (title.length <= 150) return title;
+  let heading = "";
+  for (const character of title) {
+    if (heading.length + character.length > 149) break;
+    heading += character;
+  }
+  return `${heading}…`;
+};
+
 const buildSlackPayload = (event: RelayEvent) => {
-  const title = escapeSlackMrkdwn(event.title);
-  const message = escapeSlackMrkdwn(event.message);
-  const environment = escapeSlackMrkdwn(event.environment);
-  const level = escapeSlackMrkdwn(event.level);
-  const projectId = escapeSlackMrkdwn(event.projectId);
-  const issueId = escapeSlackMrkdwn(event.issueId);
-  const occurredAt = escapeSlackMrkdwn(event.occurredAt);
+  const heading = toSlackHeading(event.title);
+  const repeatedMessage =
+    event.message === event.title || event.title.endsWith(`: ${event.message}`);
+  const showMessage = heading !== event.title || !repeatedMessage;
+  const diagnostics = {
+    ...(event.app ? { app: event.app } : {}),
+    ...(event.failureKind ? { kind: event.failureKind } : {}),
+    ...(event.release ? { release: event.release } : {}),
+  };
+  const diagnosticEntries = Object.entries(diagnostics);
+  const tagText = Object.entries({
+    environment: event.environment,
+    level: event.level,
+    ...diagnostics,
+  })
+    .map(
+      ([key, value]) =>
+        `${key}: \`${key === "release" ? value.replace("oioi-bwg@", "").slice(0, 12) : value}\``,
+    )
+    .join("   ");
+  const occurredAt = event.occurredAt.replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+  const timestamp = Math.floor(Date.parse(event.occurredAt) / 1_000);
 
   return {
-    text: `[Sentry][${event.environment}] ${escapeSlackMrkdwn(event.title)}`,
+    text: [
+      `[Sentry][${event.environment}][${event.level}] ${escapeSlackMrkdwn(event.title)}`,
+      ...(repeatedMessage ? [] : [escapeSlackMrkdwn(event.message)]),
+      ...(diagnosticEntries.length
+        ? [diagnosticEntries.map(([key, value]) => `${key}=${value}`).join(" · ")]
+        : []),
+      `발생 ${occurredAt}`,
+      event.issueUrl,
+    ].join("\n"),
+    unfurl_links: false,
+    unfurl_media: false,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "Sentry new issue", emoji: true } },
-      { type: "section", text: { type: "mrkdwn", text: `*Title*\n${title}` } },
-      { type: "section", text: { type: "mrkdwn", text: `*Message*\n${message}` } },
       {
-        type: "section",
-        fields: [
-          { type: "mrkdwn", text: `*Environment*\n${environment}` },
-          { type: "mrkdwn", text: `*Level*\n${level}` },
-          { type: "mrkdwn", text: `*Project*\n${projectId}` },
-          { type: "mrkdwn", text: `*Issue*\n${issueId}` },
-          { type: "mrkdwn", text: `*Occurred at*\n${occurredAt}` },
-        ],
-      },
-      {
-        type: "actions",
+        type: "rich_text",
         elements: [
           {
-            type: "button",
-            text: { type: "plain_text", text: "Open in Sentry" },
-            url: event.issueUrl,
-            action_id: "open_sentry_issue",
+            type: "rich_text_section",
+            elements: [{ type: "link", url: event.issueUrl, text: heading, style: { bold: true } }],
           },
         ],
+      },
+      ...(showMessage
+        ? [{ type: "section", text: { type: "plain_text", text: event.message, emoji: false } }]
+        : []),
+      { type: "context", elements: [{ type: "mrkdwn", text: tagText, verbatim: true }] },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `발생 <!date^${timestamp}^{date_num} {time_secs}|${occurredAt}>`,
+          verbatim: true,
+        },
+        accessory: {
+          type: "button",
+          text: { type: "plain_text", text: "Sentry에서 보기" },
+          accessibility_label: "Sentry에서 오류 상세 보기",
+          url: event.issueUrl,
+          action_id: "open_sentry_issue",
+        },
       },
     ],
   };

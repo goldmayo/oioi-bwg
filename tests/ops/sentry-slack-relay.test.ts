@@ -59,6 +59,13 @@ const env = {
   SLACK_SENTRY_WEBHOOK_URL: SLACK_WEBHOOK_URL,
 };
 
+const captureSlackPayload = async (payload = baseEvent) => {
+  const slackFetch = vi.fn<typeof fetch>(async () => new Response("ok"));
+  expect((await handleSentryWebhook(await makeRequest(payload), env, slackFetch)).status).toBe(204);
+  expect(slackFetch).toHaveBeenCalledOnce();
+  return JSON.parse(String(slackFetch.mock.calls[0]?.[1]?.body));
+};
+
 describe("Sentry Slack relay", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -110,7 +117,7 @@ describe("Sentry Slack relay", () => {
     const serialized = JSON.stringify(slackPayload);
     expect(serialized).toContain("staging");
     expect(serialized).toContain("123456789");
-    expect(serialized).toContain("2026-09-20T09:10:11.000Z");
+    expect(serialized).toContain("2026-09-20 09:10:11 UTC");
     expect(serialized).toContain("token=[redacted]");
     expect(serialized).toContain("[redacted-email]");
     expect(serialized).toContain("[redacted-url]");
@@ -238,5 +245,163 @@ describe("Sentry Slack relay", () => {
     expect(response.headers.get("allow")).toBe("POST");
     expect(response.headers.get("access-control-allow-origin")).toBeNull();
     expect(slackFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("Slack message layout", () => {
+  it("puts the title first and keeps metadata, local time and the issue link compact", async () => {
+    const payload = await captureSlackPayload();
+    expect(payload.blocks.map((block: { type: string }) => block.type)).toEqual([
+      "rich_text",
+      "context",
+      "section",
+    ]);
+    expect(payload.blocks[0].elements[0].elements).toEqual([
+      {
+        type: "link",
+        text: "TypeError: Failed to fetch",
+        url: payload.blocks[2].accessory.url,
+        style: { bold: true },
+      },
+    ]);
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `staging`   level: `error`");
+    expect(payload.blocks[2].text.text).toBe(
+      "발생 <!date^1789895411^{date_num} {time_secs}|2026-09-20 09:10:11 UTC>",
+    );
+    expect(payload.blocks[2].accessory).toMatchObject({
+      type: "button",
+      text: { text: "Sentry에서 보기" },
+      accessibility_label: "Sentry에서 오류 상세 보기",
+      url: "https://oioi-bwg.sentry.io/organizations/oioi-bwg/issues/123456789/?project=42",
+    });
+    expect(payload.blocks.some((block: { fields?: unknown }) => block.fields)).toBe(false);
+    expect(payload.text).toContain("[Sentry][staging][error] TypeError: Failed to fetch");
+    expect(payload.text).toContain("발생 2026-09-20 09:10:11 UTC");
+    expect(payload.text).toContain(payload.blocks[2].accessory.url);
+    expect(payload).toMatchObject({ unfurl_links: false, unfurl_media: false });
+  });
+
+  it.each([
+    ["TypeError: Failed to fetch", "Failed to fetch", 0],
+    ["Failed to fetch", "Failed to fetch", 0],
+    ["TypeError", "A separate diagnostic message", 1],
+    ["TypeError", "", 0],
+  ] as const)(
+    "only adds a body when it contributes information: %s",
+    async (title, message, count) => {
+      const event = structuredClone(baseEvent);
+      event.data.event.title = title;
+      event.data.event.metadata.value = message;
+      const payload = await captureSlackPayload(event);
+      const body = payload.blocks.filter(
+        (block: { type: string; text?: { type: string } }) =>
+          block.type === "section" && block.text?.type === "plain_text",
+      );
+      expect(body).toHaveLength(count);
+      if (count) expect(body[0].text.text).toBe(message);
+    },
+  );
+
+  it.each(["가".repeat(150), "가".repeat(151), "😀".repeat(120)])(
+    "fits the display title budget without breaking Unicode or losing the full fallback title",
+    async (title) => {
+      const event = structuredClone(baseEvent);
+      event.data.event.title = title;
+      const payload = await captureSlackPayload(event);
+      const heading = payload.blocks[0].elements[0].elements[0].text;
+      expect(heading.length).toBeLessThanOrEqual(150);
+      expect(() => encodeURIComponent(heading)).not.toThrow();
+      expect(payload.text).toContain(title);
+      if (title.length <= 150) expect(heading).toBe(title);
+      else expect(heading).toMatch(/…$/);
+    },
+  );
+
+  it("keeps unknown environment and default severity visible", async () => {
+    const event = structuredClone(baseEvent);
+    event.data.event.tags = [["environment", "unrecognized"]];
+    event.data.event.level = "unrecognized";
+    const payload = await captureSlackPayload(event);
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `unknown`   level: `error`");
+  });
+
+  it("keeps a truncated title available without repeating it in the accessible fallback", async () => {
+    const event = structuredClone(baseEvent);
+    const title = "가".repeat(151);
+    event.data.event.title = title;
+    event.data.event.metadata.value = title;
+    const payload = await captureSlackPayload(event);
+    expect(payload.blocks[1].text).toMatchObject({ type: "plain_text", text: title });
+    expect(payload.text.split(title)).toHaveLength(2);
+  });
+});
+
+describe("Slack diagnostic tags and linked title", () => {
+  const release = `oioi-bwg@${"abcdef0123".repeat(4)}`;
+
+  it.each([
+    ["web", release],
+    ["console", { version: release, owner: "PRIVATE_OWNER_MARKER" }],
+  ] as const)(
+    "shows validated %s metadata and preserves the full release in the fallback",
+    async (app, incomingRelease) => {
+      const event = structuredClone(baseEvent);
+      event.data.event.tags.push(["app", app], ["failure.kind", "delivery"]);
+      Object.assign(event.data.event, { release: incomingRelease });
+      const payload = await captureSlackPayload(event);
+      expect(payload.blocks[1].elements[0].text).toBe(
+        `environment: \`staging\`   level: \`error\`   app: \`${app}\`   kind: \`delivery\`   release: \`abcdef0123ab\``,
+      );
+      expect(payload.text).toContain(`app=${app} · kind=delivery · release=${release}`);
+      expect(JSON.stringify(payload)).not.toContain("PRIVATE_OWNER_MARKER");
+    },
+  );
+
+  it.each([
+    undefined,
+    null,
+    "latest-PRIVATE_RELEASE_MARKER",
+    { version: "PRIVATE_RELEASE_MARKER" },
+  ])("omits invalid or absent diagnostic values without guessing", async (incomingRelease) => {
+    const event = structuredClone(baseEvent);
+    event.data.event.tags.push(
+      ["app", "private@example.test"],
+      ["failure.kind", "<!channel>"],
+      ["surface", "PRIVATE_SURFACE_MARKER"],
+    );
+    Object.assign(event.data.event, { release: incomingRelease });
+    const payload = await captureSlackPayload(event);
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `staging`   level: `error`");
+    expect(JSON.stringify(payload)).not.toMatch(
+      /private@example|<!channel>|PRIVATE_RELEASE_MARKER|PRIVATE_SURFACE_MARKER/,
+    );
+  });
+
+  it("omits ambiguous and malformed optional tags", async () => {
+    const event = structuredClone(baseEvent);
+    event.data.event.tags.push(
+      ["app", "web"],
+      ["app", "console"],
+      ["failure.kind", "contract", "EXTRA_VALUE_MARKER"],
+    );
+    const payload = await captureSlackPayload(event);
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `staging`   level: `error`");
+    expect(payload.text).not.toMatch(/app=|kind=|EXTRA_VALUE_MARKER/);
+  });
+
+  it("keeps link labels as literal text instead of interpreting markup or mentions", async () => {
+    const event = structuredClone(baseEvent);
+    const title = "App_Error: *bold* `code` | <@U123> <!channel> &";
+    event.data.event.title = title;
+    const payload = await captureSlackPayload(event);
+    expect(payload.blocks[0].elements[0].elements).toEqual([
+      {
+        type: "link",
+        text: title,
+        style: { bold: true },
+        url: payload.blocks.at(-1).accessory.url,
+      },
+    ]);
+    expect(payload.text).toContain("&lt;!channel&gt;");
   });
 });
