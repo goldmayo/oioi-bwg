@@ -1,7 +1,7 @@
 ---
 title: "Sentry 오류 알림 Slack relay 구현 결과"
 document_id: "SENTRY-SLACK-RELAY-RESULT"
-version: "1.5"
+version: "1.6"
 status: "completed"
 authority: "result"
 updated_at: "2026-10-22"
@@ -18,6 +18,9 @@ tags:
 ---
 
 # Sentry 오류 알림 Slack relay 구현 결과
+
+**현재 상태: 2026-10-22 새 알림 형식의 Worker 배포·실제 Slack 수신 완료.**
+현재 판정은 §11이 소유하며, §8~10의 미배포·사용자 수동 배포 대기는 당시 기록으로 보존한다.
 
 ## 1. 범위와 기존 구조 조사
 
@@ -254,3 +257,55 @@ branch 누적 diff의 400줄 목표 초과는 같은 알림 표시의 두 단위
 Console의 정상 인증 거부가 실제 로그인 이동/403 UX로 처리되는지와 탈출한 예외의 수집을 다룬다.
 별도 branch의 P1-A `56c2506`은 코드·검증 완료이나 미병합이므로 다음 단위에 들어가기 전 최신
 `migration_main`과 선행 변경 포함 여부를 재확인한다. 이번 Worker 배포 대기와 별개이며 아직 착수하지 않았다.
+
+## 11. 2026-10-22 새 알림 형식 배포와 실제 수신 완료
+
+사용자가 기존 배포 보류를 해제하고 Slack Worker 배포와 테스트 알림 **1건 전송**을 승인했다.
+기본 checkout과 앱 Sentry 작업을 보존하고, 별도 `feature/sentry-slack-message-layout` worktree의
+깨끗한 `0ab0923c5dbb59405cd18fc8cc7ef5cc065d3bc8`에서 기존 Worker를 업데이트했다.
+배포 코드 변경은 `f085fdbe5363b7b1aacec93a496c76e02a319a79`, Worker Git blob은
+`ca52ab8776ed3c7ffcdbd9148c46c816ff495d61`다. 이번 작업에서 Worker 코드는 수정하지 않았다.
+
+- [x] 기존 `oioi-bwg-sentry-slack-relay` 업데이트
+- [x] 배포 ref·Worker version·배포 시각과 100% 활성화 확인
+- [x] 실제 Sentry staging 새 issue → Worker → Slack의 새 형식 수신 확인
+
+| 실제 실행/관측 | 결과 |
+| --- | --- |
+| Wrangler `whoami` | 만료된 로컬 OAuth 로그인을 갱신한 뒤 기존 Worker가 있는 계정 확인 |
+| relay 단독 Vitest | 29건 성공. 이전 결과를 이번 실행으로 재사용하지 않음 |
+| Wrangler 4.135.0 `deploy --dry-run` | bundle 12.54 KiB / gzip 4.10 KiB 생성, 원격 변경 없이 종료 |
+| Wrangler 4.135.0 `deploy --keep-vars` | 기존 이름/주소로 배포 성공. version `4c6de6ec-4fec-4cfe-828f-e267ce7de640` |
+| 배포 API 재조회 | deployment `b8b3637d-acef-47f9-90cb-205116b29d5e`, 새 version 100% 활성 |
+| 배포 시각 | `2026-10-22T14:28:19.151328Z` = **2026-10-22 23:28:19 KST** |
+| secret 이름/type 전후 대조 | `SENTRY_WEBHOOK_SECRET`, `SLACK_SENTRY_WEBHOOK_URL`의 두 secret_text binding 동일 |
+| 실제 endpoint 거부 검사 | GET/OPTIONS 405, 무서명 POST 401, 잘못된 path 404 |
+| 단일 staging 진단 event 제출 | Sentry HTTP 200, event ID `48a06f64b928454da9b35024c609ee68` |
+| 새 Worker 관측 | POST 204, exception 0, 위 새 version ID와 일치 |
+| Slack 실제 수신 | `#oioi-sentry`, **2026-10-22 23:36:56 KST**, message TS `1792679816.294489` |
+
+테스트는 기존 Web DSN을 파일에서 읽어 기존 project `4512117278179328`과 일치하는지 검증한 뒤
+개인정보 없는 staging event를 정확히 한 번 제출했다. test marker는 `slack-layout-check-48a06f64`,
+새 issue는 [7806902379](https://sentry.io/organizations/oioibawige/issues/7806902379/?project=4512117278179328)다.
+제출 시각 23:36:14 KST부터 실제 Slack 수신까지 약 42초였다.
+[실제 테스트 알림](https://oioibawige.slack.com/archives/C0C2Q7J3K0R/p1792679816294489)을
+Slack 연결 도구의 채널 읽기와 고유 marker 검색으로 확인했다. 검색 결과는 1건이었다.
+
+기존 title/message의 필드 나열 대신 굵은 제목 링크, inline environment/level/app/kind, 발생 시각과
+상세 버튼이 Slack에 저장된 것을 확인했다. 테스트에 실제 앱 release를 넣지 않았으므로 release 표시는
+검증하지 않았다. 실제 모바일 픽셀 배치나 링크 클릭 뒤 Sentry 화면은 직접 확인하지 않았다.
+Windows UI 도구가 WSL 경로 오류로 시작되지 않아 해당 UI 검증을 성공으로 세지 않았다.
+
+최초 기본 urllib User-Agent의 403은 성공으로 세지 않았고, 명시적 진단 User-Agent로 위 거부 응답을
+확인했다. tail의 sampling-rate 1 옵션은 CLI가 거부해 제거했다. 최종 tail은 요청 헤더·서명·원문 URL·body를
+저장하지 않고 응답 status·version·exception 수만 남겼으며, 관측 후 종료했다.
+
+기존 secret 값이나 Slack webhook 주소를 읽거나 다시 등록/회전하지 않았다. 일반 변수는 `--keep-vars`로
+보존했고 개인 env는 읽기만 했다. 테스트 body에는 user·입력·cookie/token·raw cause·stack을 넣지 않았고
+DSN 원문은 출력하거나 증거 파일에 저장하지 않았다. Sentry 규칙/Integration·Slack 앱 이름·운영 DB·VM·Vault·
+OCI 앱 배포·PR 생성/병합은 변경하지 않았다. 앱 release/Debug ID/소스맵 실제 복원과 운영 알림 규칙 보완은
+이 Worker 배포로 완료 처리하지 않는다. §10의 미배포 브리핑 조건은 이번 배포·수신 확인으로 해제됐다.
+
+문서만 갱신했으므로 두 앱 build·전체 검사 세트를 별도로 다시 실행하지 않았다. 문서 format/diff와
+commit/push hook의 실제 결과는 각각의 실행 로그로 구분한다. 증거는 이 worktree의 ignored
+`.local/observability/slack-deploy/`에 있으며 secret/원문 webhook payload를 포함하지 않는다.
