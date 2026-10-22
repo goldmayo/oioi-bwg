@@ -1,20 +1,4 @@
-import dotenv from "dotenv";
+import { loadLocalDatabaseUrl } from "./local-database-environment";
 
-dotenv.config({ path: ["apps/web/.env.local", "apps/web/.env"] });
-
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required");
-}
-
-const { hostname } = new URL(databaseUrl);
-const allowedHosts = new Set(["localhost", "127.0.0.1", "postgres"]);
-
-if (!allowedHosts.has(hostname)) {
-  throw new Error(
-    `Refusing database operation for non-local host: ${hostname}. Local DB operations only.`,
-  );
-}
-
+const { hostname } = new URL(loadLocalDatabaseUrl(process.argv.slice(2)));
 console.log(`Local database guard passed: ${hostname}`);
