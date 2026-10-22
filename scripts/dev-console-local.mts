@@ -28,6 +28,26 @@ export function validateLocalConsoleEnvironment(values: Record<string, string>) 
     throw new Error("Console 로컬 실행은 Compose의 127.0.0.1:5432/oioibawige만 허용합니다.");
   if (!["http://127.0.0.1:3001", "http://localhost:3001"].includes(values.CONSOLE_ORIGIN ?? ""))
     throw new Error("CONSOLE_ORIGIN은 http://127.0.0.1:3001로 설정해주세요.");
+  const uploadKeys = [
+    "R2_ENDPOINT",
+    "R2_BUCKET",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "ASSETS_PUBLIC_BASE_URL",
+  ];
+  const missing = uploadKeys.filter((name) => !values[name]?.trim());
+  if (missing.length)
+    throw new Error(`Console 이미지 업로드 설정을 입력해주세요: ${missing.join(", ")}`);
+  for (const name of ["R2_ENDPOINT", "ASSETS_PUBLIC_BASE_URL"]) {
+    let url: URL;
+    try {
+      url = new URL(values[name]);
+    } catch {
+      throw new Error(`${name}에 올바른 HTTPS URL을 설정해주세요.`);
+    }
+    if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash)
+      throw new Error(`${name}에 올바른 HTTPS URL을 설정해주세요.`);
+  }
   const secret = values.CONSOLE_AUTH_SECRET ?? "";
   const encoded = values.CONSOLE_MFA_ENCRYPTION_KEY ?? "";
   const key = Buffer.from(encoded, "base64");
