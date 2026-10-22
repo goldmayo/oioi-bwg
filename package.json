@@ -39,7 +39,7 @@
     "dev:console:local": "tsx scripts/dev-console-local.mts",
     "test:integration:admin": "tsx scripts/run-postgres-integration-tests.ts --admin-smoke",
     "test:integration:admin:local": "docker compose -f compose.dev.yml up -d --wait postgres && tsx scripts/run-postgres-integration-tests.ts --local --admin-smoke",
-    "type-check:config": "tsc --noEmit -p config/tsconfig.json",
+    "type-check:config": "tsc --noEmit -p tsconfig.config.json",
     "type-check:scripts": "tsc --noEmit -p scripts/tsconfig.json"
   },
   "dependencies": {

@@ -2,7 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "cacheDir": "node_modules/.cache/turbo",
   "globalDependencies": [
-    "config/**",
+    "tsconfig.config.json",
     "harness/architecture/**",
     "eslint.config.ts",
     "steiger.config.ts",
