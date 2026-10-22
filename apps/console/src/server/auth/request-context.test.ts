@@ -3,14 +3,15 @@ import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { findConsoleAuthorizationFacts } from "@oioi-bwg/server/repositories/admin-mfa-repository";
 import { describe, expect, it, vi } from "vitest";
 
-import { getRequestContext, requireUser } from "./request-context";
+import { getRequestAuthorization, getRequestContext, requireUser } from "./request-context";
 
 import { auth } from "@/auth";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@oioi-bwg/server/db", () => ({ getDatabase: vi.fn() }));
+const facts = vi.hoisted(() => vi.fn());
 vi.mock("@oioi-bwg/server/repositories/admin-mfa-repository", () => ({
-  findConsoleAuthorizationFacts: vi.fn(),
+  findConsoleAuthorizationFacts: facts,
 }));
 
 const mockedAuth = vi.mocked(
@@ -108,5 +109,55 @@ describe("requireUser", () => {
     expect(() => requireUser({ user: null, ability: { can: () => false } as never })).toThrow(
       new AppError("UNAUTHENTICATED"),
     );
+  });
+});
+
+describe("AUTH-009 safe authorization decisions", () => {
+  it.each([
+    ["identity", "no_valid_identity", 0],
+    ["proof", "mfa_proof_missing", 0],
+    ["id", "invalid_identity", 0],
+    ["missing", "authorization_facts_missing", 1],
+    ["inactive", "account_inactive", 1],
+    ["role", "admin_role_required", 1],
+    ["disabled", "mfa_disabled", 1],
+    ["version", "mfa_version_mismatch", 1],
+    ["authorized", "authorized", 1],
+  ] as const)("keeps %s separate without additional DB reads", async (mode, decision, reads) => {
+    mockedAuth.mockResolvedValue(
+      mode === "identity"
+        ? null
+        : {
+            user: {
+              id: mode === "id" ? "0" : "42",
+              mfaVerified: mode !== "proof",
+              mfaVersion: 1,
+            },
+          },
+    );
+    facts.mockClear();
+    facts.mockResolvedValue(
+      mode === "missing"
+        ? undefined
+        : {
+            id: 42n,
+            role: mode === "role" ? "USER" : "ADMIN",
+            status: mode === "inactive" ? "SUSPENDED" : "ACTIVE",
+            enabledAt: mode === "disabled" ? null : "2026-10-10T00:00:00Z",
+            version: mode === "version" ? 2 : 1,
+          },
+    );
+    const state = await getRequestAuthorization();
+    expect(state.decision).toBe(decision);
+    expect(state.context.user !== null).toBe(mode === "authorized");
+    expect(facts).toHaveBeenCalledTimes(reads);
+    expect(state.context).not.toHaveProperty("decision");
+  });
+
+  it("keeps a facts database failure as the original exception", async () => {
+    mockedAuth.mockResolvedValue({ user: { id: "42", mfaVerified: true, mfaVersion: 1 } });
+    const error = new Error("database outage");
+    facts.mockRejectedValueOnce(error);
+    await expect(getRequestAuthorization()).rejects.toBe(error);
   });
 });

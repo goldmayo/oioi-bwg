@@ -35,6 +35,7 @@ describe("reportAuthError", () => {
     expect(mockedReportServerError).toHaveBeenCalledWith(error, {
       event: "auth.failure",
       source: "auth-js",
+      route: "/api/auth/[...nextauth]",
       error: { type: "auth", code: "AUTH_FAILURE" },
     });
     expect(JSON.stringify(mockedReportServerError.mock.calls[0]?.[1])).not.toMatch(

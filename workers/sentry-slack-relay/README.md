@@ -23,10 +23,45 @@ Slack에는 다음 값만 새 객체로 구성해 전달한다.
 - issue ID와 project ID
 - event 경로와 query/hash를 제거한 `https://*.sentry.io/.../issues/<issue-id>/?project=<validated-project-id>` 링크
 - ISO 8601 발생 시각
+- 선택적 `app` tag: `web`, `console`
+- 선택적 `failure.kind` tag: `contract`, `delivery`, `system`, `unknown`
+- 선택적 release: `oioi-bwg@<소문자 40자리 Git SHA>`
 
 Sentry payload의 user/email, request, headers, body, cookie/token, raw cause, arbitrary extras,
 exception/전체 stack trace는 읽어서 Slack payload로 복사하지 않는다. application Sentry sanitizer가
 첫 번째 privacy 경계이며 이 Worker는 Slack 전송 전 두 번째 allowlist 경계다.
+
+## 알림 표시
+
+오류 제목은 [Slack rich text link](https://docs.slack.dev/reference/block-kit/block-elements/link-element/)로
+굵게 표시하고 누르면 검증된 Sentry 이슈로 이동한다. 제목과 URL을 별도 필드로 보내므로 문구의 `|`,
+backtick, mention 표기가 링크 문법이나 실제 mention으로 해석되지 않는다.
+title과 같은 내용이거나 `오류 타입: message`의 반복인 message는 생략한다. 별도의 진단 내용은 본문에
+유지하며 제목이 150자를 넘으면 Unicode를 끊지 않고 줄인다. 기존 240자 제한의 전체 정제 제목은
+알림/스크린 리더용 fallback에 유지한다. 150자는 간결한 표시를 위한 자체 기준이며 rich text의 API 한도가 아니다.
+진단 본문은 `plain_text`로 보내 임의 markup을 실행하지 않는다.
+
+설명 아래에 `environment: staging`, `level: error`를 기본으로, 유효한 `app`, `kind`, `release`를
+inline code 값으로 묶는다. `app`/`failure.kind`는 event의 tuple 배열 tags에서 해당 key가 한 번만
+나오고 위 enum과 일치할 때만 사용한다. 누락·중복·형식 오류는 추정해서 채우지 않고 생략한다.
+다른 시스템의 임의 `kind`나 raw URL·사용자 정보·함수명·경로를 추가로 가져오지 않는다.
+
+release는 `event.release` 문자열 또는 `event.release.version`에서 정해진 형식만 읽는다.
+본문에는 SHA 앞 12자, fallback에는 전체 release를 남긴다. Worker의 Git HEAD·현재 배포 SHA로 대체하지 않는다.
+일반 제목/설명 redaction으로 release를 우회 전달하지 않고 별도 검증된 필드만 사용한다.
+앱 producer가 아직 전달하지 않는 값은 표시되지 않는다. 이 Worker 변경은 앱의 Sentry 수집 코드를 수정하지 않는다.
+
+발생 시각은 [Slack 날짜 형식](https://docs.slack.dev/messaging/formatting-message-text/#date-formatting)으로
+보는 사람의 기기 시간대에 표시한다. 해석하지 못하는 client에는 UTC가 명시된 fallback을 제공한다.
+숫자 project/issue ID는 본문에서 빼고 검증된 상세 링크에 유지한다. `Sentry에서 보기` 버튼으로 이동한다.
+불필요한 링크 preview는 끄고 위 진단 정보·제목·추가 메시지·시각·링크는 top-level fallback에도 남긴다.
+이 relay의 action은 이슈 열기다. Resolve·Archive·담당자 선택은 공식 Sentry Slack 연동의 관리 기능이며,
+이번 형식에 동작하지 않는 관리 버튼이나 새 관리 API/token을 넣지 않는다.
+
+화면의 `SLACK_SENTRY_WEBHOOK_URL` 발신자 이름과 아이콘은 payload로 바꿀 수 없다.
+[Incoming Webhook 규격](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/)에 따라
+기존 Slack 앱 설정의 표시 이름·아이콘을 바꾼다. 예를 들어 이름은 `바위게 오류 알림`으로 정할 수 있다.
+이 코드 변경은 Slack 앱 설정을 수정하지 않으며 Worker를 별도로 배포한 뒤 새 알림부터 적용된다.
 
 `SLACK_DEPLOY_WEBHOOK_URL`은 OCI 배포 결과 알림 전용이다. 이 Worker는 Cloudflare Worker Secret인
 `SLACK_SENTRY_WEBHOOK_URL`만 사용하며 GitHub Actions 또는 OCI application secret을 공유하지 않는다.
@@ -62,6 +97,8 @@ body는 Content-Length 사전 검사와 실제 stream byte 누적 제한(1,000,0
 
 ## 3. Worker deploy
 
+### 최초 설치
+
 이 디렉터리에서 로그인한 뒤 아래 Python 예제를 실행한다. Python 3가 필요하다.
 저장소 밖 `/tmp`에 mode 600 임시 JSON 파일을 만들고, 숨김 입력으로 값을 받은 뒤
 첫 deploy에 `--secrets-file`로 전달한다. 성공·실패·일반적인 중단 시 파일은 제거된다.
@@ -94,8 +131,34 @@ with tempfile.TemporaryDirectory(prefix="sentry-relay-", dir="/tmp") as director
 PYTHON
 ```
 
-이후 코드 배포는 `pnpm dlx wrangler@4.135.0 deploy`를 사용한다.
-이미 배포한 Worker의 secret 회전은 대화형 입력으로 수행한다.
+### 기존 Worker 코드 업데이트
+
+기존 연동이 설정되어 있다면 최초 설치나 secret 등록을 반복하지 않는다. 배포할 코드가 있는 checkout의
+저장소 루트에서 시작한다. 아래 상태·기록을 확인하고 다른 작업의 checkout이면 배포를 멈춘다.
+이번 알림 디자인의 코드 ref와 배포 대기 상태는
+[결과 문서 §10](../../docs/migration/implementation/SENTRY-SLACK-RELAY-RESULT.md#10-2026-10-22-사용자-수동-배포-대기)을 따른다.
+
+```bash
+git status --short --branch
+git log -1 --oneline
+cd workers/sentry-slack-relay
+pnpm dlx wrangler@4.135.0 whoami
+pnpm dlx wrangler@4.135.0 deploy --keep-vars
+```
+
+`whoami`에서 기존 `oioi-bwg-sentry-slack-relay`가 있는 Cloudflare 계정인지 확인한다. 로그인하지
+않았다면 `pnpm dlx wrangler@4.135.0 login` 뒤 다시 확인한다. `--keep-vars`는 대시보드의 일반
+변수를 보존하고, 기존 두 Worker secret도 다시 입력하거나 회전하지 않는다. Worker 이름·계정을
+유지하면 기존 `/webhooks/sentry` 주소와 Sentry integration·Slack webhook을 재설정할 필요가 없다.
+
+배포 출력의 version ID·시각을 기록하고 아래 6절에 따라 새 알림의 제목 링크·표시·개인정보 제거를
+확인한다. 새 형식은 이후 수신하는 알림에 적용되며 과거 Slack 메시지는 바뀌지 않는다. 기존 issue의
+재발생은 new-issue rule의 수신 검증이 아니므로 test notification 또는 안전한 새 staging issue를 사용한다.
+배포 성공과 실제 Slack 수신은 따로 기록한다. OCI 앱 배포·Promotion은 이 Worker 업데이트에 필요하지 않다.
+
+### 기존 secret 회전
+
+secret 회전이 별도로 필요한 경우에만 대화형 입력으로 수행한다.
 
 ```bash
 pnpm dlx wrangler@4.135.0 secret put SLACK_SENTRY_WEBHOOK_URL

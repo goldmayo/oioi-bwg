@@ -6,7 +6,14 @@ const getRequestContext = vi.hoisted(() => vi.fn());
 const saveSongLyrics = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/server/auth/request-context", () => ({ getRequestContext }));
+vi.mock("@/server/auth/request-context", () => ({
+  getRequestContext,
+  getRequestAuthorization: async () => ({
+    context: await getRequestContext(),
+    decision: "unknown",
+    rejectionLogged: false,
+  }),
+}));
 vi.mock("@oioi-bwg/server/services/song-service", () => ({ saveSongLyrics }));
 vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
