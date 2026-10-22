@@ -76,7 +76,7 @@ describe("Sentry Slack relay", () => {
   });
 
   it("uses the Worker module fetch entry without treating ExecutionContext as fetch", async () => {
-    const slackFetch = vi.fn(async () => new Response("ok", { status: 200 }));
+    const slackFetch = vi.fn<typeof fetch>(async () => new Response("ok", { status: 200 }));
     vi.stubGlobal("fetch", slackFetch);
 
     const response = await worker.fetch(await makeRequest(), env);
@@ -101,7 +101,7 @@ describe("Sentry Slack relay", () => {
       exception: { values: [{ stacktrace: "full-stack-secret" }] },
       extra: { arbitrary: "extra-secret" },
     });
-    const slackFetch = vi.fn(async () => new Response("ok", { status: 200 }));
+    const slackFetch = vi.fn<typeof fetch>(async () => new Response("ok", { status: 200 }));
 
     const response = await handleSentryWebhook(await makeRequest(payload), env, slackFetch);
 

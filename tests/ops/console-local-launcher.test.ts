@@ -80,7 +80,7 @@ describe("Console 로컬 실행 경계", () => {
     },
   );
 
-  it.each([
+  it.each<Record<string, string>>([
     { CONSOLE_AUTH_SECRET: "" },
     { AUTH_SECRET: local.CONSOLE_AUTH_SECRET },
     { CONSOLE_MFA_ENCRYPTION_KEY: local.CONSOLE_MFA_ENCRYPTION_KEY + "\n" },

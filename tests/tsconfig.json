@@ -1,0 +1,10 @@
+{
+  "extends": "../config/typescript/node.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true
+  },
+  "include": ["ops/**/*.ts", "integration/*.postgres.test.ts", "mocks/**/*.ts"],
+  "exclude": ["integration/m7-foundation.postgres.test.ts"]
+}

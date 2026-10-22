@@ -24,6 +24,7 @@ export function markdownOnly(raw) {
   return true;
 }
 
+/** @param {{ eventName?: string, event?: { pull_request?: { base?: { ref?: string, sha?: string }, head?: { sha?: string } } }, local?: boolean, cwd?: string }} [options] */
 export function docsOnly({ eventName, event, local = false, cwd = process.cwd() } = {}) {
   try {
     const env = Object.fromEntries(

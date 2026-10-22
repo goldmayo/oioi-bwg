@@ -41,11 +41,11 @@ test("AUTH-009 rejects invalid MFA states and accepts reset, pending, and enable
   ] as const;
   for (const [secret, enabledAt, step, version, constraint] of invalid) {
     await expect(
-      client`insert into admin_mfa values (${id}, ${secret}, ${enabledAt}, ${step}, ${version})`,
+      client`insert into admin_mfa values (${id.toString()}, ${secret}, ${enabledAt}, ${step}, ${version})`,
     ).rejects.toMatchObject({ code: "23514", constraint_name: constraint });
   }
   await expect(
-    client`insert into admin_mfa (account_id, version) values (${id}, null)`,
+    client`insert into admin_mfa (account_id, version) values (${id.toString()}, null)`,
   ).rejects.toMatchObject({ code: "23502" });
   expect(await mfa.incrementAdminMfaVersion(database, id)).toEqual([{ version: 1 }]);
   expect(await mfa.ensurePendingAdminMfa(database, id, "cipher")).toMatchObject({
@@ -67,7 +67,9 @@ test("AUTH-009 rejects invalid MFA states and accepts reset, pending, and enable
 test("AUTH-009 enforces account PK/FK and RESTRICT to preserve the tombstone reference", async () => {
   const id = await createAccount();
   await mfa.incrementAdminMfaVersion(database, id);
-  await expect(client`insert into admin_mfa (account_id) values (${id})`).rejects.toMatchObject({
+  await expect(
+    client`insert into admin_mfa (account_id) values (${id.toString()})`,
+  ).rejects.toMatchObject({
     code: "23505",
     constraint_name: "admin_mfa_pkey",
   });
@@ -75,7 +77,7 @@ test("AUTH-009 enforces account PK/FK and RESTRICT to preserve the tombstone ref
     code: "23503",
     constraint_name: "admin_mfa_account_id_fkey",
   });
-  await expect(client`delete from account where id = ${id}`).rejects.toMatchObject({
+  await expect(client`delete from account where id = ${id.toString()}`).rejects.toMatchObject({
     code: "23503",
     constraint_name: "admin_mfa_account_id_fkey",
   });

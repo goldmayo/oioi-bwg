@@ -556,7 +556,7 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
     for (const role of [null, "USER", "REVIEWER"] as const) {
       const context = requestContext(role);
       const code = role === null ? "UNAUTHENTICATED" : "FORBIDDEN";
-      const operations = [
+      const operations: (() => Promise<unknown>)[] = [
         () => albums.listAdminAlbums(context),
         () => albums.createAlbum(context, albumInput("m7-denied-album")),
         () => albums.editAlbum(context, 1, albumInput("m7-denied-album")),
