@@ -36,6 +36,10 @@ services:
       - .:/app
       - node_modules:/app/node_modules
       - web_node_modules:/app/apps/web/node_modules
+      - console_node_modules:/app/apps/console/node_modules
+      - config_node_modules:/app/packages/config/node_modules
+      - contracts_node_modules:/app/packages/contracts/node_modules
+      - server_node_modules:/app/packages/server/node_modules
       - next_cache:/app/apps/web/.next
     depends_on:
       postgres:
@@ -45,4 +49,8 @@ volumes:
   postgres_data:
   node_modules:
   web_node_modules:
+  console_node_modules:
+  config_node_modules:
+  contracts_node_modules:
+  server_node_modules:
   next_cache:

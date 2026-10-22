@@ -142,7 +142,12 @@ cp apps/web/.env.example apps/web/.env.local
 
 Web은 비로그인 공개 조회 앱이므로 DB와 앱별 공개 설정만 준비한다. Supabase Auth·R2 업로드·메일 설정을 요구하지 않는다. 기존 개인 env 파일은 덮어쓰지 않는다.
 
+개발 이미지는 root·Web·Console·config·contracts·server의 manifest로 전체 workspace를 frozen install한다.
+소스 bind mount 후에도 각 workspace의 node_modules는 전용 volume에서 유지한다. `next`는 Web 개발
+서버이며 Console은 위의 별도 local launcher를 사용한다. 실행 환경은 명시적 local이다.
+
 ```bash
+docker compose -f compose.dev.yml build next
 docker compose -f compose.dev.yml up -d postgres
 docker compose -f compose.dev.yml up -d next
 docker compose -f compose.dev.yml exec next pnpm db:migrate
@@ -194,13 +199,21 @@ pnpm install --frozen-lockfile
 ```
 
 컨테이너의 dependency volume을 갱신해야 할 경우에는 DB volume을 삭제하지 말고, `next`
-컨테이너와 `node_modules` volume만 재생성한다. volume의 정확한 이름은 먼저 확인한다.
+컨테이너와 여섯 의존성 volume만 재생성한다. 대상은 `node_modules`, `web_node_modules`,
+`console_node_modules`, `config_node_modules`, `contracts_node_modules`, `server_node_modules`다.
+현재 Compose project와 volume의 정확한 이름을 확인하며 `postgres_data`와 `next_cache`는 보존한다.
+아래 `<PROJECT>`는 `docker compose ls`에서 확인한 실제 프로젝트명으로 대체한다.
+새 volume은 image의 설치 내용을 복사하지만 기존 volume은 image rebuild만으로 갱신되지 않는다.
+[Docker volume의 초기 내용 복사](https://docs.docker.com/engine/storage/volumes/#mounting-a-volume-over-existing-data)를 따른다.
 
 ```bash
 docker compose -f compose.dev.yml stop next
 docker compose -f compose.dev.yml rm -sf next
-docker volume ls --format '{{.Name}}' | rg 'node_modules'
-docker volume rm <현재-프로젝트의-node_modules-volume>
+docker compose ls
+docker volume ls --filter 'label=com.docker.compose.project=<PROJECT>' --format '{{.Name}}'
+docker volume rm '<PROJECT>_node_modules' '<PROJECT>_web_node_modules' \
+  '<PROJECT>_console_node_modules' '<PROJECT>_config_node_modules' \
+  '<PROJECT>_contracts_node_modules' '<PROJECT>_server_node_modules'
 docker compose -f compose.dev.yml up -d --build next
 ```
 
