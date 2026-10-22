@@ -40,7 +40,7 @@ created_at: "2026-10-22"
 | [x] | CFG-06 | root/pre-commit/package가 동일한 server/contracts 경계 규칙을 적용한다. 실제 lintText 회귀로 확인했다. |
 | [x] | CFG-07 | 누락된 운영 .ts 8개를 strict 타입 검사에 포함했다. 기존 .mts NodeNext 검사는 유지하고 repo/CI/push 경로의 실제 오류 검출과 소스별 검사 소속을 검증했다. |
 | [x] | TEST-01 | 두 앱이 각자의 Vitest root·alias·include를 소유한다. 공통 browser preset/setup과 root의 프로젝트 선택 책임을 분리하고 수집 파일·환경 보존을 검증했다. |
-| [ ] | TEST-02 | 대기 |
+| [x] | TEST-02 | root unit·coverage의 실행 대상을 네 workspace로 맞췄다. Turbo와 같은 81파일·410건을 실행하며 환경·제외·alias를 보존한다. coverage 측정 경로는 TEST-03에서 수정한다. |
 | [ ] | TEST-03 | 대기 |
 | [ ] | TEST-04 | 대기 |
 | [ ] | RUN-01 | 대기 |
@@ -291,3 +291,54 @@ created_at: "2026-10-22"
   개인 env 파일과 운영 자원은 변경하지 않았다. 실제 DB 실행·standalone smoke는 추가하지 않았다.
 - 앞 절의 build 미실행은 당시 기록으로 보존한다. 이번 build 로그는
   `.local/monorepo-config/vitest-ownership/build.log`에 보존하며 TEST-02~04의 완료 판정은 바꾸지 않는다.
+
+### 4단계 두 번째 단위 — TEST-02 루트 실행 범위
+
+- 진입 기준: `99d4428816be36878b084c03c17606b3a7251858`. fetch 후 로컬과 같은 이름의 원격
+  작업 브랜치가 같고 작업 트리가 깨끗함을 확인했다. `origin/migration_main`은 `4d5e42d`다.
+  [두 번째 단위 계획](MONOREPO-CONFIGURATION-PLAN.md#4단계-두-번째-단위--test-02-루트-실행-범위)에
+  따라 TEST-02의 실행 범위를 정리했다. 원문 38개 중 완료 9개, 대기 29개다.
+  구현과 이 기록은 같은 커밋에 포함하며 이전 이력과 PLAN 원문 매핑은 보존했다.
+- root Vitest의 `projects`는 두 앱과 두 package의 실제 `vitest.config.ts`를 선택한다.
+  `test:unit`과 `test:coverage`는 기존 명령 그대로 같은 프로젝트 구성을 사용하고,
+  `test:unit:run`·CI·verify·push hook의 Turbo workspace 실행은 유지했다.
+  repo ops·PostgreSQL integration·관리자 E2E는 기존 별도 명령에서만 실행한다.
+- contracts/server config에 자기 root를 명시하고 두 파일을 config strict 검사에 포함했다.
+  앱별 alias/include는 앱에, package별 include/globals/marker mock은 해당 package에 유지한다.
+  Node package 둘의 globals 차이와 기존 browser preset은 바꾸지 않았다.
+- [공식 v4 projects 문서](https://v4.vitest.dev/guide/projects)와 설치된 Vitest 4.1.2의
+  설정 해석·수집 API를 확인했다. root 실행 범위 조정과 coverage 측정 경로 조정은 구분한다.
+  기존 coverage include는 그대로이며 측정 파일 0개 문제는 TEST-03에 남아 있다.
+
+실행한 로컬 검증:
+
+- 변경 전후 Web 24·Console 39·contracts 1·server 17개 파일의 실제 목록·exclude·alias·setup·
+  globals·jsdom/Node·pool·isolation·timeout·worker 옵션을 비교했다. 각 workspace의 설정과
+  파일 목록은 동일하며 root는 이 81개 파일의 중복 없는 합집합을 수집한다.
+  ops 21개와 PostgreSQL integration 4개 파일의 별도 수집/환경도 동일하다.
+- `pnpm test:unit --run`, `pnpm test:coverage`: 각각 81파일·410건 성공.
+  JSON reporter와 별도 출력 경로로 실제 실행 파일·이름별 테스트 결과까지 대조해 일치함을 확인했다.
+  coverage에는 JSON 측정 reporter도 지정했다. 실제 측정 파일은 0개이며 전체 테스트 실행 성공을
+  측정 범위가 충분하다는 근거로 사용하지 않는다.
+- `pnpm test:unit:run`: contracts 3 + server 88 + Web 93 + Console 226 = 410건 성공.
+  81개 파일을 실행했고 Turbo 캐시 사용은 0개다. 루트 두 명령의 실제 실행 결과와 대조했다.
+- `pnpm type-check`(repo/config/scripts 포함), `pnpm lint`, `pnpm lint:fsd`,
+  `pnpm test:harness` 29건: 성공. 신규 회귀는 실제 Turbo dry-run의 test task 명령·cwd를 기준으로
+  workspace별 수집 결과를 구하고, 루트 unit·coverage 명령을 Vitest `parseCLI`로 해석해
+  프로젝트별 파일·alias·실행 환경·제외 규칙이 같은지 검사한다. 고정 테스트 수만 비교하지 않는다.
+- `pnpm build --force`: 두 앱의 컴파일·타입 검사·정적 페이지 생성·standalone 구성 성공,
+  Turbo 2개 task 성공·캐시 사용 0개. Sentry 업로드·telemetry를 끄고 local 앱 환경과
+  접속 불가능한 loopback DB·임시 Console 인증 입력을 사용했다. 실제 DB·standalone smoke는 미실행이다.
+- `pnpm format:check`, `git diff --check`: 성공. 실효 설정·수집 목록·JSON 결과·명령 로그는
+  `.local/monorepo-config/workspace-unit/`에 보존한다.
+
+리팩토링 점검:
+
+- 별도 runner·새 preset·의존성·설정 복제 없이 Vitest의 기존 `projects`로 실행 대상을 조합했다.
+  glob은 실제 workspace 진입점만 선택하며 root에 앱 alias/include/environment를 다시 정의하지 않았다.
+- 수집 회귀는 기존 Turbo 명령을 기준으로 하므로 한쪽 명령만 특정 workspace를 빠뜨리거나
+  browser setup을 Node에 적용하면 실패한다. 기존 앱별 root/alias 회귀도 유지한다.
+- Next/Sentry/DB/env 코드·dependency/lockfile·개인 env·DB 볼륨·MFA 키·운영 자원은 변경하지 않았다.
+  TEST-04의 Web HTTP adapter alias와 consumer도 유지했다.
+- 다음 단위는 TEST-03의 실제 coverage 측정 경로다. TEST-04는 별도로 유지하고 이번 단위에서
+  PR 생성·병합·배포는 하지 않는다.

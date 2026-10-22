@@ -164,3 +164,22 @@ workspace/repo 검사 책임을 유지하며 누락된 운영 `.ts` 스크립트
 - 변경 전후 수집 파일 전체·제외 범위·실행 환경을 비교하고 앱 cwd/루트의 명시적 config 실행을 검증한다.
   기본 타입/lint/FSD/harness/unit/format, root unit/coverage의 현행 동작을 실제 실행한다.
   앱 runtime/build·DB·개인 env·운영 설정은 변경하지 않는다.
+
+## 4단계 두 번째 단위 — TEST-02 루트 실행 범위
+
+기준은 `99d4428816be36878b084c03c17606b3a7251858`다. 헌법 §5와 Testing §17·18에 따라
+루트 unit·coverage가 실행하는 테스트를 기존 Turbo workspace test의 합집합과 맞춘다.
+
+- 변경 전 실효 설정·수집 파일을 `.local/monorepo-config/workspace-unit/before.json`에 기록했다.
+  root는 Web 24개, workspace 전체는 Web 24 + Console 39 + contracts 1 + server 17 = 81개다.
+- root `projects`는 `apps/*/vitest.config.ts`와 `packages/*/vitest.config.ts`를 선택한다.
+  unit의 watch 진입점과 coverage 명령은 이 설정을 공유하고, CI의 `test:unit:run`은 기존 Turbo를
+  유지한다. repo ops·PostgreSQL·관리자 E2E는 기존의 별도 명령에 남긴다.
+- Node package 두 곳도 자신의 root를 명시하고 config strict 검사에 포함한다.
+  각 workspace의 alias·include·environment·globals·setup·timeout은 그대로 유지한다.
+  browser preset과 별개인 Node globals/실행 책임을 이번 단위에서 재설계하지 않는다.
+- 세 루트 명령의 실제 수집 파일·환경·제외 범위를 비교하고 unit·coverage를 각각 실행한다.
+  TEST-03의 오래된 coverage include는 보존하며, 전체 테스트 실행 성공과 측정 파일 0개 문제를
+  구분해 기록한다. API·DB·앱 runtime 설정은 바꾸지 않고 TEST-04 alias도 유지한다.
+- 기본 타입/lint/FSD/harness/unit/format과 두 앱 build를 실제 실행한다.
+  결과 기록·리팩토링 점검 후 같은 브랜치에 새 커밋을 만들고 hook을 생략하지 않고 push한다.
