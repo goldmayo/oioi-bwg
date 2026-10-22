@@ -502,3 +502,58 @@ created_at: "2026-10-22"
   공통 build 조립은 후속 단위이며 OBS-01/02·env·Docker 정리는 대기다.
 - 개인 env·DB 볼륨·MFA 키와 운영 DB·VM·Vault·secret은 변경하지 않았다.
   이번 단위의 커밋·push 후 멈추며 PR 생성·병합·배포는 하지 않는다.
+
+### Next build 두 번째 단위 — Sentry 옵션 조립
+
+- 진입 기준: `18cc91ab173ee8ce87f9e3639b33d58fb70cb8a4`. HEAD·같은 이름의 원격 추적 ref·
+  실제 원격 작업 브랜치가 일치하고 작업 트리가 깨끗함을 확인했다. 원격 `migration_main` 기준은
+  `4d5e42d`다. [두 번째 단위 계획](MONOREPO-CONFIGURATION-PLAN.md#next-build-두-번째-단위--sentry-옵션-조립)에
+  따라 공통 옵션 조립만 분리했다. 원문 38개 ID와 완료 12개·대기 26개는 그대로다.
+  DSN·프로젝트 공유 판단과 예제 정리인 OBS-01/02를 이 보조 단위의 완료로 합산하지 않는다.
+  구현과 이 결과 기록은 같은 커밋에 포함한다.
+- `config/sentry-build.ts`는 검증된 네 문자열을 받아 기존 Sentry build 옵션을 반환한다.
+  두 앱은 `getSentryBuildConfig()`·활성화 분기·`withSentryConfig()`를 자기 entry에 유지한다.
+  telemetry false, route manifest 비활성화, 경고 억제, 업로드 오류 재전파, release 생성/확정,
+  `.next/**/*.map` 삭제 패턴을 보존했다. 삭제 경로를 공통 파일 위치로 재해석하지 않는다.
+- 공통 함수는 env·앱 소스·SDK를 import하지 않는다. 기존 config strict 프로그램이 새 `.ts`와 두 앱
+  entry의 SDK 호출 호환성을 검사한다. root SDK dependency·새 타입 경로 연결·lockfile 변경은 없다.
+  `routeManifestInjection`의 `as const`는 SDK가 허용하는 literal false로 타입만 좁힌다.
+- 설치된 `@sentry/nextjs` 10.42.0의 구현·타입과
+  [같은 버전의 공식 옵션 정의](https://github.com/getsentry/sentry-javascript/blob/10.42.0/packages/nextjs/src/config/types.ts)를
+  대조했다. 실제 SDK는 옵션 object를 수정할 수 있으므로 호출마다 새 object와 nested 값을 생성한다.
+
+실행한 로컬 검증:
+
+- 변경 전후 신규 경계 회귀 3건이 모두 성공했다. 기존 esbuild로 실제 앱 entry·공통 정책·앱 env parser를
+  메모리에서 조합하고 SDK 호출 경계만 대체했다. 업로드 스위치 미설정/false/대문자 TRUE의 우회,
+  앱별 입력과 trim, Console 인증 옵션, release 생성/확정, 삭제 패턴, 누락 입력·잘못된 release 거절을
+  확인했다. 가짜 업로드 오류가 같은 object로 다시 throw되는지도 검사했다. 외부 SDK 업로드는 없다.
+- 별도 snapshot에서 SDK에 전달하는 전체 Next/Sentry 옵션과 실제 SDK 활성 조립 결과를 두 앱에서
+  각각 비교했다. 총 4개 설정이 전후 일치했다. 실제 SDK 검사는 가짜 입력과 Turbopack 모드로
+  compile hook이 생성되는 것까지만 확인했으며 hook을 호출하지 않았다. 직렬화한 설정에 가짜 build
+  token이 포함되지 않고 release가 유지됨도 확인했다. 실제 업로드·빌드 산출물의 secret 검증과 구분한다.
+- `pnpm exec turbo run type-check lint test --concurrency=4`: 12개 task 성공·캐시 사용 0개.
+  unit은 81파일·410건(contracts 3 + server 88 + Web 93 + Console 226)이다.
+  병행한 `pnpm type-check:repo`(root/config/scripts)·`pnpm lint:repo`도 성공했다.
+- workspace 검사 후 `pnpm test:harness` 34건·`pnpm lint:fsd`·`pnpm format:check` 성공.
+  기존 Turbo 회귀에 새 공통 파일을 추가해 변경 시 두 앱의 type-check/lint/test/build가 모두 선택되고
+  hash가 바뀜을 확인했다. harness와 workspace/build는 겹쳐 실행하지 않았다.
+- 변경 전후 `pnpm build --force --env-mode=loose`: 각각 두 앱 컴파일·타입 검사·정적 페이지 생성·
+  standalone 구성 성공, Turbo 2개 task 성공·캐시 사용 0개다. `required-server-files.json`의 전체
+  Next config와 두 앱의 standalone `apps/<앱>/server.js`·static 경로를 대조해 일치함을 확인했다.
+  Sentry 업로드·runtime 수집·telemetry를 끄고 local 환경, 접속 불가능한 loopback DB, 임시 Console
+  인증 입력을 사용했다. 이번 단위의 실제 DB 조회/CRUD·browser smoke·전체 관리자 E2E와 Sentry
+  외부 업로드·실제 token 권한·업로드 후 map 삭제 동작은 미검증이다.
+- snapshot·SDK 경계/활성 조립·검사/build 로그는 `.local/monorepo-config/sentry-build/`에 보존한다.
+  `git diff --check`도 성공했다.
+
+리팩토링 점검:
+
+- 공통화는 실제로 복제된 옵션에 한정했다. SDK 호출과 앱별 활성화 판단을 숨기는 wrapper나
+  범용 merge·새 runner를 만들지 않았다. 공통 파일에 process env cache나 고정 org/project를 넣지 않았다.
+- 두 앱 env parser·server Sentry 초기화·서버/클라이언트 instrumentation은 기준 소스와 byte가 같다.
+  request adapter·runtime 오류 분류와 Next 공통 정책·Console 인증 옵션도 변경하지 않았다.
+  기존 `config/**` Turbo 입력과 Docker source 복사를 유지하며 CI·hook·배포 도구의 코드는 그대로다.
+- 원문 매핑과 과거 기록을 보존했고 env·DB 도구·Docker·관측 입력 정리는 후속 단위로 남겼다.
+  개인 env·DB 볼륨·MFA 키와 운영 DB·VM·Vault·secret은 변경하지 않았다.
+  이번 단위의 커밋·push 후 멈추며 PR 생성·병합·배포는 하지 않는다.

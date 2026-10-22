@@ -244,3 +244,23 @@ Runtime §11·12.1과 배포 runbook §14·21에 따라 동일한 Next build 정
 `sentry-build` import를 찾지 못했다. 실제 CLI build는 성공했다. root/app cwd 12개 조합은 기존
 `tsx`로 앱 export를 비교하고, 실제 Next loader 결과는 변경 전후 build가 저장한
 `required-server-files.json`의 전체 config와 standalone 경로로 별도 대조한다.
+
+## Next build 두 번째 단위 — Sentry 옵션 조립
+
+기준은 `18cc91ab173ee8ce87f9e3639b33d58fb70cb8a4`다. 헌법 §5·11, Testing §14·17,
+Runtime §12.1·14와 배포 runbook §21에 따라 두 앱이 복제한 Sentry build 옵션만 공통화한다.
+
+- `config/sentry-build.ts`는 검증된 authToken·org·project·release를 받아 기존 옵션을 반환한다.
+  telemetry·route manifest·경고 억제·업로드 오류 재전파·release 생성/확정·map 삭제 정책을 보존한다.
+  공통 함수가 env나 SDK를 직접 읽거나 앱 소스를 import하지 않게 한다.
+- 앱별 `getSentryBuildConfig()`와 활성화 분기, `withSentryConfig()` 호출은 각 `next.config.ts`에
+  유지한다. Console 인증 옵션과 Next 공통 정책, instrumentation·request adapter·runtime 오류
+  분류, env 예제·CI·Docker·dependency/lockfile은 변경하지 않는다.
+- 변경 전후 실제 앱 entry가 SDK에 전달하는 전체 Next/Sentry 옵션을 가짜 업로드 입력으로 비교한다.
+  SDK 경계만 대체해 외부 전송 없이 비활성 우회·앱별 입력·누락/잘못된 release 거절·오류 재전파를
+  검사한다. 실제 SDK의 활성 설정 조립도 build hook 실행 없이 별도로 대조한다.
+- 기존 config strict 검사와 Turbo 공통 입력을 사용한다. 새 파일 변경이 두 앱의 검사/build를
+  선택하고 hash를 바꾸는 회귀를 추가한다. 새 wrapper framework나 공통 SDK dependency는 만들지 않는다.
+- 승인한 workspace/repo 검사, harness/FSD/format과 두 앱 실제 build를 실행하고 최종 설정·standalone
+  경로를 비교한다. 실제 build에서는 업로드를 끄고 임시 local 입력을 사용한다. 검증·점검 결과를
+  RESULT에 추가한 뒤 같은 브랜치에 새 커밋을 push하고 멈춘다. PR·병합·배포는 하지 않는다.
