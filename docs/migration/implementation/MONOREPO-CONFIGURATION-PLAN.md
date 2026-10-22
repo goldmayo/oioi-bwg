@@ -131,3 +131,18 @@ Rendering/Query §29.2·35에 맞춰 다음 변경을 한 단위로 검증한다
 - Web/Console HTTP transport에 `client-only`를 선언한다. 실제 import graph 회귀와 기존 API·
   consumer 테스트, 타입/lint/FSD/harness/unit/format, 양쪽 Next build로 경계를 검증한다.
 - Next/Vitest/DB 설정·운영 스크립트 전체 TS 검사·운영 자원은 이 단계에서 변경하지 않는다.
+
+## 3단계 실행 범위 — CFG-07 운영 TypeScript 검사
+
+기준은 `4e012b9fb611a730ff420b81a5c8b97391722db5`다. 헌법 §5·14와 Testing §17의
+workspace/repo 검사 책임을 유지하며 누락된 운영 `.ts` 스크립트 8개를 strict 검사에 포함한다.
+
+- 기존 root `tsconfig.json`의 `.mts` launcher·worker에 대한 NodeNext 검사는 보존한다.
+  `scripts/tsconfig.json`은 기존 Node preset을 상속하고 `tsx` 실행·esbuild bundle의 확장자 없는
+  import에 맞춰 ESNext/Bundler를 사용한다. JS 도구 전체를 변환하거나 검사 범위에 추가하지 않는다.
+- `type-check:scripts`를 `type-check:repo`에 연결해 `pnpm type-check`·verify·CI·push hook의
+  기존 진입점에서 실행한다. 새 검사로 드러난 오류는 타입 계약을 정확히 표현하는 범위로 수정한다.
+- tracked 운영 TS 파일의 실제 타입 프로그램 소속을 회귀 검사하고 잘못된 타입이 기존 repo 명령에서
+  거절되는지 확인한다. DB·MFA·VM·Vault 관련 운영 명령은 실행하지 않는다.
+- 타입/lint/FSD/harness/unit/format 및 필요한 ops 회귀 후 중복 설정·검사 누락·런타임 영향 여부를
+  점검하고 결과를 별도로 추가한다. Vitest·coverage·PostgreSQL alias는 TEST-01~04에서 처리한다.

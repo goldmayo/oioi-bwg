@@ -34,12 +34,13 @@
     "test:spike": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/spike.js",
     "release": "release-it",
     "lint:repo": "eslint . --ignore-pattern \"apps/**\"",
-    "type-check:repo": "tsc --noEmit -p tsconfig.json && pnpm type-check:config",
+    "type-check:repo": "tsc --noEmit -p tsconfig.json && pnpm type-check:config && pnpm type-check:scripts",
     "dev:console": "pnpm --filter @oioi-bwg/console dev",
     "dev:console:local": "tsx scripts/dev-console-local.mts",
     "test:integration:admin": "tsx scripts/run-postgres-integration-tests.ts --admin-smoke",
     "test:integration:admin:local": "docker compose -f compose.dev.yml up -d --wait postgres && tsx scripts/run-postgres-integration-tests.ts --local --admin-smoke",
-    "type-check:config": "tsc --noEmit -p config/tsconfig.json"
+    "type-check:config": "tsc --noEmit -p config/tsconfig.json",
+    "type-check:scripts": "tsc --noEmit -p scripts/tsconfig.json"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",

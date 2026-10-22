@@ -38,7 +38,7 @@ created_at: "2026-10-22"
 | [x] | CFG-04 | entities/*/api 공개 entry를 허용한다. alias·상대 경로의 내부 파일 우회와 같은 레이어의 다른 slice 참조는 회귀 검사로 차단한다. |
 | [x] | CFG-05 | 네 Album/Song root에서 browser Query/Mutation을 분리하고 양쪽 HTTP transport에 client-only를 적용했다. RSC 거절 검사·정상 build·standalone browser smoke로 검증했다. |
 | [x] | CFG-06 | root/pre-commit/package가 동일한 server/contracts 경계 규칙을 적용한다. 실제 lintText 회귀로 확인했다. |
-| [ ] | CFG-07 | 대기 |
+| [x] | CFG-07 | 누락된 운영 .ts 8개를 strict 타입 검사에 포함했다. 기존 .mts NodeNext 검사는 유지하고 repo/CI/push 경로의 실제 오류 검출과 소스별 검사 소속을 검증했다. |
 | [ ] | TEST-01 | 대기 |
 | [ ] | TEST-02 | 대기 |
 | [ ] | TEST-03 | 대기 |
@@ -176,3 +176,51 @@ created_at: "2026-10-22"
   import graph와 Next 음성 검증이 서로 다른 경계 실패를 검출한다.
 - Next/Vitest/DB 설정, 개인 env·볼륨·MFA 키, 운영 DB·VM·Vault·secret은 변경하지 않았다.
   다음 단계는 CFG-07 및 TEST-01~04의 검사 범위와 테스트 책임 정리다. 최종 PR은 전체 작업 후 생성한다.
+
+### 3단계 — CFG-07 운영 TypeScript 검사
+
+- 진입 기준: `4e012b9fb611a730ff420b81a5c8b97391722db5`. fetch 후 로컬과 같은 이름의
+  원격 작업 브랜치가 같고 작업 트리가 깨끗함을 확인했다. 이전 계획·검증 이력은 보존했다.
+  원문 38개 항목 중 CFG-07을 추가 완료해 누적 완료 7개, 대기 31개다.
+- 기존 root 타입 프로그램은 `scripts/dev-console-local.mts`와 Sentry relay worker `.mts`만
+  포함했다. NodeNext 검사와 기존 공통 설정 18개의 strict 검사는 그대로 유지한다.
+- `scripts/tsconfig.json`은 기존 Node preset을 상속하고 ESNext/Bundler·`allowJs: false`를 적용한다.
+  `tsx` 실행과 esbuild bundle이 사용하는 확장자 없는 import를 검사하며 JS 도구를 포함하지 않는다.
+  `type-check:scripts`를 `type-check:repo`에 연결해 기존 type-check·verify·CI·push hook에서 실행한다.
+- 새 프로그램은 운영 `.ts` 8개와 타입 보완 선언 1개를 포함한다. 기존 `.mts` 2개와 합쳐 tracked
+  운영 TypeScript 소스 10개에 누락이 없는지 harness가 실제 compiler root 목록과 대조한다.
+- 최초 검사에서 migration·runtime role 스크립트의 TS2349/TS2345를 발견했다.
+  설치된 postgres 3.4.8의 `Omit<Sql, ...>`이 transaction 호출 서명을 잃는
+  [공식 이슈 #1143](https://github.com/porsager/postgres/issues/1143)와 일치한다.
+  스크립트 프로그램의 `scripts/types/postgres.d.ts`에 사용 중인 tagged query·문자열 식별자 호출만
+  보완했다. 연결 전용 `begin`/`end`는 추가하지 않으며 upstream 수정 버전 적용 시 제거한다.
+- 두 스크립트의 transaction 내부 helper 인자를 `Sql`에서 실제 `TransactionSql`로 수정했다.
+  SQL·권한·lock·migration 순서·드라이버 버전·dependency/lockfile은 변경하지 않았다.
+
+실행한 로컬 검증:
+
+- `pnpm type-check:scripts`, `pnpm type-check`(기존 repo/config 및 새 scripts 검사 포함),
+  `pnpm lint`, `pnpm lint:fsd`: 성공. 최초 lint에서 외부 선언의 기본 제네릭 `{}` 중복 표기를
+  지적해 보완 선언에서는 원본 default를 상속하도록 정리한 뒤 다시 통과했다.
+- `pnpm test:harness`: 26건 성공. 신규 2건은 운영 소스 누락과 transaction 타입 계약을 보호한다.
+  잘못된 값·행 필드 타입, 직렬화 불가능한 SQL 입력, transaction의 연결 API 참조가 거절되고
+  정상 식별자 조립은 허용되는지 메모리 안의 compiler fixture로 확인했다.
+- 임시 운영 `.ts`에 잘못된 값을 넣고 실제 `pnpm type-check:repo`를 실행해 TS2322로 실패함을
+  확인했다. 직접 만든 임시 파일은 종료 시 제거했다. 운영 스크립트 본문은 실행하지 않았다.
+- `pnpm test:unit:run`: contracts 3 + server 88 + Web 93 + Console 226 = 410건 성공.
+- 두 스크립트의 변경 전 기준과 변경 후 소스를 esbuild로 변환해 생성 JavaScript가 각각 동일함을
+  확인했다. 타입 선언과 검사 연결만 바뀌었으므로 이번 단계의 앱 build·standalone smoke는 미실행이다.
+  앞 단계의 build/smoke 성공을 이번 변경의 실행 결과로 재사용하지 않는다.
+- `pnpm format:check`, `git diff --check`: 성공. 최초 실패·최종 성공·음성 검사·출력 비교 로그는
+  `.local/monorepo-config/script-types/`에 보존한다.
+
+리팩토링 점검:
+
+- root의 NodeNext와 scripts의 실행 방식을 섞지 않고 기존 Node preset을 재사용했다.
+  별도 runner·설정 framework·runtime wrapper·새 dependency는 추가하지 않았다.
+- 타입 보완은 스크립트 프로그램에 한정하며 호출 서명을 한 곳에서 소유한다. `any`, 강제 cast,
+  타입 검사 억제로 오류를 숨기지 않고 transaction 전용 계약을 회귀 검사로 유지한다.
+- 두 helper 파일의 생성 JavaScript가 동일하므로 DB 실행·인가·환경 로딩 동작은 유지된다.
+  DB·MFA 운영 명령, 개인 env·볼륨·키, VM·Vault·secret은 변경하거나 실행하지 않았다.
+- TEST-01~04의 Vitest entry·unit/coverage 범위·PostgreSQL alias 정리는 대기다.
+  다음 작업은 TEST-01~03을 작은 단위로 나눠 진행하고 TEST-04의 실제 Web adapter consumer를 보존한다.
