@@ -199,7 +199,14 @@ async function main() {
       packageManager,
       adminSmoke
         ? ["exec", "node", "tests/ops/admin-migration-smoke.mjs"]
-        : ["exec", "vitest", "run", "--config", "vitest.postgres.config.ts", "--reporter=verbose"],
+        : [
+            "exec",
+            "vitest",
+            "run",
+            "--config",
+            "tests/integration/vitest.config.ts",
+            "--reporter=verbose",
+          ],
       childEnvironment,
     );
   } catch (error) {
