@@ -153,6 +153,8 @@ test("shared mocks and source packages select and invalidate both apps verificat
     "tests/mocks/server-only.ts",
     "config/eslint/app.ts",
     "config/steiger.ts",
+    "config/vitest/browser.ts",
+    "config/vitest/browser.setup.ts",
     "packages/contracts/src/song.ts",
     "packages/server/src/services/song-service.ts",
   ]) {

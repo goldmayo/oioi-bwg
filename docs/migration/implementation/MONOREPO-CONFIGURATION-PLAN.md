@@ -146,3 +146,21 @@ workspace/repo 검사 책임을 유지하며 누락된 운영 `.ts` 스크립트
   거절되는지 확인한다. DB·MFA·VM·Vault 관련 운영 명령은 실행하지 않는다.
 - 타입/lint/FSD/harness/unit/format 및 필요한 ops 회귀 후 중복 설정·검사 누락·런타임 영향 여부를
   점검하고 결과를 별도로 추가한다. Vitest·coverage·PostgreSQL alias는 TEST-01~04에서 처리한다.
+
+## 4단계 첫 단위 — TEST-01 앱별 Vitest 소유권
+
+기준은 `d8713c59d44cb9ff5a9603f4693638546849169c`다. 헌법 §5·11·14와 Testing §17·18에
+따라 설정 소유권을 먼저 분리한다. TEST-02/03의 실행·측정 범위 변경은 다음 단위로 남긴다.
+
+- 실제 Vitest 4.1.2 수집 API로 root Web 24·Console 39·server 17·contracts 1·ops 21·PostgreSQL
+  4개 파일을 확인했다. 두 앱은 jsdom, 나머지는 Node다. 파일 목록·exclude·setup·alias·timeout과
+  coverage 설정을 `.local/monorepo-config/vitest-ownership/before.json`에 기록했다.
+- 두 앱에서 실제 중복인 globals/jsdom/css/setup만 `.ts` browser preset으로 옮긴다.
+  Node 설정은 globals·timeout·직렬 실행 책임이 다르므로 이번 단위에서 강제로 합치지 않는다.
+- Web도 앱 내부 `vitest.config.ts`로 실행한다. 각 앱의 root·alias·include는 앱이 소유하고
+  root는 Web 프로젝트 선택과 기존 coverage 정책만 유지한다. 전체 workspace 확대는 TEST-02다.
+- 기존 공통 browser setup은 preset 옆으로 이동하고 절대 경로로 연결한다. config strict 검사와
+  Turbo 공통 입력을 갱신한다. TEST-03의 오래된 coverage include와 TEST-04의 Web adapter alias는 유지한다.
+- 변경 전후 수집 파일 전체·제외 범위·실행 환경을 비교하고 앱 cwd/루트의 명시적 config 실행을 검증한다.
+  기본 타입/lint/FSD/harness/unit/format, root unit/coverage의 현행 동작을 실제 실행한다.
+  앱 runtime/build·DB·개인 env·운영 설정은 변경하지 않는다.

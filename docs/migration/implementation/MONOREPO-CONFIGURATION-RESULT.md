@@ -39,7 +39,7 @@ created_at: "2026-10-22"
 | [x] | CFG-05 | 네 Album/Song root에서 browser Query/Mutation을 분리하고 양쪽 HTTP transport에 client-only를 적용했다. RSC 거절 검사·정상 build·standalone browser smoke로 검증했다. |
 | [x] | CFG-06 | root/pre-commit/package가 동일한 server/contracts 경계 규칙을 적용한다. 실제 lintText 회귀로 확인했다. |
 | [x] | CFG-07 | 누락된 운영 .ts 8개를 strict 타입 검사에 포함했다. 기존 .mts NodeNext 검사는 유지하고 repo/CI/push 경로의 실제 오류 검출과 소스별 검사 소속을 검증했다. |
-| [ ] | TEST-01 | 대기 |
+| [x] | TEST-01 | 두 앱이 각자의 Vitest root·alias·include를 소유한다. 공통 browser preset/setup과 root의 프로젝트 선택 책임을 분리하고 수집 파일·환경 보존을 검증했다. |
 | [ ] | TEST-02 | 대기 |
 | [ ] | TEST-03 | 대기 |
 | [ ] | TEST-04 | 대기 |
@@ -224,3 +224,59 @@ created_at: "2026-10-22"
   DB·MFA 운영 명령, 개인 env·볼륨·키, VM·Vault·secret은 변경하거나 실행하지 않았다.
 - TEST-01~04의 Vitest entry·unit/coverage 범위·PostgreSQL alias 정리는 대기다.
   다음 작업은 TEST-01~03을 작은 단위로 나눠 진행하고 TEST-04의 실제 Web adapter consumer를 보존한다.
+
+### 4단계 첫 단위 — TEST-01 앱별 Vitest 소유권
+
+- 진입 기준: `d8713c59d44cb9ff5a9603f4693638546849169c`. fetch 후 로컬과 같은 이름의 원격
+  작업 브랜치가 같고 작업 트리가 깨끗함을 확인했다. `origin/migration_main`은 `4d5e42d`다.
+  로컬 `migration_main`의 오래된 `5135f6e`를 재판정 기준으로 사용하지 않았다.
+- [4단계 계획](MONOREPO-CONFIGURATION-PLAN.md#4단계-첫-단위--test-01-앱별-vitest-소유권)에
+  따라 TEST-01만 완료했다. 원문 38개 ID를 유지하며 누적 완료 8개, 대기 30개다.
+  구현과 이 기록은 같은 커밋에 포함한다. 이전 계획·결과 이력은 보존했다.
+- Web에 앱 전용 `vitest.config.ts`를 추가하고 package test가 앱 cwd에서 실행되도록 했다.
+  두 앱은 각자 명시적 root·`@`/marker mock alias·include를 소유하며 다른 앱을 import하지 않는다.
+  root Vitest는 Web 프로젝트 선택과 기존 coverage 정책만 유지한다. root unit/coverage의 전체
+  workspace 확대는 TEST-02, 없는 coverage 경로 수정은 TEST-03으로 남겼다.
+- 실제로 중복된 globals/jsdom/css/setup을 `config/vitest/browser.ts`로 분리했다.
+  공통 setup은 옆의 `browser.setup.ts`로 이동했고 comment 외 동작은 동일하다.
+  절대 setup 경로와 앱 config의 root 지정으로 실행 cwd에 따른 경로 변화를 없앴다.
+  Node 설정은 globals·timeout·직렬 실행 책임이 달라 이번 단위에서는 합치지 않았다.
+- preset/setup·root/앱 Vitest entry를 기존 config strict 타입 검사에 포함했다.
+  Turbo는 기존 `config/**` 입력을 사용하며 없어진 root setup 입력만 제거했다.
+  preset과 setup 각각의 변경이 두 앱의 검사 task 선택·hash를 바꾸는 회귀를 추가했다.
+
+실행한 로컬 검증:
+
+- 설치된 Vitest 4.1.2의 `createVitest`/`globTestSpecifications`와
+  [공식 v4 설정 문서](https://v4.vitest.dev/config/),
+  [coverage 문서](https://v4.vitest.dev/config/coverage)를 확인했다.
+  변경 전후 파일 전체 목록·exclude·alias·setup·환경·timeout·worker 옵션을 비교했다.
+  Web 24·Console 39·server 17·contracts 1·ops 21·PostgreSQL 4개 파일이 각각 동일하다.
+  앱들은 jsdom, 나머지는 Node이며 소스에 별도 환경 override 지시는 없다.
+- root가 `projects`를 사용하면서 Vitest가 자동 생성하는 coverage exclude 표현은 달라졌다.
+  명시적 include/provider/reporter/출력 위치 정책은 보존했고 실제 측정 파일 목록도 전후 동일했다.
+  변경 전 `pnpm exec vitest run --coverage`, 변경 후 `pnpm test:coverage`에 JSON reporter와
+  별도 로컬 출력 경로를 지정해 실행했다. 각각 Web 24파일·93건 통과, 측정 파일은 모두 0개다.
+  이를 coverage가 충분하다는 근거로 사용하지 않으며 TEST-03의 실제 수정 대상으로 남긴다.
+- `pnpm test:unit --run`: Web 24파일·93건 성공. `pnpm test:unit:run`: 81파일·410건 성공
+  (contracts 3 + server 88 + Web 93 + Console 226, Turbo 캐시 사용 0개).
+  루트 명령의 현행 Web 범위와 workspace 전체 실행의 차이는 TEST-02에서 처리한다.
+- `pnpm type-check:config`, `pnpm type-check`(repo/config/scripts 포함), `pnpm lint`,
+  `pnpm lint:fsd`, `pnpm test:harness` 28건: 성공. 새 harness 2건은 루트 cwd에서 앱 config를
+  해석해 실제 수집 목록과 앱 root·alias·browser 환경·setup·기본 제외 경계를 검사한다.
+  최초 strict 검사에서 preset의 잘못된 타입 export 이름을 발견해 설치된 v4의 `TestUserConfig`로
+  수정했다. 강제 cast·타입 검사 억제·새 dependency는 추가하지 않았다.
+- `pnpm format:check`, `git diff --check`: 성공. 수집 비교·실행 로그는
+  `.local/monorepo-config/vitest-ownership/`에 보존한다.
+
+리팩토링 점검:
+
+- 공통화는 실제 중복인 browser 정책과 setup에 한정했다. factory·wrapper·새 테스트 framework 없이
+  Vitest의 `defineConfig`/`projects`/`test` 어휘를 유지한다. 앱 root·alias·include를 preset에 넣지 않았다.
+- 앱 테스트 수뿐 아니라 수집 파일 전체와 제외/환경/경로를 비교했다. Node에 browser setup을
+  적용하지 않았고 TEST-04의 PostgreSQL Web HTTP adapter alias와 실제 consumer는 유지했다.
+- 앱 runtime·Next/Sentry/DB/env 설정, dependency/lockfile, 기존 JS 도구의 언어는 바꾸지 않았다.
+  이번 단위의 앱 build·standalone smoke·실제 PostgreSQL 실행·운영 연결은 미실행이다.
+  개인 env·DB 볼륨·MFA 키와 운영 DB·VM·Vault·secret은 변경하지 않았다.
+- 다음 단위는 TEST-02의 root unit/coverage workspace 범위 정리다. TEST-03/04는 별도 단위로
+  유지하며 전체 작업 완료 전 PR 생성·병합·배포는 하지 않는다.

@@ -10,7 +10,7 @@
     "lint": "eslint . && pnpm lint:fsd",
     "lint:fsd": "NODE_OPTIONS=\"${NODE_OPTIONS:+$NODE_OPTIONS }--import tsx\" steiger src --config steiger.config.ts",
     "type-check": "tsc --noEmit --incremental false",
-    "test": "pnpm --dir ../.. exec vitest run"
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@casl/ability": "^7.0.1",

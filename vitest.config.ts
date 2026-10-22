@@ -1,20 +1,9 @@
-import path from "path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./apps/web/src"),
-      "client-only": path.resolve(__dirname, "./tests/mocks/client-only.ts"),
-      "server-only": path.resolve(__dirname, "./tests/mocks/server-only.ts"),
-    },
-  },
   test: {
-    globals: true,
-    environment: "jsdom",
-    setupFiles: "./vitest.setup.ts",
-    include: ["apps/web/src/**/*.test.{ts,tsx}"],
-    css: true,
+    // TEST-02에서 workspace 전체로 확대하기 전까지 기존 Web 실행 범위를 유지한다.
+    projects: ["apps/web/vitest.config.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

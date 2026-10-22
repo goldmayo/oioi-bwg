@@ -7,7 +7,6 @@
     "eslint.config.ts",
     "steiger.config.ts",
     "vitest.config.ts",
-    "vitest.setup.ts",
     "tests/mocks/**"
   ],
   "tasks": {
