@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import { createSentryBuildOptions } from "../../config/sentry-build";
+import { createSentryBuildOptions } from "@oioi-bwg/config/sentry-build";
 
 describe("GitHub Actions OCI Run Command deployment", () => {
   test("uses local verification builds and production VM candidates", async () => {

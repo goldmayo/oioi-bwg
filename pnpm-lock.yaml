@@ -24,6 +24,9 @@ importers:
       '@feature-sliced/steiger-plugin':
         specifier: 0.7.0
         version: 0.7.0(typescript@5.9.3)
+      '@oioi-bwg/config':
+        specifier: workspace:*
+        version: link:packages/config
       '@oioi-bwg/contracts':
         specifier: workspace:*
         version: link:packages/contracts
@@ -223,6 +226,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@oioi-bwg/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.2.1
@@ -338,6 +344,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@oioi-bwg/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.2.1
@@ -369,12 +378,61 @@ importers:
         specifier: ^4.1.2
         version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@20.19.37)(jsdom@29.0.1(@noble/hashes@2.4.0))(msw@2.12.10(@types/node@20.19.37)(typescript@5.9.3))(vite@8.0.2(@types/node@20.19.37)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.2))
 
+  packages/config:
+    dependencies:
+      '@feature-sliced/steiger-plugin':
+        specifier: 0.7.0
+        version: 0.7.0(typescript@5.9.3)
+      '@testing-library/jest-dom':
+        specifier: ^6.9.1
+        version: 6.9.1
+      eslint:
+        specifier: ^9
+        version: 9.39.4(jiti@2.6.1)
+      eslint-config-next:
+        specifier: 16.4.1
+        version: 16.4.1(@typescript-eslint/parser@8.56.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@9.39.4(jiti@2.6.1))
+      eslint-plugin-boundaries:
+        specifier: ^6.0.1
+        version: 6.0.1(@typescript-eslint/parser@8.56.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))
+      eslint-plugin-simple-import-sort:
+        specifier: ^12.1.1
+        version: 12.1.1(eslint@9.39.4(jiti@2.6.1))
+      eslint-plugin-unused-imports:
+        specifier: ^4.4.1
+        version: 4.4.1(@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))
+      globals:
+        specifier: ^16.4.0
+        version: 16.4.0
+      steiger:
+        specifier: 0.6.0
+        version: 0.6.0(typescript@5.9.3)
+      typescript-eslint:
+        specifier: 8.56.1
+        version: 8.56.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
+      vitest:
+        specifier: ^4.1.2
+        version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@20.19.39)(jsdom@29.0.1(@noble/hashes@2.4.0))(msw@2.12.10(@types/node@20.19.39)(typescript@5.9.3))(vite@8.0.2(@types/node@20.19.39)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.2))
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   packages/contracts:
     dependencies:
       zod:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@oioi-bwg/config':
+        specifier: workspace:*
+        version: link:../config
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -415,6 +473,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@oioi-bwg/config':
+        specifier: workspace:*
+        version: link:../config
       '@types/node':
         specifier: ^20
         version: 20.19.39

@@ -61,17 +61,17 @@ created_at: "2026-10-22"
 
 현재 원문 38개는 **처리 26개·대기 12개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01·ENV-10·DB-01/02를 더했다.
 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
-별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01·CFG-10·TEST-05는 처리됐으며 나머지 5개는 검토/대기다.
+별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01·CFG-08/09/10·TEST-05는 처리됐으며 나머지 3개는 검토/대기다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
 등록 당시 조사와 아래 현재 완료 근거를 구분하며, 다른 대기 항목의 구현 완료로 확대하지 않는다.
 
 | 점검 | ID | 범위 | 현재 상태와 후속 기준 |
 | --- | --- | --- | --- |
 | [x] | BASE-01 | Sentry 통합 기준선 | #196/#197/#198을 반영한 #200의 4443d64에서 전체 gate·두 앱 build/browser smoke, 최종 head 68d7756의 전체 CI가 성공했다. 4b08beb squash 결과와 검증 tree 일치를 확인했다. 운영 수신/소스맵은 별도다. |
-| [ ] | CFG-08 | 공통 config workspace 패키지 | packages/config 한 개로 시작하는 구조 제안이다. manifest·exports·소비자 의존성·도구 소유권·실행 호환성 검토와 구현은 대기다. |
-| [ ] | CFG-09 | workspace 간 import 계약 | 명시적 package entry로 상대경로를 대체하는 제안이다. 앱 내부 alias·slice 내부 상대경로·파일시스템 경로 계산은 구분하며 변경은 대기다. |
+| [x] | CFG-08 | 공통 config workspace 패키지 | private @oioi-bwg/config가 실제 공통 factory·preset·rule/mock·직접 도구 의존성과 자체 타입/lint를 소유한다. root/app 자동 탐색 entry와 env 해석은 consumer에 유지했다. |
+| [x] | CFG-09 | workspace 간 import 계약 | root·두 앱·server/contracts가 workspace 개발 의존성과 공개 subpath로 소비한다. 실제 Next/ESLint/Steiger/Vitest/tsx·cwd·Turbo/hash·두 앱 build/standalone을 확인했다. |
 | [x] | CFG-10 | 루트 설정 TS 검사 | Drizzle·ops Vitest 두 설정을 기존 config 타입 프로그램에 포함했다. 실제 TS2322 검출과 repo/CI/hook 공통 entry를 확인했다. |
-| [x] | TEST-05 | 루트 tests TS 검사 | DB 회귀 추가 후 root TS 29개를 Node 28·Web adapter 1개 프로그램으로 분리했다. strict 검사·단일 소속·alias 격리와 기존 ops/실제 DB 회귀를 확인했다. |
+| [x] | TEST-05 | 루트 tests TS 검사 | 최초 29개를 Node/Web으로 분리했고 현재 marker 2개는 config 자체 검사로 이동했다. root 27개는 Node 26·Web 1개로 strict 검사·단일 소속·alias 격리를 확인한다. |
 | [ ] | RUN-03 | Worker workspace 소유권 | 독립 배포 서비스의 apps/sentry-slack-relay 이동·패키지 등록 제안이다. 기존 workers 위치도 유효하며 경로·검사·배포 경계 정리는 대기다. |
 | [ ] | TEST-06 | tests 위치·책임 정리 | 총 52개 파일의 검증 대상을 분류했다. root 통합 검증은 유지하고 Worker·server 전용 테스트·Web 성능 테스트·공통 mock의 소유권 분리는 검토 대기다. |
 | [ ] | UI-03 | 정상화 이후 공통 UI | 정상화와 최종 통합 검증 뒤 별도로 실제 재사용을 조사한다. 패키지 선생성·일괄 이관을 승인하거나 완료한 상태가 아니다. |
@@ -1091,3 +1091,40 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 원문 처리 26/대기 12, 추가 처리 3/대기 5다. 다음은 CFG-08/09 공통 설정의 private workspace
   package·공개 entry·의존성·loader 검증이며 이후 RUN-01 개발 Docker 설치를 검증한다. Worker/test
   위치·UI 추출·향후 계정·메일 재활성화·운영 배포·#199 F 전환은 이번 단위에서 제외한다.
+
+## 2026-10-23 CFG-08/09 — 공통 tooling package의 실제 소비 경계
+
+- root 타입 검사 [#205](https://github.com/goldmayo/oioi-bwg/pull/205)는 최종 head
+  `50c254d41f734cff373655a3778c599d1265dadb`의 [CI #501](https://github.com/goldmayo/oioi-bwg/actions/runs/39844122951)
+  전체 성공과 리뷰/보호 조건 확인 후 `b386c50585257a46f15bc3e5cfeaa92baa75a102`로 squash 병합했다.
+  fetch한 병합 tree와 검증 head의 일치 확인 후 `feature/monorepo-config-workspace`를 분기했다.
+- private @oioi-bwg/config 한 개가 공통 Next/Sentry build·ESLint/Steiger·Vitest·TS preset,
+  ESLint core/helper·Vitest marker mock을 소유한다. root와 두 앱·server/contracts가 workspace 개발
+  의존성과 명시적 exports로 소비한다. 직접 도구 의존성·자체 type-check/checkJs·lint를 선언했으며
+  lockfile은 새 importer/link 61줄만 추가했다. 기존 package/snapshot 버전은 변경하지 않았다.
+- root/app 자동 탐색 entry와 앱 env·request/instrumentation adapter는 유지했다. root 타입 orchestration은
+  config/tsconfig.json, package 자체 소스 검사는 package tsconfig가 소유한다. Node lint와 PostgreSQL
+  project root는 consumer가 전달한다. marker와 browser setup은 package 내부에 있어 root tests를
+  역참조하지 않는다. TEST-06 중 이 marker 두 개만 결합했고 Worker/서버 DB/k6의 위치는 보류다.
+- 실제 Vitest config loader의 외부 TS entry 실행 실패를 확인해 두 factory만 ESM JavaScript로 제공했다.
+  JSDoc @satisfies·checkJs·strict 검사를 유지하고 실제 설정 shape만 공개해 peer 내부 nominal type
+  결합을 피했다. 전역 loader·별도 사전 빌드를 추가하지 않았다. Next·ESLint·Steiger·tsx TS 해석도
+  실제 실행했다. 공통 tooling의 앱/서버/계약 runtime 유입은 기존 lint 경계와 회귀로 거절한다.
+  헌법 v2.17·index·package README에 소유권과 entry·검사 책임을 기록했다.
+- prod Docker install 단계에 새 package manifest를 포함했다. Turbo/이미지 판정은 새 workspace를
+  인식한다. 실제 Git/Turbo 회귀 fixture에 config를 추가해 앱 단독 변경의 기존 선택과 config 변경의
+  두 앱 재검증/hash 무효화를 확인했다. 공통 entry·직접 의존성·외부 역참조 부재를 harness로 검증했다.
+- `pnpm install --frozen-lockfile --offline`, `pnpm type-check`, `pnpm lint`(두 앱 FSD 포함),
+  `pnpm test:unit:run`이 성공했다. package를 포함한 타입/lint는 각각 5작업, unit은 4작업·95파일·662건을
+  cache 0으로 실행했다. repo/config/scripts/Node·Web 타입 검사도 성공했다. 최종 harness는 **38건**,
+  ops는 **22파일·312건**, 기존 Compose PostgreSQL 17 격리 runner는 **4파일·33건**이 성공했다.
+  연결 0·advisory lock 0·테스트 DB 삭제를 확인했으며 기존 DB/볼륨과 production은 보존했다.
+- `pnpm build --force --env-mode=loose --concurrency=1`로 두 앱 실제 build가 cache 0으로 성공했다.
+  NODE_ENV=production/NEXT_PUBLIC_APP_ENV=local, 가짜 Console/R2·연결 불가능한 loopback DB·빈 DSN/GTM·
+  source map upload/telemetry OFF를 사용했다. 새 두 standalone 산출물에서 기존 browser smoke·health·
+  503/no-store·R2 누락 시 Console DB 접근 이전 거절·Web의 독립 DB 검사가 성공했다. 실제 업로드/메일/
+  외부 알림이나 운영 배포를 실행하지 않았다. 이후 수정은 harness fixture·bundle/task 수집과 문서에 한정돼
+  같은 runtime/build 입력의 build·standalone 결과는 재사용한다. 최종 hook·CI/리뷰는 PR에 기록한다.
+- 원문 처리 26/대기 12, 추가 처리 5/대기 3이다. 다음은 RUN-01 개발 Docker의 전체 workspace 설치와
+  실행 검증이다. 기존 Dockerfile.dev의 누락 manifest는 이 단위의 완료로 확대하지 않는다. 이후 수명주기·
+  소유권·안내 항목을 구분한다. #199 F 전환·production/www·운영 배포·미래 계정·UI 추출은 보류다.

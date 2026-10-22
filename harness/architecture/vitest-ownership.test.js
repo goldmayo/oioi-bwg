@@ -32,14 +32,14 @@ for (const app of ["web", "console"]) {
       assert.equal(project.config.globals, true);
       assert.equal(project.config.css, true);
       assert.deepEqual(project.config.setupFiles, [
-        path.join(root, "config/vitest/browser.setup.ts"),
+        path.join(root, "packages/config/vitest/browser.setup.ts"),
       ]);
       assert.ok(project.config.exclude.includes("**/node_modules/**"));
       assert.ok(project.config.exclude.includes("**/.git/**"));
       for (const [name, target] of [
         ["@", path.join(appRoot, "src")],
-        ["client-only", path.join(root, "tests/mocks/client-only.ts")],
-        ["server-only", path.join(root, "tests/mocks/server-only.ts")],
+        ["client-only", path.join(root, "packages/config/vitest/client-only.ts")],
+        ["server-only", path.join(root, "packages/config/vitest/server-only.ts")],
       ]) {
         const alias = project.vite.config.resolve.alias.find(({ find }) => find === name);
         assert.equal(alias?.replacement, target);
@@ -90,7 +90,9 @@ test("root unit and coverage collect the Turbo workspace union with each workspa
   }
 
   const expected = new Map();
-  for (const task of tasks.filter(({ task }) => task === "test")) {
+  for (const task of tasks.filter(
+    ({ task, command }) => task === "test" && command !== "<NONEXISTENT>",
+  )) {
     const { options, filter } = parseCLI(task.command);
     const ctx = await createVitest("test", {
       ...options,
@@ -176,7 +178,7 @@ test("PostgreSQL projects preserve serial Node execution and scope the Web adapt
       const aliases = project.vite.config.resolve.alias;
       assert.equal(
         aliases.find(({ find }) => find === "server-only")?.replacement,
-        path.join(root, "tests/mocks/server-only.ts"),
+        path.join(root, "packages/config/vitest/server-only.ts"),
       );
       assert.equal(
         aliases.some(({ find }) => find === "@"),

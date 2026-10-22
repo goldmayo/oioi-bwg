@@ -1,1 +1,1 @@
-export { architectureRule } from "../../../harness/architecture/eslint-rule.ts";
+export { architectureRule } from "@oioi-bwg/config/eslint/architecture-rule";

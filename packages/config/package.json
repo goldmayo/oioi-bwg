@@ -1,0 +1,48 @@
+{
+  "name": "@oioi-bwg/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./next": "./next.ts",
+    "./sentry-build": "./sentry-build.ts",
+    "./steiger": "./steiger.ts",
+    "./eslint/app": "./eslint/app.ts",
+    "./eslint/base": "./eslint/base.ts",
+    "./eslint/contracts": "./eslint/contracts.ts",
+    "./eslint/next": "./eslint/next.ts",
+    "./eslint/node": "./eslint/node.ts",
+    "./eslint/server": "./eslint/server.ts",
+    "./eslint/architecture-rule": "./eslint/architecture-rule.ts",
+    "./eslint/import-path": "./eslint/import-path.ts",
+    "./vitest/browser": "./vitest/browser.js",
+    "./vitest/postgres": "./vitest/postgres.js",
+    "./vitest/client-only": "./vitest/client-only.ts",
+    "./vitest/server-only": "./vitest/server-only.ts",
+    "./typescript/base.json": "./typescript/base.json",
+    "./typescript/next.json": "./typescript/next.json",
+    "./typescript/node.json": "./typescript/node.json"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@feature-sliced/steiger-plugin": "0.7.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-boundaries": "^6.0.1",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^16.4.0",
+    "steiger": "0.6.0",
+    "typescript-eslint": "8.56.1",
+    "vitest": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

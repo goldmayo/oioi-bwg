@@ -14,6 +14,7 @@ test("contracts lint rejects platform and implementation dependencies", async ()
     'export { NextResponse } from "next/server";',
     'export { getDatabase } from "@oioi-bwg/server/db";',
     'export { auth } from "../../../apps/web/src/auth";',
+    'export * from "@oioi-bwg/config/next";',
   ]) {
     const [{ messages }] = await eslint.lintText(source, { filePath: "src/boundary-probe.ts" });
     assert.ok(
@@ -52,6 +53,7 @@ test("server lint rejects app/framework dependencies and reversed persistence bo
   const eslint = new ESLint({ cwd: path.join(repositoryRoot, "packages/server") });
   for (const [filePath, dependency] of [
     ["src/auth/probe.ts", "react"],
+    ["src/auth/probe.ts", "@oioi-bwg/config/next"],
     ["src/auth/probe.ts", "next/server"],
     ["src/auth/probe.ts", "@/auth"],
     ["src/auth/probe.ts", "@oioi-bwg/web/src/auth"],

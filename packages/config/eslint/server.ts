@@ -1,7 +1,7 @@
 import type { Linter } from "eslint";
 import { defineConfig } from "eslint/config";
 
-import nodeConfig from "./node.ts";
+import { createNodeConfig } from "./node.ts";
 
 const appPatterns = [
   "@/**",
@@ -19,6 +19,8 @@ const frameworkPatterns = [
   "next",
   "next/**",
   "@sentry/nextjs",
+  "@oioi-bwg/config",
+  "@oioi-bwg/config/**",
 ];
 const restricted = (patterns: string[]): Linter.RuleEntry => [
   "error",
@@ -32,7 +34,7 @@ export function createServerConfig(rootDir: string) {
       languageOptions: { parserOptions: { tsconfigRootDir: rootDir } },
       files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
       extends: [
-        ...nodeConfig,
+        ...createNodeConfig(rootDir),
         {
           files: ["src/**/*.ts"],
           rules: {

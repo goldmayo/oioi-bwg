@@ -1,5 +1,5 @@
 {
-  "extends": "../../config/typescript/next.json",
+  "extends": "@oioi-bwg/config/typescript/next.json",
   "compilerOptions": {
     "types": ["vitest/globals"],
     "paths": {

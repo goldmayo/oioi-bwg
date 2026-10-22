@@ -6,7 +6,7 @@ import boundariesPlugin from "eslint-plugin-boundaries";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import unusedImports from "eslint-plugin-unused-imports";
 
-import { architectureRule } from "../../harness/architecture/eslint-rule.ts";
+import { architectureRule } from "./architecture-rule.ts";
 import nextConfig from "./next.ts";
 
 export function createAppConfig(rootDir: string) {

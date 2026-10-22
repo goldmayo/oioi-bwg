@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.16"
+version: "2.17"
 status: "active"
 authority: "constitution"
-updated_at: "2026-10-21"
+updated_at: "2026-10-23"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.16
+# oioi-bwg Architecture Constitution v2.17
 
 ## 1. 목적
 
@@ -164,6 +164,12 @@ E 코드의 운영 적용은 Console 운영 검증 완료 후 별도 Promotion�
 별도 명시가 없으면 이 앱 루트를 기준으로 한다. 일반 사용자 route와 서버 boundary는 유지하고,
 `/admin`·`/admin-login`·`/api/admin/*` 및 관리 upload Action은 Web에 두지 않는다.
 저장소 루트에는 workspace 진입점, 기존 검증 도구, 운영 스크립트와 migration 이력을 유지한다.
+
+공통 tooling preset과 factory·검사 구현은 private `packages/config`가 소유한다.
+consumer는 명시적 package export와 workspace 개발 의존성을 사용한다. 자동 탐색 설정 entry는
+각 root/app에 유지하며 env 해석·request/instrumentation adapter는 앱에 둔다. 앱과 공용 서버·계약의
+runtime에서 tooling package를 import하지 않는다. package는 root harness/test 구현을 역으로
+참조하지 않으며 harness가 package의 공개 경계를 검증한다.
 
 클라이언트와 서버가 함께 소비하는 serializable HTTP contract는 `packages/contracts`가 소유한다.
 `@oioi-bwg/contracts/<domain>`의 명시적 export로 소비하며 Zod schema/DTO/enum만 둔다.

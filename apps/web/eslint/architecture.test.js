@@ -256,3 +256,19 @@ test("rejects relative, package and dynamic imports between apps", () => {
     }
   }
 });
+
+test("keeps tooling config outside both app runtime graphs", () => {
+  for (const app of ["web", "console"]) {
+    for (const layer of ["app", "shared", "server"]) {
+      for (const source of [
+        'export * from "@oioi-bwg/config/next";',
+        'import("@oioi-bwg/config/eslint/app");',
+      ]) {
+        const segment = layer === "shared" ? "shared/config" : layer;
+        assert.deepEqual(lint(`apps/${app}/src/${segment}/probe.js`, source), [
+          "toolingConfigPackage",
+        ]);
+      }
+    }
+  }
+});

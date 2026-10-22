@@ -1,0 +1,11 @@
+{
+  "extends": "./typescript/node.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": ["./**/*.ts", "./**/*.js"]
+}

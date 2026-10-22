@@ -1,15 +1,15 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "eslint/config";
 
-import { createAppConfig } from "./config/eslint/app.ts";
-import { createContractsConfig } from "./config/eslint/contracts.ts";
-import nodeConfig from "./config/eslint/node.ts";
-import { createServerConfig } from "./config/eslint/server.ts";
+import { createAppConfig } from "@oioi-bwg/config/eslint/app";
+import { createContractsConfig } from "@oioi-bwg/config/eslint/contracts";
+import { createNodeConfig } from "@oioi-bwg/config/eslint/node";
+import { createServerConfig } from "@oioi-bwg/config/eslint/server";
 
 const root = (relativePath: string) => fileURLToPath(new URL(relativePath, import.meta.url));
 
 export default defineConfig([
-  ...nodeConfig,
+  ...createNodeConfig(root("./")),
   ...createAppConfig(root("./apps/web/")),
   ...createAppConfig(root("./apps/console/")),
   ...createServerConfig(root("./packages/server/")),

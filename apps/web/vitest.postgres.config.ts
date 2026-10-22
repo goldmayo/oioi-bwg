@@ -1,7 +1,9 @@
 import path from "node:path";
 import { defineProject, mergeConfig } from "vitest/config";
 
-import { postgresProject } from "../../config/vitest/postgres";
+import { createPostgresProject } from "@oioi-bwg/config/vitest/postgres";
+
+const postgresProject = createPostgresProject(path.resolve(import.meta.dirname, "../.."));
 
 export default mergeConfig(
   postgresProject,

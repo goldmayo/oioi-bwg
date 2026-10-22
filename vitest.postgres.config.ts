@@ -1,6 +1,8 @@
 import { configDefaults, defineConfig } from "vitest/config";
 
-import { postgresProject } from "./config/vitest/postgres";
+import { createPostgresProject } from "@oioi-bwg/config/vitest/postgres";
+
+const postgresProject = createPostgresProject(import.meta.dirname);
 
 export default defineConfig({
   root: import.meta.dirname,
