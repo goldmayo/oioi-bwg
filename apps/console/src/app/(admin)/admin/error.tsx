@@ -14,7 +14,11 @@ export default function AdminError({
   reset: () => void;
 }) {
   useEffect(() => {
-    captureClientErrorOnce(error, { source: "admin-error-boundary", digest: error.digest });
+    captureClientErrorOnce(error, {
+      source: "admin-error-boundary",
+      outcome: "error_boundary_mounted",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

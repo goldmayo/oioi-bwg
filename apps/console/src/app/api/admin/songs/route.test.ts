@@ -8,7 +8,14 @@ const createSong = vi.hoisted(() => vi.fn());
 const listAdminSongs = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/server/auth/request-context", () => ({ getRequestContext }));
+vi.mock("@/server/auth/request-context", () => ({
+  getRequestContext,
+  getRequestAuthorization: async () => ({
+    context: await getRequestContext(),
+    decision: "unknown",
+    rejectionLogged: false,
+  }),
+}));
 vi.mock("@oioi-bwg/server/services/song-service", () => ({ createSong, listAdminSongs }));
 vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
@@ -44,7 +51,7 @@ describe("/api/admin/songs", () => {
     const list = { items: [song], nextCursor: null };
     listAdminSongs.mockResolvedValue(list);
 
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/admin/songs"));
 
     expect(response.status).toBe(200);
     expect(adminSongListSchema.parse(await response.json())).toEqual(list);
@@ -86,7 +93,7 @@ describe("/api/admin/songs", () => {
 
   it("maps authorization and request validation failures", async () => {
     listAdminSongs.mockRejectedValue(new AppError("UNAUTHENTICATED"));
-    expect((await GET()).status).toBe(401);
+    expect((await GET(new Request("http://localhost/api/admin/songs"))).status).toBe(401);
 
     const response = await POST(
       new Request("https://example.test/api/admin/songs", {

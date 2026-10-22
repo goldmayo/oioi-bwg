@@ -48,6 +48,7 @@ describe("client Sentry instrumentation", () => {
       expect(
         filterIntegrations([
           { name: "BrowserTracing" },
+          { name: "Dedupe" },
           { name: "GlobalHandlers" },
           { name: "Replay" },
         ]),

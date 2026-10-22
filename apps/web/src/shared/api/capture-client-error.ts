@@ -1,14 +1,21 @@
-import type { SentryErrorContext } from "@/shared/lib/client-sentry-policy";
+import {
+  type SentryErrorContext,
+  toSafeSentryErrorContext,
+} from "@/shared/lib/client-sentry-policy";
 import { captureClientException } from "@/shared/lib/sentry";
 
-const capturedErrors = new WeakSet<object>();
+const capturedErrors = new WeakMap<object, Set<string>>();
 
-/** 같은 Error 인스턴스가 Query cache와 Error Boundary에서 중복 보고되지 않게 한다. */
+/** 같은 오류의 동일 관측만 억제한다. Query 보고 뒤 최초 boundary mount는 별도로 남긴다. */
 export function captureClientErrorOnce(error: unknown, context: SentryErrorContext) {
+  const safeContext = toSafeSentryErrorContext(context);
   if (typeof error === "object" && error !== null) {
-    if (capturedErrors.has(error)) return;
-    capturedErrors.add(error);
+    const observations = capturedErrors.get(error) ?? new Set<string>();
+    const observation = `${safeContext.source}:${safeContext.outcome}`;
+    if (observations.has(observation)) return;
+    observations.add(observation);
+    capturedErrors.set(error, observations);
   }
 
-  captureClientException(error, context);
+  void captureClientException(error, safeContext);
 }

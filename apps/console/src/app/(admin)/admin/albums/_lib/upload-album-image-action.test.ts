@@ -11,7 +11,14 @@ const getRequestContext = vi.hoisted(() => vi.fn());
 const reportServerError = vi.hoisted(() => vi.fn());
 const uploadAlbumImage = vi.hoisted(() => vi.fn());
 
-vi.mock("@/server/auth/request-context", () => ({ getRequestContext }));
+vi.mock("@/server/auth/request-context", () => ({
+  getRequestContext,
+  getRequestAuthorization: async () => ({
+    context: await getRequestContext(),
+    decision: "unknown",
+    rejectionLogged: false,
+  }),
+}));
 vi.mock("@/server/observability/server-error-reporter", () => ({ reportServerError }));
 vi.mock("@oioi-bwg/server/services/album-image-service", () => ({ uploadAlbumImage }));
 
@@ -86,6 +93,7 @@ describe("uploadAlbumImageAction", () => {
       event: "upload.failure",
       source: "upload-album-image-action",
       operation: "album-image-upload",
+      route: "/admin/albums",
       request: { routerKind: "App Router", routeType: "action" },
     });
   });
