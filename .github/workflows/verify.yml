@@ -510,7 +510,6 @@ jobs:
           build-args: |
             BUILD_APP=console
             NEXT_PUBLIC_APP_ENV=production
-            NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
             SENTRY_ORG=${{ env.SENTRY_ORG }}
             SENTRY_PROJECT=${{ env.SENTRY_PROJECT }}

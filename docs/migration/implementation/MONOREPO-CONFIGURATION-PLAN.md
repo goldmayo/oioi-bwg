@@ -453,3 +453,18 @@ DB-01/02·미확정 ENV-2 credential 전환·개인 env 자동 이관·공통 UI
   MAIL-01의 해당 분기만 같은 APP_ENV 계약으로 맞춘다. 미지원 환경은 OCI client 생성 전에 거절하고
   local의 no-send 기본값과 production의 dev 거절을 SDK mock으로 검증한다. 실제 앱 consumer는 없으며
   회원/메일 기능 재활성화·발송·MAIL-02의 OCI 인증/IMDS 정책 변경은 보류한다.
+
+## 2026-10-23 다음 단위 — ENV-10 Console build 입력
+
+ENV-06 [#202](https://github.com/goldmayo/oioi-bwg/pull/202)의 squash 결과
+`e4e61bc2ac0bef35b3fd7987d91f2df185e51ed3`를 fetch한 뒤 여기서 새 feature branch를 만든다.
+다른 PR을 미리 쌓지 않는다. 헌법 §5와 Runtime §12·12.1의 앱별 공개 build 입력 책임을 따른다.
+
+- Console candidate에 Web 전용 NEXT_PUBLIC_GTM_ID를 전달하는 build 인자 한 줄만 제거한다.
+  Web의 실제 layout consumer와 Web build 인자, 기존 두 앱 단위 buildConfigHash는 보존한다.
+  local/production 계약·Sentry 공용 프로젝트·Docker 공통 ARG·운영 설정은 바꾸지 않는다.
+- 완료 조건은 Console build 인자에 GTM이 없고 Web 전달과 production candidate 입력이 유지되는 것이다.
+  workflow parse/consumer 대조와 관련 ops를 확인한다. 앱/패키지/config/harness 소스가 동일하면 직전의
+  타입·unit·lint/FSD·두 앱 build 결과를 재사용하고 필수 push hook·최종 PR CI는 그대로 실행한다.
+- 실제 이미지 게시·운영 배포·GTM 외부 요청은 실행하지 않는다. 다음 후보 DB-01/02는 별도 단위이며
+  미확정 ENV-2 credential 전환과 개인 env 자동 이관은 포함하지 않는다.
