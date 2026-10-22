@@ -1,10 +1,10 @@
 ---
 title: "API / Error Architecture"
 document_id: "03"
-version: "1.4"
+version: "1.5"
 status: "active"
 authority: "architecture"
-updated_at: "2026-09-03"
+updated_at: "2026-10-22"
 depends_on:
   - "01"
 related:
@@ -20,7 +20,7 @@ tags:
   - "sentry"
 ---
 
-# oioi-bwg API & Error Architecture v1.4
+# oioi-bwg API & Error Architecture v1.5
 
 ## 1. 목적
 
@@ -777,16 +777,21 @@ TanStack Query의 MutationCache와 `meta` 같은 공식 extension point 사용�
 
 ## 23. Sentry
 
-Expected error는 Sentry에 보내지 않는다.
+delivery adapter가 정상 응답·이동으로 번역한 expected error는 Sentry에 보내지 않는다.
 
 ```text
-AppError -> no capture
+처리된 AppError -> no capture
 Request validation ZodError -> no capture
 Output/client contract violation -> capture
 Unexpected error -> capture
 ```
 
 운영자가 조사해야 할 오류만 Sentry에 남기는 것을 목표로 한다.
+
+`AppError`라는 타입만으로 전역 discard하지 않는다. RSC가 번역하지 못하고 render 오류 hook까지
+탈출한 AppError는 unexpected delivery failure이며 알려진 code와 원본 Error/frame을 보존해 수집한다.
+처리 여부·원인을 확인하지 못하면 unknown으로 남기고 message에서 추측하지 않는다. 이 구분은 도메인
+오류 code·HTTP mapping·인증 정책을 바꾸지 않는다. 허용 metadata와 최종 정제는 09 §12~15를 따른다.
 
 ---
 
@@ -929,7 +934,7 @@ YES면 과도한 abstraction인지 재검토한다.
 18. TanStack Query의 Promise/error semantics를 그대로 사용한다.
 19. Query-only custom hook wrapper는 기본적으로 만들지 않는다.
 20. Feature/model이 error를 UI state로 해석한다.
-21. Expected error는 Sentry에 보내지 않는다.
+21. 정상 번역된 expected error는 Sentry에 보내지 않는다. 탈출한 delivery failure는 별도로 수집한다.
 22. RSC는 service를 직접 호출한다.
 23. Persistence model과 API DTO는 분리한다.
 24. Mapper가 필요하면 순수함수로 구현한다.

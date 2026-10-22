@@ -6,6 +6,7 @@ import { getSentryRuntimeConfig } from "@/shared/config/sentry";
 
 import {
   describeServerError,
+  describeServerFailure,
   type ServerErrorContext,
   toSafeRequestMetadata,
   toSafeServerErrorEvent,
@@ -26,6 +27,8 @@ export function captureServerException(error: unknown, context: ServerErrorConte
   if (!getSentryRuntimeConfig().enabled) return null;
 
   const descriptor = describeServerError(error, context.error);
+  const failure = describeServerFailure(descriptor, context);
+  if (descriptor.type === "application" && failure.handling === "handled") return null;
   const event = toSafeServerErrorEvent(context.event);
   const source = toSafeServerErrorSource(context.source);
   const operation = toSafeServerOperation(context.operation);
@@ -39,6 +42,9 @@ export function captureServerException(error: unknown, context: ServerErrorConte
       source,
       ...(operation ? { operation } : {}),
       "error.type": descriptor.type,
+      "failure.kind": failure.kind,
+      handling: failure.handling,
+      outcome: failure.outcome,
       ...(descriptor.code ? { "error.code": descriptor.code } : {}),
       ...(request?.method ? { "request.method": request.method } : {}),
       ...(request?.routerKind ? { "next.router_kind": request.routerKind } : {}),

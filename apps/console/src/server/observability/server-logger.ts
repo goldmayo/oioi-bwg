@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   describeServerError,
+  describeServerFailure,
   type ServerErrorContext,
   toSafeRequestMetadata,
   toSafeServerErrorEvent,
@@ -12,6 +13,8 @@ import {
 /** 원본 오류를 직렬화하지 않고 운영에 필요한 안전한 분류만 기록한다. */
 export function logServerError(error: unknown, context: ServerErrorContext): void {
   const descriptor = describeServerError(error, context.error);
+  const failure = describeServerFailure(descriptor, context);
+  if (descriptor.type === "application" && failure.handling === "handled") return;
   const event = toSafeServerErrorEvent(context.event);
   const source = toSafeServerErrorSource(context.source);
   const operation = toSafeServerOperation(context.operation);
@@ -24,6 +27,9 @@ export function logServerError(error: unknown, context: ServerErrorContext): voi
       source,
       ...(operation ? { operation } : {}),
       error: descriptor,
+      failure: { kind: failure.kind },
+      handling: failure.handling,
+      outcome: failure.outcome,
       ...(request ? { request } : {}),
     }),
   );
