@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-22"
-revision: 16
+updated_at: "2026-10-23"
+revision: 17
 ---
 
 # 구현 순서와 PR 단위
@@ -23,6 +23,7 @@ Console 배포를 P06으로 앞당긴 독립 기능 작업선을 유지하고, P
 Console 전환 작업선
 P01 앱 이동 → P02 Turbo/config/harness → P03 실제 공통 코드 추출
   → P04 Console 이관 → P05 TOTP → P06 두 앱 배포·Web Admin 종료
+  → P06-F 운영 전환 완료 → P06-G 계정 관리 후속 기능
 
 Console 전환 뒤의 기능 작업선
   ├─ P07 CheerGuide 세 종류 / 사용자 선택
@@ -107,7 +108,11 @@ F의 www 전환·레거시 종료는 아직 시작하지 않았다.
 단일 VM의 기존 Promotion·OCI Run Command를 유지하는 세부 PR 분할과 두 앱 복구 계획은
 [P06 계획 초안](P06-PLAN.md)을 참조한다. 계획 작성은 환경 적용이나 공개 승인을 의미하지 않는다.
 기존 preview 관리자 계정을 사용하는 사전 준비 절차는 [P06 사전 준비 안내](P06-PREPARATION.md)에 둔다.
-관리자 생성·공인 IP 설정은 제외하며 일반 회원가입 페이지와 가입 API 세 개 종료는 P06-E에서 다룬다.
+A~F의 관리자 생성·공인 IP 설정 제외와 E의 공개 회원가입 종료 범위는 유지한다.
+2026-10-21 사용자 요청으로 F 뒤에 [P06-G 계정 관리 계획](P06-G-PLAN.md)을 추가한다.
+G는 계정 조회·관리자 초대·HTTPS MFA 등록/복구·권한/상태 변경·변경 이력의 후속 기능이며,
+상세 정책은 아직 제안이다. G0에서 Domain/active architecture를 개정한 뒤 구현한다.
+F까지의 운영 전환 완료와 G의 기능 완료를 분리하며 기존 D·E·F 검증을 G로 넘기지 않는다.
 P04/P05의 기존 기능과 인가 확인 전에는 기존 경로를 지우지 않는다. rollback도 password-only 관리 경로를 다시 공개하지 않는다.
 Guide writer 전환 뒤 rollback은 새 guide를 읽는 호환 앱으로 제한하고 Song.lyrics의 파괴적 정리는 후속으로 둔다.
 
