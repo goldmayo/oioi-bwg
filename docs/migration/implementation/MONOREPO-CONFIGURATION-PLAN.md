@@ -586,3 +586,17 @@ vercel-react-best-practices 지침을 참고하며 인증/인가 SSOT를 유지�
   안내 분리와 기존 Web 동작 유지다. 기본 gate와 Web 실제 local build/browser를 검증한다. Console·
   서버/DB 등 불변 입력의 기존 검증은 재사용하고 필수 hook·최종 head CI/리뷰 후 squash한다.
   계정·메일·feature flag 재활성화·운영/외부 리소스 변경·#199 F 전환은 제외한다.
+
+## 2026-10-23 다음 단위 — ROOT-01 release 도구 수명 종료
+
+ENV-08/09 #209의 squash `0018902f60108606f6ac7ad11cfde1a8f31e8375`를 fetch하고 검증 head와
+전체 tree 일치를 확인한 뒤 분기한다. 현재 active 배포 runbook §21은 source SHA·immutable image digest와
+별도 Promotion을 사용한다. release-it의 tracked 실행 참조는 root script·설정·직접 의존성과 과거 안내뿐이다.
+
+- release script·release-it·전용 changelog plugin·설정만 제거한다. package 버전·CHANGELOG와 tag 이력은
+  보존한다. 과거 DEPLOYMENT 가이드는 원문/anchor·출처를 보존하고 superseded와 현재 runbook을 명시한다.
+- lockfile은 전용 하위 의존성만 pruning하며 남은 package/snapshot과 다른 importer의 해석이 불변인지
+  구조적으로 비교한다. 기존 peer 경고나 무관한 도구 버전은 정리하지 않는다.
+- 완료 조건은 frozen install, 현재 script/CI/CLI 경로에 dangling 참조 부재, 기본 검사 및 변경된 설치
+  입력에서 실제 local 양 앱 build 성공이다. 불변 서버/DB 검증은 재사용한다. 최종 head CI·리뷰 후 squash한다.
+  release 실행·tag/Release 생성·배포와 Worker/다른 테스트 소유권 변경은 포함하지 않는다.

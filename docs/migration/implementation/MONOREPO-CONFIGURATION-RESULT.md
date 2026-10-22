@@ -50,7 +50,7 @@ created_at: "2026-10-22"
 | [x] | UI-01 | Web CLI의 utils/lib/hooks·shared root alias를 실제 shared/lib·shared/ui로 맞췄다. 설치된 CLI의 앱별 해석과 실제 경로 존재를 확인했다. |
 | [x] | UI-02 | Console에 앱 소유 components.json을 추가했다. 두 앱의 기존 style·CSS·primitive·소스는 유지하고 실제 CLI와 경로를 확인했다. UI 추출은 별도다. |
 | [ ] | DOC-01 | 대기 |
-| [ ] | ROOT-01 | 대기 |
+| [x] | ROOT-01 | 실행 consumer가 끝난 release script·설정·두 전용 의존성을 제거했다. 과거 배포 가이드는 superseded로 보존하며 버전·CHANGELOG·현재 SHA/digest 배포 계약은 유지했다. |
 | [ ] | ROOT-02 | 대기 |
 | [ ] | ROOT-03 | 대기 |
 | [ ] | ROOT-04 | 대기 |
@@ -1211,3 +1211,29 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   같은 Console build나 DB 기준선을 직접 반복하지 않았다. format·필수 hook·최종 CI/리뷰는 PR에 기록한다.
 - 원문 처리 31/대기 7, 추가 처리 5/대기 3이다. 다음은 ROOT-01 사용 종료 release 도구를 별도 관심사로
   정리하고 이후 소유권·개발 안내를 대조한다. 운영/외부 리소스 변경·#199 F 전환·미래 계정·UI 추출은 보류다.
+
+## 2026-10-23 ROOT-01 — 사용 종료한 release 도구
+
+- ENV-08/09 [#209](https://github.com/goldmayo/oioi-bwg/pull/209)은 최종 head
+  `1474cbfb67d863c3d139b7915146b7c80c937509`의 [Verify #505](https://github.com/goldmayo/oioi-bwg/actions/runs/39857574731)
+  전체 성공 후 `0018902f60108606f6ac7ad11cfde1a8f31e8375`로 squash 병합했다. fetch한 병합 tree와
+  검증 head 일치 확인 후 `feature/monorepo-release-tool-retirement`를 분기했다.
+- tracked script·CI·CLI·config·현재 active 배포 계약을 대조했다. release-it 실행 consumer는 root
+  release script와 설정뿐이며 현재 Promotion은 source SHA와 immutable image digest를 사용한다.
+  script·설정·release-it과 전용 conventional-changelog plugin을 제거했다. 버전 0.7.1·CHANGELOG·
+  기존 tag 이력과 운영/Promotion 코드는 변경하지 않았고 release/tag/배포 명령도 실행하지 않았다.
+- DEPLOYMENT 가이드는 `52d8f0a36d6b1b769e83189415f635627b739cb3`의 이전 staging/tag/Cloudflare
+  앱 배포 안내다. 원문/anchor를 보존하고 superseded 사유·현재 AGENTS/runbook/RESULT를 연결했다.
+  과거 staging 예제를 현행 환경 운영 지침으로 취급하지 않는다.
+- pnpm 10.15.1의 offline lockfile 갱신과 frozen install이 성공했다. release 전용 package/snapshot이
+  각각 129개 제거됐고 남은 항목은 추가·내용 변경 0개다. 구조 비교로 두 root 직접 의존성 외 다른
+  importer도 불변임을 확인했다. 기존 Vite/esbuild peer 경고와 무관한 버전은 수정하지 않았다.
+- `pnpm type-check`·`pnpm lint`(양 앱 FSD 포함)·`pnpm test:unit:run`이 모두 성공했다. 타입/lint
+  5작업과 unit 4작업은 cache 0이며 unit은 95파일·662건이다. 임시 local 입력·NODE_ENV=production/
+  NEXT_PUBLIC_APP_ENV=local·빈 DSN/GTM·source map upload/telemetry OFF에서 두 앱 build를 force
+  실행해 cache 0 성공했다. 새 두 standalone의 기존 browser smoke·health·503/no-store·DB 접근 경계도
+  성공했다. 불변 server/DB source의 격리 PG 검증은 #209의 결과를 재사용했다.
+- `pnpm test:harness` 38건·`pnpm test:ops` 22파일/312건·`pnpm format:check`와 diff 검사가 성공했다.
+- 원문 처리 32/대기 6, 추가 처리 5/대기 3이다. Worker·server 전용 테스트 소유권은 별도 단위이며
+  운영 배포·외부 전송·미래 계정·UI 추출·#199 F 전환은 보류다. 필수 hook과 최종 head CI/리뷰·병합
+  증거는 PR에 기록한다.
