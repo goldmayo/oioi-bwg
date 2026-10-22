@@ -72,3 +72,26 @@ test("server lint rejects app/framework dependencies and reversed persistence bo
   });
   assert.equal(errorCount, 0);
 });
+
+test("repository hooks and package commands apply the same dependency boundaries", async () => {
+  const root = path.resolve(import.meta.dirname, "../..");
+  for (const [workspace, filename, dependency] of [
+    ["server", "src/services/album-image-service.ts", "drizzle-orm"],
+    ["server", "src/repositories/song-repository.ts", "../services/song-service"],
+    ["contracts", "src/song.ts", "node:fs"],
+  ]) {
+    const filePath = path.join(root, "packages", workspace, filename);
+    const configs = [];
+    for (const cwd of [root, path.join(root, "packages", workspace)]) {
+      const eslint = new ESLint({ cwd });
+      const config = await eslint.calculateConfigForFile(filePath);
+      configs.push(config.rules["no-restricted-imports"]);
+      const [{ messages }] = await eslint.lintText(`export * from "${dependency}";`, { filePath });
+      assert.ok(
+        messages.some(({ ruleId }) => ruleId === "no-restricted-imports"),
+        `${cwd}: ${dependency}`,
+      );
+    }
+    assert.deepEqual(configs[0], configs[1]);
+  }
+});

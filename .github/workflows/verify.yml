@@ -328,6 +328,9 @@ jobs:
             --env CONSOLE_AUTH_SECRET=console-workspace-smoke-local-only-secret \
             --env CONSOLE_ORIGIN=http://127.0.0.1:3001 \
             --env CONSOLE_MFA_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= \
+            --env R2_ENDPOINT=https://r2.example.test --env R2_BUCKET=smoke \
+            --env R2_ACCESS_KEY_ID=smoke-only --env R2_SECRET_ACCESS_KEY=smoke-only \
+            --env ASSETS_PUBLIC_BASE_URL=https://assets.example.test \
             oioi-bwg-console:workspace-check
           trap 'docker logs console-workspace-check; docker rm --force console-workspace-check' EXIT
           for attempt in $(seq 1 30); do
