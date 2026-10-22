@@ -1,7 +1,7 @@
 ---
 title: "오류 원인과 처리 결과 추적 개선 결과"
 document_id: "OBSERVABILITY-ERROR-TRACKING-RESULT"
-version: "1.5"
+version: "1.6"
 status: "active"
 authority: "result"
 updated_at: "2026-10-22"
@@ -12,6 +12,9 @@ depends_on:
 ---
 
 # 오류 원인과 처리 결과 추적 개선 결과
+
+현재 상태: 1~6번의 코드·로컬 검증과 Slack 알림 디자인 배포·실제 수신은 완료했다.
+앱 배포·운영 알림 규칙·이미지별 소스맵 복원은 기존 보류 범위다. 최신 Slack 판정은 §8을 따른다.
 
 ## 1. 기준과 완료 범위
 
@@ -247,7 +250,7 @@ Slack Worker 디자인의 사용자 수동 배포 대기는 별도이며, 모노
 - [x] 4번: 기존 인증 판정 기반 안전한 거부 사유
 - [x] 5번: Console 서버 생성 request ID와 JSON/Sentry 연결
 - [x] 6번: Web 기존 dynamic/API request ID 연결
-- [ ] 7번: 운영 알림·앱 배포·외부 Sentry/Slack 수신·이미지별 실제 소스맵 복원 — 사용자 지정 배포 대기
+- [ ] 7번: 앱 배포·운영 알림 규칙·이미지별 실제 소스맵 복원 대기 — Slack relay 배포·실제 수신은 §8 완료
 
 위 1~6번의 완료는 이 문서에 기록한 코드·로컬 검증 범위다. 과거 절의 미완료 표시는 당시 상태이며
 현재 판정은 이 목록과 §1이 소유한다. 미실행 운영 검증을 로컬 결과로 대체하지 않는다.
@@ -420,3 +423,23 @@ root layout에 headers reader를 추가하거나 Web 인증·쿠키·Action을 �
 **승인 범위의 1~6번은 코드·로컬 검증 완료다. 7번은 배포 대기**다. 외부 Sentry/Slack 수신·production 알림 규칙 변경·
 이미지별 Debug ID와 실제 source map 복원은 실행하지 않았다. **Slack 알림 디자인은 미배포**이며 사용자 수동 Worker
 배포 보류를 유지한다. 새 PR·병합·OCI/Worker 배포·외부 알림·운영/개인 설정 변경은 하지 않았다.
+
+
+## 8. 2026-10-22 Slack 알림 배포 완료와 남은 운영 검증
+
+사용자가 Slack Worker 배포 보류를 해제하고 테스트 알림 1건 전송을 승인했다.
+별도 `feature/sentry-slack-message-layout`에서 기존 Worker를 업데이트했고, 실제 Sentry staging
+진단 event 1건이 새 알림 형식으로 Slack에 도착한 것을 확인했다. 배포 ref·Worker version·시각·검사와
+실수신 증거의 소유 문서는
+[Slack relay 결과 §11 고정본](https://github.com/goldmayo/oioi-bwg/blob/07489153f246e4ead36c89f9e5f07a0297e6e7b6/docs/migration/implementation/SENTRY-SLACK-RELAY-RESULT.md#11-2026-10-22-새-알림-형식-배포와-실제-수신-완료)이다.
+이 문서의 이전 미배포 기록은 당시 상태이며, 미배포 브리핑 조건은 해제됐다.
+
+1~6번의 코드·로컬 검증은 완료다. 이 앱 branch의 `c2645e9badcd9860dd20c921f6a4be9672501a5e`
+코드는 아직 미병합·미배포이므로 앱 변경의 운영 수신·운영 알림 규칙 보완·배포 이미지별 실제
+Debug ID/소스맵 복원은 기존 7번의 보류 범위로 남는다. 합성 staging event의 실수신을 이 검증으로
+대체하지 않으며 새 작업을 추가한 것이 아니다. 7번 전체는 미완료로 둔다.
+
+이번 앱 branch 변경은 이 결과 문서의 현재 판정과 참조만 갱신했다. Worker 소스와 다른 branch 변경을
+복제하거나 병합하지 않았다. 문서 format과 diff를 검사하며, 두 앱 build·전체 검사 세트는 별도로 다시
+실행하지 않는다. hook이 실행한 검사는 해당 실행 로그로 구분한다. 기존 실행 결과를 이번 문서 변경의
+재실행 결과로 기록하지 않는다.
