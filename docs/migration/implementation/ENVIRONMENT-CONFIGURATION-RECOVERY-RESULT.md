@@ -62,3 +62,12 @@ F의 production/www 전환은 별도 보류 상태이며 이 PR의 선행 작업
   임시 local 입력·빈 DSN·업로드/telemetry OFF·접속 불가능한 loopback DB와 임시 Console 키를 사용했다.
 - 검증 로그와 명령별 종료 코드는 저장소 밖 `/tmp/oioi-monorepo-recovery-20261023-0b6s5a9k/validation-env/`에 보존한다.
   commit/push hook 결과는 PR 본문에 별도 기록하며 위 직접 실행 결과에 합산하지 않는다.
+
+### Hook 상태 보정
+
+현재 host의 `core.hooksPath`가 설정되지 않아 최초 회수 커밋 `e67d737`에는 Git hook이 자동 실행되지 않았다.
+이를 통과로 보고하지 않는다. 직접 실행한 위 검증은 성공했으며 이후 commit/push는 명령별
+`-c core.hooksPath=.husky/_`로 기존 저장소 hook을 실행한다. 공용 Git 설정과 원본 worktree는 바꾸지 않는다.
+최초 커밋의 TS 변경은 ESLint/Prettier 재확인이 성공했다. commitlint는 본문 한 줄이 100자를 넘어 실패했다.
+기존 커밋 재작성 금지에 따라 해당 이력을 보존하고, 후속 커밋은 활성 hook으로 검사한다.
+이 실패를 commitlint 통과로 기록하지 않으며 PR/squash 본문은 규칙에 맞게 작성한다.
