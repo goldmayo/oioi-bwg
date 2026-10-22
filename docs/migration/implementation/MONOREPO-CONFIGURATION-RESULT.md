@@ -45,7 +45,7 @@ created_at: "2026-10-22"
 | [x] | TEST-02 | root unit·coverage의 실행 대상을 네 workspace로 맞췄다. Turbo와 같은 81파일·410건을 실행하며 환경·제외·alias를 보존한다. coverage 측정 경로는 TEST-03에서 수정한다. |
 | [x] | TEST-03 | 없는 Web 경로를 실제 네 workspace src 경로로 교체했다. coverage 276개 소스를 추적 목록과 대조했고 미실행 소스의 0회 기록과 테스트·선언 제외를 확인했다. |
 | [x] | TEST-04 | Web adapter를 쓰는 foundation만 Web 소유 project로 한정했다. 서버 세 파일에는 Web alias가 없으며 실제 PostgreSQL 4파일·33건과 직렬 Node 실행·DB 정리를 검증했다. |
-| [ ] | RUN-01 | 대기 |
+| [x] | RUN-01 | 개발 이미지의 전체 workspace manifest와 bind mount 이후 의존성 volume을 보완했다. 별도 임시 프로젝트의 clean install·native 해석·config 검사·Web dev/metadata/browser와 자원 정리를 확인했다. |
 | [x] | RUN-02 | Web 관리 route·forbidden consumer 제거로 적용 제외한다. Console의 실제 admin layout consumer와 authInterrupts 옵션은 유지했고 공통 experimental 옵션의 보존도 검증했다. |
 | [ ] | UI-01 | 대기 |
 | [ ] | UI-02 | 대기 |
@@ -59,7 +59,7 @@ created_at: "2026-10-22"
 
 ## 2026-10-22 추가 논의 체크리스트
 
-현재 원문 38개는 **처리 26개·대기 12개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01·ENV-10·DB-01/02를 더했다.
+현재 원문 38개는 **처리 27개·대기 11개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01·ENV-10·DB-01/02·RUN-01을 더했다.
 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
 별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01·CFG-08/09/10·TEST-05는 처리됐으며 나머지 3개는 검토/대기다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
@@ -1128,3 +1128,36 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 원문 처리 26/대기 12, 추가 처리 5/대기 3이다. 다음은 RUN-01 개발 Docker의 전체 workspace 설치와
   실행 검증이다. 기존 Dockerfile.dev의 누락 manifest는 이 단위의 완료로 확대하지 않는다. 이후 수명주기·
   소유권·안내 항목을 구분한다. #199 F 전환·production/www·운영 배포·미래 계정·UI 추출은 보류다.
+
+## 2026-10-23 RUN-01 — 개발 Docker의 clean workspace 설치·실행
+
+- 공통 설정 [#206](https://github.com/goldmayo/oioi-bwg/pull/206)은 최종 head
+  `25a65fd7c2da7b0e005ed4cc82122ad58c0f5d86`의 [CI #502](https://github.com/goldmayo/oioi-bwg/actions/runs/39848675916)
+  전체 성공 후 `34bcab0d3db53258dfb05834956798ea7a01ebf3`로 squash 병합했다. fetch한 병합 tree와
+  검증 head의 일치 확인 후 `feature/monorepo-dev-docker`를 분기했다.
+- Dockerfile.dev는 install 전에 root·Web·Console·config·contracts·server manifest를 복사한다.
+  개발 Compose는 root와 각 workspace node_modules의 여섯 volume을 유지해 소스 bind mount가
+  설치 내용을 가리지 않게 한다. Web 서비스·host loopback·APP_ENV=local·기존 DB 설정은 유지했다.
+  prod Docker/운영 Compose·credential·개인 env·기존 PostgreSQL 데이터는 변경하지 않았다.
+- `docker compose build --no-cache next`를 고유 임시 project와 추적 소스 복사본에서 실행했다.
+  node:22-bookworm-slim/pnpm 10.15.1의 전체 6 workspace frozen install이 성공했다. 개인 env와
+  host node_modules는 복사하지 않았다. 새 의존성 volume+소스 bind mount에서 추가 offline frozen
+  install, 여섯 workspace의 실제 module 해석·argon2 native import·config 자체 type-check/checkJs가 성공했다.
+  이 추가 install은 테스트 전용 복사본에서만 수행했다. 일반 의존성 변경은 host에서 하도록 안내를 유지했다.
+- 최초 HTTP 시작 프로브가 연결 reset을 재시도하지 않아 중단됐다. 임시 자원 정리를 확인하고 대기를
+  보완했다. 같은 Dockerfile/manifest의 성공한 install layer는 재사용했으며 불필요한 clean install은
+  반복하지 않았다. 새 임시 프로젝트 `oioi-run01-368931b254c7`에서 Web dev health 200·policy 200·
+  localhost metadata·실제 브라우저 hydration 무오류를 확인했다. 최종 임시 image는
+  `sha256:7dcac23cea2c9d6aed1943957d26fe2d22da03c59d65cc62f246698ab85eef14`였다.
+- dummy local env·연결 불가능한 loopback DB·빈 DSN/GTM·telemetry OFF를 사용했다. `--no-deps`로
+  기존 postgres를 실행/중단하지 않았다. 테스트 namespace의 컨테이너·volume·image·소스 복사본을
+  정리하고 해당 project volume 0개와 기존 PostgreSQL container의 동일 ID/실행 상태를 확인했다.
+  기존 DB/volume 초기화·seed·운영 접근·업로드/외부 알림은 수행하지 않았다.
+- LOCAL-DEVELOPMENT-ENVIRONMENT에 전체 workspace 설치와 여섯 의존성 volume 갱신을 기록했다.
+  image rebuild가 기존 volume을 갱신하지 않는 동작을 설명하고 DB/cache와 다른 project를 보존하도록
+  정확한 대상을 명시했다. 앱/공용 package/config/harness/ops/scripts/tests/root manifest·lockfile·Turbo·
+  prod Docker 무변경을 대조해 #206의 실제 타입/lint/unit·harness 38·ops 312·PG 33·두 앱 build/standalone을
+  재사용한다. 변경 Docker/YAML은 실제 실행했으며 format·필수 hook·최종 CI/리뷰는 PR에 기록한다.
+- 원문 처리 27/대기 11, 추가 처리 5/대기 3이다. 다음은 scaffold alias·사용 종료 도구와 수명주기/
+  소유권·안내를 각각 구분해 대조한다. Worker를 새 workspace로 추가하면 manifest/volume 영향은
+  해당 단위에서 재점검한다. #199 F 전환·production/www·운영 배포·미래 계정·UI 추출은 보류다.

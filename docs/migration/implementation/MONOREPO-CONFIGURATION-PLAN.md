@@ -536,3 +536,21 @@ consumer와 함께 도입한다. 앱 자동 탐색 entry·APP_ENV·request/instr
   ESM JavaScript와 JSDoc @satisfies·package checkJs로 전환한다. 넓은 도구 내부 타입을 공개해
   peer별 nominal type에 결합하지 않고 실제 설정 shape를 유지한다. 전역 loader나 사전 빌드는 추가하지 않는다.
   Next·ESLint·Steiger의 TS loader와 두 앱 실제 build는 별도로 확인한다.
+
+## 2026-10-23 다음 단위 — RUN-01 개발 Docker workspace 설치·실행
+
+CFG-08/09 #206의 squash 결과 `34bcab0d3db53258dfb05834956798ea7a01ebf3`를 fetch하고 검증 head와
+전체 tree 일치를 확인한 뒤 분기한다. Dockerfile.dev의 install 전 manifest와 개발 Compose의
+workspace node_modules 보존만 수정한다. production 이미지·운영 Compose·DB credential/volume은 유지한다.
+
+- root와 Web뿐 아니라 Console·config·contracts·server manifest를 frozen install 이전에 복사한다.
+  root 소스 bind mount가 package의 설치 의존성을 가리지 않게 모든 workspace node_modules를 보존한다.
+  기존 named dependency volume은 rebuild만으로 갱신되지 않으므로 host install·lock 검토 후 의존성
+  volume만 재생성하는 사용법을 기록한다. DB volume 초기화·임의 seed·개인 env 자동 이관은 하지 않는다.
+- 완료 조건은 새 image의 전체 workspace frozen install, 빈 임시 volume과 소스 bind mount 상태의
+  package 해석/자체 검사·Web dev 실제 실행이다. 임시 추적 소스 복사본·가짜 local env·loopback의
+  연결 불가능한 DB URL·빈 DSN/GTM·telemetry OFF로 검증한다. 기존 Compose postgres를 시작/중단하거나
+  기존 volume을 삭제하지 않는다. 테스트 자원은 고유 project/image 이름으로 만들고 명시적으로 정리한다.
+- 앱/공통 package/build 입력이 불변이면 #206의 타입/unit/두 앱 build/standalone 결과를 재사용하고
+  변경 YAML·Docker 동작을 직접 검증한다. 필수 hook·최종 head CI·리뷰 후 squash한다. 이후 Worker가
+  workspace로 추가되면 manifest/volume 영향은 해당 단위에서 재점검한다. 다른 lifecycle/UI/배포는 제외한다.
