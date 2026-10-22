@@ -221,6 +221,7 @@ export function planImages({
             "@oioi-bwg/web",
             "@oioi-bwg/console",
             "@oioi-bwg/contracts",
+            "@oioi-bwg/config",
             "@oioi-bwg/server",
           ].includes(t.package),
       )

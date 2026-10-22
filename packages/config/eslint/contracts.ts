@@ -1,6 +1,6 @@
 import { defineConfig } from "eslint/config";
 
-import nodeConfig from "./node.ts";
+import { createNodeConfig } from "./node.ts";
 
 export function createContractsConfig(rootDir: string) {
   return defineConfig([
@@ -9,7 +9,7 @@ export function createContractsConfig(rootDir: string) {
       languageOptions: { parserOptions: { tsconfigRootDir: rootDir } },
       files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
       extends: [
-        ...nodeConfig,
+        ...createNodeConfig(rootDir),
         {
           files: ["src/**/*.ts"],
           ignores: ["src/**/*.test.ts"],

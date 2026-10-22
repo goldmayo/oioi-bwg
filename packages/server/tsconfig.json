@@ -1,5 +1,5 @@
 {
-  "extends": "../../config/typescript/node.json",
+  "extends": "@oioi-bwg/config/typescript/node.json",
   "compilerOptions": {
     "types": ["node", "vitest/globals"],
     "module": "ESNext",

@@ -5,7 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { getSourceParts, resolveImportedParts } from "./import-path.ts";
+import ts from "typescript";
+
+import { getSourceParts, resolveImportedParts } from "@oioi-bwg/config/eslint/import-path";
 
 const dependencyFields = [
   "dependencies",
@@ -70,6 +72,40 @@ test("app workspaces do not depend directly on other app workspaces", () => {
   }
 });
 
+test("config workspace owns its exports and imports without repository implementation dependencies", () => {
+  const directory = path.resolve(import.meta.dirname, "../../packages/config");
+  const manifest = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf8"));
+  assert.equal(manifest.private, true);
+  for (const target of Object.values(manifest.exports)) {
+    assert.ok(target.startsWith("./"));
+    assert.ok(fs.existsSync(path.join(directory, target)), target);
+  }
+  const declared = new Set(dependencyFields.flatMap((field) => Object.keys(manifest[field] ?? {})));
+  function visit(folder) {
+    for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
+      const filename = path.join(folder, entry.name);
+      if (entry.isDirectory() && !["node_modules", ".turbo"].includes(entry.name)) visit(filename);
+      if (!entry.isFile() || !/\.[jt]s$/.test(entry.name)) continue;
+      for (const { fileName: dependency } of ts.preProcessFile(fs.readFileSync(filename, "utf8"))
+        .importedFiles) {
+        if (dependency.startsWith("node:")) continue;
+        if (dependency.startsWith(".")) {
+          assert.ok(path.resolve(folder, dependency).startsWith(directory + path.sep), filename);
+        } else {
+          const name = dependency
+            .split("/")
+            .slice(0, dependency.startsWith("@") ? 2 : 1)
+            .join("/");
+          assert.ok(declared.has(name), `${filename} must declare ${name}`);
+          assert.notEqual(name, "@oioi-bwg/web");
+          assert.notEqual(name, "@oioi-bwg/console");
+        }
+      }
+    }
+  }
+  visit(directory);
+});
+
 test("shared mocks and source packages select and invalidate both apps verification", (context) => {
   const repositoryRoot = path.resolve(import.meta.dirname, "../..");
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "oioi-turbo-affected-"));
@@ -83,7 +119,6 @@ test("shared mocks and source packages select and invalidate both apps verificat
     ".gitignore",
     "apps/web/package.json",
     "apps/console/package.json",
-    "tests/mocks/server-only.ts",
   ]) {
     const destination = path.join(fixtureRoot, filename);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -150,13 +185,13 @@ test("shared mocks and source packages select and invalidate both apps verificat
   assert.deepEqual(dryRun(true), []);
 
   for (const filename of [
-    "tests/mocks/server-only.ts",
-    "config/eslint/app.ts",
-    "config/steiger.ts",
-    "config/vitest/browser.ts",
-    "config/vitest/browser.setup.ts",
-    "config/next.ts",
-    "config/sentry-build.ts",
+    "packages/config/vitest/server-only.ts",
+    "packages/config/eslint/app.ts",
+    "packages/config/steiger.ts",
+    "packages/config/vitest/browser.js",
+    "packages/config/vitest/browser.setup.ts",
+    "packages/config/next.ts",
+    "packages/config/sentry-build.ts",
     "packages/contracts/src/song.ts",
     "packages/server/src/services/song-service.ts",
   ]) {

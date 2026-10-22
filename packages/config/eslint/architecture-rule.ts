@@ -60,6 +60,7 @@ export const architectureRule: Rule.RuleModule = {
       crossAppImport: "다른 앱을 직접 import하지 마세요. 공통 package의 공개 entry를 사용하세요.",
       clientServerPackage:
         "Client/FSD 레이어에서 공통 서버 패키지 '{{dependency}}'를 import하지 마세요.",
+      toolingConfigPackage: "공통 tooling 설정은 앱 src runtime에서 import하지 마세요.",
     },
   },
   create(context) {
@@ -85,6 +86,11 @@ export const architectureRule: Rule.RuleModule = {
       const source = sourceNode.value;
 
       if (typeof source !== "string") return;
+
+      if (/^@oioi-bwg\/config(?:\/|$)/.test(source)) {
+        context.report({ node: sourceNode, messageId: "toolingConfigPackage" });
+        return;
+      }
 
       if (
         (isClient || ["widgets", "features", "entities", "shared"].includes(layer)) &&

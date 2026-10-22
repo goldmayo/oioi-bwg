@@ -15,7 +15,7 @@ async function loadBuildConfig(app, environment) {
     platform: "node",
     format: "esm",
     write: false,
-    packages: "external",
+    packages: "bundle",
     define: {
       "import.meta.dirname": JSON.stringify(appDirectory),
       "process.env": JSON.stringify({ NEXT_PUBLIC_APP_ENV: "local", ...environment }),

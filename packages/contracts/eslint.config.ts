@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
 
-import { createContractsConfig } from "../../config/eslint/contracts.ts";
+import { createContractsConfig } from "@oioi-bwg/config/eslint/contracts";
 
 export default createContractsConfig(fileURLToPath(new URL(".", import.meta.url)));
