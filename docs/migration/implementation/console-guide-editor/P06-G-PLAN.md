@@ -53,15 +53,15 @@ revision: 2
 
 최초 조사 기준은 metadata의 고정 소스다. 현재 판정은 위 통합 개정을 따른다. 아래는 저장소 정적 관찰이며 실제 운영 상태의 재검증이 아니다.
 
-| 현재 근거                                                                                  | 확인한 사실 / G에서 해결할 점                                                                                               |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| [Domain AUTH-001~002](../../DOMAIN_SPECIFICATION.md#auth-001-회원가입-방식)                | E는 공개 가입을 중단하며 별도 관리자 생성을 허용하지 않는다. 초대 기반 생성 계약 개정이 먼저 필요하다.                      |
-| [Domain AUTH-004~006/009](../../DOMAIN_SPECIFICATION.md#auth-004-password-reset)           | 비밀번호·이메일 변경/정지의 전체 세션 회수 요구와 Console MFA version이 별개다. Web 회수 공백을 숨기지 않는다.              |
-| [운영자 명령 정책](../../../../scripts/console-mfa-operator-policy.ts)                     | `mfa-reset`, `account-access`만 제공한다. 신규 계정 생성 명령은 없다.                                                       |
-| [회수 service](../../../../packages/server/src/services/console-mfa-revocation-service.ts) | 대상·예상 상태/version을 확인하지만 호출자 인가는 CLI 경계에 의존한다. HTTP에 그대로 노출하지 않는다.                       |
-| [당시 Web request context](https://github.com/goldmayo/oioi-bwg/blob/9beb8fcb90e8d1408e5b7c961e8cff940d109d3b/apps/web/src/server/auth/request-context.ts)             | 매 요청 ACTIVE/role을 확인하지만 해당 코드에는 로그인 세대 비교가 없다. 정지 후 복귀 시 옛 JWT 재사용 방지도 설계해야 한다. |
-| [MFA 등록 HTTP](../../../../apps/console/src/server/http/console-mfa-enrollment.ts)        | 전역 enrollment flag와 비밀번호 기반 setup/confirm이다. 초대·복구 목적의 제한된 인증과 구분해야 한다.                       |
-| [D 결과](P06-D1-RESULT.md), [E 결과](P06-E2-RESULT.md)                                     | D는 비공개 SSH 등록·운영 CLI/복구, E는 Web 관리·가입 종료를 소유한다. G의 새 기능으로 기존 미완료 검증을 대체하지 않는다.   |
+| 현재 근거                                                                                                                                                  | 확인한 사실 / G에서 해결할 점                                                                                               |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| [Domain AUTH-001~002](../../DOMAIN_SPECIFICATION.md#auth-001-회원가입-방식)                                                                                | E는 공개 가입을 중단하며 별도 관리자 생성을 허용하지 않는다. 초대 기반 생성 계약 개정이 먼저 필요하다.                      |
+| [Domain AUTH-004~006/009](../../DOMAIN_SPECIFICATION.md#auth-004-password-reset)                                                                           | 비밀번호·이메일 변경/정지의 전체 세션 회수 요구와 Console MFA version이 별개다. Web 회수 공백을 숨기지 않는다.              |
+| [운영자 명령 정책](../../../../scripts/console-mfa-operator-policy.ts)                                                                                     | `mfa-reset`, `account-access`만 제공한다. 신규 계정 생성 명령은 없다.                                                       |
+| [회수 service](../../../../packages/server/src/services/console-mfa-revocation-service.ts)                                                                 | 대상·예상 상태/version을 확인하지만 호출자 인가는 CLI 경계에 의존한다. HTTP에 그대로 노출하지 않는다.                       |
+| [당시 Web request context](https://github.com/goldmayo/oioi-bwg/blob/9beb8fcb90e8d1408e5b7c961e8cff940d109d3b/apps/web/src/server/auth/request-context.ts) | 매 요청 ACTIVE/role을 확인하지만 해당 코드에는 로그인 세대 비교가 없다. 정지 후 복귀 시 옛 JWT 재사용 방지도 설계해야 한다. |
+| [MFA 등록 HTTP](../../../../apps/console/src/server/http/console-mfa-enrollment.ts)                                                                        | 전역 enrollment flag와 비밀번호 기반 setup/confirm이다. 초대·복구 목적의 제한된 인증과 구분해야 한다.                       |
+| [D 결과](P06-D1-RESULT.md), [E 결과](P06-E2-RESULT.md)                                                                                                     | D는 비공개 SSH 등록·운영 CLI/복구, E는 Web 관리·가입 종료를 소유한다. G의 새 기능으로 기존 미완료 검증을 대체하지 않는다.   |
 
 상위 기준은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md),
 [Auth/Authz](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md),
