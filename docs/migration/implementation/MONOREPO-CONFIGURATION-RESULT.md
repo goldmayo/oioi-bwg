@@ -280,3 +280,14 @@ created_at: "2026-10-22"
   개인 env·DB 볼륨·MFA 키와 운영 DB·VM·Vault·secret은 변경하지 않았다.
 - 다음 단위는 TEST-02의 root unit/coverage workspace 범위 정리다. TEST-03/04는 별도 단위로
   유지하며 전체 작업 완료 전 PR 생성·병합·배포는 하지 않는다.
+
+### TEST-01 후속 — 두 앱 build 추가 검증
+
+- 사용자의 추가 요청에 따라 `5c793771d19571fcd33d0cbf018375ccef1fc907`에서
+  `pnpm build --force`를 실행했다. Web·Console의 Next 16.4.1 컴파일·타입 검사·정적 페이지 생성과
+  standalone 산출물 구성이 성공했다. Turbo 결과는 2개 task 성공, 캐시 사용 0개다.
+- Sentry source map 업로드·telemetry를 끄고 공개 앱 환경은 local로 지정했다.
+  DB 주소는 접속 불가능한 loopback으로, Console 인증 입력은 임시 로컬 값으로 지정했다.
+  개인 env 파일과 운영 자원은 변경하지 않았다. 실제 DB 실행·standalone smoke는 추가하지 않았다.
+- 앞 절의 build 미실행은 당시 기록으로 보존한다. 이번 build 로그는
+  `.local/monorepo-config/vitest-ownership/build.log`에 보존하며 TEST-02~04의 완료 판정은 바꾸지 않는다.
