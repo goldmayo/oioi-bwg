@@ -818,3 +818,25 @@ consumer와 예제·Sentry·site metadata를 대조해 `development` 비교 불�
 GTM 전달은 여전히 남아 있으며 회수 #198이 CI 변경을 제외했으므로 완료로 표시하지 않는다.
 DB-01/02는 환경 계약 다음 순서이며 미확정 ENV-2 전체 credential 전환·개인 env 자동 이관은 포함하지 않는다.
 BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한 단위만 구현하고 멈춘다.
+
+## 2026-10-23 리뷰 P2 — 공개 URL 경계 보완
+
+- 사용자는 기존 병합 제한의 출처가 자신의 이전 조사/Draft·재개 프롬프트였음을 정정하고,
+  ENV-03 검토 뒤 빈 query/fragment 구분자와 정규화 보완을 요청했다. 기존 기록은 당시 상태로 보존한다.
+- 구현 `3e56a62c9ec99239041f888e5c84ae7f5f2a1835`: `URL.search/hash` 대신 정규화한 `href`의
+  `?`·`#` 구분자 존재를 확인한다. 파싱 결과를 반환하고 public base의 끝 `/`를 모두 제거한 뒤
+  object key를 연결한다. 앞뒤 공백·호스트/기본 포트·경로를 정규화하며 `%3F`·`%23`은 유지한다.
+  배포 runbook v1.20과 인덱스에 정책을 반영했다.
+- 신규 회귀의 수정 전 실행은 readiness 6건·storage 8건 실패로 문제를 재현했다. 수정 후 readiness
+  38건·storage 16건, 전체 unit 81파일·456건(4 task·캐시 0개)이 성공했다.
+- `pnpm type-check`(4 task·캐시 0개 및 repo/config/scripts), `pnpm lint`, `pnpm lint:fsd`,
+  `pnpm test:harness` 34건, 기존 jq PATH의 `pnpm test:ops` 262건, `pnpm format:check`, diff 검사 성공.
+  harness는 타입/build와 순차 실행했다. unit 이후 필요한 두 앱 build와 기존 browser smoke도 재실행했다.
+- `pnpm build --force --env-mode=loose --concurrency=1`: 두 앱 실제 build 2 task·캐시 0개 성공.
+  두 standalone browser smoke와 HTTP/DB 접근 경계도 성공했다. 이전 로그는 보존하고 P2 gate 로그는
+  `.local/monorepo-config/readiness/p2-*.log`, build/smoke 로그는 `readiness/p2/`에 분리했다.
+  임시 local·가짜 R2/Console·빈 DSN·Sentry 업로드/telemetry OFF 입력을 사용했다. 외부 전송은 없다.
+- #198은 사용자 후속 승인으로 `ef0e1224fa7f289bfde0cba60dfbbab9e58cf42f`에 squash 병합됐다.
+  #196 최신 main 반영 head는 `3351b5b313d0465e11b0a1c687b2af6a654e03a6`이며 CI 재검증 중이다.
+  #197/#200의 실제 통합과 BASE-01 완료, #187 문서 통합은 후속 검증·병합 결과로 별도 기록한다.
+  #199 F 전환·운영 배포·실제 R2/Vault/Sentry 검증과 관리자 전체 E2E는 보류다.
