@@ -94,8 +94,9 @@ Compose의 `--env-file`은 YAML 보간 입력이고 서비스의 `env_file`은 �
 [Next.js 환경변수 로딩](https://nextjs.org/docs/app/guides/environment-variables).
 
 로컬 실행에 사용하는 앱 환경 값은 기존 consumer와 맞춰 `NEXT_PUBLIC_APP_ENV=local`로 정리한다.
-`NODE_ENV`는 Next.js의 `development`/`production` 의미를 유지한다. 로컬 standalone 검증에서
-`NODE_ENV=production`인 경우에도 운영 메일 보호 규칙을 해제하지 않는다.
+`NODE_ENV`는 Next.js의 `development`/`production` 의미를 유지한다. 휴면 메일 provider도 앱 환경으로
+모드를 고른다. local production build의 기본값은 no-send dev이며 production의 dev 전송 금지는 유지한다.
+실제 메일 재활성화와 IMDS 차단 아래의 OCI 인증 설계는 별도다.
 
 ### 3.2 OCI prod
 

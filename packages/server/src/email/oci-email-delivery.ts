@@ -41,10 +41,13 @@ function required(name: string) {
 
 /** OCI Email Delivery 또는 local no-send 경계로 메일을 제출한다. */
 export async function sendEmail(email: OutboundEmail): Promise<EmailDeliveryResult> {
-  const mode =
-    process.env.EMAIL_DELIVERY_MODE ?? (process.env.NODE_ENV === "production" ? "oci" : "dev");
+  const appEnvironment = process.env.NEXT_PUBLIC_APP_ENV;
+  if (appEnvironment !== "local" && appEnvironment !== "production") {
+    throw new Error("NEXT_PUBLIC_APP_ENV must be local or production.");
+  }
+  const mode = process.env.EMAIL_DELIVERY_MODE ?? (appEnvironment === "production" ? "oci" : "dev");
   if (mode === "dev") {
-    if (process.env.NODE_ENV === "production") {
+    if (appEnvironment === "production") {
       throw new Error("dev email delivery is not allowed in production");
     }
     return {

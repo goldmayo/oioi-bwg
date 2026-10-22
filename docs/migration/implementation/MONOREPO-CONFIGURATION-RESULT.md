@@ -28,7 +28,7 @@ created_at: "2026-10-22"
 | [ ] | ENV-08 | 대기 |
 | [ ] | ENV-09 | 대기 |
 | [ ] | ENV-10 | 대기 |
-| [ ] | MAIL-01 | 대기 |
+| [x] | MAIL-01 | 휴면 provider의 NODE_ENV 모드 추론을 같은 local/production 계약으로 수정했다. local 기본 no-send·production dev 거절·미지원 값의 OCI 이전 거절을 SDK mock 12건으로 검증했다. 재활성화/실제 발송은 보류다. |
 | [ ] | MAIL-02 | 대기 |
 | [x] | OBS-01 | #198의 Runtime §12.1·앱 예제·배포 안내가 공용 Sentry 프로젝트 유지와 앱별 입력 책임을 명시한다. 프로젝트 분리·외부 변경 없음. |
 | [x] | OBS-02 | #198의 Console NEXT_PUBLIC_SENTRY_DSN 예제와 local 전송 비활성 안내가 ef0e122에 병합됐다. |
@@ -59,7 +59,7 @@ created_at: "2026-10-22"
 
 ## 2026-10-22 추가 논의 체크리스트
 
-현재 원문 38개는 **처리 22개·대기 16개**다. 기존 처리 20개에 ENV-06과 관련 ENV-07을 더했다.
+현재 원문 38개는 **처리 23개·대기 15개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01을 더했다.
 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
 별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01은 처리됐으며 나머지 7개는 검토/대기다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
@@ -982,3 +982,23 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 로그는 `.local/monorepo-config/app-env/local-production/`에 이전 계약의 로그와 분리했다.
   최종 push hook·head CI·리뷰·squash 결과는 PR 본문에서 확인한다. 코드·fixture·문서를 한 환경 전환으로
   묶는 크기 목표 초과 이유와 리뷰 순서도 PR에 기록한다. ENV-10 GTM·DB-01/02·UI/계정 기능은 별도다.
+
+#### 최종 소비자 대조 — 휴면 메일의 NODE_ENV 추론 제거
+
+- `998c289788edbb367637b2cc145a672e2f2f2a21` 이후 추적 앱/공유 서버의 NODE_ENV 사용을 전수 대조해
+  휴면 `oci-email-delivery.ts`의 기본 모드와 dev 거절 조건이 Next 실행 모드를 배포 환경으로 취급함을
+  확인했다. 앱 consumer는 없지만 사용자 확정 계약과 충돌하므로 MAIL-01의 해당 분기만 같은 PR에서
+  보완했다. 회원/메일 기능·앱 consumer를 추가하거나 OCI 인증·IMDS 차단을 바꾸지 않았다.
+- provider는 명시적 local/production을 검증한 뒤 local 기본 no-send dev, production 기본 OCI를
+  선택한다. production의 dev 모드 거절을 유지하며 누락·staging 등은 OCI client 획득 전에 실패한다.
+  NODE_ENV 값과 무관하다. 테스트의 OCI 제출은 전부 SDK mock이며 실제 메일 발송이 아니다.
+- `pnpm --filter @oioi-bwg/server exec vitest run src/email/oci-email-delivery.test.ts`: 12건 성공.
+  local production 모드의 no-send와 production dev 거절, 기본 OCI/명시적 OCI 결과 mapping,
+  미지원 값의 전송 이전 실패를 확인했다. 타입 억제나 기능 재활성화는 없다.
+- 보완 후 `pnpm type-check`·`pnpm lint`·`pnpm test:unit:run`은 각각 4 task·캐시 0개 성공했다.
+  repo/config/scripts 타입과 repo lint·양쪽 FSD도 성공, unit은 95파일·662건
+  (contracts 3/server 112/Web 176/Console 371)이다. harness 35·ops 291·format은 해당 소스/설정이
+  같아 앞선 직접 결과를 재사용하고 최종 push hook/CI를 별도로 확인한다.
+- 원문 처리 23/대기 15로 갱신한다. MAIL-02의 재활성화 인증 설계·실제 발송·기능 확장은 보류다.
+- 보완 후 `pnpm build --force --env-mode=loose --concurrency=1`도 두 앱 성공·캐시 0개다.
+  앞과 같은 명시적 local 입력·전송 OFF·가짜 값으로 실행했다. 최종 head CI/리뷰·병합 결과는 PR에 기록한다.

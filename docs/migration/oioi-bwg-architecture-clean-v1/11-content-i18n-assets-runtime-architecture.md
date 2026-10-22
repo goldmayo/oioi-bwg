@@ -241,6 +241,10 @@ local launcher·Docker 기본값·일반 CI/관리자 smoke는 `local`, VM용 Pr
 www URL 전환은 P06-F의 보류 범위다. 이름에 staging이 있는 버킷·외부 리소스·기존 host 식별자는
 이 계약만으로 삭제·이름 변경·접속 대상 변경하지 않는다.
 
+공유 서버의 휴면 메일 provider도 명시적 앱 환경을 검증하고 NODE_ENV로 전송 모드를 추론하지 않는다.
+기본 모드는 local의 no-send dev, production의 OCI이며 production에서 dev 모드는 거절한다.
+이 값 계약은 메일 기능 재활성화나 실제 전송·OCI 인증/IMDS 정책 변경을 승인하지 않는다.
+
 Web의 기본 metadata와 곡/앨범 metadata helper는 같은 site URL을 사용한다. `local`에서는
 `http://localhost:3000`, `production`에서는 기존 `https://oioibawige.com`을 사용한다.
 누락·빈 값·미지원 값은 local로 추론하지 않고 기존 공개 URL을 유지하며, Sentry와 browser logging은

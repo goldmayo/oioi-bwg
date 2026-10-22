@@ -449,3 +449,7 @@ DB-01/02·미확정 ENV-2 credential 전환·개인 env 자동 이관·공통 UI
 - 앱 환경값의 production 결정은 실제 운영 배포 승인이 아니다. #199의 www/F 전환 보류·운영 배포·
   Worker 배포/외부 알림·staging 이름의 버킷/host/외부 리소스와 접속 대상은 변경하지 않는다.
   새 공개 입력은 차후 승인된 Promotion에서 새 digest로 검증해야 한다.
+- 최종 소비자 대조에서 휴면 메일 provider의 NODE_ENV 기반 기본 모드·production 보호 분기를 확인했다.
+  MAIL-01의 해당 분기만 같은 APP_ENV 계약으로 맞춘다. 미지원 환경은 OCI client 생성 전에 거절하고
+  local의 no-send 기본값과 production의 dev 거절을 SDK mock으로 검증한다. 실제 앱 consumer는 없으며
+  회원/메일 기능 재활성화·발송·MAIL-02의 OCI 인증/IMDS 정책 변경은 보류한다.
