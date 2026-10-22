@@ -6,6 +6,7 @@ import {
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
 import { getSentryRuntimeConfig } from "@/shared/config/sentry";
+import { readRequestObservation } from "@/shared/lib/observability-correlation";
 import { getSentryRouteMetadata } from "@/shared/lib/sentry-route-metadata";
 
 /**
@@ -42,6 +43,7 @@ export async function onRequestError(
   reportServerError(error, {
     event: "next.request_error",
     source: "next-instrumentation",
+    ...(route ? readRequestObservation(request.headers, route.template) : {}),
     ...(route ? { route: route.template } : {}),
     request: {
       method: toSafeMethod(request.method),

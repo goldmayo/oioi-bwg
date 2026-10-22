@@ -8,6 +8,7 @@ import { authAbilityQueryKeys } from "@/features/auth";
 import { albumQueryKeys } from "@/entities/album";
 
 import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-page-context";
+import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
 
@@ -25,7 +26,9 @@ export const metadata = {
 
 export default async function AdminAlbumsPage() {
   const context = await getAdminPageContext();
-  const albums = await listAdminAlbums(context).catch(rethrowAdminPageError);
+  const albums = await listAdminAlbums(context).catch(async (error: unknown) =>
+    rethrowAdminPageError(error, await getRequestAuthorization()),
+  );
   const queryClient = getQueryClient();
   queryClient.setQueryData(albumQueryKeys.adminList(), albums);
   queryClient.setQueryData(

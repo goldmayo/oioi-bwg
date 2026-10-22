@@ -7,6 +7,7 @@ import {
   type SentryErrorContext,
   toSafeSentryErrorContext,
 } from "./client-sentry-policy";
+import { getErrorRequestId } from "./observability-correlation";
 import { getSentryRouteMetadata } from "./sentry-route-metadata";
 
 /** Client unexpected exception만 Sentry로 전송하는 error tracking 경계다. */
@@ -36,6 +37,8 @@ export async function captureClientException(
       "error.type": errorType,
       ...(safeContext.digest ? { "error.digest": safeContext.digest } : {}),
     });
+    const requestId = getErrorRequestId(error);
+    if (requestId) scope.setContext("correlation", { request_id: requestId });
     const errorObject = error instanceof Error ? error : new Error("Unexpected client error");
     // 원본 frame은 SDK가 만든다. originalException hint를 다시 붙이면 SDK의 객체 중복 제거가
     // Query 보고 이후의 별도 boundary 관측까지 버리므로, 관측별 중복은 호출 경계가 소유한다.

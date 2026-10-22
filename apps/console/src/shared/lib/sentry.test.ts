@@ -4,12 +4,17 @@ const sentryMocks = vi.hoisted(() => ({
   eventFromException: vi.fn(async () => ({ type: undefined })),
   captureEvent: vi.fn(() => "event-id"),
   setTags: vi.fn(),
+  setContext: vi.fn(),
 }));
 
 vi.mock("@sentry/nextjs", () => ({
   getClient: () => ({ eventFromException: sentryMocks.eventFromException }),
   getCurrentScope: () => ({
-    clone: () => ({ setTags: sentryMocks.setTags, captureEvent: sentryMocks.captureEvent }),
+    clone: () => ({
+      setContext: sentryMocks.setContext,
+      setTags: sentryMocks.setTags,
+      captureEvent: sentryMocks.captureEvent,
+    }),
   }),
 }));
 
@@ -74,4 +79,15 @@ describe("Sentry error reporter", () => {
     ).resolves.toBeNull();
     expect(sentryMocks.captureEvent).not.toHaveBeenCalled();
   });
+});
+
+it("carries HTTP correlation through the browser reporter", async () => {
+  vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+  vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "http://public@localhost/1");
+  const { rememberErrorRequestId } = await import("./observability-correlation");
+  const id = "48be30fa-1441-4dc9-8ffa-9b618ec32652";
+  const error = rememberErrorRequestId(new Error(), id);
+  await captureClientException(error, { source: "query-cache" });
+  expect(sentryMocks.setContext).toHaveBeenCalledWith("correlation", { request_id: id });
+  vi.unstubAllEnvs();
 });

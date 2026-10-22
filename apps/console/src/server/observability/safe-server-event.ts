@@ -5,6 +5,7 @@ import { AppError } from "@oioi-bwg/server/errors/app-error";
 import type { ErrorEvent } from "@sentry/nextjs";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 
+import { toSafeRequestId } from "@/shared/lib/observability-correlation";
 import {
   toSafeSentryBuildMetadata,
   toSafeSentryBuildPath,
@@ -86,6 +87,7 @@ export interface ServerErrorContext {
   source: ServerErrorSource;
   operation?: ServerOperation;
   route?: string;
+  requestId?: string;
   error?: Partial<SafeErrorDescriptor>;
   request?: SafeRequestMetadata;
   handling?: (typeof ERROR_HANDLINGS)[number];
@@ -332,6 +334,9 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
     },
   );
   const trace = safeTraceContext(event);
+  const requestId = toSafeRequestId(
+    readProperty(readProperty(event.contexts, "correlation"), "request_id"),
+  );
   const stacktrace = safeStacktrace(event);
 
   const tags = {
@@ -377,6 +382,13 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
       ],
     },
     tags,
-    ...(trace ? { contexts: { trace } } : {}),
+    ...(trace || requestId
+      ? {
+          contexts: {
+            ...(trace ? { trace } : {}),
+            ...(requestId ? { correlation: { request_id: requestId } } : {}),
+          },
+        }
+      : {}),
   };
 }

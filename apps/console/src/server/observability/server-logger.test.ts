@@ -602,3 +602,19 @@ describe("sanitizeServerSentryEvent", () => {
     for (const marker of Object.values(MARKERS)) expect(serialized(event)).not.toContain(marker);
   });
 });
+
+it("preserves only verified request correlation in the final server event", () => {
+  const id = "48be30fa-1441-4dc9-8ffa-9b618ec32652";
+  expect(
+    sanitizeServerSentryEvent({
+      type: undefined,
+      contexts: { correlation: { request_id: id, token: "private" } },
+    })?.contexts?.correlation,
+  ).toEqual({ request_id: id });
+  expect(
+    sanitizeServerSentryEvent({
+      type: undefined,
+      contexts: { correlation: { request_id: "private" } },
+    })?.contexts?.correlation,
+  ).toBeUndefined();
+});

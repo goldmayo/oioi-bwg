@@ -9,6 +9,8 @@ import { getRequestAuthorization, type RequestAuthorization } from "@/server/aut
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 import { assertConsoleOrigin } from "@/server/http/console-origin";
 
+import { readRequestObservation } from "@/shared/lib/observability-correlation";
+
 interface SongRouteContext {
   params: Promise<{ id: string }>;
 }
@@ -25,7 +27,11 @@ export async function PATCH(request: Request, context: SongRouteContext) {
     );
     return jsonResponse(adminSongMutationResultSchema, song);
   } catch (error) {
-    return toErrorResponse(error, { route: "/api/admin/songs/[id]", authorization });
+    return toErrorResponse(error, {
+      route: "/api/admin/songs/[id]",
+      ...readRequestObservation(request.headers, "/api/admin/songs/[id]"),
+      authorization,
+    });
   }
 }
 
@@ -37,6 +43,10 @@ export async function DELETE(request: Request, context: SongRouteContext) {
     await deleteSong((authorization = await getRequestAuthorization()).context, id);
     return new Response(null, { status: 204 });
   } catch (error) {
-    return toErrorResponse(error, { route: "/api/admin/songs/[id]", authorization });
+    return toErrorResponse(error, {
+      route: "/api/admin/songs/[id]",
+      ...readRequestObservation(request.headers, "/api/admin/songs/[id]"),
+      authorization,
+    });
   }
 }

@@ -5,7 +5,7 @@ import { forbidden, redirect } from "next/navigation";
 
 import { logAuthRejection } from "@/server/observability/auth-rejection-logger";
 
-import { getRequestAuthorization } from "./request-context";
+import { getRequestAuthorization, type RequestAuthorization } from "./request-context";
 
 /** Layout과 병렬 실행되는 관리자 페이지도 서비스 호출 전에 같은 요청의 인증을 확인한다. */
 export async function getAdminPageContext() {
@@ -23,14 +23,14 @@ export async function getAdminPageContext() {
 }
 
 /** 알려진 인증 실패만 RSC 이동/거부로 번역하고 나머지 예외는 원본 그대로 전달한다. */
-export function rethrowAdminPageError(error: unknown): never {
+export function rethrowAdminPageError(error: unknown, authorization?: RequestAuthorization): never {
   if (error instanceof AppError) {
     if (error.code === "UNAUTHENTICATED") {
-      logAuthRejection(undefined, "login_redirect_requested", "admin-rsc");
+      logAuthRejection(authorization, "login_redirect_requested", "admin-rsc");
       redirect("/admin-login");
     }
     if (error.code === "FORBIDDEN") {
-      logAuthRejection(undefined, "access_denied_requested", "admin-rsc");
+      logAuthRejection(authorization, "access_denied_requested", "admin-rsc");
       forbidden();
     }
   }

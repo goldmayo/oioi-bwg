@@ -2,6 +2,10 @@ import "server-only";
 
 import { cache } from "react";
 import type { GuestRequestContext, RequestContext } from "@oioi-bwg/server/auth/request-context";
+
+import { getRequestObservation } from "@/server/observability/request-observation";
+
+import type { RequestObservation } from "@/shared/lib/observability-correlation";
 export type {
   AuthenticatedRequestContext,
   GuestRequestContext,
@@ -47,28 +51,34 @@ export interface RequestAuthorization {
   context: RequestContext;
   decision: AuthorizationDecision;
   rejectionLogged: boolean;
+  observation?: RequestObservation;
 }
 
-function guestAuthorization(decision: AuthorizationDecision): RequestAuthorization {
-  return { context: guestContext(), decision, rejectionLogged: false };
+function guestAuthorization(
+  decision: AuthorizationDecision,
+  observation: RequestObservation,
+): RequestAuthorization {
+  return { context: guestContext(), decision, rejectionLogged: false, observation };
 }
 
 async function loadRequestAuthorization(): Promise<RequestAuthorization> {
+  const observation = await getRequestObservation();
   const session = await auth();
   const sessionUserId = session?.user?.id;
-  if (!sessionUserId) return guestAuthorization("no_valid_identity");
-  if (!hasConsoleMfaProof(session?.user)) return guestAuthorization("mfa_proof_missing");
+  if (!sessionUserId) return guestAuthorization("no_valid_identity", observation);
+  if (!hasConsoleMfaProof(session?.user))
+    return guestAuthorization("mfa_proof_missing", observation);
 
   const accountId = toAccountId(sessionUserId);
-  if (accountId === null) return guestAuthorization("invalid_identity");
+  if (accountId === null) return guestAuthorization("invalid_identity", observation);
 
   const account = await findConsoleAuthorizationFacts(getDatabase(), accountId);
-  if (!account) return guestAuthorization("authorization_facts_missing");
-  if (account.status !== "ACTIVE") return guestAuthorization("account_inactive");
-  if (account.role !== "ADMIN") return guestAuthorization("admin_role_required");
-  if (account.enabledAt === null) return guestAuthorization("mfa_disabled");
+  if (!account) return guestAuthorization("authorization_facts_missing", observation);
+  if (account.status !== "ACTIVE") return guestAuthorization("account_inactive", observation);
+  if (account.role !== "ADMIN") return guestAuthorization("admin_role_required", observation);
+  if (account.enabledAt === null) return guestAuthorization("mfa_disabled", observation);
   if (account.version !== session.user.mfaVersion)
-    return guestAuthorization("mfa_version_mismatch");
+    return guestAuthorization("mfa_version_mismatch", observation);
 
   const facts: AuthorizationFacts = {
     accountId: account.id.toString(),
@@ -77,6 +87,7 @@ async function loadRequestAuthorization(): Promise<RequestAuthorization> {
 
   return {
     context: { user: { id: account.id.toString() }, ability: buildAbility(facts) },
+    observation,
     decision: "authorized",
     rejectionLogged: false,
   };

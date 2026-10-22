@@ -1,5 +1,6 @@
 import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
 
+import { toSafeRequestId } from "./observability-correlation";
 import { toSafeSentryBuildMetadata, toSafeSentryBuildPath } from "./sentry-build-metadata";
 import { getSentryRouteMetadata } from "./sentry-route-metadata";
 
@@ -301,6 +302,9 @@ export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
     readProperty(lastException, "value"),
   );
   const stacktrace = safeStacktrace(event);
+  const requestId = toSafeRequestId(
+    readProperty(readProperty(event.contexts, "correlation"), "request_id"),
+  );
   const browser = safeContext(readProperty(event.contexts, "browser"), SAFE_BROWSER_NAMES);
   const os = safeContext(readProperty(event.contexts, "os"), SAFE_OS_NAMES);
   const breadcrumbs = Array.isArray(event.breadcrumbs)
@@ -338,9 +342,10 @@ export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
       "error.type": errorType,
       ...(digest ? { "error.digest": digest } : {}),
     },
-    ...(browser || os
+    ...(browser || os || requestId
       ? {
           contexts: {
+            ...(requestId ? { correlation: { request_id: requestId } } : {}),
             ...(browser ? { browser } : {}),
             ...(os ? { os } : {}),
           },

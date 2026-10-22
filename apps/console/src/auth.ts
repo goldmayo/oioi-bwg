@@ -9,6 +9,7 @@ import { ConsoleMfaRateLimited, reserveConsoleMfaAttempt } from "@/server/auth/c
 import { consoleSessionCallbacks } from "@/server/auth/console-session";
 import { assertConsoleOrigin } from "@/server/http/console-origin";
 import { reportAuthError } from "@/server/observability/auth-error-reporter";
+import { getRequestObservation } from "@/server/observability/request-observation";
 
 import {
   getConsoleCookies,
@@ -37,14 +38,15 @@ const {
   handlers,
   signIn: authSignIn,
   signOut: authSignOut,
-} = NextAuth(() => {
+} = NextAuth(async () => {
+  const observation = await getRequestObservation();
   const config = getConsoleRuntimeConfig();
   return {
     secret: config.secret,
     trustHost: true,
     cookies: getConsoleCookies(config.origin),
     pages: { signIn: "/admin-login" },
-    logger: { error: reportAuthError },
+    logger: { error: (error) => reportAuthError(error, observation) },
     providers: [
       Credentials({
         credentials: {

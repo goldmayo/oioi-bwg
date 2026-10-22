@@ -8,13 +8,19 @@ import { createAlbum, listAdminAlbums } from "@oioi-bwg/server/services/album-se
 import { getRequestAuthorization, type RequestAuthorization } from "@/server/auth/request-context";
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 
-export async function GET() {
+import { readRequestObservation } from "@/shared/lib/observability-correlation";
+
+export async function GET(request: Request) {
   let authorization: RequestAuthorization | undefined;
   try {
     const albums = await listAdminAlbums((authorization = await getRequestAuthorization()).context);
     return jsonResponse(adminAlbumListSchema, albums);
   } catch (error) {
-    return toErrorResponse(error, { route: "/api/admin/albums", authorization });
+    return toErrorResponse(error, {
+      route: "/api/admin/albums",
+      ...readRequestObservation(request.headers, "/api/admin/albums"),
+      authorization,
+    });
   }
 }
 
@@ -28,6 +34,10 @@ export async function POST(request: Request) {
     );
     return jsonResponse(albumSummarySchema, album, { status: 201 });
   } catch (error) {
-    return toErrorResponse(error, { route: "/api/admin/albums", authorization });
+    return toErrorResponse(error, {
+      route: "/api/admin/albums",
+      ...readRequestObservation(request.headers, "/api/admin/albums"),
+      authorization,
+    });
   }
 }

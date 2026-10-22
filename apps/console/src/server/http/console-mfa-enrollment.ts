@@ -16,6 +16,7 @@ import { getConsoleMfaKey } from "@/server/auth/authenticate-console";
 import { ConsoleMfaRateLimited, reserveConsoleMfaAttempt } from "@/server/auth/console-mfa-limiter";
 
 import { isConsoleMfaEnrollmentEnabled } from "@/shared/config/console-runtime";
+import { readRequestObservation } from "@/shared/lib/observability-correlation";
 
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "./api-response";
 
@@ -60,7 +61,13 @@ export async function handleConsoleMfaEnrollment(request: Request, operation: "s
   } catch (error) {
     response = toErrorResponse(
       error instanceof ConsoleMfaRateLimited ? new AppError("OTP_RATE_LIMITED") : error,
-      { route: operation === "setup" ? "/api/auth/mfa/setup" : "/api/auth/mfa/confirm" },
+      {
+        route: operation === "setup" ? "/api/auth/mfa/setup" : "/api/auth/mfa/confirm",
+        ...readRequestObservation(
+          request.headers,
+          operation === "setup" ? "/api/auth/mfa/setup" : "/api/auth/mfa/confirm",
+        ),
+      },
     );
     if (error instanceof ConsoleMfaRateLimited)
       response.headers.set("Retry-After", String(error.retryAfterSeconds));

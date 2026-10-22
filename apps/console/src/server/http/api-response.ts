@@ -80,7 +80,9 @@ export function jsonResponse<T>(
 /** Route Handler boundary에서만 application error를 HTTP failure contract로 변환한다. */
 export function toErrorResponse(
   error: unknown,
-  context: Pick<ServerErrorContext, "route"> & { authorization?: RequestAuthorization } = {},
+  context: Pick<ServerErrorContext, "route" | "requestId"> & {
+    authorization?: RequestAuthorization;
+  } = {},
 ): Response {
   if (error instanceof InvalidJsonBodyError) {
     return Response.json(
@@ -117,6 +119,7 @@ export function toErrorResponse(
     );
     if (error.code === "UNAUTHENTICATED" || error.code === "FORBIDDEN")
       logAuthRejection(context.authorization, "response_created", "api-route-handler", {
+        requestId: context.requestId,
         status: error.code === "UNAUTHENTICATED" ? 401 : 403,
         route: context.route,
       });
@@ -128,6 +131,7 @@ export function toErrorResponse(
     event: isOutputContractError ? "api.output_contract_violation" : "api.unexpected_error",
     source: "api-route-handler",
     ...(context.route ? { route: context.route } : {}),
+    ...(context.requestId ? { requestId: context.requestId } : {}),
     ...(isOutputContractError
       ? { error: { type: "output-contract" as const, code: "OUTPUT_CONTRACT_VIOLATION" } }
       : {}),

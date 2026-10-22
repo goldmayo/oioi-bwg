@@ -298,3 +298,29 @@ Auth.js CredentialsSignin은 세부 사유를 만들지 않고 generic reason으
 - 진단 객체·실제 RSC/API/Action·동일 consumer 회귀를 함께 바꿔 파일/라인 목표를 넘었다.
   범용 logger·인증 framework·전역 사용자 cache·새 DB 조회/의존성은 없다.
 - 로그: ignored `.local/observability/finish/auth-rejection/`. 실제 Next 통합 검증은 아래 최종 runtime 기록과 구분한다.
+
+### Console 요청 ID와 JSON·Sentry 연결 — 5번 코드·로컬 정적 검증
+
+기준 `49fb071`부터 이 기록을 포함한 커밋까지다. 관리 화면·로그인·관리/auth API 요청만 Proxy에서
+UUID v4를 새로 만들고 외부 public/internal ID와 route 헤더를 덮어쓴다. response의 `X-Request-ID`와
+request 내부 ID는 같고, 알려진 template만 전달한다. health/static은 matcher에서 제외한다.
+Next hook, HTTP catch, Auth.js, MFA 등록, upload Action과 요청별 인증 사유가 같은 메타데이터를 사용한다.
+RSC service 인증 오류 번역은 기존 요청 cache를 다시 읽으므로 추가 DB 조회가 없다.
+
+두 sink는 독립성을 유지한다. JSON은 검증된 request ID·SDK event ID·environment·immutable release와
+`requested/disabled/capture_failed`를 기록한다. SDK ID 반환을 원격 수신으로 표현하지 않는다.
+동일 Error/동일 유효 request ID만 coordinator에서 억제하고, 다른 Error/다른 요청/ID 없음은 합치지 않는다.
+Sentry 실패와 logger 실패는 application 응답을 바꾸지 않는다. 원본 Error는 기존 SDK 경계에 전달한다.
+HTTP의 공개 body/DTO는 바꾸지 않고 response header ID를 브라우저 Error의 WeakMap에 연결한다.
+최종 server/browser 정제는 `contexts.correlation.request_id`의 UUID만 허용하며 고 cardinality tag는 만들지 않는다.
+
+- 실제 검사: workspace 12 task 성공(9개 캐시), unit 91파일·542건
+  (Console 324, Web 127, server 88, contracts 3), repo 타입/lint, harness 18건,
+  두 앱 FSD, ops 21파일·262건, format/diff 성공.
+- 두 앱 실제 build 성공(2 task·캐시 0). 기존 Sentry/업로드 OFF·local·접근 불가 loopback DB 입력이다.
+- 설치 Next의 테스트 helper는 `unstable_doesMiddlewareMatch`였다. 환경/setup 및 필수 ErrorEvent type,
+  unknown narrowing과 기존 GET fixture를 맞췄다. upload Action은 같은 headers를 한 번 읽어 Origin 선행 거부를 유지했다.
+- producer·실제 delivery consumer·최종 정제·header/privacy 회귀가 연결돼 파일/라인 목표를 넘는다.
+  새 auth/DB cache·전역 request context·데이터 재조회·dependency·API envelope는 추가하지 않았다.
+- 로그: ignored `.local/observability/finish/console-correlation/`. 실제 Next 요청의 header→hook 연결과
+  장애 주입은 다음 runtime 기록에서 판정하며, 통과 전에는 §1 P4-A를 완료 표시하지 않는다.

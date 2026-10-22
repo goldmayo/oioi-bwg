@@ -9,6 +9,8 @@ import { getRequestAuthorization, type RequestAuthorization } from "@/server/aut
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 import { assertConsoleOrigin } from "@/server/http/console-origin";
 
+import { readRequestObservation } from "@/shared/lib/observability-correlation";
+
 interface AlbumRouteContext {
   params: Promise<{ id: string }>;
 }
@@ -25,7 +27,11 @@ export async function PATCH(request: Request, context: AlbumRouteContext) {
     );
     return jsonResponse(albumSummarySchema, album);
   } catch (error) {
-    return toErrorResponse(error, { route: "/api/admin/albums/[id]", authorization });
+    return toErrorResponse(error, {
+      route: "/api/admin/albums/[id]",
+      ...readRequestObservation(request.headers, "/api/admin/albums/[id]"),
+      authorization,
+    });
   }
 }
 
@@ -37,6 +43,10 @@ export async function DELETE(request: Request, context: AlbumRouteContext) {
     await deleteAlbum((authorization = await getRequestAuthorization()).context, id);
     return new Response(null, { status: 204 });
   } catch (error) {
-    return toErrorResponse(error, { route: "/api/admin/albums/[id]", authorization });
+    return toErrorResponse(error, {
+      route: "/api/admin/albums/[id]",
+      ...readRequestObservation(request.headers, "/api/admin/albums/[id]"),
+      authorization,
+    });
   }
 }

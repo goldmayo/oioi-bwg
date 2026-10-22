@@ -10,6 +10,7 @@ import { albumQueryKeys } from "@/entities/album";
 import { songQueryKeys } from "@/entities/song";
 
 import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-page-context";
+import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
 
@@ -30,7 +31,7 @@ export default async function AdminSongsPage() {
   const [songs, albums] = await Promise.all([
     listAdminSongs(context),
     listAdminAlbums(context),
-  ]).catch(rethrowAdminPageError);
+  ]).catch(async (error: unknown) => rethrowAdminPageError(error, await getRequestAuthorization()));
   const queryClient = getQueryClient();
   queryClient.setQueryData(songQueryKeys.adminList(), songs);
   queryClient.setQueryData(albumQueryKeys.adminList(), albums);

@@ -3,6 +3,7 @@ import "server-only";
 import * as Sentry from "@sentry/nextjs";
 
 import { getSentryRuntimeConfig } from "@/shared/config/sentry";
+import { toSafeRequestId } from "@/shared/lib/observability-correlation";
 import { getSentryRouteMetadata } from "@/shared/lib/sentry-route-metadata";
 
 import {
@@ -55,6 +56,8 @@ export function captureServerException(error: unknown, context: ServerErrorConte
       ...(request?.routerKind ? { "next.router_kind": request.routerKind } : {}),
       ...(request?.routeType ? { "next.route_type": request.routeType } : {}),
     });
+    const requestId = toSafeRequestId(context.requestId);
+    if (requestId) scope.setContext("correlation", { request_id: requestId });
     eventId = Sentry.captureException(capturedError);
   });
 

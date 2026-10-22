@@ -7,6 +7,8 @@ import {
 import { isHTTPError, isNetworkError, isTimeoutError } from "ky";
 import { z } from "zod";
 
+import { rememberErrorRequestId } from "@/shared/lib/observability-correlation";
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: ApiErrorCode;
@@ -79,20 +81,26 @@ export function normalizeHttpError(error: unknown): unknown {
 
   if (parsed.success) {
     const retryAfter = Number(error.response.headers.get("retry-after"));
-    return new ApiError(
-      error.response.status,
-      parsed.data,
-      error.response.status === 429 && Number.isSafeInteger(retryAfter) && retryAfter > 0
-        ? retryAfter
-        : undefined,
+    return rememberErrorRequestId(
+      new ApiError(
+        error.response.status,
+        parsed.data,
+        error.response.status === 429 && Number.isSafeInteger(retryAfter) && retryAfter > 0
+          ? retryAfter
+          : undefined,
+      ),
+      error.response.headers.get("X-Request-ID"),
     );
   }
 
-  return new ClientTransportError(
-    "HTTP_ERROR",
-    "서버 응답을 처리하지 못했습니다.",
-    error.response.status,
-    { cause: error },
+  return rememberErrorRequestId(
+    new ClientTransportError(
+      "HTTP_ERROR",
+      "서버 응답을 처리하지 못했습니다.",
+      error.response.status,
+      { cause: error },
+    ),
+    error.response.headers.get("X-Request-ID"),
   );
 }
 
