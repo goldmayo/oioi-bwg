@@ -27,7 +27,7 @@ created_at: "2026-10-22"
 | [x] | ENV-07 | 로컬 production build·일반 CI는 local, VM용 Promotion은 production이다. Docker 기본값도 local이며 staging 앱 환경을 폐기했다. 실제 운영 배포·#199 www/F 전환은 보류다. |
 | [ ] | ENV-08 | 대기 |
 | [ ] | ENV-09 | 대기 |
-| [ ] | ENV-10 | 대기 |
+| [x] | ENV-10 | Console candidate의 Web GTM build 인자를 제거했다. Web consumer/전달·두 앱 build 증명·production 입력을 보존하고 관련 ops와 workflow parse를 확인했다. 아래 ENV-10 실행 절 참조. |
 | [x] | MAIL-01 | 휴면 provider의 NODE_ENV 모드 추론을 같은 local/production 계약으로 수정했다. local 기본 no-send·production dev 거절·미지원 값의 OCI 이전 거절을 SDK mock 12건으로 검증했다. 재활성화/실제 발송은 보류다. |
 | [ ] | MAIL-02 | 대기 |
 | [x] | OBS-01 | #198의 Runtime §12.1·앱 예제·배포 안내가 공용 Sentry 프로젝트 유지와 앱별 입력 책임을 명시한다. 프로젝트 분리·외부 변경 없음. |
@@ -59,7 +59,7 @@ created_at: "2026-10-22"
 
 ## 2026-10-22 추가 논의 체크리스트
 
-현재 원문 38개는 **처리 23개·대기 15개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01을 더했다.
+현재 원문 38개는 **처리 24개·대기 14개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01·ENV-10을 더했다.
 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
 별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01은 처리됐으며 나머지 7개는 검토/대기다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
@@ -1002,3 +1002,26 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 원문 처리 23/대기 15로 갱신한다. MAIL-02의 재활성화 인증 설계·실제 발송·기능 확장은 보류다.
 - 보완 후 `pnpm build --force --env-mode=loose --concurrency=1`도 두 앱 성공·캐시 0개다.
   앞과 같은 명시적 local 입력·전송 OFF·가짜 값으로 실행했다. 최종 head CI/리뷰·병합 결과는 PR에 기록한다.
+
+## 2026-10-23 ENV-06 병합 확정과 ENV-10
+
+- ENV-06 [#202](https://github.com/goldmayo/oioi-bwg/pull/202)은 최종 head
+  `3ee76a277716ca74ec914153539756ba8fd2d5af`의
+  [CI 39832416352](https://github.com/goldmayo/oioi-bwg/actions/runs/39832416352) 성공과 리뷰/보호 조건 확인 후
+  `e4e61bc2ac0bef35b3fd7987d91f2df185e51ed3`로 main에 squash 병합됐다. fetch한 main과 검증 head의
+  전체 tree가 같았다. #199는 기존 `80af73d`의 미병합 Draft로 유지했고 운영/Worker 배포는 하지 않았다.
+- 그 최신 main의 clean tree에서 `feature/monorepo-console-build-inputs`를 분기했다.
+  [ENV-10 계획](MONOREPO-CONFIGURATION-PLAN.md#2026-10-23-다음-단위--env-10-console-build-입력)에 따라
+  Console ARM64 candidate의 NEXT_PUBLIC_GTM_ID build 인자 한 줄만 제거했다. Console에는 해당 env의
+  실제 consumer가 없으며 Web root layout은 사용한다. Web 전달·기존 pair buildConfigHash·앱 환경
+  production 입력·Sentry 공용 설정은 그대로다. Docker의 선택적 공통 ARG도 변경하지 않았다.
+- 직접 확인: Web/Console 후보 block을 분리해 Web GTM 유지·Console GTM 없음·양쪽 production 입력과
+  기존 build 증명을 대조했다. `pnpm exec prettier --check .github/workflows/verify.yml` 성공.
+  `pnpm exec vitest run --config vitest.ops.config.ts tests/ops/deploy-via-run-command.test.ts` 7건 성공.
+  `git diff --check` 성공이며 실제 candidate 게시/배포·GTM 외부 요청은 미실행이다.
+- `git diff --quiet e4e61bc -- apps packages config harness Dockerfile scripts tests turbo.json`으로
+  앱·공통 소스/검사 설정 동일성을 확인했다. 직전 타입·lint/FSD·unit 662·harness 35·ops 291·두 앱 local
+  build 결과를 이 불변 소스에 한해 재사용하고 같은 검사를 직접 반복하지 않았다. 필수 push hook과
+  최종 head CI는 별도로 확인해 PR에 기록한다. 새 VM build 입력의 실제 운영 적용 성공을 뜻하지 않는다.
+- 원문 처리 24/대기 14, 추가 항목 처리 1/대기 7이다. 다음은 DB-01/02의 도구 입력 경로 통일이다.
+  미확정 ENV-2 credential 체계·개인 env 자동 이관·메일/계정 기능·UI 추출·#199 F 전환은 보류한다.
