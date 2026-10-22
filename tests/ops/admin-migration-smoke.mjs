@@ -20,6 +20,7 @@ import {
   loginConsole,
   changeConsoleAccess,
   assertConsoleSessionBoundary,
+  assertConsoleRscAuth,
   assertConsoleLogsSafe,
 } from "./console-mfa-smoke.mjs";
 import { assertWebAdminRetired } from "./web-admin-retired-smoke.mjs";
@@ -472,6 +473,7 @@ try {
   enrollmentConsole.kill("SIGTERM");
   await once(enrollmentConsole, "exit");
   origins.console = await start("console", 3201, true);
+  await assertConsoleRscAuth(browser, origins.console, sql, artifacts);
   const web = await assertWebAdminRetired(browser, origins.web, sql, artifacts);
   const consoleApp = await journey(origins.console, "console");
   await assertConsoleSessionBoundary(browser, origins.console, sql);

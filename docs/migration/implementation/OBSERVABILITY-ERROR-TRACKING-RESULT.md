@@ -1,7 +1,7 @@
 ---
 title: "오류 원인과 처리 결과 추적 개선 결과"
 document_id: "OBSERVABILITY-ERROR-TRACKING-RESULT"
-version: "1.0"
+version: "1.1"
 status: "active"
 authority: "result"
 updated_at: "2026-10-22"
@@ -98,3 +98,72 @@ Sentry/Slack 현재 설정 조회·이벤트 전송·알림 규칙 변경·OCI/V
 총 diff의 400줄 목표 초과는 같은 계약의 규범, producer 두 sink, 최종 sanitizer, privacy 회귀를 함께
 검토하기 위한 것이다. 리뷰 순서는 03/09 → 분류 함수 → logger/reporter → HTTP·privacy test → 이 결과다.
 인증 adapter·Web 확장·Proxy·외부 알림·배포 gate는 섞지 않았다. 사용자 지시에 따라 새 PR 생성은 보류한다.
+
+## 5. Console RSC 인증 전달 — P1-B 첫 단위
+
+계획 §3.3·§7·§8의 RSC adapter와 실제 인증 UX를 먼저 분리했다. 최신 `migration_main`은 여전히
+`4d5e42dac37aeb13b3279b47a7907fbb7bc91be2`였다. 이 ref에서
+`feature/observability-console-rsc-auth`를 만들고 미병합 선행 P1-A
+`56c250676c8af3c2e39712f9e390f2f47e3d60f2`를 fast-forward로 포함했다. 기존 커밋은 보존했고
+upstream을 `migration_main`으로 두지 않았다. 이번 변경의 검토 기준은 `56c2506..HEAD`다.
+모노레포 정리·Slack Worker 디자인 변경은 포함하지 않았다. §1~4는 P1-A 당시의 기록으로 보존한다.
+
+- [x] P1-B 첫 단위: 각 관리자 RSC의 인증 선행 확인·알려진 인증 오류 번역·실제 로그인/회수 UX
+- [ ] P1-B 후속: browser boundary outcome·수집 중복 처리, 의도적으로 주입한 장애의 실제 runtime 수집
+
+따라서 §1의 P1-B 전체 완료 표시는 아직 변경하지 않는다. 신규 관측 필드를 이번 인증 처리에 섞지 않았다.
+
+### 구현과 리팩토링 점검
+
+- Console `server/auth/admin-page-context.ts`가 기존 request-cached context를 읽는다. guest는
+  `/admin-login`, 인증된 context의 `manage all` 거부는 기존 `forbidden()`으로 번역한다.
+  layout뿐 아니라 albums·songs·edit page도 service 호출 전에 같은 검사를 한다.
+- 각 page의 service Promise에서 실제 `AppError`의 UNAUTHENTICATED/FORBIDDEN만 번역한다.
+  다른 AppError·unknown·Next 제어 예외는 원본 그대로 다시 던진다. edit의 기존 not-found는 유지한다.
+  songs의 병렬 조회·Query hydration·DTO·서비스의 실제 보안 검사는 유지한다.
+- 기존 `getRequestContext()`·Auth.js·MFA·CASL·서비스·HTTP adapter·instrumentation·sanitizer는
+  변경하지 않았다. 새 DB 조회·process-global 인증 cache·범용 route wrapper·dependency는 없다.
+- [Next 인증 지침](https://nextjs.org/docs/app/guides/authentication#layouts-and-auth-checks)과
+  [redirect 제어 예외](https://nextjs.org/docs/app/api-reference/functions/redirect)를 확인했다.
+  기존 `authInterrupts`/`forbidden()` 설정은 유지했고 설치된 Next 16.4.1 standalone으로 확인했다.
+
+### 이번 단위에서 실행한 검증
+
+| 명령/범위 | 실제 결과 |
+| --- | --- |
+| 추가 Vitest 두 파일 | 27건 성공. guest/권한 부족의 service 미호출, 서비스 인증 오류 번역, 원본 예외·not-found 보존 |
+| `pnpm exec turbo run type-check lint test --concurrency=4` | 12 task 성공·9개 캐시. unit 83파일·451건: contracts 3 + server 88 + Web 93 + Console 267 |
+| `pnpm type-check:repo`, `pnpm lint:repo` | 성공. smoke 수정 뒤 repo lint도 다시 성공 |
+| `pnpm test:harness`, `pnpm lint:fsd` | harness 18건·두 앱 FSD 성공. workspace/build와 harness를 겹쳐 실행하지 않음 |
+| `pnpm test:ops` | 기준선의 21파일·262건 성공. 새 browser smoke는 이 unit 명령과 별도 |
+| `pnpm build --force --env-mode=loose` | 두 앱 컴파일·타입 검사·정적 생성·standalone 구성 성공. 2 task·캐시 0개 |
+| `tsx scripts/run-postgres-integration-tests.ts --local --admin-smoke` | 실제 standalone·Playwright·PostgreSQL 관리자 전체 흐름 성공 |
+| `pnpm format:check`, `git diff --check` | 성공 |
+
+최초 focused 검사는 auth barrel의 실제 Auth.js 로딩으로 실패해, 이 adapter unit의 관심사가 아닌
+auth UI/barrel만 mock으로 격리했다. 최초 workspace type-check는 목록 fixture의 DTO 형태 오류를 찾아
+`{ items, nextCursor }`로 고친 뒤 다시 성공했다. 검사 억제·강제 cast·hook 생략으로 해결하지 않았다.
+
+기존 Compose PostgreSQL 17이 healthy임을 먼저 확인했다. 기존 runner의 임시 DB·역할과 MFA fixture만
+사용했고 개인 DB 복원·임의 seed 추가는 하지 않았다. 새 browser 검사는 세 경로의 비로그인 직접 진입,
+만료 JWT, 실제 권한 회수 뒤 sidebar Link 이동, 권한 복구 후 기존 JWT의 계속된 거부, 새 로그인 성공을
+확인했다. 이 구간의 `next.request_error`는 0건이었다. 기존 전체 관리자 CRUD·가사 편집/재인증·회수·
+Web 인증 제거/공개 조회 검사와 민감 fixture 값의 로그 부재도 성공했다. 종료 시 연결 0개·advisory lock
+0개를 확인하고 임시 DB·역할을 정리했다. 기존 ingress의 의도적인 Action 거부 로그와 구분한다.
+
+검증한 helper blob은 `1ee6b58853d4ec2fae9ae82e19d43135889cc639`, consumer test는
+`68683bd823521533bbbabdb10bddf37fc083db73`, MFA smoke는
+`68465c3d34e0e2d1973a844e82c10ad6f995debb`다. 나머지 변경과 이 결과를 포함한 커밋이 검증 범위다.
+로그·browser artifact는 이 worktree의 `.local/observability/console-rsc-auth/`에 보존한다.
+
+### 한계와 배포 대기
+
+앱 build는 Sentry/소스맵 업로드를 끈 local 입력과 접근 불가능한 loopback DB URL을 사용했다.
+browser 검증도 외부 Sentry 전송을 끈 실제 로컬 격리 DB에서 실행했다. 원격 수신·실제 소스맵 복원이나
+현재 운영 이슈 해결을 확인한 결과는 아니다. 인증된 context/service의 403 번역은 unit으로 검사했고,
+실제 Console의 권한 회수는 AUTH-009에 따라 guest/로그인 이동이므로 이를 실제 403 검증으로 쓰지 않는다.
+
+개인 env·DB volume·MFA key와 운영 DB·VM·Vault·secret을 변경하지 않았다. 새 PR·병합·배포·외부 알림은
+보류한다. **Sentry 알림 디자인은 미배포**이며 사용자 배포·새 형식 수신 확인 전까지 후속 브리핑에 표시한다.
+배포 절차/대기 체크리스트는
+[Slack relay 결과 §10](https://github.com/goldmayo/oioi-bwg/blob/0ab0923c5dbb59405cd18fc8cc7ef5cc065d3bc8/docs/migration/implementation/SENTRY-SLACK-RELAY-RESULT.md#10-2026-10-22-사용자-수동-배포-대기)을 따른다.

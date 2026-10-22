@@ -1,18 +1,11 @@
 import { ReactNode } from "react";
-import { forbidden, redirect } from "next/navigation";
 
-import { getRequestContext } from "@/server/auth/request-context";
+import { getAdminPageContext } from "@/server/auth/admin-page-context";
 
 import AdminSidebar from "./_ui/admin-sidebar";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const context = await getRequestContext();
-
-  if (!context.user) {
-    redirect("/admin-login");
-  }
-
-  if (context.ability.cannot("manage", "all")) forbidden();
+  await getAdminPageContext();
 
   return (
     <div className="bg-background text-foreground flex h-screen flex-col overflow-hidden md:flex-row">

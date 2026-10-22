@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { authAbilityQueryKeys } from "@/features/auth";
 
-import { getRequestContext } from "@/server/auth/request-context";
+import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-page-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
 
@@ -23,8 +23,8 @@ export default async function AdminLyricsEditPage({ params }: AdminEditPageProps
     return notFound();
   }
 
-  const context = await getRequestContext();
-  const song = await getAdminSongEditorBySlug(context, slug);
+  const context = await getAdminPageContext();
+  const song = await getAdminSongEditorBySlug(context, slug).catch(rethrowAdminPageError);
 
   if (!song) {
     return notFound();

@@ -9,7 +9,7 @@ import { authAbilityQueryKeys } from "@/features/auth";
 import { albumQueryKeys } from "@/entities/album";
 import { songQueryKeys } from "@/entities/song";
 
-import { getRequestContext } from "@/server/auth/request-context";
+import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-page-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
 
@@ -26,8 +26,11 @@ export const metadata = {
 };
 
 export default async function AdminSongsPage() {
-  const context = await getRequestContext();
-  const [songs, albums] = await Promise.all([listAdminSongs(context), listAdminAlbums(context)]);
+  const context = await getAdminPageContext();
+  const [songs, albums] = await Promise.all([
+    listAdminSongs(context),
+    listAdminAlbums(context),
+  ]).catch(rethrowAdminPageError);
   const queryClient = getQueryClient();
   queryClient.setQueryData(songQueryKeys.adminList(), songs);
   queryClient.setQueryData(albumQueryKeys.adminList(), albums);
