@@ -432,6 +432,28 @@ SH
 이 검사는 두 앱 Vault env materialization·digest pull·앱 간 키/DB 비교·실제 metadata 차단을 대신하지 않는다.
 DB journal/schema·app 권한 확인 및 필요한 migration은 별도 승인 작업이며 installer/deploy에서 실행하지 않는다.
 
+### 9.2.1. Console 업로드 설정과 앱별 Sentry
+
+Console의 활성 업로드 consumer에는 R2 설정 5개가 필수다. `console-runtime-public.env`에
+`R2_ENDPOINT`, `R2_BUCKET`, `ASSETS_PUBLIC_BASE_URL`을 설정하고, `console-runtime-secrets.env`에는
+기존 Vault의 `R2_ACCESS_KEY_ID`·`R2_SECRET_ACCESS_KEY` Secret OCID를 매핑한다. 값 자체를 기록하지 않는다.
+새 materializer 설치 전에 기존 보호 파일을 백업하고 이 설정을 준비한다. 새 materializer는 누락 시
+임시 env를 승격하지 않고 실패하므로 예전 auth/MFA-only 설정으로 새 배포를 실행하지 않는다.
+기존 R2 bucket·assets 도메인과 Auth/MFA key/version을 보존하며 자동으로 키를 새로 만들지 않는다.
+
+로컬은 `apps/console/.env.example`을 기준으로 Console의 `.env.local`에 같은 5개를 설정한다.
+Web `.env`는 자동으로 읽지 않는다. `dev:console:local`은 DB/Auth/MFA에 더해 R2 누락도 검사한다.
+기존 개인 `.env*`는 Git에 추가하지 않고 값이 포함된 로그를 남기지 않는다.
+
+Sentry는 기존 공용 프로젝트를 유지한다. GitHub `oci-development-image`의
+`NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`가 두 앱 build에 전달되며,
+각 앱의 로컬 입력은 자신의 `.env.local`에 명시한다. `local`에서는 전송하지 않는다.
+새 프로젝트·DSN·GitHub 변수 생성을 이번 회수의 선행 조건으로 추가하지 않는다.
+
+Console 로그인은 TOTP이고 현재 메일 호출 consumer가 없다. 메일 설정을 Console에 복사하지 않는다.
+Web의 가입 POST도 현재 종료된 상태다. 공통 메일 구현의 `dev`는 실제 발송이 아니며, 향후 consumer를
+연결할 때 해당 앱에 `oci` mode·발신자·compartment와 Instance Principal 권한을 별도로 준비한다.
+
 ### 9.3. 첫 배포와 실패 복구의 구분
 
 최신 후보 성공, DB 준비, 유지보수 접근 제한과 구체적인 실패/중단 복구안이 갖춰진 뒤 첫 배포 실행 범위를 승인한다.
@@ -453,12 +475,13 @@ DB journal/schema·app 권한 확인 및 필요한 migration은 별도 승인 �
 실행 명령과 복구 완료 판정을 확정한다. OCI API/agent 오류 원문·runtime env·Secret은 CI/공개 기록으로 보내지 않는다.
 실제 두 앱의 container ID/StartedAt·health/readiness·IMDS 차단/host 양성 대조와 재시작 지속성까지 확인한 뒤 B2를 완료한다.
 
-## 10. Console 운영자 CLI (P06-D, 운영 실증 전)
+## 10. Console 운영자 CLI (P06-D)
 
 공통 계약은 [P06 계획 §6](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#6-https등록운영자-경계)과
 [AUTH-009](../../docs/migration/DOMAIN_SPECIFICATION.md#auth-009-console-mfa-등록과-회수)를 따른다.
 기존 `pnpm console:mfa`는 로컬 Compose 전용으로 유지한다.
 운영 경로는 개인 SSH 운영자가 검토한 요청을 sudo로 실행하며 배포·HTTP 경로에 연결하지 않는다.
+실제 설치·실물 MFA 회수/재등록·HTTPS 복구 증거는 [P06-D 결과](../../docs/migration/implementation/console-guide-editor/P06-D1-RESULT.md)를 따른다.
 
 1. 검토한 source에서 `pnpm build:console-operator`를 실행한다.
    `.local/console-operator/`의 bundle과 provenance를 함께 검토한다. provenance의 서버 소스는

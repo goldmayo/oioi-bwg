@@ -58,7 +58,14 @@ def materialize(app, public_path, map_path, output):
             require(0 < port <= 65535)
         public.setdefault('CONSOLE_MFA_ENROLLMENT_ENABLED', 'false')
         require(public['CONSOLE_MFA_ENROLLMENT_ENABLED'] in {'true', 'false'})
-        required = {'DB_APP_PASSWORD', 'CONSOLE_AUTH_SECRET', 'CONSOLE_MFA_ENCRYPTION_KEY'}
+        required = {'DB_APP_PASSWORD', 'CONSOLE_AUTH_SECRET', 'CONSOLE_MFA_ENCRYPTION_KEY',
+                    'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'}
+        require(public.get('R2_BUCKET', '').strip())
+        for name in ('R2_ENDPOINT', 'ASSETS_PUBLIC_BASE_URL'):
+            asset_url = urlsplit(public.get(name, ''))
+            require(asset_url.scheme == 'https' and asset_url.hostname and
+                    not asset_url.username and not asset_url.password and
+                    not asset_url.query and not asset_url.fragment)
     require(required <= mapping.keys())
     require(len(set(mapping.values())) == len(mapping))
     require(all(re.fullmatch(r'ocid1\.vaultsecret\.[a-z0-9.-]+', value) for value in mapping.values()))

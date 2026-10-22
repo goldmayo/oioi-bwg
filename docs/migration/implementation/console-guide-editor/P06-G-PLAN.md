@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: 9beb8fcb90e8d1408e5b7c961e8cff940d109d3b
 created_at: "2026-10-21"
-updated_at: "2026-10-21"
-revision: 1
+updated_at: "2026-10-23"
+revision: 2
 ---
 
 # P06-G 관리자 계정 관리 계획
@@ -15,6 +15,20 @@ revision: 1
 **F의 운영 전환 완료 뒤 시작하는 후속 기능**이다. 기존 D·E·F 완료 조건을 바꾸거나 G로 넘기지 않는다.
 이 문서는 설계 제안이며 신규 계정 생성·공개 MFA 등록·DB migration·배포를 승인하거나 실행한 기록이 아니다.
 아래 새 정책은 G0에서 Domain/active architecture에 반영하기 전까지 구현 기준으로 사용하지 않는다.
+
+## 2026-10-23 통합 개정 — Web 인증 종료 반영
+
+최초 제안은 `9beb8fcb90e8d1408e5b7c961e8cff940d109d3b`의 관찰로 보존한다.
+현재 통합 기준 `ef0e1224fa7f289bfde0cba60dfbbab9e58cf42f`에는 E3의 Web 인증 종료가 반영됐다.
+헌법 §5·Auth §4.0·Domain AUTH-001과 [E3 결과](P06-E3-RESULT.md)를 우선한다.
+
+- 아래 §2의 Web request context 관찰은 최초 소스의 역사 기록이다. 현재 Web에는 해당 adapter·세션이 없다.
+- §3.2·§4·G2b/G4·§6의 Web 전체 세션 회수 전제는 폐기한다. G의 세션 회수는 Console을 대상으로
+  설계하며, Web의 공개 조회·인증 endpoint/과거 cookie 비사용 검증은 기존 종료 경계를 유지하는 회귀다.
+- G 구현을 위해 Web 로그인·인증 adapter·메일 consumer를 복구하지 않는다. 계정·초대·Console MFA와
+  회수 정책은 G0에서 active 계약을 개정한 뒤 구현한다. 현재 계정/키를 변경하지 않는다.
+- F 운영 전환은 여전히 보류이고 G는 F 완료 뒤의 후속 기능이다. 이 통합은 계획 승인·문서 충돌 해소이며
+  F 전환·G 구현·메일 발송·배포 완료를 뜻하지 않는다.
 
 ## 1. 목표와 범위
 
@@ -37,7 +51,7 @@ revision: 1
 
 ## 2. 근거와 현재 공백
 
-조사 기준은 metadata의 최신 `origin/migration_main`이다. 아래는 저장소 정적 관찰이며 실제 운영 상태의 재검증이 아니다.
+최초 조사 기준은 metadata의 고정 소스다. 현재 판정은 위 통합 개정을 따른다. 아래는 저장소 정적 관찰이며 실제 운영 상태의 재검증이 아니다.
 
 | 현재 근거                                                                                  | 확인한 사실 / G에서 해결할 점                                                                                               |
 | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
@@ -45,7 +59,7 @@ revision: 1
 | [Domain AUTH-004~006/009](../../DOMAIN_SPECIFICATION.md#auth-004-password-reset)           | 비밀번호·이메일 변경/정지의 전체 세션 회수 요구와 Console MFA version이 별개다. Web 회수 공백을 숨기지 않는다.              |
 | [운영자 명령 정책](../../../../scripts/console-mfa-operator-policy.ts)                     | `mfa-reset`, `account-access`만 제공한다. 신규 계정 생성 명령은 없다.                                                       |
 | [회수 service](../../../../packages/server/src/services/console-mfa-revocation-service.ts) | 대상·예상 상태/version을 확인하지만 호출자 인가는 CLI 경계에 의존한다. HTTP에 그대로 노출하지 않는다.                       |
-| [Web request context](../../../../apps/web/src/server/auth/request-context.ts)             | 매 요청 ACTIVE/role을 확인하지만 해당 코드에는 로그인 세대 비교가 없다. 정지 후 복귀 시 옛 JWT 재사용 방지도 설계해야 한다. |
+| [당시 Web request context](https://github.com/goldmayo/oioi-bwg/blob/9beb8fcb90e8d1408e5b7c961e8cff940d109d3b/apps/web/src/server/auth/request-context.ts)             | 매 요청 ACTIVE/role을 확인하지만 해당 코드에는 로그인 세대 비교가 없다. 정지 후 복귀 시 옛 JWT 재사용 방지도 설계해야 한다. |
 | [MFA 등록 HTTP](../../../../apps/console/src/server/http/console-mfa-enrollment.ts)        | 전역 enrollment flag와 비밀번호 기반 setup/confirm이다. 초대·복구 목적의 제한된 인증과 구분해야 한다.                       |
 | [D 결과](P06-D1-RESULT.md), [E 결과](P06-E2-RESULT.md)                                     | D는 비공개 SSH 등록·운영 CLI/복구, E는 Web 관리·가입 종료를 소유한다. G의 새 기능으로 기존 미완료 검증을 대체하지 않는다.   |
 

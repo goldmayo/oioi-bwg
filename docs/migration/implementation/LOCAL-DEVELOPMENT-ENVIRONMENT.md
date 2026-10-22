@@ -80,13 +80,18 @@ pnpm install --frozen-lockfile
 기존 파일과 등록 후의 암호화 키는 보존한다. 최초 QR 등록을 확인할 때만
 `CONSOLE_MFA_ENROLLMENT_ENABLED=true`로 설정한다. Web env 파일을 복사하지 않는다.
 
+Console 이미지 업로드에는 `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+`ASSETS_PUBLIC_BASE_URL`을 모두 채운다. 기존 Web `.env`에 값이 있다면 이 다섯 값만 옮기고,
+Console DB/Auth/MFA 설정은 보존한다. Console에도 현재 공용 프로젝트의 `NEXT_PUBLIC_SENTRY_DSN`을 명시하며
+`NEXT_PUBLIC_APP_ENV=local`에서는 전송하지 않는다. 메일은 현재 Console consumer가 없어 요구하지 않는다.
+
 준비 후 매번 다음 명령 하나로 실행한다.
 
 ```bash
 pnpm dev:console:local
 ```
 
-스크립트는 Console env의 대상/키/Origin을 먼저 검사하고 Compose PostgreSQL을 health까지 기다린다.
+스크립트는 Console env의 대상/키/Origin과 R2 설정 다섯 항목을 먼저 검사하고 Compose PostgreSQL을 health까지 기다린다.
 고정된 Compose 개발용 bootstrap credential로 guarded `db:migrate`를 실행한 뒤 Console dev 서버를
 3001에서 시작한다. migration은 미적용분만 반영하며 기존 데이터와 키를 초기화하지 않는다.
 앱의 `DATABASE_URL`도 `127.0.0.1:5432/oioibawige`로 제한한다. 환경변수/credential을 출력하지 않는다.
@@ -112,7 +117,7 @@ Docker 연결 실패나 env/migration 실패 시 다음 단계를 실행하지 �
 cp apps/web/.env.example apps/web/.env.local
 ```
 
-`apps/web/.env.local`에 Supabase Auth 공개 환경변수를 채운 뒤 실행한다.
+Web은 비로그인 공개 조회 앱이므로 DB와 앱별 공개 설정만 준비한다. Supabase Auth·R2 업로드·메일 설정을 요구하지 않는다. 기존 개인 env 파일은 덮어쓰지 않는다.
 
 ```bash
 docker compose -f compose.dev.yml up -d postgres

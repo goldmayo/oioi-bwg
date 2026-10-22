@@ -26,7 +26,35 @@ for (const path of ["/web-app-manifest-192x192.png", "/apple-icon.png", "/favico
 
 assert.equal((await get("/api/admin/songs")).status, 404);
 
-for (const path of ["/login", "/more"]) {
+// Public Web must not interpret a legacy cookie or expose an Auth.js endpoint.
+for (const cookie of [
+  undefined,
+  "authjs.session-token=retired-web-session; oioi-console.session-token=console-session",
+]) {
+  for (const path of [
+    "/login",
+    "/api/auth",
+    "/api/auth/signin",
+    "/api/auth/csrf",
+    "/api/auth/session",
+    "/api/auth/ability",
+    "/api/auth/providers",
+    "/api/auth/callback/credentials",
+    "/api/auth/signout",
+  ]) {
+    for (const method of ["GET", "POST"]) {
+      const response = await fetch(new URL(path, baseUrl), {
+        method,
+        headers: cookie ? { Cookie: cookie } : {},
+        redirect: "manual",
+        signal: AbortSignal.timeout(10_000),
+      });
+      assert.equal(response.status, 404, method + " " + path);
+      assert.equal(response.headers.get("set-cookie"), null, "Web must not issue auth cookies");
+    }
+  }
+}
+for (const path of ["/more", "/more/policy"]) {
   const response = await get(path);
   assert.equal(response.status, 200, path);
   const html = await response.text();
@@ -44,8 +72,7 @@ try {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   assert.equal((await page.goto(new URL("/admin", baseUrl).href)).status(), 404);
-  await page.goto(new URL("/login", baseUrl).href);
-  await page.getByLabel("Email").waitFor();
+  assert.equal((await page.goto(new URL("/login", baseUrl).href)).status(), 404);
   await page.goto(new URL("/more", baseUrl).href);
   await page.waitForLoadState("networkidle");
   assert.equal(new URL(page.url()).pathname, "/more");
@@ -55,5 +82,5 @@ try {
 }
 
 console.log(
-  "Standalone smoke passed: health, public assets, retired admin, login, user URLs, JS/CSS",
+  "Standalone smoke passed: health, public assets, retired admin/auth, public URLs, JS/CSS",
 );

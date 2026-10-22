@@ -1,13 +1,18 @@
 ---
 title: "P06-E1 공개 가입 접수 종료 결과"
 kind: migration-result
-status: partial
+status: complete
 authority: evidence
 source_commit: ed19b6d9f033009349708dc35cb7bed2cd7be5cd
 created_at: "2026-10-21"
 ---
 
 # P06-E1 결과
+
+**최신 상태(2026-10-21):** #189 정상 Promotion으로 preview의 공개 가입 접수 종료를 적용했다.
+실제 host·새 origin의 가입 API 세 개 거절과 기존 일반 로그인·로그아웃 유지까지 확인했다.
+배포 식별자와 검증 증거는 [E2 운영 결과](P06-E2-RESULT.md#2026-10-21-e-정상-promotion과-최종-검증-완료)를 따른다.
+아래 배포 대기 문구는 초기 구현 당시 이력이다.
 
 [P06 계획](P06-PLAN.md#web-관리-종료-이후의-안전한-rollback)의 가입 종료 concern을 별도 구현했다.
 위 integration 기준에서 분기했으며 검증한 구현 commit은 이 결과가 포함된 PR head로 식별한다.

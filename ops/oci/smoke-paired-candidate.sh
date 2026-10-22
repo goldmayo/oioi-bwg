@@ -20,7 +20,6 @@ done
 
 docker run --detach --name promotion-smoke --network host \
   --env DATABASE_URL=postgresql://postgres@127.0.0.1:5432/promotion_smoke \
-  --env AUTH_SECRET=promotion-smoke-local-only-secret --env AUTH_TRUST_HOST=true \
   "${IMAGE_REPOSITORY}@${IMAGE_DIGEST}"
 docker run --detach --name console-promotion-smoke \
   --add-host host.docker.internal:host-gateway --publish 127.0.0.1:3001:3000 \

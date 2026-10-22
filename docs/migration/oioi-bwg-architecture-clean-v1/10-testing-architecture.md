@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.4"
+version: "1.5"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-21"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.4
+# oioi-bwg Testing Architecture v1.5
 
 ## 1. 목적
 
@@ -316,8 +316,10 @@ feature push hook도 같은 전체 diff 판정을 사용한다. Promotion과 mai
 Web과 Console은 독립 FSD root에서 lint/type-check/unit/build를 실행한다.
 각 앱의 alias와 테스트 include는 다른 앱의 소스·테스트를 읽지 않도록 해당 workspace가 소유한다.
 repo harness는 직접 앱 import, source package 및 공통 설정 변경의 두 앱 task 선택/hash를 검사한다.
-P04 회귀는 두 standalone origin에서 로그인·기존 앨범/곡/LRC/가사 저장·권한 거부·세션 격리를
-검증한다. CI의 PostgreSQL fixture는 격리된 test DB에만 만들고 정리한다.
+P04의 두 앱 로그인 회귀는 P06-E에서 Console 인증/관리와 Web 비로그인 조회/인증 거절로 전환한다.
+Web은 로그인 화면·세션/권한 API·Credentials callback 부재와 기존 쿠키의 비사용을 검증한다.
+Console의 MFA·인가 계약은 유지한다. 전체 관리자 E2E의 수동 실행 원칙은 §12.1을 따른다.
+CI의 PostgreSQL fixture는 격리된 test DB에만 만들고 정리한다.
 
 최소 후보:
 

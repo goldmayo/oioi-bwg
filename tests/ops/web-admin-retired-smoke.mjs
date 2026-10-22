@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
+
+const consoleRequire = createRequire(new URL("../../apps/console/package.json", import.meta.url));
+const { encode } = await import(consoleRequire.resolve("next-auth/jwt"));
 
 // Read-only capture from the current Web container on 2026-10-21, release 18462a4004780a0b43bcadf77792ef8fa22b082390498774331ed2a704a31c1a.
 // This public action identifier is not a credential.
@@ -28,23 +32,25 @@ export async function assertWebAdminRetired(browser, origin, sql, artifacts) {
   for (const email of [null, "user@p04.example.test", "admin@p04.example.test"]) {
     const context = await browser.newContext();
     if (email) {
-      const page = await context.newPage();
-      await page.goto(`${origin}/login`);
-      await page.getByLabel("Email").waitFor();
-      if (email.startsWith("user@")) {
-        await page.screenshot({ path: path.join(artifacts, "web-login.png"), fullPage: true });
-      }
-      await page.getByLabel("Email").fill(email);
-      await page.getByLabel("Password").fill("P04-fixture-pass1!");
-      await page.getByRole("button", { name: "로그인", exact: true }).click();
-      await page.waitForURL(`${origin}/`);
-      const session = await (await context.request.get(`${origin}/api/auth/session`)).json();
-      assert.ok(session.user?.id, "ordinary Web credentials must still authenticate");
-      if (email.startsWith("user@")) {
-        await page.screenshot({ path: path.join(artifacts, "web-login-home.png"), fullPage: true });
-      }
+      const [account] =
+        await sql`select account_id from password_credential where email = ${email}`;
+      const name = "authjs.session-token";
+      // A valid pre-retirement Web JWT must no longer give Web an identity.
+      const value = await encode({
+        token: { sub: String(account.account_id) },
+        secret: "p04-web-private-browser-fixture-secret",
+        salt: name,
+      });
+      await context.addCookies([{ name, value, url: origin }]);
     }
     for (const route of [
+      "/login",
+      "/api/auth/session",
+      "/api/auth/ability",
+      "/api/auth/csrf",
+      "/api/auth/signin",
+      "/api/auth/signout",
+      "/api/auth/callback/credentials",
       "/admin",
       "/admin/albums",
       "/admin/songs",
@@ -89,10 +95,14 @@ export async function assertWebAdminRetired(browser, origin, sql, artifacts) {
     if (email?.startsWith("admin@")) admin = { context, cookies: await context.cookies() };
     else await context.close();
   }
+  const page = await browser.newPage();
+  await page.goto(origin + "/");
+  await page.screenshot({ path: path.join(artifacts, "web-public-home.png"), fullPage: true });
+  await page.close();
   assert.equal(await snapshot(), before, "retired Web calls must not mutate managed data");
   assert.ok((await fetch(origin + "/")).ok);
   console.log(
-    "Web admin retired: guest/USER/ADMIN denied routes and old upload Action; ordinary login works",
+    "Web admin retired: guest/legacy USER/ADMIN denied auth/admin and old upload Action; public reads work",
   );
   return admin;
 }
