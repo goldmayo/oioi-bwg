@@ -192,41 +192,69 @@ const verifySignature = async (
   return crypto.subtle.verify("HMAC", key, signatureBytes, rawBody);
 };
 
+const toSlackHeading = (title: string): string => {
+  if (title.length <= 150) return title;
+  let heading = "";
+  for (const character of title) {
+    if (heading.length + character.length > 149) break;
+    heading += character;
+  }
+  return `${heading}…`;
+};
+
 const buildSlackPayload = (event: RelayEvent) => {
-  const title = escapeSlackMrkdwn(event.title);
-  const message = escapeSlackMrkdwn(event.message);
-  const environment = escapeSlackMrkdwn(event.environment);
-  const level = escapeSlackMrkdwn(event.level);
-  const projectId = escapeSlackMrkdwn(event.projectId);
-  const issueId = escapeSlackMrkdwn(event.issueId);
-  const occurredAt = escapeSlackMrkdwn(event.occurredAt);
+  const heading = toSlackHeading(event.title);
+  const repeatedMessage =
+    event.message === event.title || event.title.endsWith(`: ${event.message}`);
+  const showMessage = heading !== event.title || !repeatedMessage;
+  const levelLabel = {
+    fatal: "치명적 오류",
+    error: "오류",
+    warning: "경고",
+    info: "정보",
+    debug: "디버그",
+  }[event.level];
+  const occurredAt = event.occurredAt.replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+  const timestamp = Math.floor(Date.parse(event.occurredAt) / 1_000);
 
   return {
-    text: `[Sentry][${event.environment}] ${escapeSlackMrkdwn(event.title)}`,
+    text: [
+      `[Sentry][${event.environment}][${event.level}] ${escapeSlackMrkdwn(event.title)}`,
+      ...(repeatedMessage ? [] : [escapeSlackMrkdwn(event.message)]),
+      `발생 ${occurredAt}`,
+      event.issueUrl,
+    ].join("\n"),
+    unfurl_links: false,
+    unfurl_media: false,
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "Sentry new issue", emoji: true } },
-      { type: "section", text: { type: "mrkdwn", text: `*Title*\n${title}` } },
-      { type: "section", text: { type: "mrkdwn", text: `*Message*\n${message}` } },
+      { type: "header", text: { type: "plain_text", text: heading, emoji: false } },
       {
-        type: "section",
-        fields: [
-          { type: "mrkdwn", text: `*Environment*\n${environment}` },
-          { type: "mrkdwn", text: `*Level*\n${level}` },
-          { type: "mrkdwn", text: `*Project*\n${projectId}` },
-          { type: "mrkdwn", text: `*Issue*\n${issueId}` },
-          { type: "mrkdwn", text: `*Occurred at*\n${occurredAt}` },
-        ],
-      },
-      {
-        type: "actions",
+        type: "context",
         elements: [
           {
-            type: "button",
-            text: { type: "plain_text", text: "Open in Sentry" },
-            url: event.issueUrl,
-            action_id: "open_sentry_issue",
+            type: "plain_text",
+            text: `${event.environment.toUpperCase()} · ${levelLabel}`,
+            emoji: false,
           },
         ],
+      },
+      ...(showMessage
+        ? [{ type: "section", text: { type: "plain_text", text: event.message, emoji: false } }]
+        : []),
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `발생 <!date^${timestamp}^{date_num} {time_secs}|${occurredAt}>`,
+          verbatim: true,
+        },
+        accessory: {
+          type: "button",
+          text: { type: "plain_text", text: "Sentry에서 보기" },
+          accessibility_label: "Sentry에서 오류 상세 보기",
+          url: event.issueUrl,
+          action_id: "open_sentry_issue",
+        },
       },
     ],
   };

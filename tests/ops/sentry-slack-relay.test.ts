@@ -59,6 +59,13 @@ const env = {
   SLACK_SENTRY_WEBHOOK_URL: SLACK_WEBHOOK_URL,
 };
 
+const captureSlackPayload = async (payload = baseEvent) => {
+  const slackFetch = vi.fn<typeof fetch>(async () => new Response("ok"));
+  expect((await handleSentryWebhook(await makeRequest(payload), env, slackFetch)).status).toBe(204);
+  expect(slackFetch).toHaveBeenCalledOnce();
+  return JSON.parse(String(slackFetch.mock.calls[0]?.[1]?.body));
+};
+
 describe("Sentry Slack relay", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -110,7 +117,7 @@ describe("Sentry Slack relay", () => {
     const serialized = JSON.stringify(slackPayload);
     expect(serialized).toContain("staging");
     expect(serialized).toContain("123456789");
-    expect(serialized).toContain("2026-09-20T09:10:11.000Z");
+    expect(serialized).toContain("2026-09-20 09:10:11 UTC");
     expect(serialized).toContain("token=[redacted]");
     expect(serialized).toContain("[redacted-email]");
     expect(serialized).toContain("[redacted-url]");
@@ -238,5 +245,90 @@ describe("Sentry Slack relay", () => {
     expect(response.headers.get("allow")).toBe("POST");
     expect(response.headers.get("access-control-allow-origin")).toBeNull();
     expect(slackFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("Slack message layout", () => {
+  it("puts the title first and keeps metadata, local time and the issue link compact", async () => {
+    const payload = await captureSlackPayload();
+    expect(payload.blocks.map((block: { type: string }) => block.type)).toEqual([
+      "header",
+      "context",
+      "section",
+    ]);
+    expect(payload.blocks[0].text).toEqual({
+      type: "plain_text",
+      text: "TypeError: Failed to fetch",
+      emoji: false,
+    });
+    expect(payload.blocks[1].elements[0].text).toBe("STAGING · 오류");
+    expect(payload.blocks[2].text.text).toBe(
+      "발생 <!date^1789895411^{date_num} {time_secs}|2026-09-20 09:10:11 UTC>",
+    );
+    expect(payload.blocks[2].accessory).toMatchObject({
+      type: "button",
+      text: { text: "Sentry에서 보기" },
+      accessibility_label: "Sentry에서 오류 상세 보기",
+      url: "https://oioi-bwg.sentry.io/organizations/oioi-bwg/issues/123456789/?project=42",
+    });
+    expect(payload.blocks.some((block: { fields?: unknown }) => block.fields)).toBe(false);
+    expect(payload.text).toContain("[Sentry][staging][error] TypeError: Failed to fetch");
+    expect(payload.text).toContain("발생 2026-09-20 09:10:11 UTC");
+    expect(payload.text).toContain(payload.blocks[2].accessory.url);
+    expect(payload).toMatchObject({ unfurl_links: false, unfurl_media: false });
+  });
+
+  it.each([
+    ["TypeError: Failed to fetch", "Failed to fetch", 0],
+    ["Failed to fetch", "Failed to fetch", 0],
+    ["TypeError", "A separate diagnostic message", 1],
+    ["TypeError", "", 0],
+  ] as const)(
+    "only adds a body when it contributes information: %s",
+    async (title, message, count) => {
+      const event = structuredClone(baseEvent);
+      event.data.event.title = title;
+      event.data.event.metadata.value = message;
+      const payload = await captureSlackPayload(event);
+      const body = payload.blocks.filter(
+        (block: { type: string; text?: { type: string } }) =>
+          block.type === "section" && block.text?.type === "plain_text",
+      );
+      expect(body).toHaveLength(count);
+      if (count) expect(body[0].text.text).toBe(message);
+    },
+  );
+
+  it.each(["가".repeat(150), "가".repeat(151), "😀".repeat(120)])(
+    "fits the header limit without breaking Unicode or losing the full fallback title",
+    async (title) => {
+      const event = structuredClone(baseEvent);
+      event.data.event.title = title;
+      const payload = await captureSlackPayload(event);
+      const heading = payload.blocks[0].text.text;
+      expect(heading.length).toBeLessThanOrEqual(150);
+      expect(() => encodeURIComponent(heading)).not.toThrow();
+      expect(payload.text).toContain(title);
+      if (title.length <= 150) expect(heading).toBe(title);
+      else expect(heading).toMatch(/…$/);
+    },
+  );
+
+  it("keeps unknown environment and default severity visible", async () => {
+    const event = structuredClone(baseEvent);
+    event.data.event.tags = [["environment", "unrecognized"]];
+    event.data.event.level = "unrecognized";
+    const payload = await captureSlackPayload(event);
+    expect(payload.blocks[1].elements[0].text).toBe("UNKNOWN · 오류");
+  });
+
+  it("keeps a truncated title available without repeating it in the accessible fallback", async () => {
+    const event = structuredClone(baseEvent);
+    const title = "가".repeat(151);
+    event.data.event.title = title;
+    event.data.event.metadata.value = title;
+    const payload = await captureSlackPayload(event);
+    expect(payload.blocks[2].text).toMatchObject({ type: "plain_text", text: title });
+    expect(payload.text.split(title)).toHaveLength(2);
   });
 });

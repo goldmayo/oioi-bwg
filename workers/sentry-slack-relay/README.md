@@ -28,6 +28,23 @@ Sentry payload의 user/email, request, headers, body, cookie/token, raw cause, a
 exception/전체 stack trace는 읽어서 Slack payload로 복사하지 않는다. application Sentry sanitizer가
 첫 번째 privacy 경계이며 이 Worker는 Slack 전송 전 두 번째 allowlist 경계다.
 
+## 알림 표시
+
+오류 제목을 가장 먼저 크게 표시하고 `STAGING · 오류`처럼 환경과 심각도를 한 줄에 묶는다.
+title과 같은 내용이거나 `오류 타입: message`의 반복인 message는 생략한다. 별도의 진단 내용은 본문에
+유지하며 제목이 150자를 넘으면 Unicode를 끊지 않고 줄인다. 기존 240자 제한의 전체 정제 제목은
+알림/스크린 리더용 fallback에 유지한다. 제목과 진단 본문은 `plain_text`로 보내 임의 markup을 실행하지 않는다.
+
+발생 시각은 [Slack 날짜 형식](https://docs.slack.dev/messaging/formatting-message-text/#date-formatting)으로
+보는 사람의 기기 시간대에 표시한다. 해석하지 못하는 client에는 UTC가 명시된 fallback을 제공한다.
+숫자 project/issue ID는 본문에서 빼고 검증된 상세 링크에 유지한다. `Sentry에서 보기` 버튼으로 이동한다.
+불필요한 링크 preview는 끄고 환경·level·제목·추가 메시지·시각·링크는 top-level fallback에도 남긴다.
+
+화면의 `SLACK_SENTRY_WEBHOOK_URL` 발신자 이름과 아이콘은 payload로 바꿀 수 없다.
+[Incoming Webhook 규격](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/)에 따라
+기존 Slack 앱 설정의 표시 이름·아이콘을 바꾼다. 예를 들어 이름은 `바위게 오류 알림`으로 정할 수 있다.
+이 코드 변경은 Slack 앱 설정을 수정하지 않으며 Worker를 별도로 배포한 뒤 새 알림부터 적용된다.
+
 `SLACK_DEPLOY_WEBHOOK_URL`은 OCI 배포 결과 알림 전용이다. 이 Worker는 Cloudflare Worker Secret인
 `SLACK_SENTRY_WEBHOOK_URL`만 사용하며 GitHub Actions 또는 OCI application secret을 공유하지 않는다.
 
