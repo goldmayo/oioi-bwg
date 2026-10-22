@@ -9,6 +9,33 @@ created_at: "2026-10-22"
 
 # 모노레포 설정 공통화와 구조 개선
 
+## 2026-10-23 후속 — 루트 파일 점검과 설정 타입 프로그램 이관
+
+기존 정상화 완료 후 사용자가 추가 요청한 독립 단위다. 기준은 `1a5be78eddd12e0c83bfe17d7839dbfa017526dc`이며
+루트 파일의 실제 소비자·자동 탐색/명시적 호출을 [점검표](ROOT-FILE-INVENTORY.md)에 기록한다.
+`config/tsconfig.json`은 루트 `tsconfig.config.json`으로 옮기고 호출·상대 include·Turbo/harness를 함께 맞춘다.
+헌법 §5와 Testing §17을 따르며 기존 root NodeNext 프로그램·공통 preset·앱 설정 소유권은 유지한다.
+완료 조건은 검사 대상·옵션 보존, root 실행 명령과 양 앱 Turbo 선택/hash 회귀 검증, 필수 검사·리뷰 후
+기존 승인 절차의 squash 병합이다. 앱 runtime·DB·설치 입력은 바꾸지 않는다. 추가 파일 정리·#199·배포와
+보류 기능은 포함하지 않으며, 후속 전환 구현을 미리 쌓지 않는다. 원래 완료 누계는 다시 열지 않는다.
+
+### 사용자 후속 승인 — 루트 배치 정리
+
+위 TS 이동을 중단해 설명·비교와 Before/After를 제시한 뒤 사용자가 정리 트리를 승인했다.
+범위를 다음 세 단위로 확장하며 각 단위의 최종 검사·리뷰·squash 병합 후 최신 통합선에서 다음을 시작한다.
+
+1. 저장소 도구: TS 이동과 함께 ops/PG config를 tests/ops·tests/integration으로, 이슈 발행 도구를
+   scripts/manual로 옮긴다. 명시적 root·타입 소유권·직렬 PG 수집·실행 명령을 보존한다.
+2. 운영 자산: 개발 Dockerfile은 ops/docker로, 운영 Compose와 세 env 예제는 ops/oci 하위로 옮긴다.
+   source 참조만 갱신하고 설치되는 호스트 파일명·보호·rollback·입력 값은 보존한다.
+3. 앱 이미지: root 운영 Dockerfile을 앱별 Dockerfile로 분리하고 root build context를 유지한다.
+   CI/Promotion 경로와 build provenance·이미지 선택을 함께 맞추며 양 앱 image/native/readiness를 검증한다.
+
+k6는 성능 테스트로 **tests/k6에 유지**한다. 네 파일·세 root 실행 명령의 경로만 대조하며 외부 부하를
+실행하거나 target을 바꾸지 않는다. 일반 필수 검사와 단위별 실제 config/설치 fixture·Docker 검증을
+실행한다. 자동 탐색 root 설정은 유지하며 의존성 재정리·CI 최적화·운영 설치/배포는 추가하지 않는다.
+기존 보류 범위는 그대로다. [배치 점검표](ROOT-FILE-INVENTORY.md)에 각 완료 단위의 현재 경로를 덧붙인다.
+
 ## 기준과 실행 계약
 
 **2026-10-23 승인 범위 실행 완료.** 현재 결과·보존 판단은 [RESULT](MONOREPO-CONFIGURATION-RESULT.md)의

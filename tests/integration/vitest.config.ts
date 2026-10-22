@@ -1,11 +1,13 @@
+import path from "node:path";
 import { configDefaults, defineConfig } from "vitest/config";
 
 import { createPostgresProject } from "@oioi-bwg/config/vitest/postgres";
 
-const postgresProject = createPostgresProject(import.meta.dirname);
+const root = path.resolve(import.meta.dirname, "../..");
+const postgresProject = createPostgresProject(root);
 
 export default defineConfig({
-  root: import.meta.dirname,
+  root,
   test: {
     fileParallelism: false,
     maxWorkers: 1,
@@ -23,8 +25,8 @@ export default defineConfig({
         },
       },
       {
-        extends: "./apps/web/vitest.postgres.config.ts",
-        root: import.meta.dirname,
+        extends: path.join(root, "apps/web/vitest.postgres.config.ts"),
+        root,
       },
     ],
   },

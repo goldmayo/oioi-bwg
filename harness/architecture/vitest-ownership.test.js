@@ -163,7 +163,7 @@ test("root unit and coverage collect the Turbo workspace union with each workspa
 
 test("PostgreSQL projects preserve serial Node execution and scope the Web adapter alias", async () => {
   const ctx = await createVitest("test", {
-    config: path.join(root, "vitest.postgres.config.ts"),
+    config: path.join(root, "tests/integration/vitest.config.ts"),
     watch: false,
   });
   try {

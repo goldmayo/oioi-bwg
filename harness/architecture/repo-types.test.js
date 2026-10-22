@@ -46,8 +46,12 @@ test("repo type programs cover every tracked operational TypeScript source", () 
 });
 
 test("root settings and tests have strict type owners without leaking Web aliases", () => {
-  const config = readProject("config/tsconfig.json");
-  for (const filename of ["drizzle.config.ts", "vitest.ops.config.ts"])
+  const config = readProject("tsconfig.config.json");
+  for (const filename of [
+    "drizzle.config.ts",
+    "tests/ops/vitest.config.ts",
+    "tests/integration/vitest.config.ts",
+  ])
     assert.ok(config.fileNames.includes(path.join(root, filename)), `${filename} needs an owner`);
 
   const node = readProject("tests/tsconfig.json");
@@ -57,7 +61,7 @@ test("root settings and tests have strict type owners without leaking Web aliase
     encoding: "utf8",
   })
     .split("\0")
-    .filter((filename) => filename.endsWith(".ts"));
+    .filter((filename) => filename.endsWith(".ts") && !filename.endsWith("/vitest.config.ts"));
   assert.ok(sources.length > 0);
   for (const filename of sources) {
     const absolute = path.join(root, filename);

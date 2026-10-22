@@ -116,6 +116,7 @@ test("shared mocks and source packages select and invalidate both apps verificat
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
     "turbo.json",
+    "tsconfig.config.json",
     ".gitignore",
     "apps/web/package.json",
     "apps/console/package.json",
@@ -124,9 +125,6 @@ test("shared mocks and source packages select and invalidate both apps verificat
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     fs.copyFileSync(path.join(repositoryRoot, filename), destination);
   }
-  fs.cpSync(path.join(repositoryRoot, "config"), path.join(fixtureRoot, "config"), {
-    recursive: true,
-  });
   fs.cpSync(path.join(repositoryRoot, "packages"), path.join(fixtureRoot, "packages"), {
     recursive: true,
     filter: (filename) =>
@@ -185,6 +183,7 @@ test("shared mocks and source packages select and invalidate both apps verificat
   assert.deepEqual(dryRun(true), []);
 
   for (const filename of [
+    "tsconfig.config.json",
     "packages/config/vitest/server-only.ts",
     "packages/config/eslint/app.ts",
     "packages/config/steiger.ts",

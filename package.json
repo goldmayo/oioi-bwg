@@ -26,7 +26,7 @@
     "test:integration:postgres": "tsx scripts/run-postgres-integration-tests.ts",
     "test:integration:postgres:local": "docker compose -f compose.dev.yml up -d --wait postgres && tsx scripts/run-postgres-integration-tests.ts --local",
     "test:load": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/load.js",
-    "test:ops": "vitest run --config vitest.ops.config.ts",
+    "test:ops": "vitest run --config tests/ops/vitest.config.ts",
     "test:unit": "vitest",
     "test:unit:run": "turbo run test",
     "test:harness": "node --import tsx --test harness/architecture/*.test.js apps/web/eslint/*.test.js",
@@ -39,7 +39,7 @@
     "dev:console:local": "tsx scripts/dev-console-local.mts",
     "test:integration:admin": "tsx scripts/run-postgres-integration-tests.ts --admin-smoke",
     "test:integration:admin:local": "docker compose -f compose.dev.yml up -d --wait postgres && tsx scripts/run-postgres-integration-tests.ts --local --admin-smoke",
-    "type-check:config": "tsc --noEmit -p config/tsconfig.json",
+    "type-check:config": "tsc --noEmit -p tsconfig.config.json",
     "type-check:scripts": "tsc --noEmit -p scripts/tsconfig.json"
   },
   "dependencies": {
