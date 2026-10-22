@@ -60,7 +60,7 @@ async function start(app, port, append = false, enrollmentEnabled = false) {
       HOSTNAME: "127.0.0.1",
       PORT: String(port),
       DATABASE_URL: process.env.DATABASE_URL,
-      NEXT_PUBLIC_APP_ENV: "staging",
+      NEXT_PUBLIC_APP_ENV: "local",
       ...(app === "web"
         ? {}
         : {

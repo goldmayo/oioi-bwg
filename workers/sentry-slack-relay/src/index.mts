@@ -5,7 +5,7 @@ interface Env {
 
 interface RelayEvent {
   app?: "web" | "console";
-  environment: "local" | "staging" | "production" | "unknown";
+  environment: "local" | "production" | "unknown";
   failureKind?: "contract" | "delivery" | "system" | "unknown";
   issueId: string;
   issueUrl: string;
@@ -68,14 +68,14 @@ const escapeSlackMrkdwn = (value: string) =>
 
 const readEnvironment = (event: Record<string, unknown>): RelayEvent["environment"] => {
   const direct = event.environment;
-  if (direct === "local" || direct === "staging" || direct === "production") return direct;
+  if (direct === "local" || direct === "production") return direct;
 
   if (Array.isArray(event.tags)) {
     const environmentTag = event.tags.find(
       (tag): tag is [string, unknown] => Array.isArray(tag) && tag[0] === "environment",
     );
     const value = environmentTag?.[1];
-    if (value === "local" || value === "staging" || value === "production") return value;
+    if (value === "local" || value === "production") return value;
   }
 
   return "unknown";

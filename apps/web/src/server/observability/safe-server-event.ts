@@ -5,6 +5,7 @@ import { AppError } from "@oioi-bwg/server/errors/app-error";
 import type { ErrorEvent } from "@sentry/nextjs";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 
+import { APP_ENVIRONMENTS } from "@/shared/config/app-env";
 import { toSafeRequestId } from "@/shared/lib/sentry/correlation";
 import {
   toSafeSentryBuildMetadata,
@@ -50,7 +51,6 @@ const ERROR_OUTCOMES = [
 ] as const;
 
 const SAFE_LEVELS = ["fatal", "error", "warning", "log", "info", "debug"] as const;
-const SAFE_ENVIRONMENTS = ["development", "staging", "production", "test"] as const;
 const SAFE_METHODS = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"] as const;
 const SAFE_ROUTER_KINDS = ["App Router", "Pages Router"] as const;
 const SAFE_ROUTE_TYPES = ["action", "proxy", "render", "route"] as const;
@@ -367,7 +367,7 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
     ...(typeof event.timestamp === "number" ? { timestamp: event.timestamp } : {}),
     ...(isOneOf(event.level, SAFE_LEVELS) ? { level: event.level } : { level: "error" }),
     platform: "node",
-    ...(isOneOf(event.environment, SAFE_ENVIRONMENTS) ? { environment: event.environment } : {}),
+    ...(isOneOf(event.environment, APP_ENVIRONMENTS) ? { environment: event.environment } : {}),
     ...toSafeSentryBuildMetadata(event),
     exception: {
       values: [

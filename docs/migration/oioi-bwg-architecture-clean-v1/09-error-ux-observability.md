@@ -1,10 +1,10 @@
 ---
 title: "Error UX / Observability Architecture"
 document_id: "09"
-version: "1.4"
+version: "1.5"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-22"
+updated_at: "2026-10-23"
 depends_on:
   - "03"
   - "04"
@@ -21,7 +21,7 @@ tags:
   - "observability"
 ---
 
-# oioi-bwg Error UX / Observability Architecture v1.4
+# oioi-bwg Error UX / Observability Architecture v1.5
 
 ## 1. 목적
 
@@ -275,8 +275,8 @@ Script / CLI progress
 ```
 
 `clientLogger`는 `NEXT_PUBLIC_APP_ENV=local`에서만 `debug/info/warn/error`를 browser console에
-출력한다. staging과 production에서는 기본적으로 출력하지 않으며 Sentry API, breadcrumb 또는 message
-capture를 호출하지 않는다.
+출력한다. production과 미지원 값에서는 출력하지 않으며 Sentry API, breadcrumb 또는 message capture를
+호출하지 않는다. 환경 값과 Sentry 활성화의 계약은 11 §12를 따른다. NODE_ENV로 배포 환경을 추론하지 않는다.
 
 server log는 자유형 객체 전체를 직렬화하는 범용 API보다 다음과 같은 고정 schema와 allowlist를 사용한다.
 

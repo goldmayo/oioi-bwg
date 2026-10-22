@@ -1,9 +1,11 @@
 "use client";
 
+import { getAppEnvironment } from "@/shared/config/app-env";
+
 type ConsoleMethod = "debug" | "error" | "info" | "warn";
 
 function write(method: ConsoleMethod, message: string): void {
-  if (process.env.NEXT_PUBLIC_APP_ENV !== "local") return;
+  if (getAppEnvironment() !== "local") return;
   console[method](message);
 }
 

@@ -28,8 +28,8 @@ describe("Sentry error reporter", () => {
     vi.unstubAllEnvs();
   });
 
-  it("stays silent locally and does not capture", async () => {
-    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "local");
+  it.each(["local", "staging"])("does not capture in %s", async (environment) => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", environment);
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
@@ -44,7 +44,7 @@ describe("Sentry error reporter", () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
-  it.each(["staging", "production"])("captures an allowlisted error in %s", async (environment) => {
+  it.each(["production"])("captures an allowlisted error in %s", async (environment) => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", environment);
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
     const error = Object.assign(new Error("private response"), { name: "ClientContractError" });
@@ -72,7 +72,7 @@ describe("Sentry error reporter", () => {
   });
 
   it("does not create an unhandled rejection when SDK projection fails", async () => {
-    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
     sentryMocks.eventFromException.mockRejectedValueOnce(new Error("SDK failure"));
 
@@ -84,7 +84,7 @@ describe("Sentry error reporter", () => {
 });
 
 it("carries HTTP correlation through the browser reporter", async () => {
-  vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+  vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
   vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "http://public@localhost/1");
   const { rememberErrorRequestId } = await import("./correlation");
   const id = "48be30fa-1441-4dc9-8ffa-9b618ec32652";

@@ -5,7 +5,7 @@ import test from "node:test";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 
-function loadAppConfig(app, cwd, ephemeralBuild) {
+function loadAppConfig(app, cwd, ephemeralBuild, environment = {}) {
   const appDirectory = path.join(repositoryRoot, "apps", app);
   // Isolate module/env caches; never enable source map upload in the harness.
   const output = execFileSync(
@@ -27,7 +27,9 @@ function loadAppConfig(app, cwd, ephemeralBuild) {
       env: {
         ...process.env,
         SENTRY_SOURCE_MAPS_ENABLED: "false",
+        NEXT_PUBLIC_APP_ENV: "local",
         OIOI_EPHEMERAL_BUILD: ephemeralBuild,
+        ...environment,
       },
     },
   );
@@ -51,5 +53,20 @@ test("Next app entries preserve tracing roots, shared build cache policy and Con
     assert.equal(configs.console.experimental.authInterrupts, true);
     delete configs.console.experimental.authInterrupts;
     assert.deepEqual(configs.console, configs.web);
+  }
+});
+
+test("Next app entries validate explicit local/production before building", () => {
+  for (const app of ["web", "console"]) {
+    assert.equal(
+      loadAppConfig(app, repositoryRoot, "true", { NEXT_PUBLIC_APP_ENV: "production" }).output,
+      "standalone",
+    );
+    for (const value of [undefined, "", "staging", "development", "INPUT_MARKER"]) {
+      assert.throws(
+        () => loadAppConfig(app, repositoryRoot, "true", { NEXT_PUBLIC_APP_ENV: value }),
+        /NEXT_PUBLIC_APP_ENV must be local or production\./,
+      );
+    }
   }
 });

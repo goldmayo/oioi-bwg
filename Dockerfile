@@ -27,7 +27,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 FROM dependencies AS builder
 
 ARG BUILD_APP=all
-ARG NEXT_PUBLIC_APP_ENV=staging
+ARG NEXT_PUBLIC_APP_ENV=local
 ARG NEXT_PUBLIC_GTM_ID
 ARG NEXT_PUBLIC_SENTRY_DSN
 ARG SENTRY_ORG

@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: 7cb3a6d424fc7255449c30786e10a3282884c6b6
 created_at: "2026-10-11"
-updated_at: "2026-10-12"
-revision: 3
+updated_at: "2026-10-23"
+revision: 4
 ---
 
 # 로컬 개발과 OCI 운영 환경변수 구성 개선 계획
@@ -17,8 +17,10 @@ revision: 3
 같은 VM의 Web을 향후 `www.oioibawige.com`으로 전환한다. 별도 OCI dev/staging 환경을 만들지 않는다.
 
 `oci-development-image`, `migration_develop`, `compose.oci-development.yml`은 기존 운영 경로의
-식별자다. 이름에 development가 있어도 실제 대상은 prod다. `NEXT_PUBLIC_APP_ENV=staging`도
-현재 빌드 입력이며 환경의 실체를 정의하지 않는다. 이름과 동작의 정리는 검증된 전환 순서로 진행한다.
+식별자다. 이름에 development가 있어도 실제 대상은 prod다. 초기 조사 당시의
+`NEXT_PUBLIC_APP_ENV=staging` 입력은 2026-10-23 사용자 확정으로 폐기한다. 앱 환경은 local/production만
+사용하며 로컬 production build·일반 CI는 local, VM용 Promotion build는 production이다.
+이 값 결정은 운영 배포나 www 전환 승인이 아니다. staging 이름의 외부 리소스는 별도로 보존한다.
 
 이번 문서는 환경변수 개선 **계획**이다. 개인 env 파일, Vault, 운영 DB, GitHub 설정을 변경하지 않는다.
 구현은 아래 독립 PR 단위로 나누고, 운영 변경은 기존 P06의 배포·IAM·검증 경계에서 수행한다.
@@ -114,7 +116,7 @@ OCI API 개인 키도 앱 파일에 넣지 않는다. atomic write와 기존 rel
 Console secret 접근 검증은 P06-B0/B2의 완료 조건을 유지한다. 현재 차단됐다고 주장하지 않는다.
 
 `NEXT_PUBLIC_*`는 공개 빌드 입력으로 취급하고 비밀 값을 넣지 않는다. 필요한 경우만 공개 DSN·GTM
-등을 제공한다. 실제 prod 빌드값 `production` 전환은 P06에서 두 앱의 새 digest와 함께 검증한다.
+등을 제공한다. VM용 빌드값은 `production`이다. 새 digest의 실제 운영 적용은 P06에서 별도 검증한다.
 GitHub Environment 이름만 바꾸어 기존 이미지의 빌드값이 바뀌었다고 처리하지 않는다.
 
 ## 4. 구현 순서와 PR 경계
@@ -136,7 +138,8 @@ P06의 필수 선행 작업이 아니다.** 로컬 실행을 실제로 막는 �
 - 개인 `.env`/`.env.local`을 덮어쓰지 않고, 차이와 이전 방법은 값 없이 안내한다.
 
 완료 조건: 템플릿의 각 변수에 실제 소비 근거가 있고, 로컬 Web·Console의 환경 해석이 일치한다.
-운영 `staging` 입력의 전환은 ENV-3/P06에서 처리한다.
+2026-10-23 확정에 따라 앱 환경 입력의 local/production 정합화는 모노레포 ENV-06에서 처리한다.
+이전 staging 입력 보류 전제는 이 결정으로 대체하며 ENV-3/P06의 실제 운영 배포 경계는 유지한다.
 
 ### ENV-2 — 로컬 DB 입력과 시작 경로 통합
 

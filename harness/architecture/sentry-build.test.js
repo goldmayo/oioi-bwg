@@ -18,7 +18,7 @@ async function loadBuildConfig(app, environment) {
     packages: "external",
     define: {
       "import.meta.dirname": JSON.stringify(appDirectory),
-      "process.env": JSON.stringify(environment),
+      "process.env": JSON.stringify({ NEXT_PUBLIC_APP_ENV: "local", ...environment }),
     },
     plugins: [
       {

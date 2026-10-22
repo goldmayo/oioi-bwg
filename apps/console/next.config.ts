@@ -3,7 +3,10 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 import { createNextConfig } from "../../config/next.ts";
 import { createSentryBuildOptions } from "../../config/sentry-build.ts";
+import { validateAppEnvironment } from "./src/shared/config/app-env";
 import { getSentryBuildConfig } from "./src/shared/config/sentry-build";
+
+validateAppEnvironment();
 
 const sharedNextConfig = createNextConfig(import.meta.dirname);
 const nextConfig: NextConfig = {

@@ -1,5 +1,7 @@
 import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
 
+import { APP_ENVIRONMENTS } from "@/shared/config/app-env";
+
 import { toSafeRequestId } from "./observability-correlation";
 import { toSafeSentryBuildMetadata, toSafeSentryBuildPath } from "./sentry-build-metadata";
 import { getSentryRouteMetadata } from "./sentry-route-metadata";
@@ -15,7 +17,6 @@ export const SENTRY_ERROR_SOURCES = [
 
 const CLIENT_ERROR_TYPES = ["client-contract", "client-transport", "runtime"] as const;
 const SAFE_LEVELS = ["fatal", "error", "warning", "log", "info", "debug"] as const;
-const SAFE_ENVIRONMENTS = ["staging", "production"] as const;
 const SAFE_EXCEPTION_TYPES = [
   "Error",
   "EvalError",
@@ -322,7 +323,7 @@ export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
     ...(typeof event.timestamp === "number" ? { timestamp: event.timestamp } : {}),
     ...(isOneOf(event.level, SAFE_LEVELS) ? { level: event.level } : { level: "error" }),
     platform: "javascript",
-    ...(isOneOf(event.environment, SAFE_ENVIRONMENTS) ? { environment: event.environment } : {}),
+    ...(isOneOf(event.environment, APP_ENVIRONMENTS) ? { environment: event.environment } : {}),
     ...toSafeSentryBuildMetadata(event),
     exception: {
       values: [

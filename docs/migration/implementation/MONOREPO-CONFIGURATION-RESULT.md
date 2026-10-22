@@ -23,8 +23,8 @@ created_at: "2026-10-22"
 | [x] | ENV-03 | #200이 4b08beb에 병합됐다. readiness/업로드의 필수 입력·빈 URL 구분자 거절·정규화·503/no-store·값 비노출을 검증했다. 실제 R2 업로드는 미검증이다. |
 | [x] | ENV-04 | #198에서 Web DATABASE_URL 예제를 추가했다. 개인 env 변경 없이 회수 코드·검증 증거를 재판정했다. |
 | [x] | ENV-05 | 개인 비추적 env의 값 유무는 브랜치 결함에서 제외한다. 두 앱 추적 예제는 local을 명시하며 개인 파일을 수정하지 않았다. |
-| [x] | ENV-06 | 앱 환경 계약을 local/staging/production으로 명시했다. Web 기본·곡/앨범 metadata가 local site URL을 공유하며 환경 회귀·두 앱 build·실제 local HTML을 검증했다. 아래 ENV-06 실행 절 참조. |
-| [x] | ENV-07 | local launcher의 local 지정과 현행 CI/Promotion staging 입력의 의미를 Runtime §12에 명시했다. production/www 입력 전환은 #199의 P06-F 보류로 유지한다. |
+| [x] | ENV-06 | 사용자 확정 local/production만 허용하며 Next dev/build에서 누락·미지원 값을 거절한다. metadata·logger·Sentry·최종 event/relay와 예제·CI 입력을 맞췄다. 아래 확정 계약 실행 절 참조. |
+| [x] | ENV-07 | 로컬 production build·일반 CI는 local, VM용 Promotion은 production이다. Docker 기본값도 local이며 staging 앱 환경을 폐기했다. 실제 운영 배포·#199 www/F 전환은 보류다. |
 | [ ] | ENV-08 | 대기 |
 | [ ] | ENV-09 | 대기 |
 | [ ] | ENV-10 | 대기 |
@@ -896,6 +896,9 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 
 ## 2026-10-23 정상화 재개 — ENV-06·관련 ENV-07
 
+이 절은 `fb6b91e`까지의 최초 3값 구현 이력이다. 아래 사용자 확정 계약이 환경 값·Sentry·CI 입력의
+현재 판단을 대체한다. 이전 실행 결과를 새 local/production 소스의 검증으로 재사용하지 않는다.
+
 ### 기준과 변경
 
 - 진입 기준은 fetch한 `origin/migration_main@792a7464007d586a0e19d5c8382fe2c6a50af37b`다.
@@ -935,3 +938,47 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   기록한다. CI 링크만 추가하려는 문서 커밋으로 전체 CI를 다시 유발하지 않는다.
 - 개인 env·DB 볼륨·MFA 키·운영 설정을 변경하지 않았다. 로컬 DB integration·관리자 전체 E2E·
   외부 Sentry/R2/Slack 전송·운영 배포는 미실행이다. #199 F 전환·향후 계정 기능·UI 추출은 보류다.
+
+### 사용자 확정 계약 — local/production 전환
+
+- 사용자는 ENV-06 중간에 앱 환경을 local/production 두 값으로 확정했다. 비용상 별도 staging 환경은
+  없으며 VM용 build는 production, 로컬 개발·production build·검증은 local이다. NODE_ENV로 배포 환경을
+  추론하지 않는다. 이 결정은 실제 운영 배포 승인이 아니다. 이전 3값 설명을 현재 계약으로 사용하지 않는다.
+- [확정 계획](MONOREPO-CONFIGURATION-PLAN.md#사용자-확정-반영--localproduction-계약)에 따라 같은
+  [PR #202](https://github.com/goldmayo/oioi-bwg/pull/202)의 후속 커밋으로 구현한다. 기준은
+  `fb6b91e40397dd4e3c57c3f159db3e4726b7859a`와 이 RESULT를 포함한 local/production 전환 diff다.
+  기존 커밋은 보존하며 앞 head의 CI 성공은 새 계약의 병합 근거로 사용하지 않는다.
+- 두 앱의 `shared/config/app-env.ts`가 값 해석을 소유한다. Next dev/build 진입점은 누락·빈 값·staging·
+  development·미지원 값을 고정 오류로 거절하며 입력 값을 노출하지 않는다. runtime getter는 미지원 값을
+  undefined로 반환해 Sentry/browser logging을 끈다. metadata·feature flag도 같은 getter를 사용한다.
+- Sentry는 production+DSN만 활성화한다. browser/server의 최종 event sanitizer는 local/production 외
+  environment를 제거한다. 독립 relay의 입력 표시는 local/production만 허용하고 staging은 unknown으로
+  정규화한다. 이는 환경 표시 계약이며 Worker 위치 이동·workspace 추출·배포는 아니다.
+- Docker 기본값과 일반 CI 이미지 build 세 곳·관리자 local smoke는 local, VM용 Promotion job과 양쪽
+  candidate build는 production으로 맞췄다. 기존 공개 build hash는 APP_ENV를 이미 포함하므로 새 값은
+  새 candidate 검증이 필요하다. #199의 www URL 변경·F 전환·운영 배포는 실행하지 않았다.
+- Runtime v1.10·Observability v1.5와 인덱스 v1.31, 앱 예제·환경 PLAN·기존 client Sentry 결과의 후속
+  안내·relay README를 맞췄다. 과거 staging 실행/수신 증거와 pinned 조사 표는 그대로 보존한다.
+  staging 이름의 외부 버킷·기존 host URL·수동 k6 대상·개인 env·운영 리소스와 접속 대상은 변경하지 않았다.
+
+확정 소스에서 직접 실행한 검증:
+
+- `pnpm type-check`: 4 task 성공·캐시 1개, repo/config/scripts 성공.
+  `pnpm lint`: 4 task 성공·캐시 2개, 양쪽 FSD와 repo ESLint 성공.
+  신규 sanitizer fixture의 필수 type 누락과 import 정렬을 보완했다. format·lint가 겹친 실행의
+  max-lines-per-function 도구 예외는 format 종료 후 개별 파일·전체 lint에서 재현되지 않았다.
+  검사 규칙이나 hook을 비활성화하지 않았다.
+- `pnpm test:unit:run`: 95파일·653건(contracts 3/server 103/Web 176/Console 371),
+  최종 4 task 성공·캐시 2개다. 앞선 확정 계약 unit 실행은 4 task·캐시 0개 성공이었다.
+- `pnpm test:harness`: 35건 성공. 실제 두 Next entry에서 local/production을 허용하고 누락·staging·
+  development·미지원 값을 거절하는 검사를 포함한다. `NODE_ENV=production`이 local을 바꾸지 않는다.
+- 기존 jq PATH의 `pnpm test:ops`: 21파일·291건 성공. 일반 CI local/VM candidate production 입력,
+  relay의 direct/tag local/production 허용·staging unknown과 기존 서명·전송 경계를 mock으로 검증했다.
+- `pnpm format:check`, `git diff --check`: 성공.
+- `pnpm build --force --env-mode=loose --concurrency=1`: 두 앱 실제 local production build 성공·캐시 0개.
+  NODE_ENV=production과 NEXT_PUBLIC_APP_ENV=local, 빈 DSN/GTM·업로드/telemetry OFF·불가 loopback DB·
+  가짜 Console/R2 입력을 사용했다. 최신 Web standalone `/more/policy`의 200 HTML에서 localhost
+  Open Graph URL·이미지와 Twitter 이미지를 확인했다. 운영 production build/수신 검증은 아니다.
+- 로그는 `.local/monorepo-config/app-env/local-production/`에 이전 계약의 로그와 분리했다.
+  최종 push hook·head CI·리뷰·squash 결과는 PR 본문에서 확인한다. 코드·fixture·문서를 한 환경 전환으로
+  묶는 크기 목표 초과 이유와 리뷰 순서도 PR에 기록한다. ENV-10 GTM·DB-01/02·UI/계정 기능은 별도다.

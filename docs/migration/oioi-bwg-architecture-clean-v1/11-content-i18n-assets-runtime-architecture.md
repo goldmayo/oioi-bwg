@@ -232,16 +232,21 @@ Sentry는 현재 Web/Console이 같은 프로젝트를 사용한다. 앱 내부 
 `NEXT_PUBLIC_SENTRY_DSN`을 유지하고 앱별 입력 책임을 명시한다. 프로젝트 분리는 별도 결정과
 검증 없이 요구하지 않는다. `local`에서는 DSN 존재 여부와 무관하게 전송하지 않는 기존 정책을 유지한다.
 
-Web/Console의 `NEXT_PUBLIC_APP_ENV` 값 계약은 `local | staging | production`이다.
-`NODE_ENV`는 Next 실행 모드이며 앱 환경을 대신하지 않는다. `development`는 앱 환경의 별칭이 아니다.
-local launcher는 로컬 전용 명령이므로 `local`을 명시한다. 현행 CI/Promotion의 `staging` 입력은
-기존 배포 경로의 식별값이며 별도 staging 인프라를 뜻하지 않는다. `production` 입력과 www URL 전환은
-P06-F의 별도 전환 절차로 다룬다.
+Web/Console의 `NEXT_PUBLIC_APP_ENV` 값 계약은 `local | production`이다. 비용상 별도 staging 환경은
+운영하지 않는다. `NODE_ENV`는 Next 실행 모드이며 앱 환경을 대신하지 않는다. 로컬 production build도
+앱 환경은 `local`이다. `staging/development/test`는 앱 환경의 별칭으로 허용하지 않는다.
+앱의 `shared/config/app-env.ts`가 해석을 소유하며 Next dev/build 진입점은 누락·미지원 값을 거절한다.
+local launcher·Docker 기본값·일반 CI/관리자 smoke는 `local`, VM용 Promotion candidate build는
+`production`을 명시한다. 공개 build 입력 변경은 새 image가 필요하며 실제 운영 배포는 별도 승인 대상이다.
+www URL 전환은 P06-F의 보류 범위다. 이름에 staging이 있는 버킷·외부 리소스·기존 host 식별자는
+이 계약만으로 삭제·이름 변경·접속 대상 변경하지 않는다.
 
 Web의 기본 metadata와 곡/앨범 metadata helper는 같은 site URL을 사용한다. `local`에서는
-`http://localhost:3000`, `staging/production`에서는 기존 `https://oioibawige.com`을 사용한다.
+`http://localhost:3000`, `production`에서는 기존 `https://oioibawige.com`을 사용한다.
 누락·빈 값·미지원 값은 local로 추론하지 않고 기존 공개 URL을 유지하며, Sentry와 browser logging은
-비활성화한다. Sentry는 지원되는 `staging/production`과 비어 있지 않은 DSN이 함께 있을 때만 활성화한다.
+비활성화한다. Sentry는 `production`과 비어 있지 않은 DSN이 함께 있을 때만 활성화한다.
+Sentry 최종 event와 Slack relay의 environment 허용값도 이 계약을 따르며 이전 staging 값은
+전송용 event에서 제거하거나 relay에서 unknown으로 표시한다. 기존 리소스 이름과 구분한다.
 
 ---
 
