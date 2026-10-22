@@ -204,3 +204,20 @@ workspace/repo 검사 책임을 유지하며 누락된 운영 `.ts` 스크립트
   기존 verify/CI/hook의 검사 범위와 task 의존 관계는 유지하고 실행 도구를 새로 만들지 않는다.
 - coverage·workspace/repo 검사·harness/FSD/format 및 두 앱 build를 실제 실행하고 결과를 기록한다.
   같은 브랜치에 새 커밋을 push한 뒤 브리핑하며 PR·병합·배포는 하지 않는다.
+
+## 4단계 네 번째 단위 — TEST-04 PostgreSQL 의존 책임
+
+기준은 `1a6f4b2f6be2c5895c8840ffa6f907495f17c334`다. Testing §6·15·17을 따라 실제 PostgreSQL
+검증을 보존하면서 Web alias의 적용 범위를 실제 adapter consumer로 한정한다.
+
+- 현재 네 integration 파일 중 foundation만 Web의 `toErrorResponse`를 소비한다. 실제 nickname·
+  credential·Album/Song slug 충돌이 HTTP 409로 변환되는 검증을 제거하거나 mock으로 대체하지 않는다.
+- root PostgreSQL entry는 전체 선택과 직렬 실행을 소유한다. 공통 server 검사 세 파일과 Web adapter를
+  포함한 foundation 한 파일을 별도 project로 나누고, Web project의 alias·include는 Web이 소유한다.
+  두 project가 실제 공유하는 Node 환경·timeout·server-only mock만 PostgreSQL 공통 설정으로 둔다.
+  기존 테스트 파일·이름·검증 본문과 migration/role/runner/CI 실행 경로는 유지한다.
+- 변경 전후 네 파일의 수집 목록·제외·환경·직렬 설정을 대조하고 실제 로컬 PostgreSQL runner를
+  실행한다. 기존 Compose PostgreSQL 17의 임시 DB만 사용하고 runner의 연결·lock·DB 정리를 확인한다.
+  Web alias가 server project에 적용되지 않는 회귀도 확인한다.
+- 승인한 Turbo 병렬 workspace 검사와 repo 검사 후 harness/FSD/format 및 두 앱 build를 실행한다.
+  리팩토링 점검과 RESULT 기록 후 새 커밋을 push한다. 다음 설정 개선은 별도 단위로 남긴다.

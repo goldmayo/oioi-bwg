@@ -130,3 +130,68 @@ test("root unit and coverage collect the Turbo workspace union with each workspa
     }
   }
 });
+
+test("PostgreSQL projects preserve serial Node execution and scope the Web adapter alias", async () => {
+  const ctx = await createVitest("test", {
+    config: path.join(root, "vitest.postgres.config.ts"),
+    watch: false,
+  });
+  try {
+    const specifications = await ctx.globTestSpecifications();
+    const expected = fs
+      .readdirSync(path.join(root, "tests/integration"))
+      .filter((file) => file.endsWith(".postgres.test.ts"))
+      .map((file) => path.join(root, "tests/integration", file))
+      .sort();
+    assert.ok(expected.length > 0);
+    assert.deepEqual(specifications.map(({ moduleId }) => moduleId).sort(), expected);
+    assert.equal(ctx.config.fileParallelism, false);
+    assert.equal(ctx.config.maxWorkers, 1);
+    assert.deepEqual(ctx.projects.map(({ name }) => name).sort(), [
+      "server-postgres",
+      "web-postgres",
+    ]);
+    const foundation = path.join(root, "tests/integration/m7-foundation.postgres.test.ts");
+    for (const project of ctx.projects) {
+      const files = specifications
+        .filter(({ project: owner }) => owner === project)
+        .map(({ moduleId }) => moduleId)
+        .sort();
+      const isWeb = project.name === "web-postgres";
+      assert.deepEqual(
+        files,
+        isWeb ? [foundation] : expected.filter((file) => file !== foundation),
+      );
+      assert.equal(project.config.root, root);
+      assert.equal(project.config.environment, "node");
+      assert.equal(project.config.globals, false);
+      assert.deepEqual(project.config.setupFiles, []);
+      assert.equal(project.config.pool, "forks");
+      assert.equal(project.config.isolate, true);
+      assert.equal(project.config.testTimeout, 30_000);
+      assert.equal(project.config.hookTimeout, 30_000);
+      assert.equal(project.config.sequence.concurrent, false);
+      assert.ok(project.config.exclude.includes("**/node_modules/**"));
+      assert.ok(project.config.exclude.includes("**/.git/**"));
+      const aliases = project.vite.config.resolve.alias;
+      assert.equal(
+        aliases.find(({ find }) => find === "server-only")?.replacement,
+        path.join(root, "tests/mocks/server-only.ts"),
+      );
+      assert.equal(
+        aliases.some(({ find }) => find === "@"),
+        isWeb,
+      );
+      const resolved = await project.vite.environments.ssr.pluginContainer.resolveId(
+        "@/server/http/api-response",
+        files[0],
+      );
+      assert.equal(
+        resolved?.id ?? null,
+        isWeb ? path.join(root, "apps/web/src/server/http/api-response.ts") : null,
+      );
+    }
+  } finally {
+    await ctx.close();
+  }
+});

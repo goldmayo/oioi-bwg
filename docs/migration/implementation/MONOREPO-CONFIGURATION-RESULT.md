@@ -42,7 +42,7 @@ created_at: "2026-10-22"
 | [x] | TEST-01 | 두 앱이 각자의 Vitest root·alias·include를 소유한다. 공통 browser preset/setup과 root의 프로젝트 선택 책임을 분리하고 수집 파일·환경 보존을 검증했다. |
 | [x] | TEST-02 | root unit·coverage의 실행 대상을 네 workspace로 맞췄다. Turbo와 같은 81파일·410건을 실행하며 환경·제외·alias를 보존한다. coverage 측정 경로는 TEST-03에서 수정한다. |
 | [x] | TEST-03 | 없는 Web 경로를 실제 네 workspace src 경로로 교체했다. coverage 276개 소스를 추적 목록과 대조했고 미실행 소스의 0회 기록과 테스트·선언 제외를 확인했다. |
-| [ ] | TEST-04 | 대기 |
+| [x] | TEST-04 | Web adapter를 쓰는 foundation만 Web 소유 project로 한정했다. 서버 세 파일에는 Web alias가 없으며 실제 PostgreSQL 4파일·33건과 직렬 Node 실행·DB 정리를 검증했다. |
 | [ ] | RUN-01 | 대기 |
 | [ ] | RUN-02 | 대기 |
 | [ ] | UI-01 | 대기 |
@@ -390,3 +390,55 @@ created_at: "2026-10-22"
   TEST-04의 PostgreSQL Web adapter alias와 consumer도 유지했다.
 - 다음 단위는 TEST-04의 PostgreSQL integration 의존 책임이다. 이번 단위에서는 PR 생성·병합·배포를
   하지 않는다.
+
+### 4단계 네 번째 단위 — TEST-04 PostgreSQL 의존 책임
+
+- 진입 기준: `1a6f4b2f6be2c5895c8840ffa6f907495f17c334`. fetch 후 같은 이름의 원격 작업
+  브랜치와 HEAD가 같고 작업 트리가 깨끗함을 확인했다. `origin/migration_main`은 `4d5e42d`다.
+  [네 번째 단위 계획](MONOREPO-CONFIGURATION-PLAN.md#4단계-네-번째-단위--test-04-postgresql-의존-책임)에
+  따라 TEST-04를 완료했다. 원문 38개 중 완료 11개, 대기 27개다. 구현과 이 기록은 같은 커밋에
+  포함하며 PLAN 원문 매핑과 이전 결과는 보존했다.
+- root `vitest.postgres.config.ts`는 전체 project 선택과 `fileParallelism:false`·`maxWorkers:1`을
+  소유한다. server project는 공통 서버 검사 세 파일을 수집하고 foundation은 제외한다.
+  `apps/web/vitest.postgres.config.ts`는 실제 Web HTTP adapter를 소비하는 foundation 한 파일과
+  Web `@` alias를 소유한다. 실제 DB 충돌의 HTTP 409 변환과 모든 테스트 본문은 그대로 유지했다.
+- 두 project가 공유하는 Node 환경·30초 timeout·파일 내부 직렬 실행·server-only mock은
+  `config/vitest/postgres.ts`에 한 번 정의한다. 공통 설정에는 앱 alias를 넣지 않았다.
+  두 project 모두 repo root를 기준으로 기존 `drizzle/` 파일 읽기와 수집 경로를 보존한다.
+  PostgreSQL root/app entry도 config strict 타입 검사에 포함했다.
+- [Vitest v4 projects 문서](https://v4.vitest.dev/guide/projects)의 project별 설정·상속과
+  [직렬 실행 문서](https://v4.vitest.dev/config/fileparallelism)를 설치된 4.1.2 동작과 대조했다.
+
+실행한 로컬 검증:
+
+- 변경 전후 `pnpm exec tsx scripts/run-postgres-integration-tests.ts --local`: 각각 4파일·33건 성공.
+  공통 서버 3파일·22건과 Web foundation 1파일·11건으로 수집됐으며 파일·이름별 결과가 동일하다.
+  Node·globals false·setup 없음·forks·isolation·timeout·기본 제외·직렬 설정도 대조했다.
+- 기존 Compose PostgreSQL 17 컨테이너가 healthy임을 먼저 확인했다. runner가 각각 별도 임시 DB와
+  역할을 만들고 추적 migration 및 실제 constraint·transaction·MFA·CLI 검증을 수행했다.
+  두 실행 모두 연결 0개·advisory lock 0개·임시 DB 삭제 로그와 임시 역할 정리 성공으로 종료했다.
+  개인 앱 DB·볼륨·MFA 키는 변경하지 않았다.
+- 실제 Vite resolver가 Web project에서 Web `api-response.ts`를 찾고 server project에서는
+  해석하지 못함을 확인했다. 전체 수집 합집합·중복 없음·환경·직렬 실행·resolver 경계를 보호하는
+  harness를 추가했다. 기존 root unit/coverage의 workspace 수집 회귀도 함께 통과했다.
+- `pnpm exec turbo run type-check lint test --concurrency=4`: 12개 task 성공·캐시 사용 0개.
+  unit은 contracts 3 + server 88 + Web 93 + Console 226 = 410건이다.
+  병행한 `pnpm type-check:repo`(root/config/scripts)·`pnpm lint:repo`도 성공했다.
+- workspace 검사와 build가 끝난 뒤 `pnpm test:harness` 30건·`pnpm lint:fsd` 성공.
+- `pnpm build --force --env-mode=loose`: 두 앱의 컴파일·타입 검사·정적 페이지 생성·standalone 구성
+  성공. Turbo 2개 task 성공·캐시 사용 0개다. Sentry 업로드·telemetry를 끄고 local 환경·접속 불가능한
+  loopback DB·임시 Console 인증 입력으로 실행했다. 개인 env는 수정하지 않았다.
+  standalone browser smoke·실제 앱 DB 조회/CRUD·전체 관리자 E2E는 이번 단위에서 실행하지 않았다.
+- 설정 snapshot·파일/이름별 대조 결과·변경 전후 DB 실행과 검사·build 로그는
+  `.local/monorepo-config/postgres-boundary/`에 보존한다.
+- `pnpm format:check`·`git diff --check`: 성공.
+
+리팩토링 점검:
+
+- 공통화는 실제 두 PostgreSQL project의 중복에 한정했다. browser 정책을 상속하거나 범용 Node
+  factory를 만들지 않았고 root 전역 Web alias도 제거했다. foundation의 공통 서버 검증과 HTTP 검증을
+  억지로 재작성하지 않고 실제 consumer가 있는 파일만 Web project로 명시했다.
+- 단위 테스트·coverage·ops 설정과 DB runner·SQL·migration·role 정책·CI·dependency/lockfile은
+  변경하지 않았다. Next/Sentry/env 정리와 운영 자원 변경도 포함하지 않았다.
+- TEST-01~04 정리가 끝났으며 다음 단위는 계획의 Next build 공통 정책 조사다.
+  이번 단위에서는 PR 생성·병합·배포를 하지 않는다.
