@@ -557,3 +557,23 @@ created_at: "2026-10-22"
 - 원문 매핑과 과거 기록을 보존했고 env·DB 도구·Docker·관측 입력 정리는 후속 단위로 남겼다.
   개인 env·DB 볼륨·MFA 키와 운영 DB·VM·Vault·secret은 변경하지 않았다.
   이번 단위의 커밋·push 후 멈추며 PR 생성·병합·배포는 하지 않는다.
+
+#### Sentry 옵션 조립 push 보완
+
+- 첫 구현 커밋은 `5be01cd9bebc5ef15595b0e6aaab63411765168c`다. commit hook은 성공했지만
+  첫 push hook의 ops 262건 중 1건이 실패해 원격은 `18cc91a`를 유지했다. 기존
+  `tests/ops/deploy-via-run-command.test.ts`가 Web entry 안의 옵션 문구를 직접 찾는 consumer를
+  첫 변경에서 놓쳤다. 앞 절의 로컬 검증 성공과 이번 push 실패는 구분하며 로그를 보존한다.
+- 해당 검사는 공통 조립 함수를 호출해 같은 map 삭제·route manifest·업로드 오류 정책을 검사하도록
+  보완했다. workflow·source SHA·BuildKit secret 검사는 그대로다. 두 앱의 실제 SDK 연결은 앞 절의
+  harness가 검증한다. 애플리케이션과 공통 설정은 첫 구현 커밋 이후 추가로 변경하지 않았다.
+- 해당 ops 파일 6건 성공 후 전체 ops를 별도로 실행할 때 기존 jq PATH를 빠뜨려 Run Command
+  mock 검사 16건이 실패했다. 저장소 코드를 바꾸지 않고 안내된 `.local/p06-c/bin`을 PATH에 넣어
+  `pnpm test:ops`를 다시 실행했으며 21파일·262건이 모두 성공했다.
+- 보완 후 승인한 workspace 명령은 12개 task 성공·12개 cache 사용이었다. repo 타입/lint와
+  harness 34건·FSD·format도 다시 성공했다. `pnpm build --force --env-mode=loose`를 같은 안전한
+  local 입력으로 재실행해 두 앱 컴파일·타입 검사·정적 페이지 생성·standalone 구성이 성공했다.
+  Turbo 2개 task 성공·cache 사용 0개이며 기준 Next config·standalone 경로와도 일치했다.
+- 첫 push 실패는 `push.log`, jq PATH 누락 실행은 `ops.log`, 올바른 PATH 실행은 `ops-with-jq.log`,
+  보완 검증은 같은 로그 폴더의 `followup-*`에 보존한다. 최초 커밋을 합치거나 amend하지 않고
+  테스트와 계획·결과 보완을 별도 커밋으로 추가한 뒤 hook을 거쳐 다시 push한다.

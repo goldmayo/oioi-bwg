@@ -264,3 +264,7 @@ Runtime §12.1·14와 배포 runbook §21에 따라 두 앱이 복제한 Sentry 
 - 승인한 workspace/repo 검사, harness/FSD/format과 두 앱 실제 build를 실행하고 최종 설정·standalone
   경로를 비교한다. 실제 build에서는 업로드를 끄고 임시 local 입력을 사용한다. 검증·점검 결과를
   RESULT에 추가한 뒤 같은 브랜치에 새 커밋을 push하고 멈춘다. PR·병합·배포는 하지 않는다.
+
+push 전 보완 범위: 기존 ops의 Sentry 검사는 Web entry의 옵션 문구를 직접 읽는다.
+공통 조립 함수의 실제 반환값으로 같은 삭제·manifest·오류 정책을 검사하도록 갱신한다.
+workflow·BuildKit secret 검사는 보존하고 두 앱의 실제 연결은 새 harness가 계속 검증한다.

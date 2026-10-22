@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
+import { createSentryBuildOptions } from "../../config/sentry-build";
+
 describe("GitHub Actions OCI Run Command deployment", () => {
   test("deploys only an immutable OCIR manifest digest", async () => {
     const source = await readFile(resolve("ops/oci/deploy-via-run-command.sh"), "utf8");
@@ -49,11 +51,10 @@ describe("GitHub Actions OCI Run Command deployment", () => {
     );
   });
 
-  test("uploads Sentry source maps with commit correlation and a BuildKit secret", async () => {
-    const [workflow, dockerfile, nextConfig] = await Promise.all([
+  test("configures shared Sentry source maps with commit correlation and a BuildKit secret", async () => {
+    const [workflow, dockerfile] = await Promise.all([
       readFile(resolve(".github/workflows/verify.yml"), "utf8"),
       readFile(resolve("Dockerfile"), "utf8"),
-      readFile(resolve("apps/web/next.config.ts"), "utf8"),
     ]);
 
     expect(workflow).toContain("SENTRY_ORG: ${{ vars.SENTRY_ORG }}");
@@ -64,9 +65,16 @@ describe("GitHub Actions OCI Run Command deployment", () => {
     expect(dockerfile).toContain("apt-get install -y --no-install-recommends ca-certificates");
     expect(dockerfile).not.toContain("ARG SENTRY_AUTH_TOKEN");
     expect(dockerfile).not.toMatch(/^ENV .*SENTRY_AUTH_TOKEN/m);
-    expect(nextConfig).toContain('filesToDeleteAfterUpload: [".next/**/*.map"]');
-    expect(nextConfig).toContain("routeManifestInjection: false");
-    expect(nextConfig).toMatch(/errorHandler\(error\) \{\s*throw error;\s*\}/);
+    const options = createSentryBuildOptions({
+      authToken: "test-token",
+      org: "test-org",
+      project: "test-project",
+      release: `oioi-bwg@${"a".repeat(40)}`,
+    });
+    expect(options.sourcemaps.filesToDeleteAfterUpload).toEqual([".next/**/*.map"]);
+    expect(options.routeManifestInjection).toBe(false);
+    const uploadError = new Error("synthetic upload failure");
+    expect(() => options.errorHandler(uploadError)).toThrow(uploadError);
   });
 
   test("redacts sensitive remote output and preserves deployment exit semantics", async () => {
