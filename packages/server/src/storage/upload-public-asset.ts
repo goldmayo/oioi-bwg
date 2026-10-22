@@ -12,8 +12,15 @@ function requiredHttpsUrl(name: string) {
   const value = requiredEnvironment(name);
   try {
     const url = new URL(value);
-    if (url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash)
-      return value;
+    // search/hash는 빈 구분자를 드러내지 않으므로 정규화한 URL 전체에서 거절한다.
+    if (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      !url.href.includes("?") &&
+      !url.href.includes("#")
+    )
+      return url.href;
   } catch {
     // URL parser 오류에는 입력이 포함될 수 있으므로 설정 이름만 노출한다.
   }
@@ -27,7 +34,7 @@ export function getPublicAssetConfig() {
     bucket: requiredEnvironment("R2_BUCKET"),
     accessKeyId: requiredEnvironment("R2_ACCESS_KEY_ID"),
     secretAccessKey: requiredEnvironment("R2_SECRET_ACCESS_KEY"),
-    publicBaseUrl: requiredHttpsUrl("ASSETS_PUBLIC_BASE_URL").replace(/\/$/, ""),
+    publicBaseUrl: requiredHttpsUrl("ASSETS_PUBLIC_BASE_URL").replace(/\/+$/, ""),
   };
 }
 

@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.19"
+version: "1.20"
 status: "active"
 authority: "runbook"
 updated_at: "2026-10-23"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.19
+# oioi-bwg Deployment / Migration Runbook v1.20
 
 ## 1. 목적
 
@@ -365,6 +365,9 @@ Response에 secret, connection string, raw DB error를 노출하지 않는다.
 
 Console `/readyz`는 인증·MFA 키에 더해 업로드의 R2 필수 입력 다섯 개를 DB 접근 전에 검사한다.
 `R2_ENDPOINT`·`ASSETS_PUBLIC_BASE_URL`은 credential·query·fragment 없는 HTTPS URL이어야 하며,
+값이 비어 있는 `?`·`#` 구분자도 거절한다. 두 URL은 파싱한 `URL.href`를 사용해 앞뒤 공백·호스트·
+기본 포트·경로를 정규화한다. public base URL의 끝 `/`는 제거한 뒤 object key를 연결하며,
+경로에 인코딩된 `%3F`·`%23`은 보존한다.
 `R2_BUCKET`·`R2_ACCESS_KEY_ID`·`R2_SECRET_ACCESS_KEY`는 공백뿐인 값을 허용하지 않는다.
 업로드도 같은 검사를 쓰며 설정이 잘못되면 외부 쓰기 전에 실패한다. readiness는 R2 client를 만들거나
 R2/asset 요청을 보내지 않는다. 권한·버킷 존재·실제 업로드 성공은 별도 운영 검증이다.

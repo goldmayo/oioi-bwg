@@ -58,6 +58,9 @@ describe("Console readiness", () => {
         "https://user:private@example.test",
         "https://example.test/?private=value",
         "https://example.test/#private",
+        "https://example.test/?",
+        "https://example.test/#",
+        "https://example.test/?#",
       ].map<[string, string]>((value) => [name, value]),
     ),
   ])("rejects unusable %s without accessing PostgreSQL", async (name, value) => {
