@@ -2,8 +2,8 @@
 title: "오류 원인·처리 결과 추적 개선 계획"
 document_id: "OBSERVABILITY-ERROR-TRACKING-PLAN"
 kind: migration-plan
-version: "1.0"
-status: planned
+version: "1.1"
+status: active
 authority: plan
 created_at: "2026-10-22"
 updated_at: "2026-10-22"
@@ -311,3 +311,53 @@ Slack relay의 새 필드 표시·알림 빈도 조정은 payload 확인 후 별
 - [Sentry filtering](https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/filtering/)
 - [Sentry tags/context](https://docs.sentry.io/platforms/javascript/guides/nextjs/enriching-events/)
 - [Sentry sensitive data](https://docs.sentry.io/platforms/javascript/guides/nextjs/data-management/sensitive-data/)
+
+## 11. 2026-10-22 피드백 반영 — 알림과 소스맵 운영 검증
+
+사용자가 위 계획을 기반으로 실제 적용을 요청했다. 최초 계획·관측 snapshot은 보존하며 실행 결과는
+checkpoint별 RESULT가 소유한다. 이 절은 계획 보완이며 외부 설정·배포·수신 완료를 뜻하지 않는다.
+P1-A부터 작은 단위로 구현하고 기존 §7의 concern 분리와 최신 `migration_main` 분기 원칙을 유지한다.
+
+### 11.1. 현재 구조와 보완 판단
+
+- [Slack relay 결과](SENTRY-SLACK-RELAY-RESULT.md)에는 Worker 배포·staging 새 이슈·Slack 실제 수신과
+  재발생 시 중복 알림 억제를 사용자가 확인한 기록이 있다. 이는 현재 가용성을 재조회한 증거는 아니지만
+  “알림 연동 부재”의 근거로도 삼을 수 없다. 기존 relay·채널·secret 소유권을 유지하고 새 연동을 만들지 않는다.
+- 오류 분류와 최종 sanitizer를 함께 바꾸는 방향, 정상 거부와 탈출한 delivery 오류의 구분은 채택한다.
+  작은 enum은 tag에, 서버가 생성한 request ID는 context에 둔다. 원문 URL·사용자 ID·MFA 정보는 추가하지 않는다.
+- JSON logger와 Sentry reporter는 독립 sink를 유지한다. 연결은 §6의 coordinator가 소유하며 logger를
+  Sentry transport로 바꾸지 않는다. 공개 Web에 제거된 인증·메일·미래 도메인 기능을 복구하지 않는다.
+
+### 11.2. 알림 보완 checkpoint — 분류와 payload 배포 뒤 별도 수행
+
+| 규칙 | 조건 | 정책 |
+| --- | --- | --- |
+| 계약 위반 | production의 새로운 contract 이슈 | 계정이 지원하는 최소 간격으로 전달 |
+| 신규 장애 | production 새 이슈, 확인된 contract 제외 | 기존 relay 사용, 필요 시 30분 재알림 제한 |
+| 장애 재발 | production의 resolved 이슈 regression | 최소 간격으로 전달 |
+
+세 규칙은 environment를 명시하고 staging 검증 규칙과 구분한다. missing/unknown 분류가 일반 장애에서
+빠지지 않는지, 기존 이슈·회귀와 새 이슈가 중복 알림을 만드는지 실제 계정에서 먼저 확인한다.
+즉시 전달은 처리 목표이며 전달 지연의 SLA가 아니다. 새 분류와 안전한 표시 필드가 relay 최종 payload에
+남아야 할 때만 Worker allowlist와 회귀를 함께 보완한다. 배포 Slack webhook은 그대로 분리한다.
+
+Sentry의 frequency는 재알림 간격이며 여러 이슈를 30분 요약으로 묶는 기능의 증거가 아니다.
+진짜 digest는 상태·queue 설계가 필요하므로 보류한다. fatal 전용·절대 건수 급증·규칙 자동 생성도 보류한다.
+수동 규칙의 조건·실제 환경·검증 결과를 기록하고 기존 규칙을 읽기 전에 삭제하거나 중복 생성하지 않는다.
+
+### 11.3. 소스맵 운영 검증 checkpoint — 업로드 성공과 심볼리케이션 분리
+
+- Web/Console 각각의 project·DSN 대상, image digest·`buildSourceSha`·Sentry release를 대조한다.
+  선택적 재사용 이미지는 과거 build source를 유지하므로 Promotion의 현재 source SHA로 덮어쓰지 않는다.
+  같은 project/release 안에 두 앱 artifact가 있어도 단순 개수나 project 전체의 존재 여부로 합격시키지 않는다.
+- 새 이미지의 bundle에서 나온 안전한 새 이벤트별로 Debug ID·배포 artifact·원본 frame 대응을 확인한다.
+  devtools eval 오류와 과거 이벤트는 판정 입력으로 쓰지 않는다. event ID 반환·upload 로그·release 조회·
+  실제 복원은 별도 증거다. API의 “some artifact” flag만으로 앱별 일치를 보증하지 않는다.
+- 일반 verify의 외부 비의존 원칙을 유지하고 Promotion/배포 후 별도 gate에서 제한된 재시도와 deadline을
+  사용한다. Summary에 앱별 source·release·검증 상태를 남기고 기존 배포 알림과 중복되지 않게 실패만 알린다.
+  build token이 조회 권한도 가진다고 가정하지 않으며 필요한 읽기 권한과 외부 검증 접근을 먼저 확인한다.
+- 외부 알림 설정, synthetic 이벤트 전송, source-map API 확인은 해당 checkpoint의 실행 범위다.
+  이번 P1-A에서는 외부 서비스·VM·Vault·DB를 변경하거나 사용자 장애를 인위적으로 만들지 않는다.
+
+공식 근거: [Sentry 알림 frequency/environment](https://docs.sentry.io/api/monitors/create-an-alert-for-an-organization/),
+[이벤트별 source-map 진단](https://docs.sentry.io/api/events/get-debug-information-related-to-source-maps-for-a-given-event/).
