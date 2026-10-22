@@ -651,3 +651,102 @@ created_at: "2026-10-22"
   별도로 재실행하지 않는다. commit/push hook이 실행한 검사는 별도 hook 실행 결과로 보고한다.
 - 사용자 요청 범위에서 application/설정/테스트/manifest/lockfile·개인 env·운영 자원은 변경하지 않는다.
   신규 PR 생성·branch 병합·배포는 하지 않으며 구조 제안의 구현도 대기다.
+
+
+## 2026-10-23 기존 작업 회수와 Draft PR 연결
+
+이번 사용자 승인은 기존 변경 보존·검토·최소 호환 보정·검증·커밋·push·Draft 연결이다.
+신규 정상화·실제 병합·배포·운영 설정 변경·브랜치 삭제를 하지 않았다.
+조사/검증 기준은 모노레포 `103b89466926d86628d6a80b4abce03333e3844f`,
+원격 통합 `aa4e814f9fdbfd1c69b8b3af8934e5c99b80277c`다. main의 #195는 계획 문서만 포함한다.
+모든 대상 head의 기존 PR을 원격 재조회한 뒤 아래 Draft를 연결했다.
+
+### 원본 보존과 회수
+
+공통 영속 보존 위치는 저장소 밖 `/home/hsj95/.codex/recovery/monorepo-20261023-0b6s5a9k/`다.
+A-env/B-evidence 각각 full-index patch·변경 파일 snapshot·manifest와 SHA-256을 보존했다.
+권한을 제한하고 개인 env 파일을 제외했으며 알려진 private secret 값과 token/key 패턴을 검사했다.
+snapshot 전후 원본 파일 해시가 같았다. 원본 reset/clean/stash·amend·강제 push는 하지 않았다.
+
+| 작업 | 원본 ref/상태 | 회수·검토 위치 | 커밋·Draft 또는 보류 근거 |
+| --- | --- | --- | --- |
+| A env | `feature/p06-console-env-boundary@4d5e42d` 미커밋 16파일 | 원본 `/home/hsj95/.codex/worktrees/p06-web-public-only/cheer-rock-crab` 보존. `A-env/`, `.local/worktrees/recovery-console-env` | `feature/recover-console-env-boundary`, `e67d737` → `e1f7a1e`, [#198](https://github.com/goldmayo/oioi-bwg/pull/198) |
+| B 증적 | `feature/p06b2-acceptance@7fb8590` 문서 2개 미커밋 | 원본 `.local/worktrees/p06b2-acceptance` 보존, `B-evidence/` | RESULT 추가 블록 121줄이 현행 결과에 연속된 동일 본문으로 이미 존재. 고유 미반영 증적 0개로 중복 PR 없음 |
+| Slack Worker | `feature/sentry-slack-message-layout@0748915` | `.local/worktrees/review-slack-worker` detached 고정본 | 원본/원격 같은 ref, [#196](https://github.com/goldmayo/oioi-bwg/pull/196) |
+| Sentry 앱 | `feature/observability-console-rsc-auth@7ed3246` | `.local/worktrees/review-sentry-app` detached 고정본 | 원본/원격 같은 ref, [#197](https://github.com/goldmayo/oioi-bwg/pull/197). `56c2506` 포함, 중복 회수 없음 |
+| 모노레포 | `feature/monorepo-configuration-cleanup@103b894` | 기본 checkout, 기존 구현 그대로·회수 기록만 추가 | [#200](https://github.com/goldmayo/oioi-bwg/pull/200), 기존 구현은 보존하고 이번 회수 기록을 후속 문서 커밋으로 추가 |
+| F 준비 | 로컬 `feature/p06-f-cutover@a595cca` | `.local/worktrees/recovery-f-cutover` | 원본 커밋 보존·`80af73d` 보류 기록 추가·원격 push, [#199](https://github.com/goldmayo/oioi-bwg/pull/199). F 전환 보류 |
+
+B의 고정 snapshot은 402줄 RESULT·revision 33 HANDOFF이고, 현행은 445줄 RESULT·revision 66 HANDOFF다.
+[현행 B2 결과의 B 완료 절](console-guide-editor/P06-B2-3-RESULT.md#2026-10-18-b-운영-실증-완료와-최종-상태)은
+재부팅 최종 검증·자원 관찰·preview 원복까지 기록한다. 오래된 `verify-reboot/finish 대기` handoff로
+덮어쓰지 않았다. 당시 대기 기록과 원본 ref는 snapshot에 보존하고 최신 완료 증거를 우선한다.
+
+A에서 회수한 것은 Console R2 예제/필수 입력 검사·앱별 env·기존 local launcher와 host materializer다.
+원안의 필수 Sentry 프로젝트 분리는 PLAN OBS-01의 공용 프로젝트 유지와 충돌해 제외했다.
+제외한 CI/promotion hash/두 테스트 파일을 새로 구현하지 않았다. 상세 회수/보정/검증은
+[env 회수 결과 고정본](https://github.com/goldmayo/oioi-bwg/blob/e1f7a1e74319d458bf3f0db7e5e8214a3d293f46/docs/migration/implementation/ENVIRONMENT-CONFIGURATION-RECOVERY-RESULT.md)이 소유한다.
+실제 R2 업로드·운영 주입, readiness 검사·APP_ENV/DB 입력·새 config/Worker/UI 구조는 완료하지 않았다.
+
+### 이번 직접 실행과 기존/캐시/hook 구분
+
+각 별도 검토 worktree는 `pnpm install --offline --frozen-lockfile --ignore-scripts` 성공 후 검사했다.
+최초 pnpm PATH 누락 실행은 성공으로 계산하지 않았고 기존 Node/pnpm 경로를 명시해 재실행했다.
+workspace/repo 타입/lint → harness → FSD/ops/format → 두 앱 build 순서를 지켰다.
+`pnpm exec turbo run type-check lint test --concurrency=2`와 별도 repo 명령을 실행했다.
+
+| 대상 | workspace 직접 실행 | 별도 직접 검사 | 실제 두 앱 build |
+| --- | --- | --- | --- |
+| env 회수 코드 | 12 task, 캐시 0, unit 81파일·410건 | repo 타입/lint·harness 18·FSD·ops 21파일/269건·format 성공 | 2 task 성공, 캐시 0 |
+| Sentry 앱 `7ed3246` | 12 task, 캐시 0, unit 92파일·569건 | repo 타입/lint·harness 18·FSD·ops 21파일/262건·format 성공 | 2 task 성공, 캐시 0 |
+| F 코드 `a595cca` | 12 task, 캐시 0, unit 81파일·410건 | repo 타입/lint·harness 18·FSD·ops 21파일/262건·format 성공 | 2 task 성공, 캐시 0 |
+| 모노레포 `103b894` | 12 task, 캐시 6, unit 81파일·410건 | repo 타입(root/config/scripts)/lint·harness 34·FSD·ops 21파일/262건·format 성공 | 2 task 성공, 캐시 0 |
+| Worker `0748915` | Next workspace 전체 재검사 대신 관련 검사 | repo 타입·Worker unit 29건·변경 파일 lint/format 성공 | Next 앱 build 대상 아님 |
+
+build 명령은 `pnpm build --force --env-mode=loose --concurrency=1`이다. 임시 local 입력·빈 DSN·
+Sentry 업로드/telemetry OFF·접속 불가능한 loopback DB·임시 Console 키를 사용했다.
+F의 로컬 robots 산출물에 www sitemap URL을 확인했지만 production/www 운영 적용 성공은 아니다.
+검증 명령·종료 코드·로그는 `/tmp/oioi-monorepo-recovery-20261023-0b6s5a9k/validation-*/`에 보존한다.
+과거 결과의 DB/runtime/외부 수신을 이번 재실행으로 합산하지 않는다. 이번 DB integration·관리자 전체 E2E·
+collector·실제 외부 업로드/전송·운영 수신/소스맵 검증은 실행하지 않았다.
+
+현재 host는 `core.hooksPath` 미설정 상태였다. 최초 env 회수 커밋 `e67d737`에는 자동 hook이 없었으며
+별도 TS lint/format은 성공했으나 commitlint의 본문 줄길이 검사는 실패했다. 재작성 금지에 따라 기록·보존했다.
+후속 commit/push는 기존 `.husky/_`를 명령별 `-c core.hooksPath=.husky/_`로 지정한다.
+공용 Git 설정·원본 worktree를 변경하지 않았다. 문서 후속 commit은 lint-staged 대상 없음·commitlint 성공이다.
+env push hook은 영향 앱 6 task/캐시 6·repo 타입/lint·harness 18·ops 269·format 성공,
+F push hook은 영향 Web 3 task/캐시 3·repo 타입/lint·harness 18·ops 262·format 성공이다.
+모노레포 최종 push hook 결과는 PR 본문에서 별도로 추적한다.
+
+### 중복·의존 관계와 통합 대기
+
+원안 A는 모노레포의 `tests/ops/deploy-via-run-command.test.ts`, F의 `.github/workflows/verify.yml`과 겹쳤다.
+필수 Sentry 프로젝트 분리를 제외한 최종 5개 작업은 10개 모든 쌍에서 수정 경로 교집합이 0개이고,
+`git merge-tree --write-tree` 개별 모의 병합도 10개 모두 exit 0이다. 실제 브랜치 병합은 하지 않았다.
+이 결과는 함께 실행한 통합 검사/build의 성공을 뜻하지 않는다.
+
+- Worker #196은 독립 서비스이며 재배포·알림 전송 없이 Git 통합만 검토한다.
+- Sentry #197은 기존 `56c2506`을 포함한다. 운영 적용·알림 규칙·Debug ID/소스맵 확인은 마지막 배포 단계다.
+- 모노레포는 기존 설정/검사 기반만 회수한다. 원문 12개 처리·26개 대기와 추가 8개 대기를 유지한다.
+- env #198은 기존 코드의 회수다. 공통 Sentry build 정책은 유지하며 앱별 env를 config 패키지로 옮기지 않는다.
+- F #199는 production build 입력과 www 기준 URL의 준비 코드다. 전환 보류이며 다른 회수 PR의 필수 선행 조건이 아니다.
+
+BASE-01은 승인된 변경 통합과 합쳐진 소스의 전체 검사·두 앱 build가 남는다. Draft 생성은 BASE-01이나
+ENV/OBS/DB/CFG/TEST/UI ID의 완료 표시가 아니다. 정리 뒤 다음 한 단위는 BASE-01의 검토·통합 기준선 확정이며,
+그 후 env #198의 회수 범위를 대조해 미반영 부분만 판단한다. 신규 구현과 실제 병합은 이번 종료 조건 밖이다.
+
+### 잔존 브랜치 별도 분류
+
+squash ancestry나 `git cherry`의 단독 결과로 미반영을 단정하지 않았다. PR 상태·파일 내용·현행 문서와
+후속 구현을 대조했으며 아래 브랜치를 현재 회수 PR에 섞거나 삭제하지 않았다.
+
+| 대상 | 분류 | 근거와 판단 |
+| --- | --- | --- |
+| `feature/p02-shared-config-turbo@de0850a` | 이미 병합되거나 다른 작업에 포함됨 | [#110](https://github.com/goldmayo/oioi-bwg/pull/110) merged 확인. 이후 config TS 공통화가 해당 기반을 확장함 |
+| 닫힌 #131, `feature/p06-preparation-guide@b8848dc` | 이미 병합되거나 다른 작업에 포함됨 | #131 자체는 미병합 closed. [#130](https://github.com/goldmayo/oioi-bwg/pull/130) merged의 `382049d`가 같은 문서를 보강·재구성했고 현행 PLAN/ROADMAP이 연결함. 옛 본문을 다시 덮어쓰지 않음 |
+| 닫힌 #49, `migration_m6-base-ui-label-separator@8e8d36a` | 대체된 과거 작업 | #49 미병합 closed. M6-BASE-UI-PREFLIGHT가 전환 폐기를 명시. 마지막 곡 툴바 분리 개념은 현행 Console의 별도 SongManagerToolbar consumer로 존재함. 옛 패치를 일괄 회수하지 않음 |
+| `backup/m6-base-ui-pr49@7faa795` | 고유한 변경이 남아 판단 필요 | Base UI 전체 전환·Radix 제거·Select 계약의 큰 구현이 현행과 다름. 폐기된 단계의 고유 코드를 보존하되 UI-03/별도 foundation 검토 없이 재도입하지 않음 |
+| `feature/aws-lambda-migration@d7c2b65` | 대체된 과거 작업 | SST/Lambda·파괴용 workflow 기반. 현행 Next standalone/OCI Promotion 계약과 다르며 관련 명령을 실행하지 않음 |
+| `refactor/arch@e2e711d` | 고유한 변경이 남아 판단 필요 | 옛 ViewModel/Repository·인가·UI 46파일 변경. 책임은 현행 contracts/server/FSD로 재구성됐으나 개별 UI 동작까지 모두 포함됐다고 단정하지 않음. 별도 요구 없이 회수하지 않음 |
+| `worker@69b0794` | 대체된 과거 작업 | legacy Worker/Vinext 배포 문서 6파일 변경이며 Sentry relay가 아님. 현행 헌법의 Next 단일 스택과 배포 문서가 대체함 |
+| `backup/pr73-before-m9-reconstruction-20260910@9e04ce2` | 대체된 과거 작업 | [#73](https://github.com/goldmayo/oioi-bwg/pull/73) merged의 재구성된 M9·후속 Run Command/paired 배포가 대체함. 초기 직접 배포 기반을 재적용하지 않음 |
