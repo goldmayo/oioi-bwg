@@ -18,8 +18,8 @@ created_at: "2026-10-22"
 
 | 점검 | ID | 결과와 근거 |
 | --- | --- | --- |
-| [x] | ENV-01 | #198에서 Console R2 예제·launcher 필수 입력 검사가 구현·검증됨. 미병합이며 실제 업로드는 미검증이다. |
-| [x] | ENV-02 | #198의 host 공개 입력·Vault 매핑 예제와 누락 거절 fixture가 완료됨. 미병합이며 운영 주입은 미검증이다. |
+| [x] | ENV-01 | #198의 Console R2 예제·launcher 필수 입력 검사가 ef0e122에 병합됐다. 실제 업로드는 미검증이다. |
+| [x] | ENV-02 | #198의 host 공개 입력·Vault 매핑 예제와 누락 거절 fixture가 ef0e122에 병합됐다. 운영 주입은 미검증이다. |
 | [x] | ENV-03 | fd66161에서 Console readiness와 업로드의 R2 입력 검사를 공유한다. 설정 오류 시 DB/외부 쓰기 전 거절하며 503/no-store·값 비노출을 검증했다. #200 미병합이다. |
 | [x] | ENV-04 | #198에서 Web DATABASE_URL 예제를 추가했다. 개인 env 변경 없이 회수 코드·검증 증거를 재판정했다. |
 | [x] | ENV-05 | 개인 비추적 env의 값 유무는 브랜치 결함에서 제외한다. 두 앱 추적 예제는 local을 명시하며 개인 파일을 수정하지 않았다. |
@@ -31,7 +31,7 @@ created_at: "2026-10-22"
 | [ ] | MAIL-01 | 대기 |
 | [ ] | MAIL-02 | 대기 |
 | [x] | OBS-01 | #198의 Runtime §12.1·앱 예제·배포 안내가 공용 Sentry 프로젝트 유지와 앱별 입력 책임을 명시한다. 프로젝트 분리·외부 변경 없음. |
-| [x] | OBS-02 | #198에서 Console NEXT_PUBLIC_SENTRY_DSN 예제와 local 전송 비활성 안내를 추가했다. 미병합이다. |
+| [x] | OBS-02 | #198의 Console NEXT_PUBLIC_SENTRY_DSN 예제와 local 전송 비활성 안내가 ef0e122에 병합됐다. |
 | [ ] | DB-01 | 대기 |
 | [ ] | DB-02 | 대기 |
 | [x] | CFG-01 | 공통 app policy에서 규칙 11개를 한 번 정의하고 두 앱이 같은 factory를 사용한다. |
@@ -67,7 +67,7 @@ created_at: "2026-10-22"
 
 | 점검 | ID | 범위 | 현재 상태와 후속 기준 |
 | --- | --- | --- | --- |
-| [ ] | BASE-01 | Sentry 통합 기준선 | #197/#200은 미병합 Draft다. 실제 통합·합쳐진 소스 검사는 승인된 병합 후에 수행한다. 독립 ENV-03 구현은 진행했으며 Worker 실수신과 앱 운영 검증은 별개다. |
+| [ ] | BASE-01 | Sentry 통합 기준선 | #196/#197/#198은 main에 병합됐다. 이를 반영한 #200의 4443d64에서 전체 gate·두 앱 build/browser smoke가 성공했다. #200의 main 병합 확인이 남으며 운영 검증은 별개다. |
 | [ ] | CFG-08 | 공통 config workspace 패키지 | packages/config 한 개로 시작하는 구조 제안이다. manifest·exports·소비자 의존성·도구 소유권·실행 호환성 검토와 구현은 대기다. |
 | [ ] | CFG-09 | workspace 간 import 계약 | 명시적 package entry로 상대경로를 대체하는 제안이다. 앱 내부 alias·slice 내부 상대경로·파일시스템 경로 계산은 구분하며 변경은 대기다. |
 | [ ] | CFG-10 | 루트 설정 TS 검사 | drizzle.config.ts와 vitest.ops.config.ts가 현재 타입 프로그램에 없음을 확인했다. CFG-07의 운영 스크립트 8개 완료와 별도로 보완한다. |
@@ -840,3 +840,25 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   #196 최신 main 반영 head는 `3351b5b313d0465e11b0a1c687b2af6a654e03a6`이며 CI 재검증 중이다.
   #197/#200의 실제 통합과 BASE-01 완료, #187 문서 통합은 후속 검증·병합 결과로 별도 기록한다.
   #199 F 전환·운영 배포·실제 R2/Vault/Sentry 검증과 관리자 전체 E2E는 보류다.
+
+## 2026-10-23 승인 통합 — #200 합쳐진 소스 검증
+
+- 사용자 후속 병합 승인으로 #198 `ef0e122`, #196 `b0000a0`, #197
+  `95e05a43d4cb7c97633256975e2d0523f1219c60`을 순서대로 main에 squash 병합했다.
+  #196 최신 head `3351b5b`의 CI run `39817458568`, #197 `ff26200`의 run `39818880353`은
+  필수 verify·전체 gate·격리 PostgreSQL·두 앱 컨테이너/브라우저·Compose 복구 성공이다.
+  각 Promotion은 skipped이며 배포·운영 설정 변경·외부 업로드/전송을 실행하지 않았다.
+- #200에서 위 main을 반영한 실제 검증 소스는 `4443d644460d9f71d0d76d4d87b6c137307ad876`이다.
+  충돌은 active 인덱스 한 파일뿐이었다. API 1.5·Observability 1.4·Runtime 1.9·runbook 1.20을
+  각 소유 문서와 대조해 모두 보존하고 인덱스를 1.30으로 갱신했다. 공통 runtime 구현 충돌은 없었다.
+- 이번 직접 실행: `pnpm type-check` 4 task·캐시 2 및 repo/config/scripts 성공,
+  `pnpm lint`·`pnpm lint:fsd`, `pnpm test:unit:run` 92파일·615건(4 task·캐시 2) 성공.
+  unit은 contracts 3/server 103/Web 153/Console 356건이다. 이어서 harness 34건·ops 287건·
+  format·diff 검사가 성공했다. harness와 타입/build를 겹쳐 실행하지 않았다.
+- `pnpm build --force --env-mode=loose --concurrency=1`: 두 앱 실제 build 2 task·캐시 0개 성공.
+  기존 두 standalone browser smoke와 503/no-store·R2 누락 시 Console DB 연결 0회·Web 독립 DB
+  접근도 성공했다. 임시 local·가짜 R2/Console·빈 DSN·Sentry 업로드/telemetry OFF만 사용했다.
+  이번 실행은 `.local/monorepo-config/integration/`에 이전/P2 기록과 분리해 보존한다.
+- 이 통합 소스의 로컬 DB integration·정상 DB readiness 200·관리자 전체 E2E·운영 검증은 미실행이다.
+  실제 PostgreSQL/컨테이너 성공은 위 개별 PR 및 새 #200 CI와 구분한다. #200은 최종 CI·병합
+  확인이 남아 있어 BASE-01을 아직 완료로 표시하지 않는다. 병합 후 PR/Notion과 후속 기록으로 확정한다.
