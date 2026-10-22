@@ -6,7 +6,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getAdminPageContext, rethrowAdminPageError } from "./admin-page-context";
 import { getRequestContext, type RequestContext } from "./request-context";
 
-vi.mock("./request-context", () => ({ getRequestContext: vi.fn() }));
+vi.mock("./request-context", () => {
+  const getRequestContext = vi.fn();
+  return {
+    getRequestContext,
+    getRequestAuthorization: async () => ({
+      context: await getRequestContext(),
+      decision: "unknown",
+      rejectionLogged: false,
+    }),
+  };
+});
 
 const redirectSignal = new Error("redirect control flow");
 const forbiddenSignal = new Error("forbidden control flow");

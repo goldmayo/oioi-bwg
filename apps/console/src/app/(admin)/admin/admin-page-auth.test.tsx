@@ -11,7 +11,17 @@ import AdminAlbumsPage from "./albums/page";
 import AdminLyricsEditPage from "./edit/[slug]/page";
 import AdminSongsPage from "./songs/page";
 
-vi.mock("@/server/auth/request-context", () => ({ getRequestContext: vi.fn() }));
+vi.mock("@/server/auth/request-context", () => {
+  const getRequestContext = vi.fn();
+  return {
+    getRequestContext,
+    getRequestAuthorization: async () => ({
+      context: await getRequestContext(),
+      decision: "unknown",
+      rejectionLogged: false,
+    }),
+  };
+});
 vi.mock("@/features/auth", () => ({
   authAbilityQueryKeys: { ability: () => ["auth", "ability"] },
 }));

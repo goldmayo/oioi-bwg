@@ -1,5 +1,6 @@
 import "server-only";
 
+import { logCredentialsRejection } from "./auth-rejection-logger";
 import { reportServerError } from "./server-error-reporter";
 
 function isCredentialsSignin(error: Error) {
@@ -12,7 +13,10 @@ function isCredentialsSignin(error: Error) {
 
 /** Auth.js의 정상 credentials 거부와 조사해야 할 내부 실패를 분리한다. */
 export function reportAuthError(error: Error) {
-  if (isCredentialsSignin(error)) return;
+  if (isCredentialsSignin(error)) {
+    logCredentialsRejection(error);
+    return;
+  }
 
   reportServerError(error, {
     event: "auth.failure",

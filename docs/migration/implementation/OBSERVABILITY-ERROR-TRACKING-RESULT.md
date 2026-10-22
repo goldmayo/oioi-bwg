@@ -28,7 +28,7 @@ depends_on:
 - [ ] P1-B: Console RSC 인증 전달과 실제 로그인/거부 UX 검증
 - [x] P2-A: Console app·경로 template·operation·breadcrumb
 - [x] P2-B: Web의 실제 consumer 적용
-- [ ] P3: 기존 인증 판정 기반 typed rejection log
+- [x] P3: 기존 인증 판정 기반 typed rejection log
 - [ ] P4-A: Console 서버 생성 request ID와 두 sink 연결
 - [ ] P4-B: Web dynamic/API 요청 연결
 - [ ] 계획 §11: 기존 Slack 규칙 보완과 이미지별 소스맵 운영 검증
@@ -276,3 +276,25 @@ Next hook은 두 앱 모두 정제한 template만 reporter로 전달하도록 �
 - producer·server 분류·최종 정제·browser 중복과 privacy 회귀의 결합으로 400줄 목표를 넘는다.
   앱 간 import·공용 telemetry package·기능/UI/데이터 정리는 추가하지 않았다.
 - 로그: ignored `.local/observability/finish/web-metadata/`. 운영 배포·원격 수신·실제 소스맵 복원은 미실행이다.
+
+
+### 기존 인증 판정 기반 안전한 거부 사유 — 4번 완료
+
+기준 `8d7303fa76050976ae3eeb653e3f2c71cc312ad1`부터 이 기록을 포함한 커밋까지다.
+기존 request cache가 `{ context, decision }`과 요청 내부의 기록 여부를 함께 소유한다.
+공통 RequestContext·JWT·DTO·Query cache에는 진단 필드를 추가하지 않았다. guest로 합쳐지던 기존 분기를
+고정 reason으로 구분하며 검사 순서·MFA 회수 판정·DB throw를 유지한다. 같은 RSC 요청의 page/layout은
+한 번만 기록하고, HTTP/Action은 이미 읽은 같은 객체를 catch에 전달하므로 추가 DB 조회가 없다.
+Auth.js CredentialsSignin은 세부 사유를 만들지 않고 generic reason으로 기록한다.
+
+`auth.rejected`는 info JSON뿐이며 SDK capture를 호출하지 않는다. 실제로 만든 HTTP 응답에서만 401/403을
+기록하고 RSC 이동·forbidden·Action 거부는 각 관측 결과만 남긴다. 근거가 없으면 unknown이며
+계정 ID·email·role 원문·MFA 값·cookie/token·원본 Error/cause를 직렬화하지 않는다.
+
+- 실제 검사: workspace type/lint/unit 성공(90파일·521건; Console 303, Web 127, server 88, contracts 3),
+  repo 타입/lint, harness 18건, 두 앱 FSD, ops 21파일·262건, format/diff 성공.
+- 사유별 0/1회 DB 조회·원본 DB 예외, 요청 내부 반복/서로 다른 요청, credentials 반복 전달과 민감 값 제거를 검사했다.
+- 두 앱 실제 build 성공(2 task·캐시 0). 기존 Sentry/업로드 OFF·local·접근 불가 loopback DB 입력을 유지했다.
+- 진단 객체·실제 RSC/API/Action·동일 consumer 회귀를 함께 바꿔 파일/라인 목표를 넘었다.
+  범용 logger·인증 framework·전역 사용자 cache·새 DB 조회/의존성은 없다.
+- 로그: ignored `.local/observability/finish/auth-rejection/`. 실제 Next 통합 검증은 아래 최종 runtime 기록과 구분한다.
