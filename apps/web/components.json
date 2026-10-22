@@ -13,11 +13,11 @@
   "iconLibrary": "lucide",
   "rtl": false,
   "aliases": {
-    "components": "@/shared",
-    "utils": "@/shared/utils/utils",
+    "components": "@/shared/ui",
+    "utils": "@/shared/lib/utils",
     "ui": "@/shared/ui",
-    "lib": "@/shared/libs",
-    "hooks": "@/shared/hooks"
+    "lib": "@/shared/lib",
+    "hooks": "@/shared/lib"
   },
   "registries": {}
 }
