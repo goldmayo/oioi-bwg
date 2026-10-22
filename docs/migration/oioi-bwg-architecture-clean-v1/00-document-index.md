@@ -1,7 +1,7 @@
 ---
 title: "Architecture Document Index"
 document_id: "00"
-version: "1.32"
+version: "1.33"
 status: "active"
 authority: "index"
 updated_at: "2026-10-23"
@@ -52,7 +52,7 @@ migration / implementation plan
 | ID | 문서 | 버전 | 상태 | 책임 |
 |---|---|---:|---|---|
 | 00 | Document Index | 1.31 | active | 문서 상태 / 버전 / 책임 SSOT |
-| 01 | Architecture Constitution | 2.16 | active | 전체 시스템 헌법 |
+| 01 | Architecture Constitution | 2.17 | active | 전체 시스템 헌법 |
 | 02 | Frontend Architecture | 1.10 | active | FSD, UI/model/lib, Query 사용 원칙 |
 | 03 | API / Error Architecture | 1.5 | active | HTTP / AppError / ApiError / error mapping |
 | 04 | Auth / Authz Architecture | 1.7 | active | Auth.js, RequestContext, CASL, Console MFA 회수 |

@@ -509,3 +509,30 @@ DB-01/02 #204의 squash 결과 `306339bb6898efdeb022e1ed528805f9618f1cc3`를 fet
   앱 runtime/build 입력이 불변이면 검증된 두 앱 build를 재사용하며 최종 head CI·리뷰 후 squash한다.
 - 공통 config package 이동·개발 Docker 설치·Worker/test 파일 위치 재편은 다음 독립 단위다.
   운영 배포·production 설정/DB·#199 F 전환·향후 계정·공통 UI 추출은 보류한다.
+
+## 2026-10-23 다음 단위 — CFG-08/09 공유 설정 workspace
+
+CFG-10·TEST-05 #205의 squash 결과 `b386c50585257a46f15bc3e5cfeaa92baa75a102`를 fetch하고
+검증 head와 전체 tree 일치를 확인한 뒤 분기한다. 공통 설정 한 개의 private package를 실제
+consumer와 함께 도입한다. 앱 자동 탐색 entry·APP_ENV·request/instrumentation adapter는 앱에 둔다.
+
+- `packages/config`가 공통 Next/Sentry build·ESLint/Steiger·Vitest·TS preset과 직접 도구 의존성,
+  공개 exports·자체 타입/lint 검사를 소유한다. root와 앱·server/contracts가 workspace 의존성을 선언한다.
+  내부 구현을 root alias나 workspace 상대 경로로 우회하지 않는다.
+- ESLint rule 구현과 helper를 package가 소유하고 harness가 공개 entry를 소비한다. 공통 Vitest
+  marker mock도 package 내부로 옮겨 root tests에 역의존하지 않게 한다. TEST-06의 이 두 mock만
+  결합하며 Worker·서버 DB 테스트·k6의 위치 재편은 포함하지 않는다.
+- root orchestration 타입 설정은 config/tsconfig.json에 유지하고 package 자체 타입 검사와 구분한다.
+  Node lint/project root는 consumer가 명시한다. 브라우저 setup은 package의 자체 경로를 사용하며
+  tracing root·app alias·DB test 실행 root는 기존 consumer가 소유한다.
+- 분리 가능성을 검토한다. 새 package와 실제 consumer·직접 의존성·core rule/mock 소유권·prod Docker
+  manifest·Turbo/harness 경로는 하나의 해석/검사 전환으로 검증한다. 단순 파일 이동이나 미사용 package
+  선생성을 하지 않는다. 파일 목표를 넘으면 rename 비중·결합 이유·리뷰 순서를 PR에 설명한다.
+- 완료 조건은 package 외부 역참조 부재·공개 entry/명시 의존성·도구의 실제 cwd/loader 호환성·두 앱
+  task 선택/hash 보존이다. 기본 gate·두 앱 실제 local build/standalone과 최종 head CI·리뷰 후 병합한다.
+  prod Docker에는 새 manifest를 install 전에 포함한다. 기존 개발 Docker의 전체 설치 보완은 RUN-01로
+  분리하며 Worker나 계정/UI/배포 확장·#199 F 전환은 보류한다.
+- 실제 Node 22.16/Vitest config loader는 외부 TS entry를 실행하지 못했다. 두 Vitest factory는
+  ESM JavaScript와 JSDoc @satisfies·package checkJs로 전환한다. 넓은 도구 내부 타입을 공개해
+  peer별 nominal type에 결합하지 않고 실제 설정 shape를 유지한다. 전역 loader나 사전 빌드는 추가하지 않는다.
+  Next·ESLint·Steiger의 TS loader와 두 앱 실제 build는 별도로 확인한다.
