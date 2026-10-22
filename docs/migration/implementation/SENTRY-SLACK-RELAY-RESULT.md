@@ -1,7 +1,7 @@
 ---
 title: "Sentry 오류 알림 Slack relay 구현 결과"
 document_id: "SENTRY-SLACK-RELAY-RESULT"
-version: "1.4"
+version: "1.5"
 status: "completed"
 authority: "result"
 updated_at: "2026-10-22"
@@ -224,3 +224,33 @@ Playwright로 390px/1120px, light/dark를 한 번에 캡처해 가로 넘침이 
 
 branch 누적 diff의 400줄 목표 초과는 같은 알림 표시의 두 단위와 privacy 회귀·역사 기록을 함께
 검토하기 위한 것이다. 리뷰 순서는 README 입력/표시 계약 → Worker → ops 회귀 → §8/§9 결과다.
+
+## 10. 2026-10-22 사용자 수동 배포 대기
+
+사용자가 집에서 직접 배포하기로 하여 새 알림 디자인의 배포를 보류했다. 구현 완료와 외부 적용을
+구분하며, 배포·새 형식의 수신 증거가 기록될 때까지 후속 작업 브리핑에 **Sentry 알림 디자인: 미배포**를
+계속 표시한다. 이는 대화 중 브리핑 요청이며 정해진 시각의 자동 알림을 설정한 기록은 아니다.
+
+- [x] 코드·로컬 검증·commit/push: `feature/sentry-slack-message-layout`의
+  `f085fdbe5363b7b1aacec93a496c76e02a319a79`. 이번 기록 전 HEAD·원격 추적 ref·실제 원격이
+  모두 같고 작업 트리가 깨끗함을 재확인했다. §9의 검증을 이번 문서 변경에서 재실행한 결과로 쓰지 않는다.
+- [ ] 사용자가 기존 Cloudflare Worker `oioi-bwg-sentry-slack-relay` 업데이트
+- [ ] 배포한 코드 ref·Worker version ID·배포 시각 기록
+- [ ] 새 Sentry 테스트 알림 또는 안전한 staging 새 issue의 Slack 수신·제목 링크·표시 확인
+
+현재 코드가 있는 checkout은
+`/home/hsj95/.codex/worktrees/observability-error-tracking/cheer-rock-crab`이다.
+기본 checkout의 `feature/monorepo-configuration-cleanup`에는 이 알림 변경이 없으므로 그 경로에서
+배포하지 않는다. 다른 PC에서는 위 원격 작업 branch의 코드를 먼저 확보하고 배포 대상 ref를 확인한다.
+
+실행 명령과 기존 secret·일반 변수 보존 방법은
+[Worker README의 기존 Worker 코드 업데이트](../../../workers/sentry-slack-relay/README.md#기존-worker-코드-업데이트)가
+소유한다. 최초 설치·secret 회전·Sentry 규칙 재생성은 이번 코드 업데이트에 필요하지 않다.
+실제 배포나 외부 알림 전송은 이 기록을 작성하면서 실행하지 않았다. 문서만 수정했으므로 앱 build·
+타입·lint·test는 별도로 재실행하지 않으며 commit/push hook이 실행한 검사는 해당 실행 결과로 구분한다.
+
+다음 관측성 구현 단위는
+[관측성 계획 §7의 P1-B](https://github.com/goldmayo/oioi-bwg/blob/dd2b41f1e03a2e29d43f98badabb283d0c595986/docs/migration/implementation/OBSERVABILITY-ERROR-TRACKING-PLAN.md#7-구현-checkpoint와-예상-변경-위치)다.
+Console의 정상 인증 거부가 실제 로그인 이동/403 UX로 처리되는지와 탈출한 예외의 수집을 다룬다.
+별도 branch의 P1-A `56c2506`은 코드·검증 완료이나 미병합이므로 다음 단위에 들어가기 전 최신
+`migration_main`과 선행 변경 포함 여부를 재확인한다. 이번 Worker 배포 대기와 별개이며 아직 착수하지 않았다.

@@ -97,6 +97,8 @@ body는 Content-Length 사전 검사와 실제 stream byte 누적 제한(1,000,0
 
 ## 3. Worker deploy
 
+### 최초 설치
+
 이 디렉터리에서 로그인한 뒤 아래 Python 예제를 실행한다. Python 3가 필요하다.
 저장소 밖 `/tmp`에 mode 600 임시 JSON 파일을 만들고, 숨김 입력으로 값을 받은 뒤
 첫 deploy에 `--secrets-file`로 전달한다. 성공·실패·일반적인 중단 시 파일은 제거된다.
@@ -129,8 +131,34 @@ with tempfile.TemporaryDirectory(prefix="sentry-relay-", dir="/tmp") as director
 PYTHON
 ```
 
-이후 코드 배포는 `pnpm dlx wrangler@4.135.0 deploy`를 사용한다.
-이미 배포한 Worker의 secret 회전은 대화형 입력으로 수행한다.
+### 기존 Worker 코드 업데이트
+
+기존 연동이 설정되어 있다면 최초 설치나 secret 등록을 반복하지 않는다. 배포할 코드가 있는 checkout의
+저장소 루트에서 시작한다. 아래 상태·기록을 확인하고 다른 작업의 checkout이면 배포를 멈춘다.
+이번 알림 디자인의 코드 ref와 배포 대기 상태는
+[결과 문서 §10](../../docs/migration/implementation/SENTRY-SLACK-RELAY-RESULT.md#10-2026-10-22-사용자-수동-배포-대기)을 따른다.
+
+```bash
+git status --short --branch
+git log -1 --oneline
+cd workers/sentry-slack-relay
+pnpm dlx wrangler@4.135.0 whoami
+pnpm dlx wrangler@4.135.0 deploy --keep-vars
+```
+
+`whoami`에서 기존 `oioi-bwg-sentry-slack-relay`가 있는 Cloudflare 계정인지 확인한다. 로그인하지
+않았다면 `pnpm dlx wrangler@4.135.0 login` 뒤 다시 확인한다. `--keep-vars`는 대시보드의 일반
+변수를 보존하고, 기존 두 Worker secret도 다시 입력하거나 회전하지 않는다. Worker 이름·계정을
+유지하면 기존 `/webhooks/sentry` 주소와 Sentry integration·Slack webhook을 재설정할 필요가 없다.
+
+배포 출력의 version ID·시각을 기록하고 아래 6절에 따라 새 알림의 제목 링크·표시·개인정보 제거를
+확인한다. 새 형식은 이후 수신하는 알림에 적용되며 과거 Slack 메시지는 바뀌지 않는다. 기존 issue의
+재발생은 new-issue rule의 수신 검증이 아니므로 test notification 또는 안전한 새 staging issue를 사용한다.
+배포 성공과 실제 Slack 수신은 따로 기록한다. OCI 앱 배포·Promotion은 이 Worker 업데이트에 필요하지 않다.
+
+### 기존 secret 회전
+
+secret 회전이 별도로 필요한 경우에만 대화형 입력으로 수행한다.
 
 ```bash
 pnpm dlx wrangler@4.135.0 secret put SLACK_SENTRY_WEBHOOK_URL
