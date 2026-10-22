@@ -393,3 +393,16 @@ Web 예제는 이미 구현·검증됐으므로 복사하거나 재구현하지 
 #198/#200의 검증 후 squash 통합을 진행한다. #199의 F production/www 전환 보류와 운영 배포 제외는
 유지한다. 이미 병합된 최신 main을 각 작업 브랜치에 반영하고, #200에서는 합쳐진 소스를 검증한다.
 G 계획 #187은 문서 충돌과 폐기된 Web 세션 전제를 명시적으로 정정하며 G 구현을 시작하지 않는다.
+
+## 2026-10-23 승인 통합 확정과 다음 재개점
+
+#198 → #196 → #197 → #200 → #187을 검증 후 main에 squash 병합했다.
+통합 기준선 BASE-01은 합쳐진 소스의 실제 gate·두 앱 build/smoke·최종 CI 및 병합 tree 일치로 완료했다.
+세부 ref·CI·문서 전용 생략·운영 보류의 canonical 근거는 RESULT의 승인 통합 확정 절이 소유한다.
+#199 F production/www 전환과 운영 배포는 계속 보류하며 G는 계획만 병합했다.
+
+다음 독립 구현은 **ENV-06 — 앱별 APP_ENV 값 계약과 Web local metadata**다.
+최신 원격 migration_main에서 새 feature branch/격리 worktree를 만들고 local/staging/production
+consumer·예제·Sentry·site metadata를 대조한다. ENV-07/10의 관련 입력과 범위를 먼저 확인하되
+DB-01/02·미확정 ENV-2 credential 전환·개인 env 자동 이관·공통 UI/Base UI를 섞지 않는다.
+이번 작업에서는 ENV-06 구현을 시작하지 않는다.

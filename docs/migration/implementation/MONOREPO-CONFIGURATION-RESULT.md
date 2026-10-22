@@ -11,8 +11,8 @@ created_at: "2026-10-22"
 [계획과 원문 매핑](MONOREPO-CONFIGURATION-PLAN.md)을 따른다.
 아래 체크는 구현뿐 아니라 적용 제외·보존 판단까지 근거를 점검했다는 의미다.
 운영 상태나 외부 전송 성공을 뜻하지 않는다.
-2026-10-23 재개 판정은 #198과 #200의 각 구현 head를 함께 추적한다. 체크된 미병합 구현이
-`migration_main`에 이미 통합됐다는 의미는 아니다. PR별 ref와 이번 실행은 마지막 재개 절을 따른다.
+현재 구현·통합 상태는 아래 체크리스트와 마지막 승인 통합 확정 절을 따른다.
+과거 미병합 표시와 검증 수치는 해당 ref·시점의 이력으로 보존한다.
 
 ## 원문 항목 체크리스트
 
@@ -20,7 +20,7 @@ created_at: "2026-10-22"
 | --- | --- | --- |
 | [x] | ENV-01 | #198의 Console R2 예제·launcher 필수 입력 검사가 ef0e122에 병합됐다. 실제 업로드는 미검증이다. |
 | [x] | ENV-02 | #198의 host 공개 입력·Vault 매핑 예제와 누락 거절 fixture가 ef0e122에 병합됐다. 운영 주입은 미검증이다. |
-| [x] | ENV-03 | fd66161에서 Console readiness와 업로드의 R2 입력 검사를 공유한다. 설정 오류 시 DB/외부 쓰기 전 거절하며 503/no-store·값 비노출을 검증했다. #200 미병합이다. |
+| [x] | ENV-03 | #200이 4b08beb에 병합됐다. readiness/업로드의 필수 입력·빈 URL 구분자 거절·정규화·503/no-store·값 비노출을 검증했다. 실제 R2 업로드는 미검증이다. |
 | [x] | ENV-04 | #198에서 Web DATABASE_URL 예제를 추가했다. 개인 env 변경 없이 회수 코드·검증 증거를 재판정했다. |
 | [x] | ENV-05 | 개인 비추적 env의 값 유무는 브랜치 결함에서 제외한다. 두 앱 추적 예제는 local을 명시하며 개인 파일을 수정하지 않았다. |
 | [ ] | ENV-06 | 대기 |
@@ -61,13 +61,13 @@ created_at: "2026-10-22"
 
 현재 원문 38개는 **처리 20개·대기 18개**다. 회수 구현/적용 제외 재판정 7개와 이번 ENV-03 1개를
 기존 12개에 더했다. 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
-별도로 등록한다. 총 추적 ID는 46개이며 추가 8개는 모두 미구현·검토/대기다.
+별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01은 처리됐으며 나머지 7개는 검토/대기다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
-이번 문서 반영은 아래 작업의 구현 승인이나 완료 표시가 아니다.
+등록 당시 조사와 아래 현재 완료 근거를 구분하며, 다른 대기 항목의 구현 완료로 확대하지 않는다.
 
 | 점검 | ID | 범위 | 현재 상태와 후속 기준 |
 | --- | --- | --- | --- |
-| [ ] | BASE-01 | Sentry 통합 기준선 | #196/#197/#198은 main에 병합됐다. 이를 반영한 #200의 4443d64에서 전체 gate·두 앱 build/browser smoke가 성공했다. #200의 main 병합 확인이 남으며 운영 검증은 별개다. |
+| [x] | BASE-01 | Sentry 통합 기준선 | #196/#197/#198을 반영한 #200의 4443d64에서 전체 gate·두 앱 build/browser smoke, 최종 head 68d7756의 전체 CI가 성공했다. 4b08beb squash 결과와 검증 tree 일치를 확인했다. 운영 수신/소스맵은 별도다. |
 | [ ] | CFG-08 | 공통 config workspace 패키지 | packages/config 한 개로 시작하는 구조 제안이다. manifest·exports·소비자 의존성·도구 소유권·실행 호환성 검토와 구현은 대기다. |
 | [ ] | CFG-09 | workspace 간 import 계약 | 명시적 package entry로 상대경로를 대체하는 제안이다. 앱 내부 alias·slice 내부 상대경로·파일시스템 경로 계산은 구분하며 변경은 대기다. |
 | [ ] | CFG-10 | 루트 설정 TS 검사 | drizzle.config.ts와 vitest.ops.config.ts가 현재 타입 프로그램에 없음을 확인했다. CFG-07의 운영 스크립트 8개 완료와 별도로 보완한다. |
@@ -862,3 +862,34 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 이 통합 소스의 로컬 DB integration·정상 DB readiness 200·관리자 전체 E2E·운영 검증은 미실행이다.
   실제 PostgreSQL/컨테이너 성공은 위 개별 PR 및 새 #200 CI와 구분한다. #200은 최종 CI·병합
   확인이 남아 있어 BASE-01을 아직 완료로 표시하지 않는다. 병합 후 PR/Notion과 후속 기록으로 확정한다.
+
+## 2026-10-23 승인 통합 확정 — BASE-01 완료
+
+문서 기록 기준은 원격 main `84b9030af78e2c54d8e29841f6bfef0e256138b3`이다.
+기존 회수·미병합·개별 검증 기록은 당시 ref의 이력으로 보존하고, 현재 상태를 아래처럼 확정한다.
+
+| PR | 실제 상태 | main squash commit / 근거 |
+| --- | --- | --- |
+| [#198](https://github.com/goldmayo/oioi-bwg/pull/198) | env 계약 병합 완료 | `ef0e1224fa7f289bfde0cba60dfbbab9e58cf42f` |
+| [#196](https://github.com/goldmayo/oioi-bwg/pull/196) | Worker 변경 병합 완료 | `b0000a025ebc9be38a775a7cde1405476837f5ce` |
+| [#197](https://github.com/goldmayo/oioi-bwg/pull/197) | 앱 Sentry 변경 병합 완료 | `95e05a43d4cb7c97633256975e2d0523f1219c60` |
+| [#200](https://github.com/goldmayo/oioi-bwg/pull/200) | 모노레포·ENV-03·리뷰 P2 병합 완료 | `4b08beb959596ca47d3ec6025bf7210d7f14fe31` |
+| [#187](https://github.com/goldmayo/oioi-bwg/pull/187) | G 계획 문서 병합 완료 | `84b9030af78e2c54d8e29841f6bfef0e256138b3`, G 구현은 미착수 |
+| [#199](https://github.com/goldmayo/oioi-bwg/pull/199) | F 전환 보류 Draft 유지 | head `80af73d`, production/www 입력 전환·배포 미승인/미실행 |
+
+- #200의 최종 검증 head `68d7756744799b1b00000e5681c0d0b1e4cf9732`의
+  [CI run 39820633051](https://github.com/goldmayo/oioi-bwg/actions/runs/39820633051)이 성공했다.
+  필수 verify·품질·unit/ops·격리 PostgreSQL·두 앱 이미지/readiness/browser·Compose 보존/실패 복구가
+  통과했다. Promotion/candidate는 skipped다. 위 로컬 직접 검증·캐시·hook과 별도 자동 CI 결과다.
+- fetch 후 #200 squash 결과와 해당 head의 전체 tree가 같음을 `git diff --quiet`로 확인했다.
+  이후 #187은 G 계획·P06 계획·ROADMAP의 일반 Markdown 세 파일만 바꿨다.
+  따라서 BASE-01의 실제 통합·합쳐진 소스 검증을 완료 처리하며 운영 성공으로 확대하지 않는다.
+- #187은 최신 main 반영 뒤 상대 링크 46개·G 계획의 명시적 Prettier·diff 검사·docs_only=true 확인을
+  마쳤다. [CI run 39822855803](https://github.com/goldmayo/oioi-bwg/actions/runs/39822855803)의
+  scope·필수 verify 성공, heavy job skipped를 확인했다. push hook도 Markdown-only skip이었다.
+  문서 충돌 해소와 Web 인증 종료 전제 정정이며 계정·MFA·메일 기능을 구현하거나 실행하지 않았다.
+- 원문은 처리 20/대기 18을 유지한다. 추가 8개는 BASE-01 처리 1/대기 7이다. 정상화 전체 완료는 아니다.
+  다음은 PLAN에 명시한 ENV-06 한 단위다. 운영 R2/Vault/Sentry 수신·소스맵·배포와 관리자 전체 E2E는
+  이번 로컬 작업에서 미검증/미실행이며 #199 F 전환·UI/Worker 후속도 보류한다.
+- 이번 확정은 PLAN/RESULT 두 Markdown 파일만 갱신한다. 내용·ID 고유성·상대 링크·diff·문서 전용
+  scope를 점검하고 앱 gate/build를 별도로 재실행하지 않는다. 후속 PR의 hook/CI는 별도 기록한다.
