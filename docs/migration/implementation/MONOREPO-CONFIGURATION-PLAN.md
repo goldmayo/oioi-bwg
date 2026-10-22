@@ -50,6 +50,9 @@ fetch한 origin/migration_main의 위 source_commit에서 feature/monorepo-confi
 
 각 단계는 구현 → 관련 검증 → diff/리팩토링 점검 → 결과 기록 → 한글 Conventional Commit 순서다.
 이 표는 계획이며 완료 표시는 [실행 결과 체크리스트](MONOREPO-CONFIGURATION-RESULT.md)가 소유한다.
+2026-10-22 중간 점검 이후의 재개 순서와 추가 항목은 이 문서 끝의
+[추가 논의 반영](#2026-10-22-추가-논의-반영--재개-순서와-소유권)을 따른다.
+위 순서와 아래 원문 38개 ID는 당시 계획과 추적성을 위해 보존한다.
 
 ## 원문 전체 항목 매핑
 
@@ -268,3 +271,74 @@ Runtime §12.1·14와 배포 runbook §21에 따라 두 앱이 복제한 Sentry 
 push 전 보완 범위: 기존 ops의 Sentry 검사는 Web entry의 옵션 문구를 직접 읽는다.
 공통 조립 함수의 실제 반환값으로 같은 삭제·manifest·오류 정책을 검사하도록 갱신한다.
 workflow·BuildKit secret 검사는 보존하고 두 앱의 실제 연결은 새 harness가 계속 검증한다.
+
+## 2026-10-22 추가 논의 반영 — 재개 순서와 소유권
+
+사용자는 중간 점검, 공유 config 패키지화, 상대경로 대체, 작업 우선순위, UI 후속 추출,
+Worker 위치와 루트 tests 조사까지 Notion 및 저장소 체크리스트에 함께 반영하도록 요청했다.
+이번 승인은 문서와 체크리스트 갱신 범위다. 아래 구조 변경은 구현 전 검토·대기 항목이며,
+기록을 구현·병합·배포 승인이나 완료로 해석하지 않는다. 개인 env와 운영 자원은 변경하지 않는다.
+
+조사 소스는 `feature/monorepo-configuration-cleanup`의
+`d1df79a7672e64b8366f58a298fbb50914afea96`이다. 원격 조회 시 `migration_main`은
+`4d5e42dac37aeb13b3279b47a7907fbb7bc91be2`였다. 초기 원문 38개와 추가 8개를 구분하며,
+추가 항목의 현재 상태와 조사 증거는 [RESULT](MONOREPO-CONFIGURATION-RESULT.md)가 소유한다.
+기존 CFG-07의 완료 범위는 운영 스크립트 8개이며, 추가 설정·테스트 누락은 별도 ID로 추적한다.
+
+### 재개 순서
+
+| 순서 | 작업 | 추적 항목과 완료 기준 |
+| --- | --- | --- |
+| 0 | Sentry 완료 커밋과 통합 기준선 확정 | BASE-01. 승인된 병합 후 최신 migration_main을 반영하고 합쳐진 소스의 검사·두 앱 build를 확인한다. 운영 수신·소스맵 검증은 별도 추적한다. |
+| 1 | 앱별 환경변수 계약 정상화 | ENV-01~10, OBS-01/02, MAIN-01. Console R2·Sentry 예제, Web의 종료된 기능 입력, APP_ENV 값 계약과 필수 설정 검사를 맞춘다. MAIL-01/02는 현재 호출처가 없는 휴면 코드의 재활성화 조건으로 기록한다. |
+| 2 | DB 도구 입력 경로 통일 | DB-01/02. guard와 실제 실행이 같은 입력을 사용하고 공통 DB 도구의 Web env 의존을 정리한다. 미확정 ENV-2 전체 credential 체계 전환은 별도다. |
+| 3 | 공유 설정 패키지와 타입 검사 책임 정리 | CFG-08/09/10, TEST-05. 공통 설정의 공개 진입점·의존성을 명시하고 설정 2개·루트 tests TS 28개의 검사 누락을 보완한다. |
+| 4 | 개발 Docker 설치·실행 검증 | RUN-01. 새 config 패키지를 포함한 workspace manifest와 lockfile로 깨끗한 설치·실행을 확인한다. 뒤에서 Worker를 추가하면 manifest와 영향 경로를 재점검한다. |
+| 5 | 기존 대화의 6번: 수명주기·소유권·안내 정리 | ROOT-01~04, ENV-08/09, UI-01/02, DOC-01, MAIN-02 및 RUN-03, TEST-06. rollback 소비자와 기존 CI·수동 실행 계약을 보존한다. |
+| 6 | 정상화 전체 검증 | 원문·추가 정상화 항목을 대조하고 전체 gate·두 앱 standalone smoke를 확인한다. 수동 관리자 E2E는 active Testing 정책을 따른다. |
+| 후속 | 공통 UI 조사와 제한적 추출 | UI-03. 위 정상화 및 통합 검증 이후 별도 관심사로 검토한다. 이번 정상화의 완료 조건에 UI 추출을 넣지 않는다. |
+
+### 추가 항목과 구현 전 검토 기준
+
+- **BASE-01 — Sentry와 모노레포 통합 기준선:** Sentry 앱 branch와 Slack Worker branch의
+  코드·문서·운영 상태를 구분한다. 겹치는 수정 파일이 없다는 관찰만으로 통합 검증 완료를 선언하지 않는다.
+  원격 main 재조회, 승인된 병합 ref, 실제 통합 검사 결과를 남긴다.
+- **CFG-08 — 공유 설정의 workspace 패키지화:** 우선 `packages/config` 한 개의 private 패키지를
+  검토한다. 도구 의존성·공개 exports·자체 검사 책임을 소유하고 소비자가 workspace 의존성을 선언한다.
+  앱별 자동 탐색 entry, 런타임 env 해석과 request/instrumentation adapter는 앱에 유지한다.
+  ESLint rule 구현의 root harness 참조와 Vitest mock 경로를 함께 검토하고 새 패키지가 루트 테스트 구현에
+  역으로 결합되지 않게 한다. 폴더 위치만 바꾸거나 목적별 패키지를 선생성하지 않는다.
+- **CFG-09 — workspace 간 경로 계약:** `@oioi-bwg/config/next` 같은 명시적 package entry를
+  사용한다. root tsconfig alias만으로 도구·런타임 해석과 Turbo 의존 관계가 연결됐다고 가정하지 않는다.
+  앱 내부 `@/`와 같은 slice 내부 상대경로 규칙은 유지한다. tracing root·mock 등 파일시스템 경로 계산은
+  별도 책임이며, TS 직접 export의 Next·ESLint·Vitest·CLI loader 호환성을 확인한다.
+- **CFG-10 — 루트 설정 타입 검사:** `drizzle.config.ts`, `vitest.ops.config.ts`를 적절한 타입
+  프로그램에 포함하고 기존 repo·CI·hook 진입점의 오류 검출을 확인한다. 설정 위치를 미관상 옮기지 않는다.
+- **TEST-05 — 루트 tests TypeScript 검사:** 조사 기준 TS 28개(integration 4, ops 22, mocks 2)의
+  검사 소속을 정한다. Web alias가 필요한 foundation과 Node/Worker·CLI 환경을 구분하며 모든 테스트에
+  Web alias나 browser 환경을 퍼뜨리지 않는다. 수집·실행 성공과 타입 검사 성공을 별도로 확인한다.
+- **RUN-03 — 독립 Worker의 workspace 소유권:** `apps/sentry-slack-relay`와 전용 package.json을
+  검토한다. 현재 `workers/` 위치 자체는 결함이 아니다. 이동 시 type-check/test·Wrangler·README·
+  root glob/harness·CI/Docker·배포 영향 판정을 함께 점검한다. Worker secret·Cloudflare 배포는 독립적으로
+  유지하고 Next image나 OCI 배포에 합치지 않는다. 폴더 이동을 실제 Worker 재배포로 해석하지 않는다.
+- **TEST-06 — 루트 tests 소유권:** 저장소 전체 배포/호스트/이미지/두 앱 통합 검증은 루트에 유지한다.
+  Worker 단위 테스트는 RUN-03과 함께 앱으로, 서버 repository/service 전용 DB 테스트 두 개는
+  `packages/server/tests/integration`으로 옮길 후보로 검토한다. foundation의 Web HTTP 409 검증과
+  root CLI operator 검증, 격리 DB runner의 생성·직렬 실행·정리 계약을 보존한다. Web k6는 Web 소유 후보,
+  marker mock 두 개는 공통 테스트 설정과 함께 관리할 후보로 둔다. ops의 test/smoke/fixture 역할과
+  전체 참조를 먼저 조사하며 경로·CI·수집·중복 실행·Turbo 입력을 함께 검증한다. 단순 폴더 미관상 이동은 하지 않는다.
+- **UI-03 — 정상화 이후 공통 UI:** 두 앱의 실제 재사용과 동일한 동작·스타일 계약을 확인한 primitive만
+  추출 후보로 둔다. theme/CSS 변수/font/style 생성/provider와 browser 회귀를 확인한다.
+  도메인·인증·라우팅에 결합된 UI는 앱에 유지하고, Base UI 전환·디자인 변경은 검증 가능한 별도 단위로 나눈다.
+  헌법 §5의 공용 UI package 선생성 금지를 유지하며 필요 시 구현 전에 관련 active 문서를 검토한다.
+
+### 범위와 문서 소유권
+
+현재 config는 package.json 없이 루트 소스로 관리되고 `config/**` 전역 Turbo 입력과 별도 타입 검사에
+연결되어 있다. workspace 목록에 config가 없다는 사실 자체는 검사 누락을 뜻하지 않는다.
+패키지화의 목적은 공개 계약·의존성·검사 책임을 명시하는 것이며 기능 설정 오류의 해결이나 성능 향상을
+자동으로 보장하지 않는다. 실제 기능에 영향을 주는 env·DB 입력을 우선한다.
+
+이 절은 재개 계획, RESULT는 구현 상태와 관찰 증거의 canonical 문서다. Notion은 두 문서를 연결하는
+요약 체크리스트로 동기화한다. 원문 조사와 이전 완료 기록은 삭제하거나 현재 코드에 맞춰 소급 변경하지 않는다.
+이번 문서 갱신에서는 구현·설정·테스트·manifest·lockfile·개인 env를 바꾸거나 구조 변경을 실행하지 않는다.

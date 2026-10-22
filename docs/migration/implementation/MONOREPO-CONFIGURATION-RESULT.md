@@ -55,6 +55,28 @@ created_at: "2026-10-22"
 | [ ] | MAIN-01 | 대기 |
 | [ ] | MAIN-02 | 대기 |
 
+## 2026-10-22 추가 논의 체크리스트
+
+원문 38개는 **처리 12개·대기 26개**로 유지한다. 여기에 정상화 추가 항목 7개와 후속 UI 검토 1개를
+별도로 등록한다. 총 추적 ID는 46개이며 추가 8개는 모두 미구현·검토/대기다.
+대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
+이번 문서 반영은 아래 작업의 구현 승인이나 완료 표시가 아니다.
+
+| 점검 | ID | 범위 | 현재 상태와 후속 기준 |
+| --- | --- | --- | --- |
+| [ ] | BASE-01 | Sentry 통합 기준선 | 앱 코드·로컬 검증 완료 문서를 확인했다. main 미병합이며 합쳐진 소스의 검사는 대기다. Slack Worker의 별도 배포·실수신 완료와 앱 이미지의 운영 검증을 구분한다. |
+| [ ] | CFG-08 | 공통 config workspace 패키지 | packages/config 한 개로 시작하는 구조 제안이다. manifest·exports·소비자 의존성·도구 소유권·실행 호환성 검토와 구현은 대기다. |
+| [ ] | CFG-09 | workspace 간 import 계약 | 명시적 package entry로 상대경로를 대체하는 제안이다. 앱 내부 alias·slice 내부 상대경로·파일시스템 경로 계산은 구분하며 변경은 대기다. |
+| [ ] | CFG-10 | 루트 설정 TS 검사 | drizzle.config.ts와 vitest.ops.config.ts가 현재 타입 프로그램에 없음을 확인했다. CFG-07의 운영 스크립트 8개 완료와 별도로 보완한다. |
+| [ ] | TEST-05 | 루트 tests TS 검사 | tests 아래 추적 TS 28개 모두 현재 type-check 프로그램에 없다. integration 4·ops 22·mocks 2의 환경별 검사 소속 보완은 대기다. |
+| [ ] | RUN-03 | Worker workspace 소유권 | 독립 배포 서비스의 apps/sentry-slack-relay 이동·패키지 등록 제안이다. 기존 workers 위치도 유효하며 경로·검사·배포 경계 정리는 대기다. |
+| [ ] | TEST-06 | tests 위치·책임 정리 | 총 52개 파일의 검증 대상을 분류했다. root 통합 검증은 유지하고 Worker·server 전용 테스트·Web 성능 테스트·공통 mock의 소유권 분리는 검토 대기다. |
+| [ ] | UI-03 | 정상화 이후 공통 UI | 정상화와 최종 통합 검증 뒤 별도로 실제 재사용을 조사한다. 패키지 선생성·일괄 이관을 승인하거나 완료한 상태가 아니다. |
+
+재개 순서와 각 ID의 완료 조건은 [PLAN의 추가 논의](MONOREPO-CONFIGURATION-PLAN.md#2026-10-22-추가-논의-반영--재개-순서와-소유권),
+조사 기준과 근거는 이 문서 끝의 중간 점검 기록을 따른다. 기존 단계별 이력의 수치와 당시 미배포 표시는
+그 시점의 사실로 보존한다.
+
 ## 단계별 로컬 검증과 리팩토링 점검
 
 구현·검증·커밋이 끝난 순서대로 실제 결과만 추가한다.
@@ -577,3 +599,55 @@ created_at: "2026-10-22"
 - 첫 push 실패는 `push.log`, jq PATH 누락 실행은 `ops.log`, 올바른 PATH 실행은 `ops-with-jq.log`,
   보완 검증은 같은 로그 폴더의 `followup-*`에 보존한다. 최초 커밋을 합치거나 amend하지 않고
   테스트와 계획·결과 보완을 별도 커밋으로 추가한 뒤 hook을 거쳐 다시 push한다.
+
+### 2026-10-22 중간 점검과 추가 논의 기록
+
+- 조사 기준은 `feature/monorepo-configuration-cleanup`의
+  `d1df79a7672e64b8366f58a298fbb50914afea96`이다. 이 문서 수정 전 작업 트리는 clean이었다.
+  원격 조회로 같은 이름의 작업 branch가 일치하고 `migration_main`이
+  `4d5e42dac37aeb13b3279b47a7907fbb7bc91be2`임을 확인했다. 이 추가 기록은 구현 결과가 아닌
+  해당 소스에 대한 점검 결과와 사용자 요청에 따른 체크리스트 갱신이다.
+- Sentry 앱 branch 최신 ref는 `7ed3246b37548997178afe2c42e9ecdd468bd8ea`다.
+  [해당 결과 §8](https://github.com/goldmayo/oioi-bwg/blob/7ed3246b37548997178afe2c42e9ecdd468bd8ea/docs/migration/implementation/OBSERVABILITY-ERROR-TRACKING-RESULT.md#8-2026-10-22-slack-알림-배포-완료와-남은-운영-검증)은
+  코드·로컬 검증 완료와 앱 변경 미병합·미배포를 구분한다. 앱 변경의 운영 수신·운영 알림 규칙 보완·
+  이미지별 실제 Debug ID/소스맵 복원은 대기다. 실제 Next hook에서 원래 Error 클래스가 소실돼 unknown으로
+  수집된 한계도 보존한다. 문서 기록을 이번 점검의 runtime 재실행으로 세지 않는다.
+- Slack Worker branch는 `07489153f246e4ead36c89f9e5f07a0297e6e7b6`이다.
+  [해당 결과 §11](https://github.com/goldmayo/oioi-bwg/blob/07489153f246e4ead36c89f9e5f07a0297e6e7b6/docs/migration/implementation/SENTRY-SLACK-RELAY-RESULT.md#11-2026-10-22-새-알림-형식-배포와-실제-수신-완료)에
+  사용자 승인 후 Worker 배포와 새 Slack 알림의 실제 수신 완료가 기록됐다. 앞선 대화의 미배포 설명은
+  이 최신 증거로 정정한다. 이 점검에서는 외부 조회·배포·알림 전송을 하지 않았다.
+- 최초 중간 점검 시 모노레포·Sentry 앱·Worker branch 사이의 수정 경로 교집합은 없었다.
+  최신 두 branch의 추가 문서 커밋도 모노레포 수정 파일과 겹치지 않는다. 통합 tree build나 병합은 하지 않았다.
+
+루트 tests 조사:
+
+| 위치 | 파일 수 | 확인한 책임과 분류 |
+| --- | --- | --- |
+| tests/ops | 42 | Vitest 테스트 21개 외에 smoke·fixture·shell/Python 도구가 함께 있다. host·배포·이미지·두 앱 통합 검증은 root 소유가 적절하다. |
+| tests/integration | 4 | foundation은 Web adapter와 서버·DB를 함께 검증한다. p05a/p05b2는 server repository/service 전용 이관 후보이고 p05b3는 root CLI까지 실행한다. |
+| tests/k6 | 4 | 현재 Web URL·song slug를 사용하는 수동 성능 검증이다. Web 소유 후보이며 부하 테스트는 실행하지 않았다. |
+| tests/mocks | 2 | client-only/server-only marker의 공통 빈 mock이다. 두 앱·server·PostgreSQL 설정에서 소비하므로 공통 테스트 설정과 함께 관리할 후보다. |
+
+- `tests/ops/sentry-slack-relay.test.ts`는 Worker 소스를 직접 import하는 단위 테스트다.
+  RUN-03에서 Worker를 패키지로 정리할 때 함께 이관할 후보이며 현재 root ops 실행과 연결돼 있다.
+- foundation의 실제 HTTP 409 검증과 Web 전용 alias 제한은 TEST-04의 완료 범위다. 파일 소유권을
+  추가 검토한다는 이유로 완료 판정을 되돌리거나 HTTP 검증을 삭제하지 않는다. 전체 DB 생성·역할·직렬
+  실행·정리, CI image smoke·수동 관리자 E2E와 실제 path 참조를 보존한다.
+- TypeScript compiler API로 root/config/scripts/Web/Console/server/contracts의 7개 프로그램과
+  `git ls-files tests`의 추적 TS 소스를 대조했다. tests TS 28개(integration 4·ops 22·mocks 2)의 소속이
+  모두 없고, root 설정 `drizzle.config.ts`·`vitest.ops.config.ts`도 없었다. 소속 분석이며 새 타입 검사
+  프로그램을 만들거나 해당 파일의 타입 검사 통과를 확인한 것은 아니다. CFG-10·TEST-05에 등록한다.
+
+중간 점검에서 직접 실행한 검증과 한계:
+
+- 모노레포 `pnpm test:harness` 34건, `pnpm type-check:repo`,
+  `pnpm exec vitest run --config vitest.ops.config.ts tests/ops/deploy-via-run-command.test.ts --reporter=dot`
+  6건이 성공했다. Sentry 코드 점검 기준은 문서 커밋 전 `c2645e9badcd9860dd20c921f6a4be9672501a5e`다.
+  해당 worktree의 Console 관련 11파일·96건, Web 관련 9파일·95건이 성공했다.
+- 최초 Web 검사는 앱 cwd에서 이전 root config를 직접 실행해 테스트 0건으로 종료했다.
+  root cwd와 기존 root config로 실행 경로를 바로잡은 뒤 위 95건이 성공했다. 저장소 코드를 고치지 않았다.
+- 이번 체크리스트 반영은 PLAN/RESULT 문서와 기존 Notion 요약의 갱신이다. 기존 38개 이력과 추가
+  8개 ID의 상태를 대조한다. 문서 갱신을 위해 전체 lint/type-check/test/build·DB·외부 서비스 검사를
+  별도로 재실행하지 않는다. commit/push hook이 실행한 검사는 별도 hook 실행 결과로 보고한다.
+- 사용자 요청 범위에서 application/설정/테스트/manifest/lockfile·개인 env·운영 자원은 변경하지 않는다.
+  신규 PR 생성·branch 병합·배포는 하지 않으며 구조 제안의 구현도 대기다.
