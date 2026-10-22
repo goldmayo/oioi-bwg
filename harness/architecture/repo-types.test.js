@@ -33,6 +33,33 @@ test("repo type programs cover every tracked operational TypeScript source", () 
   assert.equal(projects[1].options.allowJs, false);
 });
 
+test("root settings and tests have strict type owners without leaking Web aliases", () => {
+  const config = readProject("config/tsconfig.json");
+  for (const filename of ["drizzle.config.ts", "vitest.ops.config.ts"])
+    assert.ok(config.fileNames.includes(path.join(root, filename)), `${filename} needs an owner`);
+
+  const node = readProject("tests/tsconfig.json");
+  const web = readProject("tests/tsconfig.web.json");
+  const sources = execFileSync("git", ["ls-files", "-z", "--", "tests"], {
+    cwd: root,
+    encoding: "utf8",
+  })
+    .split("\0")
+    .filter((filename) => filename.endsWith(".ts"));
+  assert.ok(sources.length > 0);
+  for (const filename of sources) {
+    const absolute = path.join(root, filename);
+    assert.equal(
+      Number(node.fileNames.includes(absolute)) + Number(web.fileNames.includes(absolute)),
+      1,
+      `${filename} must have exactly one root test type owner`,
+    );
+  }
+  assert.equal(node.options.paths, undefined);
+  assert.deepEqual(web.options.paths, { "@/*": ["./src/*"] });
+  assert.ok([config, node, web].every(({ options }) => options.strict && options.noEmit));
+});
+
 test("script type checking rejects bad values and connection APIs on transactions", () => {
   const project = readProject("scripts/tsconfig.json");
   const filename = path.join(root, "scripts/type-check-regression.ts");

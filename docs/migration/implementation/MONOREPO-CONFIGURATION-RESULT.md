@@ -61,7 +61,7 @@ created_at: "2026-10-22"
 
 현재 원문 38개는 **처리 26개·대기 12개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01·ENV-10·DB-01/02를 더했다.
 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
-별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01은 처리됐으며 나머지 7개는 검토/대기다.
+별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01·CFG-10·TEST-05는 처리됐으며 나머지 5개는 검토/대기다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
 등록 당시 조사와 아래 현재 완료 근거를 구분하며, 다른 대기 항목의 구현 완료로 확대하지 않는다.
 
@@ -70,8 +70,8 @@ created_at: "2026-10-22"
 | [x] | BASE-01 | Sentry 통합 기준선 | #196/#197/#198을 반영한 #200의 4443d64에서 전체 gate·두 앱 build/browser smoke, 최종 head 68d7756의 전체 CI가 성공했다. 4b08beb squash 결과와 검증 tree 일치를 확인했다. 운영 수신/소스맵은 별도다. |
 | [ ] | CFG-08 | 공통 config workspace 패키지 | packages/config 한 개로 시작하는 구조 제안이다. manifest·exports·소비자 의존성·도구 소유권·실행 호환성 검토와 구현은 대기다. |
 | [ ] | CFG-09 | workspace 간 import 계약 | 명시적 package entry로 상대경로를 대체하는 제안이다. 앱 내부 alias·slice 내부 상대경로·파일시스템 경로 계산은 구분하며 변경은 대기다. |
-| [ ] | CFG-10 | 루트 설정 TS 검사 | drizzle.config.ts와 vitest.ops.config.ts가 현재 타입 프로그램에 없음을 확인했다. CFG-07의 운영 스크립트 8개 완료와 별도로 보완한다. |
-| [ ] | TEST-05 | 루트 tests TS 검사 | tests 아래 추적 TS 28개 모두 현재 type-check 프로그램에 없다. integration 4·ops 22·mocks 2의 환경별 검사 소속 보완은 대기다. |
+| [x] | CFG-10 | 루트 설정 TS 검사 | Drizzle·ops Vitest 두 설정을 기존 config 타입 프로그램에 포함했다. 실제 TS2322 검출과 repo/CI/hook 공통 entry를 확인했다. |
+| [x] | TEST-05 | 루트 tests TS 검사 | DB 회귀 추가 후 root TS 29개를 Node 28·Web adapter 1개 프로그램으로 분리했다. strict 검사·단일 소속·alias 격리와 기존 ops/실제 DB 회귀를 확인했다. |
 | [ ] | RUN-03 | Worker workspace 소유권 | 독립 배포 서비스의 apps/sentry-slack-relay 이동·패키지 등록 제안이다. 기존 workers 위치도 유효하며 경로·검사·배포 경계 정리는 대기다. |
 | [ ] | TEST-06 | tests 위치·책임 정리 | 총 52개 파일의 검증 대상을 분류했다. root 통합 검증은 유지하고 Worker·server 전용 테스트·Web 성능 테스트·공통 mock의 소유권 분리는 검토 대기다. |
 | [ ] | UI-03 | 정상화 이후 공통 UI | 정상화와 최종 통합 검증 뒤 별도로 실제 재사용을 조사한다. 패키지 선생성·일괄 이관을 승인하거나 완료한 상태가 아니다. |
@@ -1060,3 +1060,34 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   필수 push hook·최종 head CI/리뷰 결과는 PR에 기록한다. 원문 처리 26/대기 12,
   추가 처리 1/대기 7이다. 다음 후보는 공유 설정 package/entry와 root config/tests 타입 검사 책임이며,
   DB credential 체계 전환·운영 DB·메일/계정 재활성화·Worker 배포·UI 추출은 이번 단위에서 제외한다.
+
+## 2026-10-23 CFG-10·TEST-05 — root 설정·테스트 타입 검사
+
+- DB-01/02 [#204](https://github.com/goldmayo/oioi-bwg/pull/204)는 최종 head
+  `644386666484e930dedb3d3f743721a6e1d98098`의 [CI #500](https://github.com/goldmayo/oioi-bwg/actions/runs/39839977208)
+  전체 성공 후 `306339bb6898efdeb022e1ed528805f9618f1cc3`로 squash 병합했다. 브라우저 설치가 오래
+  걸렸으나 재실행 없이 standalone·Compose 복구까지 성공했다. fetch한 병합 tree와 검증 head의
+  일치를 확인한 뒤 `feature/monorepo-root-type-coverage`를 분기했다. #199·운영 배포는 보류다.
+- Drizzle·ops Vitest root 설정을 기존 config 타입 프로그램에 포함했다. root tests는 조사 당시 28개에
+  #204의 DB CLI 회귀 1개가 더해진 29개다. Node 28개와 Web HTTP adapter foundation 1개를 구분했다.
+  Web만 앱 alias와 기존 PostgreSQL transaction 보완 선언을 사용한다. 파일 위치·Vitest 수집·DB
+  runner의 직렬 실행/격리/정리는 유지한다. 기존 type-check:repo에 연결해 type-check·verify·CI·push
+  hook이 같은 검사를 소비하게 했다. Testing v1.6과 인덱스에 이 책임을 반영했다.
+- 새 검사는 기존 fixture/mock의 오류를 드러냈다. SQL bigint는 정밀도를 보존하는 문자열로 전달하고,
+  MFA 동시성 mock은 실제 query builder를 유지해 execute 완료만 보류한다. 서로 다른 service 반환값은
+  Promise<unknown>으로 명시하고 fetch mock·env fixture의 계약을 맞췄다. SQL/잠금/권한 단언·도메인
+  구현을 약화하지 않았다. JS 함수의 event 옵션과 이미지 판정 command 주입 경계를 JSDoc으로 명시하고
+  기존 문자열 command 출력 해석을 유지했다. CI 구조 최적화·배포 정책 변경은 포함하지 않는다.
+- `pnpm type-check`·`pnpm lint`(FSD 포함)·`pnpm test:unit:run`이 성공했다. workspace별 4작업은
+  각 cache 0으로 실행됐고 unit은 95파일·662건이다. config/scripts와 새 Node/Web 검사도 실제 실행했다.
+  harness **36건**, ops **22파일·312건**이 성공했다. 추적 root TS의 단일 검사 소속과 alias 격리를
+  harness에 추가했다. compiler host overlay로 실제 두 설정·Node·Web 소스에 잘못된 타입을 주입해
+  각 프로그램의 TS2322 검출을 확인했다. 파일을 수정하거나 검사 오류를 suppress하지 않았다.
+- 기존 Compose PostgreSQL 17의 격리 runner에서 수정 fixture를 포함한 **4파일·33건**이 성공했다.
+  종료 시 연결 0·advisory lock 0·테스트 DB 삭제를 확인했다. 기존 DB/볼륨·production은 변경하지 않았다.
+- 앱 소스·공용 서버/계약·Next/Sentry build 설정·app TS preset·Dockerfile·lockfile이 #204와 같음을
+  대조했다. 앱 build를 다시 직접 실행하지 않고 해당 최종 CI의 두 앱 이미지/standalone 결과를 재사용한다.
+  `pnpm format:check`도 성공했다. 필수 push hook·최종 head CI/리뷰 결과는 PR에 기록한다.
+- 원문 처리 26/대기 12, 추가 처리 3/대기 5다. 다음은 CFG-08/09 공통 설정의 private workspace
+  package·공개 entry·의존성·loader 검증이며 이후 RUN-01 개발 Docker 설치를 검증한다. Worker/test
+  위치·UI 추출·향후 계정·메일 재활성화·운영 배포·#199 F 전환은 이번 단위에서 제외한다.

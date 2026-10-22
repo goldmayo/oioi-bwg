@@ -489,3 +489,23 @@ ENV-10 #203의 squash 결과 `7e535753ebd1949fc185318ef7361d6a32f5fd0f`를 fetch
 - 실제 CLI child의 입력 일치·누락/충돌/원격/override 거절·값 비노출·설정 loader를 검증한다.
   기본 gate와 local Compose의 격리 PostgreSQL runner를 실행하며 개인 DB/볼륨은 보존한다.
   불변 앱 소스의 build 결과는 재사용할 수 있는지 확인하고 최종 hook·CI·리뷰 후 squash 병합한다.
+
+## 2026-10-23 다음 단위 — CFG-10·TEST-05 root 타입 검사
+
+DB-01/02 #204의 squash 결과 `306339bb6898efdeb022e1ed528805f9618f1cc3`를 fetch하고 검증 head와
+전체 tree 일치를 확인한 뒤 분기한다. 공유 설정 package/entry 이동(CFG-08/09)과 독립 검증 가능한
+검사 누락 보완을 먼저 마친다. 헌법의 검증 경계와 active Testing §14·15·17을 따른다.
+
+- root Drizzle·ops Vitest 설정 두 개를 기존 설정 타입 프로그램에 포함한다. 테스트는 현재 추적 TS
+  29개를 Node 28개와 Web adapter foundation 1개로 나누고 기존 repo 검사에 연결한다.
+  CI·push hook·verify가 호출하는 repo entry를 재사용하며 별도 필수 gate를 새로 만들지 않는다.
+- Web alias는 해당 프로그램만 앱 config에서 상속한다. 기존 PostgreSQL TransactionSql call signature
+  보완 선언을 명시적으로 재사용한다. 실행 위치·Vitest 수집·직렬 격리 DB lifecycle은 유지한다.
+- 새 검사에서 드러난 fixture·mock·JS 주입 API의 타입 불일치만 보완한다. bigint SQL 인자는 정밀도를
+  보존하는 문자열로 전달하고 MFA mock은 실제 query builder의 실행 완료를 보류한다. SQL·잠금·
+  권한 단언을 제거하거나 도메인 구현을 타입 검사 편의로 바꾸지 않는다.
+- 완료 조건은 두 설정과 모든 root TS tests의 검사 소속·strict/noEmit·Web alias 격리 확인,
+  실제 타입 오류 검출과 기존 repo entry 성공이다. 기본 gate·ops·격리 PostgreSQL 회귀를 실행한다.
+  앱 runtime/build 입력이 불변이면 검증된 두 앱 build를 재사용하며 최종 head CI·리뷰 후 squash한다.
+- 공통 config package 이동·개발 Docker 설치·Worker/test 파일 위치 재편은 다음 독립 단위다.
+  운영 배포·production 설정/DB·#199 F 전환·향후 계정·공통 UI 추출은 보류한다.

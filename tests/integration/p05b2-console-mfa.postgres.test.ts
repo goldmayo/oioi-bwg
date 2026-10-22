@@ -166,12 +166,17 @@ test("AUTH-009 concurrent equal OTPs wait on PostgreSQL and exactly one UPDATE r
   const ready = gate();
   const resume = gate();
   const original = mfa.consumeAdminMfaStep;
-  vi.spyOn(mfa, "consumeAdminMfaStep").mockImplementationOnce(async (...args) => {
-    const rows = await original(...args);
-    expect(rows).toHaveLength(1);
-    ready.release();
-    await resume.wait;
-    return rows;
+  vi.spyOn(mfa, "consumeAdminMfaStep").mockImplementationOnce((...args) => {
+    const query = original(...args);
+    const execute = query.execute.bind(query);
+    query.execute = async (...parameters) => {
+      const rows = await execute(...parameters);
+      expect(rows).toHaveLength(1);
+      ready.release();
+      await resume.wait;
+      return rows;
+    };
+    return query;
   });
   const login = () =>
     authenticateConsoleMfa(fixture.email, password, token(fixture.secret, 30), key);
@@ -469,11 +474,16 @@ test("AUTH-009 login winning the lock commits before reset and its returned vers
   const ready = gate();
   const resume = gate();
   const original = mfa.consumeAdminMfaStep;
-  vi.spyOn(mfa, "consumeAdminMfaStep").mockImplementationOnce(async (...args) => {
-    const rows = await original(...args);
-    ready.release();
-    await resume.wait;
-    return rows;
+  vi.spyOn(mfa, "consumeAdminMfaStep").mockImplementationOnce((...args) => {
+    const query = original(...args);
+    const execute = query.execute.bind(query);
+    query.execute = async (...parameters) => {
+      const rows = await execute(...parameters);
+      ready.release();
+      await resume.wait;
+      return rows;
+    };
+    return query;
   });
   const login = authenticateConsoleMfa(f.email, password, token(f.secret, 30), key);
   await Promise.race([
