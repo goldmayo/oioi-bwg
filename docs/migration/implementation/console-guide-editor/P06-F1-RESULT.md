@@ -57,3 +57,22 @@ MFA 등록 false·현재 key/version·계정 상태를 유지하고 불명확한
 Workers 요금제 해지와 브랜치 이름 변경은 이번 checkpoint에서 실행하지 않았다.
 
 관찰과 Cloudflare CLI 진단은 이 worktree의 ignored `.local/p06-f/`에 보관한다.
+
+
+## 2026-10-23 기존 준비 커밋 회수 — F 전환 보류
+
+`a595cca`의 production build 입력·www 기준 URL 준비 변경을 검토하고 원격 보존·Draft PR로 연결한다.
+위 2026-10-22의 로컬/운영 관찰은 당시 기록이며 이번 회수의 새 운영 검증으로 계산하지 않는다.
+현재 F 전환은 **보류**다. 이 Draft는 준비 코드 검토만 요청하며 production/www 적용·DNS·Caddy·
+Cloudflare·Worker 종료·배포는 실행하거나 승인하지 않는다. 실제 서비스 완료 상태를 되돌리지 않는다.
+
+검토 worktree는 `.local/worktrees/recovery-f-cutover`이며 원래 커밋을 amend/재작성하지 않았다.
+이번 검증에는 임시 local 입력·빈 DSN·업로드/telemetry OFF·접속 불가능한 loopback DB와 임시 Console 키를 사용한다.
+실제 production candidate digest·TLS/라우팅·운영 알림·이미지별 소스맵 복원은 미검증이다.
+
+이번 직접 실행은 workspace 12 task·캐시 0개, unit 81파일·410건, repo 타입/lint·harness 18건·
+FSD·ops 21파일·262건·format 모두 성공했다. 두 앱 실제 build도 2 task·캐시 0개로 성공했다.
+명령은 `pnpm exec turbo run type-check lint test --concurrency=2`, repo 타입/lint, harness, FSD,
+ops, format을 순서대로 실행한 뒤 `pnpm build --force --env-mode=loose --concurrency=1`을 실행했다.
+로그는 저장소 밖 `/tmp/oioi-monorepo-recovery-20261023-0b6s5a9k/validation-f/`에 둔다.
+commit/push hook 결과는 PR에 별도로 기록한다. www robots 산출물의 URL도 로컬 파일에서 확인한다.

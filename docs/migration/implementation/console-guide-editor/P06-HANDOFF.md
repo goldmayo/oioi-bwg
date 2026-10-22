@@ -2,8 +2,8 @@
 title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
-updated_at: "2026-10-22"
-revision: 67
+updated_at: "2026-10-23"
+revision: 68
 ---
 
 # P06 작업 인계
@@ -12,8 +12,8 @@ revision: 67
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- **F 착수(2026-10-22):** `feature/p06-f-cutover`에서 production build 입력·www metadata/sitemap/robots를 준비했다.
-  [F1 결과](P06-F1-RESULT.md)가 변경·실제 로컬 검증과 외부 선행 조건을 소유한다. 실제 서비스는 #193을 유지한다.
+- **F 전환 보류(2026-10-23 회수):** `feature/p06-f-cutover`에서 production build 입력·www metadata/sitemap/robots를 준비했다.
+  [F1 결과](P06-F1-RESULT.md)가 기존 준비·검증과 이번 회수 범위를 소유한다. Draft 검토만 진행하며 실제 서비스는 #193을 유지한다.
   R2는 유지하며 Console runtime의 R2 설정 누락을 확인했다. www TLS/라우팅·콘텐츠 비교와 Cloudflare 재로그인이 남았다.
   Workers/DNS 변경·레거시 종료·요금제 해지·브랜치 개명은 미실행이다.
 - **E 완료 상태(2026-10-22): Web 공개 조회 전용 / 정상 Promotion #193 배포 성공.**
