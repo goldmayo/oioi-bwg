@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.8"
+version: "1.9"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-19"
+updated_at: "2026-10-23"
 depends_on:
   - "01"
   - "05"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.8
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.9
 
 ## 1. 목적
 
@@ -220,6 +220,17 @@ runtime
 ```
 
 `NEXT_PUBLIC_*`는 실제 client exposure가 필요한 값만 사용한다.
+
+앱은 자신의 `.env*`만 읽는다. Web 설정에 값이 있다는 이유로 Console 설정 완료로 판단하지 않는다.
+Console 앨범 업로드에는 `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+`ASSETS_PUBLIC_BASE_URL` 다섯 항목이 필요하다. local launcher와 배포 env materializer는 누락을
+실행/승격 전에 거절한다. 공개 endpoint/bucket/base URL과 Vault의 쓰기 credential 매핑을 구분한다.
+Web은 공개 조회만 제공하며 R2 쓰기 credential을 새 Web의 설정 예제에 요구하지 않는다.
+기존 이미지 복구를 위한 host mapping은 해당 이미지 지원 종료까지 별도로 보존한다.
+
+Sentry는 현재 Web/Console이 같은 프로젝트를 사용한다. 앱 내부 변수 이름은
+`NEXT_PUBLIC_SENTRY_DSN`을 유지하고 앱별 입력 책임을 명시한다. 프로젝트 분리는 별도 결정과
+검증 없이 요구하지 않는다. `local`에서는 DSN 존재 여부와 무관하게 전송하지 않는 기존 정책을 유지한다.
 
 ---
 
