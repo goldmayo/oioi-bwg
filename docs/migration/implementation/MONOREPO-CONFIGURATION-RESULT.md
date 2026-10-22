@@ -1,7 +1,7 @@
 ---
 title: "모노레포 설정 공통화와 구조 개선 실행 결과"
 kind: migration-result
-status: in-progress
+status: completed
 source_commit: 4d5e42dac37aeb13b3279b47a7907fbb7bc91be2
 created_at: "2026-10-22"
 ---
@@ -11,6 +11,9 @@ created_at: "2026-10-22"
 [계획과 원문 매핑](MONOREPO-CONFIGURATION-PLAN.md)을 따른다.
 아래 체크는 구현뿐 아니라 적용 제외·보존 판단까지 근거를 점검했다는 의미다.
 운영 상태나 외부 전송 성공을 뜻하지 않는다.
+**2026-10-23 승인된 정상화 범위 완료.** 원문 38개는 모두 구현 또는 보존/적용 제외 판단을 마쳤고,
+추가 8개 중 정상화 7개를 처리했다. UI-03은 사용자 보류 범위다. 운영/Worker 배포·외부 전송·#199
+F/www 전환·미래 계정/메일 재활성화는 완료 주장에 포함하지 않는다.
 현재 구현·통합 상태는 아래 체크리스트와 날짜별 최신 실행 절을 따른다.
 과거 미병합 표시와 검증 수치는 해당 ref·시점의 이력으로 보존한다.
 
@@ -29,7 +32,7 @@ created_at: "2026-10-22"
 | [x] | ENV-09 | 소비자 없는 Compose NEXT_PUBLIC_ASSETS_URL 주입을 제거했다. 실제 Console ASSETS_PUBLIC_BASE_URL·R2 설정과 외부 host/bucket·개인 env는 유지했다. |
 | [x] | ENV-10 | Console candidate의 Web GTM build 인자를 제거했다. Web consumer/전달·두 앱 build 증명·production 입력을 보존하고 관련 ops와 workflow parse를 확인했다. 아래 ENV-10 실행 절 참조. |
 | [x] | MAIL-01 | 휴면 provider의 NODE_ENV 모드 추론을 같은 local/production 계약으로 수정했다. local 기본 no-send·production dev 거절·미지원 값의 OCI 이전 거절을 SDK mock 12건으로 검증했다. 재활성화/실제 발송은 보류다. |
-| [ ] | MAIL-02 | 대기 |
+| [x] | MAIL-02 | 휴면 Instance Principal의 metadata 의존과 현재 컨테이너 IMDS 차단의 충돌을 확인했다. 차단을 유지하며 재활성화 인증·권한·비밀/실패 계약 설계와 실제 발송은 별도 보류다. |
 | [x] | OBS-01 | #198의 Runtime §12.1·앱 예제·배포 안내가 공용 Sentry 프로젝트 유지와 앱별 입력 책임을 명시한다. 프로젝트 분리·외부 변경 없음. |
 | [x] | OBS-02 | #198의 Console NEXT_PUBLIC_SENTRY_DSN 예제와 local 전송 비활성 안내가 ef0e122에 병합됐다. |
 | [x] | DB-01 | 공통 loader·guard가 검증한 URL을 migrate/pull/studio child에 전달한다. 값 비노출·입력 충돌·원격/override 거절과 실제 격리 PostgreSQL migration을 검증했다. 아래 DB 실행 절 참조. |
@@ -42,26 +45,26 @@ created_at: "2026-10-22"
 | [x] | CFG-06 | root/pre-commit/package가 동일한 server/contracts 경계 규칙을 적용한다. 실제 lintText 회귀로 확인했다. |
 | [x] | CFG-07 | 누락된 운영 .ts 8개를 strict 타입 검사에 포함했다. 기존 .mts NodeNext 검사는 유지하고 repo/CI/push 경로의 실제 오류 검출과 소스별 검사 소속을 검증했다. |
 | [x] | TEST-01 | 두 앱이 각자의 Vitest root·alias·include를 소유한다. 공통 browser preset/setup과 root의 프로젝트 선택 책임을 분리하고 수집 파일·환경 보존을 검증했다. |
-| [x] | TEST-02 | root unit·coverage의 실행 대상을 네 workspace로 맞췄다. Turbo와 같은 81파일·410건을 실행하며 환경·제외·alias를 보존한다. coverage 측정 경로는 TEST-03에서 수정한다. |
-| [x] | TEST-03 | 없는 Web 경로를 실제 네 workspace src 경로로 교체했다. coverage 276개 소스를 추적 목록과 대조했고 미실행 소스의 0회 기록과 테스트·선언 제외를 확인했다. |
+| [x] | TEST-02 | root unit/coverage와 Turbo가 각 workspace config의 같은 합집합을 수집한다. #211 이후 unit은 5 workspace의 96파일/694건이며 config는 자체 type/lint만 소유한다. 환경·제외·alias를 보존한다. |
+| [x] | TEST-03 | 실제 apps/packages src를 측정하며 #211에서 Worker .mts까지 포함한 285개 source와 실행 기록을 확인했다. 미실행 소스의 0회 기록과 테스트·선언 제외도 검증했다. |
 | [x] | TEST-04 | Web adapter를 쓰는 foundation만 Web 소유 project로 한정했다. 서버 세 파일에는 Web alias가 없으며 실제 PostgreSQL 4파일·33건과 직렬 Node 실행·DB 정리를 검증했다. |
 | [x] | RUN-01 | 개발 이미지의 전체 workspace manifest와 bind mount 이후 의존성 volume을 보완했다. 별도 임시 프로젝트의 clean install·native 해석·config 검사·Web dev/metadata/browser와 자원 정리를 확인했다. |
 | [x] | RUN-02 | Web 관리 route·forbidden consumer 제거로 적용 제외한다. Console의 실제 admin layout consumer와 authInterrupts 옵션은 유지했고 공통 experimental 옵션의 보존도 검증했다. |
 | [x] | UI-01 | Web CLI의 utils/lib/hooks·shared root alias를 실제 shared/lib·shared/ui로 맞췄다. 설치된 CLI의 앱별 해석과 실제 경로 존재를 확인했다. |
 | [x] | UI-02 | Console에 앱 소유 components.json을 추가했다. 두 앱의 기존 style·CSS·primitive·소스는 유지하고 실제 CLI와 경로를 확인했다. UI 추출은 별도다. |
-| [ ] | DOC-01 | 대기 |
+| [x] | DOC-01 | README·로컬 안내를 현재 workspace/검사·build 소유권과 두 값 APP_ENV·Web 비로그인/Console MFA에 맞췄다. 최초 schema/운영 영향·과거 k6 관측은 이력으로 구분했다. |
 | [x] | ROOT-01 | 실행 consumer가 끝난 release script·설정·두 전용 의존성을 제거했다. 과거 배포 가이드는 superseded로 보존하며 버전·CHANGELOG·현재 SHA/digest 배포 계약은 유지했다. |
-| [ ] | ROOT-02 | 대기 |
-| [ ] | ROOT-03 | 대기 |
-| [ ] | ROOT-04 | 대기 |
+| [x] | ROOT-02 | 단일 앱 .env.oci-development.example은 legacy release.env 형식 호환으로 보존한다. app.env.oci-development.example·.env.oci-secrets.example의 host installer 직접 소비도 확인해 유지했다. 운영 설정 변경 없음. |
+| [x] | ROOT-03 | 기존 create_issues.sh는 수동 gh issue create 도구로 보존한다. package/CI 자동 소비가 없고 이번 작업에서 외부 이슈 생성·실행을 하지 않았다. |
+| [x] | ROOT-04 | root next-env.d.ts·tsconfig.tsbuildinfo는 git ls-files에 없는 ignored 생성/개인 산출물이다. 브랜치 결함에서 제외하며 파일을 삭제하지 않았다. |
 | [x] | MAIN-01 | #198에서 Web 예제의 종료된 인증·메일·업로드 입력을 제거했다. host rollback 매핑과 개인 env는 보존한다. |
-| [ ] | MAIN-02 | 대기 |
+| [x] | MAIN-02 | active Auth 1.8에서 초기 일반 Credentials 로그인 보존 전제를 명시적으로 폐기했다. Web 인증 부재·Console MFA와 기존 데이터/공통 service 보존을 헌법과 맞췄다. |
 
 ## 2026-10-22 추가 논의 체크리스트
 
-현재 원문 38개는 **처리 31개·대기 7개**다. 기존 처리 20개에 ENV-06/07/08/09/10·MAIL-01·DB-01/02·RUN-01·UI-01/02를 더했다.
+현재 원문 38개는 **처리 38개·대기 0개**다. 구현과 보존/적용 제외 판정을 합산하며 기능 재활성화나 운영 배포 완료 수를 뜻하지 않는다.
 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
-별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01·CFG-08/09/10·TEST-05는 처리됐으며 나머지 3개는 검토/대기다.
+별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01·CFG-08/09/10·TEST-05·RUN-03·TEST-06의 **7개를 처리**했고 UI-03 1개는 사용자 보류 범위로 제외한다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
 등록 당시 조사와 아래 현재 완료 근거를 구분하며, 다른 대기 항목의 구현 완료로 확대하지 않는다.
 
@@ -71,7 +74,7 @@ created_at: "2026-10-22"
 | [x] | CFG-08 | 공통 config workspace 패키지 | private @oioi-bwg/config가 실제 공통 factory·preset·rule/mock·직접 도구 의존성과 자체 타입/lint를 소유한다. root/app 자동 탐색 entry와 env 해석은 consumer에 유지했다. |
 | [x] | CFG-09 | workspace 간 import 계약 | root·두 앱·server/contracts가 workspace 개발 의존성과 공개 subpath로 소비한다. 실제 Next/ESLint/Steiger/Vitest/tsx·cwd·Turbo/hash·두 앱 build/standalone을 확인했다. |
 | [x] | CFG-10 | 루트 설정 TS 검사 | Drizzle·ops Vitest 두 설정을 기존 config 타입 프로그램에 포함했다. 실제 TS2322 검출과 repo/CI/hook 공통 entry를 확인했다. |
-| [x] | TEST-05 | 루트 tests TS 검사 | 최초 29개를 Node/Web으로 분리했고 현재 marker 2개는 config 자체 검사로 이동했다. root 27개는 Node 26·Web 1개로 strict 검사·단일 소속·alias 격리를 확인한다. |
+| [x] | TEST-05 | 루트 tests TS 검사 | 최초 29개를 Node/Web으로 분리했고 현재 marker 2개는 config 자체 검사로 이동했다. 현재 root 24개는 Node 23·Web 1개, Worker unit 1개와 서버 전용 DB 2개는 각 workspace의 strict 검사·단일 소속·alias 격리로 확인한다. |
 | [x] | RUN-03 | Worker workspace 소유권 | private apps/sentry-slack-relay가 소스·Node type/lint/unit을 소유한다. root 수집·coverage·runtime 경계와 일곱 workspace 개발 Docker를 검증했다. 기존 handler/Wrangler 설정과 독립 수동 배포 계약은 유지하며 실제 배포는 하지 않았다. |
 | [x] | TEST-06 | tests 위치·책임 정리 | marker는 #206의 config, Worker unit은 #211의 앱, 서버 전용 DB 두 파일은 server tests/타입 프로그램이 소유한다. foundation·operator·ops/smoke/fixture와 앱 import 없는 수동 k6는 root 실행 책임으로 보존한다. 실제 PG 4파일/33건·격리 정리와 unit 중복 부재를 확인했다. |
 | [ ] | UI-03 | 정상화 이후 공통 UI | 정상화와 최종 통합 검증 뒤 별도로 실제 재사용을 조사한다. 패키지 선생성·일괄 이관을 승인하거나 완료한 상태가 아니다. |
@@ -1300,3 +1303,39 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 원문 처리 32/대기 6, 추가 처리 7/대기 1이다. 남은 추가 UI-03은 사용자 보류 범위다. 다음은 현재
   개발 안내·legacy 예제/수동 도구·생성 파일/메일 인증 보존·Auth 문서 충돌을 정리하는 문서 단위다.
   운영/Worker 배포·외부 전송·미래 계정·UI 추출·#199 F 전환은 보류한다. 필수 hook·최종 CI/리뷰는 PR에 기록한다.
+
+## 2026-10-23 최종 안내·보존 판정과 승인 범위 완료
+
+- TEST-06 [#212](https://github.com/goldmayo/oioi-bwg/pull/212)은 최종 head
+  `a6a07f00b0fcca2563bbcdbbd7d0bb1e2686c4fd`의 [Verify #508](https://github.com/goldmayo/oioi-bwg/actions/runs/39863126599)
+  전체 성공 후 `c3082ed9807a4bda4af96ffa02d0fff327dd37df`로 squash 병합했다. fetch한 병합 tree와
+  검증 head 일치 확인 후 feature/monorepo-final-guidance를 분기했다. 이 ref가 최종 코드 검증 기준이다.
+- README/로컬 안내에서 실제 Web·Console·relay/config/contracts/server 소유권과 root dev/start·양 앱
+  build·검사/PG runner·수동 k6를 구분했다. 현재 Auth는 Web 비로그인/Console 독립 MFA다. local
+  production build도 APP_ENV local이며 VM 입력만 production이다. 최초 schema/운영 관찰·Supabase
+  시절 영향 기록은 날짜를 명시해 보존하고 현행 실행 전제와 구분했다.
+- MAIL-02는 packages/server/src/email/oci-email-delivery.ts의 Instance Principal provider와
+  ops/oci/metadata-guard.py의 차단 정책을 대조했다. 차단을 유지하고 재활성화 전 인증·권한·비밀 관리와
+  실패/전송 계약 설계를 선행 조건으로 남겼다. Runtime 1.11에 이 경계를 기록했으며 actual mail·
+  OCI 인증/host 정책·production 설정은 변경하지 않았다.
+- ROOT-02는 단일 앱 release.env 호환 예제의 형식과 host installer가 직접 읽는 공개/secret 예제를
+  구분해 보존했다. legacy 메일/R2 키를 제거하거나 host 값을 변경하지 않았다. ROOT-03 수동 이슈
+  생성 script는 현재 package/CI 자동 consumer가 없으며 보존하되 실행하지 않았다. ROOT-04의 두 root
+  생성 파일은 git ls-files에 없는 개인/ignored 산출물이므로 삭제하지 않고 브랜치 결함에서 제외했다.
+- MAIN-02는 active Auth 1.8에서 초기 일반 Credentials 보존 전제를 명시적으로 폐기했다. 헌법과
+  현재 §4.0의 Web 로그인/handler/세션 부재에 맞추며 Account·credential·공통 service는 보존한다.
+  회원 기능을 추가하거나 기존 Console 인증을 바꾸지 않았다. index의 현재 버전도 일치시켰다.
+- 원문 **38/38 처리**, 추가 **7/8 처리**다. 상단 현재 누계를 실제 행과 대조해 갱신하고 과거 날짜별
+  수치는 소급 변경하지 않았다. BASE-01은 회수/기준선 검증을 다시 수행하지 않고 기존 완료 증거를
+  유지했다. UI-03 공용 UI 추출은 제외한다. k6는 root 수동 도구로 보존하며 기존 외부 대상은 호출하거나 바꾸지 않았다.
+- 이번 단위는 일반 Markdown 변경뿐이다. 코드/테스트/설정/lock/설치/운영 입력은 #212와 같으므로
+  같은 전체 검증을 다시 실행하지 않는다. 최종 코드의 unit **96파일/694건**, harness **40건**, ops
+  **21파일/280건**, 실제 PG17 **4파일/33건**과 양 앱 image/native/readiness/browser/paired Compose는
+  #212 최종 head CI 증거를 재사용한다. 문서 포맷/diff·경로/계약/누계 검토 및 docs-only scope/필수 verify와
+  최종 리뷰·squash/tree 일치 증거는 마지막 PR에 기록한다.
+- 문서 8개/일반 Markdown만 변경됨·코드 변경 0개, 추적 ID 46개 중 처리 45개/UI-03 보류 1개,
+  현재 root TS 테스트 24개와 새 로컬 링크 대상 5개 존재를 정적 대조했다. 변경 Markdown의 Prettier와
+  git diff --check가 성공했다. 코드 lint/type/unit/build는 이 문서 단위에서 새로 실행하지 않았다.
+- #199는 2026-10-23 재조회에서도 Draft/open·동일 head
+  `80af73d7fdc7432fb5e46f7a9a04840f1b81e819`다. F/www 전환·운영/Worker 배포·외부 알림/실제 mail·
+  미래 계정·UI 추출은 별도 결정/승인 범위로 남긴다. 이번 완료는 승인된 저장소 정상화 범위의 완료다.

@@ -1,7 +1,7 @@
 ---
 title: "모노레포 설정 공통화와 구조 개선 계획"
 kind: migration-plan
-status: active
+status: completed
 authority: plan
 source_commit: 4d5e42dac37aeb13b3279b47a7907fbb7bc91be2
 created_at: "2026-10-22"
@@ -10,6 +10,12 @@ created_at: "2026-10-22"
 # 모노레포 설정 공통화와 구조 개선
 
 ## 기준과 실행 계약
+
+**2026-10-23 승인 범위 실행 완료.** 현재 결과·보존 판단은 [RESULT](MONOREPO-CONFIGURATION-RESULT.md)의
+체크리스트와 최종 완료 절이 소유한다. 원문 매핑과 초기 실행 계약은 당시 이력으로 보존한다.
+이번 재개 지시는 구현·검증·최종 리뷰/보호 조건 충족 후 migration_main squash를 승인하며 아래 초기
+“자동 병합 범위 아님”을 종료 규칙으로 사용하지 않는다. 운영/Worker 배포·외부 전송·#199 F/www 전환·
+미래 계정/메일 재활성화·UI-03 공용 UI 추출은 승인 범위에서 제외한다.
 
 [Notion 조사 리포트](https://app.notion.com/p/400395eb18c2802dbe1df6a1d16db73a)의
 2026-10-22 현행 재판정표(36개)와 MAIN-01/02를 빠짐없이 추적한다.
@@ -639,3 +645,22 @@ package-relative 기준만 맞춘다. runtime·migration·DB schema·의존성�
   테스트를 실행하지 않는다. 현재 Runtime은 Next이며 과거 Wrangler/staging 설명은 DOC-01에서 구분한다.
 - 공통 marker는 #206, Worker unit은 #211로 소유권 이관을 마쳤다. tests/ops의 배포/호스트/이미지/
   두 앱 smoke·fixture는 root 소유를 유지한다. 개발 안내와 보존 결정의 최종 정리는 다음 문서 단위다.
+
+## 2026-10-23 최종 단위 — 개발 안내·보존 판단·Auth 문서 정합
+
+TEST-06 #212의 squash `c3082ed9807a4bda4af96ffa02d0fff327dd37df`를 fetch하고 최종 CI head와
+전체 tree 일치를 확인한 뒤 분기한다. 이 단위는 문서만 변경한다. README/로컬 안내의 현재 앱·package·
+명령/검사 소유권과 local/production 계약을 맞추고 최초 baseline/운영 영향 이력은 명시적으로 보존한다.
+
+- MAIL-02는 휴면 Instance Principal과 IMDS 차단의 충돌을 확인하고 차단 유지·향후 인증 설계의 선행
+  조건을 기록한다. 실제 메일 재활성화·전송·운영 인증/정책 변경은 하지 않는다.
+- ROOT-02는 단일 앱 env 형식의 호환 예제와 현재 host installer가 소비하는 예제를 구분해 보존한다.
+  ROOT-03 수동 gh issue 생성 script는 자동 실행하지 않고 유지한다. ROOT-04 비추적 root Next/TS
+  생성 파일은 브랜치 결함에서 제외하고 개인 산출물을 삭제하지 않는다.
+- MAIN-02는 초기 일반 Credentials 보존 전제를 명시적으로 폐기하고 헌법/§4.0의 Web 인증 부재와
+  Account/credential·공통 service 보존을 구분한다. 새 인증 기능이나 제품 결정을 도입하지 않는다.
+- DOC-01은 현재 사용법과 수동 k6의 책임/외부 대상·과거 Wrangler 관측을 구분한다. 실제 k6 호출·
+  외부 hostname/bucket 변경·개인 env 변경은 하지 않는다. 현재 누계와 날짜별 실행 이력도 구분한다.
+- 완료 조건은 추적 diff가 일반 Markdown뿐이며 코드/검사/설치/운영 입력이 #212와 같고, 변경 문서의
+  경로/계약/누계·포맷/diff 검토와 문서 전용 scope/verify가 성공하는 것이다. 같은 소스의 전체 코드 검사는
+  #212 최종 head CI를 재사용한다. 필수 리뷰/보호 조건 충족 후 squash하며 CI 링크만을 위한 추가 커밋은 만들지 않는다.
