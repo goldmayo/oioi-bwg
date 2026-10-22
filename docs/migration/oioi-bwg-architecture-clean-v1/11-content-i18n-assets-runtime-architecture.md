@@ -1,7 +1,7 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.9"
+version: "1.10"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-23"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.9
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.10
 
 ## 1. 목적
 
@@ -231,6 +231,17 @@ Web은 공개 조회만 제공하며 R2 쓰기 credential을 새 Web의 설정 �
 Sentry는 현재 Web/Console이 같은 프로젝트를 사용한다. 앱 내부 변수 이름은
 `NEXT_PUBLIC_SENTRY_DSN`을 유지하고 앱별 입력 책임을 명시한다. 프로젝트 분리는 별도 결정과
 검증 없이 요구하지 않는다. `local`에서는 DSN 존재 여부와 무관하게 전송하지 않는 기존 정책을 유지한다.
+
+Web/Console의 `NEXT_PUBLIC_APP_ENV` 값 계약은 `local | staging | production`이다.
+`NODE_ENV`는 Next 실행 모드이며 앱 환경을 대신하지 않는다. `development`는 앱 환경의 별칭이 아니다.
+local launcher는 로컬 전용 명령이므로 `local`을 명시한다. 현행 CI/Promotion의 `staging` 입력은
+기존 배포 경로의 식별값이며 별도 staging 인프라를 뜻하지 않는다. `production` 입력과 www URL 전환은
+P06-F의 별도 전환 절차로 다룬다.
+
+Web의 기본 metadata와 곡/앨범 metadata helper는 같은 site URL을 사용한다. `local`에서는
+`http://localhost:3000`, `staging/production`에서는 기존 `https://oioibawige.com`을 사용한다.
+누락·빈 값·미지원 값은 local로 추론하지 않고 기존 공개 URL을 유지하며, Sentry와 browser logging은
+비활성화한다. Sentry는 지원되는 `staging/production`과 비어 있지 않은 DSN이 함께 있을 때만 활성화한다.
 
 ---
 

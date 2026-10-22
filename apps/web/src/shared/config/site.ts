@@ -4,7 +4,10 @@ export const SITE_CONFIG = {
   name: "어이어이바위게",
   shortName: "OIOIBWG",
   description: "QWER 비공식 응원법 가이드. 바위게야 오늘은 응원을 하자!",
-  url: "https://oioibawige.com",
+  url:
+    process.env.NEXT_PUBLIC_APP_ENV === "local"
+      ? "http://localhost:3000"
+      : "https://oioibawige.com",
   ogImage: "/images/og_oioibawige.webp", // OG 이미지 경로
   author: "CheerRockCrab Team",
   links: {
@@ -14,8 +17,7 @@ export const SITE_CONFIG = {
 } as const;
 
 export const DEFAULT_METADATA: Metadata = {
-  metadataBase:
-    process.env.NEXT_PUBLIC_APP_ENV === "development" ? "http://localhost:3000" : SITE_CONFIG.url,
+  metadataBase: new URL(SITE_CONFIG.url),
   title: {
     default: SITE_CONFIG.name,
     template: `%s | ${SITE_CONFIG.shortName}`,

@@ -406,3 +406,27 @@ G 계획 #187은 문서 충돌과 폐기된 Web 세션 전제를 명시적으로
 consumer·예제·Sentry·site metadata를 대조한다. ENV-07/10의 관련 입력과 범위를 먼저 확인하되
 DB-01/02·미확정 ENV-2 credential 전환·개인 env 자동 이관·공통 UI/Base UI를 섞지 않는다.
 이번 작업에서는 ENV-06 구현을 시작하지 않는다.
+
+## 2026-10-23 정상화 재개 — ENV-06과 관련 ENV-07 계약
+
+이번 사용자 지시는 범위 내 구현·검증·commit/push·PR과 필수 조건 충족 후 squash 병합까지 승인한다.
+과거의 Draft 종료·병합 금지는 당시 이력으로 보존한다. 진입 기준은 fetch한
+`origin/migration_main@792a7464007d586a0e19d5c8382fe2c6a50af37b`이며
+`feature/monorepo-app-env`를 여기서 분기한다. #187/#196/#197/#198/#200/#201의 병합과 최종 head CI를
+원격에서 대조한다. 완료된 BASE-01의 회수·통합·기준선 검증은 반복하지 않는다. #199는 전환 보류다.
+
+- 헌법 §5·11, Runtime §12·12.1, Observability §13과 Testing §4·17을 따른다.
+  앱 환경은 `local/staging/production`, Next 실행 모드는 `NODE_ENV`로 구분한다.
+  Web site URL의 `development` 분기를 `local`로 맞춰 기본 metadata·Open Graph와 곡/앨범 helper가
+  동일한 URL을 사용하게 한다. Sentry와 clientLogger의 기존 활성화 정책은 실제 consumer로 대조한다.
+- 완료 조건: `NODE_ENV=development/production` 모두 local metadata는 localhost를 사용하며,
+  staging/production의 기존 공개 URL과 Sentry의 DSN 조건을 유지한다. 누락·미지원 값이 local로
+  해석되지 않는 회귀를 검증하고 앱별 예제·feature flag 설명과 active Runtime 계약을 맞춘다.
+- ENV-07은 같은 값 계약의 설명을 소유한다. local launcher의 명시적 local과 현행 CI/Promotion의
+  staging 의미를 기록하며 입력·workflow·운영 환경은 전환하지 않는다. ENV-10의 Console GTM 전달은
+  독립 관심사로 남긴다. robots/sitemap의 www 전환은 #199에 유지한다.
+- 기본 type-check·lint/FSD·harness·unit·format과 두 앱 build를 실행한다. build는 임시 local 입력·
+  빈 DSN·업로드/telemetry OFF·연결 불가능한 loopback DB·가짜 Console/R2 입력으로 수행한다.
+  local build의 metadata 산출물을 확인하고 최종 head의 CI·실제 diff·리뷰/보호 조건을 확인한 후 병합한다.
+- 다음 후보는 ENV-10의 앱별 GTM 입력 경계이며 이 PR에 선행 의존하지 않는다. DB-01/02는 그 뒤
+  별도 단위로 유지한다. ENV-2 credential 전환·개인 env 자동 이관·휴면 메일/flag 제거·UI/Worker는 제외한다.

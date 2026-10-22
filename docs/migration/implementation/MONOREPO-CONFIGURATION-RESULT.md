@@ -11,7 +11,7 @@ created_at: "2026-10-22"
 [계획과 원문 매핑](MONOREPO-CONFIGURATION-PLAN.md)을 따른다.
 아래 체크는 구현뿐 아니라 적용 제외·보존 판단까지 근거를 점검했다는 의미다.
 운영 상태나 외부 전송 성공을 뜻하지 않는다.
-현재 구현·통합 상태는 아래 체크리스트와 마지막 승인 통합 확정 절을 따른다.
+현재 구현·통합 상태는 아래 체크리스트와 날짜별 최신 실행 절을 따른다.
 과거 미병합 표시와 검증 수치는 해당 ref·시점의 이력으로 보존한다.
 
 ## 원문 항목 체크리스트
@@ -23,8 +23,8 @@ created_at: "2026-10-22"
 | [x] | ENV-03 | #200이 4b08beb에 병합됐다. readiness/업로드의 필수 입력·빈 URL 구분자 거절·정규화·503/no-store·값 비노출을 검증했다. 실제 R2 업로드는 미검증이다. |
 | [x] | ENV-04 | #198에서 Web DATABASE_URL 예제를 추가했다. 개인 env 변경 없이 회수 코드·검증 증거를 재판정했다. |
 | [x] | ENV-05 | 개인 비추적 env의 값 유무는 브랜치 결함에서 제외한다. 두 앱 추적 예제는 local을 명시하며 개인 파일을 수정하지 않았다. |
-| [ ] | ENV-06 | 대기 |
-| [ ] | ENV-07 | 대기 |
+| [x] | ENV-06 | 앱 환경 계약을 local/staging/production으로 명시했다. Web 기본·곡/앨범 metadata가 local site URL을 공유하며 환경 회귀·두 앱 build·실제 local HTML을 검증했다. 아래 ENV-06 실행 절 참조. |
+| [x] | ENV-07 | local launcher의 local 지정과 현행 CI/Promotion staging 입력의 의미를 Runtime §12에 명시했다. production/www 입력 전환은 #199의 P06-F 보류로 유지한다. |
 | [ ] | ENV-08 | 대기 |
 | [ ] | ENV-09 | 대기 |
 | [ ] | ENV-10 | 대기 |
@@ -893,3 +893,45 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   이번 로컬 작업에서 미검증/미실행이며 #199 F 전환·UI/Worker 후속도 보류한다.
 - 이번 확정은 PLAN/RESULT 두 Markdown 파일만 갱신한다. 내용·ID 고유성·상대 링크·diff·문서 전용
   scope를 점검하고 앱 gate/build를 별도로 재실행하지 않는다. 후속 PR의 hook/CI는 별도 기록한다.
+
+## 2026-10-23 정상화 재개 — ENV-06·관련 ENV-07
+
+### 기준과 변경
+
+- 진입 기준은 fetch한 `origin/migration_main@792a7464007d586a0e19d5c8382fe2c6a50af37b`다.
+  로컬 main은 `5135f6e`였으므로 분기 기준으로 사용하지 않았다. 깨끗한 작업 트리에서
+  `feature/monorepo-app-env`를 원격 기준으로 분기했다. #187/#196/#197/#198/#200/#201의 merged 상태와
+  각 최종 head의 CI success를 원격에서 대조했다. 열린 PR은 보류 대상 #199뿐이었다.
+  기존 회수·통합과 완료된 BASE-01의 검증을 다시 실행하지 않았다.
+- [ENV-06 계획](MONOREPO-CONFIGURATION-PLAN.md#2026-10-23-정상화-재개--env-06과-관련-env-07-계약)에
+  따라 Web의 site URL을 정확한 `local`일 때 localhost로 선택한다. 기본 metadata·Open Graph와
+  기존 곡/앨범 `constructMetadata()`가 같은 URL을 소비한다. staging/production의 기존 apex URL과
+  robots/sitemap은 유지한다. `development`를 앱 환경으로 해석하던 분기를 제거했다.
+- Runtime §12를 v1.10, 문서 인덱스를 v1.31로 갱신했다. 앱별 예제와 feature flag 주석도 같은 값
+  계약을 설명한다. Sentry·clientLogger는 이미 일치해 구현을 바꾸지 않았다. 누락·미지원 값의
+  전송/브라우저 로그 비활성화와 공개 metadata URL fallback을 유지한다.
+- ENV-07은 같은 계약의 local launcher·CI/Promotion staging 의미를 문서화한 것으로 처리한다.
+  입력이나 workflow는 전환하지 않았다. 원문 38개는 처리 22/대기 16, 추가 8개는 처리 1/대기 7이다.
+  ENV-10의 Console GTM 전달은 독립된 다음 후보이며 이번 diff에 포함하지 않았다.
+
+### 직접 실행과 검증 한계
+
+- 신규 metadata 회귀는 URL 객체/문자열을 정규화한 뒤 수정 전 3건 실패·5건 성공으로 결함을 재현했다.
+  최초 테스트 작성 중 trailing slash 표현 차이를 수정했으며 그 오류를 제품 결함으로 세지 않았다.
+  수정 후 Web metadata·Sentry·clientLogger 관련 3파일·20건이 성공했다.
+- `pnpm type-check`: workspace 4 task 중 캐시 2개와 repo/config/scripts 성공.
+  `pnpm lint`: workspace 4 task 중 캐시 2개, 양쪽 FSD와 repo ESLint 성공.
+- `pnpm test:unit:run`: 93파일·623건(contracts 3/server 103/Web 161/Console 356),
+  4 task 중 캐시 2개 성공. 새 metadata 8건을 포함하며 Sentry의 local OFF·DSN 조건·NODE_ENV 독립도
+  기존 실제 소비자 검사로 확인했다. `pnpm test:harness` 34건은 workspace 검사 종료 후 성공했다.
+- 기존 jq PATH에서 `pnpm test:ops` 21파일·287건 성공. `pnpm format:check` 성공.
+  최초 수정 site의 Prettier 줄바꿈을 보완했고 최종 형식을 확인했다. `git diff --check` 성공.
+- `pnpm build --force --env-mode=loose --concurrency=1`: 두 앱 실제 build 성공·캐시 0개.
+  임시 local 입력·빈 DSN/GTM·Sentry 업로드/telemetry OFF·연결 불가능한 loopback DB·가짜 Console/R2
+  입력을 사용했다. Web standalone의 `/more/policy` 200 HTML에서 Open Graph URL·이미지와 Twitter
+  이미지의 localhost URL을 확인했다. DB 없는 정적 경로의 실제 Next 렌더링 검증이다.
+- 로그와 임시 runner는 `.local/monorepo-config/app-env/`에 보존한다. 검증 소스는 위 기준 SHA와
+  이 RESULT가 포함된 커밋의 ENV-06 diff다. 이후 hook 실행·최종 head CI·리뷰·squash 결과는 PR 본문에
+  기록한다. CI 링크만 추가하려는 문서 커밋으로 전체 CI를 다시 유발하지 않는다.
+- 개인 env·DB 볼륨·MFA 키·운영 설정을 변경하지 않았다. 로컬 DB integration·관리자 전체 E2E·
+  외부 Sentry/R2/Slack 전송·운영 배포는 미실행이다. #199 F 전환·향후 계정 기능·UI 추출은 보류다.
