@@ -67,6 +67,7 @@ export type ClientErrorType = (typeof CLIENT_ERROR_TYPES)[number];
 export interface SentryErrorContext {
   source: SentryErrorSource;
   digest?: string;
+  outcome?: "error_boundary_mounted" | "unknown";
 }
 
 function isOneOf<const T extends readonly string[]>(value: unknown, values: T): value is T[number] {
@@ -227,8 +228,14 @@ export function toSafeSentryErrorContext(value: unknown): SentryErrorContext {
   const sourceValue = readProperty(value, "source");
   const digest = safeDigest(readProperty(value, "digest"));
   const source = isOneOf(sourceValue, SENTRY_ERROR_SOURCES) ? sourceValue : "sentry-auto-capture";
+  const outcomeValue = readProperty(value, "outcome");
+  const outcome =
+    (source === "admin-error-boundary" || source === "global-error-boundary") &&
+    outcomeValue === "error_boundary_mounted"
+      ? outcomeValue
+      : "unknown";
 
-  return digest ? { source, digest } : { source };
+  return { source, outcome, ...(digest ? { digest } : {}) };
 }
 
 export function describeClientError(error: unknown): ClientErrorType {
@@ -260,10 +267,12 @@ export function sanitizeClientBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | n
 
 /** Browser SDK가 보강한 event도 전송 직전에 allowlist field만 남긴다. */
 export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
-  const sourceValue = safeTag(event, "source");
+  const { source, outcome, digest } = toSafeSentryErrorContext({
+    source: safeTag(event, "source"),
+    outcome: safeTag(event, "outcome"),
+    digest: safeTag(event, "error.digest"),
+  });
   const errorTypeValue = safeTag(event, "error.type");
-  const digest = safeDigest(safeTag(event, "error.digest"));
-  const source = isOneOf(sourceValue, SENTRY_ERROR_SOURCES) ? sourceValue : "sentry-auto-capture";
   const errorType = isOneOf(errorTypeValue, CLIENT_ERROR_TYPES) ? errorTypeValue : "runtime";
   const values = readProperty(readProperty(event, "exception"), "values");
   const lastException = Array.isArray(values) ? values[values.length - 1] : undefined;
@@ -307,6 +316,7 @@ export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
     },
     tags: {
       source,
+      outcome,
       "error.type": errorType,
       ...(digest ? { "error.digest": digest } : {}),
     },

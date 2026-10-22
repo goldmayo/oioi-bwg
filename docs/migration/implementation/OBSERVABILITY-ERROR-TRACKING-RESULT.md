@@ -1,7 +1,7 @@
 ---
 title: "오류 원인과 처리 결과 추적 개선 결과"
 document_id: "OBSERVABILITY-ERROR-TRACKING-RESULT"
-version: "1.1"
+version: "1.2"
 status: "active"
 authority: "result"
 updated_at: "2026-10-22"
@@ -167,3 +167,68 @@ browser 검증도 외부 Sentry 전송을 끈 실제 로컬 격리 DB에서 실�
 보류한다. **Sentry 알림 디자인은 미배포**이며 사용자 배포·새 형식 수신 확인 전까지 후속 브리핑에 표시한다.
 배포 절차/대기 체크리스트는
 [Slack relay 결과 §10](https://github.com/goldmayo/oioi-bwg/blob/0ab0923c5dbb59405cd18fc8cc7ef5cc065d3bc8/docs/migration/implementation/SENTRY-SLACK-RELAY-RESULT.md#10-2026-10-22-사용자-수동-배포-대기)을 따른다.
+
+## 6. Console 브라우저 오류 화면 관측과 중복 처리 — P1-B 두 번째 단위
+
+기준은 `feature/observability-console-rsc-auth`의 깨끗한
+`a5539af85f90d0898550278bfb760f7f62559562`다. 실제 원격도 같은 SHA였고 `origin/migration_main`은
+`4d5e42dac37aeb13b3279b47a7907fbb7bc91be2`였다. 기본 checkout의 모노레포 작업은 보존했다.
+§1~5는 당시 기록이며, 이번 실행 결과는 이 절이 소유한다. 승인 계획 고정본은 §1을 따른다.
+
+- [x] 두 오류 화면의 mount outcome·관측별 중복 처리·최종 정제와 로컬 회귀
+- [ ] P1-B 남은 범위: 실제 Next 요청의 DB/service/render 장애 주입과 서버·browser 수집 검증
+
+따라서 P1-B 전체는 계속 미완료다. 원격 수신·배포·운영 이슈 해결도 완료 처리하지 않는다.
+
+### 구현과 리팩토링 점검
+
+- Admin/global 오류 화면의 `useEffect`에서만 `error_boundary_mounted`를 생성한다. producer와
+  최종 beforeSend가 같은 작은 정제 함수를 사용하며, 다른 source·없는/잘못된 outcome은 unknown이다.
+- WeakMap은 Error 객체별 source/outcome 조합만 기억한다. Query/Mutation 선행 보고 뒤 boundary의
+  최초 관측은 별도 event이며, 동일 관측의 StrictMode·재렌더는 억제한다. digest·시간창으로 합치지 않는다.
+- 설치된 Sentry 10.42.0의 객체 중복 제거와 기본 Dedupe는 이 관측을 잃게 할 수 있었다.
+  원본 Error를 `client.eventFromException()`에 전달하고, 복제한 scope의 `captureEvent()`로 보낸다.
+  `originalException` hint를 다시 붙이지 않으며, Promise 실패는 null로 끝내 복구 화면을 보호한다.
+- Console의 기본 Dedupe만 제외했다. 서로 다른 Error를 같은 stack/message로 합치지 않고,
+  자동 capture의 SDK 객체 중복 제거는 유지한다. 명시적 보고의 중복은 위 WeakMap이 소유한다.
+- 기존 event를 나중에 갱신하거나 server/browser를 병합하지 않는다. 각 event는 관측 기록이며 요청별
+  장애 건수로 단순 합산하지 않는다. 원본 frame·release·Debug ID 정제와 unknown 수집은 유지한다.
+- 새 dependency·route·전역 request/user context·범용 wrapper는 없다. 서버 인증·reporter와 Web은
+  이번 단위에서 변경하지 않았다. 요청 ID·경로/breadcrumb·인증 사유·운영 알림은 후속 범위다.
+
+SDK 판단 근거는 설치 소스와 공식 [client](https://github.com/getsentry/sentry-javascript/blob/10.42.0/packages/core/src/client.ts)·
+[Dedupe](https://github.com/getsentry/sentry-javascript/blob/10.42.0/packages/core/src/integrations/dedupe.ts) 고정본이다.
+09 §12·18의 관측 의미 안에서 구현했으며 규범과 과거 계획을 개정하지 않았다.
+
+### 이번 단위에서 실제 실행한 검증
+
+| 명령/범위 | 실제 결과 |
+| --- | --- |
+| `pnpm exec turbo run type-check lint test --concurrency=4` | 최종 12 task 성공·9개 캐시. unit 86파일·464건: contracts 3 + server 88 + Web 93 + Console 280 |
+| `pnpm type-check:repo`, `pnpm lint:repo` | 성공 |
+| `pnpm test:harness`, `pnpm lint:fsd` | harness 18건·두 앱 FSD 성공. harness는 workspace/build와 겹치지 않음 |
+| `pnpm test:ops` | 21파일·262건 성공 |
+| `pnpm format:check`, `git diff --check` | 성공 |
+| `pnpm build --force --env-mode=loose` | Next 16.4.1 두 앱 컴파일·타입 검사·정적 생성·standalone 구성 성공. 2 task·캐시 0개 |
+| `node .local/observability/browser-boundary/browser-check.mjs` | 실제 Chromium·React 19.2.5·Browser SDK 10.42.0의 5개 envelope를 로컬에서 가로채 검증 |
+
+최초 RTL은 window 없는 document fixture로 실패해 iframe document로 고쳤다. workspace가 찾은
+테스트 타입 오류는 올바른 getter/비동기 반환 타입·query option으로 수정했다. lint import 정렬과
+test group 길이·타입 전용 상수 경고도 정리했다. 검사 억제나 강제 cast로 우회하지 않았다.
+
+Chromium 검사는 실제 Console 두 component·Query client·instrumentation policy를 별도 bundle로 실행했다.
+SDK import는 같은 버전의 `@sentry/browser`로 연결해 Next bridge를 제외했다. Query와 SDK 자동 보고를
+먼저 수행하고 실제 mount·반복 render·같은 digest/stack의 별개 Error를 확인했다. 합성 frame·release·
+Debug ID fixture 보존과 token/email/cookie/MFA/SQL marker 부재를 최종 envelope에서 검사했다.
+모든 네트워크 요청을 intercept했으며 실제 Sentry/Slack으로 보내지 않았다. 일반 CI/hook 범위는 그대로다.
+
+build는 Sentry/소스맵 업로드 OFF·local 환경·빈 DSN·임시 Console secret·loopback origin·
+`127.0.0.1:1`의 접근 불가 DB URL을 사용했다. 개인 env·DB volume·MFA 키·운영 자원은 변경하지 않았다.
+이번에는 DB/전체 관리자 smoke·Next 요청의 실제 장애·원격 수신·실제 소스맵 복원을 검증하지 않았다.
+
+검증 소스는 위 기준 SHA부터 이 결과를 포함한 커밋까지의 diff다. 주요 blob은 capture helper
+`2ade5fe5eec9bbb39c5776e211dac05cb422984c`, client reporter `913c41d18dde56ba1800bfb81fca989e016cd00d`,
+policy `5dd64d5a605798801a9231f080d8aa9416bc8774`다. 실행 로그·브라우저 fixture/envelope는
+이 worktree의 ignored `.local/observability/browser-boundary/`에 보존하며 원격에 push하는 파일은 아니다.
+
+새 PR·병합·배포는 보류한다. **Sentry Slack 알림 디자인은 미배포**이며 §5의 수동 배포 대기를 유지한다.

@@ -1,17 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sentryMocks = vi.hoisted(() => ({
-  captureException: vi.fn(() => "event-id"),
+  eventFromException: vi.fn(async () => ({ type: undefined })),
+  captureEvent: vi.fn(() => "event-id"),
   setTags: vi.fn(),
-  withScope: vi.fn(),
 }));
 
 vi.mock("@sentry/nextjs", () => ({
-  captureException: sentryMocks.captureException,
-  withScope: (callback: (scope: { setTags: (tags: Record<string, unknown>) => void }) => void) => {
-    sentryMocks.withScope(callback);
-    callback({ setTags: sentryMocks.setTags });
-  },
+  getClient: () => ({ eventFromException: sentryMocks.eventFromException }),
+  getCurrentScope: () => ({
+    clone: () => ({ setTags: sentryMocks.setTags, captureEvent: sentryMocks.captureEvent }),
+  }),
 }));
 
 import { captureClientException } from "./sentry";
@@ -24,38 +23,53 @@ describe("Sentry error reporter", () => {
     vi.unstubAllEnvs();
   });
 
-  it("stays silent locally and does not capture", () => {
+  it("stays silent locally and does not capture", async () => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", "local");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     expect(
-      captureClientException(new Error("TOKEN_MARKER", { cause: "PASSWORD_MARKER" }), {
+      await captureClientException(new Error("TOKEN_MARKER", { cause: "PASSWORD_MARKER" }), {
         source: "admin-login-form",
       }),
     ).toBeNull();
 
-    expect(sentryMocks.captureException).not.toHaveBeenCalled();
+    expect(sentryMocks.eventFromException).not.toHaveBeenCalled();
+    expect(sentryMocks.captureEvent).not.toHaveBeenCalled();
     expect(consoleError).not.toHaveBeenCalled();
   });
 
-  it.each(["staging", "production"])("captures an allowlisted error in %s", (environment) => {
+  it.each(["staging", "production"])("captures an allowlisted error in %s", async (environment) => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", environment);
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
     const error = Object.assign(new Error("private response"), { name: "ClientContractError" });
 
     expect(
-      captureClientException(error, {
+      await captureClientException(error, {
         source: "admin-error-boundary",
+        outcome: "error_boundary_mounted",
         digest: "safe_digest-123",
       }),
     ).toBe("event-id");
 
-    expect(sentryMocks.captureException).toHaveBeenCalledWith(error);
+    expect(sentryMocks.eventFromException).toHaveBeenCalledWith(error);
+    expect(sentryMocks.captureEvent).toHaveBeenCalledWith({ type: undefined });
     expect(sentryMocks.setTags).toHaveBeenCalledWith({
       source: "admin-error-boundary",
+      outcome: "error_boundary_mounted",
       "error.type": "client-contract",
       "error.digest": "safe_digest-123",
     });
+  });
+
+  it("does not create an unhandled rejection when SDK projection fails", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
+    sentryMocks.eventFromException.mockRejectedValueOnce(new Error("SDK failure"));
+
+    await expect(
+      captureClientException(new Error("original failure"), { source: "query-cache" }),
+    ).resolves.toBeNull();
+    expect(sentryMocks.captureEvent).not.toHaveBeenCalled();
   });
 });
