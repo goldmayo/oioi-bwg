@@ -1,10 +1,10 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.5"
+version: "1.6"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-21"
+updated_at: "2026-10-23"
 depends_on:
   - "01"
   - "02"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.5
+# oioi-bwg Testing Architecture v1.6
 
 ## 1. 목적
 
@@ -316,6 +316,10 @@ feature push hook도 같은 전체 diff 판정을 사용한다. Promotion과 mai
 Web과 Console은 독립 FSD root에서 lint/type-check/unit/build를 실행한다.
 각 앱의 alias와 테스트 include는 다른 앱의 소스·테스트를 읽지 않도록 해당 workspace가 소유한다.
 repo harness는 직접 앱 import, source package 및 공통 설정 변경의 두 앱 task 선택/hash를 검사한다.
+루트 설정과 운영·통합 테스트도 repo 진입점의 strict 타입 검사에 포함한다. 테스트 수집·실행 성공을
+타입 검사 성공으로 취급하지 않는다. Node 테스트에는 앱 alias를 전역 적용하지 않으며 Web HTTP
+adapter를 소비하는 테스트만 해당 앱의 타입 해석을 사용한다. harness는 추적 테스트의 검사 소속과
+alias 격리를 확인한다. CI·push hook은 동일한 repo 검사 진입점을 사용한다.
 P04의 두 앱 로그인 회귀는 P06-E에서 Console 인증/관리와 Web 비로그인 조회/인증 거절로 전환한다.
 Web은 로그인 화면·세션/권한 API·Credentials callback 부재와 기존 쿠키의 비사용을 검증한다.
 Console의 MFA·인가 계약은 유지한다. 전체 관리자 E2E의 수동 실행 원칙은 §12.1을 따른다.

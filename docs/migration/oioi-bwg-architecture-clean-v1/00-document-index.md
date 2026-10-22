@@ -1,7 +1,7 @@
 ---
 title: "Architecture Document Index"
 document_id: "00"
-version: "1.31"
+version: "1.32"
 status: "active"
 authority: "index"
 updated_at: "2026-10-23"
@@ -61,7 +61,7 @@ migration / implementation plan
 | 07 | Rendering / Query / Cache Architecture | 1.2 | active | RSC / Query / hydration / cache / retry 전략 |
 | 08 | Form / Client State Architecture | 1.0 | active | form / URL / local client state ownership |
 | 09 | Error UX / Observability Architecture | 1.5 | active | query/mutation error UX / logging / Sentry |
-| 10 | Testing Architecture | 1.5 | active | unit / integration / component / E2E strategy |
+| 10 | Testing Architecture | 1.6 | active | unit / integration / component / E2E strategy |
 | 11 | Content / i18n / Assets / Runtime Architecture | 1.10 | active | locale / content / assets / env / runtime |
 | 12 | Deployment / Migration Runbook | 1.20 | active | migration phases / test infra / Docker / OCI / rollback |
 
