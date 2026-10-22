@@ -568,3 +568,21 @@ RUN-01 #207의 squash 결과 `78d5d5e0ccd95a2b807c0367229446ff03c29f2a`를 fetch
   속하며 실제 CSS/cn/디렉터리가 존재하는 것이다. 공식 components.json schema/CLI와 대조한다.
   CLI info는 경로 존재를 보장하지 않으므로 별도로 확인한다. 포맷·diff와 불변 runtime 입력을 대조하고
   #207의 기존 앱 검사/build 결과를 재사용하며 필수 hook·최종 CI/리뷰 후 squash한다.
+
+## 2026-10-23 다음 단위 — ENV-08/09 미사용 설정 수명주기
+
+UI-01/02 #208의 squash 결과 `be513f4f3c1f133db775ee9b124a7c71549b33c1`를 fetch하고 검증 head와
+전체 tree 일치를 확인한 뒤 분기한다. Runtime의 명시적 앱 설정·Frontend/FSD의 실제 consumer 기준과
+사용하지 않는 추상화를 선생성하지 않는 원칙을 따른다. React/Server Action 경계 검토에는 저장소의
+vercel-react-best-practices 지침을 참고하며 인증/인가 SSOT를 유지한다.
+
+- Careon flag는 내부 wrapper 두 개만 참조하고 route/action/feature consumer가 없다. 추적 소스의
+  import graph·CLI/config·active architecture/Domain Specification·가이드를 대조한다. 가이드는 다른
+  프로젝트의 TypeORM/경로 예제이며 현재 예정 기능의 승인 근거가 아니다. 세 휴면 파일을 제거하고
+  가이드는 출처·superseded 이유·현재 Runtime/Auth 안내를 붙여 본문을 보존한다.
+- Compose NEXT_PUBLIC_ASSETS_URL은 active consumer가 없어 주입을 제거한다. 실제 Console의
+  ASSETS_PUBLIC_BASE_URL·R2 설정·기존 assets host와 버킷·개인 env는 유지한다.
+- 완료 조건은 외부 참조/예정 consumer 부재 근거·삭제 후 dangling import 부재·현재 환경 계약의
+  안내 분리와 기존 Web 동작 유지다. 기본 gate와 Web 실제 local build/browser를 검증한다. Console·
+  서버/DB 등 불변 입력의 기존 검증은 재사용하고 필수 hook·최종 head CI/리뷰 후 squash한다.
+  계정·메일·feature flag 재활성화·운영/외부 리소스 변경·#199 F 전환은 제외한다.
