@@ -1,7 +1,7 @@
 ---
 title: "오류 원인과 처리 결과 추적 개선 결과"
 document_id: "OBSERVABILITY-ERROR-TRACKING-RESULT"
-version: "1.4"
+version: "1.5"
 status: "active"
 authority: "result"
 updated_at: "2026-10-22"
@@ -30,7 +30,7 @@ depends_on:
 - [x] P2-B: Web의 실제 consumer 적용
 - [x] P3: 기존 인증 판정 기반 typed rejection log
 - [x] P4-A: Console 서버 생성 request ID와 두 sink 연결
-- [ ] P4-B: Web dynamic/API 요청 연결
+- [x] P4-B: Web dynamic/API 요청 연결
 - [ ] 계획 §11: 기존 Slack 규칙 보완과 이미지별 소스맵 운영 검증
 
 ## 2. P1-A 구현
@@ -241,6 +241,18 @@ policy `5dd64d5a605798801a9231f080d8aa9416bc8774`다. 실행 로그·브라우�
 Slack Worker 디자인의 사용자 수동 배포 대기는 별도이며, 모노레포·환경변수·기능 로드맵 작업을 섞지 않는다.
 §1의 기존 계획 항목만 수행하고 새 개선을 추가하지 않는다. 아래 기록의 task/test 수는 검사 수이며 작업 완료 수가 아니다.
 
+- [x] 1번: 실제 Next 장애·오류 화면·로컬 event 수집 검증
+- [x] 2번: Console 앱·경로·작업·breadcrumb
+- [x] 3번: Web의 같은 관측 정책과 실제 consumer
+- [x] 4번: 기존 인증 판정 기반 안전한 거부 사유
+- [x] 5번: Console 서버 생성 request ID와 JSON/Sentry 연결
+- [x] 6번: Web 기존 dynamic/API request ID 연결
+- [ ] 7번: 운영 알림·앱 배포·외부 Sentry/Slack 수신·이미지별 실제 소스맵 복원 — 사용자 지정 배포 대기
+
+위 1~6번의 완료는 이 문서에 기록한 코드·로컬 검증 범위다. 과거 절의 미완료 표시는 당시 상태이며
+현재 판정은 이 목록과 §1이 소유한다. 미실행 운영 검증을 로컬 결과로 대체하지 않는다.
+
+
 ### Console 앱·경로·작업 정보와 breadcrumb — 2번 완료
 
 기준 `faccbbd9721b3cf4b5e95e6882356059d2bb5037`부터 이 기록을 포함한 커밋까지다.
@@ -368,3 +380,43 @@ assert `a9ad680378bbc3c901e774238996f4eaa24715593cd80774b4ac4a8b411713b2`다.
 
 운영 알림·이미지별 실제 Debug ID/소스맵 복원과 외부 Sentry/Slack 수신은 7번 배포 대기다.
 **Slack 알림 디자인도 미배포**이며 사용자 수동 Worker 배포 보류를 유지한다.
+
+### Web dynamic/API 요청 연결 — 6번 코드·로컬 완료
+
+기준 `94c56ca53fe9f50963009077369b6fd9d3311b5e`부터 이 기록을 포함한 커밋까지다.
+Console의 실제 hook 연결 검증 후에만 Web에 같은 ID·sink·최종 allowlist와 선택 필드 초기화를 적용했다.
+Proxy matcher는 기존 dynamic인 `/`, `/chants`, `/songs/*`, `/albums/*`와 두 공개 API family만 포함한다.
+정적 안내·약관·health/ready·제거된 인증/admin 경로는 제외하고 internal reader도 그 경로의 caller ID를 거부한다.
+root layout에 headers reader를 추가하거나 Web 인증·쿠키·Action을 복구하지 않았다. DTO와 공개 API body도 유지한다.
+
+관련 파일 수가 기존 Shared/lib 권장 상한에 걸려 Web의 Sentry reporter·correlation·같은 테스트를
+`shared/lib/sentry/`로 묶었다. 기존 `@/shared/lib/sentry` import는 유지했고 lint 규칙을 끄지 않았다.
+다른 lib/설정·패키지·공통 telemetry framework로 정리 범위를 넓히지 않았다.
+
+- 실제 검사: workspace 12 task 성공(9개 캐시), unit 92파일·569건
+  (Web 153, Console 325, server 88, contracts 3), repo 타입/lint, harness 18건, ops 21파일·262건 성공.
+  최초 matcher fixture의 경로 중복 치환은 올바른 소유 경로로 수정했다.
+- `node .local/observability/finish/runtime-web/run.mjs`는 기존 runner의 격리 DB·역할·앱 시작/정리 경로에서
+  변경한 요청 경로의 진단 검증을 실행했다. 이 실행은 C2/D/CRUD 전체를 반복한 결과로 세지 않는다.
+  해당 전체 smoke는 앞 Console runtime 절의 실제 실행과 구분한다.
+- 실제 Web DB fixture의 home/chants/song/album과 두 API 정상 200/DTO를 확인했다.
+  안내·약관·health/ready에는 response ID가 없고 제거된 auth/admin은 계속 404였다.
+  기존 `assertWebAdminRetired`로 guest/legacy USER/ADMIN·오래된 upload Action 거부와 공개 조회도 확인했다.
+- 임시 기존 songs page/API overlay에서 실제 render 오류·output 계약 오류·malformed HTTP를 주입했다.
+  서버 event와 response/JSON ID 연결, 다른 요청의 별도 event, 실제 global 오류 화면의 mounted outcome,
+  Query 선행 보고 후 별도 최초 boundary event와 같은 HTTP ID를 확인했다. 원본 source는 모두 복구했다.
+- 두 앱 실제 SDK의 최종 **24개 로컬 event**를 loopback collector에서 수신했고 민감 marker 부재를 검사했다.
+  Console의 앞 장애/요청 연결 진단도 같은 build에서 재실행했다. 임시 DB는 연결/lock 0개 확인 후 역할과 함께 정리됐다.
+- 주입 build의 두 앱 2 task·캐시 0개 성공 후, 주입 없는 정상 local build를 별도로 실행했다.
+  Sentry/업로드 OFF·빈 DSN과 기존 접근 불가 loopback DB/임시 Console 입력을 사용한다.
+  최종 정상 build도 두 앱 2 task·캐시 0개로 성공했다. Web route tree의 정적/동적 표기는 변경 전과 같고
+  FSD/format/diff도 성공했다.
+
+검증 로그는 ignored `.local/observability/finish/web-correlation/`, runtime fixture/event는
+`.local/observability/finish/runtime-web/`다. fixture SHA-256은 run
+`384dda0261bf649ef3a22ed61a863c61df179eb5fd08de60a5f8b5685df99275`, assert
+`cc889b51b362223abea1407537113c570cf824d989088ac82f4b855b4cc15956`다.
+
+**승인 범위의 1~6번은 코드·로컬 검증 완료다. 7번은 배포 대기**다. 외부 Sentry/Slack 수신·production 알림 규칙 변경·
+이미지별 Debug ID와 실제 source map 복원은 실행하지 않았다. **Slack 알림 디자인은 미배포**이며 사용자 수동 Worker
+배포 보류를 유지한다. 새 PR·병합·OCI/Worker 배포·외부 알림·운영/개인 설정 변경은 하지 않았다.

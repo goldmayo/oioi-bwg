@@ -1,13 +1,14 @@
 import * as Sentry from "@sentry/nextjs";
 
-import { getSentryRuntimeConfig } from "../config/sentry";
-
+import { getSentryRuntimeConfig } from "../../config/sentry";
 import {
   describeClientError,
   type SentryErrorContext,
   toSafeSentryErrorContext,
-} from "./client-sentry-policy";
-import { getSentryRouteMetadata } from "./sentry-route-metadata";
+} from "../client-sentry-policy";
+import { getSentryRouteMetadata } from "../sentry-route-metadata";
+
+import { getErrorRequestId } from "./correlation";
 
 /** Client unexpected exception만 Sentry로 전송하는 error tracking 경계다. */
 export async function captureClientException(
@@ -30,12 +31,15 @@ export async function captureClientException(
     scope.setTags({
       app: "web",
       runtime: "browser",
-      ...(route ? { "route.template": route.template, operation: route.operation } : {}),
+      "route.template": route?.template,
+      operation: route?.operation,
       source: safeContext.source,
       outcome: safeContext.outcome,
       "error.type": errorType,
-      ...(safeContext.digest ? { "error.digest": safeContext.digest } : {}),
+      "error.digest": safeContext.digest,
     });
+    const requestId = getErrorRequestId(error);
+    scope.setContext("correlation", requestId ? { request_id: requestId } : null);
     const errorObject = error instanceof Error ? error : new Error("Unexpected client error");
     // 원본 frame은 SDK가 만든다. originalException hint를 다시 붙이면 SDK의 객체 중복 제거가
     // Query 보고 이후의 별도 boundary 관측까지 버리므로, 관측별 중복은 호출 경계가 소유한다.

@@ -71,7 +71,7 @@ export function jsonResponse<T>(
 /** Route Handler boundary에서만 application error를 HTTP failure contract로 변환한다. */
 export function toErrorResponse(
   error: unknown,
-  context: Pick<ServerErrorContext, "route"> = {},
+  context: Pick<ServerErrorContext, "route" | "requestId"> = {},
 ): Response {
   if (error instanceof InvalidJsonBodyError) {
     return Response.json(

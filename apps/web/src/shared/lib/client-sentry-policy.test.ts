@@ -308,3 +308,19 @@ describe("client Sentry privacy policy", () => {
     });
   });
 });
+
+it("preserves only a valid correlation ID in the final browser event", () => {
+  const id = "48be30fa-1441-4dc9-8ffa-9b618ec32652";
+  expect(
+    sanitizeClientSentryEvent({
+      type: undefined,
+      contexts: { correlation: { request_id: id, token: "private" } },
+    })?.contexts?.correlation,
+  ).toEqual({ request_id: id });
+  expect(
+    sanitizeClientSentryEvent({
+      type: undefined,
+      contexts: { correlation: { request_id: "private" } },
+    })?.contexts?.correlation,
+  ).toBeUndefined();
+});

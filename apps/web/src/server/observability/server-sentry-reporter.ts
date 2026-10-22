@@ -3,6 +3,7 @@ import "server-only";
 import * as Sentry from "@sentry/nextjs";
 
 import { getSentryRuntimeConfig } from "@/shared/config/sentry";
+import { toSafeRequestId } from "@/shared/lib/sentry/correlation";
 import { getSentryRouteMetadata } from "@/shared/lib/sentry-route-metadata";
 
 import {
@@ -43,18 +44,20 @@ export function captureServerException(error: unknown, context: ServerErrorConte
       event,
       app: "web",
       runtime: "node",
-      ...(route ? { "route.template": route.template } : {}),
+      "route.template": route?.template,
       source,
-      ...(operation ? { operation } : {}),
+      operation,
       "error.type": descriptor.type,
       "failure.kind": failure.kind,
       handling: failure.handling,
       outcome: failure.outcome,
-      ...(descriptor.code ? { "error.code": descriptor.code } : {}),
-      ...(request?.method ? { "request.method": request.method } : {}),
-      ...(request?.routerKind ? { "next.router_kind": request.routerKind } : {}),
-      ...(request?.routeType ? { "next.route_type": request.routeType } : {}),
+      "error.code": descriptor.code,
+      "request.method": request?.method,
+      "next.router_kind": request?.routerKind,
+      "next.route_type": request?.routeType,
     });
+    const requestId = toSafeRequestId(context.requestId);
+    scope.setContext("correlation", requestId ? { request_id: requestId } : null);
     eventId = Sentry.captureException(capturedError);
   });
 
