@@ -28,9 +28,7 @@ const database = getDatabase();
 const observer = postgres(url.toString(), { max: 2, connection: { statement_timeout: 10_000 } });
 const key = Buffer.alloc(32, 9);
 const password = "P04-fixture-pass1!";
-const { generateSync } = createRequire(
-  new URL("../../packages/server/package.json", import.meta.url),
-)("otplib");
+const { generateSync } = createRequire(new URL("../../package.json", import.meta.url))("otplib");
 const epoch = 1_234_567_890;
 const token = (secret: string, offset = 0) =>
   generateSync({ secret, epoch: epoch + offset, period: 30, digits: 6, algorithm: "sha1" });

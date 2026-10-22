@@ -70,6 +70,21 @@ test("root settings and tests have strict type owners without leaking Web aliase
   assert.equal(node.options.paths, undefined);
   assert.deepEqual(web.options.paths, { "@/*": ["./src/*"] });
   assert.ok([config, node, web].every(({ options }) => options.strict && options.noEmit));
+  const server = readProject("packages/server/tsconfig.json");
+  assert.ok(server.options.strict && server.options.noEmit);
+  assert.equal(server.options.paths, undefined);
+  const serverTests = execFileSync("git", ["ls-files", "-z", "--", "packages/server/tests"], {
+    cwd: root,
+    encoding: "utf8",
+  })
+    .split("\0")
+    .filter((file) => file.endsWith(".ts"));
+  assert.equal(serverTests.length, 2);
+  for (const filename of serverTests) {
+    const absolute = path.join(root, filename);
+    assert.ok(server.fileNames.includes(absolute), `${filename} needs the server type owner`);
+    assert.ok(!node.fileNames.includes(absolute) && !web.fileNames.includes(absolute));
+  }
 });
 
 test("script type checking rejects bad values and connection APIs on transactions", () => {

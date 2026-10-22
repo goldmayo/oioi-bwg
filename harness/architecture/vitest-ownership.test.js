@@ -168,10 +168,13 @@ test("PostgreSQL projects preserve serial Node execution and scope the Web adapt
   });
   try {
     const specifications = await ctx.globTestSpecifications();
-    const expected = fs
-      .readdirSync(path.join(root, "tests/integration"))
-      .filter((file) => file.endsWith(".postgres.test.ts"))
-      .map((file) => path.join(root, "tests/integration", file))
+    const expected = ["tests/integration", "packages/server/tests/integration"]
+      .flatMap((directory) =>
+        fs
+          .readdirSync(path.join(root, directory))
+          .filter((file) => file.endsWith(".postgres.test.ts"))
+          .map((file) => path.join(root, directory, file)),
+      )
       .sort();
     assert.ok(expected.length > 0);
     assert.deepEqual(specifications.map(({ moduleId }) => moduleId).sort(), expected);
