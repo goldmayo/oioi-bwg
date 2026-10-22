@@ -104,3 +104,21 @@ created_at: "2026-10-23"
 k6는 성능 테스트로 `tests/k6/{common,load,stress,spike}.js`에 유지한다. root 세 명령이 이 경로를
 가리킴을 확인했으며 script·입력/외부 hostname·CI 실행 범위를 바꾸지 않았다.
 이번 단위 후 root 추적 파일은 27개다. 운영 자산과 앱 Dockerfile은 후속 단위다.
+
+## 사용자 승인 후 배치 정리 — 운영 자산
+
+저장소 도구 [#214](https://github.com/goldmayo/oioi-bwg/pull/214) 병합 후 `7f98682`에서 시작했다.
+아래 다섯 자산의 내용은 byte 불변이다. 현재 source 경로만 이관하며 실제 호스트에 설치하지 않았다.
+
+| 이전 경로                         | 현재 source 경로                          |
+| --------------------------------- | ----------------------------------------- |
+| `Dockerfile.dev`                  | `ops/docker/Dockerfile.dev`               |
+| `compose.oci-development.yml`     | `ops/oci/compose.yml`                     |
+| `app.env.oci-development.example` | `ops/oci/env/runtime-public.env.example`  |
+| `.env.oci-secrets.example`        | `ops/oci/env/runtime-secrets.env.example` |
+| `.env.oci-development.example`    | `ops/oci/env/legacy/release.env.example`  |
+
+개발 Compose는 root context에서 새 Dockerfile을 선택한다. 운영 installer·fixture·paired Compose
+smoke는 새 source를 읽되 호스트의 Compose·protected config 목적지와 보호/보존·rollback은 유지한다.
+최초 표와 고정 ref의 과거 문서는 당시 경로를 보존한다. 이 단위 후 root 추적 파일은 22개다.
+앱 Dockerfile 분리는 다음 단위이며 k6의 위치·내용·세 실행 명령은 그대로다.
