@@ -25,8 +25,8 @@ created_at: "2026-10-22"
 | [x] | ENV-05 | 개인 비추적 env의 값 유무는 브랜치 결함에서 제외한다. 두 앱 추적 예제는 local을 명시하며 개인 파일을 수정하지 않았다. |
 | [x] | ENV-06 | 사용자 확정 local/production만 허용하며 Next dev/build에서 누락·미지원 값을 거절한다. metadata·logger·Sentry·최종 event/relay와 예제·CI 입력을 맞췄다. 아래 확정 계약 실행 절 참조. |
 | [x] | ENV-07 | 로컬 production build·일반 CI는 local, VM용 Promotion은 production이다. Docker 기본값도 local이며 staging 앱 환경을 폐기했다. 실제 운영 배포·#199 www/F 전환은 보류다. |
-| [ ] | ENV-08 | 대기 |
-| [ ] | ENV-09 | 대기 |
+| [x] | ENV-08 | Careon flag의 참조가 휴면 wrapper 두 개 안에만 있고 실제/예정 consumer가 없음을 source graph·CLI/config·active 명세로 확인했다. 세 파일을 제거하고 과거 가이드는 superseded 이력으로 보존했다. |
+| [x] | ENV-09 | 소비자 없는 Compose NEXT_PUBLIC_ASSETS_URL 주입을 제거했다. 실제 Console ASSETS_PUBLIC_BASE_URL·R2 설정과 외부 host/bucket·개인 env는 유지했다. |
 | [x] | ENV-10 | Console candidate의 Web GTM build 인자를 제거했다. Web consumer/전달·두 앱 build 증명·production 입력을 보존하고 관련 ops와 workflow parse를 확인했다. 아래 ENV-10 실행 절 참조. |
 | [x] | MAIL-01 | 휴면 provider의 NODE_ENV 모드 추론을 같은 local/production 계약으로 수정했다. local 기본 no-send·production dev 거절·미지원 값의 OCI 이전 거절을 SDK mock 12건으로 검증했다. 재활성화/실제 발송은 보류다. |
 | [ ] | MAIL-02 | 대기 |
@@ -59,7 +59,7 @@ created_at: "2026-10-22"
 
 ## 2026-10-22 추가 논의 체크리스트
 
-현재 원문 38개는 **처리 29개·대기 9개**다. 기존 처리 20개에 ENV-06·관련 ENV-07·MAIL-01·ENV-10·DB-01/02·RUN-01·UI-01/02를 더했다.
+현재 원문 38개는 **처리 31개·대기 7개**다. 기존 처리 20개에 ENV-06/07/08/09/10·MAIL-01·DB-01/02·RUN-01·UI-01/02를 더했다.
 아래 과거 단계의 개수는 당시 이력이다. 정상화 추가 항목 7개와 후속 UI 검토 1개를
 별도로 등록한다. 총 추적 ID는 46개다. 추가 8개 중 BASE-01·CFG-08/09/10·TEST-05는 처리됐으며 나머지 3개는 검토/대기다.
 대기에는 결함뿐 아니라 기준선 확정·구조 제안·보존 판단이 포함되므로 미해결 runtime 결함 수로 읽지 않는다.
@@ -1182,3 +1182,32 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   최종 head CI/리뷰 결과는 PR에 기록한다. rendered UI 변경이 없어 별도 스크린샷은 만들지 않았다.
 - 원문 처리 29/대기 9, 추가 처리 5/대기 3이다. 이후 사용 종료/휴면 설정과 수명주기·소유권·안내를
   구분한다. UI-03 추출·미래 계정·운영 배포·#199 F 전환은 별도 보류다.
+
+## 2026-10-23 ENV-08/09 — 소비가 끝난 설정과 wrapper
+
+- 앱별 scaffold [#208](https://github.com/goldmayo/oioi-bwg/pull/208)은 최종 head
+  `091d44f506f4d154e00119c5e5af16bd2ace8846`의 [CI #504](https://github.com/goldmayo/oioi-bwg/actions/runs/39854316363)
+  전체 성공 후 `be513f4f3c1f133db775ee9b124a7c71549b33c1`로 squash 병합했다. fetch한 병합 tree와
+  검증 head 일치 확인 후 `feature/monorepo-unused-environment`를 분기했다.
+- 해당 source의 추적 JS/TS import graph에서 feature-flag를 참조하는 것은 FeatureFlagBoundary와
+  withFeatureFlag 두 파일뿐이었고 이 세 파일 밖의 consumer는 0개였다. route/action/feature·CLI/config·
+  active architecture/Domain Specification에 Careon 예정 기능도 없었다. 자동 unused 결과만으로
+  삭제하지 않고 위 소비 경로와 문서를 대조한 뒤 세 휴면 파일을 제거했다. 실제 권한 경계·Console
+  MFA 등록 설정·계정/메일 기능은 변경하거나 재활성화하지 않았다.
+- feature-flag-guide는 `66255b973bc829437a296132ad480bf2ea7bb483`의 Careon/TypeORM·다른 경로를
+  예로 든 과거 설계다. 원문과 제목 anchor를 보존하고 superseded 상태·사유·원 출처·현재 Runtime/Auth
+  및 본 RESULT 링크를 추가했다. 현재 APP_ENV local/production과 local production build 계약을
+  명시해 과거 development 예제가 현행 지침으로 읽히지 않게 했다.
+- Compose NEXT_PUBLIC_ASSETS_URL은 active source consumer가 없어 주입을 제거했다. Console의
+  ASSETS_PUBLIC_BASE_URL·R2 입력·실제 assets host·bucket과 개인 env는 유지했다. `/dev/null` env와
+  `--no-env-resolution`을 사용한 Compose config 검사가 성공했으며 개인 env를 읽거나 수정하지 않았다.
+- `pnpm type-check`·`pnpm lint`(FSD 포함)·`pnpm test:unit:run` 성공. 타입/lint 각 5작업 중 Web만
+  실제 실행하고 4개 캐시를 재사용했다. unit 95파일·662건 중 Web 176건을 실제 실행하고 다른 3작업은
+  캐시를 재사용했다. harness **38건**, ops **22파일·312건**도 성공했다. 삭제 후 소스 참조가 없음을 확인했다.
+- 가짜 local 입력·NODE_ENV=production/NEXT_PUBLIC_APP_ENV=local·빈 DSN/GTM·source map upload/telemetry
+  OFF로 Web build를 `pnpm build --force --env-mode=loose --concurrency=1 --filter=@oioi-bwg/web`로
+  실제 실행해 cache 0 성공했다. 새 Web standalone의 기존 browser smoke·health·503/no-store·DB 접근
+  경계가 성공했다. Console·서버/DB 등 불변 source의 기존 build/standalone·PG 검증은 #208에서 재사용했다.
+  같은 Console build나 DB 기준선을 직접 반복하지 않았다. format·필수 hook·최종 CI/리뷰는 PR에 기록한다.
+- 원문 처리 31/대기 7, 추가 처리 5/대기 3이다. 다음은 ROOT-01 사용 종료 release 도구를 별도 관심사로
+  정리하고 이후 소유권·개발 안내를 대조한다. 운영/외부 리소스 변경·#199 F 전환·미래 계정·UI 추출은 보류다.
