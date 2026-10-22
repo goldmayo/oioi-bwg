@@ -3,9 +3,10 @@
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
-import { albumQueries } from "@/entities/album";
+import { albumQueries } from "@/entities/album/api";
 import type { AdminSongSummary } from "@/entities/song";
-import { songMutations, songQueries, songQueryKeys } from "@/entities/song";
+import { songQueryKeys } from "@/entities/song";
+import { songMutations, songQueries } from "@/entities/song/api";
 
 import { type SongEditValues, toAdminSongUpdate } from "../model/schemas";
 

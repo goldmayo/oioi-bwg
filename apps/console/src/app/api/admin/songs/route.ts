@@ -5,24 +5,36 @@ import {
 } from "@oioi-bwg/contracts/song";
 import { createSong, listAdminSongs } from "@oioi-bwg/server/services/song-service";
 
-import { getRequestContext } from "@/server/auth/request-context";
+import { getRequestAuthorization, type RequestAuthorization } from "@/server/auth/request-context";
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
 
-export async function GET() {
+import { readRequestObservation } from "@/shared/lib/observability-correlation";
+
+export async function GET(request: Request) {
+  let authorization: RequestAuthorization | undefined;
   try {
-    const songs = await listAdminSongs(await getRequestContext());
+    const songs = await listAdminSongs((authorization = await getRequestAuthorization()).context);
     return jsonResponse(adminSongListSchema, songs);
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, {
+      route: "/api/admin/songs",
+      ...readRequestObservation(request.headers, "/api/admin/songs"),
+      authorization,
+    });
   }
 }
 
 export async function POST(request: Request) {
+  let authorization: RequestAuthorization | undefined;
   try {
     const input = await parseJsonRequest(request, createAdminSongSchema);
-    const song = await createSong(await getRequestContext(), input);
+    const song = await createSong((authorization = await getRequestAuthorization()).context, input);
     return jsonResponse(adminSongMutationResultSchema, song, { status: 201 });
   } catch (error) {
-    return toErrorResponse(error);
+    return toErrorResponse(error, {
+      route: "/api/admin/songs",
+      ...readRequestObservation(request.headers, "/api/admin/songs"),
+      authorization,
+    });
   }
 }

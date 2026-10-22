@@ -2,14 +2,14 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readMigrationFiles } from "drizzle-orm/migrator";
-import postgres, { type Sql } from "postgres";
+import postgres, { type TransactionSql } from "postgres";
 
 const MIGRATIONS_FOLDER = resolve(fileURLToPath(new URL("../drizzle", import.meta.url)));
 const MIGRATIONS_SCHEMA = "drizzle";
 const MIGRATIONS_TABLE = "__drizzle_migrations";
 const MIGRATION_LOCK = "oioi-bwg:drizzle-migrations";
 
-async function ensureMigrationMetadata(sql: Sql) {
+async function ensureMigrationMetadata(sql: TransactionSql) {
   const [schema] = await sql<{ exists: boolean }[]>`
     select exists(select 1 from pg_namespace where nspname = ${MIGRATIONS_SCHEMA})
   `;

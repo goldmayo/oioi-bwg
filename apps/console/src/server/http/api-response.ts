@@ -4,6 +4,9 @@ import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { AppError, type AppErrorCode } from "@oioi-bwg/server/errors/app-error";
 import { z } from "zod";
 
+import type { RequestAuthorization } from "@/server/auth/request-context";
+import { logAuthRejection } from "@/server/observability/auth-rejection-logger";
+import type { ServerErrorContext } from "@/server/observability/safe-server-event";
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
 import { assertConsoleOrigin } from "./console-origin";
@@ -75,7 +78,12 @@ export function jsonResponse<T>(
 }
 
 /** Route Handler boundary에서만 application error를 HTTP failure contract로 변환한다. */
-export function toErrorResponse(error: unknown): Response {
+export function toErrorResponse(
+  error: unknown,
+  context: Pick<ServerErrorContext, "route" | "requestId"> & {
+    authorization?: RequestAuthorization;
+  } = {},
+): Response {
   if (error instanceof InvalidJsonBodyError) {
     return Response.json(
       apiErrorResponseSchema.parse({
@@ -105,16 +113,25 @@ export function toErrorResponse(error: unknown): Response {
 
   if (error instanceof AppError) {
     const definition = appErrorDefinitions[error.code];
-    return Response.json(
+    const response = Response.json(
       apiErrorResponseSchema.parse({ code: error.code, message: definition.message }),
       { status: definition.status },
     );
+    if (error.code === "UNAUTHENTICATED" || error.code === "FORBIDDEN")
+      logAuthRejection(context.authorization, "response_created", "api-route-handler", {
+        requestId: context.requestId,
+        status: error.code === "UNAUTHENTICATED" ? 401 : 403,
+        route: context.route,
+      });
+    return response;
   }
 
   const isOutputContractError = error instanceof OutputContractError;
   reportServerError(error, {
     event: isOutputContractError ? "api.output_contract_violation" : "api.unexpected_error",
     source: "api-route-handler",
+    ...(context.route ? { route: context.route } : {}),
+    ...(context.requestId ? { requestId: context.requestId } : {}),
     ...(isOutputContractError
       ? { error: { type: "output-contract" as const, code: "OUTPUT_CONTRACT_VIOLATION" } }
       : {}),

@@ -44,6 +44,18 @@ describe("toErrorResponse", () => {
     expect(mockedReportServerError).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["UNAUTHENTICATED", 401],
+    ["FORBIDDEN", 403],
+    ["SONG_NOT_FOUND", 404],
+    ["SONG_SLUG_ALREADY_EXISTS", 409],
+  ] as const)("keeps handled %s out of error reporting", async (code, status) => {
+    const response = toErrorResponse(new AppError(code));
+    expect(response.status).toBe(status);
+    expect(apiErrorResponseSchema.parse(await response.json()).code).toBe(code);
+    expect(mockedReportServerError).not.toHaveBeenCalled();
+  });
+
   it("treats malformed JSON as a request validation failure", async () => {
     const request = new Request("https://example.test/api", {
       body: "{broken",

@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { getSourceParts, resolveImportedParts } from "./import-path.js";
+import { getSourceParts, resolveImportedParts } from "./import-path.ts";
 
 const dependencyFields = [
   "dependencies",
@@ -89,6 +89,9 @@ test("shared mocks and source packages select and invalidate both apps verificat
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     fs.copyFileSync(path.join(repositoryRoot, filename), destination);
   }
+  fs.cpSync(path.join(repositoryRoot, "config"), path.join(fixtureRoot, "config"), {
+    recursive: true,
+  });
   fs.cpSync(path.join(repositoryRoot, "packages"), path.join(fixtureRoot, "packages"), {
     recursive: true,
     filter: (filename) =>
@@ -148,6 +151,12 @@ test("shared mocks and source packages select and invalidate both apps verificat
 
   for (const filename of [
     "tests/mocks/server-only.ts",
+    "config/eslint/app.ts",
+    "config/steiger.ts",
+    "config/vitest/browser.ts",
+    "config/vitest/browser.setup.ts",
+    "config/next.ts",
+    "config/sentry-build.ts",
     "packages/contracts/src/song.ts",
     "packages/server/src/services/song-service.ts",
   ]) {

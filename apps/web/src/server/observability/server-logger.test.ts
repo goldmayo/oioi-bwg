@@ -1,3 +1,4 @@
+import { AppError } from "@oioi-bwg/server/errors/app-error";
 import type { ErrorEvent } from "@sentry/nextjs";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -5,16 +6,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const sentryMocks = vi.hoisted(() => ({
   captureException: vi.fn<(error: unknown) => string>(() => "safe-event-id"),
   init: vi.fn(),
-  setTags: vi.fn(),
+  setContext: vi.fn(),
+  setTags: vi.fn<(tags: NonNullable<ErrorEvent["tags"]>) => void>(),
   withScope: vi.fn(),
 }));
 
 vi.mock("@sentry/nextjs", () => ({
   captureException: sentryMocks.captureException,
   init: sentryMocks.init,
-  withScope: (callback: (scope: { setTags: (tags: Record<string, unknown>) => void }) => void) => {
+  withScope: (
+    callback: (scope: {
+      setContext: typeof sentryMocks.setContext;
+      setTags: (tags: NonNullable<ErrorEvent["tags"]>) => void;
+    }) => void,
+  ) => {
     sentryMocks.withScope(callback);
-    callback({ setTags: sentryMocks.setTags });
+    callback({ setTags: sentryMocks.setTags, setContext: sentryMocks.setContext });
   },
 }));
 
@@ -36,16 +43,16 @@ function serialized(value: unknown) {
   return JSON.stringify(value);
 }
 
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
+
 describe("independent server logging and Sentry sinks", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllEnvs();
-  });
-
   it("logs only an allowlisted descriptor for a nested database error", () => {
     vi.stubEnv("NODE_ENV", "development");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -73,11 +80,16 @@ describe("independent server logging and Sentry sinks", () => {
     const output = call?.[0] as string;
     expect(output).not.toMatch(/[\r\n]/);
     expect(JSON.parse(output)).toEqual({
+      app: "web",
+      runtime: "node",
       timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       level: "error",
       event: "api.unexpected_error",
       source: "api-route-handler",
       error: { type: "database", code: "23505" },
+      failure: { kind: "system" },
+      handling: "unknown",
+      outcome: "unknown",
     });
     for (const marker of Object.values(MARKERS)) expect(output).not.toContain(marker);
     expect(sentryMocks.captureException).not.toHaveBeenCalled();
@@ -134,9 +146,16 @@ describe("independent server logging and Sentry sinks", () => {
         source: "api-route-handler",
         "error.type": "output-contract",
         "error.code": "OUTPUT_CONTRACT_VIOLATION",
+        "failure.kind": "contract",
+        handling: "unknown",
+        outcome: "unknown",
         "request.method": "POST",
       }),
     );
+    expect(
+      sanitizeServerSentryEvent({ type: undefined, tags: sentryMocks.setTags.mock.calls[0]?.[0] })
+        .tags,
+    ).toMatchObject({ "failure.kind": "contract", "error.code": "OUTPUT_CONTRACT_VIOLATION" });
   });
 
   it("does not inspect hostile getters beyond the safe bounded fields", () => {
@@ -193,6 +212,8 @@ describe("independent server logging and Sentry sinks", () => {
     logServerError(new Error("ERROR_MARKER"), {
       event: "EVENT_MARKER",
       source: "SOURCE_MARKER",
+      handling: "HANDLING_MARKER",
+      outcome: "OUTCOME_MARKER",
       request: {
         method: "METHOD_MARKER",
         routerKind: "ROUTER_MARKER",
@@ -203,12 +224,141 @@ describe("independent server logging and Sentry sinks", () => {
     const output = consoleError.mock.calls[0]?.[0];
     expect(output).toEqual(expect.any(String));
     expect(output).not.toMatch(
-      /ERROR_MARKER|EVENT_MARKER|SOURCE_MARKER|METHOD_MARKER|ROUTER_MARKER|ROUTE_MARKER/,
+      /ERROR_MARKER|EVENT_MARKER|SOURCE_MARKER|METHOD_MARKER|ROUTER_MARKER|ROUTE_MARKER|HANDLING_MARKER|OUTCOME_MARKER/,
     );
     expect(JSON.parse(output as string)).toMatchObject({
       event: "server.unhandled_error",
       source: "sentry-auto-capture",
+      failure: { kind: "unknown" },
+      handling: "unknown",
+      outcome: "unknown",
     });
+  });
+});
+
+describe("application failure classification", () => {
+  it.each(["UNAUTHENTICATED", "FORBIDDEN"] as const)(
+    "retains escaped %s through both sinks and the final sanitizer",
+    (code) => {
+      vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+      vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const error = new AppError(code, MARKERS);
+      const context = {
+        event: "next.request_error",
+        source: "next-instrumentation",
+        request: { routeType: "render" },
+        handling: "handled",
+        outcome: "response_created",
+      } as const;
+
+      logServerError(error, context);
+      expect(captureServerException(error, context)).toBe("safe-event-id");
+      expect(sentryMocks.captureException.mock.calls[0]?.[0]).toBe(error);
+      expect(JSON.parse(consoleError.mock.calls[0]?.[0] as string)).toMatchObject({
+        error: { type: "application", code },
+        failure: { kind: "delivery" },
+        handling: "unhandled",
+        outcome: "render_error_captured",
+      });
+
+      const frame = { filename: "src/app/admin/page.tsx", lineno: 10, colno: 2 };
+      const event = sanitizeServerSentryEvent({
+        type: undefined,
+        tags: {
+          ...sentryMocks.setTags.mock.calls[0]?.[0],
+          handling: "handled",
+          outcome: "response_created",
+          "failure.kind": "system",
+        },
+        extra: MARKERS,
+        exception: { values: [{ type: "AppError", value: code, stacktrace: { frames: [frame] } }] },
+      });
+      expect(event.tags).toMatchObject({
+        "error.type": "application",
+        "error.code": code,
+        "failure.kind": "delivery",
+        handling: "unhandled",
+        outcome: "render_error_captured",
+      });
+      expect(event.exception?.values).toEqual([
+        {
+          type: "DeliveryError",
+          value: "Unhandled application delivery failure",
+          stacktrace: { frames: [frame] },
+        },
+      ]);
+      for (const marker of Object.values(MARKERS)) {
+        expect(serialized([event, consoleError.mock.calls])).not.toContain(marker);
+      }
+    },
+  );
+
+  it.each(["UNAUTHENTICATED", "FORBIDDEN", "SONG_NOT_FOUND", "SONG_SLUG_ALREADY_EXISTS"] as const)(
+    "excludes a handled %s from both error sinks",
+    (code) => {
+      vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+      vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const error = new AppError(code, MARKERS);
+      const context = {
+        event: "api.unexpected_error",
+        source: "api-route-handler",
+        handling: "handled",
+        outcome: "response_created",
+      } as const;
+
+      logServerError(error, context);
+      expect(captureServerException(error, context)).toBeNull();
+      expect(consoleError).not.toHaveBeenCalled();
+      expect(sentryMocks.captureException).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    Object.assign(new Error("UNAUTHENTICATED", { cause: new AppError("FORBIDDEN") }), {
+      name: "AppError",
+      code: "UNAUTHENTICATED",
+    }),
+    Object.assign(new AppError("UNAUTHENTICATED"), { code: MARKERS.token }),
+  ])("does not infer an application error from invalid or unavailable identity", (error) => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
+    captureServerException(error, {
+      event: "next.request_error",
+      source: "next-instrumentation",
+      request: { routeType: "render" },
+    });
+    expect(sentryMocks.captureException.mock.calls[0]?.[0]).toBe(error);
+    expect(sentryMocks.setTags).toHaveBeenCalledWith(
+      expect.objectContaining({
+        "error.type": "unknown",
+        "failure.kind": "unknown",
+        handling: "unhandled",
+        outcome: "render_error_captured",
+      }),
+    );
+    expect(sentryMocks.setTags.mock.calls[0]?.[0]).toHaveProperty("error.code", undefined);
+  });
+
+  it("keeps render failure classification in the actual hook log when Sentry is off", async () => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "local");
+    vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { onRequestError } = await import("../../instrumentation");
+    await onRequestError(
+      new AppError("UNAUTHENTICATED", MARKERS),
+      { method: "GET" },
+      { routeType: "render" },
+    );
+    expect(JSON.parse(consoleError.mock.calls[0]?.[0] as string)).toMatchObject({
+      event: "next.request_error",
+      error: { type: "application", code: "UNAUTHENTICATED" },
+      failure: { kind: "delivery" },
+      handling: "unhandled",
+      outcome: "render_error_captured",
+    });
+    expect(sentryMocks.captureException).not.toHaveBeenCalled();
   });
 
   it("normalizes a non-Error throw before Sentry capture", () => {
@@ -304,10 +454,13 @@ describe("sanitizeServerSentryEvent", () => {
       extra: { params: Object.values(MARKERS) },
       breadcrumbs: [{ message: MARKERS.token, data: { otp: MARKERS.otpHash } }],
       tags: {
+        app: "web",
+        runtime: "node",
         event: "api.unexpected_error",
         source: "api-route-handler",
         "error.type": "database",
         "error.code": "23505",
+        "failure.kind": "delivery",
         "request.method": "POST",
         unsafe: MARKERS.email,
       },
@@ -363,10 +516,15 @@ describe("sanitizeServerSentryEvent", () => {
         ],
       },
       tags: {
+        app: "web",
+        runtime: "node",
         event: "api.unexpected_error",
         source: "api-route-handler",
         "error.type": "database",
         "error.code": "23505",
+        "failure.kind": "system",
+        handling: "unknown",
+        outcome: "unknown",
         "request.method": "POST",
       },
       contexts: { trace: { trace_id: "b".repeat(32), span_id: "c".repeat(16) } },
@@ -382,9 +540,14 @@ describe("sanitizeServerSentryEvent", () => {
 
     expect(serialized(safeEvent)).not.toMatch(/TOKEN_MARKER|PASSWORD_HASH_MARKER/);
     expect(safeEvent.tags).toEqual({
+      app: "web",
+      runtime: "node",
       event: "server.unhandled_error",
       source: "sentry-auto-capture",
       "error.type": "unknown",
+      "failure.kind": "unknown",
+      handling: "unknown",
+      outcome: "unknown",
     });
   });
 
@@ -410,10 +573,74 @@ describe("sanitizeServerSentryEvent", () => {
 
     expect(serialized(safeEvent)).not.toMatch(/TOKEN_MARKER|PASSWORD_HASH_MARKER/);
     expect(safeEvent.tags).toEqual({
+      app: "web",
+      runtime: "node",
       event: "upload.failure",
       source: "upload-album-image-action",
       operation: "album-image-upload",
       "error.type": "unknown",
+      "failure.kind": "unknown",
+      handling: "unknown",
+      outcome: "unknown",
     });
   });
+
+  it("rejects unknown classification, application code and outcome tags", () => {
+    const event = sanitizeServerSentryEvent({
+      type: undefined,
+      tags: {
+        "error.type": "application",
+        "error.code": MARKERS.token,
+        "failure.kind": "delivery",
+        handling: MARKERS.email,
+        outcome: MARKERS.passwordHash,
+      },
+    });
+    expect(event.tags).toMatchObject({
+      "error.type": "unknown",
+      "failure.kind": "unknown",
+      handling: "unknown",
+      outcome: "unknown",
+    });
+    expect(event.tags).not.toHaveProperty("error.code");
+    for (const marker of Object.values(MARKERS)) expect(serialized(event)).not.toContain(marker);
+  });
+});
+
+it("preserves only verified request correlation in the final server event", () => {
+  const id = "48be30fa-1441-4dc9-8ffa-9b618ec32652";
+  expect(
+    sanitizeServerSentryEvent({
+      type: undefined,
+      contexts: { correlation: { request_id: id, token: "private" } },
+    })?.contexts?.correlation,
+  ).toEqual({ request_id: id });
+  expect(
+    sanitizeServerSentryEvent({
+      type: undefined,
+      contexts: { correlation: { request_id: "private" } },
+    })?.contexts?.correlation,
+  ).toBeUndefined();
+});
+
+it("clears optional scope fields before capturing an unrelated error", () => {
+  vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+  vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "http://public@localhost/1");
+  sentryMocks.setTags.mockClear();
+  sentryMocks.setContext.mockClear();
+  captureServerException(new Error(), {
+    event: "api.unexpected_error",
+    source: "api-route-handler",
+  });
+  expect(sentryMocks.setTags).toHaveBeenCalledWith(
+    expect.objectContaining({
+      "error.code": undefined,
+      "route.template": undefined,
+      operation: undefined,
+      "request.method": undefined,
+      "next.route_type": undefined,
+    }),
+  );
+  expect(sentryMocks.setContext).toHaveBeenCalledWith("correlation", null);
+  vi.unstubAllEnvs();
 });

@@ -1,28 +1,12 @@
-import path from "path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./apps/web/src"),
-      "client-only": path.resolve(__dirname, "./tests/mocks/client-only.ts"),
-      "server-only": path.resolve(__dirname, "./tests/mocks/server-only.ts"),
-    },
-  },
   test: {
-    globals: true,
-    environment: "jsdom",
-    setupFiles: "./vitest.setup.ts",
-    include: ["apps/web/src/**/*.test.{ts,tsx}"],
-    css: true,
+    projects: ["apps/*/vitest.config.ts", "packages/*/vitest.config.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      include: [
-        "apps/web/src/shared/hooks/**/*.{ts,tsx}",
-        "apps/web/src/shared/utils/**/*.{ts,tsx}",
-        "apps/web/src/features/**/use*.{ts,tsx}",
-      ],
+      include: ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"],
       exclude: ["**/*.test.{ts,tsx}", "**/*.d.ts"],
     },
   },

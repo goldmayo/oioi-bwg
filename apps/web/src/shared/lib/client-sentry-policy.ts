@@ -1,10 +1,12 @@
 import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
 
+import { toSafeRequestId } from "./sentry/correlation";
 import { toSafeSentryBuildMetadata, toSafeSentryBuildPath } from "./sentry-build-metadata";
+import { getSentryRouteMetadata } from "./sentry-route-metadata";
 
 export const SENTRY_ERROR_SOURCES = [
   "admin-error-boundary",
-  "login-form",
+  "admin-login-form",
   "global-error-boundary",
   "mutation-cache",
   "query-cache",
@@ -67,6 +69,8 @@ export type ClientErrorType = (typeof CLIENT_ERROR_TYPES)[number];
 export interface SentryErrorContext {
   source: SentryErrorSource;
   digest?: string;
+  route?: string;
+  outcome?: "error_boundary_mounted" | "unknown";
 }
 
 function isOneOf<const T extends readonly string[]>(value: unknown, values: T): value is T[number] {
@@ -227,8 +231,20 @@ export function toSafeSentryErrorContext(value: unknown): SentryErrorContext {
   const sourceValue = readProperty(value, "source");
   const digest = safeDigest(readProperty(value, "digest"));
   const source = isOneOf(sourceValue, SENTRY_ERROR_SOURCES) ? sourceValue : "sentry-auto-capture";
+  const outcomeValue = readProperty(value, "outcome");
+  const outcome =
+    (source === "admin-error-boundary" || source === "global-error-boundary") &&
+    outcomeValue === "error_boundary_mounted"
+      ? outcomeValue
+      : "unknown";
 
-  return digest ? { source, digest } : { source };
+  const route = getSentryRouteMetadata(readProperty(value, "route"));
+  return {
+    source,
+    outcome,
+    ...(digest ? { digest } : {}),
+    ...(route ? { route: route.template } : {}),
+  };
 }
 
 export function describeClientError(error: unknown): ClientErrorType {
@@ -238,12 +254,12 @@ export function describeClientError(error: unknown): ClientErrorType {
   return "runtime";
 }
 
-/** URL, DOM, console, network payload는 버리고 query/hash가 제거된 navigation만 남긴다. */
+/** URL, DOM, console, network payload는 버리고 앱 소유 template으로 축약한 navigation만 남긴다. */
 export function sanitizeClientBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
   if (breadcrumb.category !== "navigation") return null;
 
-  const from = stripUrlDetails(readProperty(breadcrumb.data, "from"));
-  const to = stripUrlDetails(readProperty(breadcrumb.data, "to"));
+  const from = getSentryRouteMetadata(readProperty(breadcrumb.data, "from"))?.template;
+  const to = getSentryRouteMetadata(readProperty(breadcrumb.data, "to"))?.template;
   if (!from && !to) return null;
 
   return {
@@ -260,10 +276,19 @@ export function sanitizeClientBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | n
 
 /** Browser SDK가 보강한 event도 전송 직전에 allowlist field만 남긴다. */
 export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
-  const sourceValue = safeTag(event, "source");
+  const {
+    source,
+    outcome,
+    digest,
+    route: routeTemplate,
+  } = toSafeSentryErrorContext({
+    source: safeTag(event, "source"),
+    route: safeTag(event, "route.template"),
+    outcome: safeTag(event, "outcome"),
+    digest: safeTag(event, "error.digest"),
+  });
+  const route = getSentryRouteMetadata(routeTemplate);
   const errorTypeValue = safeTag(event, "error.type");
-  const digest = safeDigest(safeTag(event, "error.digest"));
-  const source = isOneOf(sourceValue, SENTRY_ERROR_SOURCES) ? sourceValue : "sentry-auto-capture";
   const errorType = isOneOf(errorTypeValue, CLIENT_ERROR_TYPES) ? errorTypeValue : "runtime";
   const values = readProperty(readProperty(event, "exception"), "values");
   const lastException = Array.isArray(values) ? values[values.length - 1] : undefined;
@@ -277,6 +302,9 @@ export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
     readProperty(lastException, "value"),
   );
   const stacktrace = safeStacktrace(event);
+  const requestId = toSafeRequestId(
+    readProperty(readProperty(event.contexts, "correlation"), "request_id"),
+  );
   const browser = safeContext(readProperty(event.contexts, "browser"), SAFE_BROWSER_NAMES);
   const os = safeContext(readProperty(event.contexts, "os"), SAFE_OS_NAMES);
   const breadcrumbs = Array.isArray(event.breadcrumbs)
@@ -306,13 +334,18 @@ export function sanitizeClientSentryEvent(event: ErrorEvent): ErrorEvent {
       ],
     },
     tags: {
+      app: "web",
+      runtime: "browser",
+      ...(route ? { "route.template": route.template, operation: route.operation } : {}),
       source,
+      outcome,
       "error.type": errorType,
       ...(digest ? { "error.digest": digest } : {}),
     },
-    ...(browser || os
+    ...(browser || os || requestId
       ? {
           contexts: {
+            ...(requestId ? { correlation: { request_id: requestId } } : {}),
             ...(browser ? { browser } : {}),
             ...(os ? { os } : {}),
           },

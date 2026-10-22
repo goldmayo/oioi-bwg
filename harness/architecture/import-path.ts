@@ -1,6 +1,6 @@
 import path from "node:path";
 
-export function getSourceParts(filename) {
+export function getSourceParts(filename: string) {
   const normalized = filename.split(path.sep).join("/");
   const marker = "/src/";
   const index = normalized.lastIndexOf(marker);
@@ -8,7 +8,7 @@ export function getSourceParts(filename) {
   return index === -1 ? null : normalized.slice(index + marker.length).split("/");
 }
 
-export function resolveImportedParts(sourceParts, importPath) {
+export function resolveImportedParts(sourceParts: readonly string[], importPath: string) {
   if (importPath.startsWith("@/")) {
     return importPath.slice(2).split("/");
   }

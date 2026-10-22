@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 
 import { vi } from "vitest";
 
-// 브라우저 API 모킹 예시 (필요 시 추가)
+// 두 앱의 jsdom 테스트가 공유하는 브라우저 API mock.
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
