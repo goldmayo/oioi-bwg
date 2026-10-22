@@ -8,7 +8,7 @@ describe("Console browser Sentry setup", () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it("leaves observation deduplication to error identity/source/outcome", async () => {
-    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://fixture@example.test/1");
     await import("./instrumentation-client");
     const options = init.mock.calls[0]?.[0];

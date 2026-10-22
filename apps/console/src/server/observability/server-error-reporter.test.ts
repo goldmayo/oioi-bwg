@@ -14,7 +14,7 @@ describe("request-scoped reporting", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     captureServerException.mockReturnValue(id);
-    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "http://public@localhost/1");
   });
   afterEach(() => vi.unstubAllEnvs());

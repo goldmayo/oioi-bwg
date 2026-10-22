@@ -119,7 +119,7 @@ describe("independent server logging and Sentry sinks", () => {
   });
 
   it("captures the original Error for its frames and sends only typed metadata", () => {
-    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const rawError = new Error(MARKERS.passwordHash, {
@@ -240,7 +240,7 @@ describe("application failure classification", () => {
   it.each(["UNAUTHENTICATED", "FORBIDDEN"] as const)(
     "retains escaped %s through both sinks and the final sanitizer",
     (code) => {
-      vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+      vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
       vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
       const error = new AppError(code, MARKERS);
@@ -297,7 +297,7 @@ describe("application failure classification", () => {
   it.each(["UNAUTHENTICATED", "FORBIDDEN", "SONG_NOT_FOUND", "SONG_SLUG_ALREADY_EXISTS"] as const)(
     "excludes a handled %s from both error sinks",
     (code) => {
-      vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+      vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
       vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
       const error = new AppError(code, MARKERS);
@@ -322,7 +322,7 @@ describe("application failure classification", () => {
     }),
     Object.assign(new AppError("UNAUTHENTICATED"), { code: MARKERS.token }),
   ])("does not infer an application error from invalid or unavailable identity", (error) => {
-    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
     captureServerException(error, {
       event: "next.request_error",
@@ -377,6 +377,11 @@ describe("application failure classification", () => {
 });
 
 describe("sanitizeServerSentryEvent", () => {
+  it.each(["staging", "development", "test"])("drops unsupported environment %s", (environment) => {
+    expect(sanitizeServerSentryEvent({ type: undefined, environment })).not.toHaveProperty(
+      "environment",
+    );
+  });
   it("is registered as the fail-closed server beforeSend boundary", async () => {
     await import("../../../sentry.server.config");
 
@@ -394,7 +399,7 @@ describe("sanitizeServerSentryEvent", () => {
       event_id: "a".repeat(32),
       timestamp: 123,
       level: "error",
-      environment: "staging",
+      environment: "production",
       release: `oioi-bwg@${"b".repeat(40)}`,
       debug_meta: {
         images: [
@@ -480,7 +485,7 @@ describe("sanitizeServerSentryEvent", () => {
       timestamp: 123,
       level: "error",
       platform: "node",
-      environment: "staging",
+      environment: "production",
       release: `oioi-bwg@${"b".repeat(40)}`,
       debug_meta: {
         images: [
@@ -624,7 +629,7 @@ it("preserves only verified request correlation in the final server event", () =
 });
 
 it("clears optional scope fields before capturing an unrelated error", () => {
-  vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+  vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
   vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "http://public@localhost/1");
   sentryMocks.setTags.mockClear();
   sentryMocks.setContext.mockClear();

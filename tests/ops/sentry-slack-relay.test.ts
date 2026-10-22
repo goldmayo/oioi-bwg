@@ -15,7 +15,7 @@ const baseEvent = {
       level: "error",
       metadata: { type: "TypeError", value: "Failed to fetch" },
       project: 42,
-      tags: [["environment", "staging"]],
+      tags: [["environment", "production"]],
       title: "TypeError: Failed to fetch",
       web_url:
         "https://oioi-bwg.sentry.io/organizations/oioi-bwg/issues/123456789/events/abcdef/?query=sensitive",
@@ -115,7 +115,7 @@ describe("Sentry Slack relay", () => {
     const requestInit = slackFetch.mock.calls[0]?.[1];
     const slackPayload = JSON.parse(String(requestInit?.body));
     const serialized = JSON.stringify(slackPayload);
-    expect(serialized).toContain("staging");
+    expect(serialized).toContain("production");
     expect(serialized).toContain("123456789");
     expect(serialized).toContain("2026-09-20 09:10:11 UTC");
     expect(serialized).toContain("token=[redacted]");
@@ -264,7 +264,7 @@ describe("Slack message layout", () => {
         style: { bold: true },
       },
     ]);
-    expect(payload.blocks[1].elements[0].text).toBe("environment: `staging`   level: `error`");
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `production`   level: `error`");
     expect(payload.blocks[2].text.text).toBe(
       "발생 <!date^1789895411^{date_num} {time_secs}|2026-09-20 09:10:11 UTC>",
     );
@@ -275,7 +275,7 @@ describe("Slack message layout", () => {
       url: "https://oioi-bwg.sentry.io/organizations/oioi-bwg/issues/123456789/?project=42",
     });
     expect(payload.blocks.some((block: { fields?: unknown }) => block.fields)).toBe(false);
-    expect(payload.text).toContain("[Sentry][staging][error] TypeError: Failed to fetch");
+    expect(payload.text).toContain("[Sentry][production][error] TypeError: Failed to fetch");
     expect(payload.text).toContain("발생 2026-09-20 09:10:11 UTC");
     expect(payload.text).toContain(payload.blocks[2].accessory.url);
     expect(payload).toMatchObject({ unfurl_links: false, unfurl_media: false });
@@ -317,6 +317,20 @@ describe("Slack message layout", () => {
     },
   );
 
+  it.each(["local", "production", "staging"])(
+    "validates direct and tag environment %s",
+    async (environment) => {
+      const event = structuredClone(baseEvent);
+      event.data.event.tags = [["environment", environment]];
+      Object.assign(event.data.event, { environment });
+      const payload = await captureSlackPayload(event);
+      const expected = environment === "staging" ? "unknown" : environment;
+      expect(payload.blocks[1].elements[0].text).toBe(
+        `environment: \`${expected}\`   level: \`error\``,
+      );
+    },
+  );
+
   it("keeps unknown environment and default severity visible", async () => {
     const event = structuredClone(baseEvent);
     event.data.event.tags = [["environment", "unrecognized"]];
@@ -350,7 +364,7 @@ describe("Slack diagnostic tags and linked title", () => {
       Object.assign(event.data.event, { release: incomingRelease });
       const payload = await captureSlackPayload(event);
       expect(payload.blocks[1].elements[0].text).toBe(
-        `environment: \`staging\`   level: \`error\`   app: \`${app}\`   kind: \`delivery\`   release: \`abcdef0123ab\``,
+        `environment: \`production\`   level: \`error\`   app: \`${app}\`   kind: \`delivery\`   release: \`abcdef0123ab\``,
       );
       expect(payload.text).toContain(`app=${app} · kind=delivery · release=${release}`);
       expect(JSON.stringify(payload)).not.toContain("PRIVATE_OWNER_MARKER");
@@ -371,7 +385,7 @@ describe("Slack diagnostic tags and linked title", () => {
     );
     Object.assign(event.data.event, { release: incomingRelease });
     const payload = await captureSlackPayload(event);
-    expect(payload.blocks[1].elements[0].text).toBe("environment: `staging`   level: `error`");
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `production`   level: `error`");
     expect(JSON.stringify(payload)).not.toMatch(
       /private@example|<!channel>|PRIVATE_RELEASE_MARKER|PRIVATE_SURFACE_MARKER/,
     );
@@ -385,7 +399,7 @@ describe("Slack diagnostic tags and linked title", () => {
       ["failure.kind", "contract", "EXTRA_VALUE_MARKER"],
     );
     const payload = await captureSlackPayload(event);
-    expect(payload.blocks[1].elements[0].text).toBe("environment: `staging`   level: `error`");
+    expect(payload.blocks[1].elements[0].text).toBe("environment: `production`   level: `error`");
     expect(payload.text).not.toMatch(/app=|kind=|EXTRA_VALUE_MARKER/);
   });
 

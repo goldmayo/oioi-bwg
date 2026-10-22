@@ -1,3 +1,5 @@
+import { getAppEnvironment } from "./app-env";
+
 /**
  * Feature Flag 운영 원칙
  *
@@ -21,7 +23,7 @@
  *
  * 5) Next.js App Router env 주의사항
  * - `next start`로 서버를 띄우면 개발/운영 모두 `NODE_ENV=production`으로 동작할 수 있다.
- * - 따라서 운영 분기는 `NODE_ENV`가 아닌 `NEXT_PUBLIC_APP_ENV`(development/production)로 제어한다.
+ * - 따라서 운영 분기는 `NODE_ENV`가 아닌 `NEXT_PUBLIC_APP_ENV`(local/production)로 제어한다.
  * - `NEXT_PUBLIC_*` 값은 클라이언트 번들에 주입되므로 민감 제어에 사용하지 않는다.
  */
 
@@ -50,7 +52,7 @@ const FEATURE_FLAG_VALUES: Record<FeatureFlagKey, string | undefined> = {
   DEV_CAREON: process.env.FF_DEV_CAREON ?? process.env.NEXT_PUBLIC_FF_DEV_CAREON,
 };
 
-const IS_REAL_PROD = process.env.NEXT_PUBLIC_APP_ENV === "production";
+const IS_REAL_PROD = getAppEnvironment() === "production";
 
 /**
  * 플래그 활성 상태를 반환한다.

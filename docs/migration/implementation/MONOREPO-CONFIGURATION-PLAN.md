@@ -406,3 +406,50 @@ G 계획 #187은 문서 충돌과 폐기된 Web 세션 전제를 명시적으로
 consumer·예제·Sentry·site metadata를 대조한다. ENV-07/10의 관련 입력과 범위를 먼저 확인하되
 DB-01/02·미확정 ENV-2 credential 전환·개인 env 자동 이관·공통 UI/Base UI를 섞지 않는다.
 이번 작업에서는 ENV-06 구현을 시작하지 않는다.
+
+## 2026-10-23 정상화 재개 — ENV-06과 관련 ENV-07 계약
+
+이번 사용자 지시는 범위 내 구현·검증·commit/push·PR과 필수 조건 충족 후 squash 병합까지 승인한다.
+과거의 Draft 종료·병합 금지는 당시 이력으로 보존한다. 진입 기준은 fetch한
+`origin/migration_main@792a7464007d586a0e19d5c8382fe2c6a50af37b`이며
+`feature/monorepo-app-env`를 여기서 분기한다. #187/#196/#197/#198/#200/#201의 병합과 최종 head CI를
+원격에서 대조한다. 완료된 BASE-01의 회수·통합·기준선 검증은 반복하지 않는다. #199는 전환 보류다.
+
+- 헌법 §5·11, Runtime §12·12.1, Observability §13과 Testing §4·17을 따른다.
+  앱 환경은 `local/staging/production`, Next 실행 모드는 `NODE_ENV`로 구분한다.
+  Web site URL의 `development` 분기를 `local`로 맞춰 기본 metadata·Open Graph와 곡/앨범 helper가
+  동일한 URL을 사용하게 한다. Sentry와 clientLogger의 기존 활성화 정책은 실제 consumer로 대조한다.
+- 완료 조건: `NODE_ENV=development/production` 모두 local metadata는 localhost를 사용하며,
+  staging/production의 기존 공개 URL과 Sentry의 DSN 조건을 유지한다. 누락·미지원 값이 local로
+  해석되지 않는 회귀를 검증하고 앱별 예제·feature flag 설명과 active Runtime 계약을 맞춘다.
+- ENV-07은 같은 값 계약의 설명을 소유한다. local launcher의 명시적 local과 현행 CI/Promotion의
+  staging 의미를 기록하며 입력·workflow·운영 환경은 전환하지 않는다. ENV-10의 Console GTM 전달은
+  독립 관심사로 남긴다. robots/sitemap의 www 전환은 #199에 유지한다.
+- 기본 type-check·lint/FSD·harness·unit·format과 두 앱 build를 실행한다. build는 임시 local 입력·
+  빈 DSN·업로드/telemetry OFF·연결 불가능한 loopback DB·가짜 Console/R2 입력으로 수행한다.
+  local build의 metadata 산출물을 확인하고 최종 head의 CI·실제 diff·리뷰/보호 조건을 확인한 후 병합한다.
+- 다음 후보는 ENV-10의 앱별 GTM 입력 경계이며 이 PR에 선행 의존하지 않는다. DB-01/02는 그 뒤
+  별도 단위로 유지한다. ENV-2 credential 전환·개인 env 자동 이관·휴면 메일/flag 제거·UI/Worker는 제외한다.
+
+### 사용자 확정 반영 — local/production 계약
+
+위 ENV-06 최초 구현의 3값 계약과 staging 입력 유지 판단은 2026-10-23 사용자 확정으로 대체한다.
+환경은 `local | production`만 사용한다. 비용상 별도 staging 인프라는 두지 않는다. 이 변경은 같은
+[PR #202](https://github.com/goldmayo/oioi-bwg/pull/202)에서 기존 커밋을 보존한 후속 커밋으로 반영한다.
+
+- 앱별 `shared/config/app-env.ts`에서 값을 해석하고 Next dev/build 진입점에서 누락·미지원 값을
+  거절한다. NODE_ENV에서 앱 환경을 추론하지 않으며 local production build도 명시적 local이다.
+  metadata·browser logger·feature flag·Sentry·최종 event sanitizer가 같은 계약을 사용한다.
+- 일반 CI 이미지·Docker 기본값·관리자 local smoke는 local, VM용 Promotion candidate는 production을
+  사용한다. Sentry는 production+DSN만 허용한다. staging은 활성화·event 허용값에서 제거한다.
+  Slack relay는 외부 이벤트의 이전 staging 값을 unknown으로 표시한다. Worker workspace 추출은 제외한다.
+- 앱 소스·fixture·Next entry harness·CI 입력 검사·active 문서·기존 Sentry 결과의 후속 안내를 함께
+  수정한다. 하나의 환경 전환이라 파일 수 목표를 넘는 결합 이유와 리뷰 순서를 PR에 설명한다.
+  변경 코드에 맞춰 기본 gate·두 앱 실제 local build와 metadata HTML·실제 config 거절을 검증한다.
+- 앱 환경값의 production 결정은 실제 운영 배포 승인이 아니다. #199의 www/F 전환 보류·운영 배포·
+  Worker 배포/외부 알림·staging 이름의 버킷/host/외부 리소스와 접속 대상은 변경하지 않는다.
+  새 공개 입력은 차후 승인된 Promotion에서 새 digest로 검증해야 한다.
+- 최종 소비자 대조에서 휴면 메일 provider의 NODE_ENV 기반 기본 모드·production 보호 분기를 확인했다.
+  MAIL-01의 해당 분기만 같은 APP_ENV 계약으로 맞춘다. 미지원 환경은 OCI client 생성 전에 거절하고
+  local의 no-send 기본값과 production의 dev 거절을 SDK mock으로 검증한다. 실제 앱 consumer는 없으며
+  회원/메일 기능 재활성화·발송·MAIL-02의 OCI 인증/IMDS 정책 변경은 보류한다.

@@ -1,15 +1,21 @@
 ---
 title: "Client Sentry 초기화·환경 정책·privacy 경계 개선 결과"
 document_id: "OBSERVABILITY-CLIENT-SENTRY-RESULT"
-version: "1.2"
+version: "1.3"
 status: "completed"
 authority: "result"
-updated_at: "2026-09-20"
+updated_at: "2026-10-23"
 depends_on:
   - "OBSERVABILITY-AUDIT"
 ---
 
 # Client Sentry 초기화·환경 정책·privacy 경계 개선 결과
+
+2026-10-23 후속: 아래 local/staging/production 정책과 staging 검증은 9월 고정 소스의 이력이다.
+사용자 확정에 따라 현행 앱 환경은 local/production, Sentry 전송은 production+DSN으로 대체한다.
+현재 계약은 [Runtime §12](../oioi-bwg-architecture-clean-v1/11-content-i18n-assets-runtime-architecture.md#12-environment-variables),
+구현·검증은 [모노레포 ENV-06 결과](MONOREPO-CONFIGURATION-RESULT.md)와
+[PR #202](https://github.com/goldmayo/oioi-bwg/pull/202)가 소유한다. 과거 실행 수치·소스는 소급 변경하지 않는다.
 
 ## 기준과 범위
 

@@ -17,7 +17,7 @@ Integration Client Secret으로 HMAC-SHA256 검증하고 `Sentry-Hook-Resource: 
 
 Slack에는 다음 값만 새 객체로 구성해 전달한다.
 
-- environment: `local`, `staging`, `production`, 그 외 `unknown`
+- environment: `local`, `production`, 그 외 `unknown` (이전 `staging` 값 포함)
 - level: Sentry의 고정 level 값
 - 240자로 제한하고 email, URL, credential 표식을 제거한 issue title/message
 - issue ID와 project ID
@@ -41,7 +41,7 @@ title과 같은 내용이거나 `오류 타입: message`의 반복인 message는
 알림/스크린 리더용 fallback에 유지한다. 150자는 간결한 표시를 위한 자체 기준이며 rich text의 API 한도가 아니다.
 진단 본문은 `plain_text`로 보내 임의 markup을 실행하지 않는다.
 
-설명 아래에 `environment: staging`, `level: error`를 기본으로, 유효한 `app`, `kind`, `release`를
+설명 아래에 `environment: production`, `level: error` 같은 값을 표시하고, 유효한 `app`, `kind`, `release`를
 inline code 값으로 묶는다. `app`/`failure.kind`는 event의 tuple 배열 tags에서 해당 key가 한 번만
 나오고 위 enum과 일치할 때만 사용한다. 누락·중복·형식 오류는 추정해서 채우지 않고 생략한다.
 다른 시스템의 임의 `kind`나 raw URL·사용자 정보·함수명·경로를 추가로 가져오지 않는다.
@@ -153,7 +153,7 @@ pnpm dlx wrangler@4.135.0 deploy --keep-vars
 
 배포 출력의 version ID·시각을 기록하고 아래 6절에 따라 새 알림의 제목 링크·표시·개인정보 제거를
 확인한다. 새 형식은 이후 수신하는 알림에 적용되며 과거 Slack 메시지는 바뀌지 않는다. 기존 issue의
-재발생은 new-issue rule의 수신 검증이 아니므로 test notification 또는 안전한 새 staging issue를 사용한다.
+재발생은 new-issue rule의 수신 검증이 아니므로 별도 승인 후 test notification 또는 안전한 새 production issue를 사용한다.
 배포 성공과 실제 Slack 수신은 따로 기록한다. OCI 앱 배포·Promotion은 이 Worker 업데이트에 필요하지 않다.
 
 ### 기존 secret 회전
@@ -190,7 +190,7 @@ query parameter나 Bearer token을 Webhook URL에 넣지 않는다.
 대상 project의 issue alert rule을 다음 원칙으로 설정한다.
 
 1. 조건은 **새 issue가 생성된 경우**로 제한한다.
-2. 필요한 경우 `staging`과 `production` rule/channel을 분리한다.
+2. 앱의 운영 environment는 `production`이다. 별도 staging 환경이나 rule/channel을 새로 만들지 않는다.
 3. action으로 4단계의 Internal Integration을 선택한다.
 4. 모든 event/occurrence마다 실행되는 조건이나 반복 interval action은 사용하지 않는다.
 
@@ -200,10 +200,11 @@ alert rule이 소유한다. Sentry의 실패 재시도로 동일 alert가 다시
 
 ## 6. synthetic Sentry error → Worker → Slack E2E 검증
 
-staging에서 기존 production 데이터나 사용자 입력을 사용하지 않는 synthetic error로 한 번 검증한다.
+별도 승인된 운영 검증에서 기존 데이터나 사용자 입력을 사용하지 않는 synthetic error로 한 번 검증한다.
+로컬 개발·build·자동 검증은 앱 환경 local이며 실제 Sentry/Slack 전송을 하지 않는다.
 
 1. alert rule과 integration을 저장하고 Slack 채널을 비운 시각을 기록한다.
-2. application의 기존 Sentry 테스트 절차 또는 승인된 일회성 staging 진단으로
+2. application의 기존 Sentry 테스트 절차 또는 승인된 일회성 production 진단으로
    `TypeError: Cannot read properties of undefined (reading 'map')` 같은 privacy-safe 오류를 발생시킨다.
 3. Sentry에서 새 issue, environment, project, 발생 시각을 확인한다.
 4. Slack에서 같은 issue ID와 안전한 title/message 및 Sentry 링크가 한 번 전달됐는지 확인한다.

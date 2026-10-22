@@ -74,6 +74,11 @@ describe("client Sentry observed outcome", () => {
 });
 
 describe("client Sentry privacy policy", () => {
+  it.each(["staging", "development", "test"])("drops unsupported environment %s", (environment) => {
+    expect(sanitizeClientSentryEvent({ type: undefined, environment })).not.toHaveProperty(
+      "environment",
+    );
+  });
   it("classifies client boundary errors without reading their cause", () => {
     expect(describeClientError({ name: "ClientContractError", cause: MARKERS.zod })).toBe(
       "client-contract",
@@ -172,7 +177,7 @@ describe("client Sentry privacy policy", () => {
       type: undefined,
       event_id: "a".repeat(32),
       timestamp: 123,
-      environment: "staging",
+      environment: "production",
       message: MARKERS.token,
       logentry: { message: MARKERS.auth, params: [MARKERS.zod] },
       exception: {
@@ -255,7 +260,7 @@ describe("client Sentry privacy policy", () => {
       timestamp: 123,
       level: "error",
       platform: "javascript",
-      environment: "staging",
+      environment: "production",
       release: `oioi-bwg@${"a".repeat(40)}`,
       debug_meta: {
         images: [
