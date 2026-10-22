@@ -14,6 +14,7 @@
     "../vitest.postgres.config.ts",
     "../apps/*/vitest.config.ts",
     "../apps/*/vitest.postgres.config.ts",
+    "../apps/*/next.config.ts",
     "../packages/*/vitest.config.ts",
     "../apps/*/eslint.config.ts",
     "../apps/*/steiger.config.ts",

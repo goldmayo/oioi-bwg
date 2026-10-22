@@ -155,6 +155,7 @@ test("shared mocks and source packages select and invalidate both apps verificat
     "config/steiger.ts",
     "config/vitest/browser.ts",
     "config/vitest/browser.setup.ts",
+    "config/next.ts",
     "packages/contracts/src/song.ts",
     "packages/server/src/services/song-service.ts",
   ]) {

@@ -1,37 +1,16 @@
-import path from "node:path";
-
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+import { createNextConfig } from "../../config/next.ts";
 import { getSentryBuildConfig } from "./src/shared/config/sentry-build";
 
+const sharedNextConfig = createNextConfig(import.meta.dirname);
 const nextConfig: NextConfig = {
-  output: "standalone",
-  transpilePackages: ["@oioi-bwg/contracts", "@oioi-bwg/server"],
-  outputFileTracingRoot: path.resolve(import.meta.dirname, "../.."),
+  ...sharedNextConfig,
   experimental: {
+    ...sharedNextConfig.experimental,
     authInterrupts: true,
-    turbopackFileSystemCacheForBuild: process.env.OIOI_EPHEMERAL_BUILD !== "true",
   },
-  reactCompiler: true,
-  allowedDevOrigins: ["localhost", "127.0.0.1"],
-  images: {
-    unoptimized: true,
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "assets.oioibawige.com",
-        port: "",
-        pathname: "/**",
-      },
-    ],
-  },
-  logging: {
-    fetches: {
-      fullUrl: true,
-    },
-  },
-  serverExternalPackages: ["postgres"],
 };
 
 const sentryBuildConfig = getSentryBuildConfig();

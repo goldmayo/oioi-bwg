@@ -221,3 +221,26 @@ workspace/repo 검사 책임을 유지하며 누락된 운영 `.ts` 스크립트
   Web alias가 server project에 적용되지 않는 회귀도 확인한다.
 - 승인한 Turbo 병렬 workspace 검사와 repo 검사 후 harness/FSD/format 및 두 앱 build를 실행한다.
   리팩토링 점검과 RESULT 기록 후 새 커밋을 push한다. 다음 설정 개선은 별도 단위로 남긴다.
+
+## Next build 첫 단위 — 공통 정책과 앱별 옵션
+
+기준은 `6b65d7cabb0e84b54b8ac0cf0562d44c884cf4a8`이다. 헌법 §5·11, Testing §17,
+Runtime §11·12.1과 배포 runbook §14·21에 따라 동일한 Next build 정책만 분리한다.
+
+- 두 `next.config.ts`의 standalone·source package transpile·tracing root·build cache·React compiler·
+  개발 origin·image·fetch logging·postgres external 정책은 동일하다. `config/next.ts`에서 공유하고
+  자동 탐색 entry는 각 앱에 유지한다. tracing root는 전달받은 앱 디렉터리를 기준으로 계산한다.
+- Console은 공통 experimental 옵션을 보존하면서 자기 entry에서 `authInterrupts:true`를 조합한다.
+  실제 `forbidden()` consumer와 Web 인증 제거 결정을 유지한다. 일반 deep merge wrapper는 만들지 않는다.
+- Sentry build 조립과 앱별 `sentry-build.ts` 입력 검증, instrumentation·request adapter는 조사만 한다.
+  source map 업로드·release 검증과 runtime 오류 분류는 바꾸지 않으며 Sentry 조립 공통화는 후속 단위다.
+- 변경 전후 설치된 Next loader의 설정을 local/ephemeral build 입력과 root/app cwd에서 대조한다.
+  config strict 검사에 양쪽 entry를 포함하고 공통 파일 변경이 두 앱의 Turbo task를 무효화하는지 확인한다.
+- 승인한 workspace/repo 검사 후 harness/FSD/format과 두 앱 실제 build를 실행한다.
+  임시 local 입력을 사용하고 개인 env·DB·운영 자원은 변경하지 않는다. 결과를 추가하고 새 커밋을
+  push한 뒤 멈춘다. 원문 38개 ID와 PLAN 매핑은 보존하고 PR·병합·배포는 하지 않는다.
+
+검증 방식 보정: 임시 조사 도구의 Next `loadConfig` 직접 호출은 변경 전 설정에서도 확장자 없는
+`sentry-build` import를 찾지 못했다. 실제 CLI build는 성공했다. root/app cwd 12개 조합은 기존
+`tsx`로 앱 export를 비교하고, 실제 Next loader 결과는 변경 전후 build가 저장한
+`required-server-files.json`의 전체 config와 standalone 경로로 별도 대조한다.

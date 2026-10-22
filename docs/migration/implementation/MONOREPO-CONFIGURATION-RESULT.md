@@ -44,7 +44,7 @@ created_at: "2026-10-22"
 | [x] | TEST-03 | 없는 Web 경로를 실제 네 workspace src 경로로 교체했다. coverage 276개 소스를 추적 목록과 대조했고 미실행 소스의 0회 기록과 테스트·선언 제외를 확인했다. |
 | [x] | TEST-04 | Web adapter를 쓰는 foundation만 Web 소유 project로 한정했다. 서버 세 파일에는 Web alias가 없으며 실제 PostgreSQL 4파일·33건과 직렬 Node 실행·DB 정리를 검증했다. |
 | [ ] | RUN-01 | 대기 |
-| [ ] | RUN-02 | 대기 |
+| [x] | RUN-02 | Web 관리 route·forbidden consumer 제거로 적용 제외한다. Console의 실제 admin layout consumer와 authInterrupts 옵션은 유지했고 공통 experimental 옵션의 보존도 검증했다. |
 | [ ] | UI-01 | 대기 |
 | [ ] | UI-02 | 대기 |
 | [ ] | DOC-01 | 대기 |
@@ -442,3 +442,63 @@ created_at: "2026-10-22"
   변경하지 않았다. Next/Sentry/env 정리와 운영 자원 변경도 포함하지 않았다.
 - TEST-01~04 정리가 끝났으며 다음 단위는 계획의 Next build 공통 정책 조사다.
   이번 단위에서는 PR 생성·병합·배포를 하지 않는다.
+
+### Next build 첫 단위 — 공통 정책과 RUN-02 판정
+
+- 진입 기준: `6b65d7cabb0e84b54b8ac0cf0562d44c884cf4a8`. HEAD·같은 이름의 원격 추적 ref·
+  `git ls-remote`가 일치하고 작업 트리가 깨끗함을 확인했다. `origin/migration_main`과 실제 원격
+  기준은 `4d5e42d`다. Notion 원문의 최종 편집 시각도 `2026-10-21T17:17:49.914Z`로 동일하다.
+  [첫 단위 계획](MONOREPO-CONFIGURATION-PLAN.md#next-build-첫-단위--공통-정책과-앱별-옵션)에
+  따라 공통 정책을 분리하고 RUN-02의 적용 제외·보존 판단을 완료했다. 원문 38개 ID는 유지하며
+  누적 완료 12개, 대기 26개다. 구현과 이 기록은 같은 커밋에 포함한다.
+- `config/next.ts`는 실제로 같았던 standalone·두 source package transpile·tracing root·
+  ephemeral build cache·React compiler·개발 origin·image·fetch logging·postgres external 정책을
+  반환한다. 각 앱은 자기 디렉터리를 전달하며 자동 탐색 `next.config.ts`를 소유한다.
+  Console만 공통 experimental 값을 펼친 뒤 `authInterrupts:true`를 조합한다.
+- RUN-02는 현재 Web에 관리 route와 `forbidden()` consumer가 없으므로 설정을 추가하지 않는다.
+  헌법 §5·Auth §4.0의 공개 조회 범위를 따른다. Console admin layout의 실제 `forbidden()` 호출과
+  해당 옵션은 유지했다. 인증 runtime·request context·인가 규칙은 변경하지 않았다.
+- 공통 함수는 Next runtime을 import하지 않는다. 각 앱의 기존 `NextConfig` 타입으로 조합 결과를
+  검사하고 두 entry를 config strict 프로그램에 포함했다. root에 새 Next dependency를 추가하거나
+  한 앱의 타입·설정을 다른 앱에 연결하지 않았다. 두 literal의 `as const`는 문자열 값의 타입만 좁힌다.
+- [Next 설정 문서](https://nextjs.org/docs/app/api-reference/config/next-config-js)와
+  [standalone/tracing 문서](https://nextjs.org/docs/app/api-reference/config/next-config-js/output),
+  설치된 Next 16.4.1 loader·실제 package build 명령을 대조했다.
+
+실행한 로컬 검증:
+
+- 변경 전후 `tsx`로 실제 두 entry를 별도 프로세스에서 읽었다. root/app cwd와 cache 입력
+  빈 값·false·true의 12개 조합에서 전체 export가 일치했다. 새 harness는 실행 위치에 따른
+  tracing root, 두 앱의 공통 정책, Console 전용 인증 옵션, cache 전환을 보호한다.
+- 임시 도구에서 Next `loadConfig`를 직접 호출한 비교는 변경 전에도 `sentry-build` import를
+  찾지 못해 실패했다. 앱 코드나 loader를 고치지 않고 계획에 검증 방식 보정을 추가했다.
+  실제 Next loader 검증은 아래 CLI build 산출물로 수행했으며 `tsx` 비교와 구분한다.
+- `pnpm exec turbo run type-check lint test --concurrency=4`: 12개 task 성공·캐시 사용 0개.
+  unit은 81파일·410건(contracts 3 + server 88 + Web 93 + Console 226)이다.
+  병행한 `pnpm type-check:repo`(root/config/scripts)·`pnpm lint:repo`도 성공했다.
+- workspace 검사 후 `pnpm test:harness` 31건·`pnpm lint:fsd`·`pnpm format:check` 성공.
+  기존 Turbo 회귀에 `config/next.ts`를 추가해 해당 변경이 두 앱의 type-check/lint/test/build를
+  모두 선택하고 hash를 무효화함을 확인했다. harness와 workspace/build는 겹쳐 실행하지 않았다.
+- 변경 전과 변경 후 일반 입력, 변경 후 `OIOI_EPHEMERAL_BUILD=true`에서 각각
+  `pnpm build --force --env-mode=loose` 성공. 세 실행 모두 두 앱 컴파일·타입 검사·정적 페이지
+  생성·standalone 구성 성공이며 Turbo 2개 task 성공·캐시 사용 0개다.
+  `required-server-files.json`의 전체 config가 전후 일치하고 ephemeral 모드는 filesystem cache 값만
+  false로 달랐다. 두 앱의 standalone `apps/<앱>/server.js`와 static 경로도 확인했다.
+- build는 Sentry 업로드·runtime 수집·telemetry를 끈 local 입력, 접속 불가능한 loopback DB,
+  임시 Console 인증 값으로 실행했다. 개인 env를 수정하지 않았다. 이번 단위의 실제 DB 조회/CRUD·
+  browser smoke·전체 관리자 E2E·Sentry 외부 업로드는 미실행이다.
+- 설정 snapshot·최종 build config 대조·검사/build 로그는 `.local/monorepo-config/next-policy/`에
+  보존한다. `git diff --check`도 성공했다.
+
+리팩토링 점검:
+
+- 앱 디렉터리 한 개를 받는 함수와 명시적 object spread만 사용한다. 범용 deep merge·설정 framework·
+  새 runner·dependency/lockfile 변경은 없다. 반환 object를 매번 생성해 앱별 옵션이 서로 섞이지 않는다.
+- 기존 `config/**` Turbo 입력과 Docker의 전체 source 복사에 새 파일이 포함된다. Promotion의 공통 경로
+  변경 판정도 두 앱 build를 유지한다. CI·hook·Docker·배포 도구의 코드는 수정하지 않았으며,
+  CI 실행·컨테이너 build·배포는 수행하지 않았다.
+- Sentry build 옵션과 업로드 실패 처리·release·map 삭제 조립은 기존 entry에 그대로 남겼다.
+  앱별 env parser·instrumentation·request adapter·runtime 오류 분류는 변경하지 않았다.
+  공통 build 조립은 후속 단위이며 OBS-01/02·env·Docker 정리는 대기다.
+- 개인 env·DB 볼륨·MFA 키와 운영 DB·VM·Vault·secret은 변경하지 않았다.
+  이번 단위의 커밋·push 후 멈추며 PR 생성·병합·배포는 하지 않는다.
