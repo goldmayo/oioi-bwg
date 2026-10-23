@@ -105,6 +105,53 @@ schema와 dialect이며 이 명령으로 DB에 접속하거나 migration을 적�
 
 ## Local development workflow
 
+### 환경 파일의 역할과 작성 순서
+
+각 앱의 `.env.example`은 **값이 전부 빈 템플릿**이다. 실제 값은 개인 `.env` 또는 `.env.local`에
+입력하며 Git에 커밋하지 않는다. 한 파일로 합치도록 강제하지 않으며 기존 파일별 키와 값은 보존한다.
+Web의 기존 `.env`에 있는 인증·메일·R2 등의 항목도 현재 consumer 유무만으로 삭제하거나 옮기지 않는다.
+템플릿은 현재 앱의 입력을 안내하며 개인 파일에 보존한 추가 항목을 자동으로 제거하는 기준이 아니다.
+
+두 앱은 아래 순서로 해당하는 그룹만 쓰고, 한글 주석에 공개 여부·입력 조건·변경 시 주의사항을 적는다.
+동일 파일 안에서 같은 키를 반복하지 않는다. 기존 중복을 정리할 때는 실제 적용 값이 유지되는지 확인한다.
+
+| 순서 | 그룹 | Web / Console 입력 |
+| --- | --- | --- |
+| 1 | 실행 환경 | `NEXT_PUBLIC_APP_ENV` |
+| 2 | 데이터베이스 | `DATABASE_URL` |
+| 3 | 접속·인증 | Console Origin·서명 키·MFA 키·등록 허용 설정 |
+| 4 | 파일 업로드·에셋 | Console R2 5개 입력. 기존 개인 Web 항목은 보존 |
+| 5 | 메일 | 기존 개인 파일에 있는 항목 보존. 현재 두 앱의 신규 필수 입력 아님 |
+| 6 | 관측 | 앱별 `NEXT_PUBLIC_SENTRY_DSN` |
+| 7 | 분석 | Web의 선택 입력 `NEXT_PUBLIC_GTM_ID` |
+
+새 개인 파일은 빈 템플릿을 복사한 뒤 다음 값을 직접 채운다. 기존 개인 파일은 복사로 덮어쓰지 않고
+필요한 항목만 반영한다. 아래 DB credential은 Compose의 로컬 개발 전용 값이다.
+
+| 키 | 호스트 로컬 입력 |
+| --- | --- |
+| `NEXT_PUBLIC_APP_ENV` | `local` — 로컬 production build도 동일 |
+| `DATABASE_URL` | `postgresql://oioibawige:oioibawige_dev_only@127.0.0.1:5432/oioibawige` 또는 권한이 준비된 기존 로컬 URL |
+| `CONSOLE_ORIGIN` | `http://127.0.0.1:3001` — 브라우저 주소와 일치 |
+| `CONSOLE_MFA_ENROLLMENT_ENABLED` | 평소 `false`, 최초 등록/재등록 확인 시에만 `true` |
+| Console 인증 키·R2 설정 | 아래 Console 절차대로 채우며 기존 값 보존 |
+| `NEXT_PUBLIC_SENTRY_DSN` | 선택 입력. 같은 프로젝트의 DSN을 앱별로 입력하며 local 전송은 비활성 |
+| `NEXT_PUBLIC_GTM_ID` | 로컬에서는 빈칸 유지. 현재 GTM 로드는 APP_ENV로 차단하지 않음 |
+
+Next 직접 실행은 앱 루트의 `.env*`를 읽는다. [공식 로드 순서](https://nextjs.org/docs/app/guides/environment-variables#environment-variable-load-order)는
+process → `.env.$NODE_ENV.local` → `.env.local` → `.env.$NODE_ENV` → `.env`이며 먼저 찾은 값이 우선한다.
+`NODE_ENV=test`에서는 `.env.local`을 읽지 않지만 `.env`는 읽는다. `.env.example`은 자동 로드되지 않는다.
+이 파일 선택에 쓰이는 NODE_ENV와 배포 환경 계약인 NEXT_PUBLIC_APP_ENV를 구분한다.
+
+현재 개발 Compose의 Web `env_file`과 Console 로컬 실행기는 `.env.local`을 직접 지정한다.
+이 경로에서는 필요한 값을 해당 파일에 준비한다. Console 실행기는 이 파일의 값을 process보다 우선해
+전달하고 APP_ENV를 local로 고정한다. DB 도구의 명시적 입력 규칙은 위의 DB 도구 입력 절을 따른다.
+이 차이는 기존 실행 경로의 제약이며 모든 Next 직접 실행에 `.env.local`만 강제하는 규칙이 아니다.
+
+값을 바꾼 뒤 dev 서버를 재시작한다. `NEXT_PUBLIC_*`는 production build 때 고정되므로 기존 산출물에
+runtime 파일만 바꿔 반영할 수 없다. 개인 파일은 권한 `0600`, 별도 백업 디렉터리는 `0700`으로 관리하고
+실제 값·백업을 commit이나 PR 본문에 넣지 않는다. VM 설정 변경·배포는 별도 승인 범위다.
+
 ### Console MFA 로컬 확인 (P05 이후)
 
 Console은 호스트의 별도 Next 프로세스와 Compose PostgreSQL을 사용한다. Docker Desktop/daemon을
@@ -115,13 +162,15 @@ pnpm install --frozen-lockfile
 ```
 
 `apps/console/.env.local`이 없으면 [Console env 예제](../../../apps/console/.env.example)를 복사한다.
-예제의 주석을 따라 `openssl rand -base64 32`를 두 번 실행해 서로 다른 서명/암호화 키를 채운다.
+예제는 모든 값이 비어 있으므로 위 표의 APP_ENV·DB·Origin·등록 허용 설정을 먼저 채운다.
+주석을 따라 `openssl rand -base64 32`를 두 번 실행해 서로 다른 서명/암호화 키를 채운다.
 기존 파일과 등록 후의 암호화 키는 보존한다. 최초 QR 등록을 확인할 때만
 `CONSOLE_MFA_ENROLLMENT_ENABLED=true`로 설정한다. Web env 파일을 복사하지 않는다.
 
 Console 이미지 업로드에는 `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
-`ASSETS_PUBLIC_BASE_URL`을 모두 채운다. 기존 Web `.env`에 값이 있다면 이 다섯 값만 옮기고,
-Console DB/Auth/MFA 설정은 보존한다. Console에도 현재 공용 프로젝트의 `NEXT_PUBLIC_SENTRY_DSN`을 명시하며
+`ASSETS_PUBLIC_BASE_URL`을 모두 채운다. 기존 Web `.env`의 값을 참고할 때도 원본은 보존하고
+Console DB/Auth/MFA 설정을 덮어쓰지 않는다. 기존 버킷·접속 대상은 이름만 보고 바꾸지 않는다.
+Console에도 현재 공용 프로젝트의 `NEXT_PUBLIC_SENTRY_DSN`을 필요한 경우 입력하며
 `NEXT_PUBLIC_APP_ENV=local`에서는 전송하지 않는다. 메일은 현재 Console consumer가 없어 요구하지 않는다.
 
 준비 후 매번 다음 명령 하나로 실행한다.
@@ -155,6 +204,9 @@ Docker 연결 실패나 env/migration 실패 시 다음 단계를 실행하지 �
 ```bash
 cp apps/web/.env.example apps/web/.env.local
 ```
+
+복사만으로 설정이 끝나지 않는다. 위 표의 `NEXT_PUBLIC_APP_ENV=local`과 로컬 `DATABASE_URL`을 채운다.
+Sentry DSN은 선택 입력이며 로컬 GTM ID는 비워 둔다.
 
 Web은 비로그인 공개 조회 앱이므로 DB와 앱별 공개 설정만 준비한다. Supabase Auth·R2 업로드·메일 설정을 요구하지 않는다. 기존 개인 env 파일은 덮어쓰지 않는다.
 

@@ -114,6 +114,8 @@ pnpm install --frozen-lockfile
 
 `pnpm dev`·`pnpm start`는 Web, `pnpm build`는 Turbo로 Web과 Console을 빌드합니다.
 검증·DB 명령은 저장소 루트에서 실행합니다. 각 앱의 `.env.example`을 사용하고 기존 개인 env는 보존합니다.
+예제는 값이 모두 빈 템플릿입니다. 실제 값은 개인 `.env` 또는 `.env.local`에 입력합니다.
+개발 Compose와 Console 로컬 실행기는 `.env.local`을 직접 읽습니다.
 `NEXT_PUBLIC_APP_ENV`는 `local | production`만 허용합니다. 로컬 개발·production build·검증은
 `local`, VM Promotion candidate는 `production`입니다. `NODE_ENV`로 앱 환경을 추론하지 않으며
 별도 staging 환경을 운영하지 않습니다. local에서는 Sentry를 전송하지 않고 Web metadata는 localhost를 사용합니다.
@@ -126,6 +128,12 @@ Console MFA를 로컬에서 확인하려면 `apps/console/.env.example`의 주�
 
 ```bash
 test -e apps/web/.env.local || cp apps/web/.env.example apps/web/.env.local
+```
+
+새 파일에는 먼저 `NEXT_PUBLIC_APP_ENV=local`과 로컬 `DATABASE_URL`을 채웁니다.
+[로컬 입력값과 파일 우선순위](docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#환경-파일의-역할과-작성-순서)를 확인한 뒤 실행합니다.
+
+```bash
 docker compose -f compose.dev.yml up -d postgres
 docker compose -f compose.dev.yml up -d next
 docker compose -f compose.dev.yml exec next pnpm db:migrate
