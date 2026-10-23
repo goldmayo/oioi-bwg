@@ -76,8 +76,11 @@ cheer-rock-crab/
 │   ├── config/         # 공통 tooling factory·preset·rule·marker mock
 │   ├── contracts/      # serializable HTTP schema/DTO
 │   └── server/         # 공통 service·repository·DB 및 전용 integration tests
-├── tests/              # root 통합/운영/smoke/fixture와 수동 Web k6
-├── scripts/            # guarded DB·로컬 launcher·검증 CLI
+├── ops/
+│   ├── docker/         # 공통 개발 Dockerfile
+│   └── oci/            # 운영 Compose·env 예제·호스트/배포 도구
+├── tests/              # root 통합/운영 검증·fixture·k6 성능 테스트
+├── scripts/            # guarded DB·로컬 launcher·검증 CLI·manual 수동 도구
 └── package.json        # workspace 명령 진입점
 ```
 
@@ -171,8 +174,9 @@ pnpm start # Web standalone
 명시적으로 참조하는 운영 자산, 수동 도구·생성 파일을 구분했습니다. 설정 entry의 타입 검사는
 루트 `tsconfig.config.json`이 소유하며 `pnpm type-check:config`로 실행합니다.
 
-- `.env.oci-development.example`은 이전 단일 앱 release.env 형식의 호환 예제입니다. 현재 paired
-  candidate 입력이나 로컬 앱 env가 아닙니다. `app.env.oci-development.example`과 `.env.oci-secrets.example`은
+- `ops/oci/env/legacy/release.env.example`은 이전 단일 앱 release.env 형식의 호환 예제입니다. 현재 paired
+  candidate 입력이나 로컬 앱 env가 아닙니다. `ops/oci/env/runtime-public.env.example`과
+  `ops/oci/env/runtime-secrets.env.example`은
   host installer가 누락된 보호 설정의 초기 예제로 아직 소비하므로 rollback 지원과 함께 보존합니다.
   현재 배포 입력은 [active runbook §21](docs/migration/oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md#21-cicd)을 따릅니다.
 - `scripts/manual/create_issues.sh`는 `gh issue create`를 수행하는 기존 수동 도구입니다. 실제 발행할 내용·대상을

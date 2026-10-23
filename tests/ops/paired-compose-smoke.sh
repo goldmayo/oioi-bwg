@@ -7,7 +7,7 @@ export POSTGRES_NETWORK="${project}"
 export APP_BIND_ADDRESS=127.0.0.1 APP_PORT=3000 CONSOLE_PORT=3001
 export WEB_IMAGE=oioi-bwg:workspace-check CONSOLE_IMAGE=oioi-bwg-console:workspace-check
 export WEB_ENV_FILE="${root}/web.env" CONSOLE_ENV_FILE="${root}/console.env"
-compose() { docker compose -p "${project}" -f compose.oci-development.yml -f "${root}/override.yml" "$@"; }
+compose() { docker compose -p "${project}" -f ops/oci/compose.yml -f "${root}/override.yml" "$@"; }
 cleanup() {
   compose rm -sf web console >/dev/null 2>&1 || true
   docker network rm "${POSTGRES_NETWORK}" >/dev/null 2>&1 || true

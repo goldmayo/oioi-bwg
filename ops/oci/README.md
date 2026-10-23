@@ -19,6 +19,13 @@ Container Instance나 build runtime을 만들지 않고 기존 Compute와 GitHub
 
 ## 1. Install and configure
 
+현재 source Compose는 `ops/oci/compose.yml`, 초기 공개/secret 예제는
+`ops/oci/env/runtime-{public,secrets}.env.example`이다. installer는 이를 기존 호스트의
+`/srv/oioibawige/compose.oci-development.yml`과 `/etc/oioibawige/runtime-{public,secrets}.env`로
+설치한다. legacy release.env 예제는 `ops/oci/env/legacy/release.env.example`에 보존한다.
+경로 이관 근거는 [루트 배치 결과](../../docs/migration/implementation/ROOT-FILE-INVENTORY.md)를 따른다.
+아래 §9의 고정 commit·archive 명령은 당시 증거이며 현재 checkout의 source 경로와 구분한다.
+
 설치 전 root 실행 경로의 전체 상위 경로를 확인한다. installer는 runtime·scripts·deploy·config와
 각 ancestor가 root 소유·group/other 쓰기 금지인 일반 디렉터리인지 **첫 mkdir/lock 전에** 검사한다.
 기존 설치 대상과 lock의 symlink/hardlink·비보호 파일도 거절한다. preflight도 같은 디렉터리 조건을

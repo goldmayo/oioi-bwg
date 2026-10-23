@@ -36,8 +36,6 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
-!.env.oci-development.example
-!.env.oci-secrets.example
 /app.env.oci-development
 
 # independent Cloudflare Worker local state and secrets

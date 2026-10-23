@@ -79,11 +79,14 @@ runtime, config = map(Path, sys.argv[1:3])`,
         expect(await readFile(installed)).toEqual(await readFile(join("ops/oci", script)));
         expect((await stat(installed)).mode & 0o777).toBe(0o755);
       }
+      expect(await readFile(join(runtime, "compose.oci-development.yml"))).toEqual(
+        await readFile("ops/oci/compose.yml"),
+      );
       for (const [index, name] of protectedNames.entries()) {
         const source = [
           "ops/oci/deploy.conf.example",
-          "app.env.oci-development.example",
-          ".env.oci-secrets.example",
+          "ops/oci/env/runtime-public.env.example",
+          "ops/oci/env/runtime-secrets.env.example",
         ][index];
         expect(await readFile(join(config, name), "utf8")).toBe(
           repeat ? `preserved:${name}\n` : await readFile(source, "utf8"),

@@ -230,7 +230,7 @@ docker volume rm '<PROJECT>_node_modules' '<PROJECT>_web_node_modules' \
 docker compose -f compose.dev.yml up -d --build next
 ```
 
-`Dockerfile.dev`는 `NPM_CONFIG_STORE_DIR=/pnpm/store`로 pnpm store를 컨테이너 내부에
+`ops/docker/Dockerfile.dev`는 `NPM_CONFIG_STORE_DIR=/pnpm/store`로 pnpm store를 컨테이너 내부에
 명시적으로 고정한다. 따라서 위 절차 이외의 실수로 install을 실행해도 project root에
 `.pnpm-store`가 생기지 않는다.
 

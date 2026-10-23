@@ -35,7 +35,7 @@ class PairedDeployTest(unittest.TestCase):
         for path in (self.runtime / 'deploy', self.config, self.bin): path.mkdir(parents=True)
         self.state = self.runtime / 'deploy'
         self.file = self.runtime / 'compose.yml'
-        self.file.write_text((ROOT / 'compose.oci-development.yml').read_text())
+        self.file.write_text((ROOT / 'ops/oci/compose.yml').read_text())
         self.configuration = '''IMAGE_REPOSITORY=registry.test/namespace/web
 CONSOLE_IMAGE_REPOSITORY=registry.test/namespace/console
 POSTGRES_NETWORK=fixture-network

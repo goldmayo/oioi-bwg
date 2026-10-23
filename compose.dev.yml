@@ -19,7 +19,7 @@ services:
   next:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: ops/docker/Dockerfile.dev
     restart: unless-stopped
     working_dir: /app
     command: pnpm dev --hostname 0.0.0.0

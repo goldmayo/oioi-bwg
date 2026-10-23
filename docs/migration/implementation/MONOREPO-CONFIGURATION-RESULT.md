@@ -1362,3 +1362,26 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   성공했다. 필수 push hook의 최종 unit 및 CI·리뷰·squash/tree 대조는 PR 본문에 추가한다.
 - 다음은 운영 자산의 source 경로 이관, 이후 앱 Dockerfile 분리다. 후속 구현을 미리 쌓지 않는다.
   #199·F/www·실제 운영/Worker 배포·외부 전송·메일/계정 재활성화·UI 추출은 계속 보류한다.
+
+## 2026-10-23 후속 — 루트 배치 정리 2: 운영 자산
+
+- 저장소 도구 [#214](https://github.com/goldmayo/oioi-bwg/pull/214)은 최종 head `907989a`의
+  [Verify #510](https://github.com/goldmayo/oioi-bwg/actions/runs/39873159951) 전체 성공·리뷰 조건 충족 후
+  `7f98682394d2c7464f96569a06ab2bdf037ed5cd`로 squash 병합했다. fetch한 tree와 검증 head 일치 후
+  feature/root-operational-assets를 분기했다. [추가 승인 계획](MONOREPO-CONFIGURATION-PLAN.md#사용자-후속-승인--루트-배치-정리)을 따른다.
+- code commit `efe2c52`에서 개발 Dockerfile은 ops/docker로, 운영 Compose·세 env 예제는 ops/oci
+  하위로 옮겼다. [현재 경로](ROOT-FILE-INVENTORY.md#사용자-승인-후-배치-정리--운영-자산)를 기록했고
+  다섯 파일 모두 baseline과 byte 동일함을 확인했다. source 호출·fixture·현재 개발 안내를 맞췄다.
+- installer가 읽는 source만 바뀌며 기존 호스트 Compose 파일명·protected config 목적지·파일 권한·
+  보존/rollback 계약은 유지했다. installer fixture에 새 source와 실제 설치된 Compose의 내용 일치도
+  확인했다. 고정 ref의 과거 archive·운영 검증 문서는 당시 경로를 보존했다. 실제 installer는 실행하지 않았다.
+- 새 경로의 pnpm test:ops 21파일/280건, type-check:repo·lint:repo·format:check, shell syntax·diff 검사가
+  성공했다. 개인 env를 해석하지 않고 개발 Compose의 context=root·새 Dockerfile을 확인했으며,
+  빈 임시 env로 이전/현재 운영 Compose의 실제 JSON 해석 결과가 같은 것을 비교했다.
+- 새 경로에서 실제 개발 Docker image를 빌드했다. 임시 image
+  `sha256:1239baa0b7b6846f7d049157050f1786c97c0b079a8230451982c87797bb10a5`에서 network none으로
+  7 workspace manifest와 argon2 hash/verify native 실행을 확인한 뒤 tag를 정리했다. 기존 PG container
+  b1efbdd60ec2의 실행은 유지했다. 앱·package 소스와 운영 Dockerfile·의존성/설치 입력은 불변이므로
+  #214의 workspace unit 694건·PG 33건 증거를 재사용하며 최종 hook·CI 결과는 PR 본문에 기록한다.
+- root 추적 파일은 22개다. 다음은 앱별 Dockerfile·CI 소비자 정리다. k6 네 파일·세 명령·target은
+  그대로이며 성능 테스트를 실행하지 않았다. 운영 배포·보류 기능과 #199는 범위에 추가하지 않았다.
