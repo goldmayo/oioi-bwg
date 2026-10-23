@@ -1385,3 +1385,28 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   #214의 workspace unit 694건·PG 33건 증거를 재사용하며 최종 hook·CI 결과는 PR 본문에 기록한다.
 - root 추적 파일은 22개다. 다음은 앱별 Dockerfile·CI 소비자 정리다. k6 네 파일·세 명령·target은
   그대로이며 성능 테스트를 실행하지 않았다. 운영 배포·보류 기능과 #199는 범위에 추가하지 않았다.
+
+## 2026-10-23 후속 — 루트 배치 정리 3: 앱 Dockerfile
+
+- 운영 자산 [#215](https://github.com/goldmayo/oioi-bwg/pull/215)은 최종 head `e621f48`의
+  [Verify #511](https://github.com/goldmayo/oioi-bwg/actions/runs/39875516499) 전체 성공·리뷰 조건 충족 후
+  `550a6883099744701e7900a9fd974d5b71ed1202`로 squash 병합했다. fetch한 tree와 검증 head 일치 후
+  feature/app-dockerfile-ownership를 분기했다. [추가 승인 계획](MONOREPO-CONFIGURATION-PLAN.md#사용자-후속-승인--루트-배치-정리)의 마지막 단위다.
+- code commit `96d3a26`에서 root 운영 Dockerfile을 앱별로 분리했다. 각 파일은 해당 앱을 기본
+  BUILD_APP과 최종 runner로 사용한다. root context·기존 공통 설치/build 정책·local APP_ENV·
+  source map secret·runtime user/healthcheck/CMD를 보존했다. 공통 builder는 기본 ARG를 all로 대응하면
+  baseline과 byte 같다. 실제 local build의 양 standalone server.js 경로도 확인했다.
+- 일반 CI는 세 호출에 BUILD_APP=all을 명시해 기존 두 앱의 builder 결과를 검증·캐시하고 각 앱 파일의
+  runner를 읽는다. Web의 verification-cache는 두 builder entry를 확인한다. Promotion은 앱 파일과
+  BUILD_APP을 선택하며 Console에 Web GTM 입력을 추가하지 않는다. 어느 앱 Dockerfile 변경이든
+  두 이미지를 다시 빌드하도록 실제 Git/Turbo fixture와 보수적 image selection을 보완했다.
+- pnpm type-check·pnpm lint(양 앱 FSD 포함)·format:check 성공. APP_ENV local·빈 DSN·source map/
+  telemetry OFF에서 pnpm build가 양 앱 cache 0으로 성공했다. 두 Dockerfile의 실제 BuildKit --check는
+  경고 0이며 ops 21파일/283건이 성공했다. 추가 3건은 두 앱 Dockerfile·개발 Dockerfile의 보수적 판정이다.
+  unit source·DB/schema/runner는 불변이므로 #215 unit 694건·PG 33건 증거를 재사용하며 최종
+  push hook·CI의 실제 이미지/native/readiness/browser/paired Compose·리뷰·squash 증거는 PR에 기록한다.
+- Runbook 1.21과 index 1.37에 앱 파일 소유권·기본값/CI 명시값·재사용 계약을 맞췄다. 현재 README와
+  [배치 점검표](ROOT-FILE-INVENTORY.md)에 최종 경로를 기록했다. root 추적 파일은 **21개**이며
+  테스트·운영 자산·수동 도구의 승인된 이관을 마쳤다. k6 네 파일·세 실행 명령·target은 그대로다.
+- pruning·의존성 정리·별도 CI 최적화는 포함하지 않았다. 실제 운영/Worker 배포·외부 전송·메일/계정·
+  UI 추출과 #199 F/www 전환은 계속 보류한다. 앞서 완료된 정상화·BASE-01은 다시 수행하지 않았다.

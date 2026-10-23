@@ -122,3 +122,15 @@ k6는 성능 테스트로 `tests/k6/{common,load,stress,spike}.js`에 유지한�
 smoke는 새 source를 읽되 호스트의 Compose·protected config 목적지와 보호/보존·rollback은 유지한다.
 최초 표와 고정 ref의 과거 문서는 당시 경로를 보존한다. 이 단위 후 root 추적 파일은 22개다.
 앱 Dockerfile 분리는 다음 단위이며 k6의 위치·내용·세 실행 명령은 그대로다.
+
+## 사용자 승인 후 배치 정리 — 앱 이미지
+
+운영 자산 [#215](https://github.com/goldmayo/oioi-bwg/pull/215) 병합 후 `550a688`에서 시작했다.
+root Dockerfile을 apps/web/Dockerfile·apps/console/Dockerfile로 분리했다. 각 파일의 기본 BUILD_APP과
+최종 runner는 해당 앱이며 build context는 root다. 두 파일의 공통 build 정책과 설치 입력은 보존한다.
+일반 CI는 BUILD_APP=all로 기존 두 앱 builder 결과를 검증·캐시한 뒤 각 runner를 읽는다.
+Promotion은 해당 앱 파일과 BUILD_APP을 선택하며 실제 배포는 실행하지 않는다.
+
+어느 앱 Dockerfile 변경이든 두 이미지를 다시 빌드하는 기존 보수적 계약을 Git/Turbo 회귀로 검증한다.
+APP_ENV local/production·공개 입력·BuildKit secret·digest 출처 계약은 그대로다. pruning·의존성 정리·
+별도 CI 최적화는 추가하지 않았다. root 추적 파일은 최종 21개이며 k6는 tests/k6에 유지한다.

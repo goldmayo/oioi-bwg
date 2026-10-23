@@ -27,7 +27,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM dependencies AS builder
 
-ARG BUILD_APP=all
+ARG BUILD_APP=console
 ARG NEXT_PUBLIC_APP_ENV=local
 ARG NEXT_PUBLIC_GTM_ID
 ARG NEXT_PUBLIC_SENTRY_DSN
@@ -80,17 +80,7 @@ EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=6 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:3000/readyz').then((response) => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))"]
 
-FROM runtime-base AS runtime
-
-RUN mkdir -p apps/web/.next
-
-COPY --from=builder --chown=node:node /app/apps/web/public ./apps/web/public
-COPY --from=builder --chown=node:node /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
-
-CMD ["node", "apps/web/server.js"]
-
-FROM runtime-base AS runner-console
+FROM runtime-base AS runner
 
 RUN mkdir -p apps/console/.next
 
@@ -99,12 +89,3 @@ COPY --from=builder --chown=node:node /app/apps/console/.next/standalone ./
 COPY --from=builder --chown=node:node /app/apps/console/.next/static ./apps/console/.next/static
 
 CMD ["node", "apps/console/server.js"]
-
-# Reference both runtime targets so one cache export includes their shared builder.
-# CI transfers the two runnable images; no second standalone tarball is needed.
-FROM scratch AS verification-cache
-COPY --from=runtime /app/apps/web/server.js /web-server.js
-COPY --from=runner-console /app/apps/console/server.js /console-server.js
-
-# Keep the production runner as the default target.
-FROM runtime AS runner
