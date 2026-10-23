@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
+import { renderToString } from "react-dom/server";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -36,6 +37,13 @@ const album: Album = {
 };
 beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
+
+it("직접 URL의 서버 HTML에 앨범과 곡 링크를 포함한다", () => {
+  const html = renderToString(<AlbumDetailModal album={album} />);
+  expect(html).toContain(album.name);
+  expect(html).toContain('href="/songs/fixture"');
+  expect(html).toContain('role="dialog"');
+});
 
 it("앨범 이름과 곡 링크를 유지하고 Escape 중복 요청도 퇴장 완료 후 한 번만 닫는다", async () => {
   const onClose = vi.fn();

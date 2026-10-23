@@ -92,6 +92,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
       }}
     >
       <DialogContent
+        portalled={false}
         className="h-[85vh] max-h-[85vh] w-[calc(100%-2rem)] max-w-5xl gap-0 border-0 bg-transparent p-0 shadow-none data-[state=closed]:animate-none data-[state=open]:animate-none sm:max-w-5xl md:w-[calc(100%-5rem)]"
         showCloseButton={false}
         overlayProps={{
