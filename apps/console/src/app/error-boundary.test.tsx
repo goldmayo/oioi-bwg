@@ -40,10 +40,10 @@ describe.each([
       outcome: "unknown",
     });
 
-    const reset = vi.fn();
+    const retry = vi.fn();
     const renderBoundary = (value: Error) => (
       <StrictMode>
-        <Boundary error={value} reset={reset} />
+        <Boundary error={value} retry={retry} />
       </StrictMode>
     );
     const frame = document.createElement("iframe");
@@ -59,7 +59,7 @@ describe.each([
     });
     view.rerender(renderBoundary(error));
     fireEvent.click(view.getByRole("button", { name: retryLabel }));
-    expect(reset).toHaveBeenCalledOnce();
+    expect(retry).toHaveBeenCalledOnce();
     expect(capture).toHaveBeenCalledTimes(2);
 
     const nextError = Object.assign(new Error("another request"), { digest: error.digest });
