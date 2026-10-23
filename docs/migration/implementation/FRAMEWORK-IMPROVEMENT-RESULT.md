@@ -2,9 +2,9 @@
 title: "프레임워크 활용 감사 후속 개선 결과"
 kind: migration-result
 status: active
-source_commit: 0744a30d16bf3762177f50715b8de4608ac65168
+source_commit: f1a2905c05cd4ae1a25f9338e8815844c3487f24
 created_at: "2026-10-23"
-revision: 2
+revision: 3
 ---
 
 # 프레임워크 활용 감사 후속 개선 결과
@@ -54,11 +54,12 @@ A는 [#219](https://github.com/goldmayo/oioi-bwg/pull/219)의 squash
 `1e30f6786b7859735e85aefb0e881928683c25c3`로 병합됐다. 최종 CI head와 전체 tree 일치를 확인하고
 깨끗한 최신 local/origin에서 분기했다. B 구현·검증 소스는 위 source_commit이다.
 
-- 기존 Web Dialog의 overlayProps만 추가해 실제 portal overlay의 ref/style을 전달한다.
-  기본 consumer API는 보존하고 앨범은 이름·설명·접근 가능한 닫기 버튼을 제공한다.
+- 기존 Web Dialog의 overlayProps로 overlay의 ref/style을 전달한다. 기본 Portal 동작은 보존하고
+  앨범 route는 portalled=false로 초기 서버 HTML의 앨범·곡 링크를 유지한다.
+  앨범 이름·설명·접근 가능한 닫기 버튼도 제공한다.
 - Dialog가 Escape·바깥 클릭·focus trap·scroll lock을 담당한다. Trigger 없이 route에서 여는 경우도
   open autofocus 전에 기존 focus를 기억하고 닫을 때 연결된 element로 복원한다.
-- Portal의 실제 DOM이 준비된 뒤 GSAP 진입을 실행하고 퇴장 완료 후 한 번만 close한다.
+- 실제 DOM이 준비된 뒤 GSAP 진입을 실행하고 퇴장 완료 후 한 번만 close한다.
   contextSafe를 이벤트 안에서 호출해 unmount 시 tween/callback을 정리한다. 기존 onClose 우선과
   router.push('/', {scroll:false})·곡 링크·레이아웃을 유지하며 intercepting routes는 추가하지 않았다.
 
@@ -66,17 +67,23 @@ A는 [#219](https://github.com/goldmayo/oioi-bwg/pull/219)의 squash
 
 | 명령/범위 | 결과 |
 | --- | --- |
-| 앨범 모달 Vitest 집중 실행 | 1파일·2건 통과. 접근성 이름/곡 링크, Escape 중복·지연 callback, 홈 push 보존 |
-| `pnpm exec turbo run type-check lint test --concurrency=4` | 최종 17 task 성공·14개 캐시. Web 31파일·179건, 불변 Console/package 결과 재사용, 두 앱 FSD 포함 |
+| 앨범 모달 Vitest 집중 실행 | 최종 1파일·3건 통과. SSR HTML·접근성 이름/곡 링크, Escape 중복·지연 callback, 홈 push 보존 |
+| `pnpm exec turbo run type-check lint test --concurrency=4` | 최종 17 task 성공·14개 캐시. Web 31파일·180건, 불변 Console/package 결과 재사용, 두 앱 FSD 포함 |
 | `pnpm test:harness`, `git diff --check` | harness 40건·diff 성공 |
 | `python3 .local/album-dialog/safe-build.py` | Web local production build 1 task·캐시 0개 성공. 불변 Console build는 #219 결과 재사용 |
 | `node .local/album-dialog/browser-check.mjs` | 실제 Chromium·Radix·GSAP·빌드 CSS의 desktop/mobile 검증 성공, page error 0개 |
+| `node .local/album-dialog/next-check.mjs` | 실제 Next production server의 초기 HTML, JS 없는 화면, 실제 Next 홈·곡 이동 성공, page error 0개 |
 
 브라우저는 Tab/Shift+Tab trap·focus 복원·배경 scroll lock과 해제·Escape 중복·바깥 클릭·닫기 버튼,
 퇴장 중 unmount callback 취소, 기존 홈 push, 390×844 viewport 내부 배치를 확인했다.
 1440×1000 변경 전후와 모바일 screenshot을 직접 검토했다. fixture·log·PNG는 ignored
-`.local/album-dialog/`에 보존했다. Next navigation/image/link와 analytics만 fixture로 대체했으며
-실제 Next route 전환·운영 앨범 데이터·외부 analytics 전송 검증은 아니다.
+`.local/album-dialog/`에 보존했다. browser-check는 Next navigation/image/link와 analytics만 대체했다.
+별도 next-check는 실제 Next adapter와 제품 모달을 쓰고 앨범 데이터만 고정 fixture로 제공한다.
+운영 앨범 DB나 외부 analytics 전송 검증은 아니다.
+
+PR 최종 리뷰에서 기본 Portal의 SSR 본문 누락을 발견해 `f1a2905`에서 보완했다. 이전 head의 CI를
+최종 성공으로 사용하지 않으며 소스 변경 후 workspace·Web build·두 브라우저 fixture를 갱신했다.
+Next fixture의 최초 CSS 누락으로 이미지가 링크를 가린 실패는 실제 build CSS를 연결해 수정했다.
 
 초기 contextSafe callback 안의 ref guard는 React Compiler 규칙에 맞춰 이벤트 안으로 옮겼고,
 새 테스트의 jest-dom matcher 타입 import를 명시한 뒤 최종 검사를 통과했다. 제품의 오류 억제나
