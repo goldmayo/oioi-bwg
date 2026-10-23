@@ -1,10 +1,10 @@
 ---
 title: "Architecture Document Index"
 document_id: "00"
-version: "1.37"
+version: "1.38"
 status: "active"
 authority: "index"
-updated_at: "2026-10-23"
+updated_at: "2026-10-24"
 tags:
   - "architecture"
   - "documentation"
@@ -62,7 +62,7 @@ migration / implementation plan
 | 08 | Form / Client State Architecture | 1.0 | active | form / URL / local client state ownership |
 | 09 | Error UX / Observability Architecture | 1.5 | active | query/mutation error UX / logging / Sentry |
 | 10 | Testing Architecture | 1.8 | active | unit / integration / component / E2E strategy |
-| 11 | Content / i18n / Assets / Runtime Architecture | 1.11 | active | locale / content / assets / env / runtime |
+| 11 | Content / i18n / Assets / Runtime Architecture | 1.12 | active | locale / content / assets / env / runtime |
 | 12 | Deployment / Migration Runbook | 1.21 | active | migration phases / test infra / Docker / OCI / rollback |
 
 ---

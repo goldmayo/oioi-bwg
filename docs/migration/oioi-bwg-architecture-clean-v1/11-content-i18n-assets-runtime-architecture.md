@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.11"
+version: "1.12"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-23"
+updated_at: "2026-10-24"
 depends_on:
   - "01"
   - "05"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.11
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.12
 
 ## 1. 목적
 
@@ -221,7 +221,15 @@ runtime
 
 `NEXT_PUBLIC_*`는 실제 client exposure가 필요한 값만 사용한다.
 
-앱은 자신의 `.env*`만 읽는다. Web 설정에 값이 있다는 이유로 Console 설정 완료로 판단하지 않는다.
+로컬 개인 입력은 앱별 `.env.local` 한 파일로 통일한다. `.env.example`은 모든 값이 빈 공유 템플릿이며
+일반 로컬 실행의 필수·선택 입력을 명시하며 CI 전용 입력은 기존 CI·Docker에서 관리한다.
+Console의 메일 설정은 주석으로 보관하며 실제 기능 연결·전송과 구분한다.
+기존 `.env`를 통합할 때는 실제 적용 값과 보존할 설정을 확인해 이관하고 원본을 ignored 백업에 보관한다.
+실제 값을 임의로 삭제하거나 외부 접속 대상을 바꾸지 않는다.
+Next의 process 우선순위와 NODE_ENV별 파일 탐색 자체는 바꾸지 않으며 테스트 입력은 개인 파일과 분리한다.
+VM·CI의 process/BuildKit/Vault 주입 계약은 로컬 파일 통일과 별개다.
+
+앱은 자신의 환경 입력만 읽는다. Web 설정에 값이 있다는 이유로 Console 설정 완료로 판단하지 않는다.
 Console 앨범 업로드에는 `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
 `ASSETS_PUBLIC_BASE_URL` 다섯 항목이 필요하다. local launcher와 배포 env materializer는 누락을
 실행/승격 전에 거절한다. 공개 endpoint/bucket/base URL과 Vault의 쓰기 credential 매핑을 구분한다.

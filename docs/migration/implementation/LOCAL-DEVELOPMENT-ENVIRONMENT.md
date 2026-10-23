@@ -107,10 +107,15 @@ schema와 dialect이며 이 명령으로 DB에 접속하거나 migration을 적�
 
 ### 환경 파일의 역할과 작성 순서
 
-각 앱의 `.env.example`은 **값이 전부 빈 템플릿**이다. 실제 값은 개인 `.env` 또는 `.env.local`에
-입력하며 Git에 커밋하지 않는다. 한 파일로 합치도록 강제하지 않으며 기존 파일별 키와 값은 보존한다.
-Web의 기존 `.env`에 있는 인증·메일·R2 등의 항목도 현재 consumer 유무만으로 삭제하거나 옮기지 않는다.
-템플릿은 현재 앱의 입력을 안내하며 개인 파일에 보존한 추가 항목을 자동으로 제거하는 기준이 아니다.
+각 앱의 `.env.example`은 **값이 전부 빈 템플릿**이다. 2026-10-24 사용자의 단일 파일 관리 요청에 따라
+실제 값은 앱별 **`.env.local` 한 파일**에 입력하며 Git에 커밋하지 않는다. Console 실행기·개발 Compose와
+같은 경로를 쓰고 테스트에 개인 설정이 자동으로 섞이는 것을 줄이기 위한 저장소 규칙이다.
+Next가 다른 `.env*` 파일을 지원하는 동작 자체를 바꾸는 것은 아니다.
+
+기존 `.env`와 `.env.local`을 통합할 때는 두 파일의 실제 적용 값을 확인하고 원본을 ignored `.local/`에
+백업한다. 동일 키의 값이 다르면 우선순위·사용 목적을 확인한 뒤 반영한다. 사용자가 정리한 개인 파일은
+보존하며 consumer가 없다는 이유만으로 실제 값을 임의로 삭제하지 않는다.
+템플릿은 현재 앱의 입력을 안내하며 개인 파일의 추가 보존 항목을 자동으로 제거하는 기준이 아니다.
 
 두 앱은 아래 순서로 해당하는 그룹만 쓰고, 한글 주석에 공개 여부·입력 조건·변경 시 주의사항을 적는다.
 동일 파일 안에서 같은 키를 반복하지 않는다. 기존 중복을 정리할 때는 실제 적용 값이 유지되는지 확인한다.
@@ -120,10 +125,29 @@ Web의 기존 `.env`에 있는 인증·메일·R2 등의 항목도 현재 consum
 | 1 | 실행 환경 | `NEXT_PUBLIC_APP_ENV` |
 | 2 | 데이터베이스 | `DATABASE_URL` |
 | 3 | 접속·인증 | Console Origin·서명 키·MFA 키·등록 허용 설정 |
-| 4 | 파일 업로드·에셋 | Console R2 5개 입력. 기존 개인 Web 항목은 보존 |
-| 5 | 메일 | 기존 개인 파일에 있는 항목 보존. 현재 두 앱의 신규 필수 입력 아님 |
+| 4 | 파일 업로드·에셋 | Console R2 5개 입력 |
+| 5 | 메일 | Console용 5개 항목을 주석으로 보관. 현재 런타임 입력 아님 |
 | 6 | 관측 | 앱별 `NEXT_PUBLIC_SENTRY_DSN` |
 | 7 | 분석 | Web의 선택 입력 `NEXT_PUBLIC_GTM_ID` |
+
+현재 Web의 공개 기능과 해당 저장소 내 의존성을 따라 읽는 일반 앱 입력은 아래 네 개다.
+값이 env 파일에 존재한다는 사실과 현재 Web이 그 값을 소비한다는 사실을 구분한다.
+
+| 변수 | 필요 조건·소비 위치 |
+| --- | --- |
+| `NEXT_PUBLIC_APP_ENV` | 필수. `next.config.ts` → `shared/config/app-env.ts`가 dev/build 진입에서 검증 |
+| `DATABASE_URL` | 공개 조회·readyz에 필수. `@oioi-bwg/server/db`가 DB 획득 시 읽음 |
+| `NEXT_PUBLIC_SENTRY_DSN` | 선택. `shared/config/sentry.ts`가 해석하며 local에서는 비활성 |
+| `NEXT_PUBLIC_GTM_ID` | 선택. root layout이 값이 있을 때만 GTM을 로드 |
+
+로컬 템플릿은 Web의 일반 입력 4개와 Console의 일반 입력 12개만 선언한다. Console의 메일 설정
+5개는 사용자 요청에 따라 빈 값의 주석으로 보관한다. 개인 파일에 보관한 메일 값도 주석 상태를 유지하며
+실제 메일 기능 연결·전송은 별도 범위다.
+
+이 목록이 Web 코드 전체의 유일한 환경 접근이라는 뜻은 아니다. Sentry 게시·캐시 제어 등의 CI 전용
+입력은 로컬 템플릿에 넣지 않고 기존 CI·Docker와 [운영 입력 부록](ENVIRONMENT-VARIABLE-OPERATIONS-INVENTORY.md)에서 관리한다.
+`NEXT_RUNTIME`은 instrumentation에서 읽는 Next 제공 값이며 `NODE_ENV`와 함께 개인 배포 설정으로
+입력하지 않는다.
 
 새 개인 파일은 빈 템플릿을 복사한 뒤 다음 값을 직접 채운다. 기존 개인 파일은 복사로 덮어쓰지 않고
 필요한 항목만 반영한다. 아래 DB credential은 Compose의 로컬 개발 전용 값이다.
@@ -140,13 +164,15 @@ Web의 기존 `.env`에 있는 인증·메일·R2 등의 항목도 현재 consum
 
 Next 직접 실행은 앱 루트의 `.env*`를 읽는다. [공식 로드 순서](https://nextjs.org/docs/app/guides/environment-variables#environment-variable-load-order)는
 process → `.env.$NODE_ENV.local` → `.env.local` → `.env.$NODE_ENV` → `.env`이며 먼저 찾은 값이 우선한다.
+파일 하나를 선택하는 방식이 아니라 키마다 값을 찾는다. `.env.local`에 없는 키는 뒤의 `.env`에서
+채울 수 있으므로 파일을 분리하면 숨은 의존성이 생길 수 있다. process에 정의된 값은 파일보다 우선한다.
 `NODE_ENV=test`에서는 `.env.local`을 읽지 않지만 `.env`는 읽는다. `.env.example`은 자동 로드되지 않는다.
 이 파일 선택에 쓰이는 NODE_ENV와 배포 환경 계약인 NEXT_PUBLIC_APP_ENV를 구분한다.
 
 현재 개발 Compose의 Web `env_file`과 Console 로컬 실행기는 `.env.local`을 직접 지정한다.
 이 경로에서는 필요한 값을 해당 파일에 준비한다. Console 실행기는 이 파일의 값을 process보다 우선해
 전달하고 APP_ENV를 local로 고정한다. DB 도구의 명시적 입력 규칙은 위의 DB 도구 입력 절을 따른다.
-이 차이는 기존 실행 경로의 제약이며 모든 Next 직접 실행에 `.env.local`만 강제하는 규칙이 아니다.
+Next 직접 실행과 Console 실행기의 process 우선순위 차이는 위와 같으며 이번에는 launcher 동작을 바꾸지 않는다.
 
 값을 바꾼 뒤 dev 서버를 재시작한다. `NEXT_PUBLIC_*`는 production build 때 고정되므로 기존 산출물에
 runtime 파일만 바꿔 반영할 수 없다. 개인 파일은 권한 `0600`, 별도 백업 디렉터리는 `0700`으로 관리하고
