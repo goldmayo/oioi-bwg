@@ -4,7 +4,7 @@ kind: migration-result
 status: completed
 source_commit: 90e00f19d18fde3cb173c0c4bbaa8c07f807f7f9
 created_at: "2026-10-24"
-revision: 2
+revision: 3
 ---
 
 # 앱 환경 파일 템플릿과 개인 설정 정리 결과
@@ -61,27 +61,32 @@ Console은 development·production에서 `.env.local`을 읽고 test에서는 �
 
 - 일반 Web 입력은 필수 APP_ENV·DB와 선택 Sentry DSN·GTM의 4개다. TypeScript resolver로 Web
   진입점의 저장소 내 의존성 143파일을 추적했고 공용 server의 메일·R2·가입 서비스 import가 없음을 확인했다.
-- 두 템플릿에 Sentry 게시 입력 5개와 `OIOI_EPHEMERAL_BUILD`를 선택 빌드 그룹으로 추가했다.
-  Web은 일반 4개+빌드 6개, Console은 일반 12개+빌드 6개이며 모든 값은 빈칸이다.
+- 최종 로컬 템플릿은 Web 일반 입력 4개와 Console 일반 입력 12개만 선언하며 모든 값은 빈칸이다.
+  Console 메일 변수 5개는 사용자 요청에 따라 빈 값의 주석으로 보관한다.
+  중간에 추가했던 CI 전용 그룹은 로컬 입력 범위를 벗어나 제거했다. 기존 CI·Docker는 변경하지 않았다.
   Next 제공 `NEXT_RUNTIME`과 실행 모드 `NODE_ENV`는 사용자 배포 입력과 구분한다.
 - 공식 문서와 설치 Next 16.4.1의 `@next/env` 구현을 대조했다. 키마다 process와 파일 우선순위가
   적용되며 `.env.local`에 없는 키는 `.env`에서 채울 수 있다. test는 `.env.local`을 제외한다.
 - 앱별 개인 입력을 `.env.local` 하나로 통일했다. 기존 Console launcher·Compose 경로와 일치한다.
   active Runtime v1.12·인덱스·로컬 안내·README를 함께 갱신했다. 프레임워크 로더를 수정하지 않았다.
-- Web의 기존 고유 키 14개 값 전부를 `.env.local`에 보존했다. 기존에 없던 APP_ENV=local과 빈 GTM
-  항목을 추가해 16개 키가 됐다. 그중 현재 Web 미사용 12개는 보존 설정으로 주석을 구분했다.
-  통합 전 `.env` 원본은 ignored `.local/env-layout/`에 백업했고 자동 로드 위치에서는 정리했다.
-  Console의 고유 키 12개 값은 유지했다. 빌드 전용 빈 입력을 기존 개인 파일에 억지로 추가하지 않았다.
+- 초기 통합은 Web의 기존 14개 값을 보존하고 APP_ENV=local·빈 GTM을 추가했다. 이후 사용자가
+  개인 파일을 직접 정리한 결과를 보존했다. 최종 상태는 Web 4개·Console 12개와 Console의 주석 메일
+  5개다. 실제 값은 바꾸지 않고 비어 있는 CI 항목만 제거했으며 메일 주석의 실제 값도 유지했다.
+  통합 전 `.env`와 각 정리 전 개인 파일 원본은 ignored `.local/env-layout/`에 백업했다.
 
 | 명령/범위 | 실제 결과 |
 | --- | --- |
 | `node .local/env-layout/audit-web.mjs` | 저장소 내 143파일·공용 server 11파일 도달 경로 확인. 미해석 동적 import 없음. 동적 Sentry 입력 5개 대조 |
-| `node .local/env-layout/consolidate.mjs` | Web 기존 14개 값·Console 기존 12개 값·원본 백업 보존, 템플릿 10/18개 값 전부 빈칸, 개인 파일 ignore·0600 확인 |
+| `node .local/env-layout/consolidate.mjs` | 초기 통합 시점의 Web 기존 14개 값·Console 기존 12개 값·원본 백업 보존. 당시 템플릿 10/18개 확인 결과이며 최종 범위는 아래 검사로 대체 |
 | `node .local/env-layout/verify-single.mjs` | 실제 파일 6경로와 가짜 입력 우선순위 fixture 4경로 통과. 두 앱 APP_ENV=local 검증·Sentry 비활성·Console 입력 검증 통과 |
 | 추적 diff의 개인 값 대조 | 인증·MFA·R2·DSN 8개 값의 유입 없음. 실제 값 출력 없음 |
 | `git diff --check` | 통과 |
+| `node .local/env-layout/finalize-local.mjs` | 최종 템플릿·개인 입력 4/12개 일치, 템플릿 전 값 빈칸, Console 주석 메일 5개·모든 일반 입력 값 보존, 빈 CI 항목 6개씩 제거, local APP_ENV·DB·Git ignore 확인 |
 
 우선순위 fixture는 process 덮어쓰기, 모드별 local 파일, `.env.local`과 `.env`의 키별 우선순위,
 하위 파일 fallback, test의 `.env.local` 제외를 확인했다. 실제 두 앱은 development·production에서
 `.env.local`만 읽고 test에서는 개인 파일을 읽지 않았다. DB·앱 서버·SDK 전송을 실행하지 않았다.
 필수 hook·최종 CI·리뷰·squash 결과는 후속 PR 본문에 기록한다. 운영 주입·배포와 #199 보류는 그대로다.
+Console 의존성도 추가로 177파일을 대조해 현재 메일 provider import가 없고 R2 consumer는 있음을
+확인했다. 메일 주석 보관은 실제 메일 기능 활성화를 뜻하지 않는다. 최종 템플릿 수정에 기존 head의
+CI 성공을 재사용하지 않으며 새 head의 필수 검사를 확인한다.

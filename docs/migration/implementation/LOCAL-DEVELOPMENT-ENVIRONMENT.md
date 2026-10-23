@@ -113,8 +113,8 @@ schema와 dialect이며 이 명령으로 DB에 접속하거나 migration을 적�
 Next가 다른 `.env*` 파일을 지원하는 동작 자체를 바꾸는 것은 아니다.
 
 기존 `.env`와 `.env.local`을 통합할 때는 두 파일의 실제 적용 값을 확인하고 원본을 ignored `.local/`에
-백업한다. 동일 키의 값이 다르면 우선순위·사용 목적을 확인한 뒤 반영한다. Web의 인증·메일·R2 등
-기존 값도 같은 `.env.local`의 보존 설정 그룹에 남기며 consumer가 없다는 이유만으로 삭제하지 않는다.
+백업한다. 동일 키의 값이 다르면 우선순위·사용 목적을 확인한 뒤 반영한다. 사용자가 정리한 개인 파일은
+보존하며 consumer가 없다는 이유만으로 실제 값을 임의로 삭제하지 않는다.
 템플릿은 현재 앱의 입력을 안내하며 개인 파일의 추가 보존 항목을 자동으로 제거하는 기준이 아니다.
 
 두 앱은 아래 순서로 해당하는 그룹만 쓰고, 한글 주석에 공개 여부·입력 조건·변경 시 주의사항을 적는다.
@@ -125,12 +125,10 @@ Next가 다른 `.env*` 파일을 지원하는 동작 자체를 바꾸는 것은 
 | 1 | 실행 환경 | `NEXT_PUBLIC_APP_ENV` |
 | 2 | 데이터베이스 | `DATABASE_URL` |
 | 3 | 접속·인증 | Console Origin·서명 키·MFA 키·등록 허용 설정 |
-| 4 | 파일 업로드·에셋 | Console R2 5개 입력. 기존 개인 Web 항목은 보존 |
-| 5 | 메일 | 기존 개인 파일에 있는 항목 보존. 현재 두 앱의 신규 필수 입력 아님 |
+| 4 | 파일 업로드·에셋 | Console R2 5개 입력 |
+| 5 | 메일 | Console용 5개 항목을 주석으로 보관. 현재 런타임 입력 아님 |
 | 6 | 관측 | 앱별 `NEXT_PUBLIC_SENTRY_DSN` |
 | 7 | 분석 | Web의 선택 입력 `NEXT_PUBLIC_GTM_ID` |
-| 8 | 선택 빌드 입력 | 두 앱의 Sentry 게시·일회성 캐시 제어. 일반 로컬에서는 빈칸 |
-| 9 | 보존 설정 | 기존 개인 파일의 현재 미사용 항목. 새 템플릿의 필수 입력 아님 |
 
 현재 Web의 공개 기능과 해당 저장소 내 의존성을 따라 읽는 일반 앱 입력은 아래 네 개다.
 값이 env 파일에 존재한다는 사실과 현재 Web이 그 값을 소비한다는 사실을 구분한다.
@@ -142,14 +140,14 @@ Next가 다른 `.env*` 파일을 지원하는 동작 자체를 바꾸는 것은 
 | `NEXT_PUBLIC_SENTRY_DSN` | 선택. `shared/config/sentry.ts`가 해석하며 local에서는 비활성 |
 | `NEXT_PUBLIC_GTM_ID` | 선택. root layout이 값이 있을 때만 GTM을 로드 |
 
-이 네 개가 Web 코드 전체의 유일한 환경 접근이라는 뜻은 아니다. 두 앱의
-`SENTRY_SOURCE_MAPS_ENABLED=true` 빌드는 `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`,
-`SENTRY_RELEASE`를 추가로 요구한다. release는 이벤트 상관관계에도 쓰이며
-`oioi-bwg@<소문자 40자리 Git SHA>` 형식이다. `OIOI_EPHEMERAL_BUILD=true`는 공통 Next 설정의
-Turbopack 파일시스템 빌드 캐시만 끈다. 이 6개는 템플릿의 선택 빌드 그룹에 명시하며 일반 로컬에서
-직접 채우지 않는다. token을 넣어 소스맵 게시를 실제 실행하는 것은 이번 로컬 정리 범위가 아니다.
+로컬 템플릿은 Web의 일반 입력 4개와 Console의 일반 입력 12개만 선언한다. Console의 메일 설정
+5개는 사용자 요청에 따라 빈 값의 주석으로 보관한다. 개인 파일에 보관한 메일 값도 주석 상태를 유지하며
+실제 메일 기능 연결·전송은 별도 범위다.
+
+이 목록이 Web 코드 전체의 유일한 환경 접근이라는 뜻은 아니다. Sentry 게시·캐시 제어 등의 CI 전용
+입력은 로컬 템플릿에 넣지 않고 기존 CI·Docker와 [운영 입력 부록](ENVIRONMENT-VARIABLE-OPERATIONS-INVENTORY.md)에서 관리한다.
 `NEXT_RUNTIME`은 instrumentation에서 읽는 Next 제공 값이며 `NODE_ENV`와 함께 개인 배포 설정으로
-입력하지 않는다. OCI·컨테이너·CI 도구 입력은 기존 운영 부록의 별도 범위다.
+입력하지 않는다.
 
 새 개인 파일은 빈 템플릿을 복사한 뒤 다음 값을 직접 채운다. 기존 개인 파일은 복사로 덮어쓰지 않고
 필요한 항목만 반영한다. 아래 DB credential은 Compose의 로컬 개발 전용 값이다.
