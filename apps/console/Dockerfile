@@ -89,4 +89,3 @@ COPY --from=builder --chown=node:node /app/apps/console/.next/standalone ./
 COPY --from=builder --chown=node:node /app/apps/console/.next/static ./apps/console/.next/static
 
 CMD ["node", "apps/console/server.js"]
-
