@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.20"
+version: "1.21"
 status: "active"
 authority: "runbook"
 updated_at: "2026-10-23"
@@ -510,14 +510,17 @@ Promotion PR은 full verify 후 현재 `migration_main` head에서 하나의 논
 P06 선택적 재사용 계약은 마지막 **실제 배포 exit 0**의 immutable Actions receipt/candidate artifact만 기준으로 삼는다.
 최신 정상 배포의 PR/source/tree/run/attempt·artifact 미만료·성공 check·registry를 검증하고,
 그 기준 source부터 현재 source까지 앱 경로와 Turbo affected 결과를 함께 확인한다. 공통/알 수 없는 경로,
-lockfile·Dockerfile·공통 build 설정·build-time 공개 설정 변경, 이력/분석 오류는 두 이미지를 빌드한다.
+lockfile·앱 Dockerfile·공통 build 설정·build-time 공개 설정 변경, 이력/분석 오류는 두 이미지를 빌드한다.
 증거 누락/만료/불일치는 재사용을 금지한다. 첫 paired deployment는 두 이미지를 빌드한다.
 기존 source/run은 현재 조합 검증의 출처다. 각 image의 `buildSourceSha`와 `origin`(built/reused)을
 별도로 기록하고 Sentry release·OCI revision은 실제 build source를 유지한다. 재사용한 digest도 현재
 run에서 pull/smoke한다. B2는 후보의 baseline release ID와 lock 안의 VM current pair를 대조하고,
 불일치하면 서비스 변경 전에 거절한다. 기준이 null이면 기존 paired state가 없어야 한다.
 아래 후보 검증과 실제 배포 게이트는 그대로 적용한다. workflow는 검증된 기준에 따라 앱별 build를 선택하며
-Dockerfile의 기본 all builder는 일반 CI에 유지하고 Promotion은 BUILD_APP=web/console로 필요한 앱만 빌드한다.
+운영 Dockerfile은 apps/web·apps/console이 각각 소유하고 기본 BUILD_APP도 해당 앱이다. build context는
+저장소 root다. 일반 CI는 BUILD_APP=all을 명시해 기존 공유 builder의 두 standalone을 검증·캐시하며
+각 파일의 runner image를 만든다. Promotion은 BUILD_APP=web/console로 필요한 앱만 빌드한다.
+어느 앱의 Dockerfile 변경이든 기존 보수적 재사용 조건에 따라 두 이미지를 다시 빌드한다.
 두 exact digest를 같은 격리 DB에서 **동시에 실행**해 native/readiness/browser smoke를 통과해야 한다.
 현재 run/attempt·각 digest/buildSourceSha를 묶은 smoke proof가 없거나 다르면 candidate.json을 쓰지 않는다.
 실제 배포 exit 0 뒤에만 candidate와 command/merge/배포 run/attempt의 receipt를 하나의 immutable

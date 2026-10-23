@@ -88,6 +88,10 @@ Web/Console은 각 앱의 src에 FSD 레이어와 server boundary를 필요한 �
 앱 간 직접 import는 금지하며 공통 소스는 package 공개 entry를 사용합니다. 자동 탐색 설정 entry는
 각 root/app에 유지하고 tooling은 `@oioi-bwg/config/*`로 소비합니다.
 
+운영 Dockerfile은 `apps/web/Dockerfile`·`apps/console/Dockerfile`이 각 앱의 이미지를 소유합니다.
+저장소 루트에서 `docker build -f apps/web/Dockerfile .`처럼 실행하며 기본 빌드 대상은 해당 앱입니다.
+공통 개발 이미지는 `ops/docker/Dockerfile.dev`와 루트 Compose가 조합합니다.
+
 ---
 
 ## 서비스 운영 철학 (Philosophy)
