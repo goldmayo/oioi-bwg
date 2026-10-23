@@ -203,7 +203,8 @@ export function planImages({
       .filter(Boolean);
     // Root configuration, shared packages, lockfile, Dockerfile, workflows, or any
     // unknown path invalidate both. Turbo supplies the existing dependency graph.
-    if (files.some((f) => !/^apps\/(web|console)\//.test(f))) return result;
+    if (files.some((f) => f.endsWith("/Dockerfile") || !/^apps\/(web|console)\//.test(f)))
+      return result;
     const dry = JSON.parse(
       String(
         execute("pnpm", ["exec", "turbo", "run", "build", "--affected", "--dry=json"], {

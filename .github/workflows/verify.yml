@@ -175,13 +175,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-verify-amd64-v2-
             ${{ runner.os }}-verify-amd64-v1-
-      - name: Build both runtime targets and cache
+      - name: Build shared app artifacts and cache
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: apps/web/Dockerfile
           target: verification-cache
           platforms: linux/amd64
-          build-args: NEXT_PUBLIC_APP_ENV=local
+          build-args: |
+            BUILD_APP=all
+            NEXT_PUBLIC_APP_ENV=local
           outputs: type=cacheonly
           cache-from: type=local,src=${{ runner.temp }}/buildx-cache
           cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
@@ -189,11 +192,14 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: apps/web/Dockerfile
           target: runner
           platforms: linux/amd64
           load: true
           tags: oioi-bwg:workspace-check
-          build-args: NEXT_PUBLIC_APP_ENV=local
+          build-args: |
+            BUILD_APP=all
+            NEXT_PUBLIC_APP_ENV=local
           cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
       - name: Archive verified container
         run: |
@@ -203,11 +209,14 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: runner-console
+          file: apps/console/Dockerfile
+          target: runner
           platforms: linux/amd64
           load: true
           tags: oioi-bwg-console:workspace-check
-          build-args: NEXT_PUBLIC_APP_ENV=local
+          build-args: |
+            BUILD_APP=all
+            NEXT_PUBLIC_APP_ENV=local
           cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
       - name: Archive verified Console container
         run: docker save --output "${{ runner.temp }}/ci-build/console-image.tar" oioi-bwg-console:workspace-check
@@ -477,6 +486,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: apps/web/Dockerfile
           target: runner
           platforms: linux/arm64
           push: true
@@ -503,7 +513,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: runner-console
+          file: apps/console/Dockerfile
+          target: runner
           platforms: linux/arm64
           push: true
           tags: ${{ env.CONSOLE_IMAGE_REPOSITORY }}:candidate-${{ steps.source.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
