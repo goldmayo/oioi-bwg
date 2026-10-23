@@ -21,6 +21,10 @@ Next.js development container     Caddy -> Next.js standalone container
 별도 staging 환경을 운영하지 않지만 기존 외부 host/bucket 식별자는 보존한다.
 Web metadata는 localhost이며 local Sentry 전송은 비활성이다. 이 문서는 실제 운영 배포 승인을 뜻하지 않는다.
 
+현재 코드가 읽는 변수·기본값·필수 조건은 [환경변수 전체 조사](ENVIRONMENT-VARIABLE-INVENTORY.md),
+운영·CI·도구·테스트 입력은 [부록](ENVIRONMENT-VARIABLE-OPERATIONS-INVENTORY.md)에서 확인한다.
+개인 env 값이나 실제 운영 설정 완료 여부를 조사한 결과는 아니다.
+
 ## Analysis
 
 아래 발견/해결과 Schema decision은 2026-08-29 최초 baseline의 이력이다. 현재 실행은 이어지는
