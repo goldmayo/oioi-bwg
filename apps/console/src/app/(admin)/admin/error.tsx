@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useQueryErrorResetBoundary } from "@tanstack/react-query";
 
 import { captureClientErrorOnce } from "@/shared/api/capture-client-error";
 import { Button } from "@/shared/ui/button";
@@ -8,11 +9,12 @@ import { Button } from "@/shared/ui/button";
 /** Admin route subtree의 초기 조회·렌더링 실패를 복구 가능한 화면으로 격리한다. */
 export default function AdminError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
+  const { reset } = useQueryErrorResetBoundary();
   useEffect(() => {
     captureClientErrorOnce(error, {
       source: "admin-error-boundary",
@@ -29,7 +31,13 @@ export default function AdminError({
           잠시 후 다시 시도해 주세요. 문제가 계속되면 운영 로그를 확인해 주세요.
         </p>
       </div>
-      <Button type="button" onClick={reset}>
+      <Button
+        type="button"
+        onClick={() => {
+          reset();
+          retry();
+        }}
+      >
         다시 시도
       </Button>
     </section>

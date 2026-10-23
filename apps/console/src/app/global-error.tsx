@@ -10,10 +10,10 @@ import { captureClientErrorOnce } from "@/shared/api/capture-client-error";
  */
 export default function GlobalError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   useEffect(() => {
     captureClientErrorOnce(error, {
@@ -34,7 +34,7 @@ export default function GlobalError({
             예기치 못한 오류가 발생했습니다. 서비스 이용에 불편을 드려 죄송합니다.
           </p>
           <button
-            onClick={() => reset()}
+            onClick={retry}
             className="bg-qwer-w rounded-lg px-6 py-2 font-bold text-white transition-opacity hover:opacity-90"
           >
             다시 시도하기
