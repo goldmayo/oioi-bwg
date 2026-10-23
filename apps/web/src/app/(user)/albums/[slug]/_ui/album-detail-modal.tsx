@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { X } from "lucide-react";
@@ -14,6 +14,7 @@ import { SongTitleBadge } from "@/entities/song";
 import { analytics } from "@/shared/lib/analytics";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/ui/dialog";
 
 interface AlbumDetailModalProps {
   album: Album;
@@ -22,70 +23,97 @@ interface AlbumDetailModalProps {
 
 export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
   const router = useRouter();
-  const modalRef = useRef<HTMLDivElement>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(true);
+  const [modalElement, setModalElement] = useState<HTMLDivElement | null>(null);
+  const [backdropElement, setBackdropElement] = useState<HTMLDivElement | null>(null);
+  const closing = useRef(false);
+  const returnFocus = useRef<HTMLElement | null>(null);
   /**
    * 모달 진입 애니메이션
    */
-  useGSAP(() => {
-    if (modalRef.current && backdropRef.current) {
-      gsap.fromTo(backdropRef.current, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "none" });
+  const { contextSafe } = useGSAP(
+    () => {
+      if (modalElement && backdropElement) {
+        gsap.fromTo(backdropElement, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "none" });
 
-      gsap.fromTo(
-        modalRef.current,
-        { scale: 0.99 },
-        { scale: 1, duration: 0.5, ease: "back.out(1.2)" },
-      );
-    }
-  }, []);
+        gsap.fromTo(
+          modalElement,
+          { scale: 0.99 },
+          { scale: 1, duration: 0.5, ease: "back.out(1.2)" },
+        );
+      }
+    },
+    { dependencies: [modalElement, backdropElement], revertOnUpdate: true },
+  );
 
   /**
    * 닫기 애니메이션 수행 후 부모의 onClose 호출 혹은 홈으로 이동
    */
-  const handleClose = (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    if (!modalRef.current || !backdropRef.current) return;
+  const handleClose = () => {
+    if (closing.current || !modalElement || !backdropElement) return;
+    closing.current = true;
+    contextSafe(() => {
+      gsap.killTweensOf([modalElement, backdropElement]);
 
-    // 강제 라우팅(replace) 대신 부드러운 푸시(push)를 사용하여 Next.js <Link>와 똑같이 캐시를 활용하도록 합니다
-    const tl = gsap.timeline({
-      onComplete: () => {
-        if (onClose) {
-          onClose();
-        } else {
-          router.push("/", { scroll: false });
-        }
-      },
-    });
+      // 강제 라우팅(replace) 대신 부드러운 푸시(push)를 사용하여 Next.js <Link>와 똑같이 캐시를 활용하도록 합니다
+      const tl = gsap.timeline({
+        onComplete: () => {
+          setOpen(false);
+          if (onClose) {
+            onClose();
+          } else {
+            router.push("/", { scroll: false });
+          }
+        },
+      });
 
-    tl.to(modalRef.current, {
-      scale: 0.99,
-      opacity: 0,
-      duration: 0.4,
-      ease: "power2.out",
-    }).to(
-      backdropRef.current,
-      {
+      tl.to(modalElement, {
+        scale: 0.99,
         opacity: 0,
         duration: 0.4,
         ease: "power2.out",
-      },
-      "<",
-    );
+      }).to(
+        backdropElement,
+        {
+          opacity: 0,
+          duration: 0.4,
+          ease: "power2.out",
+        },
+        "<",
+      );
+    })();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden p-4 md:p-10">
-      {/* Backdrop */}
-      <div
-        ref={backdropRef}
-        className="bg-background/80 absolute inset-0 backdrop-blur-xl"
-        onClick={handleClose}
-      />
-
-      {/* Modal Content Container */}
-      <div className="pointer-events-none relative flex h-full max-h-[85vh] w-full max-w-5xl items-center justify-center">
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        if (!value) handleClose();
+      }}
+    >
+      <DialogContent
+        className="h-[85vh] max-h-[85vh] w-[calc(100%-2rem)] max-w-5xl gap-0 border-0 bg-transparent p-0 shadow-none data-[state=closed]:animate-none data-[state=open]:animate-none sm:max-w-5xl md:w-[calc(100%-5rem)]"
+        showCloseButton={false}
+        overlayProps={{
+          ref: setBackdropElement,
+          className:
+            "bg-background/80 backdrop-blur-xl data-[state=open]:animate-none data-[state=closed]:animate-none",
+        }}
+        onOpenAutoFocus={() => {
+          returnFocus.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        }}
+        onCloseAutoFocus={(event) => {
+          if (returnFocus.current?.isConnected) {
+            event.preventDefault();
+            returnFocus.current.focus();
+          }
+        }}
+      >
+        <DialogTitle className="sr-only">{album.name}</DialogTitle>
+        <DialogDescription className="sr-only">수록곡 목록</DialogDescription>
         <div
-          ref={modalRef}
+          ref={setModalElement}
           className="bg-card border-border pointer-events-auto relative flex h-full w-full flex-col overflow-hidden rounded-2xl border shadow-2xl md:flex-row"
         >
           {/* 좌측: 앨범 커버 */}
@@ -117,6 +145,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
               size="icon"
               className="absolute top-8 left-8 z-20 h-12 w-12 rounded-full border border-white/10 bg-black/20 text-white backdrop-blur-xl hover:bg-black/40"
               onClick={handleClose}
+              aria-label="앨범 상세 닫기"
             >
               <X size={24} />
             </Button>
@@ -165,7 +194,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
