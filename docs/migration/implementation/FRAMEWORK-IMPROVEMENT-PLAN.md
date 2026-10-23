@@ -1,9 +1,10 @@
 ---
 title: "프레임워크 활용 감사 후속 개선 계획"
 kind: migration-plan
-status: active
+status: completed
 source_commit: b45e97145bd5e86044aa1f53bcdfb056f79d4b33
 created_at: "2026-10-23"
+revision: 2
 ---
 
 # 프레임워크 활용 감사 후속 개선 계획
@@ -46,6 +47,7 @@ B 병합 후 최신 소스로 순수 정책과 앱 adapter의 경계를 정한�
 중복 처리·SDK와 route metadata의 소유권을 보존한다. 설치된 SDK 기본 옵션으로 계약을 대체하지 않는다.
 감사에서 승인된 산출물은 설계다. 공통 package/export·client/server 경계·계약 테스트와 전환 순서를
 구체화하고, 별도 architecture 결정이나 범위 확대가 필요하면 그 지점을 명시한다.
+설계 산출물과 이후 구현의 canonical plan은 [순수 관측 정책 공통화 계획](OBSERVABILITY-POLICY-SHARING-PLAN.md)이다.
 
 ## 공통 제외와 검증 원칙
 

@@ -1,10 +1,10 @@
 ---
 title: "프레임워크 활용 감사 후속 개선 결과"
 kind: migration-result
-status: active
-source_commit: f1a2905c05cd4ae1a25f9338e8815844c3487f24
+status: completed
+source_commit: fc3167df8bbf7b5e392f3c38c731af3f910463e3
 created_at: "2026-10-23"
-revision: 3
+revision: 4
 ---
 
 # 프레임워크 활용 감사 후속 개선 결과
@@ -52,7 +52,7 @@ fixture·log는 ignored `.local/framework-error-recovery/`에 보존했다.
 
 A는 [#219](https://github.com/goldmayo/oioi-bwg/pull/219)의 squash
 `1e30f6786b7859735e85aefb0e881928683c25c3`로 병합됐다. 최종 CI head와 전체 tree 일치를 확인하고
-깨끗한 최신 local/origin에서 분기했다. B 구현·검증 소스는 위 source_commit이다.
+깨끗한 최신 local/origin에서 분기했다. B 구현·검증 소스는 `f1a2905c05cd4ae1a25f9338e8815844c3487f24`다.
 
 - 기존 Web Dialog의 overlayProps로 overlay의 ref/style을 전달한다. 기본 Portal 동작은 보존하고
   앨범 route는 portalled=false로 초기 서버 HTML의 앨범·곡 링크를 유지한다.
@@ -89,3 +89,17 @@ Next fixture의 최초 CSS 누락으로 이미지가 링크를 가린 실패는 
 새 테스트의 jest-dom matcher 타입 import를 명시한 뒤 최종 검사를 통과했다. 제품의 오류 억제나
 필수 검사 우회는 없다. repo 타입/lint·ops·format의 필수 push hook 결과와 최종 CI/리뷰/병합은
 PR 본문에 기록한다. C는 순수 정책 공통화 설계이며 운영·UI-03 보류 범위를 유지한다.
+
+## 단위 C — FWA-04 공통화 설계 산출물
+
+B는 [#220](https://github.com/goldmayo/oioi-bwg/pull/220)의 squash인 위 source_commit으로 병합됐다.
+SSR 보존을 포함한 최종 head `0d829af`의 전체 CI 성공과 병합 tree 일치 후 깨끗한 local/origin에서 분기했다.
+[별도 후속 계획](OBSERVABILITY-POLICY-SHARING-PLAN.md)이 순수 정책의 함수/소유권, private workspace 권고,
+architecture 예외 개정과 Next/Docker/영향 판정의 연결, 단계별 출력 동등성 검증을 소유한다.
+
+이 단위는 Markdown만 변경한다. 소스 근거 경로·문서 링크·diff를 검토하고 문서 전용 scope/verify를 확인한다.
+불변 제품 소스의 전체 코드 검사는 #220 최종 CI를 재사용하며 이번 문서 작업에서 다시 실행하지 않는다.
+최종 head·문서 CI·리뷰/병합은 PR 본문에 기록한다.
+
+승인된 A/B 구현과 C 설계가 완료됐다. FWA-04 runtime 중복은 남아 있으며 새 후속 계획의 구현은 별도다.
+Console Proxy는 감사의 유지 판정을 따르고 #199 기존 Draft/head·운영 및 UI-03 보류를 유지했다.
