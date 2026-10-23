@@ -4,10 +4,13 @@ kind: migration-result
 status: completed
 source_commit: 90e00f19d18fde3cb173c0c4bbaa8c07f807f7f9
 created_at: "2026-10-24"
-revision: 1
+revision: 2
 ---
 
 # 앱 환경 파일 템플릿과 개인 설정 정리 결과
+
+최초 정리는 [#222](https://github.com/goldmayo/oioi-bwg/pull/222)의 결과다. 이후 사용자의 단일 파일
+관리 요청에 따른 변경은 아래 후속 단위에 기록한다. 현재 규칙은 로컬 개발환경 안내를 따른다.
 
 ## 범위와 완료 조건
 
@@ -49,3 +52,36 @@ Console은 development·production에서 `.env.local`을 읽고 test에서는 �
 
 개인 파일 로딩 검증은 앱 실행·DB 연결·R2 업로드·Sentry/GTM 전송 검증이 아니다.
 #199·F/www·운영/Worker 배포·실제 외부 전송·메일/계정 재활성화·UI-03은 계속 보류한다.
+
+## 후속 단위 — Web 입력 범위 명시와 .env.local 통일
+
+기준은 #222 squash `cd2b7ca2db123cd02734dbddceaea421468f96db`이며 최신 local/origin과 깨끗한
+작업 트리를 확인했다. 사용자가 Next 로드 순서를 확인하고 `.env`/`.env.local` 중 하나로 관리하도록
+요청한 후속 단위다. 앞 단위의 파일 분할 보존 결과를 삭제하지 않고 변경 근거를 여기에 남긴다.
+
+- 일반 Web 입력은 필수 APP_ENV·DB와 선택 Sentry DSN·GTM의 4개다. TypeScript resolver로 Web
+  진입점의 저장소 내 의존성 143파일을 추적했고 공용 server의 메일·R2·가입 서비스 import가 없음을 확인했다.
+- 두 템플릿에 Sentry 게시 입력 5개와 `OIOI_EPHEMERAL_BUILD`를 선택 빌드 그룹으로 추가했다.
+  Web은 일반 4개+빌드 6개, Console은 일반 12개+빌드 6개이며 모든 값은 빈칸이다.
+  Next 제공 `NEXT_RUNTIME`과 실행 모드 `NODE_ENV`는 사용자 배포 입력과 구분한다.
+- 공식 문서와 설치 Next 16.4.1의 `@next/env` 구현을 대조했다. 키마다 process와 파일 우선순위가
+  적용되며 `.env.local`에 없는 키는 `.env`에서 채울 수 있다. test는 `.env.local`을 제외한다.
+- 앱별 개인 입력을 `.env.local` 하나로 통일했다. 기존 Console launcher·Compose 경로와 일치한다.
+  active Runtime v1.12·인덱스·로컬 안내·README를 함께 갱신했다. 프레임워크 로더를 수정하지 않았다.
+- Web의 기존 고유 키 14개 값 전부를 `.env.local`에 보존했다. 기존에 없던 APP_ENV=local과 빈 GTM
+  항목을 추가해 16개 키가 됐다. 그중 현재 Web 미사용 12개는 보존 설정으로 주석을 구분했다.
+  통합 전 `.env` 원본은 ignored `.local/env-layout/`에 백업했고 자동 로드 위치에서는 정리했다.
+  Console의 고유 키 12개 값은 유지했다. 빌드 전용 빈 입력을 기존 개인 파일에 억지로 추가하지 않았다.
+
+| 명령/범위 | 실제 결과 |
+| --- | --- |
+| `node .local/env-layout/audit-web.mjs` | 저장소 내 143파일·공용 server 11파일 도달 경로 확인. 미해석 동적 import 없음. 동적 Sentry 입력 5개 대조 |
+| `node .local/env-layout/consolidate.mjs` | Web 기존 14개 값·Console 기존 12개 값·원본 백업 보존, 템플릿 10/18개 값 전부 빈칸, 개인 파일 ignore·0600 확인 |
+| `node .local/env-layout/verify-single.mjs` | 실제 파일 6경로와 가짜 입력 우선순위 fixture 4경로 통과. 두 앱 APP_ENV=local 검증·Sentry 비활성·Console 입력 검증 통과 |
+| 추적 diff의 개인 값 대조 | 인증·MFA·R2·DSN 8개 값의 유입 없음. 실제 값 출력 없음 |
+| `git diff --check` | 통과 |
+
+우선순위 fixture는 process 덮어쓰기, 모드별 local 파일, `.env.local`과 `.env`의 키별 우선순위,
+하위 파일 fallback, test의 `.env.local` 제외를 확인했다. 실제 두 앱은 development·production에서
+`.env.local`만 읽고 test에서는 개인 파일을 읽지 않았다. DB·앱 서버·SDK 전송을 실행하지 않았다.
+필수 hook·최종 CI·리뷰·squash 결과는 후속 PR 본문에 기록한다. 운영 주입·배포와 #199 보류는 그대로다.
