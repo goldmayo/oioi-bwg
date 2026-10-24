@@ -1,0 +1,9 @@
+{
+  "extends": "./typescript/repository.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true
+  },
+  "include": ["*.ts"]
+}

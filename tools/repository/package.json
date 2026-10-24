@@ -1,0 +1,22 @@
+{
+  "name": "@oioi-bwg/repository-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint": "./eslint.config.ts",
+    "./steiger": "./steiger.config.ts",
+    "./typescript/repository.json": "./typescript/repository.json"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@oioi-bwg/config": "workspace:*",
+    "@types/node": "^20",
+    "eslint": "^9",
+    "jiti": "2.6.1",
+    "typescript": "^5"
+  }
+}

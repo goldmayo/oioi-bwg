@@ -131,3 +131,19 @@ server source만 바꿔 globalCacheInputs를 대조하자 외부 의존성 hash�
 [PLAN의 2026-10-25 5단계 보완](MONOREPO-BOUNDARIES-AND-EXECUTION-PLAN.md#2026-10-25-5단계-보완--root-내부-의존성의-전역-hash-해소)에 도구 workspace로 실제 consumer를 이관하는 실행안을 추가했다. 헌법 2.19·Testing 1.12는 이 전환의 책임과 root adapter 한계를 먼저 정의한다. 이 기록은 도구 코드 이관·cache 개선 완료를 뜻하지 않는다. 진단 뒤 코드/타입/테스트/build는 추가 실행하지 않은 문서 전용 checkpoint다.
 
 문서 링크 검사에서 4단계 이관으로 없어진 AS-IS 코드 경로를 발견했다. PLAN의 과거 코드 근거는 원래 source_commit의 GitHub blob 링크로 고정해 현재 구조와 혼동하지 않게 했다. 로컬 문서 링크와 해당 기준 커밋의 대상 존재를 다시 확인한다.
+
+
+### 5단계 A 통합 증거
+
+[PR #230](https://github.com/goldmayo/oioi-bwg/pull/230)의 [Verify #529](https://github.com/goldmayo/oioi-bwg/actions/runs/40115304369)는 문서 전용 scope/verify 성공과 무거운 job 생략을 확인했다. 두 push hook도 Markdown-only로 검증을 생략했다. 검증 head `820d1ac04639ae2adc2cb262ffa22e24641b62d8`와 squash `ec9776055267f7eb6dedfd464639a18b5cf9439b`의 tree가 동일하다.
+
+## 5단계 B1 — 저장소 설정 조합의 실제 소유 workspace
+
+기준은 `ec9776055267f7eb6dedfd464639a18b5cf9439b`다. private repository-tools workspace와 기존 공통 Node preset을 사용하는 공개 repository preset을 추가했다. Root ESLint/Steiger는 Tool의 공개 설정 파일을 재수출하는 자동 탐색 entry이며 기존 실제 설정 조합과 앱 root는 유지한다. Root/scripting/운영 테스트의 TS 설정도 Tool의 공개 preset 파일을 extends한다.
+
+Tool은 config·TypeScript·Node types·ESLint·jiti를 직접 소유한다. 새 workspace를 dependency 분석과 타입 소속 검사에 포함하고 root repo lint는 Tool을 중복 검사하지 않는다. 제품 runtime의 tooling import 금지를 Tool까지 확장했다. root의 JS/TS adapter는 source별로 대응하는 Tool 공개 export 파일만 참조할 수 있으며 TS preset도 공개 export와의 대응을 검사한다.
+
+pnpm의 새 importer 해석이 일부 검사 도구 patch를 재선택해, 기존 root 잠금 버전으로 새 importer를 고정했다. 기존 importer/package/snapshot은 모두 보존하고 Tool importer만 추가했으며 frozen offline 설치가 성공했다. 새 설정을 추가한 직후 tracked-config harness는 아직 Git에 등록되지 않은 Tool 파일 때문에 실패했으며, 파일을 추적한 뒤 harness 44/44가 성공했다. 이 단계는 Root 내부 의존성 제거 전 준비 작업이며 cache 개선 완료로 보고하지 않는다.
+
+
+최종 로컬 검증은 type-check 7 workspace+root·lint(새 graph 포함)·FSD·harness 44건·unit 99파일 700건·format 모두 성공했다. Tool 파일의 추적 등록 후 관련 소속 harness 6건도 성공했다. 임시 미등록 root adapter, 등록 adapter의 비공개 파일 참조, 제품 runtime의 Tool 참조를 각각 넣자 lint:deps가 종료 코드 1과 해당 정책 오류로 거절했고 모두 원복했다. 최종 push/CI 결과는 PR에 기록한다.

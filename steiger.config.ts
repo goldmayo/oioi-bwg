@@ -1,3 +1,1 @@
-import { createSteigerConfig } from "@oioi-bwg/config/steiger";
-
-export default createSteigerConfig("./apps/*/src");
+export { default } from "./tools/repository/steiger.config.ts";
