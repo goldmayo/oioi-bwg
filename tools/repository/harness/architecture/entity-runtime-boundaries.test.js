@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { build } from "esbuild";
 
-const repositoryRoot = path.resolve(import.meta.dirname, "../..");
+const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
 
 for (const app of ["web", "console"]) {
   const appRoot = path.join(repositoryRoot, "apps", app);

@@ -6,7 +6,7 @@ import test from "node:test";
 import { ESLint } from "eslint";
 
 test("independent Worker runtime boundaries match in repository and workspace lint", async () => {
-  const root = path.resolve(import.meta.dirname, "../..");
+  const root = path.resolve(import.meta.dirname, "../../../..");
   const workspace = path.join(root, "apps/sentry-slack-relay");
   for (const source of [
     'export * from "@oioi-bwg/config/next";',
@@ -45,7 +45,7 @@ test("independent Worker runtime boundaries match in repository and workspace li
 });
 
 test("contracts lint rejects platform and implementation dependencies", async () => {
-  const repositoryRoot = path.resolve(import.meta.dirname, "../..");
+  const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
   const eslint = new ESLint({ cwd: path.join(repositoryRoot, "packages/contracts") });
   for (const source of [
     'export { readFile } from "node:fs";',
@@ -68,12 +68,11 @@ test("contracts lint rejects platform and implementation dependencies", async ()
 });
 
 test("server database entry rejects client conditions and loads without connecting under server conditions", () => {
-  const repositoryRoot = path.resolve(import.meta.dirname, "../..");
   const entry = "@oioi-bwg/server/db";
   const code = `import(${JSON.stringify(entry)})`;
   const env = { ...process.env };
   delete env.DATABASE_URL;
-  const options = { cwd: repositoryRoot, encoding: "utf8", env };
+  const options = { cwd: path.resolve(import.meta.dirname, "../.."), encoding: "utf8", env };
   const client = spawnSync(process.execPath, ["--import", "tsx", "--eval", code], options);
   assert.equal(client.error, undefined);
   assert.notEqual(client.status, 0);
@@ -88,7 +87,7 @@ test("server database entry rejects client conditions and loads without connecti
 });
 
 test("server lint rejects app/framework dependencies and reversed persistence boundaries", async () => {
-  const repositoryRoot = path.resolve(import.meta.dirname, "../..");
+  const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
   const eslint = new ESLint({ cwd: path.join(repositoryRoot, "packages/server") });
   for (const [filePath, dependency] of [
     ["src/auth/probe.ts", "react"],
@@ -115,7 +114,7 @@ test("server lint rejects app/framework dependencies and reversed persistence bo
 });
 
 test("repository hooks and package commands apply the same dependency boundaries", async () => {
-  const root = path.resolve(import.meta.dirname, "../..");
+  const root = path.resolve(import.meta.dirname, "../../../..");
   for (const [workspace, filename, dependency] of [
     ["server", "src/services/album-image-service.ts", "drizzle-orm"],
     ["server", "src/repositories/song-repository.ts", "../services/song-service"],

@@ -6,7 +6,7 @@ import test from "node:test";
 
 import ts from "typescript";
 
-const root = path.resolve(import.meta.dirname, "../..");
+const root = path.resolve(import.meta.dirname, "../../../..");
 
 function readProject(filename) {
   const configPath = path.join(root, filename);

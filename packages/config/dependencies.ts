@@ -144,7 +144,11 @@ export function workspaceDependencyErrors(
       if (!from) {
         if (to?.directory === "tools/repository") {
           const entry = to.exports?.[rootToolEntries[module.source] ?? ""];
-          if (!entry || dependency.resolved !== to.directory + "/" + entry.slice(2))
+          if (
+            !dependency.module.startsWith(".") ||
+            !entry ||
+            dependency.resolved !== to.directory + "/" + entry.slice(2)
+          )
             errors.push(`${module.source}: 등록된 공개 tooling 진입점만 참조해야 함`);
         }
         continue;

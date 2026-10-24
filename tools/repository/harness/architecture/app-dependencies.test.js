@@ -16,7 +16,7 @@ const dependencyFields = [
   "peerDependencies",
 ];
 
-function readAppManifests(root = process.cwd()) {
+function readAppManifests(root = path.resolve(import.meta.dirname, "../../../..")) {
   const appsDirectory = path.join(root, "apps");
 
   return fs
@@ -73,7 +73,7 @@ test("app workspaces do not depend directly on other app workspaces", () => {
 });
 
 test("config workspace owns its exports and imports without repository implementation dependencies", () => {
-  const directory = path.resolve(import.meta.dirname, "../../packages/config");
+  const directory = path.resolve(import.meta.dirname, "../../../../packages/config");
   const manifest = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf8"));
   assert.equal(manifest.private, true);
   for (const target of Object.values(manifest.exports)) {
@@ -107,7 +107,7 @@ test("config workspace owns its exports and imports without repository implement
 });
 
 test("shared mocks and source packages select and invalidate both apps verification", (context) => {
-  const repositoryRoot = path.resolve(import.meta.dirname, "../..");
+  const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "oioi-turbo-affected-"));
   context.after(() => fs.rmSync(fixtureRoot, { recursive: true, force: true }));
 
@@ -126,6 +126,12 @@ test("shared mocks and source packages select and invalidate both apps verificat
     fs.copyFileSync(path.join(repositoryRoot, filename), destination);
   }
   fs.cpSync(path.join(repositoryRoot, "packages"), path.join(fixtureRoot, "packages"), {
+    recursive: true,
+    filter: (filename) =>
+      !filename.split(path.sep).some((part) => ["node_modules", ".turbo"].includes(part)),
+  });
+
+  fs.cpSync(path.join(repositoryRoot, "tools"), path.join(fixtureRoot, "tools"), {
     recursive: true,
     filter: (filename) =>
       !filename.split(path.sep).some((part) => ["node_modules", ".turbo"].includes(part)),

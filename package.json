@@ -29,7 +29,7 @@
     "test:ops": "vitest run --config tests/ops/vitest.config.ts",
     "test:unit": "vitest",
     "test:unit:run": "turbo run test",
-    "test:harness": "node --import tsx --test harness/architecture/*.test.js",
+    "test:harness": "pnpm --filter @oioi-bwg/repository-tools test:harness",
     "test:stress": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/stress.js",
     "test:spike": "K6_WEB_DASHBOARD=true k6 run -e BASE_URL=https://staging.oioibawige.com tests/k6/spike.js",
     "lint:repo": "eslint . --ignore-pattern \"apps/**\" --ignore-pattern \"packages/**\" --ignore-pattern \"tools/**\"",

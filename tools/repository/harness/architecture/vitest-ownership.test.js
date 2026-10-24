@@ -6,7 +6,7 @@ import test from "node:test";
 
 import { createVitest, parseCLI } from "vitest/node";
 
-const root = path.resolve(import.meta.dirname, "../..");
+const root = path.resolve(import.meta.dirname, "../../../..");
 
 test("relay workspace owns its Node unit test without browser or application aliases", async () => {
   const directory = path.join(root, "apps/sentry-slack-relay");

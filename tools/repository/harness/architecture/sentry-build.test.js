@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { build } from "esbuild";
 
-const repositoryRoot = path.resolve(import.meta.dirname, "../..");
+const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
 let configLoad = 0;
 
 async function loadBuildConfig(app, environment) {

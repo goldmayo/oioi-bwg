@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import test from "node:test";
 
-const repositoryRoot = path.resolve(import.meta.dirname, "../..");
+const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
 
 function loadAppConfig(app, cwd, ephemeralBuild, environment = {}) {
   const appDirectory = path.join(repositoryRoot, "apps", app);
