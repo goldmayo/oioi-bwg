@@ -106,7 +106,7 @@ test("config workspace owns its exports and imports without repository implement
   visit(directory);
 });
 
-test("shared mocks and source packages select and invalidate both apps verification", (context) => {
+test("task inputs preserve required invalidation and unrelated cache hashes", (context) => {
   const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "oioi-turbo-affected-"));
   context.after(() => fs.rmSync(fixtureRoot, { recursive: true, force: true }));
@@ -117,9 +117,11 @@ test("shared mocks and source packages select and invalidate both apps verificat
     "pnpm-workspace.yaml",
     "turbo.json",
     "tsconfig.config.json",
+    "eslint.config.ts",
     ".gitignore",
     "apps/web/package.json",
     "apps/console/package.json",
+    "apps/sentry-slack-relay/package.json",
   ]) {
     const destination = path.join(fixtureRoot, filename);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -182,34 +184,136 @@ test("shared mocks and source packages select and invalidate both apps verificat
         env: { ...fixtureEnvironment, TURBO_SCM_BASE: "HEAD", TURBO_SCM_HEAD: "HEAD" },
       },
     );
-    return JSON.parse(output).tasks;
+    const result = JSON.parse(output);
+    assert.equal(result.globalCacheInputs.hashOfInternalDependencies, "");
+    return result.tasks;
   }
 
-  const baseline = dryRun().filter(({ taskId }) => /^@oioi-bwg\/(web|console)#/.test(taskId));
+  const tasks = dryRun();
+  const baseline = tasks.filter(
+    ({ command, resolvedTaskDefinition }) =>
+      command !== "<NONEXISTENT>" && resolvedTaskDefinition.cache,
+  );
+  assert.equal(baseline.length, 19);
+  for (const name of ["type-check", "lint"])
+    assert.equal(
+      tasks.find(({ taskId }) => taskId === `@oioi-bwg/repository-tools#${name}`)
+        .resolvedTaskDefinition.cache,
+      false,
+    );
   assert.deepEqual(dryRun(true), []);
 
-  for (const filename of [
-    "tsconfig.config.json",
-    "packages/config/vitest/server-only.ts",
-    "packages/config/eslint/app.ts",
-    "packages/config/steiger.ts",
-    "packages/config/vitest/browser.js",
-    "packages/config/vitest/browser.setup.ts",
-    "packages/config/next.ts",
-    "packages/config/sentry-build.ts",
-    "packages/contracts/src/song.ts",
-    "packages/server/src/services/song-service.ts",
+  const ids = (names, tasks) =>
+    names.flatMap((name) => tasks.map((task) => `@oioi-bwg/${name}#${task}`));
+  const apps = ["web", "console"];
+  const products = [...apps, "server", "contracts", "sentry-slack-relay"];
+  const appTypes = ids(apps, ["type-check"]);
+  const appBuilds = ids(apps, ["build"]);
+  const appLint = ids(apps, ["lint"]);
+  const appUnit = ids(apps, ["test"]);
+  const configChecks = ids(["config"], ["type-check", "lint"]);
+  for (const directory of [
+    "apps/web",
+    "apps/console",
+    "apps/sentry-slack-relay",
+    "packages/server",
+    "packages/contracts",
+    "packages/config",
   ]) {
+    const task = baseline.find(
+      ({ taskId }) => taskId === `@oioi-bwg/${directory.split("/")[1]}#type-check`,
+    );
+    for (const config of ["tsconfig.json", "tsconfig.config.json"]) {
+      const filename = path.join(repositoryRoot, directory, config);
+      if (!fs.existsSync(filename)) continue;
+      const inputs = new Set();
+      const parsed = ts.getParsedCommandLineOfConfigFile(
+        filename,
+        {},
+        {
+          ...ts.sys,
+          readFile(file) {
+            const value = ts.sys.readFile(file);
+            if (value !== undefined) {
+              const actual = fs.realpathSync(file);
+              if (actual.startsWith(path.join(repositoryRoot, "packages/config/typescript/")))
+                inputs.add(actual);
+            }
+            return value;
+          },
+          onUnRecoverableConfigFileDiagnostic: (error) => assert.fail(String(error.messageText)),
+        },
+      );
+      const program = ts.createProgram(parsed.fileNames, parsed.options);
+      for (const { fileName } of program.getSourceFiles())
+        if (fileName.startsWith(path.join(repositoryRoot, "packages/config/")))
+          inputs.add(fileName);
+      for (const file of inputs) {
+        const relative = path.relative(path.join(repositoryRoot, directory), file);
+        assert.ok(Object.hasOwn(task.inputs, relative), `${directory} must hash ${relative}`);
+      }
+    }
+  }
+  const cases = [
+    ["tsconfig.config.json", []],
+    ["eslint.config.ts", []],
+    ["tools/repository/harness/architecture/app-dependencies.test.js", []],
+    ["packages/config/vitest/server-only.ts", [...appUnit, ...ids(["server"], ["test"])]],
+    ["packages/config/vitest/client-only.ts", appUnit],
+    ["packages/config/vitest/browser.js", [...appUnit, ...appTypes]],
+    ["packages/config/vitest/browser.setup.ts", appUnit],
+    ["packages/config/vitest/postgres.js", appTypes],
+    ["packages/config/next.ts", [...appBuilds, ...appTypes]],
+    ["packages/config/sentry-build.ts", [...appBuilds, ...appTypes]],
+    ["packages/config/steiger.ts", [...appLint, ...appTypes]],
+    [
+      "packages/config/typescript/base.json",
+      [...ids(products, ["type-check"]), ...appLint, ...appBuilds],
+    ],
+    ["packages/config/typescript/next.json", [...appTypes, ...appLint, ...appBuilds]],
+    ["packages/config/typescript/node.json", ids(products, ["type-check"])],
+    ...["app", "base", "architecture-rule"].map((name) => [
+      `packages/config/eslint/${name}.ts`,
+      ids(products, ["type-check", "lint"]),
+    ]),
+    [
+      "packages/contracts/src/song.ts",
+      [
+        ...ids(apps, ["type-check", "lint", "test", "build"]),
+        ...ids(["server", "contracts"], ["type-check", "lint", "test"]),
+      ],
+    ],
+    [
+      "packages/server/src/services/song-service.ts",
+      [
+        ...ids(apps, ["type-check", "lint", "test", "build"]),
+        ...ids(["server"], ["type-check", "lint", "test"]),
+      ],
+    ],
+  ];
+  for (const [filename, consumers] of cases) {
     const changedFile = path.join(fixtureRoot, filename);
     const original = fs.readFileSync(changedFile);
-    fs.appendFileSync(changedFile, "\n// shared input change\n");
-    const affected = dryRun(true);
-    for (const { taskId, hash } of baseline) {
-      const selected = affected.find((task) => task.taskId === taskId);
-      assert.ok(selected, `${filename} must select ${taskId}`);
-      assert.notEqual(selected.hash, hash, `${filename} must invalidate ${taskId}`);
+    try {
+      fs.appendFileSync(changedFile, "\n// cache input change\n");
+      const current = dryRun();
+      const affected = dryRun(true);
+      const expected = new Set([
+        ...consumers,
+        ...(filename.startsWith("packages/config/") ? configChecks : []),
+      ]);
+      for (const { taskId, hash } of baseline) {
+        const task = current.find((task) => task.taskId === taskId);
+        assert.equal(task.hash !== hash, expected.has(taskId), `${filename}: ${taskId}`);
+        if (expected.has(taskId))
+          assert.ok(
+            affected.some((task) => task.taskId === taskId),
+            `${filename} must select ${taskId}`,
+          );
+      }
+    } finally {
+      fs.writeFileSync(changedFile, original);
     }
-    fs.writeFileSync(changedFile, original);
     assert.deepEqual(dryRun(true), []);
   }
 });
