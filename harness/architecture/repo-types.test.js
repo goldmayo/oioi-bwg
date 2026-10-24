@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
@@ -15,6 +16,52 @@ function readProject(filename) {
   assert.deepEqual(parsed.errors, []);
   return parsed;
 }
+
+test("every tracked TypeScript test has exactly one primary type owner", () => {
+  const projects = [
+    "tsconfig.json",
+    "tsconfig.config.json",
+    "scripts/tsconfig.json",
+    "apps/web/tsconfig.json",
+    "apps/console/tsconfig.json",
+    "apps/sentry-slack-relay/tsconfig.json",
+    "packages/server/tsconfig.json",
+    "packages/contracts/tsconfig.json",
+    "packages/config/tsconfig.json",
+    "tests/tsconfig.json",
+    "tests/tsconfig.web.json",
+  ].map((config) => ({ config, project: readProject(config) }));
+  const tests = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" })
+    .split("\0")
+    .filter((file) => /\.(?:test|spec)\.[cm]?tsx?$/.test(file));
+  assert.ok(tests.length > 0);
+  for (const file of tests) {
+    // fileNames는 include로 소유한 진입점이다. import로 방문한 파일과 구분한다.
+    const owners = projects.filter(({ project }) =>
+      project.fileNames.includes(path.join(root, file)),
+    );
+    assert.equal(owners.length, 1, `${file}: ${owners.map(({ config }) => config).join(", ")}`);
+  }
+  assert.ok(projects.every(({ project }) => project.options.strict && project.options.noEmit));
+});
+
+test("the contracts type program rejects errors inside its real test entry", () => {
+  const project = readProject("packages/contracts/tsconfig.json");
+  const filename = path.join(root, "packages/contracts/src/contract.test.ts");
+  const source = fs.readFileSync(filename, "utf8") + "\nconst invalid: string = 42;\n";
+  const host = ts.createCompilerHost(project.options);
+  const original = host.getSourceFile.bind(host);
+  host.getSourceFile = (file, version, onError, fresh) =>
+    file === filename
+      ? ts.createSourceFile(file, source, version)
+      : original(file, version, onError, fresh);
+  const program = ts.createProgram(project.fileNames, project.options, host);
+  assert.ok(
+    ts
+      .getPreEmitDiagnostics(program)
+      .some(({ file, code }) => file?.fileName === filename && code === 2322),
+  );
+});
 
 test("repo type programs cover every tracked operational TypeScript source", () => {
   const projects = [
