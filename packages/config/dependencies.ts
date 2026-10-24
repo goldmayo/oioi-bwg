@@ -22,6 +22,23 @@ export function dependencyOptions(
       from: { path: "^packages/" },
       to: { path: "^apps/" },
     },
+    {
+      name: "root-to-apps",
+      severity: "error",
+      from: {
+        pathNot: [
+          "^(?:apps|packages)/",
+          "^tests/integration/m7-foundation\\.postgres\\.test\\.ts$",
+        ],
+      },
+      to: { path: "^apps/" },
+    },
+    {
+      name: "foundation-app-adapter",
+      severity: "error",
+      from: { path: "^tests/integration/m7-foundation\\.postgres\\.test\\.ts$" },
+      to: { path: "^apps/", pathNot: "^apps/web/src/server/http/api-response\\.ts$" },
+    },
     ...owners
       .filter(({ directory }) => directory.startsWith("apps/"))
       .map(({ directory }) => ({
