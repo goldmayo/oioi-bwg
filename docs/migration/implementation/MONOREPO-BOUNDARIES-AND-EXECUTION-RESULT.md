@@ -169,3 +169,14 @@ Tool cwd로 실제 실행하자 Linter의 암묵적 cwd로 FSD 12사례가 설�
 ## 5단계 B2-b — dependency runner와 기존 CLI 호환 진입점
 
 기준은 `cbc35bc499785cdd830dfc393ad63d366c42f42e`다. 분석기 구현을 Tool의 src로 옮기고 repository root 계산을 실제 파일 위치에 맞췄다. 정책과 분석 범위는 유지한다. Tool의 lint:deps 명령과 공개 CLI export를 추가하고 Root 명령은 Tool 위임 뒤 기존 Turbo boundaries를 실행한다. 기존 scripts 파일은 등록된 Tool 공개 entry만 import한다. Tool의 기존 직접 의존성으로 실행하므로 lockfile 변경은 없다. 전체 type-check(7 workspace+root)·lint(새 Tool 위임 포함)·FSD·harness 44/44·unit 99파일 700건·format가 성공했다. 기존 Root CLI와 Tool cwd의 직접 CLI를 각각 Node+tsx로 실행해 stdout/stderr와 종료 코드 0이 동일함도 확인했다. 최종 push/CI는 PR에 기록한다.
+
+
+### 5단계 B2-b 통합 증거
+
+[PR #233](https://github.com/goldmayo/oioi-bwg/pull/233)의 [Verify #532](https://github.com/goldmayo/oioi-bwg/actions/runs/40119049822)와 push hook 전체 gate가 성공했다. 검증 head `f5947ddd8af7accd2b14d849625c4b97bf9bae8a`와 squash `54e4c1c462fe17bf0cc4a2d7d8fd82d920e716c0`의 tree가 동일하다.
+
+## 5단계 B3-a — operator 구현의 실제 소비자 이관
+
+기준은 `54e4c1c462fe17bf0cc4a2d7d8fd82d920e716c0`다. 실행·정책 구현을 Tool src/operators로 옮기고 기존 scripts 경로는 등록된 공개 entry를 재수출한다. local CLI·OCI worker·테스트의 기존 import 경로를 보존한다. 본문의 DB 대상/권한 검사·오류 클래스·파일 보호·서비스 호출은 변경하지 않는다. Tool은 이미 server 의존성을 직접 소유하며 lock 변경은 없다.
+
+실행·정책 본문 189줄의 byte 동일성을 확인했다. 전체 type-check·lint·FSD·harness 44/44·unit 99파일 700건·ops 21파일 283건·format가 성공했다. build:console-operator와 bundle/provenance의 모든 source hash 대조도 성공했고 새 Tool 구현과 기존 Root entry가 모두 포함됐다. 실제 DB 검증은 PR CI가 소유한다. 두 구현과 동일 오류 클래스·공개 entry·경계를 한 checkpoint로 맞추므로 변경량이 400줄 목표를 소폭 넘는다. 리뷰는 이동 본문 → 공개 entry/Root 재수출 → 경계/SSOT 순서로 한다.

@@ -11,6 +11,8 @@ const rootToolEntries: Record<string, string> = {
   "eslint.config.ts": "./eslint",
   "steiger.config.ts": "./steiger",
   "scripts/check-workspace-dependencies.ts": "./cli/dependencies",
+  "scripts/console-mfa-execution.ts": "./operator/execution",
+  "scripts/console-mfa-operator-policy.ts": "./operator/policy",
 };
 
 const testFiles = "\\.(?:test|spec)\\.[cm]?[jt]sx?$";
