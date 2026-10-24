@@ -4,13 +4,14 @@
 선언하고 `package.json`의 명시적 subpath를 사용한다. 앱 `src`와 공용 서버·계약 runtime에서는
 이 package를 import하지 않는다. 앱별 env 해석과 Next/ESLint/Vitest 자동 탐색 entry는 consumer가 소유한다.
 
-| entry                                      | 책임                                                              |
-| ------------------------------------------ | ----------------------------------------------------------------- |
-| `next`, `sentry-build`                     | 앱이 검증한 입력을 사용하는 공통 build factory                    |
-| `eslint/*`, `steiger`                      | 공통 규칙·FSD 검사. 실행 root는 consumer가 전달                   |
-| `vitest/browser`, `vitest/postgres`        | 공통 테스트 설정. 앱 alias/include·DB 실행 root는 consumer가 소유 |
-| `vitest/client-only`, `vitest/server-only` | Vitest 전용 marker mock의 파일 경로                               |
-| `typescript/*.json`                        | 공통 TS preset. include·프로그램 소속은 consumer가 소유           |
+| entry                                      | 책임                                                                        |
+| ------------------------------------------ | --------------------------------------------------------------------------- |
+| `next`, `sentry-build`                     | 앱이 검증한 입력을 사용하는 공통 build factory                              |
+| `eslint/*`, `steiger`                      | 공통 규칙·FSD 검사. 실행 root는 consumer가 전달                             |
+| `vitest/browser`, `vitest/postgres`        | 공통 테스트 설정. 앱 alias/include·DB 실행 root는 consumer가 소유           |
+| `vitest/client-only`, `vitest/server-only` | Vitest 전용 marker mock의 파일 경로                                         |
+| `dependencies`                             | source·config·test의 workspace 경계 정책. root runner가 각 TS 설정으로 해석 |
+| `typescript/*.json`                        | 공통 TS preset. include·프로그램 소속은 consumer가 소유                     |
 
 Node 22.16의 Vitest config loader는 외부 `.ts` entry를 직접 실행하지 못하므로 두 Vitest factory는
 ESM JavaScript와 JSDoc `@satisfies`를 사용한다. package의 `checkJs`·strict 타입 검사를 유지한다.

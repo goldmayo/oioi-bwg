@@ -12,8 +12,8 @@ created_at: "2026-10-25"
 
 | 단계 | 범위                    | 상태                   |
 | ---- | ----------------------- | ---------------------- |
-| 1    | DEP-01 의존성 선언      | 로컬 검증 완료·CI 대기 |
-| 2    | BND-01 경계 검사        | 미착수                 |
+| 1    | DEP-01 의존성 선언      | 병합 완료 — PR #225 |
+| 2    | BND-01 경계 검사        | 분석기 검증 중                 |
 | 3    | TYP-01 테스트 타입 소속 | 미착수                 |
 | 4    | OWN-01/02 검증 소유권   | 미착수                 |
 | 5    | CAC-01 캐시 영향 범위   | 미착수                 |
@@ -60,3 +60,20 @@ created_at: "2026-10-25"
 - `git diff --check`와 변경 문서의 명시적 Prettier 검사를 실행한다. 최종 push hook·PR/CI·squash 통합 증거는 PR과 다음 단계의 이력에서 연결한다.
 
 단계 2~6의 경계·타입·실행 정책 변경과 Docker prune는 아직 포함하지 않았다. 실제 PostgreSQL·컨테이너·브라우저 smoke는 이번 로컬 검증에 포함하지 않았으며 코드 PR의 CI 결과와 구분한다.
+
+### 1단계 통합 증거
+
+[PR #225](https://github.com/goldmayo/oioi-bwg/pull/225)의 [Verify #524](https://github.com/goldmayo/oioi-bwg/actions/runs/40109845064)가 실제 PG·이미지·브라우저·paired smoke를 포함해 성공했다. 미해결 리뷰 없이 squash 결과 `2a1603048f9e3df23458e5720f815a3e995d7493`로 통합했으며 검증 head `90ddfbfcbf8e9c86b741d6fe7752b503739c98ed`와 통합 tree가 동일하다. push hook의 type/lint/unit·root type/lint·harness 40건·ops 283건·format도 성공했다.
+
+## 2단계 A — resolved dependency 분석기
+
+기준 `2a1603048f9e3df23458e5720f815a3e995d7493`에서 분기했다. 분석기와 필수 실행 연결을 독립 검증 가능한 두 PR로 나눈다. A는 `pnpm lint:deps` 명령과 정책을 제공하며 B에서 회귀 fixture·기존 lint/verify/hook 연결·Testing SSOT 개정을 적용한다.
+
+- root의 tsx runner가 workspace별 TS 설정으로 source·config·test를 해석한다. `@/*`, `exports`, type-only·문자열 dynamic import도 분석한다. 정책 factory는 `@oioi-bwg/config/dependencies`가 소유한다.
+- 패키지의 앱 역참조, 앱 간 참조, 상대 경로로 workspace 경계를 우회한 참조, 미선언 내부 의존성·`workspace:` 누락, client의 server core 참조, contracts의 플랫폼 의존성, runtime 순환을 오류로 처리한다.
+- ESLint/Steiger FSD 검사는 유지한다. Turbo boundaries를 함께 실행해 선언된 의존성과 실제 사용을 대조한다. 문자열을 계산하는 dynamic import 등 정적 해석 불가능한 참조까지 증명하는 도구는 아니다.
+- Node 22.16을 지원하는 dependency-cruiser 18.7.0을 고정했다. 새 tool과 필요한 전이 의존성만 추가했으며 기존 lockfile importer·package·snapshot 값이 보존됨을 YAML 구조로 대조했다.
+- Console auth의 type import가 포함된 순환은 경고로 남긴다. 실제 runtime edge만으로 닫히는 순환은 실패한다. 도메인 auth 리팩터링은 이 범위에 섞지 않는다.
+- 외부 k6 runtime의 스크립트와 소비 경로가 없는 legacy `drizzle/relations.ts`는 초기 진입점에서 제외한다. Drizzle 파일을 삭제하거나 reachable dependency 검사에서 제외하지 않는다.
+
+실행한 검증: frozen offline 설치·전체 `pnpm type-check`·`pnpm lint:deps` 성공. 정상 저장소는 6 workspace·root·Web integration graph 오류 0건, Turbo 426파일·6패키지 위반 0건이다. 임시 contracts 테스트에서 Web source를 상대 경로로 참조하자 `packages-to-apps` 위반과 종료 코드 1을 확인했고 fixture를 제거했다. 추가로 `pnpm lint`, `pnpm lint:fsd`, `pnpm test:harness` 40/40, `pnpm test:unit:run` 99파일·700건(5개 task 모두 cache miss), `pnpm format:check`가 성공했다. CI 결과는 PR에 기록한다.

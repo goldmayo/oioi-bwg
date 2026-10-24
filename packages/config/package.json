@@ -22,7 +22,8 @@
     "./typescript/base.json": "./typescript/base.json",
     "./typescript/next.json": "./typescript/next.json",
     "./typescript/node.json": "./typescript/node.json",
-    "./eslint/worker": "./eslint/worker.ts"
+    "./eslint/worker": "./eslint/worker.ts",
+    "./dependencies": "./dependencies.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
@@ -44,7 +45,8 @@
   },
   "devDependencies": {
     "@types/node": "^20",
-    "typescript": "^5",
-    "jiti": "2.6.1"
+    "dependency-cruiser": "18.7.0",
+    "jiti": "2.6.1",
+    "typescript": "^5"
   }
 }
