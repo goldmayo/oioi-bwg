@@ -40,7 +40,8 @@
     "test:integration:admin": "tsx scripts/run-postgres-integration-tests.ts --admin-smoke",
     "test:integration:admin:local": "docker compose -f compose.dev.yml up -d --wait postgres && tsx scripts/run-postgres-integration-tests.ts --local --admin-smoke",
     "type-check:config": "tsc --noEmit -p tsconfig.config.json",
-    "type-check:scripts": "tsc --noEmit -p scripts/tsconfig.json"
+    "type-check:scripts": "tsc --noEmit -p scripts/tsconfig.json",
+    "lint:deps": "tsx scripts/check-workspace-dependencies.ts && turbo boundaries"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
@@ -50,12 +51,14 @@
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^20.4.3",
     "@feature-sliced/steiger-plugin": "0.7.0",
+    "@oioi-bwg/config": "workspace:*",
     "@oioi-bwg/contracts": "workspace:*",
     "@oioi-bwg/server": "workspace:*",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.2",
+    "dependency-cruiser": "18.7.0",
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.9",
     "esbuild": "0.25.12",
@@ -82,8 +85,7 @@
     "turbo": "^2.11.2",
     "typescript": "^5",
     "typescript-eslint": "8.56.1",
-    "vitest": "^4.1.2",
-    "@oioi-bwg/config": "workspace:*"
+    "vitest": "^4.1.2"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,tsx,mts,cts}": [
