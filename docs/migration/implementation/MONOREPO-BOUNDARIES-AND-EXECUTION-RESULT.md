@@ -16,7 +16,7 @@ created_at: "2026-10-25"
 | 2    | BND-01 경계 검사        | 병합 완료 — PR #226·#227                 |
 | 3    | TYP-01 테스트 타입 소속 | 병합 완료 — PR #228                 |
 | 4    | OWN-01/02 검증 소유권   | 병합 완료 — PR #229                 |
-| 5    | CAC-01 캐시 영향 범위   | 진단·보완 계획                 |
+| 5    | CAC-01 캐시 영향 범위   | 도구 소비자 이관 중                 |
 | 6    | IMG-01 Docker 입력 축소 | 미착수                 |
 
 ## 1단계 — 직접 의존성과 도구 실행 소유권
@@ -160,3 +160,12 @@ pnpm의 새 importer 해석이 일부 검사 도구 patch를 재선택해, 기�
 Tool이 dependency-cruiser·esbuild·tsx·Vitest·server를 직접 선언했다. 기존 root의 잠금 해석을 그대로 소비하며 다른 importer/package/snapshot은 유지한다. 보수적인 기존 hash 동작은 harness glob의 새 위치로 유지한다. Root 공개 adapter·비공개/bare entry·미등록 consumer·선언된 제품 tooling 참조·Tool의 앱 역참조를 포함한 graph 26가지 사례를 검사한다.
 
 Tool cwd로 실제 실행하자 Linter의 암묵적 cwd로 FSD 12사례가 설정을 적용하지 못하는 실패가 드러났다. Linter에도 repository cwd를 명시해 기존 messageId 기대를 보존했고 Tool harness 44/44가 성공했다. 전체 type-check(7 workspace+root), lint·FSD, unit 99파일 700건, format도 성공했다. 분석기 분리 뒤 Root lint:deps가 graph 오류 0건·Turbo 435파일 7패키지 위반 0건으로 성공했고, Root test:harness의 Tool 위임도 44/44 성공했다. 최종 push/CI는 PR에 기록한다. 실제 cache 전환은 후속 C가 소유한다.
+
+
+### 5단계 B2-a 통합 증거
+
+[PR #232](https://github.com/goldmayo/oioi-bwg/pull/232)의 [Verify #531](https://github.com/goldmayo/oioi-bwg/actions/runs/40117998246)과 최종 push hook 전체 gate가 성공했다. 검증 head `5c5578597cfaed2299a114bbaec42955567b6bfa`와 squash `cbc35bc499785cdd830dfc393ad63d366c42f42e`의 tree가 동일하다.
+
+## 5단계 B2-b — dependency runner와 기존 CLI 호환 진입점
+
+기준은 `cbc35bc499785cdd830dfc393ad63d366c42f42e`다. 분석기 구현을 Tool의 src로 옮기고 repository root 계산을 실제 파일 위치에 맞췄다. 정책과 분석 범위는 유지한다. Tool의 lint:deps 명령과 공개 CLI export를 추가하고 Root 명령은 Tool 위임 뒤 기존 Turbo boundaries를 실행한다. 기존 scripts 파일은 등록된 Tool 공개 entry만 import한다. Tool의 기존 직접 의존성으로 실행하므로 lockfile 변경은 없다. 전체 type-check(7 workspace+root)·lint(새 Tool 위임 포함)·FSD·harness 44/44·unit 99파일 700건·format가 성공했다. 기존 Root CLI와 Tool cwd의 직접 CLI를 각각 Node+tsx로 실행해 stdout/stderr와 종료 코드 0이 동일함도 확인했다. 최종 push/CI는 PR에 기록한다.

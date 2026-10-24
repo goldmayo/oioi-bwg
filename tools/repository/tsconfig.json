@@ -5,5 +5,5 @@
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true
   },
-  "include": ["*.ts"]
+  "include": ["*.ts", "src/**/*.ts"]
 }

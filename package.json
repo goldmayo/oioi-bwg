@@ -41,7 +41,7 @@
     "test:integration:admin:local": "docker compose -f compose.dev.yml up -d --wait postgres && tsx scripts/run-postgres-integration-tests.ts --local --admin-smoke",
     "type-check:config": "tsc --noEmit -p tsconfig.config.json",
     "type-check:scripts": "tsc --noEmit -p scripts/tsconfig.json",
-    "lint:deps": "tsx scripts/check-workspace-dependencies.ts && turbo boundaries"
+    "lint:deps": "pnpm --filter @oioi-bwg/repository-tools lint:deps && turbo boundaries"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
