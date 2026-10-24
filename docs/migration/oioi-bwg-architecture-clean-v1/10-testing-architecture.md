@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.11"
+version: "1.12"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-25"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.11
+# oioi-bwg Testing Architecture v1.12
 
 ## 1. 목적
 
@@ -320,6 +320,13 @@ packages의 앱 역참조·앱 간 참조·workspace 상대 경로 우회·미�
 root의 앱 source 참조는 foundation HTTP 통합 테스트의 Web response adapter 한 곳으로 제한한다.
 FSD/계층 규칙은 ESLint·Steiger가 계속 소유한다. 정적 해석 불가능한 계산형 dynamic import는
 별도 runtime/build 검증 대상이며 Turbo boundaries의 실험적 검사만으로 경계 보장을 대체하지 않는다.
+
+root의 내부 package 소비 검증은 tools/repository로 단계적으로 이관한다. workspace는
+직접 사용하는 package·도구·타입 프로그램을 소유하며 root 명령은 같은 검증을 orchestrate한다.
+기존 경로를 위한 root adapter는 tooling의 등록된 공개 entry만 참조한다. 이관 전후
+harness/unit/ops/PG 수집 합집합·주 타입 소속·cwd 해석을 대조하고, 검사 entry를 먼저 제거하지 않는다.
+제품 task의 cache는 root 내부 package source의 전역 결합을 제거한 뒤 소비 입력으로 검증한다.
+affected 선택·hash 변화·실제 실행을 구분하고 필요한 무효화와 무관한 cache 보존을 함께 증명한다.
 
 Web과 Console은 독립 FSD root에서 lint/type-check/unit/build를 실행한다.
 각 앱의 alias와 테스트 include는 다른 앱의 소스·테스트를 읽지 않도록 해당 workspace가 소유한다.
