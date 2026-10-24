@@ -129,3 +129,5 @@ root lint:repo는 apps와 packages를 제외하며 기존 root ESLint 조합은 
 server source만 바꿔 globalCacheInputs를 대조하자 외부 의존성 hash는 같고 내부 의존성 hash가 `d3ec59b15666256c`에서 `5a026d4a4bdc1610`으로 바뀌었다. root manifest의 config/server/contracts 직접 의존이 전역 source closure를 만들고 있다. 단순 inputs 조정으로 해결할 수 없음을 공식 root workspace dependency 계약과 대조했다.
 
 [PLAN의 2026-10-25 5단계 보완](MONOREPO-BOUNDARIES-AND-EXECUTION-PLAN.md#2026-10-25-5단계-보완--root-내부-의존성의-전역-hash-해소)에 도구 workspace로 실제 consumer를 이관하는 실행안을 추가했다. 헌법 2.19·Testing 1.12는 이 전환의 책임과 root adapter 한계를 먼저 정의한다. 이 기록은 도구 코드 이관·cache 개선 완료를 뜻하지 않는다. 진단 뒤 코드/타입/테스트/build는 추가 실행하지 않은 문서 전용 checkpoint다.
+
+문서 링크 검사에서 4단계 이관으로 없어진 AS-IS 코드 경로를 발견했다. PLAN의 과거 코드 근거는 원래 source_commit의 GitHub blob 링크로 고정해 현재 구조와 혼동하지 않게 했다. 로컬 문서 링크와 해당 기준 커밋의 대상 존재를 다시 확인한다.
