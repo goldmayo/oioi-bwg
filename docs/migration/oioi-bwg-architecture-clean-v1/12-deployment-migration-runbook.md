@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.21"
+version: "1.22"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-23"
+updated_at: "2026-10-25"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.20
+# oioi-bwg Deployment / Migration Runbook v1.22
 
 ## 1. 목적
 
@@ -272,6 +272,12 @@ Next standalone output을 기준으로 최소 runtime image를 구성한다.
 단일 web container의 port, health/readiness, 환경변수 주입과 배포 topology는 유지한다.
 
 container 안에 development toolchain 전체를 넣지 않는다.
+
+Docker build는 Root와 같은 exact Turbo CLI로 대상 workspace를 prune한다. pruned JSON/partial lock을
+먼저 복사해 frozen install한 뒤 pruned full source를 복사한다. Web/Console 단독 target에는 상대 앱·
+Relay·repository-tools를 포함하지 않는다. 공통 source package·env/secret·standalone 계약은 유지한다.
+이 전환의 일반 CI는 기존 BUILD_APP=all을 유지해 양 앱을 함께 prune하며 같은 builder의 두 이미지를
+검증한다. 앱별 CI builder 전환은 §21의 같은 run/pair 검증 계약과 함께 별도로 수행한다.
 
 Image는 §21의 source SHA를 포함한 candidate tag로 traceability를 남기되 release identity는 OCIR
 manifest digest로 고정한다. `latest`, `development` 같은 mutable tag를 deployment input으로

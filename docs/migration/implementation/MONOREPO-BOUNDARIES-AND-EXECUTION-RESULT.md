@@ -16,8 +16,8 @@ created_at: "2026-10-25"
 | 2    | BND-01 경계 검사        | 병합 완료 — PR #226·#227                 |
 | 3    | TYP-01 테스트 타입 소속 | 병합 완료 — PR #228                 |
 | 4    | OWN-01/02 검증 소유권   | 병합 완료 — PR #229                 |
-| 5    | CAC-01 캐시 영향 범위   | task별 캐시 입력 전환 중                 |
-| 6    | IMG-01 Docker 입력 축소 | 미착수                 |
+| 5    | CAC-01 캐시 영향 범위   | 병합 완료 — PR #230~#238                 |
+| 6    | IMG-01 Docker 입력 축소 | pruned 입력 전환 중                 |
 
 ## 1단계 — 직접 의존성과 도구 실행 소유권
 
@@ -247,3 +247,25 @@ B3-c head의 별도 Git 복사본에서 18가지 입력을 변경해 cache 후�
 | 양 앱 .next 삭제 후 archive 복원 | 0 / 2 | 1.394초 |
 
 browser setup 변경은 config 자체 type/lint와 Web·Console unit만 다시 실행했다. 나머지 13 task는 실제 cache hit였고 원복 후 17개 모두 hit였다. build cold는 두 작업 모두 실행했고, 양 앱 .next를 삭제한 뒤 재실행해 두 archive의 hit와 두 standalone server.js 복원을 확인했다. 이후 변경은 RESULT 기록뿐이다. 최종 push/CI는 PR에 기록한다.
+
+
+### 5단계 C2/D 통합 증거
+
+[PR #238](https://github.com/goldmayo/oioi-bwg/pull/238)의 [Verify #537](https://github.com/goldmayo/oioi-bwg/actions/runs/40123778721)와 push hook 전체 gate가 성공했다. 검증 head `47a409336ea30e4462781187cbb8558e6f79f03b`와 squash `e2e5a0fcb65462388d45f861eed9b754568ba3f1`의 tree가 동일하다.
+
+## 6단계 A — pruned 설치·source 입력과 기존 CI 호환
+
+기준은 `e2e5a0fcb65462388d45f861eed9b754568ba3f1`다. Root Turbo를 기존 잠금 버전 2.11.7로 exact pin하고 Docker pruner도 같은 버전을 사용한다. JSON/partial lock 설치와 full source 복사를 분리한다. 단독 target은 대상 앱·config/server/contracts만 포함한다. 일반 CI의 all은 두 앱을 함께 prune해 기존 same-builder 검증을 유지하며 앱별 CI 전환은 후속 B가 소유한다. runtime/secret/standalone·Promotion digest/pair 계약은 유지한다.
+
+YAML을 직접 사용하는 prune 회귀는 Tool이 기존 잠금 버전 2.8.2를 직접 선언해 실행한다. Root Turbo specifier와 Tool importer만 변경하고 기존 package/snapshot·나머지 importer 해석을 보존했다. frozen offline 설치와 전체 type-check·lint·FSD·harness 46/46·unit 99파일 700건·ops 21파일 283건·format가 성공했다.
+
+prune 회귀는 양 앱 각각에 대해 무관한 앱 source와 Relay의 manifest/lock entry를 바꿔도 JSON/partial lock/full source fingerprint가 같음을 확인한다. 대상 앱/공용 server source 변경은 full source만 바꾸고, 대상 앱의 의존성·lock 변경은 설치 입력을 바꾼다. fixture의 가상 package는 설치하거나 네트워크에서 조회하지 않는다.
+
+개인 env 없는 index tree `b4fcbd14bbe5f642039902f6c5bf828605e6805a`를 추출해 실제 Docker와 같은 JSON 설치 → full source 복사 순서로 검증했다. 각 target에 상대 앱·Tool이 없는 상태에서 frozen offline 설치와 단독 build가 성공했고 해당 standalone server.js가 생성됐다.
+
+| target | workspace importer(Root 제외) | virtual store 디렉터리 | 설치 / build 관찰 시간 |
+| --- | --- | --- | --- |
+| web | 앱 1 + config/server/contracts = 4 | 1342 | 11.003초 / 17.945초 |
+| console | 앱 1 + config/server/contracts = 4 | 1365 | 4.482초 / 23.551초 |
+
+비교용 전체 C2 설치의 virtual store는 1367디렉터리였다. 공통 core/config와 Root 외부 CLI를 유지하므로 설치량이 크게 줄었다고 일반화하지 않는다. 목적은 대상 밖 변경이 설치/build 입력에 섞이지 않게 하는 것이다. 시간은 다른 로컬 검증과 병행한 ARM64 관찰값이다. Docker context 자체는 Root를 유지하며 pruner 뒤의 입력을 줄인다. 로컬 Docker 실행은 사용할 수 없어 실제 이미지·native/readiness/browser/pair 검증은 PR CI로 확인한다. 이후 변경은 RESULT 기록뿐이다.
