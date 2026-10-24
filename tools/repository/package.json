@@ -6,12 +6,14 @@
   "exports": {
     "./eslint": "./eslint.config.ts",
     "./steiger": "./steiger.config.ts",
-    "./typescript/repository.json": "./typescript/repository.json"
+    "./typescript/repository.json": "./typescript/repository.json",
+    "./cli/dependencies": "./src/check-workspace-dependencies.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
-    "test:harness": "node --import tsx --test harness/architecture/*.test.js"
+    "test:harness": "node --import tsx --test harness/architecture/*.test.js",
+    "lint:deps": "tsx src/check-workspace-dependencies.ts"
   },
   "devDependencies": {
     "@oioi-bwg/config": "workspace:*",
