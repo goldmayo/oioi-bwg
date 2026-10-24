@@ -1,10 +1,12 @@
 ---
 title: "모노레포 audit 후속 Root 의존성 정리 결과"
 kind: migration-result
-status: in-progress
+status: complete
 source_commit: c3e593498aeea6b51d8706fa1f9c37461e1ebe75
 verified_source_commit: 5e160e101f964f6d6ad395370f738e0ffb182291
+verified_ci_commit: 49f0d068f8313125d9055fc0f36bd34df7f7e2af
 created_at: "2026-10-25"
+completed_at: "2026-10-25"
 ---
 
 # 모노레포 audit 후속 Root 의존성 정리 결과
@@ -55,6 +57,14 @@ Node 22.16.0·pnpm 10.15.1·Linux ARM64에서 검증했다. 별도 clean clone�
 
 ## 남은 범위
 
-push hook·PR CI 상태는 완료 후 이 문서에 추가한다. 이번 변경만으로 config의
+push hook의 type/lint/unit·Root/Tool·경계·harness·ops·format이 성공했다.
+[PR #242](https://github.com/goldmayo/oioi-bwg/pull/242)의
+[Verify #542](https://github.com/goldmayo/oioi-bwg/actions/runs/40129786377)는 실제 PostgreSQL·
+양 앱 image·native/readiness/browser·paired Compose 보존/복구를 포함해 전체 성공했다.
+구현과 검증 완료 판정이며 PR 병합이나 운영 배포 완료는 아니다.
+
+이번 변경만으로 config의
 Next/browser 설치 의존성이나 CI cache 보관 비용이 줄었다고 평가하지 않는다. config 패키지
-분할·추가 Root 패키지 제거는 실제 consumer와 비용 근거가 필요하며 선행하지 않았다.
+분할은 보류한다. 현재 두 Next 배포 대상이 해당 도구를 함께 사용하므로 package 분할만으로
+전체 설치가 줄어든다는 근거가 없다. 독립 Node 소비자나 분리 설치의 실측 필요가 생기면
+재검토한다. 추가 Root 패키지 제거도 직접 consumer·CLI·peer 검증 없이 확대하지 않는다.
