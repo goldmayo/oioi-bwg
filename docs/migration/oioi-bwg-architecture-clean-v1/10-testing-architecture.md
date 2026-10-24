@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.13"
+version: "1.14"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-25"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.13
+# oioi-bwg Testing Architecture v1.14
 
 ## 1. 목적
 
@@ -336,7 +336,8 @@ Node 프로그램에 주입하지 않는다. 앱 Sentry runtime 진입점은 앱
 Relay·config는 기존 자체 프로그램을 유지한다. root는 root 설정·scripts·통합 검사를 소유한다.
 root lint orchestration은 workspace lint와 repo lint를 나눠 실행하며 repo lint는 apps/packages/tools를
 재검사하지 않는다. root ESLint의 설정 조합은 staged 파일과 harness의 cwd별 정책 대조를 위해 유지한다.
-양 앱의 FSD 정책 회귀는 특정 앱 밖의 root architecture harness가 소유한다.
+양 앱의 FSD 정책·해석 graph·검사 소속 회귀는 repository-tools의 architecture harness가 소유한다.
+Root test:harness는 Tool의 자체 명령을 통해 같은 검증을 실행한다.
 repo harness는 직접 앱 import, source package 및 공통 설정 변경의 두 앱 task 선택/hash를 검사한다.
 루트 설정과 운영·통합 테스트도 repo 진입점의 strict 타입 검사에 포함한다. 테스트 수집·실행 성공을
 타입 검사 성공으로 취급하지 않는다. Node 테스트에는 앱 alias를 전역 적용하지 않으며 Web HTTP

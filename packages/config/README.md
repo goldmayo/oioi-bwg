@@ -19,5 +19,5 @@ ESM JavaScript와 JSDoc `@satisfies`를 사용한다. package의 `checkJs`·stri
 주입은 필요하지 않다. marker mock과 browser setup은 package 내부에 있으며 root tests를 참조하지 않는다.
 
 `pnpm --filter @oioi-bwg/config type-check`와 `lint`가 자체 검사를 수행한다. 두 앱의 실제 설정과
-cwd·loader·Turbo 영향·runtime import 경계는 root architecture harness와 앱 build가 검증한다.
+cwd·loader·Turbo 영향·runtime import 경계는 repository-tools의 architecture harness와 앱 build가 검증한다. Root 명령은 해당 검증을 위임한다.
 배포·Sentry 업로드·외부 알림은 이 package의 책임이 아니다.

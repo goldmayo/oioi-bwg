@@ -14,15 +14,59 @@ const owners = [
   "packages/server",
   "packages/contracts",
   "packages/config",
+  "tools/repository",
 ].map((directory) => ({
   directory,
-  name: "@oioi-bwg/" + directory.split("/")[1],
+  name:
+    directory === "tools/repository"
+      ? "@oioi-bwg/repository-tools"
+      : "@oioi-bwg/" + directory.split("/")[1],
+  exports: {
+    "./public": directory === "packages/config" ? "./public.ts" : "./src/public.ts",
+    ...(directory === "tools/repository" ? { "./eslint": "./eslint.config.ts" } : {}),
+  },
   dependencies: Object.fromEntries(
     ["server", "contracts", "config"].map((name) => ["@oioi-bwg/" + name, "workspace:*"]),
   ),
 }));
 
 const cases = [
+  [
+    "registered root tooling",
+    "eslint.config.ts",
+    'export * from "./tools/repository/eslint.config.ts";',
+    false,
+  ],
+  [
+    "private root tooling",
+    "eslint.config.ts",
+    'export * from "./tools/repository/private.ts";',
+    true,
+  ],
+  [
+    "bare root tooling",
+    "eslint.config.ts",
+    'export * from "@oioi-bwg/repository-tools/eslint";',
+    true,
+  ],
+  [
+    "unregistered root tooling",
+    "tests/ops/probe.test.ts",
+    'export * from "../../tools/repository/eslint.config.ts";',
+    true,
+  ],
+  [
+    "tooling test to app",
+    "tools/repository/probe.test.ts",
+    'export * from "../../apps/web/src/shared/value";',
+    true,
+  ],
+  [
+    "declared product tooling",
+    "apps/web/src/shared/probe.ts",
+    'export * from "@oioi-bwg/repository-tools/public";',
+    true,
+  ],
   [
     "Sentry runtime tooling",
     "apps/web/sentry.server.config.ts",
@@ -147,7 +191,7 @@ test("resolved graphs enforce boundaries in source, config, tests and package ex
             JSON.stringify({
               name: owner.name,
               type: "module",
-              exports: { "./public": "./" + entry },
+              exports: owner.exports,
             }),
           );
           write(owner.directory + "/" + entry, "export const value = 1;");
@@ -167,6 +211,8 @@ test("resolved graphs enforce boundaries in source, config, tests and package ex
             include: ["src"],
           }),
         );
+        write("tools/repository/eslint.config.ts", "export const value = 1;");
+        write("tools/repository/private.ts", "export const value = 1;");
         write("apps/web/src/server/http/api-response.ts", "export const value = 1;");
         write(filename, source);
         const descriptors =
@@ -174,7 +220,19 @@ test("resolved graphs enforce boundaries in source, config, tests and package ex
             ? owners.map((owner) =>
                 owner.directory === "apps/web" ? { ...owner, dependencies: {} } : owner,
               )
-            : owners;
+            : name === "declared product tooling"
+              ? owners.map((owner) =>
+                  owner.directory === "apps/web"
+                    ? {
+                        ...owner,
+                        dependencies: {
+                          ...owner.dependencies,
+                          "@oioi-bwg/repository-tools": "workspace:*",
+                        },
+                      }
+                    : owner,
+                )
+              : owners;
         if (name === "runtime cycle")
           write("apps/web/src/b.ts", 'import { a } from "./a"; export const b = () => a;');
         if (name === "type cycle")
@@ -192,6 +250,10 @@ test("resolved graphs enforce boundaries in source, config, tests and package ex
           result.output.summary.error +
           workspaceDependencyErrors(descriptors, result.output.modules).length;
         assert.equal(count > 0, rejected, name);
+        if (name === "declared product tooling")
+          assert.ok(
+            result.output.summary.violations.some(({ rule }) => rule.name === "runtime-tooling"),
+          );
         if (name === "client relative core")
           assert.ok(
             result.output.summary.violations.some(({ rule }) => rule.name === "client-server-core"),

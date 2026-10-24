@@ -147,3 +147,16 @@ pnpm의 새 importer 해석이 일부 검사 도구 patch를 재선택해, 기�
 
 
 최종 로컬 검증은 type-check 7 workspace+root·lint(새 graph 포함)·FSD·harness 44건·unit 99파일 700건·format 모두 성공했다. Tool 파일의 추적 등록 후 관련 소속 harness 6건도 성공했다. 임시 미등록 root adapter, 등록 adapter의 비공개 파일 참조, 제품 runtime의 Tool 참조를 각각 넣자 lint:deps가 종료 코드 1과 해당 정책 오류로 거절했고 모두 원복했다. 최종 push/CI 결과는 PR에 기록한다.
+
+
+### 5단계 B1 통합 증거
+
+[PR #231](https://github.com/goldmayo/oioi-bwg/pull/231)의 [Verify #530](https://github.com/goldmayo/oioi-bwg/actions/runs/40116351548)과 최종 push hook 전체 gate가 성공했다. 검증 head `480df33fdf649406126e175f16349f5012913ec3`와 squash `686bf65a7419fef6bc086c9feade2b8e5d623c31`의 tree가 동일하다.
+
+## 5단계 B2-a — architecture harness의 실제 소비자 이관
+
+기준은 `686bf65a7419fef6bc086c9feade2b8e5d623c31`다. 검사 이관을 harness와 분석기/호환 CLI의 두 PR로 나눠 20파일·400줄 검토 목표를 유지한다. 이 PR은 architecture harness 9개와 직접 사용하는 도구 의존성을 이관한다. Root test:harness는 Tool 자체 명령을 위임한다. Root 기준 경로는 명시적인 repository 위치로 계산하고, server 조건부 export의 Node eval 검증은 실제 소비자인 Tool cwd에서 실행한다.
+
+Tool이 dependency-cruiser·esbuild·tsx·Vitest·server를 직접 선언했다. 기존 root의 잠금 해석을 그대로 소비하며 다른 importer/package/snapshot은 유지한다. 보수적인 기존 hash 동작은 harness glob의 새 위치로 유지한다. Root 공개 adapter·비공개/bare entry·미등록 consumer·선언된 제품 tooling 참조·Tool의 앱 역참조를 포함한 graph 26가지 사례를 검사한다.
+
+Tool cwd로 실제 실행하자 Linter의 암묵적 cwd로 FSD 12사례가 설정을 적용하지 못하는 실패가 드러났다. Linter에도 repository cwd를 명시해 기존 messageId 기대를 보존했고 Tool harness 44/44가 성공했다. 전체 type-check(7 workspace+root), lint·FSD, unit 99파일 700건, format도 성공했다. 분석기 분리 뒤 Root lint:deps가 graph 오류 0건·Turbo 435파일 7패키지 위반 0건으로 성공했고, Root test:harness의 Tool 위임도 44/44 성공했다. 최종 push/CI는 PR에 기록한다. 실제 cache 전환은 후속 C가 소유한다.

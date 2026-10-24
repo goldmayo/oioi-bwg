@@ -8,7 +8,10 @@ import { ESLint, Linter } from "eslint";
 
 import { architectureRule } from "@oioi-bwg/config/eslint/architecture-rule";
 
-const linter = new Linter({ configType: "flat" });
+const linter = new Linter({
+  configType: "flat",
+  cwd: path.resolve(import.meta.dirname, "../../../.."),
+});
 const config = [
   {
     languageOptions: { ecmaVersion: "latest", sourceType: "module" },
@@ -18,13 +21,13 @@ const config = [
 ];
 
 function lint(relativeFilename, code = "export {};") {
-  const filename = `${process.cwd()}/${relativeFilename}`;
+  const filename = path.resolve(import.meta.dirname, "../../../..", relativeFilename);
 
   return linter.verify(code, config, filename).map(({ messageId }) => messageId);
 }
 
 test("keeps typed lint and alias dependency boundaries from both repository and app roots", async () => {
-  const repositoryRoot = path.resolve(import.meta.dirname, "../..");
+  const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
   for (const app of ["web", "console"]) {
     const webRoot = path.join(repositoryRoot, "apps", app);
     const effective = await new ESLint({ cwd: repositoryRoot }).calculateConfigForFile(

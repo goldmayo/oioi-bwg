@@ -10,13 +10,19 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:harness": "node --import tsx --test harness/architecture/*.test.js"
   },
   "devDependencies": {
     "@oioi-bwg/config": "workspace:*",
     "@types/node": "^20",
     "eslint": "^9",
     "jiti": "2.6.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "dependency-cruiser": "18.7.0",
+    "esbuild": "0.25.12",
+    "tsx": "^4.21.0",
+    "vitest": "^4.1.2",
+    "@oioi-bwg/server": "workspace:*"
   }
 }
