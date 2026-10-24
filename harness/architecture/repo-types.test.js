@@ -23,10 +23,14 @@ test("every tracked TypeScript test has exactly one primary type owner", () => {
     "tsconfig.config.json",
     "scripts/tsconfig.json",
     "apps/web/tsconfig.json",
+    "apps/web/tsconfig.config.json",
     "apps/console/tsconfig.json",
+    "apps/console/tsconfig.config.json",
     "apps/sentry-slack-relay/tsconfig.json",
     "packages/server/tsconfig.json",
+    "packages/server/tsconfig.config.json",
     "packages/contracts/tsconfig.json",
+    "packages/contracts/tsconfig.config.json",
     "packages/config/tsconfig.json",
     "tests/tsconfig.json",
     "tests/tsconfig.web.json",
@@ -43,6 +47,44 @@ test("every tracked TypeScript test has exactly one primary type owner", () => {
     assert.equal(owners.length, 1, `${file}: ${owners.map(({ config }) => config).join(", ")}`);
   }
   assert.ok(projects.every(({ project }) => project.options.strict && project.options.noEmit));
+});
+
+test("workspace config entries have one local type owner and keep Node aliases isolated", () => {
+  const directories = [
+    "apps/web",
+    "apps/console",
+    "packages/server",
+    "packages/contracts",
+    "apps/sentry-slack-relay",
+    "packages/config",
+  ];
+  const rootSettings = readProject("tsconfig.config.json");
+  for (const directory of directories) {
+    const configFile = `${directory}/tsconfig.config.json`;
+    const programs = [readProject(`${directory}/tsconfig.json`)];
+    if (fs.existsSync(path.join(root, configFile))) {
+      const node = readProject(configFile);
+      assert.equal(node.options.paths, undefined, directory);
+      programs.push(node);
+    }
+    const entries = execFileSync("git", ["ls-files", "-z", "--", directory], {
+      cwd: root,
+      encoding: "utf8",
+    })
+      .split("\0")
+      .filter((file) => path.dirname(file) === directory && /\.config\.[cm]?ts$/.test(file));
+    assert.ok(entries.length > 0, directory);
+    for (const file of entries) {
+      const absolute = path.join(root, file);
+      assert.equal(
+        programs.filter(({ fileNames }) => fileNames.includes(absolute)).length,
+        1,
+        file,
+      );
+      assert.ok(!rootSettings.fileNames.includes(absolute), `${file} must be owned locally`);
+    }
+    assert.ok(programs.every(({ options }) => options.strict && options.noEmit));
+  }
 });
 
 test("the contracts type program rejects errors inside its real test entry", () => {

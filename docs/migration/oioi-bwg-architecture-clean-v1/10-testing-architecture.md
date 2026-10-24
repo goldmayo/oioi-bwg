@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.10"
+version: "1.11"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-25"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.10
+# oioi-bwg Testing Architecture v1.11
 
 ## 1. 목적
 
@@ -323,6 +323,13 @@ FSD/계층 규칙은 ESLint·Steiger가 계속 소유한다. 정적 해석 불�
 
 Web과 Console은 독립 FSD root에서 lint/type-check/unit/build를 실행한다.
 각 앱의 alias와 테스트 include는 다른 앱의 소스·테스트를 읽지 않도록 해당 workspace가 소유한다.
+Web·Console·server·contracts의 type-check는 소스와 자체 Node 설정 프로그램을 함께 실행한다.
+Next·ESLint·Vitest·Steiger 진입점은 해당 workspace의 tsconfig.config.json이 소유하며 앱 alias를
+Node 프로그램에 주입하지 않는다. 앱 Sentry runtime 진입점은 앱 소스 프로그램에서 검사한다.
+Relay·config는 기존 자체 프로그램을 유지한다. root는 root 설정·scripts·통합 검사를 소유한다.
+root lint orchestration은 workspace lint와 repo lint를 나눠 실행하며 repo lint는 apps/packages를
+재검사하지 않는다. root ESLint의 설정 조합은 staged 파일과 harness의 cwd별 정책 대조를 위해 유지한다.
+양 앱의 FSD 정책 회귀는 특정 앱 밖의 root architecture harness가 소유한다.
 repo harness는 직접 앱 import, source package 및 공통 설정 변경의 두 앱 task 선택/hash를 검사한다.
 루트 설정과 운영·통합 테스트도 repo 진입점의 strict 타입 검사에 포함한다. 테스트 수집·실행 성공을
 타입 검사 성공으로 취급하지 않는다. Node 테스트에는 앱 alias를 전역 적용하지 않으며 Web HTTP

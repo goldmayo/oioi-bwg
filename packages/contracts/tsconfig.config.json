@@ -1,0 +1,10 @@
+{
+  "extends": "@oioi-bwg/config/typescript/node.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "allowJs": true
+  },
+  "include": ["*.config.ts"]
+}

@@ -32,7 +32,7 @@
     "./storage/upload-public-asset": "./src/storage/upload-public-asset.ts"
   },
   "scripts": {
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",
     "lint": "eslint .",
     "test": "vitest run"
   },
