@@ -14,6 +14,7 @@ const rootToolEntries: Record<string, string> = {
   "scripts/console-mfa-execution.ts": "./operator/execution",
   "scripts/console-mfa-operator-policy.ts": "./operator/policy",
   "tests/ops/console-mfa-fixture.ts": "./fixture/console-mfa",
+  "tests/integration/vitest.config.ts": "./vitest/postgres",
 };
 
 const testFiles = "\\.(?:test|spec)\\.[cm]?[jt]sx?$";
@@ -38,7 +39,7 @@ export function dependencyOptions(
       from: {
         pathNot: [
           "^(?:apps|packages)/",
-          "^tests/integration/m7-foundation\\.postgres\\.test\\.ts$",
+          "^tools/repository/tests/integration/m7-foundation\\.postgres\\.test\\.ts$",
         ],
       },
       to: { path: "^apps/" },
@@ -46,7 +47,7 @@ export function dependencyOptions(
     {
       name: "foundation-app-adapter",
       severity: "error",
-      from: { path: "^tests/integration/m7-foundation\\.postgres\\.test\\.ts$" },
+      from: { path: "^tools/repository/tests/integration/m7-foundation\\.postgres\\.test\\.ts$" },
       to: { path: "^apps/", pathNot: "^apps/web/src/server/http/api-response\\.ts$" },
     },
     ...owners
@@ -158,6 +159,11 @@ export function workspaceDependencyErrors(
         continue;
       }
       if (from === to) continue;
+      if (
+        module.source === "tools/repository/tests/integration/m7-foundation.postgres.test.ts" &&
+        dependency.resolved === "apps/web/src/server/http/api-response.ts"
+      )
+        continue;
       if (
         !to ||
         !(dependency.module === to.name || dependency.module.startsWith(to.name + "/")) ||

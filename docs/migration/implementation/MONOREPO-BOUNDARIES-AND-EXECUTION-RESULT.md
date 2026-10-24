@@ -191,3 +191,14 @@ Tool cwd로 실제 실행하자 Linter의 암묵적 cwd로 FSD 12사례가 설�
 기준은 `6282c0256080d51c62d4c0c6f72af884fce812c2`다. config를 직접 소비하는 배포 계약 테스트와 server를 소비하는 MFA fixture를 Tool로 이관한다. Root ops 수집은 두 위치의 합집합을 유지하며 fixture의 기존 경로는 등록된 공개 entry를 import한다. Tool은 otplib을 직접 선언해 다른 package의 node_modules를 createRequire anchor로 소비하던 우회를 제거한다. 격리 DB guard·OTP epoch·출력/정리 순서는 유지한다. Tool Node 테스트 프로그램과 전체 검사의 실행 소속을 함께 연결한다.
 
 기존 package/snapshot과 Tool 외 importer를 보존한 frozen offline 설치가 성공했다. 배포 계약 테스트의 byte 동일성, 기존/새 MFA entry의 비격리 DB 거절·stdout 부재, otplib 13.5.0 CJS/ESM 공개 API의 4개 epoch 결과 동일성을 확인했다. 전체 type-check·lint·FSD·harness 44/44·unit 99파일 700건·ops 21파일 283건·format가 성공했다. 로컬에서 실제 DB fixture를 생성하지 않았다. 최종 push/CI는 PR에 기록한다.
+
+
+### 5단계 B3-b 통합 증거
+
+[PR #235](https://github.com/goldmayo/oioi-bwg/pull/235)의 [Verify #534](https://github.com/goldmayo/oioi-bwg/actions/runs/40120650438)와 push hook 전체 gate가 성공했다. 검증 head `861493b7b1a04fab2d515cde5c03f21709b7b698`와 squash `6a1cc6b6e1c6d02586bbeebda750d780be617e56`의 tree가 동일하다.
+
+## 5단계 B3-c — PostgreSQL 통합 테스트의 실제 소비자 이관
+
+기준은 `6a1cc6b6e1c6d02586bbeebda750d780be617e56`다. foundation·operator PG 테스트와 실제 PG project 조합을 Tool로 옮기고 Root 설정은 등록된 공개 entry를 재수출한다. Tool이 contracts·postgres·Drizzle을 직접 선언한다. Node/Web 타입 프로그램·수집·해석 context·HTTP adapter의 단일 예외 경로를 함께 바꾼다. 기존 Root guarded runner와 DB lifecycle·프로젝트명·직렬 실행·서버 package의 PG 소유권은 유지한다. 이전 Root foundation 경로와 인접 Tool 테스트에는 앱 참조 예외를 허용하지 않는다.
+
+두 PG 본문은 byte 동일하며 전체 PG 수집은 기존 4파일·Node/Web project·직렬 옵션을 보존했다. 새 Node/Web 테스트에 임시 TS2322를 넣자 Tool 명령이 각각 종료 코드 2로 거절했고 Root type-check:tests도 Node 오류를 거절했다. 모두 원복한 뒤 전체 type-check·lint·FSD·harness 44/44(경계 28사례·추적 TS 테스트 124개 주 소속 포함)·unit 99파일 700건·ops 21파일 283건·format가 성공했다. frozen offline 설치와 기존 lock 해석 보존도 확인했다. Root의 정적 내부 package 직접 import는 0개다. 실제 PG 실행은 PR CI가 소유하며 Root manifest 정리는 후속 C에서 수행한다.

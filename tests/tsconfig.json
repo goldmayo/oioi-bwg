@@ -5,6 +5,6 @@
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true
   },
-  "include": ["ops/**/*.ts", "integration/*.postgres.test.ts"],
-  "exclude": ["integration/m7-foundation.postgres.test.ts", "**/vitest.config.ts"]
+  "include": ["ops/**/*.ts"],
+  "exclude": ["**/vitest.config.ts"]
 }

@@ -35,7 +35,7 @@ test("every tracked TypeScript test has exactly one primary type owner", () => {
     "tools/repository/tsconfig.json",
     "tools/repository/tsconfig.tests.json",
     "tests/tsconfig.json",
-    "tests/tsconfig.web.json",
+    "tools/repository/tsconfig.web.json",
   ].map((config) => ({ config, project: readProject(config) }));
   const tests = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" })
     .split("\0")
@@ -150,7 +150,7 @@ test("repo type programs cover every tracked operational TypeScript source", () 
   assert.ok(!projects[0].fileNames.includes(worker));
 });
 
-test("root settings and tests have strict type owners without leaking Web aliases", () => {
+test("repository settings and tests have strict type owners without leaking Web aliases", () => {
   const config = readProject("tsconfig.config.json");
   for (const filename of [
     "drizzle.config.ts",
@@ -160,7 +160,7 @@ test("root settings and tests have strict type owners without leaking Web aliase
     assert.ok(config.fileNames.includes(path.join(root, filename)), `${filename} needs an owner`);
 
   const node = readProject("tests/tsconfig.json");
-  const web = readProject("tests/tsconfig.web.json");
+  const web = readProject("tools/repository/tsconfig.web.json");
   const sources = execFileSync("git", ["ls-files", "-z", "--", "tests"], {
     cwd: root,
     encoding: "utf8",
