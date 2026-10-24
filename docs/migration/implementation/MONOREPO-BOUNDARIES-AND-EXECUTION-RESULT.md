@@ -16,7 +16,7 @@ created_at: "2026-10-25"
 | 2    | BND-01 경계 검사        | 병합 완료 — PR #226·#227                 |
 | 3    | TYP-01 테스트 타입 소속 | 병합 완료 — PR #228                 |
 | 4    | OWN-01/02 검증 소유권   | 병합 완료 — PR #229                 |
-| 5    | CAC-01 캐시 영향 범위   | 도구 소비자 이관 중                 |
+| 5    | CAC-01 캐시 영향 범위   | task별 캐시 입력 전환 중                 |
 | 6    | IMG-01 Docker 입력 축소 | 미착수                 |
 
 ## 1단계 — 직접 의존성과 도구 실행 소유권
@@ -217,3 +217,33 @@ B3-c head의 별도 Git 복사본에서 18가지 입력을 변경해 cache 후�
 전체 type-check·lint·FSD·harness 45/45(경계 29사례·Root manifest/alias 회귀 포함)·unit 99파일 700건·ops 21파일 283건·format가 성공했다. 실행 로그에서 Tool type-check와 lint는 각각 한 번이었다. 실제 dry JSON의 Root internal hash 빈 값과 Tool 제외 scope를 확인했다.
 
 개인 env가 없는 index tree `1349dce1f783edb05dc4c8a439e20ee85f2d52ff` 복사본에서 frozen offline 설치 8.22초, env를 초기화한 build `--concurrency=1 --summarize`가 성공했다. 두 build 모두 cache miss, Turbo 경과 31.747초이며 양 앱 standalone server.js가 존재한다. 이후 변경은 이 RESULT 기록뿐이다. 최종 push/CI는 PR에 기록한다.
+
+
+### 5단계 C1 통합 증거
+
+[PR #237](https://github.com/goldmayo/oioi-bwg/pull/237)의 [Verify #536](https://github.com/goldmayo/oioi-bwg/actions/runs/40122730181)와 push hook 전체 gate가 성공했다. 검증 head `c19e86e1482c44aeb5a89f3ad018d8a76e19cba4`와 squash `e5907ab1cd1bf182825373fe7d3be0b5744ad79d`의 tree가 동일하다.
+
+## 5단계 C2 — task별 config 입력과 필요한/무관 cache 회귀
+
+기준은 `e5907ab1cd1bf182825373fe7d3be0b5744ad79d`다. Root 전역 파일 입력을 제거하고 config의 transit·build 전파는 package.json만 사용한다. script 없는 config build 노드의 실제 입력도 대조했다. 빈 inputs로 기본 입력이 사라진다고 가정하지 않는다. 자체 workspace 기본 입력과 server/contracts JIT 전파·build env/output 계약은 유지한다.
+
+공통 config 입력을 build(Next/Sentry·base/Next preset), Node/앱 타입, ESLint/Steiger·typed lint, browser/marker unit 소비로 구분한다. ESLint family 내부와 JIT source 전파는 보수적으로 유지한다. Tool 통합 검사는 C1의 항상 실행 위임을 유지한다.
+
+캐시 harness는 19개 cacheable task에 대해 19가지 입력 변경의 hash 변화/보존과 필요한 affected 선택을 함께 검사한다. 필요 없는 task의 미선택까지 강제하지 않는다. TypeScript의 실제 소스·설정 프로그램이 읽는 공통 config source와 preset도 입력에 포함되는지 대조한다. Root internal hash는 매 dry run에서 빈 값이어야 한다.
+
+전체 type-check·lint·FSD·harness 45/45·unit 99파일 700건·ops 21파일 283건·format가 성공했다. hash matrix는 cacheable 19 task·입력 19종이며, config build/transit의 실제 입력은 각각 package.json 한 개다. Tool의 uncached 검사와 Root 정책 검사는 항상 실행되며 이 표의 cacheable task 수에서 제외한다.
+
+## 5단계 D — 실제 재실행·재사용과 build 산출물 복원
+
+개인 env 없는 index tree `39bcf3ee2a9956263a207978b1d0341b519dce8a` 복사본에서 frozen offline 설치와 환경을 초기화한 실행을 수행했다. Node 22.16.0·pnpm 10.15.1·Linux ARM64이며 고유 cache directory와 --summarize JSON을 대조했다. 아래 시간은 동일 로컬 세션의 관찰값이며 다른 로컬 검증과 병행했다. Root·Tool 항상 실행 검사를 포함한 전체 verify 시간이나 변경 전 대비 성능 향상율을 뜻하지 않는다.
+
+| 실제 실행 | miss / hit | Turbo 경과 |
+| --- | --- | --- |
+| type/lint/unit cold | 17 / 0 | 51.152초 |
+| 같은 입력 warm | 0 / 17 | 0.036초 |
+| browser setup만 변경 | 4 / 13 | 21.253초 |
+| setup 원복 | 0 / 17 | 0.044초 |
+| 양 앱 build cold, concurrency 1 | 2 / 0 | 46.031초 |
+| 양 앱 .next 삭제 후 archive 복원 | 0 / 2 | 1.394초 |
+
+browser setup 변경은 config 자체 type/lint와 Web·Console unit만 다시 실행했다. 나머지 13 task는 실제 cache hit였고 원복 후 17개 모두 hit였다. build cold는 두 작업 모두 실행했고, 양 앱 .next를 삭제한 뒤 재실행해 두 archive의 hit와 두 standalone server.js 복원을 확인했다. 이후 변경은 RESULT 기록뿐이다. 최종 push/CI는 PR에 기록한다.

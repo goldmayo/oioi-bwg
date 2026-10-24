@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.19"
+version: "1.20"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-25"
@@ -352,7 +352,12 @@ package를 소비하는 ops 테스트·MFA fixture는 Tool이 직접 의존성�
 소유한다. Root ops entry는 양 위치의 기존 테스트 합집합을 수집하며 fixture의 기존 CLI 경로·격리 DB guard는 유지한다.
 Tool 자체 type-check는 소스·설정과 테스트 프로그램을 함께 검사한다. Root 전체 type-check는 각 owner를
 한 번 실행하고, type-check:tests는 Root와 Tool의 테스트 타입 검사를 함께 실행한다.
-repo harness는 직접 앱 import, source package 및 공통 설정 변경의 두 앱 task 선택/hash를 검사한다.
+repo harness는 직접 앱 import와 source package·공통 설정의 필수 task 선택/hash 변화 및 무관 hash 보존을
+함께 검사한다. TypeScript 프로그램이 실제로 읽는 공통 설정·preset도 type-check 입력에 포함돼야 한다.
+제품 cache는 자체 workspace 기본 입력과 JIT source 전파를 유지하고 공통 config 입력을 build·타입·lint·unit
+소비에 따라 분리한다. config의 전파 노드(transit 및 script 없는 build)는 manifest만 입력으로 사용한다.
+Root 정책·통합 검사는 항상 실행하며 제품 hash에 전역 입력으로 섞지 않는다. Task 추가·설정 import 변경 시
+입력 소속과 필수/무관 cache 회귀를 함께 갱신한다.
 루트 설정과 운영·통합 테스트도 repo 진입점의 strict 타입 검사에 포함한다. 테스트 수집·실행 성공을
 타입 검사 성공으로 취급하지 않는다. Node 테스트에는 앱 alias를 전역 적용하지 않으며 Web HTTP
 adapter를 소비하는 테스트만 해당 앱의 타입 해석을 사용한다. harness는 추적 테스트의 검사 소속과
