@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.18"
+version: "2.19"
 status: "active"
 authority: "constitution"
-updated_at: "2026-10-23"
+updated_at: "2026-10-25"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.18
+# oioi-bwg Architecture Constitution v2.19
 
 ## 1. 목적
 
@@ -170,6 +170,15 @@ consumer는 명시적 package export와 workspace 개발 의존성을 사용한�
 각 root/app에 유지하며 env 해석·request/instrumentation adapter는 앱에 둔다. 앱과 공용 서버·계약의
 runtime에서 tooling package를 import하지 않는다. package는 root harness/test 구현을 역으로
 참조하지 않으며 harness가 package의 공개 경계를 검증한다.
+
+저장소에서 내부 package를 소비하는 검증·설정 조합·operator 구현은 private
+`tools/repository` workspace가 소유한다. 자체 package 의존성과 검사 명령을 가지며 config의
+preset/factory와 server/contracts의 공개 export를 사용한다. 제품 runtime은 이 workspace를
+소비하지 않는다. 저장소 통합 테스트의 앱 참조는 10의 명시적 HTTP adapter 예외만 허용한다.
+root는 내부 workspace 의존성을 갖지 않는 orchestration 경계로 전환한다. 자동 탐색 설정과
+기존 CLI 호환 entry만 tooling의 등록된 공개 파일을 명시적 상대 경로로 연결할 수 있다.
+이는 root integration adapter의 제한적 예외이며 제품의 workspace 상대 경로 우회·사설 export
+접근을 허용하지 않는다. 전환 중에는 실제 consumer와 검사 수집을 이관한 뒤 root 의존성을 제거한다.
 
 기존 Sentry → Slack relay는 private `apps/sentry-slack-relay` workspace가 소유하는 독립 Cloudflare
 Worker다. Web/Console·공통 서버·tooling runtime을 import하지 않으며 FSD나 Next build·OCI Promotion에

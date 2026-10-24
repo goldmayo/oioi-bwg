@@ -15,8 +15,8 @@ created_at: "2026-10-25"
 | 1    | DEP-01 의존성 선언      | 병합 완료 — PR #225 |
 | 2    | BND-01 경계 검사        | 병합 완료 — PR #226·#227                 |
 | 3    | TYP-01 테스트 타입 소속 | 병합 완료 — PR #228                 |
-| 4    | OWN-01/02 검증 소유권   | 검증 중                 |
-| 5    | CAC-01 캐시 영향 범위   | 미착수                 |
+| 4    | OWN-01/02 검증 소유권   | 병합 완료 — PR #229                 |
+| 5    | CAC-01 캐시 영향 범위   | 진단·보완 계획                 |
 | 6    | IMG-01 Docker 입력 축소 | 미착수                 |
 
 ## 1단계 — 직접 의존성과 도구 실행 소유권
@@ -116,3 +116,16 @@ root lint:repo는 apps와 packages를 제외하며 기존 root ESLint 조합은 
 동일한 네 설정 오류를 각 workspace의 실제 명령이 모두 TS2322·종료 코드 2로 거절했다. fixture를 원복한 뒤 전체 type-check·lint·FSD·harness 44/44·unit 99파일 700건·format가 성공했다. Sentry guard 추가 후 config 자체 타입·lint 검사와 graph 20가지 사례도 별도 성공했다. root ESLint JSON reporter는 77파일·오류 0건·workspace 파일 0개를 확인했으며 최종 lint:deps도 source/config 전체 오류 0건과 Turbo 424파일·6패키지 위반 0건으로 성공했다. 최종 push/CI 결과는 PR에 기록한다.
 
 이 checkpoint는 4개 설정 프로그램·실행 manifest·2개 runtime include·root 검사 축소·해석 runner·이관 회귀·SSOT를 함께 맞추므로 21파일이다. 설정의 소유권 이전과 root 제거, runtime 분류와 경계 검증을 따로 병합해 검사 사각지대가 생기지 않도록 묶었다. 리뷰 순서는 workspace 설정/명령 → root 범위/runner → harness 이동/경계 → SSOT/결과다.
+
+
+### 4단계 통합 증거
+
+[PR #229](https://github.com/goldmayo/oioi-bwg/pull/229)의 [Verify #528](https://github.com/goldmayo/oioi-bwg/actions/runs/40114116656)과 최종 push hook 전체 gate가 성공했다. 검증 head `c2c2cf604797fb13b8ea86e0dc63946e48befb29`와 squash `5136d61b81dd042eca26d6bfa64b4f94deb09b52`의 tree가 동일하다.
+
+## 5단계 A — 캐시 기준선과 root 소유권 보완
+
+4단계 head에서 개인 env 없이 임시 Git fixture를 생성하고 18개 입력을 각각 변경·원복하며 type-check/lint/test/build의 dry JSON과 affected 선택을 대조했다. config/Next/Sentry/browser/ESLint/Steiger/TS preset, server/contracts source, root harness/설정 모두 실행 명령이 있는 task 19개 전부의 hash와 선택을 바꿨다. 해당 source SHA와 squash tree 일치를 확인했으므로 5단계 기준선으로 사용한다. 실제 task 실행 시간의 개선 증거는 아니다.
+
+server source만 바꿔 globalCacheInputs를 대조하자 외부 의존성 hash는 같고 내부 의존성 hash가 `d3ec59b15666256c`에서 `5a026d4a4bdc1610`으로 바뀌었다. root manifest의 config/server/contracts 직접 의존이 전역 source closure를 만들고 있다. 단순 inputs 조정으로 해결할 수 없음을 공식 root workspace dependency 계약과 대조했다.
+
+[PLAN의 2026-10-25 5단계 보완](MONOREPO-BOUNDARIES-AND-EXECUTION-PLAN.md#2026-10-25-5단계-보완--root-내부-의존성의-전역-hash-해소)에 도구 workspace로 실제 consumer를 이관하는 실행안을 추가했다. 헌법 2.19·Testing 1.12는 이 전환의 책임과 root adapter 한계를 먼저 정의한다. 이 기록은 도구 코드 이관·cache 개선 완료를 뜻하지 않는다. 진단 뒤 코드/타입/테스트/build는 추가 실행하지 않은 문서 전용 checkpoint다.
