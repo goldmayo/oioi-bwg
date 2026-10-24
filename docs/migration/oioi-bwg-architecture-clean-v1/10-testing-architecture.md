@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.18"
+version: "1.19"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-25"
@@ -326,6 +326,11 @@ root의 내부 package 소비 검증은 tools/repository로 단계적으로 이�
 직접 사용하는 package·도구·타입 프로그램을 소유하며 root 명령은 같은 검증을 orchestrate한다.
 기존 경로를 위한 root adapter는 tooling의 등록된 공개 entry만 참조한다. 이관 전후
 harness/unit/ops/PG 수집 합집합·주 타입 소속·cwd 해석을 대조하고, 검사 entry를 먼저 제거하지 않는다.
+Root는 내부 workspace 의존성을 선언하거나 제품 package를 직접 import하지 않는다. 등록된 Tool
+공개 파일 adapter만 허용하며 manifest와 해석 graph 양쪽에서 회귀를 거절한다.
+Root orchestration은 제품 Turbo 검사에서 Tool을 제외하고 type-check:repo·lint:repo에서 Tool의
+자체 검사를 항상 위임한다. --affected가 Root 파일 변경에서 Tool을 선택하지 않아도 같은 검사를
+수행하며, 전체 검사에서 Tool을 중복 실행하지 않는다. Tool의 저장소 통합 검사는 cache하지 않는다.
 제품 task의 cache는 root 내부 package source의 전역 결합을 제거한 뒤 소비 입력으로 검증한다.
 affected 선택·hash 변화·실제 실행을 구분하고 필요한 무효화와 무관한 cache 보존을 함께 증명한다.
 

@@ -126,9 +126,14 @@ export function dependencyOptions(
 export function workspaceDependencyErrors(
   owners: WorkspaceDependencyOwner[],
   modules: ICruiseResult["modules"] = [],
+  rootDependencies: Record<string, string> = {},
 ) {
   const errors: string[] = [];
   const byName = new Map(owners.map((owner) => [owner.name, owner]));
+  for (const [name, version] of Object.entries(rootDependencies)) {
+    if (byName.has(name) || version.startsWith("workspace:"))
+      errors.push(`root: 내부 workspace 의존성 ${name} 금지`);
+  }
   const ownerOf = (file: string) =>
     owners.find(({ directory }) => file.startsWith(directory + "/"));
   for (const owner of owners) {
@@ -155,6 +160,8 @@ export function workspaceDependencyErrors(
             dependency.resolved !== to.directory + "/" + entry.slice(2)
           )
             errors.push(`${module.source}: 등록된 공개 tooling 진입점만 참조해야 함`);
+        } else if (to) {
+          errors.push(`${module.source}: 내부 package 소비는 tooling workspace가 소유해야 함`);
         }
         continue;
       }
