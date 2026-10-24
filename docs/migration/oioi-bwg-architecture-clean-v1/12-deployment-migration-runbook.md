@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.22"
+version: "1.23"
 status: "active"
 authority: "runbook"
 updated_at: "2026-10-25"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.22
+# oioi-bwg Deployment / Migration Runbook v1.23
 
 ## 1. 목적
 
@@ -276,8 +276,8 @@ container 안에 development toolchain 전체를 넣지 않는다.
 Docker build는 Root와 같은 exact Turbo CLI로 대상 workspace를 prune한다. pruned JSON/partial lock을
 먼저 복사해 frozen install한 뒤 pruned full source를 복사한다. Web/Console 단독 target에는 상대 앱·
 Relay·repository-tools를 포함하지 않는다. 공통 source package·env/secret·standalone 계약은 유지한다.
-이 전환의 일반 CI는 기존 BUILD_APP=all을 유지해 양 앱을 함께 prune하며 같은 builder의 두 이미지를
-검증한다. 앱별 CI builder 전환은 §21의 같은 run/pair 검증 계약과 함께 별도로 수행한다.
+일반 CI와 Promotion 모두 각 Dockerfile의 BUILD_APP=web/console만 사용한다. all과 상대 앱 값은
+설치 전에 거절한다. 각 verification-cache target도 해당 앱 산출물만 검사한다.
 
 Image는 §21의 source SHA를 포함한 candidate tag로 traceability를 남기되 release identity는 OCIR
 manifest digest로 고정한다. `latest`, `development` 같은 mutable tag를 deployment input으로
@@ -506,7 +506,7 @@ Promotion은 문서만 달라도 전체 검증·후보 계약을 유지하며 �
 두 push에서는 성공한 동일 저장소 PR의 head/tree·검증 job·입력 key·미만료 artifact를 확인한 뒤
 검증용 BuildKit 캐시만 base branch에 발행할 수 있다. 캐시 누락은 직접 빌드로 복구하며
 다른 run의 cache를 verify 통과·검증 image·배포 candidate 증거로 사용하지 않는다.
-일반 CI는 같은 builder의 두 runtime image만 후속 smoke에 전달한다. 사용하지 않는 standalone tar는 별도로 생성·전송하지 않는다.
+일반 CI는 같은 run의 앱별 pruned builder에서 만든 두 runtime image만 후속 smoke에 전달한다. 사용하지 않는 standalone tar는 별도로 생성·전송하지 않는다.
 Docker builder는 다음 변경 build에 복원하지 않는 Next 파일시스템 cache와 Turbo output archive를 쓰지 않으며,
 의존성·빌드 레이어의 BuildKit cache와 로컬 개발 cache는 유지한다.
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
@@ -524,8 +524,14 @@ run에서 pull/smoke한다. B2는 후보의 baseline release ID와 lock 안의 V
 불일치하면 서비스 변경 전에 거절한다. 기준이 null이면 기존 paired state가 없어야 한다.
 아래 후보 검증과 실제 배포 게이트는 그대로 적용한다. workflow는 검증된 기준에 따라 앱별 build를 선택하며
 운영 Dockerfile은 apps/web·apps/console이 각각 소유하고 기본 BUILD_APP도 해당 앱이다. build context는
-저장소 root다. 일반 CI는 BUILD_APP=all을 명시해 기존 공유 builder의 두 standalone을 검증·캐시하며
-각 파일의 runner image를 만든다. Promotion은 BUILD_APP=web/console로 필요한 앱만 빌드한다.
+저장소 root다. 일반 CI는 Web·Console의 pruned builder와 BuildKit cache를 앱별로 분리하고,
+각 builder의 verification-cache 검증 뒤 같은 입력으로 runner image를 만든다. v3 cache는 앱별
+하위 디렉터리를 사용하며 이전 v1/v2 layout을 복원하지 않는다. 두 캐시는 기존 단일 artifact의
+source/tree·verify 확인 후 발행 계약을 유지한다. 공통 layer의 중복 저장 비용은 관찰값으로 기록한다.
+같은 run의 두 image artifact만 기존 native/readiness/browser·paired Compose smoke로 전달한다.
+이미지 크기·local image ID·build digest·checkout/source/tree는 해당 run의 metadata로 추적하며
+이를 OCIR release candidate나 다른 run의 성공 증거로 취급하지 않는다.
+Promotion은 BUILD_APP=web/console로 필요한 앱만 빌드한다.
 어느 앱의 Dockerfile 변경이든 기존 보수적 재사용 조건에 따라 두 이미지를 다시 빌드한다.
 두 exact digest를 같은 격리 DB에서 **동시에 실행**해 native/readiness/browser smoke를 통과해야 한다.
 현재 run/attempt·각 digest/buildSourceSha를 묶은 smoke proof가 없거나 다르면 candidate.json을 쓰지 않는다.

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -66,12 +66,36 @@ test("Docker pruning preserves target inputs and excludes unrelated sources and 
   assert.match(version, /^\d+\.\d+\.\d+$/);
   const binary = path.join(root, "node_modules/.bin/turbo");
   assert.equal(execFileSync(binary, ["--version"], { encoding: "utf8" }).trim(), version);
-  for (const app of ["web", "console"])
-    assert.ok(
-      fs
-        .readFileSync(path.join(source, `apps/${app}/Dockerfile`), "utf8")
-        .includes(`pnpm dlx turbo@${version}`),
-    );
+  const commands = path.join(temporary, "commands");
+  fs.mkdirSync(commands);
+  fs.writeFileSync(
+    path.join(commands, "pnpm"),
+    '#!/bin/sh\nprintf "%s\\n" "$*" >> "$PRUNE_CALLS"\n',
+    { mode: 0o755 },
+  );
+  for (const app of ["web", "console"]) {
+    const dockerfile = fs.readFileSync(path.join(source, `apps/${app}/Dockerfile`), "utf8");
+    assert.ok(dockerfile.includes(`pnpm dlx turbo@${version}`));
+    const pruneCommand = dockerfile
+      .split("FROM base AS dependencies")[0]
+      .replace(/\\\n/g, " ")
+      .split("\n")
+      .find((line) => line.startsWith("RUN ") && line.includes(" prune "));
+    assert.ok(pruneCommand);
+    for (const scope of [app, app === "web" ? "console" : "web", "all"]) {
+      const calls = path.join(temporary, `calls-${app}-${scope}`);
+      const run = spawnSync("sh", ["-c", pruneCommand.slice(4)], {
+        env: {
+          ...env,
+          PATH: commands + path.delimiter + env.PATH,
+          BUILD_APP: scope,
+          PRUNE_CALLS: calls,
+        },
+      });
+      assert.equal(run.status, scope === app ? 0 : 1);
+      assert.equal(fs.existsSync(calls), scope === app);
+    }
+  }
   execFileSync("git", ["init", "--quiet"], { cwd: source, env });
 
   function prune(scopes) {

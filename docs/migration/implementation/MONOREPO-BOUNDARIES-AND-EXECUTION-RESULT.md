@@ -269,3 +269,18 @@ prune 회귀는 양 앱 각각에 대해 무관한 앱 source와 Relay의 manife
 | console | 앱 1 + config/server/contracts = 4 | 1365 | 4.482초 / 23.551초 |
 
 비교용 전체 C2 설치의 virtual store는 1367디렉터리였다. 공통 core/config와 Root 외부 CLI를 유지하므로 설치량이 크게 줄었다고 일반화하지 않는다. 목적은 대상 밖 변경이 설치/build 입력에 섞이지 않게 하는 것이다. 시간은 다른 로컬 검증과 병행한 ARM64 관찰값이다. Docker context 자체는 Root를 유지하며 pruner 뒤의 입력을 줄인다. 로컬 Docker 실행은 사용할 수 없어 실제 이미지·native/readiness/browser/pair 검증은 PR CI로 확인한다. 이후 변경은 RESULT 기록뿐이다.
+
+
+### 6단계 A 통합 증거
+
+[PR #239](https://github.com/goldmayo/oioi-bwg/pull/239)의 [Verify #538](https://github.com/goldmayo/oioi-bwg/actions/runs/40125212735)와 push hook 전체 gate가 성공했다. 검증 head `b188bad36235e8eb2f8955af5e795e55e18cd699`와 squash `c1e27490202aba2866d476e3f4da227cfd67726d`의 tree가 동일하다. 실제 Docker log에는 Next compile 2회와 cached step 31개가 있었고 runtime load는 builder를 재사용했다. 양 이미지의 native/readiness/browser·paired Compose 검증도 성공했다.
+
+## 6단계 B — 앱별 builder/cache와 같은 run의 이미지 검증
+
+기준은 `c1e27490202aba2866d476e3f4da227cfd67726d`다. 일반 CI의 두 builder와 cache 경로를 앱별로 분리하고 Dockerfile은 자기 앱만 허용한다. verification-cache도 해당 산출물 하나만 검사한다. v3 namespace로 이전 layout 복원을 끊으며 기존 verified-merge cache 발행과 단일 artifact 계약을 유지한다. 같은 run의 두 이미지 다운로드·native/readiness/browser/pair smoke와 Promotion 선택·source/tree/digest/rollback 계약은 유지한다. 이미지 metadata는 관찰용이며 release candidate를 대체하지 않는다.
+
+일반 CI의 builder/runner 4개가 각각 같은 앱·해당 cache를 사용하고 두 image artifact가 같은 run의 후속 job으로 전달되는 ops 회귀를 추가했다. 초기 workflow 치환에서 env/arg 이름도 바뀐 오류를 이 검사가 검출했으며 고정 이름을 복구한 뒤 ops 21파일 284건이 성공했다. metadata JavaScript의 구문도 확인했다. Docker pruner 명령을 mock pnpm으로 실행해 자기 앱만 허용하고 all/상대 앱은 설치 호출 전에 거절함을 검증했다.
+
+전체 type-check·lint·FSD·harness 46/46·unit 99파일 700건·format가 성공했다. 개인 env 없는 index tree `56106a9c2d3bbd24c83f58d30c461e7a9b1228a9`에서 frozen offline 설치 10.003초와 build --concurrency=1 --summarize가 성공했다. 두 build는 모두 miss, Turbo 38.195초였고 두 standalone server.js가 생성됐다. 이후 변경은 RESULT 기록뿐이다. 실제 앱별 Docker 실행과 metadata·cache 크기는 PR CI 결과로 기록한다.
+
+최초 6-B head `2b299f5ccaf57fc7259874e25aae33d56170dbef`의 [Verify #539](https://github.com/goldmayo/oioi-bwg/actions/runs/40126262159)는 Console cache build에서 verification-cache target 부재로 실패했다. Web build/load·unit·PG는 성공했지만 이후 image smoke는 실행되지 않았고 병합하지 않았다. 기존 Console Dockerfile은 공유 Web target을 사용해 자체 target이 없었다. Console 전용 scratch 검증 target을 추가하고 workflow 참조 target과 Dockerfile stage 선언의 대응을 ops 회귀로 보완했다. 수정 후 ops 21파일 284건·Tool 테스트 타입 검사·harness 46건·format가 성공했다. 추가 commit/push 후 새 head의 전체 CI로 다시 확인한다.
