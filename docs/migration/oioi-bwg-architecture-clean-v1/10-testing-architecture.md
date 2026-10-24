@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.15"
+version: "1.16"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-25"
@@ -339,6 +339,8 @@ root lint orchestration은 workspace lint와 repo lint를 나눠 실행하며 re
 양 앱의 FSD 정책·해석 graph·검사 소속 회귀는 repository-tools의 architecture harness가 소유한다.
 Root test:harness와 lint:deps는 Tool의 자체 명령을 통해 같은 검증을 실행한다.
 기존 dependency CLI 파일도 등록된 Tool 공개 entry를 import하는 호환 진입점으로 유지한다.
+운영 CLI의 package 소비 구현·정책은 Tool의 공개 operator entry가 소유한다. 기존 scripts 경로는
+해당 entry를 재수출하며 local DB·파일 권한·OCI worker 검증 계약을 유지한다.
 repo harness는 직접 앱 import, source package 및 공통 설정 변경의 두 앱 task 선택/hash를 검사한다.
 루트 설정과 운영·통합 테스트도 repo 진입점의 strict 타입 검사에 포함한다. 테스트 수집·실행 성공을
 타입 검사 성공으로 취급하지 않는다. Node 테스트에는 앱 alias를 전역 적용하지 않으며 Web HTTP
