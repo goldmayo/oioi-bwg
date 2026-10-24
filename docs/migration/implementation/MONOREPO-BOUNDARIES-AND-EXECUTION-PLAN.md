@@ -1,7 +1,7 @@
 ---
 title: "모노레포 의존성 경계와 검증·빌드 실행 개선 계획"
 kind: migration-plan
-status: draft
+status: active
 authority: plan
 source_commit: f39f0b875d64ba033da4f4ff3a5b0296b18f1678
 created_at: "2026-10-25"
@@ -10,6 +10,10 @@ observed_at: "2026-10-25"
 
 # 모노레포 의존성 경계와 검증·빌드 실행 개선 계획
 
+## 2026-10-25 실행 개시
+
+사용자의 단계별 직렬 진행 지시에 따라 실행을 시작했다. 계획 [PR #224](https://github.com/goldmayo/oioi-bwg/pull/224)의 문서 전용 Verify #523 성공과 미해결 리뷰 부재를 확인하고 `b6c162674a7ec99f894a494c458814f3b6284272`로 squash 통합했다. 아래 기준선·문제 관찰·체크리스트는 작성 당시의 계획으로 보존하며 단계별 실제 변경·검증·통합 상태는 [RESULT](MONOREPO-BOUNDARIES-AND-EXECUTION-RESULT.md)가 소유한다.
+
 ## 1. 목적·기준선·문서 책임
 
 목표는 각 workspace가 의존성·설정·검증을 소유하고, 저장소 도구가 실제 의존 관계에 맞춰 작업을 실행하는 것이다. 현재의 앱·서버·계약 분리를 유지하면서 모노레포 전환 뒤 남은 암묵적 의존, 검사 누락, 불필요한 재실행을 단계별로 해소한다.
@@ -17,7 +21,7 @@ observed_at: "2026-10-25"
 - 저장소: `goldmayo/oioi-bwg`, 기준 브랜치: `migration_main`.
 - 고정 기준: `f39f0b875d64ba033da4f4ff3a5b0296b18f1678`. fetch 후 local·origin의 기준 커밋이 일치하고 작업 트리가 깨끗한 상태에서 조사했다.
 - 도구 계약: 루트 manifest의 `pnpm@10.15.1`, lockfile로 고정한 Turborepo를 유지한다. 공식 문서 열람일은 2026-10-25이며 pnpm은 10.x 문서를 사용한다.
-- 이 문서는 **구현 미착수 계획**이다. 현재 관찰, 제안한 TO-BE, 앞으로 실행할 검증을 구분한다. 이전 대화의 검사 통과·캐시 실측을 이 SHA의 실행 결과로 재사용하지 않는다.
+- 이 문서는 **작성 당시 구현 미착수 계획**이다. 현재 관찰, 제안한 TO-BE, 앞으로 실행할 검증을 구분한다. 이전 대화의 검사 통과·캐시 실측을 이 SHA의 실행 결과로 재사용하지 않는다.
 - 완료된 [이전 정상화 PLAN](MONOREPO-CONFIGURATION-PLAN.md)과 [RESULT](MONOREPO-CONFIGURATION-RESULT.md)는 당시 범위의 이력으로 보존한다. 이번 후속 범위의 실행 순서와 완료 조건은 이 문서가 소유하며, 구현 결과는 착수 후 별도 RESULT에서 PR·커밋·실제 검증과 연결한다.
 
 상위 기준은 [헌법 §5](../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md), [Frontend](../oioi-bwg-architecture-clean-v1/02-frontend-architecture.md), [Server §2.1](../oioi-bwg-architecture-clean-v1/06-server-data-access-architecture.md), [Testing §17](../oioi-bwg-architecture-clean-v1/10-testing-architecture.md), [배포 runbook §21](../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md)이다. 외부 권장사항은 이 저장소의 SSOT를 대체하지 않는다. 검사 소유권·캐시 정책·Docker 계약을 바꾸는 단계는 해당 active 문서를 같은 변경 단위에서 개정한다.

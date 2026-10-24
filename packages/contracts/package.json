@@ -22,6 +22,8 @@
   "devDependencies": {
     "typescript": "^5",
     "vitest": "^4.1.2",
-    "@oioi-bwg/config": "workspace:*"
+    "@oioi-bwg/config": "workspace:*",
+    "eslint": "^9",
+    "jiti": "2.6.1"
   }
 }
