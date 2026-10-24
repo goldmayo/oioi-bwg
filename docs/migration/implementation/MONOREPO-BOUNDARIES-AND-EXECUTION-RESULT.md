@@ -180,3 +180,14 @@ Tool cwd로 실제 실행하자 Linter의 암묵적 cwd로 FSD 12사례가 설�
 기준은 `54e4c1c462fe17bf0cc4a2d7d8fd82d920e716c0`다. 실행·정책 구현을 Tool src/operators로 옮기고 기존 scripts 경로는 등록된 공개 entry를 재수출한다. local CLI·OCI worker·테스트의 기존 import 경로를 보존한다. 본문의 DB 대상/권한 검사·오류 클래스·파일 보호·서비스 호출은 변경하지 않는다. Tool은 이미 server 의존성을 직접 소유하며 lock 변경은 없다.
 
 실행·정책 본문 189줄의 byte 동일성을 확인했다. 전체 type-check·lint·FSD·harness 44/44·unit 99파일 700건·ops 21파일 283건·format가 성공했다. build:console-operator와 bundle/provenance의 모든 source hash 대조도 성공했고 새 Tool 구현과 기존 Root entry가 모두 포함됐다. 실제 DB 검증은 PR CI가 소유한다. 두 구현과 동일 오류 클래스·공개 entry·경계를 한 checkpoint로 맞추므로 변경량이 400줄 목표를 소폭 넘는다. 리뷰는 이동 본문 → 공개 entry/Root 재수출 → 경계/SSOT 순서로 한다.
+
+
+### 5단계 B3-a 통합 증거
+
+[PR #234](https://github.com/goldmayo/oioi-bwg/pull/234)의 [Verify #533](https://github.com/goldmayo/oioi-bwg/actions/runs/40119890530)와 push hook 전체 gate가 성공했다. 검증 head `7514a56ab67b0f36aa3f4cf2ad6c3f98f87f86f2`와 squash `6282c0256080d51c62d4c0c6f72af884fce812c2`의 tree가 동일하다.
+
+## 5단계 B3-b — 운영 테스트·fixture의 직접 소비 소유권
+
+기준은 `6282c0256080d51c62d4c0c6f72af884fce812c2`다. config를 직접 소비하는 배포 계약 테스트와 server를 소비하는 MFA fixture를 Tool로 이관한다. Root ops 수집은 두 위치의 합집합을 유지하며 fixture의 기존 경로는 등록된 공개 entry를 import한다. Tool은 otplib을 직접 선언해 다른 package의 node_modules를 createRequire anchor로 소비하던 우회를 제거한다. 격리 DB guard·OTP epoch·출력/정리 순서는 유지한다. Tool Node 테스트 프로그램과 전체 검사의 실행 소속을 함께 연결한다.
+
+기존 package/snapshot과 Tool 외 importer를 보존한 frozen offline 설치가 성공했다. 배포 계약 테스트의 byte 동일성, 기존/새 MFA entry의 비격리 DB 거절·stdout 부재, otplib 13.5.0 CJS/ESM 공개 API의 4개 epoch 결과 동일성을 확인했다. 전체 type-check·lint·FSD·harness 44/44·unit 99파일 700건·ops 21파일 283건·format가 성공했다. 로컬에서 실제 DB fixture를 생성하지 않았다. 최종 push/CI는 PR에 기록한다.

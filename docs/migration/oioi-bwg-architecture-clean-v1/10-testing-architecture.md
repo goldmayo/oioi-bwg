@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.16"
+version: "1.17"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-25"
@@ -341,6 +341,10 @@ Root test:harness와 lint:deps는 Tool의 자체 명령을 통해 같은 검증�
 기존 dependency CLI 파일도 등록된 Tool 공개 entry를 import하는 호환 진입점으로 유지한다.
 운영 CLI의 package 소비 구현·정책은 Tool의 공개 operator entry가 소유한다. 기존 scripts 경로는
 해당 entry를 재수출하며 local DB·파일 권한·OCI worker 검증 계약을 유지한다.
+package를 소비하는 ops 테스트·MFA fixture는 Tool이 직접 의존성과 Node 테스트 타입 프로그램을
+소유한다. Root ops entry는 양 위치의 기존 테스트 합집합을 수집하며 fixture의 기존 CLI 경로·격리 DB guard는 유지한다.
+Tool 자체 type-check는 소스·설정과 테스트 프로그램을 함께 검사한다. Root 전체 type-check는 각 owner를
+한 번 실행하고, type-check:tests는 Root와 Tool의 테스트 타입 검사를 함께 실행한다.
 repo harness는 직접 앱 import, source package 및 공통 설정 변경의 두 앱 task 선택/hash를 검사한다.
 루트 설정과 운영·통합 테스트도 repo 진입점의 strict 타입 검사에 포함한다. 테스트 수집·실행 성공을
 타입 검사 성공으로 취급하지 않는다. Node 테스트에는 앱 alias를 전역 적용하지 않으며 Web HTTP
