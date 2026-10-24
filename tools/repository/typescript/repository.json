@@ -1,0 +1,3 @@
+{
+  "extends": "@oioi-bwg/config/typescript/node.json"
+}

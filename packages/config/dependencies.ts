@@ -4,7 +4,13 @@ export interface WorkspaceDependencyOwner {
   directory: string;
   name: string;
   dependencies: Record<string, string>;
+  exports?: Record<string, string>;
 }
+
+const rootToolEntries: Record<string, string> = {
+  "eslint.config.ts": "./eslint",
+  "steiger.config.ts": "./steiger",
+};
 
 const testFiles = "\\.(?:test|spec)\\.[cm]?[jt]sx?$";
 const escape = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -57,7 +63,7 @@ export function dependencyOptions(
         ],
         pathNot: testFiles,
       },
-      to: { path: "^packages/config/" },
+      to: { path: "^(?:packages/config|tools/repository)/" },
     },
     {
       name: "client-server-core",
@@ -132,10 +138,17 @@ export function workspaceDependencyErrors(
   }
   for (const module of modules) {
     const from = ownerOf(module.source);
-    if (!from) continue;
     for (const dependency of module.dependencies) {
       if (dependency.coreModule || dependency.resolved.startsWith("node_modules/")) continue;
       const to = ownerOf(dependency.resolved);
+      if (!from) {
+        if (to?.directory === "tools/repository") {
+          const entry = to.exports?.[rootToolEntries[module.source] ?? ""];
+          if (!entry || dependency.resolved !== to.directory + "/" + entry.slice(2))
+            errors.push(`${module.source}: 등록된 공개 tooling 진입점만 참조해야 함`);
+        }
+        continue;
+      }
       if (from === to) continue;
       if (
         !to ||

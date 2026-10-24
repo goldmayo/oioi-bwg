@@ -1,5 +1,5 @@
 {
-  "extends": "@oioi-bwg/config/typescript/node.json",
+  "extends": "../tools/repository/typescript/repository.json",
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "Bundler",

@@ -32,6 +32,7 @@ test("every tracked TypeScript test has exactly one primary type owner", () => {
     "packages/contracts/tsconfig.json",
     "packages/contracts/tsconfig.config.json",
     "packages/config/tsconfig.json",
+    "tools/repository/tsconfig.json",
     "tests/tsconfig.json",
     "tests/tsconfig.web.json",
   ].map((config) => ({ config, project: readProject(config) }));
@@ -50,6 +51,19 @@ test("every tracked TypeScript test has exactly one primary type owner", () => {
 });
 
 test("workspace config entries have one local type owner and keep Node aliases isolated", () => {
+  const tooling = path.join(root, "tools/repository");
+  const manifest = JSON.parse(fs.readFileSync(path.join(tooling, "package.json"), "utf8"));
+  const publicPreset = path.resolve(tooling, manifest.exports["./typescript/repository.json"]);
+  for (const filename of [
+    "tsconfig.json",
+    "tsconfig.config.json",
+    "scripts/tsconfig.json",
+    "tests/tsconfig.json",
+  ]) {
+    const location = path.join(root, filename);
+    const config = JSON.parse(fs.readFileSync(location, "utf8"));
+    assert.equal(path.resolve(path.dirname(location), config.extends), publicPreset, filename);
+  }
   const directories = [
     "apps/web",
     "apps/console",
@@ -57,6 +71,7 @@ test("workspace config entries have one local type owner and keep Node aliases i
     "packages/contracts",
     "apps/sentry-slack-relay",
     "packages/config",
+    "tools/repository",
   ];
   const rootSettings = readProject("tsconfig.config.json");
   for (const directory of directories) {

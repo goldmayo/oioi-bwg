@@ -25,7 +25,7 @@ const files = execFileSync(
       !/^(?:docs|tests\/k6)\//.test(file) &&
       !file.endsWith("next-env.d.ts"),
   );
-const owners: WorkspaceDependencyOwner[] = ["apps", "packages"].flatMap((folder) =>
+const owners: WorkspaceDependencyOwner[] = ["apps", "packages", "tools"].flatMap((folder) =>
   fs.readdirSync(path.join(root, folder)).flatMap((name) => {
     const directory = `${folder}/${name}`;
     const manifest = path.join(root, directory, "package.json");
@@ -38,6 +38,7 @@ const owners: WorkspaceDependencyOwner[] = ["apps", "packages"].flatMap((folder)
       {
         directory,
         name: pkg.name,
+        exports: pkg.exports,
         dependencies: {
           ...pkg.dependencies,
           ...pkg.devDependencies,
@@ -89,7 +90,9 @@ const projects = [
     // 실행 consumer가 없는 legacy introspection 파일은 진입점에서만 제외한다.
     inputs: files.filter(
       (file) =>
-        !/^(?:apps|packages)\//.test(file) && file !== webTests && file !== "drizzle/relations.ts",
+        !/^(?:apps|packages|tools)\//.test(file) &&
+        file !== webTests &&
+        file !== "drizzle/relations.ts",
     ),
   },
   { label: "web-integration", config: "tests/tsconfig.web.json", inputs: [webTests] },
