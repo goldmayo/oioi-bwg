@@ -63,6 +63,10 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
       pnpm exec turbo run build "$@" --cache=local:r; \
     fi
 
+# CI verifies this app output before caching its builder.
+FROM scratch AS verification-cache
+COPY --from=builder /app/apps/console/.next/standalone/apps/console/server.js /console-server.js
+
 FROM node:${NODE_VERSION} AS runtime-base
 
 LABEL org.opencontainers.image.source="https://github.com/goldmayo/oioi-bwg"

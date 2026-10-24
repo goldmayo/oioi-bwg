@@ -30,9 +30,14 @@ describe("GitHub Actions OCI Run Command deployment", () => {
     );
     expect(builds).toHaveLength(4);
     for (const app of ["web", "console"]) {
+      const dockerfile = await readFile(resolve(`apps/${app}/Dockerfile`), "utf8");
+      const stages = [...dockerfile.matchAll(/^FROM .+ AS ([\w-]+)\s*$/gim)].map(
+        (match) => match[1],
+      );
       const pair = builds.filter((step) => step.with?.file === `apps/${app}/Dockerfile`);
       expect(pair.map((step) => step.with?.target)).toEqual(["verification-cache", "runner"]);
       for (const step of pair) {
+        expect(stages).toContain(step.with?.target);
         expect(step.with?.["build-args"]).toContain(`BUILD_APP=${app}\n`);
         expect(step.with?.["cache-from"]).toMatch(new RegExp(`/${app}$`));
       }
