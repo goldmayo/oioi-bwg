@@ -30,7 +30,18 @@ const owners = [
   ),
 }));
 
+test("root orchestration cannot declare internal workspace dependencies", () => {
+  for (const { name } of owners) {
+    assert.ok(workspaceDependencyErrors(owners, [], { [name]: "workspace:*" }).length > 0);
+  }
+  assert.ok(
+    workspaceDependencyErrors(owners, [], { alias: "workspace:@oioi-bwg/server@*" }).length > 0,
+  );
+  assert.deepEqual(workspaceDependencyErrors(owners, [], { typescript: "^5" }), []);
+});
+
 const cases = [
+  ["root public core", "scripts/probe.ts", 'export * from "@oioi-bwg/server/public";', true],
   [
     "registered root tooling",
     "eslint.config.ts",

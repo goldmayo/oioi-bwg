@@ -97,7 +97,13 @@ const projects = [
   },
   { label: "web-integration", config: "tools/repository/tsconfig.web.json", inputs: [webTests] },
 ];
-let errors = workspaceDependencyErrors(owners);
+const rootManifest = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+let errors = workspaceDependencyErrors(owners, [], {
+  ...rootManifest.dependencies,
+  ...rootManifest.devDependencies,
+  ...rootManifest.peerDependencies,
+  ...rootManifest.optionalDependencies,
+});
 for (const project of projects) {
   const config = path.join(root, project.config);
   const tsConfig = extractTSConfig(config);

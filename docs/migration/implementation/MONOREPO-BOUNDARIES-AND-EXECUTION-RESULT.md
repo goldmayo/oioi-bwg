@@ -202,3 +202,18 @@ Tool cwd로 실제 실행하자 Linter의 암묵적 cwd로 FSD 12사례가 설�
 기준은 `6a1cc6b6e1c6d02586bbeebda750d780be617e56`다. foundation·operator PG 테스트와 실제 PG project 조합을 Tool로 옮기고 Root 설정은 등록된 공개 entry를 재수출한다. Tool이 contracts·postgres·Drizzle을 직접 선언한다. Node/Web 타입 프로그램·수집·해석 context·HTTP adapter의 단일 예외 경로를 함께 바꾼다. 기존 Root guarded runner와 DB lifecycle·프로젝트명·직렬 실행·서버 package의 PG 소유권은 유지한다. 이전 Root foundation 경로와 인접 Tool 테스트에는 앱 참조 예외를 허용하지 않는다.
 
 두 PG 본문은 byte 동일하며 전체 PG 수집은 기존 4파일·Node/Web project·직렬 옵션을 보존했다. 새 Node/Web 테스트에 임시 TS2322를 넣자 Tool 명령이 각각 종료 코드 2로 거절했고 Root type-check:tests도 Node 오류를 거절했다. 모두 원복한 뒤 전체 type-check·lint·FSD·harness 44/44(경계 28사례·추적 TS 테스트 124개 주 소속 포함)·unit 99파일 700건·ops 21파일 283건·format가 성공했다. frozen offline 설치와 기존 lock 해석 보존도 확인했다. Root의 정적 내부 package 직접 import는 0개다. 실제 PG 실행은 PR CI가 소유하며 Root manifest 정리는 후속 C에서 수행한다.
+
+
+### 5단계 B3-c 통합 증거
+
+[PR #236](https://github.com/goldmayo/oioi-bwg/pull/236)의 [Verify #535](https://github.com/goldmayo/oioi-bwg/actions/runs/40121550990)와 push hook 전체 gate가 성공했다. 검증 head `8662f93ab66d61b26e5614eb6774ba57181b51e8`와 squash `2fb159dc406dae81e7c9891fd35c769fa6d8735a`의 tree가 동일하다.
+
+## 5단계 C1 — Root 내부 의존 제거와 통합 검사의 실행 보장
+
+기준은 `2fb159dc406dae81e7c9891fd35c769fa6d8735a`다. 실제 consumer 이관과 Root 직접 import 0개를 확인한 뒤 Root config/server/contracts 선언만 제거한다. 내부 workspace 선언과 Root 직접 package import를 gate가 거절한다.
+
+B3-c head의 별도 Git 복사본에서 18가지 입력을 변경해 cache 후보를 측정했다. Root internal hash는 빈 문자열이며 browser setup은 양 앱 unit, Next/Sentry는 앱 build/설정 타입 검사에 전파됐다. Root 설정·harness는 제품 hash를 유지했다. 이는 후속 C2 후보의 hash 실험이며 현재 브랜치의 cache 전환 완료 증거가 아니다. 실험에서 Root 파일 변경의 affected 선택이 비어 Tool을 선택하지 않음을 확인했다. Root 검증 entry는 제품 Turbo 실행에서 Tool을 제외한 뒤 Tool 자체 type/lint를 항상 호출한다. 전체 실행의 중복과 Root 변경의 누락을 함께 방지하며 Tool 통합 검사는 uncached로 유지한다. 공통 task 입력·전역 파일 입력의 세분화는 후속 C2가 소유한다.
+
+전체 type-check·lint·FSD·harness 45/45(경계 29사례·Root manifest/alias 회귀 포함)·unit 99파일 700건·ops 21파일 283건·format가 성공했다. 실행 로그에서 Tool type-check와 lint는 각각 한 번이었다. 실제 dry JSON의 Root internal hash 빈 값과 Tool 제외 scope를 확인했다.
+
+개인 env가 없는 index tree `1349dce1f783edb05dc4c8a439e20ee85f2d52ff` 복사본에서 frozen offline 설치 8.22초, env를 초기화한 build `--concurrency=1 --summarize`가 성공했다. 두 build 모두 cache miss, Turbo 경과 31.747초이며 양 앱 standalone server.js가 존재한다. 이후 변경은 이 RESULT 기록뿐이다. 최종 push/CI는 PR에 기록한다.

@@ -81,6 +81,16 @@
         "!next-env.d.ts"
       ],
       "outputs": []
+    },
+    "@oioi-bwg/repository-tools#type-check": {
+      "dependsOn": ["^transit"],
+      "cache": false,
+      "outputs": []
+    },
+    "@oioi-bwg/repository-tools#lint": {
+      "dependsOn": ["^transit"],
+      "cache": false,
+      "outputs": []
     }
   }
 }
