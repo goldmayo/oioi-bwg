@@ -10,6 +10,12 @@ observed_at: "2026-10-25"
 
 # 모노레포 의존성 경계와 검증·빌드 실행 개선 계획
 
+## 2026-10-25 실행 완료 안내
+
+1~6단계의 저장소 구현·회귀·일반 CI 검증을 완료했다. 5단계는 아래 보완안에 따라 실제 도구 소비자를 workspace로 이관한 뒤 cache 전파를 분리했고, 6단계는 앱별 pruned builder와 같은 run의 두 이미지 검증으로 전환했다. 최종 코드 통합은 [PR #240](https://github.com/goldmayo/oioi-bwg/pull/240)이다.
+
+아래 AS-IS·TO-BE 기본안·체크리스트는 승인 당시의 계획 이력으로 보존한다. 실제 완료 판정·최종 구조·검증 소스·실측 비용과 보류 범위는 [RESULT의 최종 완료 대조](MONOREPO-BOUNDARIES-AND-EXECUTION-RESULT.md#최종-완료-대조)가 소유한다. 실제 OCIR 후보 발행·VM 배포는 이 실행에 포함하지 않았다.
+
 ## 2026-10-25 실행 개시
 
 사용자의 단계별 직렬 진행 지시에 따라 실행을 시작했다. 계획 [PR #224](https://github.com/goldmayo/oioi-bwg/pull/224)의 문서 전용 Verify #523 성공과 미해결 리뷰 부재를 확인하고 `b6c162674a7ec99f894a494c458814f3b6284272`로 squash 통합했다. 아래 기준선·문제 관찰·체크리스트는 작성 당시의 계획으로 보존하며 단계별 실제 변경·검증·통합 상태는 [RESULT](MONOREPO-BOUNDARIES-AND-EXECUTION-RESULT.md)가 소유한다.

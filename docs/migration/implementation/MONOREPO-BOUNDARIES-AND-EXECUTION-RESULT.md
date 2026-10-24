@@ -1,9 +1,12 @@
 ---
 title: "모노레포 의존성 경계와 검증·빌드 실행 개선 결과"
 kind: migration-result
-status: in-progress
+status: complete
 source_commit: b6c162674a7ec99f894a494c458814f3b6284272
 created_at: "2026-10-25"
+completed_at: "2026-10-25"
+verified_source_commit: c37eba2e8e9f0f5884295eecfaa7eecec258e758
+integrated_commit: 5b2215a0f95d71f222a1fff383ccc3f6bec16c7b
 ---
 
 # 모노레포 의존성 경계와 검증·빌드 실행 개선 결과
@@ -17,7 +20,7 @@ created_at: "2026-10-25"
 | 3    | TYP-01 테스트 타입 소속 | 병합 완료 — PR #228                 |
 | 4    | OWN-01/02 검증 소유권   | 병합 완료 — PR #229                 |
 | 5    | CAC-01 캐시 영향 범위   | 병합 완료 — PR #230~#238                 |
-| 6    | IMG-01 Docker 입력 축소 | pruned 입력 전환 중                 |
+| 6    | IMG-01 Docker 입력 축소 | 병합 완료 — PR #239·#240                 |
 
 ## 1단계 — 직접 의존성과 도구 실행 소유권
 
@@ -284,3 +287,65 @@ prune 회귀는 양 앱 각각에 대해 무관한 앱 source와 Relay의 manife
 전체 type-check·lint·FSD·harness 46/46·unit 99파일 700건·format가 성공했다. 개인 env 없는 index tree `56106a9c2d3bbd24c83f58d30c461e7a9b1228a9`에서 frozen offline 설치 10.003초와 build --concurrency=1 --summarize가 성공했다. 두 build는 모두 miss, Turbo 38.195초였고 두 standalone server.js가 생성됐다. 이후 변경은 RESULT 기록뿐이다. 실제 앱별 Docker 실행과 metadata·cache 크기는 PR CI 결과로 기록한다.
 
 최초 6-B head `2b299f5ccaf57fc7259874e25aae33d56170dbef`의 [Verify #539](https://github.com/goldmayo/oioi-bwg/actions/runs/40126262159)는 Console cache build에서 verification-cache target 부재로 실패했다. Web build/load·unit·PG는 성공했지만 이후 image smoke는 실행되지 않았고 병합하지 않았다. 기존 Console Dockerfile은 공유 Web target을 사용해 자체 target이 없었다. Console 전용 scratch 검증 target을 추가하고 workflow 참조 target과 Dockerfile stage 선언의 대응을 ops 회귀로 보완했다. 수정 후 ops 21파일 284건·Tool 테스트 타입 검사·harness 46건·format가 성공했다. 추가 commit/push 후 새 head의 전체 CI로 다시 확인한다.
+
+
+### 6단계 B 통합 증거
+
+수정 head `c37eba2e8e9f0f5884295eecfaa7eecec258e758`의 [Verify #540](https://github.com/goldmayo/oioi-bwg/actions/runs/40126731527)이 전체 성공했다. [PR #240](https://github.com/goldmayo/oioi-bwg/pull/240)은 미해결 리뷰 없이 squash `5b2215a0f95d71f222a1fff383ccc3f6bec16c7b`로 통합했다. source·CI checkout·squash의 tree `6284d365cea7014abbe4471d0c670ac9c80aa742`가 같다. 최초 실패 head의 성공으로 대체하지 않았으며 수정 commit push hook도 전체 성공했다.
+
+실제 앱별 builder에서 Next compile은 2회, cached step은 34개였다. 후속 같은-run 이미지의 native module·health/readiness·browser·paired Compose 보존/복구 검증이 성공했다. PostgreSQL·quality·unit·infra·필수 verify도 성공했고 일반 feature PR의 Promotion job은 생략됐다.
+
+CI checkout SHA는 `39098811be63010d1ebf0dd966cb75a0aa70c8a8`, run/attempt는 `40126731527/1`이다. 아래 값은 해당 run의 ci-image-metadata와 artifact API 관찰값이며 OCIR release digest가 아니다. Docker load의 build step이 보고한 digest는 이 run에서는 local image ID와 같았다.
+
+| 앱      | local image 크기  | local ID / 보고된 build digest                                          | image artifact ZIP 크기 |
+| ------- | ----------------- | ----------------------------------------------------------------------- | ----------------------- |
+| Web     | 102,599,481바이트 | sha256:c1d0aac862786fae56f9278804c63669a85988de5ba56efdefbdab8d01fa8b27 | 102,614,668바이트       |
+| Console | 104,447,653바이트 | sha256:655b25954a0485284ba2775428682513db84961f3e866b7f24d31a49f726d07f | 104,464,020바이트       |
+
+image artifact ZIP digest는 Web `sha256:5bc3543b48a58a4daec91482f2ee0a96378e487b3857eacc75c142dfa9bba648`, Console `sha256:27b19cacbaa09e81ea056a6ad4e72282f4dd2bcbe9892a99283869b599511fd9`다. 단일 artifact 안에 보관하는 앱별 cache는 공통 layer 중복으로 비용이 늘었다.
+
+| CI 관찰                            | Web ZIP     | Console ZIP | BuildKit cache ZIP |
+| ---------------------------------- | ----------- | ----------- | ------------------ |
+| 5단계 #537, 기존 입력/공유 builder | 102,615,180 | 104,467,604 | 416,374,567        |
+| 6-A #538, 양 앱 prune/공유 builder | 102,615,180 | 104,466,068 | 434,614,786        |
+| 6-B #540, 앱별 prune/builder/cache | 102,614,668 | 104,464,020 | 801,278,043        |
+
+단위는 바이트다. runtime artifact 크기 차이는 작으며 cache artifact는 6-A 대비 약 84% 증가했다. 입력 독립성과 재실행 범위는 검증했지만 순 설치량·runtime 크기·전체 CI 시간/비용이 감소했다고 주장하지 않는다. 공통 cache 보관 비용 개선은 별도 측정·리뷰 대상으로 남긴다.
+
+## 최종 완료 대조
+
+이 판정은 위 verified source의 저장소 구현과 일반 CI 범위다. 계획의 기준선과 단계별 관찰은 앞의 이력으로 보존한다.
+
+| 계획 항목 | 완료 근거                                                                                                                                |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| DEP-01    | 앱 테스트/marker/CLI의 직접 선언, Tool 실제 소비자 선언, frozen install; Root 내부 workspace 선언·직접 import 0개                        |
+| BND-01    | source/config/test 해석 gate·29 graph 사례·Root manifest/alias 회귀; packages→apps·cross-app·private/상대 우회·runtime tooling 참조 거절 |
+| TYP-01    | 추적 TS 테스트 124개 주 소속 정확히 1개; 실제 owner 명령의 TS2322 오류 검출·Node/Web alias 격리                                          |
+| OWN-01/02 | workspace 자체 source/config 검사와 Root·Tool 항상 검사, 중복 실행 제거·unit/ops/PG 수집 보존                                            |
+| CAC-01    | 19 task×19 입력 hash matrix·실제 TS 소비 입력 대조·필수 affected 선택·17 warm hit·browser setup 4 miss/13 hit·build archive 복원         |
+| IMG-01    | target별 prune/frozen install/단독 build·관련/무관 입력 fingerprint·같은 CI run의 두 image와 native/readiness/browser/pair smoke         |
+
+최종 로컬 gate는 type-check·lint·FSD·harness 46건·unit 99파일 700건·ops 21파일 284건·format다. runtime/build 변경은 개인 env 없는 cold build와 최종 AMD64 Docker CI로 검증했다. 로컬 Docker가 없는 환경에서 실행한 것처럼 기록하지 않는다.
+
+최종 책임 배치는 다음과 같다. 자동 탐색 entry·기존 CLI 경로는 유지하면서 실제 저장소 소비자를 Tool이 소유한다.
+
+```text
+root                         orchestration·Root 검사·등록된 공개 Tool adapter
+apps/{web,console}           앱 source/config/검사·자체 pruned Docker target
+apps/sentry-slack-relay      독립 runtime·Node 검사
+packages/{server,contracts}  공개 source 계약·자체 검사·서버 PG 검사
+packages/config             공통 preset/factory/경계 정책
+tools/repository/
+ ├─ src/                    dependency CLI·operator·MFA fixture 실제 구현
+ ├─ harness/architecture/   import·FSD·타입 소속·task 입력·prune 회귀
+ └─ tests/                  package 소비 ops/PG·Node/Web 별도 타입 프로그램
+```
+
+재검증은 pnpm lint:deps(해석 graph+Turbo boundaries), pnpm test:harness(정책·소속·cache/prune), pnpm type-check, pnpm lint:fsd, pnpm test:unit:run, pnpm test:ops를 사용한다. Root type/lint entry는 Tool 검사를 항상 위임하며 affected 선택에서 빠져도 저장소 검사를 생략하지 않는다.
+
+남은 한계와 별도 범위:
+
+- Console auth의 type import가 끊는 순환 경고 1개는 유지한다. runtime 순환은 오류이며 auth 도메인 리팩터링은 포함하지 않았다. 계산형 dynamic import/임의 파일 접근까지 정적 graph가 증명하지는 않는다.
+- workspace 기본 입력·ESLint family·JIT source 전파는 보수적으로 유지한다. Root·Tool 항상 검사를 포함한 전체 verify가 warm 0.036초라는 뜻이 아니다.
+- 설치량 감소는 작고 앱별 BuildKit cache 보관량은 증가했다. config 분할·버전 catalog·공통 layer 보관 개선은 독립 후속 concern이다.
+- UI/Base UI·도메인/API/DB schema·개인 env 값 변경은 포함하지 않았다. 실제 OCIR 후보 발행/Promotion·VM 배포·외부 알림·Worker 배포는 실행하지 않았다. release 계약은 기존 ops 회귀와 일반 CI pair 검증 범위에서 확인했다.
