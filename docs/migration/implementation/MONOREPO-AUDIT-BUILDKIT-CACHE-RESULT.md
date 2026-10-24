@@ -1,10 +1,12 @@
 ---
 title: "모노레포 audit 후속 BuildKit 캐시 보관 개선 결과"
 kind: migration-result
-status: in-progress
+status: complete
 source_commit: c3e593498aeea6b51d8706fa1f9c37461e1ebe75
 verified_source_commit: b9200b40a0a550066b4e0199af0a7fb30494c414
+verified_ci_commit: 5e3969f197f31e6305c853bbb07fd2bbb2acf4b8
 created_at: "2026-10-25"
+completed_at: "2026-10-25"
 ---
 
 # 모노레포 audit 후속 BuildKit 캐시 보관 개선 결과
@@ -54,8 +56,27 @@ ops 최초 실행은 로컬 jq 경로 누락과 기존 앱별 cache 디렉터리
 
 ## CI 측정과 잔여 범위
 
-push hook·PR CI 상태는 실행 후 추가한다.
+push hook의 type/lint/unit·Root/Tool·경계·harness·ops·format은 성공했다.
+[PR #243](https://github.com/goldmayo/oioi-bwg/pull/243)의
+[Verify #543](https://github.com/goldmayo/oioi-bwg/actions/runs/40130077778) app build는
+source `5e3969f197f31e6305c853bbb07fd2bbb2acf4b8`에서 실제 Next compile 2회 후 성공했다.
+새 v4 key는 miss였으며 native tag export/import와 digest/size 검사를 통과했다.
+
+| 같은 run의 cache 관찰 | 바이트 |
+| --- | ---: |
+| 두 앱의 참조 blob을 각각 보관한 합계 | 801,182,117 |
+| 공통 OCI 저장소의 실제 blob | 696,461,096 |
+| 공통 digest blob의 중복 보관 절감 | 104,721,021 |
+| 참조되지 않은 blob | 0 |
+| 최종 cache artifact ZIP | 696,468,887 |
+
+동일한 앱별 참조 데이터를 기준으로 약 13.1% 절감했다. 종전 #540 cache ZIP
+801,278,043바이트와 비교한 관찰 차이는 104,809,156바이트다. 실제 물리적 중복 절감과
+서로 다른 run의 ZIP 비교를 구분한다. 전체 CI 시간/비용 감소는 주장하지 않는다.
+같은 key의 후속 warm 복원 검증은 이 PR의 최종 Verify 기록에서 추가 확인한다.
+
 로컬 Docker는 WSL integration이 없어 실행할 수 없다. 실제 native cache export/import와
-저장 bytes·artifact 크기, 동일 run의 runtime image·smoke는 PR CI에서 확인한다.
+저장 bytes·artifact 크기와 같은 run의 두 runtime image·native/readiness/browser·paired Compose
+보존/복구를 포함한 Verify #543 전체 gate가 성공했다. 구현·검증 완료이며 PR 병합·운영 배포는 아니다.
 같은 digest의 layer만 중복 제거할 수 있으며 앱별 install layer가 다르면 공유되지 않는다.
 기존 801,278,043바이트와의 단일 run 비교를 전체 CI 속도 개선이나 84% 회수로 일반화하지 않는다.
