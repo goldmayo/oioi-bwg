@@ -79,7 +79,7 @@
     "react-dom": "19.2.5",
     "steiger": "0.6.0",
     "tsx": "^4.21.0",
-    "turbo": "^2.11.2",
+    "turbo": "2.11.7",
     "typescript": "^5",
     "typescript-eslint": "8.56.1",
     "vitest": "^4.1.2"

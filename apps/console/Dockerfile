@@ -15,14 +15,21 @@ RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 
 WORKDIR /app
 
+FROM base AS pruner
+
+RUN pnpm dlx turbo@2.11.7 --version
+COPY . .
+ARG BUILD_APP=console
+RUN case "${BUILD_APP}" in \
+      all) set -- @oioi-bwg/web @oioi-bwg/console ;; \
+      web|console) set -- "@oioi-bwg/${BUILD_APP}" ;; \
+      *) exit 1 ;; \
+    esac; \
+    pnpm dlx turbo@2.11.7 prune "$@" --docker
+
 FROM base AS dependencies
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/web/package.json ./apps/web/package.json
-COPY apps/console/package.json ./apps/console/package.json
-COPY packages/contracts/package.json ./packages/contracts/package.json
-COPY packages/config/package.json ./packages/config/package.json
-COPY packages/server/package.json ./packages/server/package.json
+COPY --from=pruner /app/out/json/ ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM dependencies AS builder
@@ -43,8 +50,8 @@ ENV NODE_ENV=production \
     NEXT_PUBLIC_GTM_ID=${NEXT_PUBLIC_GTM_ID} \
     NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
-COPY . .
-RUN mkdir -p apps/console/public
+COPY --from=pruner /app/out/full/ ./
+RUN if [ "${BUILD_APP}" != web ]; then mkdir -p apps/console/public; fi
 RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
     case "${BUILD_APP}" in all|web|console) ;; *) exit 1 ;; esac; \
     set --; if [ "${BUILD_APP}" != all ]; then set -- "--filter=@oioi-bwg/${BUILD_APP}"; fi; \
