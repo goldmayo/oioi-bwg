@@ -9,7 +9,7 @@
     "start": "node .next/standalone/apps/web/server.js",
     "lint": "eslint . && pnpm lint:fsd",
     "lint:fsd": "NODE_OPTIONS=\"${NODE_OPTIONS:+$NODE_OPTIONS }--import tsx\" steiger src --config steiger.config.ts",
-    "type-check": "tsc --noEmit --incremental false",
+    "type-check": "tsc --noEmit --incremental false && tsc --noEmit -p tsconfig.config.json",
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {

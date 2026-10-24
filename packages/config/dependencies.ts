@@ -50,7 +50,13 @@ export function dependencyOptions(
     {
       name: "runtime-tooling",
       severity: "error",
-      from: { path: "^(?:apps/[^/]+|packages/(?:server|contracts))/src/", pathNot: testFiles },
+      from: {
+        path: [
+          "^(?:apps/[^/]+|packages/(?:server|contracts))/src/",
+          "^apps/[^/]+/sentry\\.[^/]+\\.config\\.[cm]?ts$",
+        ],
+        pathNot: testFiles,
+      },
       to: { path: "^packages/config/" },
     },
     {

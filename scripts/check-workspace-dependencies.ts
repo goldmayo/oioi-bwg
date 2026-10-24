@@ -61,11 +61,28 @@ const clients = files.filter((file) => {
 });
 const webTests = "tests/integration/m7-foundation.postgres.test.ts";
 const projects = [
-  ...owners.map(({ directory }) => ({
-    label: directory,
-    config: `${directory}/tsconfig.json`,
-    inputs: files.filter((file) => file.startsWith(directory + "/")),
-  })),
+  ...owners.flatMap(({ directory }) => {
+    const config = `${directory}/tsconfig.config.json`;
+    const hasSettings = fs.existsSync(path.join(root, config));
+    const settings = new Set(hasSettings ? extractTSConfig(path.join(root, config)).fileNames : []);
+    const inputs = files.filter((file) => file.startsWith(directory + "/"));
+    return [
+      {
+        label: directory,
+        config: `${directory}/tsconfig.json`,
+        inputs: inputs.filter((file) => !settings.has(path.join(root, file))),
+      },
+      ...(hasSettings
+        ? [
+            {
+              label: directory + ":config",
+              config,
+              inputs: inputs.filter((file) => settings.has(path.join(root, file))),
+            },
+          ]
+        : []),
+    ];
+  }),
   {
     label: "repository",
     config: "tsconfig.config.json",

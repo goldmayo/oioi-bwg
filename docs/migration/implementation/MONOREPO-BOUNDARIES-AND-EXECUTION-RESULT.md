@@ -14,8 +14,8 @@ created_at: "2026-10-25"
 | ---- | ----------------------- | ---------------------- |
 | 1    | DEP-01 의존성 선언      | 병합 완료 — PR #225 |
 | 2    | BND-01 경계 검사        | 병합 완료 — PR #226·#227                 |
-| 3    | TYP-01 테스트 타입 소속 | 검증 중                 |
-| 4    | OWN-01/02 검증 소유권   | 미착수                 |
+| 3    | TYP-01 테스트 타입 소속 | 병합 완료 — PR #228                 |
+| 4    | OWN-01/02 검증 소유권   | 검증 중                 |
 | 5    | CAC-01 캐시 영향 범위   | 미착수                 |
 | 6    | IMG-01 Docker 입력 축소 | 미착수                 |
 
@@ -99,3 +99,20 @@ created_at: "2026-10-25"
 기준은 `7b3efa121f42c54aa51bd4ee2c7a541eee56cb3d`다. 추적된 TS 테스트 124개 중 Contracts의 `contract.test.ts` 한 개만 소속이 없었다. 수정 전 실제 파일에 `string = 42`를 임시 추가해도 package type-check가 종료 코드 0으로 통과하는 것을 재현하고 원복했다.
 
 Contracts의 테스트 exclude를 제거하고 기존 명시적 Vitest import·runtime 수집 범위는 유지한다. 환경 분리가 필요하지 않아 별도 테스트 TS 설정을 만들지 않는다. harness는 11개 repo/workspace/test 프로그램의 초기 fileNames로 모든 추적 TS 테스트의 주 소속이 정확히 하나인지 검사한다. import에 따른 중복 방문을 소속 중복으로 취급하지 않는다. 실제 Contracts 테스트 source의 메모리 fixture에서도 TS2322를 검출해 exclude 재도입을 방지한다. 수정 후 동일 임시 타입 오류를 실제 package 명령이 TS2322·종료 코드 2로 거절했고 fixture를 원복했다. 정상 package type-check와 관련 harness 5건은 성공했다. 전체 `pnpm type-check`, `pnpm lint`(경계 gate 포함), `pnpm lint:fsd`, `pnpm test:harness` 43/43, `pnpm test:unit:run` 99파일·700건, `pnpm format:check`가 성공했다. 주 소속 누락·중복은 모두 0개다.
+
+
+### 3단계 통합 증거
+
+[PR #228](https://github.com/goldmayo/oioi-bwg/pull/228)의 [Verify #527](https://github.com/goldmayo/oioi-bwg/actions/runs/40113135379)과 push hook 전체 gate가 성공했다. 검증 head `5290938bad53c9fea9aabddabe29573a61f9c30c`와 squash `e1fd1387c1077d5c63530282343f0c8fab313e76`의 tree가 동일하다.
+
+## 4단계 — workspace 검증의 완결성과 root 중복 제거
+
+기준은 `e1fd1387c1077d5c63530282343f0c8fab313e76`다. 수정 전 Web·Console next.config.ts와 server·contracts vitest.config.ts에 각각 임시 타입 오류를 넣었지만 네 workspace의 단독 type-check가 모두 종료 코드 0으로 통과했다. 각 파일은 원복했다.
+
+네 workspace에 Node 설정 타입 프로그램을 만들고 자체 type-check가 소스와 설정을 함께 검사하도록 연결했다. 소유권을 이관한 뒤 root 설정 include에서 workspace 항목을 제거했다. dependency runner도 source와 Node 설정의 TS 해석을 구분한다. runtime Sentry 진입점은 자체 앱 alias가 필요하므로 앱 소스 프로그램에 명시적으로 포함했다. 환경값이나 instrumentation 구현은 변경하지 않는다.
+
+root lint:repo는 apps와 packages를 제외하며 기존 root ESLint 조합은 staged 검사를 위해 유지한다. Web 경로에서 양 앱을 검사하던 테스트를 root fsd-policy harness로 이관했다. 소비자가 해당 테스트 하나뿐임을 import·config·CLI 검색으로 확인한 architecture.ts 재수출 wrapper도 제거했다. workspace 설정의 주 소속·strict/noEmit·Node alias 격리를 harness로 보호한다. Sentry runtime의 tooling 참조도 graph gate와 fixture로 거절하도록 보완했다.
+
+동일한 네 설정 오류를 각 workspace의 실제 명령이 모두 TS2322·종료 코드 2로 거절했다. fixture를 원복한 뒤 전체 type-check·lint·FSD·harness 44/44·unit 99파일 700건·format가 성공했다. Sentry guard 추가 후 config 자체 타입·lint 검사와 graph 20가지 사례도 별도 성공했다. root ESLint JSON reporter는 77파일·오류 0건·workspace 파일 0개를 확인했으며 최종 lint:deps도 source/config 전체 오류 0건과 Turbo 424파일·6패키지 위반 0건으로 성공했다. 최종 push/CI 결과는 PR에 기록한다.
+
+이 checkpoint는 4개 설정 프로그램·실행 manifest·2개 runtime include·root 검사 축소·해석 runner·이관 회귀·SSOT를 함께 맞추므로 21파일이다. 설정의 소유권 이전과 root 제거, runtime 분류와 경계 검증을 따로 병합해 검사 사각지대가 생기지 않도록 묶었다. 리뷰 순서는 workspace 설정/명령 → root 범위/runner → harness 이동/경계 → SSOT/결과다.

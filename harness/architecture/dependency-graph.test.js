@@ -24,6 +24,12 @@ const owners = [
 
 const cases = [
   [
+    "Sentry runtime tooling",
+    "apps/web/sentry.server.config.ts",
+    'export * from "@oioi-bwg/config/public";',
+    true,
+  ],
+  [
     "runtime cycle",
     "apps/web/src/a.ts",
     'import { b } from "./b"; export const a = () => b;',
