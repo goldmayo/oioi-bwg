@@ -161,15 +161,27 @@ const cases = [
     true,
   ],
   [
-    "foundation adapter",
+    "former foundation path",
     "tests/integration/m7-foundation.postgres.test.ts",
+    'export * from "@/server/http/api-response";',
+    true,
+  ],
+  [
+    "foundation sibling adapter",
+    "tools/repository/tests/integration/probe.test.ts",
+    'export * from "@/server/http/api-response";',
+    true,
+  ],
+  [
+    "foundation adapter",
+    "tools/repository/tests/integration/m7-foundation.postgres.test.ts",
     'export * from "@/server/http/api-response";',
     false,
   ],
   [
     "foundation foreign app",
-    "tests/integration/m7-foundation.postgres.test.ts",
-    'export * from "../../apps/console/src/shared/value";',
+    "tools/repository/tests/integration/m7-foundation.postgres.test.ts",
+    'export * from "../../../../apps/console/src/shared/value";',
     true,
   ],
 ];

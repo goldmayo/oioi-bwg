@@ -10,14 +10,15 @@
     "./cli/dependencies": "./src/check-workspace-dependencies.ts",
     "./operator/execution": "./src/operators/console-mfa-execution.ts",
     "./operator/policy": "./src/operators/console-mfa-operator-policy.ts",
-    "./fixture/console-mfa": "./src/fixtures/console-mfa.ts"
+    "./fixture/console-mfa": "./src/fixtures/console-mfa.ts",
+    "./vitest/postgres": "./vitest.postgres.config.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit && pnpm type-check:tests",
     "lint": "eslint .",
     "test:harness": "node --import tsx --test harness/architecture/*.test.js",
     "lint:deps": "tsx src/check-workspace-dependencies.ts",
-    "type-check:tests": "tsc --noEmit -p tsconfig.tests.json"
+    "type-check:tests": "tsc --noEmit -p tsconfig.tests.json && tsc --noEmit -p tsconfig.web.json"
   },
   "devDependencies": {
     "@oioi-bwg/config": "workspace:*",
@@ -30,6 +31,9 @@
     "tsx": "^4.21.0",
     "vitest": "^4.1.2",
     "@oioi-bwg/server": "workspace:*",
-    "otplib": "13.5.0"
+    "otplib": "13.5.0",
+    "@oioi-bwg/contracts": "workspace:*",
+    "postgres": "^3.4.8",
+    "drizzle-orm": "^0.45.1"
   }
 }

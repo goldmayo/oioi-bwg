@@ -60,13 +60,13 @@ const clients = files.filter((file) => {
         statement.expression.text === "use client",
     );
 });
-const webTests = "tests/integration/m7-foundation.postgres.test.ts";
+const webTests = "tools/repository/tests/integration/m7-foundation.postgres.test.ts";
 const projects = [
   ...owners.flatMap(({ directory }) => {
     const config = `${directory}/tsconfig.config.json`;
     const hasSettings = fs.existsSync(path.join(root, config));
     const settings = new Set(hasSettings ? extractTSConfig(path.join(root, config)).fileNames : []);
-    const inputs = files.filter((file) => file.startsWith(directory + "/"));
+    const inputs = files.filter((file) => file.startsWith(directory + "/") && file !== webTests);
     return [
       {
         label: directory,
@@ -95,7 +95,7 @@ const projects = [
         file !== "drizzle/relations.ts",
     ),
   },
-  { label: "web-integration", config: "tests/tsconfig.web.json", inputs: [webTests] },
+  { label: "web-integration", config: "tools/repository/tsconfig.web.json", inputs: [webTests] },
 ];
 let errors = workspaceDependencyErrors(owners);
 for (const project of projects) {

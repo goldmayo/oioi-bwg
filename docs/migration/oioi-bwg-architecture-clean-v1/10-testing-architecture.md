@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.17"
+version: "1.18"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-25"
@@ -317,7 +317,8 @@ feature push hook도 같은 전체 diff 판정을 사용한다. Promotion과 mai
 Turbo boundaries를 검사한다. root lint·verify·CI·push hook이 같은 entry를 실행한다.
 packages의 앱 역참조·앱 간 참조·workspace 상대 경로 우회·미선언 내부 의존성·runtime의 tooling 참조와
 실제 runtime 순환을 거절한다. type import로 끊기는 순환은 별도 경고로 드러낸다.
-root의 앱 source 참조는 foundation HTTP 통합 테스트의 Web response adapter 한 곳으로 제한한다.
+저장소 도구의 앱 source 참조는 tools/repository의 foundation HTTP 통합 테스트가 사용하는
+Web response adapter 한 곳으로 제한한다. 이전 Root 테스트 경로나 인접 Tool 테스트에는 예외를 허용하지 않는다.
 FSD/계층 규칙은 ESLint·Steiger가 계속 소유한다. 정적 해석 불가능한 계산형 dynamic import는
 별도 runtime/build 검증 대상이며 Turbo boundaries의 실험적 검사만으로 경계 보장을 대체하지 않는다.
 
@@ -333,7 +334,8 @@ Web과 Console은 독립 FSD root에서 lint/type-check/unit/build를 실행한�
 Web·Console·server·contracts의 type-check는 소스와 자체 Node 설정 프로그램을 함께 실행한다.
 Next·ESLint·Vitest·Steiger 진입점은 해당 workspace의 tsconfig.config.json이 소유하며 앱 alias를
 Node 프로그램에 주입하지 않는다. 앱 Sentry runtime 진입점은 앱 소스 프로그램에서 검사한다.
-Relay·config는 기존 자체 프로그램을 유지한다. root는 root 설정·scripts·통합 검사를 소유한다.
+Relay·config는 기존 자체 프로그램을 유지한다. root는 root 설정·scripts·독립 ops 검사를 소유하고
+내부 package를 직접 소비하는 통합 검사는 Tool이 소유한다.
 root lint orchestration은 workspace lint와 repo lint를 나눠 실행하며 repo lint는 apps/packages/tools를
 재검사하지 않는다. root ESLint의 설정 조합은 staged 파일과 harness의 cwd별 정책 대조를 위해 유지한다.
 양 앱의 FSD 정책·해석 graph·검사 소속 회귀는 repository-tools의 architecture harness가 소유한다.
@@ -358,7 +360,10 @@ Console의 MFA·인가 계약은 유지한다. 전체 관리자 E2E의 수동 �
 CI의 PostgreSQL fixture는 격리된 test DB에만 만들고 정리한다.
 서버 repository/service 전용 DB 테스트는 packages/server/tests/integration과 서버 strict 타입
 프로그램이 소유한다. 실제 실행은 root guarded runner와 직렬 Node project를 사용하며 일반 package
-unit에는 수집하지 않는다. Web HTTP adapter를 검증하는 foundation과 operator CLI 통합은 root에 유지한다.
+unit에는 수집하지 않는다. Web HTTP adapter를 검증하는 foundation과 operator CLI 통합은
+Tool의 tests/integration이 소유하며 기존 Root guarded runner가 같은 직렬 PG project 합집합을 실행한다.
+Tool은 Node 테스트와 Web HTTP 테스트의 타입 프로그램을 분리하고, 후자만 Web 소유 TS alias를 사용한다.
+Root PG 자동 탐색 설정은 Tool 공개 project entry를 재수출한다.
 수동 k6는 앱 import/테스트 환경 없는 외부 Web 검증 도구로 root에 유지하고 unit/일반 verify와 분리한다.
 기존 target 식별자를 APP_ENV로 해석하거나 승인 없이 변경·호출하지 않는다.
 

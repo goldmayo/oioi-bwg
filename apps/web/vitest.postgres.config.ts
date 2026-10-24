@@ -16,7 +16,7 @@ export default mergeConfig(
     test: {
       name: "web-postgres",
       // 실제 DB 충돌을 Web HTTP adapter의 409 응답까지 검증하는 consumer다.
-      include: ["tests/integration/m7-foundation.postgres.test.ts"],
+      include: ["tools/repository/tests/integration/m7-foundation.postgres.test.ts"],
     },
   }),
 );

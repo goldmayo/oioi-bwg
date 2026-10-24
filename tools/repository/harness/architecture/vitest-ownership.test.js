@@ -168,7 +168,7 @@ test("PostgreSQL projects preserve serial Node execution and scope the Web adapt
   });
   try {
     const specifications = await ctx.globTestSpecifications();
-    const expected = ["tests/integration", "packages/server/tests/integration"]
+    const expected = ["tools/repository/tests/integration", "packages/server/tests/integration"]
       .flatMap((directory) =>
         fs
           .readdirSync(path.join(root, directory))
@@ -184,7 +184,10 @@ test("PostgreSQL projects preserve serial Node execution and scope the Web adapt
       "server-postgres",
       "web-postgres",
     ]);
-    const foundation = path.join(root, "tests/integration/m7-foundation.postgres.test.ts");
+    const foundation = path.join(
+      root,
+      "tools/repository/tests/integration/m7-foundation.postgres.test.ts",
+    );
     for (const project of ctx.projects) {
       const files = specifications
         .filter(({ project: owner }) => owner === project)
