@@ -12,6 +12,8 @@
     "@oioi-bwg/config": "workspace:*",
     "@types/node": "^20",
     "typescript": "^5",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "eslint": "^9",
+    "jiti": "2.6.1"
   }
 }
