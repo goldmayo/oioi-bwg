@@ -39,11 +39,15 @@ describe("GitHub Actions OCI Run Command deployment", () => {
       for (const step of pair) {
         expect(stages).toContain(step.with?.target);
         expect(step.with?.["build-args"]).toContain(`BUILD_APP=${app}\n`);
-        expect(step.with?.["cache-from"]).toMatch(new RegExp(`/${app}$`));
+        expect(step.with?.["cache-from"]).toMatch(new RegExp(`,tag=${app}$`));
       }
-      expect(pair[0].with?.["cache-to"]).toContain(`/buildx-cache-new/${app},`);
+      expect(pair[0].with?.["cache-to"]).toContain(`/buildx-cache-new,tag=${app},`);
+      expect(pair[0].with?.["cache-to"]).not.toContain("reset=true");
       expect(pair[1].with?.load).toBe(true);
     }
+    expect(builds.map((step) => step.with?.file)).toEqual(
+      ["web", "web", "console", "console"].map((app) => `apps/${app}/Dockerfile`),
+    );
     expect(workflow.jobs.app_build.name).toBe("app build");
     expect(workflow.jobs.build.needs).toContain("app_build");
     const downloads: Step[] = workflow.jobs.build.steps.filter(

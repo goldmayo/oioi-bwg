@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.23"
+version: "1.24"
 status: "active"
 authority: "runbook"
 updated_at: "2026-10-25"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.23
+# oioi-bwg Deployment / Migration Runbook v1.24
 
 ## 1. 목적
 
@@ -524,10 +524,15 @@ run에서 pull/smoke한다. B2는 후보의 baseline release ID와 lock 안의 V
 불일치하면 서비스 변경 전에 거절한다. 기준이 null이면 기존 paired state가 없어야 한다.
 아래 후보 검증과 실제 배포 게이트는 그대로 적용한다. workflow는 검증된 기준에 따라 앱별 build를 선택하며
 운영 Dockerfile은 apps/web·apps/console이 각각 소유하고 기본 BUILD_APP도 해당 앱이다. build context는
-저장소 root다. 일반 CI는 Web·Console의 pruned builder와 BuildKit cache를 앱별로 분리하고,
-각 builder의 verification-cache 검증 뒤 같은 입력으로 runner image를 만든다. v3 cache는 앱별
-하위 디렉터리를 사용하며 이전 v1/v2 layout을 복원하지 않는다. 두 캐시는 기존 단일 artifact의
-source/tree·verify 확인 후 발행 계약을 유지한다. 공통 layer의 중복 저장 비용은 관찰값으로 기록한다.
+저장소 root다. 일반 CI는 Web·Console의 pruned builder와 cache manifest를 앱별로 분리하고,
+각 builder의 verification-cache 검증 뒤 같은 입력으로 runner image를 만든다. v4 local cache는
+OCI 저장소 하나의 `web`·`console` tag로 각각 lookup/export하며 digest가 같은 blob만 공유한다.
+두 export는 직렬로 실행하고 새 출력 디렉터리에 누적해 다른 앱 tag를 보존한다. export 중 reset이나
+같은 tag 덮어쓰기를 사용하지 않는다. 이전 v1/v2/v3 layout은 복원하지 않는다.
+사용할 Buildx/BuildKit은 tag 지원을 검증한 버전으로 고정한다. 앱별 manifest와 참조 blob의 digest/size,
+공통/전체 blob bytes를 기록하며, 동일 조건의 비교가 없으면 전체 CI 시간 개선으로 일반화하지 않는다.
+단일 cache artifact의 source/tree·verify 확인 후 발행 계약은 유지한다. cache 저장소를 image·후보
+검증 증거로 사용하지 않으며 Promotion의 별도 cache와 immutable digest 계약은 유지한다.
 같은 run의 두 image artifact만 기존 native/readiness/browser·paired Compose smoke로 전달한다.
 이미지 크기·local image ID·build digest·checkout/source/tree는 해당 run의 metadata로 추적하며
 이를 OCIR release candidate나 다른 run의 성공 증거로 취급하지 않는다.
