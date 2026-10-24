@@ -13,6 +13,7 @@ const rootToolEntries: Record<string, string> = {
   "scripts/check-workspace-dependencies.ts": "./cli/dependencies",
   "scripts/console-mfa-execution.ts": "./operator/execution",
   "scripts/console-mfa-operator-policy.ts": "./operator/policy",
+  "tests/ops/console-mfa-fixture.ts": "./fixture/console-mfa",
 };
 
 const testFiles = "\\.(?:test|spec)\\.[cm]?[jt]sx?$";

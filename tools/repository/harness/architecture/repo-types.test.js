@@ -33,6 +33,7 @@ test("every tracked TypeScript test has exactly one primary type owner", () => {
     "packages/contracts/tsconfig.config.json",
     "packages/config/tsconfig.json",
     "tools/repository/tsconfig.json",
+    "tools/repository/tsconfig.tests.json",
     "tests/tsconfig.json",
     "tests/tsconfig.web.json",
   ].map((config) => ({ config, project: readProject(config) }));
