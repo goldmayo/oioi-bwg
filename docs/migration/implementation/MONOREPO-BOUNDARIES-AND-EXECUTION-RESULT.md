@@ -13,8 +13,8 @@ created_at: "2026-10-25"
 | 단계 | 범위                    | 상태                   |
 | ---- | ----------------------- | ---------------------- |
 | 1    | DEP-01 의존성 선언      | 병합 완료 — PR #225 |
-| 2    | BND-01 경계 검사        | 필수 gate 검증 중                 |
-| 3    | TYP-01 테스트 타입 소속 | 미착수                 |
+| 2    | BND-01 경계 검사        | 병합 완료 — PR #226·#227                 |
+| 3    | TYP-01 테스트 타입 소속 | 검증 중                 |
 | 4    | OWN-01/02 검증 소유권   | 미착수                 |
 | 5    | CAC-01 캐시 영향 범위   | 미착수                 |
 | 6    | IMG-01 Docker 입력 축소 | 미착수                 |
@@ -88,3 +88,14 @@ created_at: "2026-10-25"
 기준은 A의 통합 head다. `lint:deps`를 root lint/verify와 push hook에 연결하므로 CI quality의 기존 lint entry에서도 실행한다. source/config/test의 해석 정책은 동일하다.
 
 별도 임시 workspace fixture로 공개 export·앱 alias·자체 테스트·허용한 root HTTP adapter의 정상 동작과 역참조·config 교차 참조·상대 경로 우회·private export·미선언 의존성·type-only·dynamic import·runtime 순환 차단을 검증한다. root 테스트의 앱 참조 예외는 foundation 테스트에서 Web response adapter로 향하는 edge 한 곳으로 제한했다. Testing §17과 index를 같은 변경 단위에서 개정한다. 로컬 `pnpm type-check`, `pnpm lint`(새 gate 포함), `pnpm lint:fsd`, `pnpm test:harness` 41/41, `pnpm test:unit:run` 99파일·700건, `pnpm format:check`가 성공했다. 새 graph fixture는 19가지 사례와 manifest 규칙을 검사했다. CI 결과는 PR에 기록한다.
+
+
+### 2단계 B 통합 증거
+
+[PR #227](https://github.com/goldmayo/oioi-bwg/pull/227)의 [Verify #526](https://github.com/goldmayo/oioi-bwg/actions/runs/40112319687)과 push hook 전체 gate가 성공했다. 검증 head `b465c4d8e635f7b00d8af2dd836bef33e2dcc7f9`와 squash `7b3efa121f42c54aa51bd4ee2c7a541eee56cb3d`의 tree가 동일하다.
+
+## 3단계 — 테스트의 주 타입 검사 소속
+
+기준은 `7b3efa121f42c54aa51bd4ee2c7a541eee56cb3d`다. 추적된 TS 테스트 124개 중 Contracts의 `contract.test.ts` 한 개만 소속이 없었다. 수정 전 실제 파일에 `string = 42`를 임시 추가해도 package type-check가 종료 코드 0으로 통과하는 것을 재현하고 원복했다.
+
+Contracts의 테스트 exclude를 제거하고 기존 명시적 Vitest import·runtime 수집 범위는 유지한다. 환경 분리가 필요하지 않아 별도 테스트 TS 설정을 만들지 않는다. harness는 11개 repo/workspace/test 프로그램의 초기 fileNames로 모든 추적 TS 테스트의 주 소속이 정확히 하나인지 검사한다. import에 따른 중복 방문을 소속 중복으로 취급하지 않는다. 실제 Contracts 테스트 source의 메모리 fixture에서도 TS2322를 검출해 exclude 재도입을 방지한다. 수정 후 동일 임시 타입 오류를 실제 package 명령이 TS2322·종료 코드 2로 거절했고 fixture를 원복했다. 정상 package type-check와 관련 harness 5건은 성공했다. 전체 `pnpm type-check`, `pnpm lint`(경계 gate 포함), `pnpm lint:fsd`, `pnpm test:harness` 43/43, `pnpm test:unit:run` 99파일·700건, `pnpm format:check`가 성공했다. 주 소속 누락·중복은 모두 0개다.
