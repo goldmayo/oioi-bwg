@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { describe, expect, test } from "vitest";
+import YAML from "yaml";
 
 import { createSentryBuildOptions } from "@oioi-bwg/config/sentry-build";
 
@@ -13,12 +14,38 @@ describe("GitHub Actions OCI Run Command deployment", () => {
       readFile(resolve("apps/console/Dockerfile"), "utf8"),
     ]);
     const [verification, promotion] = workflow.split("  promotion-candidate:");
-    expect(verification.match(/NEXT_PUBLIC_APP_ENV=local/g)).toHaveLength(3);
+    expect(verification.match(/NEXT_PUBLIC_APP_ENV=local/g)).toHaveLength(4);
     expect(promotion.match(/NEXT_PUBLIC_APP_ENV=production/g)).toHaveLength(2);
     expect(promotion).toContain("NEXT_PUBLIC_APP_ENV: production");
     expect(workflow).not.toMatch(/NEXT_PUBLIC_APP_ENV[:=]\s*staging/);
     for (const dockerfile of dockerfiles)
       expect(dockerfile).toContain("ARG NEXT_PUBLIC_APP_ENV=local");
+  });
+
+  test("isolates app builders and keeps both images in the same-run smoke dependency", async () => {
+    const workflow = YAML.parse(await readFile(resolve(".github/workflows/verify.yml"), "utf8"));
+    type Step = { uses?: string; with?: Record<string, string | boolean> };
+    const builds: Step[] = workflow.jobs.app_build.steps.filter(
+      (step: Step) => step.uses === "docker/build-push-action@v6",
+    );
+    expect(builds).toHaveLength(4);
+    for (const app of ["web", "console"]) {
+      const pair = builds.filter((step) => step.with?.file === `apps/${app}/Dockerfile`);
+      expect(pair.map((step) => step.with?.target)).toEqual(["verification-cache", "runner"]);
+      for (const step of pair) {
+        expect(step.with?.["build-args"]).toContain(`BUILD_APP=${app}\n`);
+        expect(step.with?.["cache-from"]).toMatch(new RegExp(`/${app}$`));
+      }
+      expect(pair[0].with?.["cache-to"]).toContain(`/buildx-cache-new/${app},`);
+      expect(pair[1].with?.load).toBe(true);
+    }
+    expect(workflow.jobs.app_build.name).toBe("app build");
+    expect(workflow.jobs.build.needs).toContain("app_build");
+    const downloads: Step[] = workflow.jobs.build.steps.filter(
+      (step: Step) => step.uses === "actions/download-artifact@v4",
+    );
+    expect(downloads.map((step) => step.with?.name)).toEqual(["ci-web-image", "ci-console-image"]);
+    expect(downloads.every((step) => step.with?.["run-id"] === undefined)).toBe(true);
   });
 
   test("deploys only an immutable OCIR manifest digest", async () => {
