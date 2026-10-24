@@ -1,10 +1,10 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.8"
+version: "1.9"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-23"
+updated_at: "2026-10-25"
 depends_on:
   - "01"
   - "02"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.8
+# oioi-bwg Testing Architecture v1.9
 
 ## 1. 목적
 
@@ -312,6 +312,14 @@ fixture가 반복될 때 작은 builder를 사용할 수 있다.
 일반 `migration_main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 무거운 검사를 생략한다.
 scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·빈 diff·판정 실패는 전체 검증이다.
 feature push hook도 같은 전체 diff 판정을 사용한다. Promotion과 main/develop push는 이 예외를 적용하지 않는다.
+
+`pnpm lint:deps`는 workspace별 TS alias·package exports를 해석한 source/config/test graph와
+Turbo boundaries를 검사한다. root lint·verify·CI·push hook이 같은 entry를 실행한다.
+packages의 앱 역참조·앱 간 참조·workspace 상대 경로 우회·미선언 내부 의존성·runtime의 tooling 참조와
+실제 runtime 순환을 거절한다. type import로 끊기는 순환은 별도 경고로 드러낸다.
+root의 앱 source 참조는 foundation HTTP 통합 테스트의 Web response adapter 한 곳으로 제한한다.
+FSD/계층 규칙은 ESLint·Steiger가 계속 소유한다. 정적 해석 불가능한 계산형 dynamic import는
+별도 runtime/build 검증 대상이며 Turbo boundaries의 실험적 검사만으로 경계 보장을 대체하지 않는다.
 
 Web과 Console은 독립 FSD root에서 lint/type-check/unit/build를 실행한다.
 각 앱의 alias와 테스트 include는 다른 앱의 소스·테스트를 읽지 않도록 해당 workspace가 소유한다.

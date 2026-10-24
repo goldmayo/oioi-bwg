@@ -13,7 +13,7 @@ created_at: "2026-10-25"
 | 단계 | 범위                    | 상태                   |
 | ---- | ----------------------- | ---------------------- |
 | 1    | DEP-01 의존성 선언      | 병합 완료 — PR #225 |
-| 2    | BND-01 경계 검사        | 분석기 검증 중                 |
+| 2    | BND-01 경계 검사        | 필수 gate 검증 중                 |
 | 3    | TYP-01 테스트 타입 소속 | 미착수                 |
 | 4    | OWN-01/02 검증 소유권   | 미착수                 |
 | 5    | CAC-01 캐시 영향 범위   | 미착수                 |
@@ -77,3 +77,14 @@ created_at: "2026-10-25"
 - 외부 k6 runtime의 스크립트와 소비 경로가 없는 legacy `drizzle/relations.ts`는 초기 진입점에서 제외한다. Drizzle 파일을 삭제하거나 reachable dependency 검사에서 제외하지 않는다.
 
 실행한 검증: frozen offline 설치·전체 `pnpm type-check`·`pnpm lint:deps` 성공. 정상 저장소는 6 workspace·root·Web integration graph 오류 0건, Turbo 426파일·6패키지 위반 0건이다. 임시 contracts 테스트에서 Web source를 상대 경로로 참조하자 `packages-to-apps` 위반과 종료 코드 1을 확인했고 fixture를 제거했다. 추가로 `pnpm lint`, `pnpm lint:fsd`, `pnpm test:harness` 40/40, `pnpm test:unit:run` 99파일·700건(5개 task 모두 cache miss), `pnpm format:check`가 성공했다. CI 결과는 PR에 기록한다.
+
+
+### 2단계 A 통합 증거
+
+[PR #226](https://github.com/goldmayo/oioi-bwg/pull/226), [Verify #525](https://github.com/goldmayo/oioi-bwg/actions/runs/40111543023)가 전체 성공했다. 검증 head `4cf2e646e9f659b4ad90f0abf95db644d699989f`와 squash 통합 `bbd4c63b945024ffd6ce60d44bc6bc095fe77c1e`의 tree 일치를 확인했다. push hook의 전체 gate도 성공했다.
+
+## 2단계 B — 경계 회귀와 필수 실행 연결
+
+기준은 A의 통합 head다. `lint:deps`를 root lint/verify와 push hook에 연결하므로 CI quality의 기존 lint entry에서도 실행한다. source/config/test의 해석 정책은 동일하다.
+
+별도 임시 workspace fixture로 공개 export·앱 alias·자체 테스트·허용한 root HTTP adapter의 정상 동작과 역참조·config 교차 참조·상대 경로 우회·private export·미선언 의존성·type-only·dynamic import·runtime 순환 차단을 검증한다. root 테스트의 앱 참조 예외는 foundation 테스트에서 Web response adapter로 향하는 edge 한 곳으로 제한했다. Testing §17과 index를 같은 변경 단위에서 개정한다. 로컬 `pnpm type-check`, `pnpm lint`(새 gate 포함), `pnpm lint:fsd`, `pnpm test:harness` 41/41, `pnpm test:unit:run` 99파일·700건, `pnpm format:check`가 성공했다. 새 graph fixture는 19가지 사례와 manifest 규칙을 검사했다. CI 결과는 PR에 기록한다.

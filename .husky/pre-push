@@ -11,6 +11,7 @@ fi
 
 pnpm type-check:repo
 pnpm lint:repo
+pnpm lint:deps
 pnpm test:harness
 pnpm test:ops
 pnpm format:check
