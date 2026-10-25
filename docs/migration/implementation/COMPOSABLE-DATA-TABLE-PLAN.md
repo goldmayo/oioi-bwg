@@ -1,7 +1,7 @@
 ---
 title: "공용 Data Table의 15개 기능과 compound 구성 복원 계획"
 kind: migration-plan
-status: active
+status: completed
 source_commit: b1bc8256ef8a99aad2f859be762b00397e181a09
 created_at: "2026-10-25"
 ---
