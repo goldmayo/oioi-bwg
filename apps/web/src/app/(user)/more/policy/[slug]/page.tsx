@@ -1,3 +1,7 @@
+import { notFound } from "next/navigation";
+
+import { constructMetadata } from "@/shared/lib/metadata";
+
 import { MoreBackButton, MoreHeader } from "../../_ui/more-common";
 
 // ----------------------------------------------------------------------
@@ -61,9 +65,21 @@ export async function generateStaticParams() {
 // ----------------------------------------------------------------------
 // 3. 서버 컴포넌트 (SSG)
 // ----------------------------------------------------------------------
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const detail = POLICY_DETAILS[slug];
+  if (!detail) notFound();
+  return constructMetadata({
+    title: detail.title,
+    path: `/more/policy/${slug}`,
+    description: `어이어이바위게 ${detail.title} 안내입니다.`,
+  });
+}
+
 export default async function PolicyDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const detail = POLICY_DETAILS[slug] || POLICY_DETAILS.privacy;
+  const detail = POLICY_DETAILS[slug];
+  if (!detail) notFound();
 
   return (
     <div className="container mx-auto min-h-screen px-4 pt-12 pb-32 lg:pt-24 lg:pb-40">

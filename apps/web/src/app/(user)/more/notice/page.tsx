@@ -1,3 +1,5 @@
+import { constructMetadata } from "@/shared/lib/metadata";
+
 import { MoreBackButton, MoreHeader } from "../_ui/more-common";
 
 import { NoticeAccordion } from "./_ui/notice-accordion";
@@ -21,6 +23,12 @@ const NOTICES = [
   //     "공식 카페 연동 기능 사용 시 정책에 어긋나는 닉네임은 필터링될 수 있습니다. 커뮤니티 가이드라인을 준수해 주세요.",
   // },
 ];
+
+export const metadata = constructMetadata({
+  title: "공지사항",
+  path: "/more/notice",
+  description: "어이어이바위게의 서비스 소식과 점검 안내입니다.",
+});
 
 export default function NoticesPage() {
   return (
