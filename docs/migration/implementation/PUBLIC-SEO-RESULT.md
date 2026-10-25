@@ -47,3 +47,9 @@ Web의 local/production URL 계약, DB 콘텐츠·schema·Console 인증은 유�
 메타데이터/사이트맵 처리 근거는 [Next Metadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata),
 [Google canonical](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls),
 [Google sitemap lastmod](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)다.
+
+
+## 2026-10-25 운영 반영
+
+구현 검증 뒤 수행한 정상 Promotion과 실제 운영 관측은
+[서비스 개선 공동 배포 결과](SERVICE-POLISH-RELEASE-RESULT.md)가 소유한다. 앞 절은 당시 검증 범위와 이력을 보존한다.

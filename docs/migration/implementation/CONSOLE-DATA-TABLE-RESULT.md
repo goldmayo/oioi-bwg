@@ -86,3 +86,9 @@ API 판단은 [공식 React quick start](https://tanstack.com/table/latest/docs/
 파일 20개/400줄 목표를 초과한다. 빈 package 기반을 선행 PR로 만들지 않고 이 checkpoint에 묶었다.
 리뷰 순서는 헌법/Frontend → `packages/ui` API·회귀 → Console 열/consumer → 검사·Docker 연결 → 결과 증거다.
 앱 배포·운영 DB·Worker 이름/환경은 변경하지 않는다.
+
+
+## 2026-10-25 운영 반영
+
+구현 검증 뒤 수행한 정상 Promotion과 실제 운영 관측은
+[서비스 개선 공동 배포 결과](SERVICE-POLISH-RELEASE-RESULT.md)가 소유한다. 앞 절은 당시 검증 범위와 이력을 보존한다.
