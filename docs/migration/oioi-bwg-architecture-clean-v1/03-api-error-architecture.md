@@ -1,10 +1,10 @@
 ---
 title: "API / Error Architecture"
 document_id: "03"
-version: "1.5"
+version: "1.6"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-22"
+updated_at: "2026-10-26"
 depends_on:
   - "01"
 related:
@@ -20,11 +20,12 @@ tags:
   - "sentry"
 ---
 
-# oioi-bwg API & Error Architecture v1.5
+# oioi-bwg API & Error Architecture v1.6
 
 ## 1. 목적
 
-oioi-bwg는 Next.js 16 단일 애플리케이션이다.
+oioi-bwg의 Web과 Console은 독립된 Next.js 16 애플리케이션이며 각 앱이 HTTP/request adapter를 소유한다.
+두 앱은 공통 server core를 소비한다. 독립 Sentry relay는 별도 runtime이며 이 API delivery 흐름에 합치지 않는다.
 
 별도의 NestJS API 서버 없이 Route Handler와 RSC가 동일한 server service를 사용한다.
 

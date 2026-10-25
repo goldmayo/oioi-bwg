@@ -21,7 +21,7 @@ tags:
   - "hydration"
 ---
 
-# oioi-bwg Rendering / Query / Cache Architecture v1.1
+# oioi-bwg Rendering / Query / Cache Architecture v1.2
 
 ## 1. 목적
 

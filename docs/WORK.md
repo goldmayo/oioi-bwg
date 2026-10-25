@@ -5,11 +5,12 @@
 이 문서가 현재·보류 작업의 유일한 목록이다. 상세 설계·명령·검증은 링크한 소유 문서에서 관리한다.
 상태·우선순위 결정은 사용자, 실행·근거 갱신은 해당 작업 담당자가 맡는다.
 
+문서 부채 정리의 최종 근거는 [정리 결과](migration/implementation/DOCUMENTATION-CLEANUP-RESULT.md)에 남겼다.
+
 ## 진행할 작업과 보류
 
 | 작업                            | 상태                  | 다음 행동                                                                                             | 완료 조건                                               | 근거                                                                                                                                                                                                                                |
 | ------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 문서 부채 정리                  | 진행 중               | 완료 설계 삭제·후속 회수·링크 이관                                                                    | 삭제별 결정/결과/절차/후속 연결과 문서 검사·PR          | [완료 지도](migration/implementation/COMPLETED-DESIGN-INDEX.md), [감사 고정본](https://github.com/goldmayo/oioi-bwg/blob/6a3c714795f511e8f673b54f13020b9138ded49d/docs/migration/implementation/DOCUMENTATION-GOVERNANCE-AUDIT.md)  |
 | P07 세 종류 응원법              | 미착수                | Domain의 FAN 분리·초기 이력 범위와 저장 계약부터 검토                                                 | 분류·내용 보존·저장 충돌·선택/재생 유지 검증            | [설계 §5](migration/implementation/console-guide-editor/DESIGN.md#5-cheerguide), [P06 결과](migration/implementation/console-guide-editor/P06-RESULT.md#다음-checkpoint-p07)                                                        |
 | P08 파형 작업                   | 미착수                | Queue/runner/job 계약과 실제 환경 검증 범위 확정                                                      | 전달 불확실성·멱등성·음원 비영속·offset/drift 검증      | [설계 §6](migration/implementation/console-guide-editor/DESIGN.md#6-waveform-worker), [기술 검토](migration/implementation/console-guide-editor/AUDIO-FEASIBILITY.md)                                                               |
 | P09 파형·Cue 편집               | 미착수                | P08 결과와 기존 JSON으로 editor 연결 검토                                                             | 재생/seek·drag/Undo·기존 기능 보존, 누적 drift 해결     | [설계 §7](migration/implementation/console-guide-editor/DESIGN.md#7-audio-editor), [로드맵](migration/implementation/console-guide-editor/ROADMAP.md)                                                                               |

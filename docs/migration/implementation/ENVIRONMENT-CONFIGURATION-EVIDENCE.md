@@ -11,6 +11,8 @@ revision: 3
 
 # 환경변수·CI/CD 보안 및 OCI 실행 확인 증적
 
+> 코드·설정 링크는 source_commit의 고정 permalink다. 이후 정상화/P06 결과와 당시 관찰을 구분하며 현재 파일 경로로 바꿔 해석하지 않는다.
+
 ## 1. 확인 범위와 출처
 
 [개선 계획](ENVIRONMENT-CONFIGURATION-PLAN.md)의 근거다. 코드·설정 관찰과 사용자 실행 결과를
@@ -36,11 +38,11 @@ revision: 3
 | `NEXT_PUBLIC_ASSETS_URL` | 앱 코드 consumer를 찾지 못했고 `compose.dev.yml`에서 주입 | Compose 주입과 안내에서 제거. 개인 env는 자동 수정하지 않음 |
 | `ASSETS_PUBLIC_BASE_URL` | 서버 업로드가 R2 object key와 합쳐 공개 URL을 반환 | 서버 runtime 입력으로 유지. 기존 자산 도메인·저장된 URL의 변경은 포함하지 않음 |
 
-근거: [Compose](../../../compose.dev.yml),
-[Web feature flag](../../../apps/web/src/shared/config/feature-flag.ts),
-[metadata](../../../apps/web/src/shared/config/site.ts),
-[Sentry](../../../apps/web/src/shared/config/sentry.ts),
-[서버 업로드](../../../packages/server/src/storage/upload-public-asset.ts).
+근거: [Compose](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/compose.dev.yml),
+[Web feature flag](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/apps/web/src/shared/config/feature-flag.ts),
+[metadata](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/apps/web/src/shared/config/site.ts),
+[Sentry](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/apps/web/src/shared/config/sentry.ts),
+[서버 업로드](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/packages/server/src/storage/upload-public-asset.ts).
 
 현재 로컬 logger는 `local`, metadata는 `development`, 운영 이미지 빌드는 `staging`을 사용한다.
 feature flag의 운영 `DEV_*` 강제 비활성화는 `production`일 때만 적용된다. 현재 개발 기능이
@@ -57,7 +59,7 @@ feature flag의 운영 `DEV_*` 강제 비활성화는 `production`일 때만 적
 
 현재 `oci-development-image`에는 OCIR/Sentry 게시 credential과 OCI Run Command 개인 키가 함께 있다.
 API 확인 결과 branch policy는 `migration_develop`, `refs/pull/*/merge`를 허용하고 required reviewer
-규칙은 없다. [candidate job](../../../.github/workflows/verify.yml)은 같은 저장소의
+규칙은 없다. [candidate job](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/.github/workflows/verify.yml)은 같은 저장소의
 `migration_main → migration_develop`으로 제한하지만 Environment의 PR ref 허용 범위는 더 넓다.
 
 같은 저장소 PR에서 workflow를 수정할 수 있는 주체를 신뢰하는 구성이다. 일반 외부 fork PR이
@@ -67,7 +69,7 @@ API 확인 결과 branch policy는 `migration_develop`, `refs/pull/*/merge`를 �
 
 ### CI-ENV-02 — OCI 개인 키의 job 전체 전달과 Action 신뢰 범위
 
-[deploy-promotion.yml](../../../.github/workflows/deploy-promotion.yml)의 job-level env에
+[deploy-promotion.yml](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/.github/workflows/deploy-promotion.yml)의 job-level env에
 `OCI_CLI_KEY_CONTENT` 등이 있어 OCI 인증 전 checkout·artifact·검증 step에도 전달된다.
 인증·실행 step으로 주입 범위를 줄이고, 생성 인증 파일의 권한과 정리를 확인할 대상이다.
 외부 Action은 현재 tag 참조이므로 credential을 취급하는 Action의 full SHA 고정도 검토한다.
@@ -75,7 +77,7 @@ step 범위 축소만으로 같은 runner의 악성 코드에 완전히 격리�
 
 ### CI-ENV-03 — Run Command 출력 보호의 제한
 
-[deploy-via-run-command.sh](../../../ops/oci/deploy-via-run-command.sh)는 일부 marker가 포함된
+[deploy-via-run-command.sh](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/ops/oci/deploy-via-run-command.sh)는 일부 marker가 포함된
 remote output을 숨긴다. `CONSOLE_MFA_ENCRYPTION_KEY`는 목록에 없으며 변수 이름 없이 출력된
 원문·변환 값은 검출하지 못한다. `agent_message`도 별도 보호 없이 출력한다.
 `CONSOLE_AUTH_SECRET=`은 기존 `AUTH_SECRET=` substring 검사에 걸리므로 그것까지 누락됐다고
@@ -87,7 +89,7 @@ GitHub에 등록한 Secrets의 자동 마스킹으로 보호된다고 가정할 
 
 ### CI-ENV-04 — prod 이미지의 staging 빌드 입력
 
-[Dockerfile](../../../Dockerfile) 기본값과 [verify.yml](../../../.github/workflows/verify.yml)의
+[Dockerfile](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/Dockerfile) 기본값과 [verify.yml](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/.github/workflows/verify.yml)의
 candidate build arg는 `NEXT_PUBLIC_APP_ENV=staging`이다. 실제 대상은 prod인데 `production` 전용
 feature flag 보호 분기가 성립하지 않고 Sentry도 staging으로 분류한다. `production` 입력의
 새 candidate로 검증해야 하며 환경 이름만 바꾸는 것으로 해결하지 않는다.
@@ -102,8 +104,8 @@ feature flag 보호 분기가 성립하지 않고 Sentry도 staging으로 분류
 
 ### CI-ENV-06 — 로컬 Docker build context의 제외 범위
 
-[.dockerignore](../../../.dockerignore)는 개인 `.env*`, dump, log 등을 제외하지만 `.local/` 전체를
-제외하지 않는다. [Dockerfile](../../../Dockerfile)의 `COPY . .`로 로컬 설정·증적이 builder context에
+[.dockerignore](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/.dockerignore)는 개인 `.env*`, dump, log 등을 제외하지만 `.local/` 전체를
+제외하지 않는다. [Dockerfile](https://github.com/goldmayo/oioi-bwg/blob/7cb3a6d424fc7255449c30786e10a3282884c6b6/Dockerfile)의 `COPY . .`로 로컬 설정·증적이 builder context에
 들어갈 여지가 있다. 수동 로컬 빌드의 `.local/` 제외와 context 검증을 추가할 대상이다.
 비밀 파일이 실제 이미지·cache에 들어갔다는 결과는 확인하지 않았다.
 2026-10-12 리뷰 보완: `compose.dev.yml`의 `.:/app`은 개발 앱에서 `.local/`을 읽을 수 있게 한다.
