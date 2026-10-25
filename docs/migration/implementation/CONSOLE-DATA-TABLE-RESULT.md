@@ -10,6 +10,10 @@ updated_at: "2026-10-25"
 
 # Console Data Table 수용 심사와 적용 결과
 
+> 이 문서는 #251 당시의 두 기능 구현과 #253 운영 적용 이력이다. 사용자의 15개 기능·compound 조합
+> 요구를 다시 확인해 지원 범위 제한을 정정했다. 현재 구현 기준은
+> [후속 계획](COMPOSABLE-DATA-TABLE-PLAN.md)과 [후속 결과](COMPOSABLE-DATA-TABLE-RESULT.md)를 따른다.
+
 ## 범위와 기준
 
 `goldmayo/oioi-bwg`의 `migration_main` `7f16a9d74e526f50a5f17e6821ed980d1057cabd`에서
@@ -92,3 +96,9 @@ API 판단은 [공식 React quick start](https://tanstack.com/table/latest/docs/
 
 구현 검증 뒤 수행한 정상 Promotion과 실제 운영 관측은
 [서비스 개선 공동 배포 결과](SERVICE-POLISH-RELEASE-RESULT.md)가 소유한다. 앞 절은 당시 검증 범위와 이력을 보존한다.
+
+## 2026-10-25 사용자 요구 정정
+
+사용자는 원본 README의 15개 기능과 소비처의 compound component 조합을 요청했으며,
+실제 Console에 있는 정렬·페이지 이동만 공용 지원 범위로 제한한 부분 수용은 요구를 충족하지 못했다.
+위 심사와 배포 기록은 당시 사실로 보존하고, 후속 계획/결과가 공용 UI의 수정과 검증을 소유한다.

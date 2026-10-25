@@ -1,7 +1,7 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.20"
+version: "2.21"
 status: "active"
 authority: "constitution"
 updated_at: "2026-10-25"
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.20
+# oioi-bwg Architecture Constitution v2.21
 
 ## 1. 목적
 
@@ -160,7 +160,9 @@ Web 인증 adapter를 두지 않는다. 인증·관리는 Console만 제공하�
 E 코드의 운영 적용은 Console 운영 검증 완료 후 별도 Promotion으로 수행한다.
 공용 domain/api-client package를 선생성하지 않는다. UI는 먼저 앱 내부에 두며, 실제 여러 consumer의
 중복이 확인된 도메인 독립 UI만 private `packages/ui`의 명시적 export로 승격한다. 첫 승격은 Console
-앨범·곡 관리 테이블의 정렬·페이지 이동 UI다. 도메인 열·행동·권한·Query·폼은 consumer 앱이 소유한다.
+앨범·곡 관리 테이블이다. Data Table은 원본의 공식 15개 기능을 소비처가 compound UI로 조합할 수 있게
+제공한다. 소비처는 정적 feature 집합·행 모델·표시 부품을 선택하며, 공용 UI 지원 범위를 첫 소비처의
+정렬·페이지 이동으로 제한하지 않는다. 도메인 열·행동·권한·Query·폼·URL/영속화 정책은 앱이 소유한다.
 UI package는 앱·server·contracts·Next runtime에 의존하지 않으며 빈 기반 package를 미리 만들지 않는다.
 
 현재 Next 앱의 루트는 `apps/web`이다. 아래 구조와 active 문서의 `src/...` 경로는
