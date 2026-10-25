@@ -1,7 +1,8 @@
 # 현재·보류 작업
 
 상태 기준: 2026-10-26. 최초 인계 목록의 source는 `migration_main@e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f`이며
-당시 운영 재조회 결과는 아니었다. UUID 행은 같은 날 #264의 실제 운영 적용·재조회로 추가 갱신했다.
+당시 운영 재조회 결과는 아니었다. UUID 행은 같은 날 #264의 실제 운영 적용·재조회, 사용자 운영 등록
+완료 보고와 로컬 개발 DB의 실제 전환 결과로 추가 갱신했다.
 **P06 A~F 종료 / P07 착수 전**이다.
 이 문서가 현재·보류 작업의 유일한 목록이다. 상세 설계·명령·검증은 링크한 소유 문서에서 관리한다.
 상태·우선순위 결정은 사용자, 실행·근거 갱신은 해당 작업 담당자가 맡는다.
@@ -15,7 +16,7 @@ UUIDv7 전환은 2026-10-26 사용자 요청으로 착수했다. 아래 항목�
 
 | 작업                            | 상태                  | 다음 행동                                                                                             | 완료 조건                                               | 근거                                                                                                                                                                                                                                |
 | ------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| UUIDv7 PK·DB 네이밍 전환 | 운영 전환 완료·사용자 재등록 대기 | 오전 SSH 등록 도구로 새 credential·QR·실물 OTP 확인 후 Console 로그인·관리 CRUD 수용 확인 | 전체 payload/FK 보존·복원·관리자 재등록·검증된 운영 적용 | [운영 #264](https://github.com/goldmayo/oioi-bwg/pull/264), [실측·등록 명령](https://app.notion.com/p/404395eb18c28034b39debf1bd080612), [ADR 0009](adr/0009-uuid-domain-identity.md). 04:12 KST 재공개·35개 API 내용/관계/숨김 상태 보존·정상 receipt 확인. 기존 로컬 DB와 공지 초안 보존; P07 로컬 앱 실행 전 DB 전환은 [현행 안내](migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#uuidv7-전환과-legacy-dump-복원)대로 별도 수행 |
+| UUIDv7 PK·DB 네이밍 전환 | 운영·로컬 전환 완료·수용 확인 대기 | 운영 로그인·관리 CRUD 수용 확인; 사용자 요청대로 로컬 관리자 재등록·실물 OTP 로그인은 귀가 후 진행 | 전체 payload/FK 보존·복원·관리자 재등록·검증된 운영 적용 | [운영 #264](https://github.com/goldmayo/oioi-bwg/pull/264), [실측·등록 명령](https://app.notion.com/p/404395eb18c28034b39debf1bd080612), [ADR 0009](adr/0009-uuid-domain-identity.md). 운영 등록 완료는 사용자 보고와 비밀 없는 등록 결과로 확인했으며 실제 로그인·CRUD 확인은 별도다. 로컬 8앨범·26곡·계정/Profile은 전체 백업·별도 복원 리허설 후 UUID로 전환하고 공개 API 34개·두 앱 health/readiness를 확인했다. 지정 로컬 ADMIN credential만 재등록 대기(version 2)다. 재등록은 [현행 안내](migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#지정-console-관리자-credential-재등록)를 따르며 공지 초안은 보존했다 |
 | P07 세 종류 응원법              | 미착수                | Domain의 FAN 분리·초기 이력 범위와 저장 계약부터 검토                                                 | 분류·내용 보존·저장 충돌·선택/재생 유지 검증            | [설계 §5](migration/implementation/console-guide-editor/DESIGN.md#5-cheerguide), [P06 결과](migration/implementation/console-guide-editor/P06-RESULT.md#다음-checkpoint-p07)                                                        |
 | P08 파형 작업                   | 미착수                | Queue/runner/job 계약과 실제 환경 검증 범위 확정                                                      | 전달 불확실성·멱등성·음원 비영속·offset/drift 검증      | [설계 §6](migration/implementation/console-guide-editor/DESIGN.md#6-waveform-worker), [기술 검토](migration/implementation/console-guide-editor/AUDIO-FEASIBILITY.md)                                                               |
 | P09 파형·Cue 편집               | 미착수                | P08 결과와 기존 JSON으로 editor 연결 검토                                                             | 재생/seek·drag/Undo·기존 기능 보존, 누적 drift 해결     | [설계 §7](migration/implementation/console-guide-editor/DESIGN.md#7-audio-editor), [로드맵](migration/implementation/console-guide-editor/ROADMAP.md)                                                                               |
