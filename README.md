@@ -4,6 +4,8 @@
 
 - **LIVE**: [oioibawige.com](https://oioibawige.com)
 
+문서는 [문서 안내](docs/README.md)에서, 현재·보류 작업은 [WORK](docs/WORK.md)에서 확인합니다.
+
 ![Main Preview](docs/screenshots/oioibwg_user_main.png)
 
 어이어이바위게(OiOiBawige) 는 QWER 팬덤 '바위게'를 위한 비공식 응원법 가이드 서비스입니다.

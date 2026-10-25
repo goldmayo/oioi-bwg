@@ -76,6 +76,15 @@ Read multiple references only when the operation crosses those concerns.
 
 ## Complete the task
 
+Apply [AGENTS §9](../../../AGENTS.md#9-문서-및-변경-원칙) as the canonical creation, ownership,
+closure, and consolidation policy. This skill supplies classification and evidence checks; it does
+not impose a second lifecycle policy or require a new repository artifact for each PR or session.
+
+Use the PR body for a single PR's plan and execution evidence. Update existing phase owners
+when work spans PRs. A new file must satisfy the repository's creation gate; ADR and devlog
+updates are conditional on their purpose, not automatic completion steps. Consolidation or
+deletion still requires the requested cleanup scope and per-file preservation/link checks.
+
 Report:
 
 - classification and chosen canonical home
