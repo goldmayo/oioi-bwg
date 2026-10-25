@@ -2,6 +2,14 @@
 
 Migration artifacts connect evidenced AS-IS to approved architecture and then record actual execution. Classify their contents even when existing filenames or directories do not.
 
+## Choose the record before creating a file
+
+Apply the creation and lifecycle policy in [AGENTS §9](../../../../AGENTS.md#9-문서-및-변경-원칙).
+The sections below describe content responsibilities, not a requirement to create one file of
+each kind. A single PR normally keeps its prospective plan and retrospective verification in
+the PR body, visibly separated. Multi-PR work updates its existing concern plan and final result.
+Repository plans, evidence files, and results are exceptions that must pass the creation gate.
+
 ## Migration plan
 
 A plan should normally contain:
@@ -40,7 +48,16 @@ A result should normally contain:
 - remaining gaps, risks, and next-phase prerequisites
 - exact verified source ref
 
-Do not merge a new general plan and its retrospective result into one mutable narrative. Link them. Historical specialized ledgers may contain separate immutable PLAN, IMPLEMENTATION, VERIFICATION, and REVIEW sections; preserve those established workflows rather than retroactively restructuring them.
+Do not rewrite a prospective plan as a retrospective result. Keep the original intent and actual
+outcome distinct, whether they live in separate existing documents or labeled PR sections.
+Historical specialized ledgers may contain separate immutable PLAN, IMPLEMENTATION,
+VERIFICATION, and REVIEW sections; preserve those established workflows rather than
+retroactively restructuring them.
+
+Keep a final result for the independent phase or concern, not a new RESULT for every PR or
+checkpoint. It summarizes final scope, significant failures and limitations, the verified ref, and
+links to implementation and detailed evidence. Intermediate records are eligible for scoped
+consolidation under AGENTS §9; preserve their unique facts, approval trail, and pinned originals.
 
 Never claim a command passed unless it ran. Distinguish static inspection, mocked tests, real PostgreSQL/runtime verification, and production observation.
 
@@ -72,7 +89,10 @@ Reverse-engineering evidence
   -> Migration result
 ```
 
-At minimum, a new or changed plan must cite its architecture and evidence inputs; a result must cite its plan, implementation refs, verification, and remaining gaps. Architecture may link rationale or downstream work, but do not rewrite it as an execution log.
+At minimum, a new or changed plan must cite its architecture and evidence inputs; a result must
+cite its governing plan or PR intent, implementation refs, verification, and remaining gaps.
+Traceability does not require a separate file at every edge. Architecture may link rationale or
+downstream work, but do not rewrite it as an execution log.
 
 When a link is unavailable, record the missing edge explicitly rather than fabricating it.
 
