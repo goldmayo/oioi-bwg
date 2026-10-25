@@ -8,7 +8,7 @@ import type { AdminAlbumSummary } from "@/entities/album";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { createAppColumnHelper, useAppTable } from "@/shared/ui/data-table";
+import { createAppColumnHelper, dataTableComponents, useAppTable } from "@/shared/ui/data-table";
 
 interface Props {
   albums: AdminAlbumSummary[];
@@ -122,7 +122,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
     initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
   });
   return (
-    <DataTable.Root table={table}>
+    <DataTable.Root table={table} components={dataTableComponents}>
       <div className="space-y-4">
         <DataTable.Table caption="앨범 관리 목록">
           <DataTable.Header />

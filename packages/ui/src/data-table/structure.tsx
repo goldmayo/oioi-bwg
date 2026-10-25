@@ -3,7 +3,14 @@
 import type { ComponentProps, ReactNode } from "react";
 import { flexRender, FlexRender } from "@tanstack/react-table";
 
-import { columnLabel, columnStyle, setColumnWidth, Snapshot, useTableContext } from "./context";
+import {
+  Button,
+  columnLabel,
+  columnStyle,
+  setColumnWidth,
+  Snapshot,
+  useTableContext,
+} from "./context";
 
 export function Table({
   caption,
@@ -89,7 +96,7 @@ export function Header({ children }: { children?: ReactNode }) {
                       {!header.isPlaceholder && (
                         <>
                           {sorting && column.getCanSort() ? (
-                            <button
+                            <Button
                               type="button"
                               className="focus-visible:ring-ring inline-flex min-h-10 items-center gap-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
                               onClick={column.getToggleSortingHandler()}
@@ -113,7 +120,7 @@ export function Header({ children }: { children?: ReactNode }) {
                                   }
                                 />
                               </svg>
-                            </button>
+                            </Button>
                           ) : (
                             <FlexRender header={header} />
                           )}
@@ -199,7 +206,7 @@ export function Body({
                       className={`p-2 align-middle whitespace-nowrap ${cell.column.columnDef.meta?.className ?? ""}`}
                     >
                       {features.columnGroupingFeature && cell.getIsGrouped() ? (
-                        <button
+                        <Button
                           type="button"
                           className="focus-visible:ring-ring min-h-9 rounded-sm px-1 focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
                           disabled={!features.rowExpandingFeature || !row.getCanExpand()}
@@ -214,7 +221,7 @@ export function Body({
                           }
                         >
                           {String(cell.getValue())} ({row.subRows.length})
-                        </button>
+                        </Button>
                       ) : features.rowAggregationFeature && cell.getIsAggregated() ? (
                         flexRender(cell.column.columnDef.aggregatedCell, cell.getContext())
                       ) : features.columnGroupingFeature && cell.getIsPlaceholder() ? null : (

@@ -1,3 +1,4 @@
+import { createRef } from "react";
 import type { ReactElement } from "react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -14,6 +15,7 @@ import {
 } from "@tanstack/react-table";
 
 import { DataTable } from "./data-table";
+import type { DataTableButtonProps } from "./data-table";
 import { exampleOrders, FullExample, ManualExample } from "./data-table.examples";
 
 afterEach(cleanup);
@@ -21,6 +23,39 @@ const grid = () => screen.getByRole("table");
 const rows = () =>
   Array.from(grid().querySelectorAll<HTMLTableRowElement>("tbody tr[data-row-id]"));
 const ids = () => rows().map((row) => row.dataset.rowId);
+
+function ConsumerButton(props: DataTableButtonProps) {
+  return <button data-consumer-button="true" {...props} />;
+}
+const consumerComponents = { Button: ConsumerButton };
+
+it("주입한 버튼에 정렬·검색·페이지·그룹의 native 속성과 동작이 전달된다", () => {
+  const { container } = render(<FullExample components={consumerComponents} />);
+  expect(container.querySelectorAll("button").length).toBeGreaterThan(10);
+  for (const button of container.querySelectorAll("button")) {
+    expect(button).toHaveAttribute("data-consumer-button", "true");
+    expect(button.className).not.toBe("");
+  }
+  expect(screen.getByRole("button", { name: "이전" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "검색" })).toHaveAttribute("type", "submit");
+  fireEvent.click(screen.getByRole("button", { name: "금액" }));
+  fireEvent.click(screen.getByRole("button", { name: "금액" }));
+  expect(ids()[0]).toBe("order-24");
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  expect(ids()[0]).toBe("order-19");
+  const group = within(screen.getByRole("group", { name: "그룹 기준" })).getByRole("button", {
+    name: "부서",
+  });
+  fireEvent.click(group);
+  expect(group).toHaveAttribute("aria-pressed", "true");
+  const expand = screen.getByRole("button", { name: "개발 그룹 펼침" });
+  fireEvent.click(expand);
+  expect(expand).toHaveAttribute("aria-expanded", "true");
+  fireEvent.click(group);
+  fireEvent.change(screen.getByLabelText("전역 검색"), { target: { value: "주문 24" } });
+  fireEvent.click(screen.getByRole("button", { name: "검색" }));
+  expect(ids()).toEqual(["order-24"]);
+});
 
 describe("15개 공식 기능의 compound 조합", () => {
   it("전체 정렬·집계가 페이지 이동보다 먼저 적용된다", () => {
@@ -171,6 +206,41 @@ const plainFeatures = tableFeatures({});
 const plainColumn = createColumnHelper<typeof plainFeatures, { value: string }>();
 const plainColumns = plainColumn.columns([plainColumn.accessor("value", { header: "값" })]);
 const plainData = [{ value: "외부 표" }];
+function ButtonExample({ buttonRef }: { buttonRef: DataTableButtonProps["ref"] }) {
+  const table = useTable({ features: plainFeatures, columns: plainColumns, data: plainData });
+  return (
+    <>
+      <DataTable.Root table={table} components={consumerComponents}>
+        <DataTable.Button ref={buttonRef}>소비처 버튼</DataTable.Button>
+        <DataTable.Root table={table}>
+          <DataTable.Button>중첩 기본 버튼</DataTable.Button>
+        </DataTable.Root>
+        <DataTable.Button>같은 소비처 버튼</DataTable.Button>
+      </DataTable.Root>
+      <DataTable.Root table={table}>
+        <DataTable.Button>형제 기본 버튼</DataTable.Button>
+      </DataTable.Root>
+    </>
+  );
+}
+it("버튼 ref를 전달하고 중첩·형제 Root의 기본 버튼을 독립적으로 유지한다", () => {
+  const ref = createRef<HTMLButtonElement>();
+  render(<ButtonExample buttonRef={ref} />);
+  const injected = screen.getByRole("button", { name: "소비처 버튼" });
+  expect(ref.current).toBe(injected);
+  expect(injected).toHaveAttribute("type", "button");
+  expect(screen.getByRole("button", { name: "같은 소비처 버튼" })).toHaveAttribute(
+    "data-consumer-button",
+    "true",
+  );
+  for (const name of ["중첩 기본 버튼", "형제 기본 버튼"]) {
+    const button = screen.getByRole("button", { name });
+    expect(button).toHaveAttribute("type", "button");
+    expect(button).not.toHaveAttribute("data-consumer-button");
+    expect(button.className).not.toBe("");
+  }
+});
+
 function PlainExample({ nested = false }: { nested?: boolean }) {
   const table = useTable({ features: plainFeatures, columns: plainColumns, data: plainData });
   return (

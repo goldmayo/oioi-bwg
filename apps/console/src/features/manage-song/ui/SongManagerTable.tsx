@@ -9,7 +9,7 @@ import type { AdminSongSummary } from "@/entities/song";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { createAppColumnHelper, useAppTable } from "@/shared/ui/data-table";
+import { createAppColumnHelper, dataTableComponents, useAppTable } from "@/shared/ui/data-table";
 
 interface Props {
   songs: AdminSongSummary[];
@@ -142,7 +142,7 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
     initialState: { pagination: { pageIndex: 0, pageSize: 15 } },
   });
   return (
-    <DataTable.Root table={table}>
+    <DataTable.Root table={table} components={dataTableComponents}>
       <div className="space-y-4">
         <DataTable.Table caption="곡 관리 목록">
           <DataTable.Header />

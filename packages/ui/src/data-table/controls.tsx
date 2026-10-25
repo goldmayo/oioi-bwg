@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import {
+  Button,
   buttonClass,
   columnLabel,
   inputClass,
@@ -74,9 +75,9 @@ function SearchForm({
           }}
         />
       </label>
-      <button type="submit" className={buttonClass}>
+      <Button type="submit" className={buttonClass}>
         {submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -142,7 +143,7 @@ export function Grouping({ label = "그룹 기준" }: { label?: string }) {
             .getAllLeafColumns()
             .filter((column) => column.getCanGroup())
             .map((column) => (
-              <button
+              <Button
                 type="button"
                 key={column.id}
                 className={buttonClass}
@@ -153,7 +154,7 @@ export function Grouping({ label = "그룹 기준" }: { label?: string }) {
                 }}
               >
                 {columnLabel(column)}
-              </button>
+              </Button>
             ))}
         </fieldset>
       )}
@@ -189,13 +190,13 @@ export function Selection() {
           <output className="text-muted-foreground text-sm" aria-live="polite">
             {Object.values(table.store.get().rowSelection).filter(Boolean).length}개 선택
           </output>
-          <button
+          <Button
             type="button"
             className={buttonClass}
             onClick={() => table.resetRowSelection(true)}
           >
             선택 해제
-          </button>
+          </Button>
         </div>
       )}
     </Snapshot>
@@ -266,7 +267,7 @@ export function ExpandRow({ rowId, label }: { rowId: string; label: string }) {
       {() => {
         const row = table.getRow(rowId);
         return (
-          <button
+          <Button
             type="button"
             className={buttonClass}
             aria-expanded={row.getIsExpanded()}
@@ -274,7 +275,7 @@ export function ExpandRow({ rowId, label }: { rowId: string; label: string }) {
             onClick={row.getToggleExpandedHandler()}
           >
             {label}
-          </button>
+          </Button>
         );
       }}
     </Snapshot>
@@ -360,7 +361,7 @@ export function ColumnOrder({ columnId }: { columnId: string }) {
         };
         return (
           <>
-            <button
+            <Button
               type="button"
               className={buttonClass}
               aria-label={`${columnLabel(column)} 앞으로`}
@@ -368,8 +369,8 @@ export function ColumnOrder({ columnId }: { columnId: string }) {
               onClick={() => move(-1)}
             >
               앞으로
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               className={buttonClass}
               aria-label={`${columnLabel(column)} 뒤로`}
@@ -377,7 +378,7 @@ export function ColumnOrder({ columnId }: { columnId: string }) {
               onClick={() => move(1)}
             >
               뒤로
-            </button>
+            </Button>
           </>
         );
       }}
@@ -466,25 +467,25 @@ export function Pagination({
           : [];
         return (
           <nav aria-label={label} className="flex flex-wrap items-center justify-center gap-2">
-            <button
+            <Button
               type="button"
               className={buttonClass}
               disabled={!table.getCanPreviousPage()}
               onClick={() => table.previousPage()}
             >
               이전
-            </button>
+            </Button>
             <span className="text-muted-foreground text-sm tabular-nums" aria-live="polite">
               {pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
             </span>
-            <button
+            <Button
               type="button"
               className={buttonClass}
               disabled={!table.getCanNextPage()}
               onClick={() => table.nextPage()}
             >
               다음
-            </button>
+            </Button>
             {pageSizes && (
               <label className="flex items-center gap-2 text-sm">
                 페이지당 행

@@ -48,3 +48,12 @@ compound component 조합을 요구했다. #251의 두 기능 고정 팩토리�
 하나의 공용 compound 계약과 두 실제 consumer·15개 기능 예제가 함께 검증돼야 하므로 400줄을 넘을 수 있다.
 리뷰 순서는 상위 계약 → 공용 context/표/조작 부품 → 예제·상호작용/타입 검사 → Console 전환 → 결과다.
 이번 범위에는 운영 배포·DB/schema·회원/인증 정책·다른 UI primitive의 Base UI 전환을 추가하지 않는다.
+
+# 실행 중 사용자 보완
+
+사용자는 버튼을 소비처에서 주입하고 생략 시 내부 기본 구현을 사용하도록 보완했다.
+`Root components.Button`은 native button props 계약을 받고 모든 조작 부품에 적용한다.
+기능 이벤트·접근성·기본 스타일은 공용 부품이 소유하며 Console은 기존 앱 Button을 주입한다.
+주입 시 정렬/검색/페이징/그룹 동작과 ref 전달, 중첩/형제 Root의 기본값 격리를 추가로 검증한다.
+설치는 저장소 루트의 `pnpm install --frozen-lockfile`로 잠금파일과 일치시키며
+두 UI tsconfig의 CLI 타입 검사와 IDE 오류를 구분한다.

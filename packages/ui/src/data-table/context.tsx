@@ -1,6 +1,7 @@
 "use client";
 
-import type { ContextType, CSSProperties, ReactNode } from "react";
+import { createContext, useContext } from "react";
+import type { ComponentProps, ComponentType, ContextType, CSSProperties, ReactNode } from "react";
 import { createTableHookContexts, Subscribe } from "@tanstack/react-table";
 import type { Column, ReactTable, RowData, TableFeatures } from "@tanstack/react-table";
 
@@ -8,6 +9,27 @@ export interface DataTableColumnMeta {
   label?: string;
   className?: string;
   filterVariant?: "text" | "select";
+}
+
+export type DataTableButtonProps = ComponentProps<"button">;
+export interface DataTableComponents {
+  Button?: ComponentType<DataTableButtonProps>;
+}
+
+const defaultComponents: DataTableComponents = {};
+const componentsContext = createContext(defaultComponents);
+
+function DefaultButton(props: DataTableButtonProps) {
+  return <button {...props} />;
+}
+
+export function Button({
+  type = "button",
+  className = buttonClass,
+  ...props
+}: DataTableButtonProps) {
+  const Component = useContext(componentsContext).Button ?? DefaultButton;
+  return <Component type={type} className={className} {...props} />;
 }
 
 // React context는 소비처 generic을 보존하지 않는다. 내부 표시 경계만 넓게 읽고,
@@ -18,14 +40,16 @@ export { useTableContext };
 
 export function Root<TFeatures extends TableFeatures, TData extends RowData, TSelected>({
   table,
+  components = defaultComponents,
   children,
 }: {
   table: ReactTable<TFeatures, TData, TSelected>;
+  components?: DataTableComponents;
   children: ReactNode;
 }) {
   return (
     <tableContext.Provider value={table as unknown as ContextType<typeof tableContext>}>
-      {children}
+      <componentsContext.Provider value={components}>{children}</componentsContext.Provider>
     </tableContext.Provider>
   );
 }

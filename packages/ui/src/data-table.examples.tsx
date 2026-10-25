@@ -37,7 +37,7 @@ import {
 } from "@tanstack/react-table";
 import type { ColumnVisibilityState, PaginationState } from "@tanstack/react-table";
 
-import { DataTable, type DataTableColumnMeta } from "./data-table";
+import { DataTable, type DataTableColumnMeta, type DataTableComponents } from "./data-table";
 
 // README와 테스트가 함께 사용하는 메모리 예제. 제품 runtime의 기본 profile이 아니다.
 const features = tableFeatures({
@@ -144,7 +144,13 @@ const columns = column.columns([
   }),
 ]);
 
-export function FullExample({ data = exampleOrders }: { data?: ExampleOrder[] }) {
+export function FullExample({
+  data = exampleOrders,
+  components,
+}: {
+  data?: ExampleOrder[];
+  components?: DataTableComponents;
+}) {
   const [columnVisibility, onColumnVisibilityChange] = useState<ColumnVisibilityState>({});
   const table = useTable(
     {
@@ -176,7 +182,7 @@ export function FullExample({ data = exampleOrders }: { data?: ExampleOrder[] })
     () => null,
   ); // 구독을 compound 부품에 맡겨도 상태·options 갱신이 유지되어야 한다.
   return (
-    <DataTable.Root table={table}>
+    <DataTable.Root table={table} components={components}>
       <div className="space-y-4">
         <DataTable.Toolbar>
           <DataTable.Search />

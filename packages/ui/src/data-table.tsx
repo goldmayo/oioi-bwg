@@ -1,7 +1,7 @@
 "use client";
 
 import { Body, Cell, Footer, Head, Header, Row, Table } from "./data-table/structure";
-import { Root } from "./data-table/context";
+import { Button, Root } from "./data-table/context";
 import {
   Columns,
   ColumnVisibility,
@@ -19,11 +19,16 @@ import {
   Toolbar,
 } from "./data-table/controls";
 
-export type { DataTableColumnMeta } from "./data-table/context";
+export type {
+  DataTableButtonProps,
+  DataTableColumnMeta,
+  DataTableComponents,
+} from "./data-table/context";
 
 // 기능/행 모델/상태는 소비처의 공식 TanStack table이 소유한다.
 export const DataTable = {
   Root,
+  Button,
   Table,
   Header,
   Head,

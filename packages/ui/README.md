@@ -51,6 +51,37 @@ export function Items({ items }: { items: Item[] }) {
 }
 ```
 
+## 버튼 주입과 기본값
+
+버튼은 패키지가 native `<button>` 기본 구현을 소유한다. 소비처의 디자인 시스템 버튼은
+`Root`의 `components.Button`으로 선택적으로 주입한다. 정렬·검색·그룹·열 순서·페이징 등
+모든 기본 조합의 버튼에 적용하며, 중첩·형제 Root는 자신의 기본값 또는 주입값을 사용한다.
+
+```tsx
+import { DataTable, type DataTableButtonProps } from "@oioi-bwg/ui/data-table";
+import { Button } from "@/shared/ui/button";
+
+// 컴포넌트와 구성 객체는 render 밖에 선언한다.
+function TableButton(props: DataTableButtonProps) {
+  return <Button variant="ghost" {...props} />;
+}
+const components = { Button: TableButton };
+
+<DataTable.Root table={table} components={components}>
+  <DataTable.Table caption="항목 목록">
+    <DataTable.Header />
+    <DataTable.Body />
+  </DataTable.Table>
+  <DataTable.Pagination />
+</DataTable.Root>;
+```
+
+주입 컴포넌트는 실제 `<button>`까지 `type`, `disabled`, 이벤트, `aria-*`, `className`, `ref`,
+`children` 등 native props를 전달한다. 기능 이벤트와 접근성 속성은 표 부품이 계속 소유한다.
+`components`를 생략하거나 `{}`를 넘기면 내부 기본 버튼을 사용하며 앱의 Button import는 필요 없다.
+직접 배치하는 도구 버튼에도 `<DataTable.Button>`을 사용하면 같은 주입값과 기본 스타일이 적용된다.
+기본 `type`은 `button`이고 검색 제출 버튼은 `submit`이다.
+
 ## 15개 기능 조합
 
 [실행·타입 검사되는 FullExample](src/data-table.examples.tsx)은 원본 예제의 15개 기능을 모두 연결한다.
