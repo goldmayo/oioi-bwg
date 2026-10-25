@@ -1,7 +1,7 @@
 ---
 title: Main to Migrated Gap Map
 document_id: RE-GAP-010
-version: 0.1.0
+version: 0.1.1
 status: draft
 authority: analysis
 legacy_source:
@@ -56,7 +56,7 @@ commit: unknown
 source_documents: docs/reverse-engineering/migrated-current/01~08
 ```
 
-`migrated-current` 문서의 front matter에 source branch와 commit이 명시되어 있지 않으므로 둘 다 확정하지 않는다. 이 문서는 현재 문서화된 migration state를 비교 대상으로 사용한다.
+`migrated-current` 원문에는 source branch/commit 근거가 없고 현재 metadata도 unknown을 명시한다. 둘 다 확정하지 않는다. 이 비교는 2026-09-05 문서 snapshot 범위이며 현행 코드나 전체 migration 완료 판정이 아니다. [대표 사본·보존 수명](README.md)을 따른다.
 
 ## 3. 변화 유형 및 상태
 

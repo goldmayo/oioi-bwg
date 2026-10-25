@@ -331,7 +331,7 @@ credential·개인 env가 없는 임시 source에서 API loopback·metrics/error
 `goldmayo/oioi-bwg`의 `migration_main` `7f16a9d74e526f50a5f17e6821ed980d1057cabd`를
 기준으로 Web/Console 최종 sanitizer·SDK/build 입력·relay 소비를 대조했다. Worker 소스 blob은
 `3d7a75805e6c438ada049a05398e34a2c1c15899`다. source 계약은 active [09](../oioi-bwg-architecture-clean-v1/09-error-ux-observability.md)와
-[11 §12](../oioi-bwg-architecture-clean-v1/11-content-i18n-assets-runtime-architecture.md#12-runtime)를 따른다.
+[11 §12](../oioi-bwg-architecture-clean-v1/11-content-i18n-assets-runtime-architecture.md#12-environment-variables)를 따른다.
 이번 감사는 기존 앱 수집 정책을 바꾸거나 새로운 진단 태그를 추측해 채우지 않는다.
 
 | 필드                                       | 현재 코드의 의미와 판정                                                                                                                                                     |

@@ -28,7 +28,7 @@ created_at: "2026-10-21"
   동일 요청 재실행을 막고 결과 불확실 시 자동 재시도하지 않는다.
   HTTP·일반 배포 workflow·ocarun sudoers에 mutation 경로를 추가하지 않았다.
 - 직접 esbuild 의존성만 추가했고 기타 lockfile resolution 변경은 포함하지 않았다.
-  자세한 설치·검토·복구 사용법은 [운영 안내 §10](../../../../ops/oci/README.md#10-console-운영자-cli-p06-d-운영-실증-전)에 둔다.
+  자세한 설치·검토·복구 사용법은 [운영 안내 §10](../../../../ops/oci/README.md#10-console-운영자-cli-p06-d)에 둔다.
 
 ## 실제 검증
 

@@ -13,7 +13,7 @@ observed_at: 2026-09-20
 
 # Logging / Sentry / Observability 조사 및 설계 리뷰
 
-이번 문서는 현재 브랜치에 대한 정적 조사 결과다. 코드·설정·의존성을 변경하지 않았다.
+이번 문서는 위 source SHA에 고정한 정적 조사 결과다. 코드·설정 permalink는 해당 tree를 가리킨다. 코드·설정·의존성을 변경하지 않았다.
 4~6절은 **미승인 개선 제안**이며 active architecture나 구현 계획을 대체하지 않는다.
 규범은 [헌법](../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md)과
 [09 Observability](../oioi-bwg-architecture-clean-v1/09-error-ux-observability.md),
@@ -51,14 +51,14 @@ Proxy는 존재하므로 누락된 middleware 설정으로 취급하지 않는�
 
 ### 1.2 배포 구조: 선언과 실제 운영을 구분
 
-[Dockerfile](../../../Dockerfile), [Compose](../../../compose.oci-development.yml),
-[CI](../../../.github/workflows/verify.yml)는 Next standalone → ARM64 OCIR image → OCI DevOps/Compute
+[Dockerfile](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/Dockerfile), [Compose](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/compose.oci-development.yml),
+[CI](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/.github/workflows/verify.yml)는 Next standalone → ARM64 OCIR image → OCI DevOps/Compute
 배포 경로를 구성한다. Compose는 기존 PostgreSQL network에 연결하며 `NODE_ENV=production`이다.
 CI image의 제품 환경은 `NEXT_PUBLIC_APP_ENV=staging`, Sentry 환경도 `staging`으로 고정된다.
 즉 배포 이름의 development와 Next의 development mode는 같은 의미가 아니다.
 
 - Compose `json-file` driver: 파일당 10 MB, 5개 회전. stdout와 stderr 모두 Docker 수집 대상이다.
-- [infra/oci/logging.tf](../../../infra/oci/logging.tf): CUSTOM log, 보존 30일, agent가
+- [infra/oci/logging.tf](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/infra/oci/logging.tf): CUSTOM log, 보존 30일, agent가
   `/var/lib/docker/containers/*/*-json.log`를 tail하도록 선언한다. app 전용 경로가 아니라 host의
   다른 container 로그도 범위에 들어갈 수 있다. `parse_nested=false`여서 Docker envelope 안의
   application JSON 문자열이 자동으로 구조화 검색된다고 가정할 수 없다.
@@ -73,15 +73,15 @@ CI image의 제품 환경은 `NEXT_PUBLIC_APP_ENV=staging`, Sentry 환경도 `st
 | 항목 | 관련 파일 / symbol | 현재 역할과 판단 |
 | --- | --- | --- |
 | dependency | `package.json`, `pnpm-lock.yaml` | 직접 의존 `@sentry/nextjs: ^10.42.0`, lock 해석 10.42.0. Next 16.3.3 / React 19.2.5. 관련 node/react/browser SDK는 전이 의존이며 별도 logger 도입 증거가 아님 |
-| server 초기화 | [src/instrumentation.ts](../../../src/instrumentation.ts): `register` | `NODE_ENV=development`면 건너뜀. 그 외 `NEXT_RUNTIME=nodejs`에서만 server config import |
-| server 옵션 | [sentry.server.config.ts](../../../sentry.server.config.ts): `Sentry.init` | 공개 DSN 변수, 환경 기본 production, `sendDefaultPii=false`, `beforeSend=sanitizeServerSentryEvent`, `debug=false` |
-| browser 초기화 | [sentry.client.config.ts](../../../sentry.client.config.ts), `next.config.ts` | 파일에 init은 있지만 import하는 application 코드가 없고 `instrumentation-client.ts`와 `withSentryConfig`도 없음. 현재 build 경로상 browser SDK 초기화 누락으로 판단 |
-| Next build integration | [next.config.ts](../../../next.config.ts) | plain NextConfig export. Sentry wrapper/loader/upload 설정 없음. Server는 독립 instrumentation import로 초기화되므로 browser 문제와 구분 |
-| server 수동 exception | [server-logger.ts](../../../src/server/observability/server-logger.ts): `reportServerError` | 안전한 descriptor를 JSON stderr에 기록하고 새 Error를 `withScope/setTags/captureException`으로 전송 |
-| API exception | [api-response.ts](../../../src/server/http/api-response.ts): `toErrorResponse` | input Zod/AppError는 HTTP 계약으로 반환; unknown/output contract failure만 위 reporter 호출 |
+| server 초기화 | [src/instrumentation.ts](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/src/instrumentation.ts): `register` | `NODE_ENV=development`면 건너뜀. 그 외 `NEXT_RUNTIME=nodejs`에서만 server config import |
+| server 옵션 | [sentry.server.config.ts](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/sentry.server.config.ts): `Sentry.init` | 공개 DSN 변수, 환경 기본 production, `sendDefaultPii=false`, `beforeSend=sanitizeServerSentryEvent`, `debug=false` |
+| browser 초기화 | [sentry.client.config.ts](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/sentry.client.config.ts), `next.config.ts` | 파일에 init은 있지만 import하는 application 코드가 없고 `instrumentation-client.ts`와 `withSentryConfig`도 없음. 현재 build 경로상 browser SDK 초기화 누락으로 판단 |
+| Next build integration | [next.config.ts](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/next.config.ts) | plain NextConfig export. Sentry wrapper/loader/upload 설정 없음. Server는 독립 instrumentation import로 초기화되므로 browser 문제와 구분 |
+| server 수동 exception | [server-logger.ts](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/src/server/observability/server-logger.ts): `reportServerError` | 안전한 descriptor를 JSON stderr에 기록하고 새 Error를 `withScope/setTags/captureException`으로 전송 |
+| API exception | [api-response.ts](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/src/server/http/api-response.ts): `toErrorResponse` | input Zod/AppError는 HTTP 계약으로 반환; unknown/output contract failure만 위 reporter 호출 |
 | Auth.js exception | `src/auth.ts`, `auth-error-reporter.ts`: `reportAuthError` | 정상 CredentialsSignin 제외; 나머지는 고정 `AUTH_FAILURE`로 reporter 호출 |
 | Next global server handler | `src/instrumentation.ts`: `onRequestError` | method/routerKind/routeType만 allowlist. request URL/body/headers 제외. 개발 모드에서는 handler가 조기 반환 |
-| browser 수동 exception | [src/shared/lib/sentry.ts](../../../src/shared/lib/sentry.ts): `logger.error` | local 등에서는 raw error/context를 console에 출력; staging/production에서는 withScope/setExtras/captureException. SDK 초기화를 대신하지 않음 |
+| browser 수동 exception | [src/shared/lib/sentry.ts](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/src/shared/lib/sentry.ts): `logger.error` | local 등에서는 raw error/context를 console에 출력; staging/production에서는 withScope/setExtras/captureException. SDK 초기화를 대신하지 않음 |
 | Query/Mutation | `src/shared/api/query/query-client.ts`: `captureClientBoundaryError` | ClientContractError와 비정상 HTTP 계약의 ClientTransportError(HTTP_ERROR)만 captureClientErrorOnce로 보고. 정상 API 500은 server capture가 담당. 일반 Error/네트워크 실패는 이 handler가 capture하지 않음 |
 | Error Boundary | `src/app/(admin)/admin/error.tsx`, `src/app/global-error.tsx` | admin은 captureClientErrorOnce, global은 logger.error 직접 호출. global에 digest extra 전달. 별도 Sentry.ErrorBoundary wrapper는 없음 |
 | 로그인 client catch | `src/features/auth/ui/LoginForm.tsx` | captureClientErrorOnce에 `source=admin-login-form` 전달 |
@@ -172,7 +172,7 @@ global unhandled error 수신을 후속 검증해야 한다.
 
 ## 3. 잘 되어 있는 부분
 
-- [server reporter](../../../src/server/observability/server-logger.ts)와 beforeSend allowlist가
+- [server reporter](https://github.com/goldmayo/oioi-bwg/blob/d0b02dcb45a8bfa615bfbec8f76f166cd8d9a377/src/server/observability/server-logger.ts)와 beforeSend allowlist가
   원본 DB error/cause/SQL/개인정보를 무분별하게 전송하지 않는다. 원본 전체를 복구하는 방향은 부적절하다.
 - `server-only` 경계, scope-local tags/extras, API output contract 별도 capture가 있다.
 - 정상 AppError/입력 오류/CredentialsSignin을 기본 capture에서 제외하고 client-safe 응답을 유지한다.

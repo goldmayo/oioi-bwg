@@ -31,3 +31,7 @@ M7 서술은 #257의 정정과 동일하게 최초 FAIL → DATA-008 보완 → 
 - [결정 ADR 0008](../adr/0008-documentation-lifecycle.md)
 - [파일별 삭제·근거 대응](../migration/implementation/COMPLETED-DESIGN-INDEX.md)
 - [현재·보류 작업](../WORK.md)
+
+역공학 초과 사본 8개를 byte/hash 대조 후 삭제하고 대표 본문과 legacy-main을 보존했다.
+과거 코드 링크와 file URI를 각 source/작성 tree의 permalink로 복구했고 unknown source는 그대로 뒀다.
+최종 파일 수·검사·미확인과 PR 단위는 [정리 결과](../migration/implementation/DOCUMENTATION-CLEANUP-RESULT.md)가 소유한다.
