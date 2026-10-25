@@ -7,7 +7,7 @@ export const SITE_CONFIG = {
   shortName: "OIOIBWG",
   description: "QWER 비공식 응원법 가이드. 바위게야 오늘은 응원을 하자!",
   url: getAppEnvironment() === "local" ? "http://localhost:3000" : "https://www.oioibawige.com",
-  ogImage: "/images/og_oioibawige.webp", // OG 이미지 경로
+  ogImage: "https://assets.oioibawige.com/images/og_oioibawige.webp",
   author: "CheerRockCrab Team",
   links: {
     github: "https://github.com/oioibawige", // 예시
@@ -19,7 +19,7 @@ export const DEFAULT_METADATA: Metadata = {
   metadataBase: new URL(SITE_CONFIG.url),
   title: {
     default: SITE_CONFIG.name,
-    template: `%s | ${SITE_CONFIG.shortName}`,
+    template: `%s | ${SITE_CONFIG.name}`,
   },
   description: SITE_CONFIG.description,
   keywords: [...SITE_CONFIG.keywords],

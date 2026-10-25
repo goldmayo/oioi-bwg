@@ -1,14 +1,30 @@
 ---
 title: "P06 세션 간 작업 인계"
 kind: migration-handoff
-status: active
+status: complete
 updated_at: "2026-10-25"
-revision: 68
+revision: 71
 ---
 
 # P06 작업 인계
 
-- **2026-10-25 재개: A~E 완료 기록을 유지하고 F를 마무리한다.** 사용자 P06 완료 지시로 아래
+- **2026-10-25 P06 A~F 전체 종료 / 다음 P07.** [전체 종료 결과](P06-RESULT.md)가 완료 판정과 단계별
+  근거·후속 범위를 소유한다. 이 인계의 P06 재개 작업은 없다. 다음은 [로드맵](ROADMAP.md#2-실제-pr-단위)의
+  P07 세 종류 응원법/선택 화면이며 [기존 설계](DESIGN.md#5-cheerguide)에서 계약·저장·선택 단위로 구체화한다.
+  G 계정 관리·추가 부하 실험은 별도 후속이다. 아래 실행 지시와 보류/재개 표시는 당시 이력이다.
+
+- **2026-10-25 F 완료: www 전환·Console 유지·옛 Web 환경 종료.** #199→한정 이력 연결 #245→정상
+  Promotion #246의 성공 candidate/receipt와 실제 두 digest를 대조했다. 두 squash-only 설정은 원복했다.
+  www/apex TLS·www 최종 조회/인증·쓰기 거절·apex308·Console 실물 로그인/업로드/로그아웃·cookie를 확인했다.
+  두 옛 Worker·staging/preview DNS와 Caddy 경로·옛 배포 trigger/전용 token 저장은 종료했다.
+  기존 DB·Auth/MFA version4·R2/assets/Console·독립 Worker·Hyperdrive·메일 DNS는 보존했다.
+  Console 확인 후 최종 콘텐츠는 26곡·9앨범이다. 원래 26곡·7앨범은 불변이며 사용 중인 신규 이미지는 보존했다.
+  [F1 결과](P06-F1-RESULT.md#2026-10-25-실제-운영-전환)가 실제 값·차이·복구·한계의 소유자다.
+  승인된 F 전환 작업은 남지 않았다. 추가 부하 실험·G 계정 관리·P07~P10은 후속이며 선행 조건으로 추가하지 않는다.
+
+아래 재개/보류/진행 표시는 당시 이력이다.
+
+- **2026-10-25 재개 당시:** A~E 완료 기록을 유지하고 F를 마무리한다. 사용자 P06 완료 지시로 아래
   F 준비 보류를 해제했다. #199를 #242/#243 통합 기준으로 갱신하고 최신 환경·prune/cache 계약을
   유지한다. [계획 개정](P06-PLAN.md#2026-10-25-모노레포-개선-이후-f-재개)과
   [F1 결과](P06-F1-RESULT.md)를 따른다. 실제 www/배포/레거시 종료는 아직 미완료다.

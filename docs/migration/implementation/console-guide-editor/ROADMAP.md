@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-23"
-revision: 17
+updated_at: "2026-10-25"
+revision: 19
 ---
 
 # 구현 순서와 PR 단위
@@ -17,13 +17,18 @@ Console 배포를 P06으로 앞당긴 독립 기능 작업선을 유지하고, P
 단계별 검증 fixture·운영 회수 경로를 보완한다. 이 문서 PR에는 앱·DB·인증·runner/worker 코드가 없다.
 전체 단계의 최초 소스 기준은 metadata에 유지하며 단계별 실행 내역은 각 PLAN/RESULT에서 확인한다.
 
+**현재 checkpoint(2026-10-25): P06 A~F 전체 완료·종료 / 다음 P07.**
+[P06 전체 결과](P06-RESULT.md)가 완료 근거와 별도 후속을 소유한다. G 계정 관리·추가 부하 실험은
+독립 후속이며 P07의 선행 조건이 아니다. P07~P10 구현은 아직 시작하지 않았다.
+
 ## 1. 코드 의존성과 운영 순서
 
 ```text
 Console 전환 작업선
 P01 앱 이동 → P02 Turbo/config/harness → P03 실제 공통 코드 추출
   → P04 Console 이관 → P05 TOTP → P06 두 앱 배포·Web Admin 종료
-  → P06-F 운영 전환 완료 → P06-G 계정 관리 후속 기능
+  → P06 A~F 전체 종료
+       └─ P06-G 계정 관리: 별도 후속 기능 / P07 선행 조건 아님
 
 Console 전환 뒤의 기능 작업선
   ├─ P07 CheerGuide 세 종류 / 사용자 선택
@@ -102,9 +107,12 @@ Console 접속에 30분 자동 종료를 적용하지 않는다. D 작업에 필
 2026-10-22 상위 문서 개정·Web 인증 제거·host 인증 차단 및 정상 Promotion #193 배포를 마쳐 E를 완료했다.
 [E3 운영 결과](P06-E3-RESULT.md#2026-10-22-배포-완료와-실제-서비스-검증)가 최신 배포·검증 상태를 소유한다.
 실제로 관찰하지 못한 인증 cookie 속성/preview 격리는 최종 hostname 검증에서 대조한다.
-F의 www 전환·레거시 종료는 아직 시작하지 않았다.
-현재 preview의 OCI Web이 최종 www가 되며 Console은 같은 VM을 사용한다. 상시 staging을 추가하지 않고
-전환 검증 후 기존 Web Worker·staging·preview 경로를 종료한다. assets/R2·메일은 실제 의존성 확인 후 정리한다.
+위 E 기록 이후 2026-10-25 정상 Promotion #246과 실제 검증으로 **F 운영 전환을 완료**했다.
+preview의 OCI Web을 최종 www로 전환했고 apex는 경로·query를 보존해 www로 이동한다.
+Console 실물 인증·업로드·cookie와 최종 www를 확인한 뒤 기존 Web Worker 두 개·staging·preview·옛 배포 경로를 종료했다.
+assets/R2·Console·기존 DB/MFA·독립 Worker·메일은 보존했다.
+[F 운영 결과](P06-F1-RESULT.md#2026-10-25-실제-운영-전환)가 최신 배포·실제 값·복구·한계를 소유한다.
+추가 동시 CRUD/장기 부하 실험은 이번 DB 불변 범위에서 수행하지 않았고, G·P07~P10은 후속이다.
 단일 VM의 기존 Promotion·OCI Run Command를 유지하는 세부 PR 분할과 두 앱 복구 계획은
 [P06 계획 초안](P06-PLAN.md)을 참조한다. 계획 작성은 환경 적용이나 공개 승인을 의미하지 않는다.
 기존 preview 관리자 계정을 사용하는 사전 준비 절차는 [P06 사전 준비 안내](P06-PREPARATION.md)에 둔다.

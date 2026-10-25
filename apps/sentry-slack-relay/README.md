@@ -107,6 +107,25 @@ body는 Content-Length 사전 검사와 실제 stream byte 누적 제한(1,000,0
 - `SLACK_SENTRY_WEBHOOK_URL`: Slack Incoming Webhook URL
 - `SENTRY_WEBHOOK_SECRET`: Sentry Internal Integration **Client Secret**
 
+### 환경변수 책임
+
+relay runtime 입력은 아래 **Worker Secret 두 개**다. 일반 `vars`나 `.env` 입력은 필요하지 않다.
+
+| 입력                       | 소유자·용도                                                              |
+| -------------------------- | ------------------------------------------------------------------------ |
+| `SENTRY_WEBHOOK_SECRET`    | Worker Secret. Sentry Internal Integration의 Client Secret으로 HMAC 검증 |
+| `SLACK_SENTRY_WEBHOOK_URL` | Worker Secret. 오류 알림 전용 Slack Incoming Webhook                     |
+
+`NEXT_PUBLIC_APP_ENV`, `NEXT_PUBLIC_SENTRY_DSN`은 Web/Console이 소유한다. `SENTRY_ORG`,
+`SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`, `SENTRY_SOURCE_MAPS_ENABLED`, `SENTRY_RELEASE`는 앱의
+Sentry build/release 설정이며 relay에 복사하지 않는다. GitHub 배포 알림의
+`SLACK_DEPLOY_WEBHOOK_URL`도 별도 소유다. 환경·app·failure kind·release 표시는 검증된 **event**에서 읽는다.
+
+2026-10-25 실제 Worker settings/secret 이름·타입 조회에서도 위 두 `secret_text`만 확인했고 일반
+binding은 없었다. 값·계정 정보는 기록하지 않았으며 변경·삭제·회전을 수행하지 않았다.
+감사와 현재 앱 태그 정책은 [결과 §13](../../docs/migration/implementation/SENTRY-SLACK-RELAY-RESULT.md#13-2026-10-25-서비스-태그와-relay-환경-감사)를 따른다.
+앱/패키지/Worker 이름은 현재 역할을 유지하고, 여러 알림 채널로 확장할 실제 요구가 생기면 별도 검토한다.
+
 ## 3. Worker deploy
 
 ### 최초 설치

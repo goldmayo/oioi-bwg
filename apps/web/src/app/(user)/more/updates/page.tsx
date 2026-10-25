@@ -1,3 +1,4 @@
+import { constructMetadata } from "@/shared/lib/metadata";
 import { cn } from "@/shared/lib/utils";
 
 import { MoreBackButton, MoreHeader } from "../_ui/more-common";
@@ -30,6 +31,12 @@ const UPDATES = [
     content: ["서비스 오픈", "동영상기반 응원법 싱크 기능"],
   },
 ];
+
+export const metadata = constructMetadata({
+  title: "업데이트 내역",
+  path: "/more/updates",
+  description: "어이어이바위게의 기능 추가와 개선 내역입니다.",
+});
 
 export default function UpdatesPage() {
   return (

@@ -1,0 +1,12 @@
+{
+  "extends": "@oioi-bwg/config/typescript/base.json",
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "allowJs": false
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

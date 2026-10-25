@@ -4,6 +4,7 @@ import { SITE_CONFIG } from "@/shared/config/site";
 
 interface ConstructMetadataProps {
   title?: string;
+  path?: string;
   description?: string;
   image?: string;
   noIndex?: boolean;
@@ -15,16 +16,24 @@ interface ConstructMetadataProps {
  */
 export function constructMetadata({
   title,
+  path = "/",
   description = SITE_CONFIG.description,
   image = SITE_CONFIG.ogImage,
   noIndex = false,
 }: ConstructMetadataProps = {}): Metadata {
-  const fullTitle = title ? `${title}` : SITE_CONFIG.name;
+  const pageTitle = title ?? SITE_CONFIG.name;
+  const fullTitle = title ? `${title} | ${SITE_CONFIG.name}` : SITE_CONFIG.name;
+  const url = new URL(path, SITE_CONFIG.url).toString();
 
   return {
-    title: fullTitle,
+    title: pageTitle,
     description,
+    alternates: { canonical: url },
     openGraph: {
+      type: "website",
+      locale: "ko_KR",
+      siteName: SITE_CONFIG.name,
+      url,
       title: fullTitle,
       description,
       images: [
@@ -38,7 +47,6 @@ export function constructMetadata({
       title: fullTitle,
       description,
       images: [image],
-      creator: "@CheerRockCrab", // 예시
     },
     icons: "/favicon.ico",
     metadataBase: new URL(SITE_CONFIG.url),

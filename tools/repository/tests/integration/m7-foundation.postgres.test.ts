@@ -642,6 +642,10 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
     });
     await expect(songs.getSongDetailBySlug("m7-hidden-song")).resolves.toBeUndefined();
     await expect(songs.getSongDetailBySlug("m7-hidden-parent-song")).resolves.toBeUndefined();
+    const sitemapSlugs = (await songs.listVisibleSongsForSitemap()).map((entry) => entry.slug);
+    expect(sitemapSlugs).toEqual(expect.arrayContaining(["m7-public-first", "m7-public-second"]));
+    expect(sitemapSlugs).not.toContain("m7-hidden-song");
+    expect(sitemapSlugs).not.toContain("m7-hidden-parent-song");
 
     await expect(
       database.transaction(async (transaction) => {

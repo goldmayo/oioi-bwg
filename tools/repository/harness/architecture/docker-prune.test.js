@@ -115,6 +115,7 @@ test("Docker pruning preserves target inputs and excludes unrelated sources and 
         "packages/config",
         "packages/contracts",
         "packages/server",
+        ...(scopes.includes("console") ? ["packages/ui"] : []),
       ].sort(),
     );
     assert.ok(!fs.existsSync(path.join(full, "tools")));

@@ -63,7 +63,7 @@ export function dependencyOptions(
       severity: "error",
       from: {
         path: [
-          "^(?:apps/[^/]+|packages/(?:server|contracts))/src/",
+          "^(?:apps/[^/]+|packages/(?:server|contracts|ui))/src/",
           "^apps/[^/]+/sentry\\.[^/]+\\.config\\.[cm]?ts$",
         ],
         pathNot: testFiles,
@@ -76,6 +76,7 @@ export function dependencyOptions(
       from: {
         path: [
           "^apps/[^/]+/src/(?:widgets|features|entities|shared)/",
+          "^packages/ui/src/",
           ...clients.map((file) => "^" + escape(file) + "$"),
         ],
         pathNot: testFiles,
@@ -87,6 +88,14 @@ export function dependencyOptions(
       severity: "error",
       from: { path: "^packages/contracts/src/", pathNot: testFiles },
       to: { pathNot: "^packages/contracts/src/|(?:^|/)node_modules/zod(?:/|$)" },
+    },
+    {
+      name: "ui-domain-boundary",
+      severity: "error",
+      from: { path: "^packages/ui/src/", pathNot: testFiles },
+      to: {
+        path: "^packages/(?:server|contracts)/|(?:^|/)node_modules/(?:next|next-auth|postgres|drizzle-orm)(?:/|$)",
+      },
     },
     {
       name: "server-framework",

@@ -221,6 +221,36 @@
       "dependsOn": ["^transit"],
       "cache": false,
       "outputs": []
+    },
+    "@oioi-bwg/ui#type-check": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/typescript/base.json",
+        "$TURBO_ROOT$/packages/config/typescript/node.json",
+        "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/vitest/browser.js"
+      ],
+      "outputs": [],
+      "dependsOn": ["^transit"]
+    },
+    "@oioi-bwg/ui#test": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/vitest/browser.js",
+        "$TURBO_ROOT$/packages/config/vitest/browser.setup.ts"
+      ],
+      "outputs": [],
+      "dependsOn": ["^transit"]
     }
   }
 }

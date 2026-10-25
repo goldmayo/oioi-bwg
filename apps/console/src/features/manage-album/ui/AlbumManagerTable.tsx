@@ -1,0 +1,134 @@
+"use client";
+
+import { useMemo } from "react";
+import { createAppColumnHelper, useAppTable } from "@oioi-bwg/ui/data-table";
+import { Edit, Trash2 } from "lucide-react";
+
+import type { AdminAlbumSummary } from "@/entities/album";
+
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+
+interface Props {
+  albums: AdminAlbumSummary[];
+  canManage: boolean;
+  hasFilter: boolean;
+  onEdit: (album: AdminAlbumSummary) => void;
+  onDelete: (album: AdminAlbumSummary) => void;
+}
+const column = createAppColumnHelper<AdminAlbumSummary>();
+
+export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDelete }: Props) {
+  "use no memo";
+  // AppTable은 내부 ref로 options를 읽는다. 자동 memo가 권한/DTO 변경 렌더를 건너뛰지 않게 한다.
+  const columns = useMemo(
+    () =>
+      column.columns([
+        column.accessor("id", {
+          header: "ID",
+          meta: { className: "w-12 text-muted-foreground text-xs" },
+          cell: ({ row: { original: album } }) => <>{album.id}</>,
+          sortFn: "basic",
+        }),
+        column.accessor("name", {
+          header: "이름",
+          meta: { className: "font-medium" },
+          cell: ({ row: { original: album } }) => <>{album.name}</>,
+        }),
+        column.accessor("slug", {
+          header: "Slug",
+          meta: {
+            className: "hidden sm:table-cell text-muted-foreground text-sm",
+          },
+          cell: ({ row: { original: album } }) => <>{album.slug}</>,
+        }),
+        column.accessor("color", {
+          header: "색상",
+          meta: { className: "w-16" },
+          cell: ({ row: { original: album } }) => (
+            <>
+              <div
+                className="h-6 w-6 rounded-full border"
+                style={{ backgroundColor: album.color }}
+                title={album.color}
+              />
+            </>
+          ),
+          enableSorting: false,
+        }),
+        column.accessor("isVisible", {
+          header: "표시",
+          meta: { className: "w-16 text-center" },
+          cell: ({ row: { original: album } }) => (
+            <>
+              <Badge
+                variant={album.isVisible ? "default" : "outline"}
+                className="text-2xs px-1.5 py-0"
+              >
+                {album.isVisible ? "표시" : "숨김"}
+              </Badge>
+            </>
+          ),
+          enableSorting: false,
+        }),
+        column.accessor("releaseDate", {
+          header: "발매일",
+          meta: {
+            className: "hidden md:table-cell text-muted-foreground text-sm",
+          },
+          cell: ({ row: { original: album } }) => (
+            <>{album.releaseDate ? new Date(album.releaseDate).toLocaleDateString("ko-KR") : "-"}</>
+          ),
+        }),
+        column.display({
+          id: "actions",
+          header: "관리",
+          meta: { className: "w-24 text-right" },
+          cell: ({ row: { original: album } }) => (
+            <>
+              {canManage && (
+                <div className="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onEdit(album)}
+                    title="수정"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:bg-destructive/10 h-8 w-8"
+                    onClick={() => onDelete(album)}
+                    title="삭제"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
+          ),
+        }),
+      ]),
+    [canManage, onEdit, onDelete],
+  );
+  const table = useAppTable({
+    columns,
+    data: albums,
+    getRowId: (row) => String(row.id),
+    initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
+  });
+  return (
+    <table.AppTable>
+      <div className="space-y-4">
+        <table.Body
+          caption="앨범 관리 목록"
+          emptyState={<>{hasFilter ? "검색 결과가 없습니다." : "등록된 앨범이 없습니다."}</>}
+        />
+        <table.Pagination label="앨범 목록 페이지" />
+      </div>
+    </table.AppTable>
+  );
+}

@@ -23,10 +23,12 @@ export async function generateMetadata({ params }: SongPageProps) {
   const { slug } = await params;
   const song = await getSongDetail(slug);
 
-  if (!song || !song.album) return {};
+  if (!song) notFound();
 
   return constructMetadata({
-    title: song.title,
+    title: `QWER ${song.title} 응원법`,
+    path: `/songs/${encodeURIComponent(song.slug)}`,
+    image: song.album.imgUrl || undefined,
     description: `${song.album.name} 수록곡 '${song.title}'의 비공식 응원법 가이드입니다.`,
   });
 }

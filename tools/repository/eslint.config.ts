@@ -5,6 +5,7 @@ import { createAppConfig } from "@oioi-bwg/config/eslint/app";
 import { createContractsConfig } from "@oioi-bwg/config/eslint/contracts";
 import { createNodeConfig } from "@oioi-bwg/config/eslint/node";
 import { createServerConfig } from "@oioi-bwg/config/eslint/server";
+import { createUiConfig } from "@oioi-bwg/config/eslint/ui";
 import { createWorkerConfig } from "@oioi-bwg/config/eslint/worker";
 
 const root = (relativePath: string) =>
@@ -17,4 +18,5 @@ export default defineConfig([
   ...createWorkerConfig(root("./apps/sentry-slack-relay/")),
   ...createServerConfig(root("./packages/server/")),
   ...createContractsConfig(root("./packages/contracts/")),
+  ...createUiConfig(root("./packages/ui/")),
 ]);
