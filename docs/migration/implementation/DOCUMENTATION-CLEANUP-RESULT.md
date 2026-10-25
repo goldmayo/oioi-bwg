@@ -9,9 +9,10 @@ recorded_at: "2026-10-26"
 # 문서 부채 정리 결과
 
 P06 종료 후·P07 착수 전 문서 정리를 수행했다. 기존 경로에서 작업했으며 P10 이후 폴더 재편은 보류했다.
-실행 기준은 위 통합 SHA와 OPEN인 [감사 #257](https://github.com/goldmayo/oioi-bwg/pull/257)의
+실행 기준은 위 통합 SHA와 초안 작성 당시 OPEN이던 [감사 #257](https://github.com/goldmayo/oioi-bwg/pull/257)의
 [고정 보고서](https://github.com/goldmayo/oioi-bwg/blob/6a3c714795f511e8f673b54f13020b9138ded49d/docs/migration/implementation/DOCUMENTATION-GOVERNANCE-AUDIT.md)다.
-시작 시 local/origin migration_main은 같고 작업 폴더는 깨끗했다. 새 PR 병합·운영 조회·배포는 수행하지 않았다.
+시작 시 local/origin migration_main은 같고 작업 폴더는 깨끗했다. 초안 준비에서는 새 PR 병합·운영 조회·배포를 수행하지 않았다.
+2026-10-26 사용자 병합 요청으로 아래 검토·통합 단위에 따라 PR을 통합했다. 운영 조회·배포는 실행하지 않았다.
 
 ## 실제 변경과 보존
 
@@ -25,9 +26,11 @@ P06 종료 후·P07 착수 전 문서 정리를 수행했다. 기존 경로에�
 - 혼합 DESIGN에서 완료된 구조/MFA 상세를 결과로 연결하고 **P07~P10 본문은 URL 이관 외 동등함을 확인**했다.
   ROADMAP은 기능 범위/의존성/완료 조건을 소유하며 현재 상태는 WORK에 연결한다.
 - RESULT·M7 finding/최종 검증 보고서·고유 승인/실패를 가진 중간 기록·P06-PREPARATION·현행 개발/운영 안내는 보존했다.
-  미완료 M1/M2·ENV-2·관측 운영 수용·FWA-04·G와 초기 승인/완료 미확인 설계도 남겼다.
+  M1/M2의 과거 계획과 ENV-2·관측 운영 수용·FWA-04·G 및 초기 승인/완료 미확인 설계도 남겼다.
+  M1/M2의 통합 상태 정정은 아래에 구분해 기록하며, 보존한 과거 계획을 현재 잔여 작업으로 계산하지 않는다.
 - [ADR 0008](../../adr/0008-documentation-lifecycle.md)과 [시간순 devlog](../../devlog/20261026-documentation.md)를 추가하고 기존 ADR의 근거를 보완했다.
-  AGENTS/문서 스킬에 WORK·결정·결과·후속을 갱신하는 최소 종료 규칙을 반영했다. 반복 인계 파일은 새로 만들지 않았다.
+  문서 생성·유지·통합·삭제 규칙은 AGENTS §9를 정본으로 삼고 스킬·안내에서 참조한다.
+  단일 PR 기록은 PR 본문에 두며 ADR/devlog는 목적에 맞을 때만 기록한다. 반복 인계 파일은 새로 만들지 않았다.
 
 ## 출처·현재 계약의 정합성
 
@@ -38,7 +41,7 @@ P06 종료 후·P07 착수 전 문서 정리를 수행했다. 기존 경로에�
 
 M7은 #257의 정정과 동일하게 2026-09-07 01:25 KST 최초 FAIL → DATA-008 보완 → 02:27 KST 최종 PASS다.
 9월 9일 FAIL 제목 병합과 실제 검증 사건 순서를 구분하며 [정정 devlog](../../devlog/202608-0909-boundaries.md#2026-10-25-감사-정정)에 원문을 유지했다.
-원본 M7 판정/승인 기록은 수정하지 않았다. #257은 병합하지 않았으며 이후 통합 시 동일 정정을 중복 추가하지 않는다.
+원본 M7 판정/승인 기록은 수정하지 않았다. #257의 병합 결과를 반영하면서 동일 정정은 중복 추가하지 않았다.
 
 API 소개는 헌법의 독립 Web/Console·공통 core 구조와 일치시켰다. API 1.6/index 1.56을 함께 갱신했고,
 Rendering 1.2·Testing 1.20의 제목과 Runtime 1.13의 index 표기를 맞췄다. 보안·데이터 불변성 규칙은 변경하지 않았다.
@@ -53,17 +56,19 @@ M0/M1부터 다시 시작하던 안내는 WORK·active 계약·기존 결과를 
 
 | 항목                                     | 정리 전 e93ae610 | 정리 후 |
 | ---------------------------------------- | ---------------: | ------: |
-| docs 전체 파일                           |              256 |     219 |
-| docs Markdown                            |              238 |     201 |
-| implementation Markdown                  |              148 |     119 |
+| docs 전체 파일                           |              256 |     220 |
+| docs Markdown                            |              238 |     202 |
+| implementation Markdown                  |              148 |     120 |
 | implementation의 PLAN/DESIGN             |               36 |       7 |
 | 완전 중복 초과 사본                      |                8 |       0 |
 | 상대 파일 결손 발생 수                   |               41 |       0 |
 | 상대 anchor 결손 발생 수                 |                3 |       0 |
 | 개인 file URI                            |               18 |       0 |
-| README·AGENTS에서 도달하는 docs Markdown |           58/238 | 201/201 |
+| README·AGENTS에서 도달하는 docs Markdown |           58/238 | 202/202 |
 
-삭제 총계는 **43개**, 신규 docs는 입구·WORK·ADR·devlog·snapshot 안내·이 결과의 **6개**다.
+삭제 총계는 **43개**, 신규 docs는 입구·WORK·ADR·devlog·snapshot 안내·이 결과의 **6개**와
+선행 #257의 감사 **1개**, 합계 **7개**다. 준비본 b5a84cc의 219파일/201 Markdown에 감사가 더해져
+최종 통합 범위는 220파일/202 Markdown이다. 감사의 원래 관찰과 수치는 보존하고 참조 17개를 당시 SHA로 고정했다.
 상대 링크의 최종 발생 수와 고정 Git blob/anchor 검증 수는 최종 PR의 확인 방법에 기록한다.
 본문을 수정한 문서는 명시적 Prettier check, 전체 상대 링크/anchor·고정 source blob·삭제 대상 참조·
 목차·version 정합성과 `git diff --check`를 검사했다. 링크만 이관한 역사 문서의 전체 포맷은 재작성하지 않았다.
@@ -77,17 +82,23 @@ P07~P10·G·FWA-04 runtime·부하·IAM/DB·Origin CA·공지 DB 전환 외에�
 관측 운영 수용·의존성 보안 잔여·타입 순환·비용 관측·옛 UX/Recap/공식 출처·장기 도메인 제안을 회수했다.
 이 결과는 미완료 항목의 별도 목록을 운영하지 않는다.
 
-M1의 수동 product smoke, M2 전체 종료, migrated-current 코드 source, 초기 MVP/renewal 승인·완료 및
-원본 analytics 검증은 미확인이다. M0~M9 전체 완료를 주장하지 않는다. 초기 결과의 옛 미배포·미병합 표시는
-그 시점의 이력으로 남겼고, 이후 배포만으로 원래의 모든 수용 검증이 통과했다고 추정하지 않았다.
+초안에서 M1의 수동 product smoke와 M2 전체 종료를 함께 미확인으로 묶었으나, 후속 통합 대조가 부족한 분류였다.
+2026-10-26 [M1 통합](https://github.com/goldmayo/oioi-bwg/commit/1e285317dc7d4a59d69398735a6f0e3d3b10aee4)과
+[M2 통합](https://github.com/goldmayo/oioi-bwg/commit/bad88499eb562ac5d15ade4cfe43e0c6cf79e526)을 확인했다.
+과거 미완료 표기만으로 M 단계 전체를 재개하지 않으며, 독립된 실제 후속만 WORK에서 관리한다.
+당시 미실시 검증을 소급해 통과로 바꾸지는 않는다. migrated-current 코드 source, 초기 MVP/renewal 승인·완료,
+원본 analytics 검증은 미확인으로 남긴다. 초기 결과의 미배포·미병합 표시는 그 시점의 이력으로 보존한다.
 보류된 `feature/service-publications`와 recovery-f-cutover의 미커밋 초안은 수정·초기화·정리하지 않았다.
 
 ## 검토·통합 단위
 
-1. [#258](https://github.com/goldmayo/oioi-bwg/pull/258): 진입점·WORK·종료 규칙, `df0539e947ea936acc4449b81c14a8076583db48`.
-2. [#259](https://github.com/goldmayo/oioi-bwg/pull/259): 완료 설계 삭제와 근거 이관, `41f170bdd7f6252b4b9ba6a60ea361de1a37f22d`.
-3. snapshot/provenance·현행 설명·이 결과: 이 결과를 포함한 Draft PR의 exact head와 확인 방법이 최종 문서 검사 단위를 고정한다.
+사용자의 2026-10-26 전체 PR 병합 지시에 따라 최신 migration_main과 문서 규칙을 반영하고 순차 squash 통합한다.
 
-모든 PR 대상은 migration_main이다. 후속 Draft는 선행 문서 commit을 포함하므로 선행 통합 뒤 최신 기준을 반영해
-독립 concern diff를 다시 확인한다. 삭제와 그 참조 이관은 같은 변경에서 검토해야 하므로 파일/행 목표를 넘는
-결합 이유·리뷰 순서를 PR에 명시했다. 자동 병합이나 Promotion은 실행하지 않는다.
+1. [#257](https://github.com/goldmayo/oioi-bwg/pull/257): 감사와 M7 정정, 통합 커밋 `4269f5ccf480b2af9efa8ff53dae30171344ca14`.
+2. [#258](https://github.com/goldmayo/oioi-bwg/pull/258): 진입점·WORK·생성/종료/통합 규칙, 통합 커밋 `abcf6d603f7518eff1ab6384bf4f689de428cc53`.
+3. [#259](https://github.com/goldmayo/oioi-bwg/pull/259): 완료 설계 삭제·근거 이관·감사 참조 고정, 통합 커밋 `2d162e3b88f38b96e8bc491209d5a99c77987a89`.
+4. [#260](https://github.com/goldmayo/oioi-bwg/pull/260): snapshot/provenance·현행 설명・최종 결과. 이 결과를 포함한 PR의 exact head·CI·병합 기록이 최종 검사와 통합 근거다.
+
+모든 PR 대상은 migration_main이다. 선행 통합 결과를 후속 브랜치에 반영해 독립 concern diff를 다시 확인했다.
+삭제와 그 참조 이관은 같은 변경에서 검토해야 하므로 파일/행 목표를 넘는 결합 이유·리뷰 순서를 PR에 명시했다.
+Promotion·운영 배포는 수행하지 않았다.

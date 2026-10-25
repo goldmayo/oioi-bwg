@@ -35,3 +35,13 @@ M7 서술은 #257의 정정과 동일하게 최초 FAIL → DATA-008 보완 → 
 역공학 초과 사본 8개를 byte/hash 대조 후 삭제하고 대표 본문과 legacy-main을 보존했다.
 과거 코드 링크와 file URI를 각 source/작성 tree의 permalink로 복구했고 unknown source는 그대로 뒀다.
 최종 파일 수·검사·미확인과 PR 단위는 [정리 결과](../migration/implementation/DOCUMENTATION-CLEANUP-RESULT.md)가 소유한다.
+
+## 2026-10-26 통합과 상태 정정
+
+사용자의 전체 PR 병합 요청으로 #257 감사·#258 문서 규칙·#259 삭제/근거 이관을 순서대로 통합했다.
+마지막 #260에서도 최신 규칙과 근거 지도를 유지하고 감사 참조를 당시 source에 고정했다.
+초안에서 M1/M2를 미확인으로 묶은 판단은 후속 통합을 충분히 대조하지 않은 분류였다.
+[M1 통합](https://github.com/goldmayo/oioi-bwg/commit/1e285317dc7d4a59d69398735a6f0e3d3b10aee4)과 [M2 통합](https://github.com/goldmayo/oioi-bwg/commit/bad88499eb562ac5d15ade4cfe43e0c6cf79e526)을 확인했으며,
+과거 문서의 미완료 표기만으로 종료 단계를 재개하거나 전체 단계를 WORK에 올리지 않는다.
+당시 미실시 검증을 소급해 통과로 바꾸지 않으며, 보존한 계획은 현재 재개 지시가 아니다.
+최종 head·문서 검사·CI·병합 근거는 [#260](https://github.com/goldmayo/oioi-bwg/pull/260)에서 확인한다.
