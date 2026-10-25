@@ -9,7 +9,7 @@ verified_at: "2026-10-10"
 
 # CI 빌드 최적화 결과
 
-[계획](PLAN.md)에 따라 `migration_main`의 `770dc66`에서 작업했다.
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/ci-build-optimization/PLAN.md)에 따라 `migration_main`의 `770dc66`에서 작업했다.
 [PR #119](https://github.com/goldmayo/oioi-bwg/pull/119)는 CI 빌드 재사용 한 관심사만 다룬다.
 앱 기능·P05/TOTP·배포 candidate/ARM64/Sentry secret·배포 digest 흐름은 변경하지 않았다.
 

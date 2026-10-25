@@ -10,7 +10,7 @@ created_at: "2026-10-23"
 
 사용자가 요청한 루트 파일 점검과 `config/tsconfig.json` 이관의 근거다. 기준은 위 커밋이며,
 `tsconfig.config.json` 행과 이관 설명은 이번 후속 변경을 반영한다. 이전 정상화의 완료 판정이나
-운영 배포 상태를 다시 정의하지 않는다. 실행 계획·검증은 [PLAN](MONOREPO-CONFIGURATION-PLAN.md)의
+운영 배포 상태를 다시 정의하지 않는다. 실행 계획·검증은 [PLAN](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md)의
 루트 파일 후속 절과 [RESULT](MONOREPO-CONFIGURATION-RESULT.md)의 같은 절이 소유한다.
 
 `git ls-files`·실제 디스크 목록과 package script, hook, CI, Docker/Compose, host installer,

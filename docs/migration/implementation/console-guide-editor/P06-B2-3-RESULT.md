@@ -10,7 +10,7 @@ verified_at: "2026-10-18"
 
 **2026-10-18 합의된 B 운영 실증을 완료했다.** 현재 상태와 실제 증거는 [최종 결과](#2026-10-18-b-운영-실증-완료와-최종-상태)가 소유한다. 아래 날짜별 대기/미실행 표시는 당시 관찰 이력이다.
 
-[P06 계획](P06-PLAN.md) §5의 독립 container 교체와 공동 rollback을 #149의 env helper 위에 구현했다.
+[P06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md) §5의 독립 container 교체와 공동 rollback을 #149의 env helper 위에 구현했다.
 최신 main `18de205`에서 분기하고 #149 head `c19d0a7`을 fast-forward로 반영했다. #149 브랜치는 변경하지 않았다.
 후보 source/build source 분리는 사용자 요청을 적용하며, 상세 계약은 active 배포 runbook §19/21이 소유한다.
 후보 계약 Draft #150과 host 변경은 분리하고 마지막 workflow 연결 PR에서 결합한다.
@@ -77,7 +77,7 @@ symlink/hardlink도 거절한다. 새 디렉터리만 root 소유로 만들며 �
 ## 2026-10-17 병합 후 VM 읽기 조회
 
 이번 사실 확인 기준은 main `d95d368a425ca59991ac3834b421508b56447919`다. #149~#154는 모두 MERGED다.
-위의 Draft/병합 대기는 당시 기록이며 현재 진입점은 [HANDOFF](P06-HANDOFF.md)다.
+위의 Draft/병합 대기는 당시 기록이며 현재 진입점은 [HANDOFF](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-HANDOFF.md)다.
 #154 Verify [38943292146](https://github.com/goldmayo/oioi-bwg/actions/runs/38943292146)은 전체 성공이며
 실제 CI Compose 보존/복구 step과 root 소유권·upgrade fixture step도 성공했다. 실제 OCI VM 배포 증거와 구분한다.
 
@@ -102,7 +102,7 @@ SSH 선택 오류는 사용자가 지정한 기존 `oioi` 계정으로 바로잡
 
 조회는 stat/lstat·선택 Docker inspect·서비스/포트/자원·공개 Caddy 구조 확인뿐이다. guard active를 실제 IMDS 차단 재실증으로 보지 않는다.
 설치·chown·설정/Secret 읽기·DB 접속·Caddy reload·container 재시작·Promotion 병합은 실행하지 않았다.
-다음 적용안은 [PLAN](P06-PLAN.md#2026-10-17-host-전환-준비)과 [운영 절차](../../../../ops/oci/README.md#9-p06-최초-host-전환)에 기록한다.
+다음 적용안은 [PLAN](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-17-host-전환-준비)과 [운영 절차](../../../../ops/oci/README.md#9-p06-최초-host-전환)에 기록한다.
 
 ## 2026-10-17 첫 운영 작업 완료와 DB 사전 확인
 

@@ -12,6 +12,8 @@ observed_at: "2026-10-25"
 
 # 문서 관리 감사
 
+> 2026-10-26 통합 안내: 본문은 위 source의 고정 관찰이며 수치·판정을 현재 상태로 재작성하지 않는다. 당시 참조는 같은 commit의 원문으로 고정했다. 후속 조치는 [완료 지도](COMPLETED-DESIGN-INDEX.md)와 [현재 작업](../../WORK.md)에서 확인한다.
+
 ## 판정과 범위
 
 문서 수가 많다는 것보다 현재 기준·작업 상태·결정 이력의 연결이 약한 것이 주요 문제다.
@@ -22,7 +24,7 @@ observed_at: "2026-10-25"
 병합 head는 위 source commit이며 문서 CI [40202706999](https://github.com/goldmayo/oioi-bwg/actions/runs/40202706999)의 scope·verify가 통과했다.
 제품 job은 Markdown-only 정책으로 skipped였으며 제품 검사를 통과했다고 계산하지 않는다.
 
-기존 [DOCUMENTATION-VERIFICATION-RESULT](DOCUMENTATION-VERIFICATION-RESULT.md)는 Markdown-only CI 판정 기능의 결과다.
+기존 [DOCUMENTATION-VERIFICATION-RESULT](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/DOCUMENTATION-VERIFICATION-RESULT.md)는 Markdown-only CI 판정 기능의 결과다.
 이번 감사의 역할은 전체 문서의 분류·상태·근거·탐색 가능성·정리 순서로, 해당 결과를 덮어쓰지 않는다.
 
 ## 전수 검사 수치
@@ -57,10 +59,10 @@ metadata가 없는 문서나 역사적 문서라는 사실만으로 결함·삭�
 
 ### DOC-01 · P1 · 현재 작업과 보류 작업의 단일 진입점 부재
 
-확인: [P06 결과 §별도 후속](console-guide-editor/P06-RESULT.md#별도-후속과-검증-한계)는 계정 관리 G·추가 부하·IAM/DB hardening·Origin CA 갱신을 가진다.
-[관측 정책 공통화 계획](OBSERVABILITY-POLICY-SHARING-PLAN.md)은 proposed·미구현이며,
-[프레임워크 결과](FRAMEWORK-IMPROVEMENT-RESULT.md)는 A/B 구현과 C 설계 완료를 구분한다.
-반면 [로드맵](console-guide-editor/ROADMAP.md)은 Console/P01~P10 작업선만 소유한다.
+확인: [P06 결과 §별도 후속](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-RESULT.md#별도-후속과-검증-한계)는 계정 관리 G·추가 부하·IAM/DB hardening·Origin CA 갱신을 가진다.
+[관측 정책 공통화 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/OBSERVABILITY-POLICY-SHARING-PLAN.md)은 proposed·미구현이며,
+[프레임워크 결과](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/FRAMEWORK-IMPROVEMENT-RESULT.md)는 A/B 구현과 C 설계 완료를 구분한다.
+반면 [로드맵](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/ROADMAP.md)은 Console/P01~P10 작업선만 소유한다.
 조회 시점 gh issue list의 열린 이슈는 0건이었다. 비공개 프로젝트 등 외부 관리판 존재 여부는 확인하지 않았다.
 
 영향: 완료된 checkpoint를 다시 열거나, 별도 후속을 종료 결과 안에 남겨 잊을 수 있다.
@@ -89,9 +91,9 @@ M7 원본 보고서·finding 상태·승인 이력은 수정하지 않았다.
 
 ### DOC-04 · P1 · 현재를 표방하는 오래된 안내가 재작업을 유도
 
-확인: [blueprint](../../blueprint.md#10-인프라-및-배포-cloudflare-native)는 Workers/Vinext/Hyperdrive를 설명하면서 마지막에 실제 구현을 반영한다고 선언한다.
-[TODO_TICKETS](../../TODO_TICKETS.md)는 Next Data Cache·revalidate 작업과 Workers 테스트를 지시하며 갱신 기준·후속 결과가 없다.
-[구현 시작 안내](../oioi-bwg-architecture-clean-v1/README-IMPLEMENTATION-START.md)는 M0/M1 runtime normalization부터 시작하라고 안내한다.
+확인: [blueprint](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/blueprint.md#10-인프라-및-배포-cloudflare-native)는 Workers/Vinext/Hyperdrive를 설명하면서 마지막에 실제 구현을 반영한다고 선언한다.
+[TODO_TICKETS](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/TODO_TICKETS.md)는 Next Data Cache·revalidate 작업과 Workers 테스트를 지시하며 갱신 기준·후속 결과가 없다.
+[구현 시작 안내](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/oioi-bwg-architecture-clean-v1/README-IMPLEMENTATION-START.md)는 M0/M1 runtime normalization부터 시작하라고 안내한다.
 현재 헌법과 P06 결과는 Node standalone·분리된 Web/Console·P07 진입을 명시한다.
 
 영향: 오래된 실행 지시를 현재 작업으로 재개하거나 이미 폐기한 cache/runtime 방식을 복구할 수 있다.
@@ -100,10 +102,10 @@ TODO 항목은 완료·폐기·보류·미확인으로 개별 대조해 살아 �
 
 ### DOC-05 · P2 · 완료 PLAN과 역사적 HANDOFF가 현행처럼 함께 노출
 
-확인: [P01 계획](console-guide-editor/P01-PLAN.md)은 draft,
-[P05 설계](console-guide-editor/P05-DESIGN.md)는 draft,
-[모노레포 계획](MONOREPO-BOUNDARIES-AND-EXECUTION-PLAN.md)은 active이나 본문에 실행 완료를 명시한다.
-[P06 인계](console-guide-editor/P06-HANDOFF.md)는 revision 71이며 맨 위 종료 선언 아래 여러 과거 보류/재개 지시를 보존한다.
+확인: [P01 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P01-PLAN.md)은 draft,
+[P05 설계](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P05-DESIGN.md)는 draft,
+[모노레포 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-BOUNDARIES-AND-EXECUTION-PLAN.md)은 active이나 본문에 실행 완료를 명시한다.
+[P06 인계](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-HANDOFF.md)는 revision 71이며 맨 위 종료 선언 아래 여러 과거 보류/재개 지시를 보존한다.
 완료/보류의 진입점은 존재하지만 파일명·metadata만으로 사용 여부를 판단할 수 없다.
 
 영향: 완료 계획을 활성 TODO로 읽거나 인계 본문의 지난 지시를 최신 지시로 오인한다.
@@ -114,7 +116,7 @@ TODO 항목은 완료·폐기·보류·미확인으로 개별 대조해 살아 �
 
 확인: reverse-engineering 루트의 01~08과 migrated-current의 01~08은 각각 byte 단위로 같다.
 두 세트는 2026-09-05의 현재 코드 관찰을 표방하지만 source commit을 명시하지 않고 authority: plan을 가진다.
-[gap map](../../reverse-engineering/10-main-to-migrated-gap-map.md)은 migrated branch/commit이 unknown임을 명시한다.
+[gap map](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/reverse-engineering/10-main-to-migrated-gap-map.md)은 migrated branch/commit이 unknown임을 명시한다.
 legacy-main은 별도로 main의 4b299934846f4a0eed7132f58c5b1c2a481a3739를 고정했다.
 
 영향: 동일 사실의 두 소유자가 생기고, 어느 구현과 비교한 것인지 복원할 수 없다.
@@ -123,9 +125,9 @@ legacy-main은 날짜가 오래됐다는 이유로 현행 코드로 덮어쓰지
 
 ### DOC-07 · P2 · source 고정 문서의 링크가 현재 checkout에 종속
 
-확인: [환경 증적](ENVIRONMENT-CONFIGURATION-EVIDENCE.md) 3회,
-[관측 감사](OBSERVABILITY-AUDIT.md) 10회,
-[CURRENT-STATE](console-guide-editor/CURRENT-STATE.md) 28회가 이동 전 src/·Dockerfile·Compose를 가리킨다.
+확인: [환경 증적](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/ENVIRONMENT-CONFIGURATION-EVIDENCE.md) 3회,
+[관측 감사](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/OBSERVABILITY-AUDIT.md) 10회,
+[CURRENT-STATE](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/CURRENT-STATE.md) 28회가 이동 전 src/·Dockerfile·Compose를 가리킨다.
 CURRENT-STATE는 frozen source를 명시하고 그 commit을 checkout하라고 안내하므로 내용 자체를 현행 불일치로 판정하지 않는다.
 
 영향: GitHub에서 클릭하면 고정 source 대신 현재 경로를 찾아 근거를 읽지 못한다.
@@ -143,7 +145,7 @@ API 문서 §1은 단일 Next 애플리케이션이라고 설명하나 헌법은
 
 ### DOC-09 · P2 · 반복 운영 안내가 migration 결과 폴더에 섞임
 
-확인: [로컬 개발환경](LOCAL-DEVELOPMENT-ENVIRONMENT.md)은 현재 반복해서 사용하는 설정·실행·DB guard 안내이며 README에서 직접 참조한다.
+확인: [로컬 개발환경](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md)은 현재 반복해서 사용하는 설정·실행·DB guard 안내이며 README에서 직접 참조한다.
 이는 특정 migration의 한 번의 실행 결과가 아니다. 운영 절차는 ops/oci에도 존재한다.
 
 영향: 완료한 migration 문서를 삭제할 때 현행 사용 설명서까지 잃거나, 비슷한 안내를 새로 작성할 수 있다.

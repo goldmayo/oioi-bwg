@@ -25,6 +25,12 @@ migration_main 통합과 migration_develop Promotion을 분리하고 검증한 �
 
 배포는 두 앱의 공동 release와 정상 baseline을 확인한다. DB·MFA·R2 보존과 hostname·인증 검증이 별도로 필요하며 CI 성공만으로 DNS/TLS 전환 완료를 주장할 수 없다.
 
+2026-10-21 사용자 범위 정정으로 Console HTTPS를 C에서 지속 공개하고 30분 자동 종료를 폐기했다.
+공개 로그인 화면과 비공개 MFA 등록은 구분한다. 이후 Web은 로그인 없는 공개 조회 전용으로 확정했다.
+이는 최초 배포 계획을 나중의 성공으로 정당화한 서술이 아니며, [C의 실패/복구·공개 유지 결과](../migration/implementation/console-guide-editor/P06-C-RESULT.md),
+[E 완료 철회와 범위 정정](../migration/implementation/console-guide-editor/P06-E2-RESULT.md), [최종 E3 결과](../migration/implementation/console-guide-editor/P06-E3-RESULT.md)를 따른다.
+현재 반복 절차는 [OCI 운영 안내](../../ops/oci/README.md)가 소유하고, 원래 승인/제안은 [삭제 대응 지도](../migration/implementation/COMPLETED-DESIGN-INDEX.md)의 고정 원문으로 보존한다.
+
 ## 근거
 
 - [구현·검증 기록](../migration/implementation/console-guide-editor/P06-RESULT.md)

@@ -25,9 +25,9 @@ observed_at: "2026-10-25"
 
 | 구분     | 고정 커밋                                  | 의미와 상세 근거                                                                                                                                                                                                                         |
 | -------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| BEFORE A | `4d5e42dac37aeb13b3279b47a7907fbb7bc91be2` | 설정 정상화 전. 이미 Web·Console과 server/contracts가 있는 모노레포다. [CONFIGURATION PLAN](MONOREPO-CONFIGURATION-PLAN.md)·[RESULT](MONOREPO-CONFIGURATION-RESULT.md)                                                                   |
-| BEFORE B | `f39f0b875d64ba033da4f4ff3a5b0296b18f1678` | 초기 정상화 후, 의존성 경계·실행 개선 전. config·relay workspace는 이미 존재한다. [BOUNDARIES PLAN](MONOREPO-BOUNDARIES-AND-EXECUTION-PLAN.md)·[RESULT](MONOREPO-BOUNDARIES-AND-EXECUTION-RESULT.md)                                     |
-| AFTER    | `c6c2f71b73235caa773de2ef56d51820b9e86b23` | #242 Root 정리와 #243 공통 blob 저장까지 `migration_main`에 통합한 상태. [AUDIT PLAN](MONOREPO-AUDIT-FOLLOWUP-PLAN.md)·[Root RESULT](MONOREPO-AUDIT-ROOT-DEPENDENCIES-RESULT.md)·[Cache RESULT](MONOREPO-AUDIT-BUILDKIT-CACHE-RESULT.md) |
+| BEFORE A | `4d5e42dac37aeb13b3279b47a7907fbb7bc91be2` | 설정 정상화 전. 이미 Web·Console과 server/contracts가 있는 모노레포다. [CONFIGURATION PLAN](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md)·[RESULT](MONOREPO-CONFIGURATION-RESULT.md)                                                                   |
+| BEFORE B | `f39f0b875d64ba033da4f4ff3a5b0296b18f1678` | 초기 정상화 후, 의존성 경계·실행 개선 전. config·relay workspace는 이미 존재한다. [BOUNDARIES PLAN](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-BOUNDARIES-AND-EXECUTION-PLAN.md)·[RESULT](MONOREPO-BOUNDARIES-AND-EXECUTION-RESULT.md)                                     |
+| AFTER    | `c6c2f71b73235caa773de2ef56d51820b9e86b23` | #242 Root 정리와 #243 공통 blob 저장까지 `migration_main`에 통합한 상태. [AUDIT PLAN](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-AUDIT-FOLLOWUP-PLAN.md)·[Root RESULT](MONOREPO-AUDIT-ROOT-DEPENDENCIES-RESULT.md)·[Cache RESULT](MONOREPO-AUDIT-BUILDKIT-CACHE-RESULT.md) |
 
 먼저 §2의 문제별 비교와 §3의 구조를 읽고, 캐시·Docker의 변화는 §5~6에서 확인한다. 각 RESULT의 과거 수치·미병합·보류 표시는 해당 검증 시점의 기록이다. 이후 완료한 #242/#243의 통합 사실은 이 문서 §7에서 연결한다.
 
@@ -248,4 +248,4 @@ config를 Next·Node별 package로 더 나누거나 UI package를 선생성하�
 | UI 공유 package·Base UI 전환·API 계약 진화        | 실제 재사용·UI 검증·독립 배포 호환성에 맞춘 별도 작업이다.                                                         |
 | 운영 적용                                         | 이 모노레포 개선의 검증 범위는 저장소 구현과 일반 CI다. Promotion·VM/Worker 배포·외부 발송 완료를 포함하지 않는다. |
 
-상세 보류 판단은 [AUDIT PLAN](MONOREPO-AUDIT-FOLLOWUP-PLAN.md)과 각 RESULT를 따른다. 개선의 유지 기준은 공개 계약과 소비 방향, 검사 소유권, 필요한 cache 무효화와 무관한 재사용을 함께 지키는 것이다.
+상세 보류 판단은 [AUDIT PLAN](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-AUDIT-FOLLOWUP-PLAN.md)과 각 RESULT를 따른다. 개선의 유지 기준은 공개 계약과 소비 방향, 검사 소유권, 필요한 cache 무효화와 무관한 재사용을 함께 지키는 것이다.

@@ -1,6 +1,6 @@
 # Console HTTPS 지속 공개 운영
 
-정책과 실행 범위는 [P06 계획의 회사 검증용 공개 개정](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)이 소유한다.
+정책과 실행 범위는 [P06 계획의 회사 검증용 공개 개정](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)이 소유한다.
 실제 실행 증거와 남은 인증 검증은 [P06-C 결과](../../docs/migration/implementation/console-guide-editor/P06-C-RESULT.md)에 기록한다.
 이 문서는 새 호스트에 즉시 실행하는 설치 스크립트가 아니다. 실제 파일·배포 상태를 대조한 운영 변경 절차다.
 

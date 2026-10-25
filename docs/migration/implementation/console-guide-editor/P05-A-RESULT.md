@@ -8,7 +8,7 @@ created_at: "2026-10-10"
 
 # P05-A 결과
 
-[계획](P05-A-PLAN.md)의 구현·검증 source는 위 커밋이며 최종 PR은
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P05-A-PLAN.md)의 구현·검증 source는 위 커밋이며 최종 PR은
 `feature/p05a-admin-mfa-foundation → migration_main`이다. 새 PR 병합/P05-B 착수는 포함하지 않는다.
 Auth §4.1·29 / Domain AUTH-009와 탈퇴·PII 정책, additive `0005_p05a_admin_mfa`,
 executor 기반 조회/pending/reset/version 증가, 실제 PostgreSQL 회귀를 추가했다.

@@ -11,7 +11,7 @@ verified_at: "2026-10-07"
 
 # P03 공통 계약 패키지 분리 결과
 
-[P03 계획](P03-PLAN.md)의 첫 concern을 구현했다. `migration_main` 기준은
+[P03 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P03-PLAN.md)의 첫 concern을 구현했다. `migration_main` 기준은
 `d2b5e9eb8e9c71492f2779fc1eba2965075fdf1b`다. 서버 추출은 다음 PR에서 진행한다.
 
 ## 변경 범위

@@ -1,6 +1,6 @@
 # P06-F www 전환과 레거시 Web 종료
 
-정책·완료 조건은 [P06 계획](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#preview--www-전환과-레거시-종료),
+정책·완료 조건은 [P06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#preview--www-전환과-레거시-종료),
 실제 실행 증거는 [F1 결과](../../docs/migration/implementation/console-guide-editor/P06-F1-RESULT.md)가 소유한다.
 이 절차는 기존 단일 VM·정상 paired Promotion을 사용한다. 단계를 건너뛰거나 과거 실행물을 재실행하지 않는다.
 

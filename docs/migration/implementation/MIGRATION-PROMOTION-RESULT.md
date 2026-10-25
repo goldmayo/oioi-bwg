@@ -11,7 +11,7 @@ verified_at: "2026-10-05"
 
 # Migration 통합과 Promotion 배포 분리 결과
 
-[계획](MIGRATION-PROMOTION-PLAN.md)에 따라 기존 app/DB/Dockerfile과 host 배포 script를 유지하고 CI 흐름을 분리했다.
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MIGRATION-PROMOTION-PLAN.md)에 따라 기존 app/DB/Dockerfile과 host 배포 script를 유지하고 CI 흐름을 분리했다.
 기준 `10ebc91df17de95ad69c3c755fb80023ffd12be7`에서 원격 `migration_main`을 생성하고
 [P01 PR #106](https://github.com/goldmayo/oioi-bwg/pull/106)의 base를 재지정했다. P01 merge와 OCI 배포는 실행하지 않았다.
 

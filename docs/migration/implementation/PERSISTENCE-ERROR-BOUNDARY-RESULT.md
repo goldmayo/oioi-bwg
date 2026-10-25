@@ -15,7 +15,7 @@ depends_on:
 
 - 기준: `migration_develop` commit `2f0cf79619d850b2481ca97430dfe57dfd8b3368`
 - 구현: commit `2867d13db6f68452434c09d536f91e63fdd73971`
-- 계획: [`PERSISTENCE-ERROR-BOUNDARY-PLAN.md`](./PERSISTENCE-ERROR-BOUNDARY-PLAN.md)
+- 계획: [`PERSISTENCE-ERROR-BOUNDARY-PLAN.md`](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/PERSISTENCE-ERROR-BOUNDARY-PLAN.md)
 
 ## 실제 변경
 

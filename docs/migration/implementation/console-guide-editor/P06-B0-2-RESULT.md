@@ -12,7 +12,7 @@ revision: 6
 
 **Stack Plan/Apply와 두 repo push/pull·두 CURRENT Secret 형식 검사·신규 command exit 0을 확인했다.**
 게시 정책의 최소 권한 교체는 사용자 승인으로 기존 정책에 복원했으며 후속 보류다.
-[B0 계획](P06-B0-PLAN.md)의 선언 변경과 실제 probe를 독립 검증 가능한 PR로 나눈다.
+[B0 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의 선언 변경과 실제 probe를 독립 검증 가능한 PR로 나눈다.
 #138 merge head `345315e9377dd3cd7050f2d5afefb5b6fd18eed5`에서 분기했고 위 source_commit이
 `infra/oci` 구현 여섯 파일의 검증 ref다. 정확한 전체 SHA와 PR/CI는 PR 본문에서도 대조한다.
 
@@ -77,7 +77,7 @@ attempt 1 전체 성공·mergeable/CLEAN을 확인했다. 사용자 승인으로
 `dac797ed6998e90f1eb78923ef6f075f0afe8ca8`이다. 두 repository의 작은 marker 게시,
 보호된 입력·guard 확인 후 host digest pull·CURRENT Secret 형식 검사, host 선행 확인 뒤
 같은 CI API 계정의 신규 command 생성/결과 확인을 구현했다. artifact는 안전한 metadata만
-담으며 full candidate는 비활성이다. workflow 배치·메모리 검사 보완은 [PLAN 갱신](P06-B0-PLAN.md#2026-10-14-b0-1-완료와-probe-구현-보완)에 기록했다.
+담으며 full candidate는 비활성이다. workflow 배치·메모리 검사 보완은 [PLAN 갱신](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md#2026-10-14-b0-1-완료와-probe-구현-보완)에 기록했다.
 
 직접 기본 여섯 검사와 ops 92건이 성공했다. harness 18건·unit 459건이며 캐시 hit 0이다.
 최초 format 검사는 새 README 줄바꿈에서 실패해 Prettier 적용 후 같은 format 검사가 성공했다.

@@ -8,7 +8,7 @@ created_at: "2026-10-10"
 
 # P05-B3 결과
 
-[계획](P05-B3-PLAN.md)의 CLI 구현·검증 source는 위 커밋이다. PR #123은 최신
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P05-B3-PLAN.md)의 CLI 구현·검증 source는 위 커밋이다. PR #123은 최신
 [Verify](https://github.com/goldmayo/oioi-bwg/actions/runs/38022360536) 성공 후 `0ce3877`로 병합했고,
 사용자 변경 없는 최신 `migration_main`에서 분기했다.
 

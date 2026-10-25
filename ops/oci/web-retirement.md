@@ -1,6 +1,6 @@
 # Web 관리·가입·인증 종료의 배포와 복구 경계
 
-이 절차는 [P06 계획의 안전한 rollback](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#web-관리-종료-이후의-안전한-rollback)을 구현한다.
+이 절차는 [P06 계획의 안전한 rollback](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#web-관리-종료-이후의-안전한-rollback)을 구현한다.
 C/D의 실제 Console 운영 검증 완료 후 E Promotion에 적용한다. 실제 host 설치와 이전/새 pair 검증 결과는
 [P06-E2 결과](../../docs/migration/implementation/console-guide-editor/P06-E2-RESULT.md)가 기존 관리/가입 종료를,
 [E3 결과](../../docs/migration/implementation/console-guide-editor/P06-E3-RESULT.md)가 인증 종료 변경을 소유한다.
@@ -12,7 +12,7 @@ C/D의 실제 Console 운영 검증 완료 후 E Promotion에 적용한다. 실�
 - 현재 Caddy 설정과 두 앱 candidate/env 복구본을 보호된 경로에 보관한다.
   D 실증을 마친 Console의 승인된 HTTPS 공개 상태·등록 false·MFA 키/버전은 유지한다.
   Web 차단 파일을 적용하면서 Console route를 닫거나 등록을 열지 않는다.
-  [C 지속 공개 계획](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)을 따른다.
+  [C 지속 공개 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)을 따른다.
 - [web-retirement.caddy](web-retirement.caddy)를 root 소유, 그룹/기타 쓰기 불가인 host 파일로 설치한다.
   앱 image/env 또는 paired release 디렉터리에 넣지 않는다.
 - 각 Web hostname의 기존 `route`에서 reverse_proxy **앞**에 이 파일을 import한다.

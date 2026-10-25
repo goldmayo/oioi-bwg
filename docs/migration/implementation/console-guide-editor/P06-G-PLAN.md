@@ -69,7 +69,7 @@ revision: 2
 [Server](../../oioi-bwg-architecture-clean-v1/06-server-data-access-architecture.md),
 [Form](../../oioi-bwg-architecture-clean-v1/08-form-state-architecture.md),
 [배포 runbook](../../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md)이다.
-[전체 로드맵](ROADMAP.md)과 [P06 계획](P06-PLAN.md)은 순서를 소유하고 이 파일이 G의 상세 범위를 소유한다.
+[전체 로드맵](ROADMAP.md)과 [P06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md)은 순서를 소유하고 이 파일이 G의 상세 범위를 소유한다.
 
 ## 3. 사용자 흐름 제안
 

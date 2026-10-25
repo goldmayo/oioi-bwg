@@ -11,7 +11,10 @@ revision: 7
 
 # Console·다중 응원법·파형 편집기 최소 설계
 
-**사용자가 전체 방향을 승인한 구현 전 설계다.** 코드 근거는 [CURRENT-STATE](CURRENT-STATE.md), 파형 기술 근거는
+**전체 방향을 승인한 설계이며 P07~P10은 미착수다.** P01~P06의 완료 결과와 미래 기능 제안을 구분한다.
+현재·보류 상태는 [WORK](../../../WORK.md)가 소유한다. 아래 Queue/runner/job/editor와 CheerGuide 모델은 현행 구현 완료를 뜻하지 않는다.
+
+초기 제안의 코드 근거는 [CURRENT-STATE](CURRENT-STATE.md), 파형 기술 근거는
 [AUDIO-FEASIBILITY](AUDIO-FEASIBILITY.md), 구현 순서는 [ROADMAP](ROADMAP.md)이 소유한다.
 이 개정은 `ef0ac77cd81cf7312df32139c44909fbf2166a09`의 runtime 실행·공용 설정·직렬 로드맵을 수정한다.
 `8882b71c0bf6bfa71f3295d6b5f34de0b16d1dce` 이후 피드백으로 SSE 전달·Queue 인증 주체·active Job 중복 생성 규칙을 보완했다.
@@ -60,108 +63,15 @@ DB runtime role 분리는 후속 hardening으로 남기고 기존 service 인가
 
 ## 3. Monorepo 구조와 검증
 
-```text
-apps/
-  web/                     기존 Next 앱을 먼저 그대로 이동, /admin 유지
-  console/                 이후 관리 UI·API·인증 진입점 이관
-packages/
-  contracts/               함께 쓰는 Zod DTO·request/response·enum
-  server/                  함께 쓰는 schema/DB·repository·service·인가·error
-config/                    공유하는 정적 설정
-  typescript/              base.json, next.json, node.json
-  eslint/                  base.mjs, next.mjs, node.mjs
-harness/
-  architecture/            기존 공통 검사 primitive / workspace 간 경계 검사
-workers/
-  waveform/                VM-local runner + one-shot 분석 worker / Containerfile
-drizzle/                   기존 migration 이력의 단일 소유자
-pnpm-workspace.yaml        workspace/dependency 관리
-turbo.json                 task graph·병렬 실행·로컬 cache
-.husky/                    repository root 한 곳
-```
-
-`packages/ui`, `domain`, `api-client`는 초기 생성하지 않는다. server 추출도 기존 코드를 가능한 그대로 옮긴다.
-Next/TS/ESLint 자동 탐색 진입점은 각 프로젝트 root의 얇은 wrapper로 두고 공유 설정을 extends/import한다.
-web/console은 Next 설정, server는 Node 설정, contracts는 base 설정을 사용한다. 앱별 alias·include만 각 진입점에 둔다.
-현재 React.cache/Auth.js를 사용하는 request-context 같은 framework adapter는 앱에 남기고 실제 공통 server 코드만 추출한다.
-
-공용 harness는 기존 import/filesystem 검사와 assertion/helper를 재사용하는 기반이다.
-**검사 경로·허용/금지 dependency·FSD·고유 제약은 각 workspace가 소유한다.**
-필요한 정책은 workspace root의 얇은 `architecture.config.*` 또는 기존 ESLint/Steiger 설정으로 표현한다.
-별도 configuration DSL을 만들거나 ESLint/Steiger가 처리하는 규칙을 다시 구현하지 않는다.
-
-| workspace          | 자체 lint/architecture 정책                                                                |
-| ------------------ | ------------------------------------------------------------------------------------------ |
-| apps/web           | public/user route·Web FSD·feature/entity 경계, client → server 및 Console 직접 import 금지 |
-| apps/console       | 관리/editor route·Console FSD/auth 경계, client → server 및 Web 직접 import 금지           |
-| packages/server    | server-only·repository/service 방향·DB/delivery 경계, React/client·apps 의존 금지          |
-| packages/contracts | serializable Zod 계약만, DB·Node-only·apps·server implementation 의존 금지                 |
-
-두 앱은 `steiger apps/web/src`, `steiger apps/console/src`로 각각 독립된 FSD root를 검사한다.
-공통 plugin/config는 공유할 수 있지만 실제 slice 구조와 정책이 같을 필요는 없다.
-
-JS/TS workspace의 실제 작업에 `lint`, `type-check`, `test`, `build` 이름을 사용한다.
-Next 앱만 `next build`를 실행하고, TS 소스 패키지는 앱의 `transpilePackages`로 소비해 불필요한 library build를 만들지 않는다.
-Node 설정의 module resolution과 package exports가 앱 소비 방식에 맞는지는 두 앱 build로 검증한다.
-worker는 JS workspace로 억지 포장하지 않고 CLI/container 검증을 별도로 연결한다.
-같은 task 이름도 검사 내용은 위 workspace 정책에 따라 다르다. Turbo는 실행 순서와 cache를 소유한다.
-
-```text
-pnpm verify
-├─ turbo run type-check lint test build --cache=local:rw
-│  └─ lint: workspace별 ESLint / 앱별 Steiger / 자체 architecture 정책
-├─ repo-level architecture harness + harness 자체 테스트
-│  └─ 앱 간 직접 import / client → server / workspace dependency 방향
-├─ 기존 운영 스크립트 테스트
-└─ format:check
-```
-
-[Turbo](https://github.com/vercel/turborepo/blob/main/apps/docs/content/docs/crafting-your-repository/configuring-tasks.mdx)의
-task graph를 쓰고 직접 변경 감지·cache 도구를 만들지 않는다. TS를 직접 소비하는 패키지도
-상위 앱의 검사 hash에 dependency 변경이 반영되도록 transit task를 연결한다.
-Next build outputs는 `.next/**`에서 `.next/cache/**`를 제외하고, config/·harness/·workspace 정책·테스트 설정·build 환경값을 hash 입력에 포함한다.
-비결정적 작업과 DB/worker 실행 결과는 cache하지 않는다. Remote Cache는 초기 도입하지 않는다.
-
-pre-commit은 root lint-staged의 ESLint/Prettier만 실행한다. 전체 type-check/build는 넣지 않는다.
-pre-push는 필요하면 `turbo run lint type-check test --affected`를 사용한다.
-[`--affected`](https://github.com/vercel/turborepo/blob/main/apps/docs/content/docs/reference/run.mdx)의 기준은
-`migration_main` merge-base로 설정하고 필요한 Git 이력을 확보한다.
-공유 config/harness 및 root 경계 규칙 변경은 affected 검사에서 빠지지 않게 하며, 초기 CI는 전체 `pnpm verify`를 실행한다.
+P01~P04는 완료됐다. 현재 구조와 검사 책임은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md)과
+[검증 기준](../../oioi-bwg-architecture-clean-v1/10-testing-architecture.md), 실제 변경·실패는 [완료 지도](../COMPLETED-DESIGN-INDEX.md)가 소유한다.
+초기 config/harness 배치와 명령을 미래 기능의 재작업 지시로 사용하지 않는다.
 
 ## 4. Console / Auth
 
-[Auth.js Credentials](https://authjs.dev/getting-started/authentication/credentials)를 유지한다.
-UI는 ID/PW → TOTP 두 단계여도 최종 `authorize`에서 **비밀번호·ACTIVE·ADMIN·TOTP를 모두 검증한 뒤에만** identity를 반환한다.
-첫 단계는 세션을 발급하지 않는다. 비밀번호는 현재 폼 메모리에서만 최종 요청까지 보유하고 URL/storage에 저장하지 않는다.
-TOTP는 [otplib](https://github.com/yeojz/otplib), QR은 [qrcode](https://github.com/soldair/node-qrcode)를 사용하고 OTP 알고리즘이나 외부 QR 서비스를 만들지 않는다.
-
-```text
-admin_mfa
-  accountId PK/FK
-  encryptedSecret          Node crypto의 인증된 암호화, key는 Console 환경에만 보관
-  enabledAt nullable       미등록/등록 진행 상태 구분
-  lastUsedStep nullable    성공한 TOTP step의 원자 갱신으로 재사용 차단
-  version                 reset/회수 시 증가, row를 지워 1로 재시작하지 않음
-
-Console JWT application claims: { sub, mfaVerified: true, mfaVersion }
-```
-
-Auth.js의 표준 만료 claims는 유지하고 명시적 session maxAge를 둔다. 현재 sub만 남기는 callback은 위 MFA claims도 보존한다.
-관리 RSC/Route/Server Action은 공통 Console guard에서 JWT 증명과 DB의 enabledAt/version을 확인한 뒤
-기존 DB role/status·CASL·service `requireAdmin` 검사를 사용한다. MFA reset 및 관리자 인증 정보 변경에 필요한
-Console 전체 회수는 version 증가로 처리한다. 세션별 관리·idle tracking·step-up은 도입하지 않는다.
-
-최초 등록은 Console 외부 공개 전에 접근이 제한된 환경에서 끝낸다.
-setup endpoint는 비밀번호로 확인한 ACTIVE ADMIN이면서 MFA 미등록일 때만 허용하고 관리 작업 권한은 주지 않는다.
-pending secret도 같은 admin_mfa 행에 암호화 저장하며 TOTP 확인 후 활성화한다.
-분실은 운영 CLI reset으로 처리한다. 다시 접근을 제한한 뒤 version 증가 → 기존 세션 거절 → 재등록 → 공개 순서를 따른다.
-pre-auth DB, login/enrollment/recovery grant, recovery code UI, Gmail OTP fallback은 만들지 않는다.
-
-Console 전용 AUTH_SECRET과 host-only Secure/HttpOnly/SameSite cookie를 사용한다.
-관리 mutation은 허용된 Console Origin과 해당 요청 방식의 CSRF 방어를 검사한다.
-현재 비밀번호 로그인에는 rate limit 호출이 없으므로, 단일 Console 프로세스에
-[rate-limiter-flexible](https://github.com/animir/node-rate-limiter-flexible)의 메모리 limiter를 붙여 계정·신뢰한 IP별 실패를 제한한다.
-분산 counter 테이블은 만들지 않는다. secret·OTP·비밀번호는 기록하지 않고 실패 이벤트는 기존 structured logging을 쓴다.
+P05 MFA와 P06 운영 전환은 [전체 결과](P06-RESULT.md)로 종료됐다. 현재 인증 계약은
+[Auth](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md), 등록·회수 절차는 [운영 안내](../../../../ops/oci/README.md)를 따른다.
+원래 제안과 승인/검증은 완료 지도에서 추적한다. 계정 관리 G는 별도 미구현 제안이다.
 
 ## 5. CheerGuide
 
@@ -241,7 +151,7 @@ Console은 OCI SDK/credential을 사용하지 않고 Runner가 내부 결과 API
 Runner로 호출을 모아도 IAM 차원의 process별 권한 분리가 생기지는 않는다. Console/Web/worker의
 metadata 접근을 차단하고 host root 권한은 이 경계 안에 둔다. Console MFA secret의 VM 읽기
 권한을 추가하는 **P06에서 Web/Console metadata 차단을 실제 VM에서 확인한다.** env 분리만으로
-접근 격리를 주장하지 않는다. [P06 계획 §4.1~4.2](P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)의
+접근 격리를 주장하지 않는다. [P06 계획 §4.1~4.2](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)의
 선행 차단·host 양성 대조·재시작/복구 검증을 따른다. P08은 Runner/worker·Queue IAM·Unix socket을
 추가 검증하고 기존 Web/Console 차단도 재검증한다.
 

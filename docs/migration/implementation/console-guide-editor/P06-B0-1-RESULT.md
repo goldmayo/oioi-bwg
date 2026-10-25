@@ -11,7 +11,7 @@ revision: 8
 # P06-B0-1 결과
 
 **코드·보완 검증과 실제 VM의 1차 적용·2A·2B·2C 재시작 지속성 검증을 완료했다.**
-[B0 계획](P06-B0-PLAN.md)의 B0-1만 구현했다. #135 병합 head `9a31a90`에서
+[B0 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의 B0-1만 구현했다. #135 병합 head `9a31a90`에서
 `feature/p06b0-metadata-guard`를 분기했다. 검증 코드 ref는 위 source_commit이다.
 [구현 PR #136](https://github.com/goldmayo/oioi-bwg/pull/136)은 리뷰/CI 확인 대상이며 운영 적용 승인이 아니다.
 
@@ -53,7 +53,7 @@ VM 업로드·설치·실제 Web probe의 1차 적용안으로 준비했으며 �
 읽기 조회는 설치 승인이나 실제 IMDS 차단 proof가 아니다. 설치·IAM/Stack·DB 변경,
 키 재생성·Secret 조회·전체 ARM64 빌드는 미실행이다. 사용자 P06-PLAN 수정·개인 env·키는 보존했다.
 Web 실제 차단·지속성 proof 전 새 Console grant를 추가하지 않는다. B0-2 권한 실증 후만 B1을 허용한다.
-현재 진입점은 기존 [HANDOFF](P06-HANDOFF.md) 한 파일을 갱신한다.
+현재 진입점은 기존 [HANDOFF](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-HANDOFF.md) 한 파일을 갱신한다.
 
 ## 2026-10-14 설치 경로 보완
 
@@ -140,7 +140,7 @@ Web image의 env key는 표준 Node 기본 항목뿐이고 image volume 없음·
 Compose는 root/0644 일반 파일이다. protected deploy.conf는 현재 SSH 사용자에게 읽을 수 없어
 원문을 읽지 않았다. 이 관찰은 재시작 성공이나 현재/이전 release 상태의 검증이 아니다.
 
-[PLAN](P06-B0-PLAN.md)의 2A 범위에 맞춘 ignored 실행 스크립트의 Bash 구문과 격리 Docker의
+[PLAN](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의 2A 범위에 맞춘 ignored 실행 스크립트의 Bash 구문과 격리 Docker의
 mock command smoke를 실행했다. 성공, live-restore 비활성, image에 runtime secret key 존재,
 probe 실패, daemon 뒤 app 재시작, container 부분 생성 실패의 여섯 분기에서 기대 결과를 확인했다.
 명령 dispatch는 mock이며 실제 daemon을 재시작한 검증이 아니다. smoke container는 `--rm

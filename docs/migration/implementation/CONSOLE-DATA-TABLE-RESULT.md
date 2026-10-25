@@ -12,7 +12,7 @@ updated_at: "2026-10-25"
 
 > 이 문서는 #251 당시의 두 기능 구현과 #253 운영 적용 이력이다. 사용자의 15개 기능·compound 조합
 > 요구를 다시 확인해 지원 범위 제한을 정정했다. 현재 구현 기준은
-> [후속 계획](COMPOSABLE-DATA-TABLE-PLAN.md)과 [후속 결과](COMPOSABLE-DATA-TABLE-RESULT.md)를 따른다.
+> [후속 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/COMPOSABLE-DATA-TABLE-PLAN.md)과 [후속 결과](COMPOSABLE-DATA-TABLE-RESULT.md)를 따른다.
 
 ## 범위와 기준
 

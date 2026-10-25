@@ -11,7 +11,7 @@ verified_at: "2026-10-07"
 
 # Console 실행과 세션 기반
 
-[P04 계획](P04-PLAN.md)의 첫 concern을 구현했다. Console의 로그인·관리 shell과 request/HTTP/
+[P04 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P04-PLAN.md)의 첫 concern을 구현했다. Console의 로그인·관리 shell과 request/HTTP/
 관측 adapter는 앱 내부에 복사했고 공통 contracts/server export를 소비한다. ACTIVE ADMIN만
 identity를 발급하며 요청마다 role/status를 재검사한다. 전용 secret/cookie와 loopback 실행 계약을
 추가했다. 공개/MFA 인증은 Auth §4.1의 후속 단계다.

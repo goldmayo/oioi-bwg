@@ -152,7 +152,7 @@ cold cache·다른 PR·동일 PR 재실행을 구분해 측정해야 한다.
 ops step은 24초, app build는 246초였다. 관리자 전체 E2E job은 생성되지 않았다.
 ops 개선만으로 전체 CI의 빌드·컨테이너 검증 병목이 해결된 것은 아니다.
 
-[계획의 2026-10-21 보완](PLAN.md)에 따라 캐시 전송 artifact와 별도 push 발행 workflow를 추가했다.
+[계획의 2026-10-21 보완](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/ci-build-optimization/PLAN.md)에 따라 캐시 전송 artifact와 별도 push 발행 workflow를 추가했다.
 성공한 같은 저장소 PR의 source/tree와 입력 key를 확인하고, migration_main 또는 migration_develop
 ref에서 actions/cache에 저장한다. 검증 job이나 앱 build를 병합 후 다시 실행하지 않는다.
 기존 검증 image/standalone은 같은 run 안에서만 전달한다. cache 자료의 보관은 1일이며
@@ -312,7 +312,7 @@ ARM64 후보의 GHA 캐시는 별도 경로이므로 이 amd64 표본을 그대�
 
 ## 캐시 용량 축소 구현과 실제 재사용 — 2026-10-21
 
-[계획](PLAN.md#캐시-용량-축소--2026-10-21)에 따른 구현은
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/ci-build-optimization/PLAN.md#캐시-용량-축소--2026-10-21)에 따른 구현은
 [#183](https://github.com/goldmayo/oioi-bwg/pull/183)의 `22e6b4d4c0f82ce1e52f99cccd53f5a56207f294`이며,
 통합 커밋은 `97ea968fb9e519f1178dd75af0184d440a0cf855`다. Docker builder에서만 Next의 Turbopack 파일시스템 build cache와
 Turbo output archive 쓰기를 끄고, 두 runtime을 참조하는 cacheonly target으로 standalone tar 중복을 제거했다.

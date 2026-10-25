@@ -8,7 +8,7 @@ created_at: "2026-10-10"
 
 # P05-C1 결과
 
-[계획](P05-C1-PLAN.md)의 구현·검증 source는 위 커밋이다. PR #124의 최신
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P05-C1-PLAN.md)의 구현·검증 source는 위 커밋이다. PR #124의 최신
 [Verify](https://github.com/goldmayo/oioi-bwg/actions/runs/38027003664) 성공과 사용자 승인 후
 `9829b1b`로 squash 병합하고 최신 `migration_main`에서 분기했다. 사용자 변경은 없었다.
 

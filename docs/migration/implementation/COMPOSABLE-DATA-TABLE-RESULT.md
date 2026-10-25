@@ -10,7 +10,7 @@ created_at: "2026-10-25"
 
 `goldmayo/oioi-bwg`의 `migration_main` `b1bc8256ef8a99aad2f859be762b00397e181a09`에서
 `feature/composable-data-table`을 분기했다. 사용자가 요구한 15개 기능·소비처 compound 구성과
-버튼 주입을 구현했다. [계획](COMPOSABLE-DATA-TABLE-PLAN.md)을 완료하며
+버튼 주입을 구현했다. [계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/COMPOSABLE-DATA-TABLE-PLAN.md)을 완료하며
 [#251 결과](CONSOLE-DATA-TABLE-RESULT.md)는 당시 두 기능 구현·배포 이력으로 보존한다.
 헌법 §5, Frontend §2와 문서 인덱스의 공용 테이블 범위를 함께 정정했다.
 

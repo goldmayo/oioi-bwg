@@ -25,6 +25,10 @@ structured logging과 Sentry 오류 추적의 책임을 분리한다. scoped SDK
 
 SDK 태그 검토와 원격 Sentry rule/event 감사는 서로 다른 검증 범위다. relay의 두 secret과 앱 build/runtime 환경의 소유권을 구분한다.
 
+FWA-01/02 오류 복구·FWA-03 Dialog 구현과 FWA-04의 설계 산출물 완료는 [프레임워크 결과](../migration/implementation/FRAMEWORK-IMPROVEMENT-RESULT.md)를 따른다.
+순수 정책 공통화의 runtime 구현은 [미완료 제안](../migration/implementation/OBSERVABILITY-POLICY-SHARING-PLAN.md)이다.
+공통화 package 예외가 이미 승인된 현행 계약이라고 해석하지 않는다.
+
 ## 근거
 
 - [구현·검증 기록](../migration/implementation/SENTRY-SLACK-RELAY-RESULT.md)

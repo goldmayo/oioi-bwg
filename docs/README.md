@@ -8,7 +8,7 @@ P06 운영 전환을 종료했고 P07~P10은 미착수다. 현재·보류 작업
 - 개발·운영: [로컬 개발환경](migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md), [OCI 운영](../ops/oci/README.md), [www 전환·인증서 관리](../ops/oci/web-cutover.md)
 - 결정·과정: [ADR](adr/README.md), [시간순 devlog](devlog/README.md), [완료 작업 근거 지도](migration/implementation/COMPLETED-DESIGN-INDEX.md)
 - 다음 기능의 제안: [Console 이후 설계](migration/implementation/console-guide-editor/DESIGN.md), [기능별 범위와 의존성](migration/implementation/console-guide-editor/ROADMAP.md)
-- 과거 관찰: [역공학 비교와 source 한계](reverse-engineering/10-main-to-migrated-gap-map.md). 역사적 snapshot은 현재 구현 기준이 아니다.
+- 과거 관찰: [문서 감사](migration/implementation/DOCUMENTATION-GOVERNANCE-AUDIT.md), [역공학 비교와 source 한계](reverse-engineering/10-main-to-migrated-gap-map.md). 역사적 snapshot은 현재 구현 기준이 아니다.
 
 현재 경로를 유지한다. product/design/engineering/audits/devlog 구조와 루트 PRODUCT.md·DESIGN.md의
 재편은 P10 이후 별도 작업이다. 향후 요약 문서는 상세 요구사항·화면 명세·기술 계약을 복제하지 않고
