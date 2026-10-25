@@ -19,12 +19,29 @@ function main() {
   environment.DOTENV_CONFIG_PATH = devNull;
   if (tool === "generate") delete environment.DATABASE_URL;
   else {
-    environment.DATABASE_URL = loadLocalDatabaseUrl(args);
+    const databaseArgs = [...args];
+    if (tool === "migrate" && databaseArgs.includes("--legacy-schema"))
+      databaseArgs.splice(databaseArgs.indexOf("--legacy-schema"), 1);
+    const mapIndex = databaseArgs.indexOf("--uuid-map");
+    if (tool === "migrate" && mapIndex !== -1) {
+      const file = databaseArgs[mapIndex + 1];
+      if (!file || file.startsWith("--")) throw new Error("--uuid-map requires a JSON file");
+      databaseArgs.splice(mapIndex, 2);
+    }
+    environment.DATABASE_URL = loadLocalDatabaseUrl(databaseArgs);
     console.log(`Local database guard passed: ${new URL(environment.DATABASE_URL).hostname}`);
   }
   const command =
     tool === "migrate"
-      ? ["exec", "tsx", "scripts/run-drizzle-migrations.ts"]
+      ? [
+          "exec",
+          "tsx",
+          "scripts/run-drizzle-migrations.ts",
+          ...(args.includes("--legacy-schema") ? ["--legacy-schema"] : []),
+          ...(args.includes("--uuid-map")
+            ? ["--uuid-map", args[args.indexOf("--uuid-map") + 1]!]
+            : []),
+        ]
       : ["exec", "drizzle-kit", tool, ...(tool === "generate" ? args : [])];
   const result = spawnSync(process.platform === "win32" ? "pnpm.cmd" : "pnpm", command, {
     cwd: root,

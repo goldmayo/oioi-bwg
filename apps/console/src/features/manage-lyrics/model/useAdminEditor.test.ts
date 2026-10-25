@@ -19,7 +19,7 @@ describe("useAdminEditor 훅 테스트", () => {
   });
 
   const mockSong = {
-    id: 1,
+    id: "019a0170-0000-7000-8000-000000000001",
     title: "Test Song",
     youtubeId: "test_initial_id",
     lyrics: [

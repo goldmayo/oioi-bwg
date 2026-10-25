@@ -87,6 +87,24 @@ test.each(["migrate", "pull", "studio"])("%s uses the exact guarded process URL"
   expect(result.stdout + result.stderr).not.toContain("NEVER_OUTPUT");
 });
 
+test("UUID preparation and map arguments retain the local guard and reach only the migrator", () => {
+  for (const args of [["--legacy-schema"], ["--uuid-map", "private-map.json"]]) {
+    const context = fixture();
+    const result = context.run("migrate", args, { DATABASE_URL: localUrl });
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(readFileSync(context.output, "utf8")).args).toEqual([
+      "exec",
+      "tsx",
+      "scripts/run-drizzle-migrations.ts",
+      ...args,
+    ]);
+    expect(
+      context.run("migrate", args, { DATABASE_URL: "postgresql://NEVER_OUTPUT@remote.invalid/db" })
+        .status,
+    ).toBe(1);
+  }
+});
+
 test.each(["migrate", "pull", "studio"])(
   "%s uses only the selected file and blocks dotenv overrides",
   (tool) => {

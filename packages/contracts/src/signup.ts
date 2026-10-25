@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { entityIdSchema } from "./entity-id";
+
 export const requestSignupOtpSchema = z.object({
   email: z.string().trim().email(),
 });
@@ -31,7 +33,7 @@ export const completeSignupSchema = z.object({
 });
 
 export const completeSignupResponseSchema = z.object({
-  accountId: z.string(),
+  accountId: entityIdSchema,
 });
 
 export type RequestSignupOtp = z.infer<typeof requestSignupOtpSchema>;

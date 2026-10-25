@@ -5,6 +5,7 @@ import fs from "node:fs";
 import https from "node:https";
 import os from "node:os";
 import path from "node:path";
+import { createRequire } from "node:module";
 
 import { chromium } from "playwright";
 import postgres from "postgres";
@@ -35,6 +36,9 @@ const sql = postgres(process.env.M7_TEST_POSTGRES_VERIFICATION_URL, { max: 1 });
 const artifacts =
   process.env.P04_ARTIFACT_DIR ?? fs.mkdtempSync(path.join(os.tmpdir(), "oioi-p04-smoke-"));
 fs.mkdirSync(artifacts, { recursive: true });
+const { v7: uuidv7 } = await import(
+  createRequire(new URL("../../packages/server/package.json", import.meta.url)).resolve("uuid")
+);
 const password = "P04-fixture-pass1!";
 const passwordHash =
   "$argon2id$v=19$m=19456,p=1,t=2$cDA0LWJyb3dzZXItZml4dHVyZS1zYWx0$B2TTF8IxGl6mwC9jStRh3/z88pnDsCMwg9Ft8nslGpY";
@@ -302,7 +306,7 @@ async function journey(origin, label) {
   await page.getByRole("button", { name: "저장 (Ctrl+S)", exact: true }).click();
   const saved = await response;
   assert.ok(saved.ok());
-  const [row] = await sql`select lyrics from "Song" where id = ${song.id}`;
+  const [row] = await sql`select lyrics from "song" where id = ${song.id}`;
   assert.equal(row.lyrics[0].startTime, 8.5);
   assert.equal(row.lyrics[1].startTime, 4.1);
   assert.equal(row.lyrics[0].segments[0].text, "이관 검증 가사");
@@ -339,7 +343,7 @@ async function journey(origin, label) {
     await page.getByRole("link", { name: "다시 로그인", exact: true }).waitFor();
     assert.equal(await draftInput.inputValue(), draftId);
     assert.ok(await saveButton.isDisabled());
-    const [unchanged] = await sql`select "youtubeId" from "Song" where id = ${song.id}`;
+    const [unchanged] = await sql`select youtube_id as "youtubeId" from song where id = ${song.id}`;
     assert.equal(unchanged.youtubeId, "lmnopqrstuv");
     await page.screenshot({
       path: path.join(artifacts, "console-reauthentication-required.png"),
@@ -377,7 +381,7 @@ async function journey(origin, label) {
     );
     await saveButton.click();
     assert.ok((await recovered).ok());
-    const [persisted] = await sql`select "youtubeId" from "Song" where id = ${song.id}`;
+    const [persisted] = await sql`select youtube_id as "youtubeId" from song where id = ${song.id}`;
     assert.equal(persisted.youtubeId, draftId);
     await page.screenshot({
       path: path.join(artifacts, "console-reauthenticated-editor.png"),
@@ -448,7 +452,7 @@ try {
     ["ADMIN", "ACTIVE", "enroll-limit"],
   ]) {
     const [account] =
-      await sql`insert into account (role, status) values (${role}, ${status}) returning id`;
+      await sql`insert into account (id, role, status) values (${uuidv7()}, ${role}, ${status}) returning id`;
     await sql`insert into profile (account_id, nickname) values (${account.id}, ${`p04-${email}`})`;
     await sql`insert into password_credential (account_id, email, password_hash, email_verified_at, password_changed_at) values (${account.id}, ${`${email}@p04.example.test`}, ${passwordHash}, now(), now())`;
   }

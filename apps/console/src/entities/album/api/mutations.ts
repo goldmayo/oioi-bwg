@@ -20,7 +20,7 @@ export const albumMutations = {
   update: () =>
     mutationOptions({
       mutationKey: albumMutationKeys.update(),
-      mutationFn: ({ id, input }: { id: number; input: SaveAdminAlbum }) =>
+      mutationFn: ({ id, input }: { id: string; input: SaveAdminAlbum }) =>
         updateAdminAlbum(id, input),
       meta: { skipGlobalError: true },
     }),

@@ -1,11 +1,13 @@
 import { z } from "zod";
 
+import { entityIdSchema } from "./entity-id";
+
 export const albumSlugParamsSchema = z.object({
   slug: z.string().trim().min(1),
 });
 
 export const adminAlbumIdParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: entityIdSchema,
 });
 
 export const saveAdminAlbumSchema = z.object({
@@ -21,7 +23,7 @@ export const saveAdminAlbumSchema = z.object({
 });
 
 export const renderableAlbumSongSchema = z.object({
-  id: z.number().int(),
+  id: entityIdSchema,
   title: z.string(),
   slug: z.string(),
   youtubeId: z.string(),
@@ -30,7 +32,7 @@ export const renderableAlbumSongSchema = z.object({
 });
 
 export const albumSummarySchema = z.object({
-  id: z.number().int(),
+  id: entityIdSchema,
   name: z.string(),
   slug: z.string(),
   imgUrl: z.string(),

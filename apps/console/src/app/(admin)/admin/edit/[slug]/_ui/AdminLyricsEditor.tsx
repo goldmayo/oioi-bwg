@@ -33,7 +33,7 @@ export function AdminLyricsEditor({ song }: { song: SongEditor }) {
   });
 
   const saveSongData = useCallback(
-    async (id: number, input: SaveAdminSongLyrics) => {
+    async (id: string, input: SaveAdminSongLyrics) => {
       if (!canManage) {
         throw new ApiError(recovery.requiresReauthentication ? 401 : 403, {
           code: recovery.requiresReauthentication ? "UNAUTHENTICATED" : "FORBIDDEN",

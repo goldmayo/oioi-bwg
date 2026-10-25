@@ -23,6 +23,18 @@ const mockedGetDatabase = vi.mocked(getDatabase);
 const mockedFindFacts = vi.mocked(findConsoleAuthorizationFacts);
 
 describe("getRequestContext", () => {
+  it.each(["42", "1", "019a0170-0000-4000-8000-00000000002a"])(
+    "rejects pre-cutover numeric and non-v7 sessions before DB access: %s",
+    async (id) => {
+      mockedFindFacts.mockClear();
+      mockedAuth.mockResolvedValue({ user: { id, mfaVerified: true, mfaVersion: 1 } });
+      await expect(getRequestAuthorization()).resolves.toMatchObject({
+        decision: "invalid_identity",
+        context: { user: null },
+      });
+      expect(mockedFindFacts).not.toHaveBeenCalled();
+    },
+  );
   it("rejects password-only, invalid proof, reset and revoked MFA sessions", async () => {
     mockedFindFacts.mockClear();
     for (const proof of [
@@ -30,16 +42,25 @@ describe("getRequestContext", () => {
       { mfaVerified: false, mfaVersion: 1 },
       { mfaVerified: true, mfaVersion: "1" },
     ]) {
-      mockedAuth.mockResolvedValue({ user: { id: "42", ...proof } });
+      mockedAuth.mockResolvedValue({
+        user: { id: "019a0170-0000-7000-8000-00000000002a", ...proof },
+      });
       await expect(getRequestContext()).resolves.toMatchObject({ user: null });
     }
     expect(mockedFindFacts).not.toHaveBeenCalled();
-    mockedAuth.mockResolvedValue({ user: { id: "42", mfaVerified: true, mfaVersion: 1 } });
+    mockedAuth.mockResolvedValue({
+      user: { id: "019a0170-0000-7000-8000-00000000002a", mfaVerified: true, mfaVersion: 1 },
+    });
     for (const mfa of [
       { enabledAt: null, version: 1 },
       { enabledAt: "2026-10-10T00:00:00Z", version: 2 },
     ]) {
-      mockedFindFacts.mockResolvedValue({ id: 42n, role: "ADMIN", status: "ACTIVE", ...mfa });
+      mockedFindFacts.mockResolvedValue({
+        id: "019a0170-0000-7000-8000-00000000002a",
+        role: "ADMIN",
+        status: "ACTIVE",
+        ...mfa,
+      });
       await expect(getRequestContext()).resolves.toMatchObject({ user: null });
     }
     mockedFindFacts.mockClear();
@@ -56,10 +77,12 @@ describe("getRequestContext", () => {
   });
 
   it("loads only active account authorization facts", async () => {
-    mockedAuth.mockResolvedValue({ user: { id: "42", mfaVerified: true, mfaVersion: 1 } });
+    mockedAuth.mockResolvedValue({
+      user: { id: "019a0170-0000-7000-8000-00000000002a", mfaVerified: true, mfaVersion: 1 },
+    });
     mockedGetDatabase.mockReturnValue({} as never);
     mockedFindFacts.mockResolvedValue({
-      id: 42n,
+      id: "019a0170-0000-7000-8000-00000000002a",
       role: "ADMIN",
       status: "ACTIVE",
       enabledAt: "2026-10-10T00:00:00Z",
@@ -68,8 +91,11 @@ describe("getRequestContext", () => {
 
     const context = await getRequestContext();
 
-    expect(context.user).toEqual({ id: "42" });
-    expect(mockedFindFacts).toHaveBeenCalledWith(expect.anything(), 42n);
+    expect(context.user).toEqual({ id: "019a0170-0000-7000-8000-00000000002a" });
+    expect(mockedFindFacts).toHaveBeenCalledWith(
+      expect.anything(),
+      "019a0170-0000-7000-8000-00000000002a",
+    );
   });
 
   it("turns invalid or inactive identities into guest context", async () => {
@@ -78,9 +104,11 @@ describe("getRequestContext", () => {
     });
     await expect(getRequestContext()).resolves.toMatchObject({ user: null });
 
-    mockedAuth.mockResolvedValue({ user: { id: "7", mfaVerified: true, mfaVersion: 1 } });
+    mockedAuth.mockResolvedValue({
+      user: { id: "019a0170-0000-7000-8000-000000000007", mfaVerified: true, mfaVersion: 1 },
+    });
     mockedFindFacts.mockResolvedValue({
-      id: 7n,
+      id: "019a0170-0000-7000-8000-000000000007",
       role: "USER",
       status: "SUSPENDED",
       enabledAt: "2026-10-10T00:00:00Z",
@@ -91,9 +119,11 @@ describe("getRequestContext", () => {
   it.each(["USER", "REVIEWER"] as const)(
     "revokes Console access on demotion to %s",
     async (role) => {
-      mockedAuth.mockResolvedValue({ user: { id: "42", mfaVerified: true, mfaVersion: 1 } });
+      mockedAuth.mockResolvedValue({
+        user: { id: "019a0170-0000-7000-8000-00000000002a", mfaVerified: true, mfaVersion: 1 },
+      });
       mockedFindFacts.mockResolvedValue({
-        id: 42n,
+        id: "019a0170-0000-7000-8000-00000000002a",
         role,
         status: "ACTIVE",
         enabledAt: "2026-10-10T00:00:00Z",
@@ -129,7 +159,7 @@ describe("AUTH-009 safe authorization decisions", () => {
         ? null
         : {
             user: {
-              id: mode === "id" ? "0" : "42",
+              id: mode === "id" ? "0" : "019a0170-0000-7000-8000-00000000002a",
               mfaVerified: mode !== "proof",
               mfaVersion: 1,
             },
@@ -140,7 +170,7 @@ describe("AUTH-009 safe authorization decisions", () => {
       mode === "missing"
         ? undefined
         : {
-            id: 42n,
+            id: "019a0170-0000-7000-8000-00000000002a",
             role: mode === "role" ? "USER" : "ADMIN",
             status: mode === "inactive" ? "SUSPENDED" : "ACTIVE",
             enabledAt: mode === "disabled" ? null : "2026-10-10T00:00:00Z",
@@ -155,7 +185,9 @@ describe("AUTH-009 safe authorization decisions", () => {
   });
 
   it("keeps a facts database failure as the original exception", async () => {
-    mockedAuth.mockResolvedValue({ user: { id: "42", mfaVerified: true, mfaVersion: 1 } });
+    mockedAuth.mockResolvedValue({
+      user: { id: "019a0170-0000-7000-8000-00000000002a", mfaVerified: true, mfaVersion: 1 },
+    });
     const error = new Error("database outage");
     facts.mockRejectedValueOnce(error);
     await expect(getRequestAuthorization()).rejects.toBe(error);

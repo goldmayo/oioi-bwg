@@ -1,7 +1,8 @@
+import { v7 } from "uuid";
+
 import { relations, sql } from "drizzle-orm";
 import {
   bigint,
-  bigserial,
   boolean,
   check,
   foreignKey,
@@ -11,7 +12,6 @@ import {
   jsonb,
   pgTable,
   primaryKey,
-  serial,
   text,
   timestamp,
   uuid,
@@ -39,7 +39,7 @@ export type EmailVerificationRateLimitScope = (typeof EMAIL_VERIFICATION_RATE_LI
 export const account = pgTable(
   "account",
   {
-    id: bigint({ mode: "bigint" }).primaryKey().generatedAlwaysAsIdentity(),
+    id: uuid().primaryKey().$defaultFn(v7),
     role: text().$type<AccountRole>().notNull(),
     status: text().$type<AccountStatus>().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
@@ -63,7 +63,7 @@ export const account = pgTable(
 export const profile = pgTable(
   "profile",
   {
-    accountId: bigint("account_id", { mode: "bigint" }).primaryKey().notNull(),
+    accountId: uuid("account_id").primaryKey().notNull(),
     nickname: text().notNull().unique("profile_nickname_key"),
     avatarUrl: text("avatar_url"),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
@@ -82,7 +82,7 @@ export const profile = pgTable(
 export const passwordCredential = pgTable(
   "password_credential",
   {
-    accountId: bigint("account_id", { mode: "bigint" }).primaryKey().notNull(),
+    accountId: uuid("account_id").primaryKey().notNull(),
     email: text().notNull().unique("password_credential_email_key"),
     passwordHash: text("password_hash").notNull(),
     emailVerifiedAt: timestamp("email_verified_at", {
@@ -114,7 +114,7 @@ export const passwordCredential = pgTable(
 export const adminMfa = pgTable(
   "admin_mfa",
   {
-    accountId: bigint("account_id", { mode: "bigint" }).primaryKey().notNull(),
+    accountId: uuid("account_id").primaryKey().notNull(),
     encryptedSecret: text("encrypted_secret"),
     enabledAt: timestamp("enabled_at", { withTimezone: true, mode: "string" }),
     lastUsedStep: integer("last_used_step"),
@@ -208,42 +208,42 @@ export const emailVerificationRateLimit = pgTable(
   ],
 );
 
-export const album = pgTable("Album", {
-  id: serial().primaryKey().notNull(),
+export const album = pgTable("album", {
+  id: uuid().primaryKey().notNull().$defaultFn(v7),
   name: text().notNull(),
-  slug: text().notNull().unique("Album_slug_key"),
-  imgUrl: text().notNull(),
+  slug: text().notNull().unique("album_slug_key"),
+  imgUrl: text("image_url").notNull(),
   color: text().notNull(),
-  releaseDate: timestamp({ precision: 3, mode: "string" }),
-  isVisible: boolean().default(true).notNull(),
-  createdAt: timestamp({ precision: 3, mode: "string" })
+  releaseDate: timestamp("release_date", { precision: 3, mode: "string" }),
+  isVisible: boolean("is_visible").default(true).notNull(),
+  createdAt: timestamp("created_at", { precision: 3, mode: "string" })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
 });
 
 export const song = pgTable(
-  "Song",
+  "song",
   {
-    id: bigserial({ mode: "number" }).primaryKey().notNull(),
-    albumId: integer().notNull(),
+    id: uuid().primaryKey().notNull().$defaultFn(v7),
+    albumId: uuid("album_id").notNull(),
     title: text(),
-    youtubeId: text(),
+    youtubeId: text("youtube_id"),
     lyrics: jsonb(),
-    hasOfficialCheer: boolean(),
-    isTitle: boolean().default(false).notNull(),
-    isVisible: boolean().default(true).notNull(),
-    order: bigint({ mode: "number" }),
-    createdAt: timestamp({ precision: 3, withTimezone: true, mode: "string" }),
-    updatedAt: timestamp({ precision: 3, withTimezone: true, mode: "string" }),
-    slug: text().unique("Song_slug_key"),
+    hasOfficialCheer: boolean("has_official_cheer"),
+    isTitle: boolean("is_title").default(false).notNull(),
+    isVisible: boolean("is_visible").default(true).notNull(),
+    order: bigint("sort_order", { mode: "number" }),
+    createdAt: timestamp("created_at", { precision: 3, withTimezone: true, mode: "string" }),
+    updatedAt: timestamp("updated_at", { precision: 3, withTimezone: true, mode: "string" }),
+    slug: text().unique("song_slug_key"),
   },
   (table) => [
     foreignKey({
       columns: [table.albumId],
       foreignColumns: [album.id],
-      name: "Song_albumId_fkey",
+      name: "song_album_id_fkey",
     }).onDelete("cascade"),
-    index("Song_albumId_idx").on(table.albumId),
+    index("song_album_id_idx").on(table.albumId),
   ],
 );
 

@@ -24,7 +24,7 @@ vi.mock("@/shared/ui/switch", () => ({
   ),
 }));
 const album: AdminAlbumSummary = {
-  id: 1,
+  id: "019a0170-0000-7000-8000-000000000001",
   name: "Original album",
   slug: "original-album",
   imgUrl: "https://assets.example.com/album.webp",

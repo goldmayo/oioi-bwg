@@ -47,7 +47,7 @@ const albumInput = {
 };
 
 const songInput = {
-  albumId: 1,
+  albumId: "019a0170-0000-7000-8000-000000000001",
   hasOfficialCheer: false,
   isTitle: false,
   isVisible: true,
@@ -58,7 +58,7 @@ const songInput = {
 };
 
 const credentialInput = {
-  accountId: 1n,
+  accountId: "019a0170-0000-7000-8000-000000000001",
   email: "user@example.com",
   emailVerifiedAt: "2026-09-09T00:00:00.000Z",
   passwordChangedAt: "2026-09-09T00:00:00.000Z",
@@ -71,30 +71,41 @@ describe("repository unique conflict translation", () => {
       expected: AlbumSlugConflictError,
       invoke: (error: unknown) => insertAlbum(insertReturningExecutor(error), albumInput),
       name: "album insert",
-      physicalConstraint: "Album_slug_key",
+      physicalConstraint: "album_slug_key",
     },
     {
       expected: AlbumSlugConflictError,
-      invoke: (error: unknown) => updateAlbum(updateReturningExecutor(error), 1, albumInput),
+      invoke: (error: unknown) =>
+        updateAlbum(
+          updateReturningExecutor(error),
+          "019a0170-0000-7000-8000-000000000001",
+          albumInput,
+        ),
       name: "album update",
-      physicalConstraint: "Album_slug_key",
+      physicalConstraint: "album_slug_key",
     },
     {
       expected: SongSlugConflictError,
       invoke: (error: unknown) => insertSong(insertReturningExecutor(error), songInput),
       name: "song insert",
-      physicalConstraint: "Song_slug_key",
+      physicalConstraint: "song_slug_key",
     },
     {
       expected: SongSlugConflictError,
       invoke: (error: unknown) =>
-        updateSongWithSlugPolicy(updateReturningExecutor(error), 1, "song", songInput),
+        updateSongWithSlugPolicy(
+          updateReturningExecutor(error),
+          "019a0170-0000-7000-8000-000000000001",
+          "song",
+          songInput,
+        ),
       name: "song slug update",
-      physicalConstraint: "Song_slug_key",
+      physicalConstraint: "song_slug_key",
     },
     {
       expected: ProfileNicknameConflictError,
-      invoke: (error: unknown) => insertProfile(insertExecutor(error), 1n, "nickname"),
+      invoke: (error: unknown) =>
+        insertProfile(insertExecutor(error), "019a0170-0000-7000-8000-000000000001", "nickname"),
       name: "profile insert",
       physicalConstraint: "profile_nickname_key",
     },
@@ -112,11 +123,22 @@ describe("repository unique conflict translation", () => {
 
   it.each([
     (error: unknown) => insertAlbum(insertReturningExecutor(error), albumInput),
-    (error: unknown) => updateAlbum(updateReturningExecutor(error), 1, albumInput),
+    (error: unknown) =>
+      updateAlbum(
+        updateReturningExecutor(error),
+        "019a0170-0000-7000-8000-000000000001",
+        albumInput,
+      ),
     (error: unknown) => insertSong(insertReturningExecutor(error), songInput),
     (error: unknown) =>
-      updateSongWithSlugPolicy(updateReturningExecutor(error), 1, "song", songInput),
-    (error: unknown) => insertProfile(insertExecutor(error), 1n, "nickname"),
+      updateSongWithSlugPolicy(
+        updateReturningExecutor(error),
+        "019a0170-0000-7000-8000-000000000001",
+        "song",
+        songInput,
+      ),
+    (error: unknown) =>
+      insertProfile(insertExecutor(error), "019a0170-0000-7000-8000-000000000001", "nickname"),
     (error: unknown) => insertPasswordCredential(insertExecutor(error), credentialInput),
   ])("preserves an unknown unique constraint by identity", async (invoke) => {
     const error = uniqueViolation("unknown_constraint_key");

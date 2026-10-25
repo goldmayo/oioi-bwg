@@ -112,7 +112,7 @@ export async function createAlbum(
 
 export async function editAlbum(
   ctx: RequestContext,
-  id: number,
+  id: string,
   input: SaveAdminAlbum,
 ): Promise<AlbumSummary> {
   requireAdmin(ctx);
@@ -128,7 +128,7 @@ export async function editAlbum(
   }
 }
 
-export async function deleteAlbum(ctx: RequestContext, id: number) {
+export async function deleteAlbum(ctx: RequestContext, id: string) {
   requireAdmin(ctx);
   const [album] = await removeAlbum(getDatabase(), id);
   if (!album) throw new AppError("ALBUM_NOT_FOUND");

@@ -5,7 +5,7 @@ import { apiErrorResponseSchema } from "./error";
 import { songDetailSchema } from "./song";
 
 const album = {
-  id: 1,
+  id: "019a0170-0000-7000-8000-000000000001",
   name: "IVE SWITCH",
   slug: "ive-switch",
   imgUrl: "https://assets.oioibawige.com/ive-switch.webp",
@@ -15,7 +15,7 @@ const album = {
   createdAt: "2024-04-29T00:00:00.000Z",
   songs: [
     {
-      id: 104,
+      id: "019a0170-0000-7000-8000-000000000068",
       title: "해야 (HEYA)",
       slug: "heya",
       youtubeId: "07EzMbVH3QE",
@@ -33,7 +33,7 @@ describe("public API contracts", () => {
   it("requires lyrics to match the cheer-guide contract", () => {
     expect(
       songDetailSchema.safeParse({
-        id: 104,
+        id: "019a0170-0000-7000-8000-000000000068",
         title: "해야 (HEYA)",
         slug: "heya",
         youtubeId: "07EzMbVH3QE",

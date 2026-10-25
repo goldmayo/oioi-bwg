@@ -11,7 +11,7 @@ import {
 import { updateAccountAccess } from "../repositories/auth-repository";
 
 // 운영 권한/DB 실행 guard는 B3 CLI가 소유한다. 브라우저 reset 경로는 제공하지 않는다.
-export function resetConsoleMfa(accountId: bigint, expectedVersion: number | null) {
+export function resetConsoleMfa(accountId: string, expectedVersion: number | null) {
   return getDatabase().transaction(async (tx) => {
     const current = await lockConsoleAuthenticationFacts(tx, accountId);
     if (!current.account || (current.mfa?.version ?? null) !== expectedVersion)
@@ -31,7 +31,7 @@ export function resetConsoleMfa(accountId: bigint, expectedVersion: number | nul
 type Access = { role: AccountRole; status: "ACTIVE" | "SUSPENDED" };
 
 export function changeConsoleAccountAccess(
-  accountId: bigint,
+  accountId: string,
   expected: Access & { version: number | null },
   next: Access,
 ) {

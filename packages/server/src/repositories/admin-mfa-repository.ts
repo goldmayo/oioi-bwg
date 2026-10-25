@@ -5,14 +5,14 @@ import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import type { DbExecutor } from "../db";
 import { account, adminMfa, passwordCredential } from "../db/schema";
 
-export function findAdminMfa(executor: DbExecutor, accountId: bigint) {
+export function findAdminMfa(executor: DbExecutor, accountId: string) {
   return executor.query.adminMfa.findFirst({
     where: (table, { eq: equals }) => equals(table.accountId, accountId),
   });
 }
 
 // 단일 statement의 동일 snapshot으로 세션 인가 facts만 읽는다. secret은 projection에 넣지 않는다.
-export async function findConsoleAuthorizationFacts(executor: DbExecutor, accountId: bigint) {
+export async function findConsoleAuthorizationFacts(executor: DbExecutor, accountId: string) {
   const [facts] = await executor
     .select({
       id: account.id,
@@ -30,7 +30,7 @@ export async function findConsoleAuthorizationFacts(executor: DbExecutor, accoun
 // 인증·등록 허용 여부는 호출하는 service가 확인한다.
 export async function ensurePendingAdminMfa(
   executor: DbExecutor,
-  accountId: bigint,
+  accountId: string,
   encryptedSecret: string,
 ) {
   const [pending] = await executor
@@ -47,7 +47,7 @@ export async function ensurePendingAdminMfa(
   return pending;
 }
 
-export function resetAdminMfa(executor: DbExecutor, accountId: bigint, expectedVersion: number) {
+export function resetAdminMfa(executor: DbExecutor, accountId: string, expectedVersion: number) {
   return executor
     .update(adminMfa)
     .set({
@@ -60,7 +60,7 @@ export function resetAdminMfa(executor: DbExecutor, accountId: bigint, expectedV
     .returning({ version: adminMfa.version });
 }
 
-export function incrementAdminMfaVersion(executor: DbExecutor, accountId: bigint) {
+export function incrementAdminMfaVersion(executor: DbExecutor, accountId: string) {
   return executor
     .insert(adminMfa)
     .values({ accountId })
@@ -72,7 +72,7 @@ export function incrementAdminMfaVersion(executor: DbExecutor, accountId: bigint
 }
 
 // 호출 service의 transaction 안에서 사용한다. 모든 mutation의 lock 순서는 같다.
-export async function lockConsoleAuthenticationFacts(executor: DbExecutor, accountId: bigint) {
+export async function lockConsoleAuthenticationFacts(executor: DbExecutor, accountId: string) {
   const [currentAccount] = await executor
     .select()
     .from(account)
@@ -94,7 +94,7 @@ export async function lockConsoleAuthenticationFacts(executor: DbExecutor, accou
 export function consumeAdminMfaStep(
   executor: DbExecutor,
   expected: {
-    accountId: bigint;
+    accountId: string;
     version: number;
     encryptedSecret: string;
     enabledAt: string | null;

@@ -13,20 +13,32 @@ describe("CASL authorization rules", () => {
   });
 
   it("allows USER contribution and own comment management only", () => {
-    const ability = buildAbility({ accountId: "42", role: "USER" });
+    const ability = buildAbility({
+      accountId: "019a0170-0000-7000-8000-00000000002a",
+      role: "USER",
+    });
 
     expect(ability.can("create", "Contribution")).toBe(true);
-    expect(ability.can("update", subject("DiscussionComment", { authorAccountId: "42" }))).toBe(
-      true,
-    );
-    expect(ability.can("update", subject("DiscussionComment", { authorAccountId: "7" }))).toBe(
-      false,
-    );
+    expect(
+      ability.can(
+        "update",
+        subject("DiscussionComment", { authorAccountId: "019a0170-0000-7000-8000-00000000002a" }),
+      ),
+    ).toBe(true);
+    expect(
+      ability.can(
+        "update",
+        subject("DiscussionComment", { authorAccountId: "019a0170-0000-7000-8000-000000000007" }),
+      ),
+    ).toBe(false);
     expect(ability.can("resolve", "DiscussionThread")).toBe(false);
   });
 
   it("allows REVIEWER thread decisions but not final revision decisions", () => {
-    const ability = buildAbility({ accountId: "42", role: "REVIEWER" });
+    const ability = buildAbility({
+      accountId: "019a0170-0000-7000-8000-00000000002a",
+      role: "REVIEWER",
+    });
 
     expect(ability.can("resolve", "DiscussionThread")).toBe(true);
     expect(ability.can("reject", "DiscussionThread")).toBe(true);
@@ -36,7 +48,10 @@ describe("CASL authorization rules", () => {
   });
 
   it("allows ADMIN management across the policy subjects", () => {
-    const ability = buildAbility({ accountId: "42", role: "ADMIN" });
+    const ability = buildAbility({
+      accountId: "019a0170-0000-7000-8000-00000000002a",
+      role: "ADMIN",
+    });
 
     expect(ability.can("approve", "Revision")).toBe(true);
     expect(ability.can("suspend", "Account")).toBe(true);

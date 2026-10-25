@@ -30,7 +30,14 @@ test("standalone worker loads through the host protocol and rejects untrusted ta
   const request = {
     scope: "oci-console",
     serverStartedAt: "1234567890.000000",
-    args: ["mfa-reset", "--account-id", "1", "--expected-version", "3", "--apply"],
+    args: [
+      "mfa-reset",
+      "--account-id",
+      "019a0170-0000-7000-8000-000000000001",
+      "--expected-version",
+      "3",
+      "--apply",
+    ],
   };
   for (const [input, url, expected] of [
     [{ ...request, scope: "local-compose" }, "", "INVALID_REQUEST"],

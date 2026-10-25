@@ -12,7 +12,7 @@ vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 import { GET } from "./route";
 
 const album = {
-  id: 1,
+  id: "019a0170-0000-7000-8000-000000000001",
   name: "Harmony",
   slug: "harmony",
   imgUrl: "https://assets.oioibawige.com/harmony.webp",
