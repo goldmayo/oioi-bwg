@@ -76,16 +76,14 @@ Read multiple references only when the operation crosses those concerns.
 
 ## Complete the task
 
-Use `docs/README.md` as the document entrance and `docs/WORK.md` as the only current/deferred
-work list. At closure, update status, next action, completion criteria, and evidence links there;
-keep detailed decisions in ADRs, chronological development in devlog, and actual verification in
-the existing result. Do not create another PLAN/CHECKPOINT/HANDOFF just for a new session.
+Apply [AGENTS §9](../../../AGENTS.md#9-문서-및-변경-원칙) as the canonical creation, ownership,
+closure, and consolidation policy. This skill supplies classification and evidence checks; it does
+not impose a second lifecycle policy or require a new repository artifact for each PR or session.
 
-When completed-plan deletion is authorized, verify each file's decision → ADR, execution/failure
-→ result or pinned Git source, reusable procedure → current developer/operations guide, and
-remaining work → WORK/unfinished plan. Record the replacement and deletion reason in the
-existing completion map/result, then delete the file and migrate inbound links together.
-Preserve unfinished proposals, unique evidence, and historical source identity.
+Use the PR body for a single PR's plan and execution evidence. Update existing phase owners
+when work spans PRs. A new file must satisfy the repository's creation gate; ADR and devlog
+updates are conditional on their purpose, not automatic completion steps. Consolidation or
+deletion still requires the requested cleanup scope and per-file preservation/link checks.
 
 Report:
 

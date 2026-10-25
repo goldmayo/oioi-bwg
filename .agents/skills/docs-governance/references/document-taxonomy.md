@@ -2,18 +2,22 @@
 
 Classify a document from the question it answers and the evidence it contains. A filename, directory, `status`, or `authority` value is only a clue; existing metadata is inconsistent outside the active architecture corpus.
 
+Classification does not require a separate file for each class. The creation and lifecycle gate
+belongs to [AGENTS §9](../../../../AGENTS.md#9-문서-및-변경-원칙); use an existing owner or PR
+body when it owns the requested record.
+
 ## Classes
 
-| Class | Question answered | Character | Canonical-home rule | Must not become |
-|---|---|---|---|---|
-| Architecture | How must the system be built? | Normative, TO-BE, implementation constraint | The owning active document under `docs/migration/oioi-bwg-architecture-clean-v1/`; `00-document-index.md` owns the corpus map and status | Evidence of current behavior |
-| Domain specification | What domain terms, permissions, transitions, invariants, and lifecycle rules must hold? | Normative domain contract and test oracle | `docs/migration/DOMAIN_SPECIFICATION.md` for the domain facts it explicitly owns | A technical implementation shortcut or AS-IS inventory |
-| Reverse engineering | How does code at a particular source ref actually behave? | Descriptive, AS-IS, source-backed | The snapshot document whose declared scope owns the observed fact | Architecture authority or a desired design |
-| Comparison | What differs between two pinned AS-IS snapshots? | Descriptive relation between reproducible observations | A comparison document with both sources pinned | A quality score, roadmap, or TO-BE design |
-| Migration plan | How will the system move from evidenced AS-IS to approved TO-BE? | Prospective execution intent | The existing phase/concern plan, or the repository's current general migration-artifact location after a search | A rewritten account of what ultimately happened |
-| Migration evidence | What was inspected or verified for this phase? | Phase-scoped observation or execution evidence | The relevant phase evidence artifact unless the fact deserves reusable RE ownership | A durable architecture rule |
-| Migration result | What actually changed and what verification passed or failed? | Retrospective, immutable execution record | The result for the same phase or reviewable concern | A replacement for the plan or architecture |
-| Developer documentation | How does a developer repeatedly set up, run, troubleshoot, or operate the repository independent of one migration phase? | Durable usage documentation | The established developer/operations documentation owner found by search; location is a governance decision when no owner exists | A phase result merely because it originated during migration |
+| Class                   | Question answered                                                                                                        | Character                                              | Canonical-home rule                                                                                                                      | Must not become                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Architecture            | How must the system be built?                                                                                            | Normative, TO-BE, implementation constraint            | The owning active document under `docs/migration/oioi-bwg-architecture-clean-v1/`; `00-document-index.md` owns the corpus map and status | Evidence of current behavior                                 |
+| Domain specification    | What domain terms, permissions, transitions, invariants, and lifecycle rules must hold?                                  | Normative domain contract and test oracle              | `docs/migration/DOMAIN_SPECIFICATION.md` for the domain facts it explicitly owns                                                         | A technical implementation shortcut or AS-IS inventory       |
+| Reverse engineering     | How does code at a particular source ref actually behave?                                                                | Descriptive, AS-IS, source-backed                      | The snapshot document whose declared scope owns the observed fact                                                                        | Architecture authority or a desired design                   |
+| Comparison              | What differs between two pinned AS-IS snapshots?                                                                         | Descriptive relation between reproducible observations | A comparison document with both sources pinned                                                                                           | A quality score, roadmap, or TO-BE design                    |
+| Migration plan          | How will the system move from evidenced AS-IS to approved TO-BE?                                                         | Prospective execution intent                           | The existing phase/concern plan, or the repository's current general migration-artifact location after a search                          | A rewritten account of what ultimately happened              |
+| Migration evidence      | What was inspected or verified for this phase?                                                                           | Phase-scoped observation or execution evidence         | The relevant phase evidence artifact unless the fact deserves reusable RE ownership                                                      | A durable architecture rule                                  |
+| Migration result        | What actually changed and what verification passed or failed?                                                            | Retrospective, immutable execution record              | The result for the same phase or reviewable concern                                                                                      | A replacement for the plan or architecture                   |
+| Developer documentation | How does a developer repeatedly set up, run, troubleshoot, or operate the repository independent of one migration phase? | Durable usage documentation                            | The established developer/operations documentation owner found by search; location is a governance decision when no owner exists         | A phase result merely because it originated during migration |
 
 `docs/migration/implementation/` is the current default candidate for general migration artifacts, not proof that every file inside is a migration artifact or that the layout is permanently canonical. `docs/migration/m7-foundation-fixes/` is governed by the narrower M7 workflow for registered findings.
 
@@ -29,7 +33,9 @@ Apply these in order:
 6. If it records actual changes, deviations, and completed verification, it is a migration result.
 7. If it remains useful after the migration phase is forgotten, it is likely developer documentation.
 
-A document with multiple answers should usually be split or reduced to a thin index that links to the owners. Do not split an existing historical artifact merely to satisfy this model unless reorganization is in scope.
+When a document mixes responsibilities, distinguish the statements and link to existing owners.
+Splitting into new files must also pass the repository's creation gate. Do not split an existing
+historical artifact merely to satisfy this model unless reorganization is in scope.
 
 ## One fact, one canonical home
 

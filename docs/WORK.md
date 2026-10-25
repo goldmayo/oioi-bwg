@@ -28,7 +28,6 @@
 | Console auth 타입 순환          | 보류                  | 별도 auth 리팩터링 필요성 판단                                                                        | runtime 경계 보존과 순환 경고 해소                      | [경계 결과의 한계](migration/implementation/MONOREPO-BOUNDARIES-AND-EXECUTION-RESULT.md)                                                                                                                                            |
 | 나머지 의존성 보안 검토         | 미확인                | 패치 결과의 잔여 audit 항목·실제 도달 가능성 재평가                                                   | 별도 검토 결과와 처리/보류 근거                         | [보안 패치 결과](migration/implementation/console-guide-editor/P06-NEXT-SECURITY-RESULT.md). Next 패치 배포와 전체 보안 감사 완료는 별개                                                                                            |
 | 공용 테이블 운영 반영           | 미확인                | 실제 배포 요청 시 source/digest와 통합 결과 대조                                                      | 정상 Promotion·receipt로 반영 여부 확인                 | [통합 결과](migration/implementation/COMPOSABLE-DATA-TABLE-RESULT.md). 이번에는 운영 조회·배포하지 않음                                                                                                                             |
-| M0~M9 잔여 상태                 | 일부 미확인           | 단계별 결과/후속을 대조해 필요한 항목만 분리                                                          | 단계별 완료·폐기·보류 근거 확정                         | [단계 정의](migration/oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md), [M7 최종 보고](migration/m7-foundation-fixes/M7-FINAL-VERIFICATION.md). 전체 완료로 묶지 않음                                             |
 | 관측 운영 수용 검증             | 미확인                | 배포 이미지별 Debug ID/소스맵·실제 수신·규칙·JSON 연결 근거 대조                                      | 앱별 수신/복원 증거와 정상 거부 제외·비밀 비노출 확인   | [미완료 관측 계획](migration/implementation/OBSERVABILITY-ERROR-TRACKING-PLAN.md), [기존 결과](migration/implementation/OBSERVABILITY-ERROR-TRACKING-RESULT.md). 이후 공동 배포 성공만으로 원래 수용 항목 전체 완료를 추정하지 않음 |
 | 장기 도메인·CMS·asset lifecycle | 미착수 제안/요구 미정 | revision/discussion/moderation·password/OAuth·관리 template·orphan object 정리의 요구/우선순위 재확인 | 명시적 채택/폐기 결정과 별도 계약·검증                  | [Domain](migration/DOMAIN_SPECIFICATION.md), [R2 결과](migration/implementation/M5-R2-ADMIN-IMAGE-UPLOAD-RESULT.md), [이전 concern 대응](migration/implementation/COMPLETED-DESIGN-INDEX.md). P07 범위로 자동 편입하지 않음         |
 | blueprint의 Recap·공식 출처     | 미구현/미확인 제안    | Recap 공유 카드와 공식 출처 링크의 채택 여부·현행 consumer 검토                                       | 채택/폐기 결정 및 채택한 흐름 검증                      | [원문 고정본](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/blueprint.md), [미래 공식 링크 필드](../apps/web/src/entities/album/model/album.ts). Cloudflare KV cache 지시는 폐기          |
@@ -36,6 +35,9 @@
 | 최종 문서 폴더 재편             | P10 이후 보류         | product/design/engineering/audits/devlog 소유권 설계                                                  | 링크·이력·상세 소유권 보존 후 별도 PR                   | [문서 안내의 합의](README.md)                                                                                                                                                                                                       |
 
 P07과 P08은 독립이며 P08→P09→P10 순서다. 번호는 기존 추적 ID이며 새로운 중첩 단계는 만들지 않는다.
+과거 M 단계 결과의 미완료 표기는 후속 통합·최종 검증과 대조한다. 현재 목록에는 위의 독립된 후속만
+유지하며, 과거 표기만으로 M 단계 전체를 재착수 대상으로 만들지 않는다. 모든 과거 검증을 소급해
+통과로 바꾸거나 개별 후속의 완료를 주장하는 의미는 아니다.
 
 ## 이전 TODO 대조
 
@@ -57,7 +59,5 @@ P07과 P08은 독립이며 P08→P09→P10 순서다. 번호는 기존 추적 ID
 
 ## 종료할 때
 
-상태·다음 행동·완료 조건·근거 링크를 갱신한다. 완료 항목은 결과에 남기고 현재 목록에서 제거한다.
-새 결정은 ADR, 과정과 실패/복구는 날짜순 devlog, 실행·검증은 기존 RESULT가 소유한다.
-완료 PLAN/DESIGN은 결정·실행·반복 절차·잔여 작업의 대응을 확인한 뒤 삭제하고 유입 링크를 함께 이관한다.
-새 세션용 PLAN/CHECKPOINT/HANDOFF를 반복 생성하지 않는다.
+[AGENTS §9](../AGENTS.md#9-문서-및-변경-원칙)의 종료 규칙을 따른다. 해당 행의 상태·다음 행동·완료
+조건·근거를 갱신하고 완료 항목은 최종 근거에 연결한 뒤 목록에서 제거한다. 상세 규칙을 이곳에 복제하지 않는다.
