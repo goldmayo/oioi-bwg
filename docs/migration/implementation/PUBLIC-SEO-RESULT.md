@@ -14,7 +14,7 @@ created_at: "2026-10-25"
 저장소 `goldmayo/oioi-bwg`, `feature/web-seo-corrections`는 위 `origin/migration_main`에서 분기했다.
 검증 대상은 이 기준에 이번 PR diff를 더한 작업 트리다. 운영 관찰은 수정 전 #246 배포를 대상으로 한
 2026-10-25 공개 HTTP 읽기이며, 코드 수정이 운영에 배포됐다는 뜻은 아니다.
-상위 계약은 [Runtime §12](../oioi-bwg-architecture-clean-v1/11-content-i18n-assets-runtime-architecture.md#12-runtime),
+상위 계약은 [Runtime §12](../oioi-bwg-architecture-clean-v1/11-content-i18n-assets-runtime-architecture.md#12-environment-variables),
 [Server/Data Access](../oioi-bwg-architecture-clean-v1/06-server-data-access-architecture.md)와
 [Domain](../DOMAIN_SPECIFICATION.md)의 공개 범위다.
 
@@ -47,3 +47,9 @@ Web의 local/production URL 계약, DB 콘텐츠·schema·Console 인증은 유�
 메타데이터/사이트맵 처리 근거는 [Next Metadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata),
 [Google canonical](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls),
 [Google sitemap lastmod](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)다.
+
+
+## 2026-10-25 운영 반영
+
+구현 검증 뒤 수행한 정상 Promotion과 실제 운영 관측은
+[서비스 개선 공동 배포 결과](SERVICE-POLISH-RELEASE-RESULT.md)가 소유한다. 앞 절은 당시 검증 범위와 이력을 보존한다.

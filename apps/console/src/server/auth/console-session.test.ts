@@ -6,10 +6,10 @@ it("issues only server MFA claims and preserves them across client session.updat
   const proof = { mfaVerified: true, mfaVersion: 7 };
   const initial = callbacks.jwt({
     token: {},
-    user: { id: "42", ...proof, role: "ADMIN" },
+    user: { id: "019a0170-0000-7000-8000-00000000002a", ...proof, role: "ADMIN" },
     trigger: "signIn",
   } as never);
-  expect(initial).toEqual({ sub: "42", ...proof });
+  expect(initial).toEqual({ sub: "019a0170-0000-7000-8000-00000000002a", ...proof });
   expect(
     callbacks.jwt({
       token: initial,
@@ -21,11 +21,17 @@ it("issues only server MFA claims and preserves them across client session.updat
     session: { user: {}, expires: "expiry" },
     token: initial,
   } as never);
-  expect(session.user).toEqual({ id: "42", ...proof });
+  expect(session.user).toEqual({ id: "019a0170-0000-7000-8000-00000000002a", ...proof });
   expect(
     callbacks.jwt({ token: { sub: "42" }, trigger: "update", session: proof } as never),
   ).toEqual({ sub: "42" });
-  expect(callbacks.jwt({ token: {}, user: { id: "42" }, trigger: "signIn" } as never)).toBeNull();
+  expect(
+    callbacks.jwt({
+      token: {},
+      user: { id: "019a0170-0000-7000-8000-00000000002a" },
+      trigger: "signIn",
+    } as never),
+  ).toBeNull();
 });
 
 it.each([undefined, null, 0, -1, 1.5, "1", 2_147_483_648])(

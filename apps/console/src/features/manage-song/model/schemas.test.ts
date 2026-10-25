@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { songEditSchema, songFormSchema, toAdminSongUpdate } from "./schemas";
 
 const fields = {
-  albumId: 1,
+  albumId: "019a0170-0000-7000-8000-000000000001",
   title: "Test Song",
   slug: "test-song",
   youtubeId: "youtube-id",

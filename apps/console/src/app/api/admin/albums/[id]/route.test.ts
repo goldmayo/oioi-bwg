@@ -21,12 +21,12 @@ vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
 import { DELETE, PATCH } from "./route";
 
-const context = { ability: {}, user: { id: "1" } };
-const routeContext = { params: Promise.resolve({ id: "1" }) };
+const context = { ability: {}, user: { id: "019a0170-0000-7000-8000-000000000001" } };
+const routeContext = { params: Promise.resolve({ id: "019a0170-0000-7000-8000-000000000001" }) };
 const album = {
   color: "#000000",
   createdAt: "2026-01-01T00:00:00.000Z",
-  id: 1,
+  id: "019a0170-0000-7000-8000-000000000001",
   imgUrl: "https://assets.oioibawige.com/images/albums/test.webp",
   isVisible: true,
   name: "Test Album",
@@ -45,7 +45,7 @@ describe("/api/admin/albums/[id]", () => {
     const { id: _id, createdAt: _createdAt, ...input } = album;
 
     const response = await PATCH(
-      new Request("https://example.test/api/admin/albums/1", {
+      new Request("https://example.test/api/admin/albums/019a0170-0000-7000-8000-000000000001", {
         body: JSON.stringify(input),
         headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "PATCH",
@@ -55,14 +55,14 @@ describe("/api/admin/albums/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(albumSummarySchema.parse(await response.json())).toEqual(album);
-    expect(editAlbum).toHaveBeenCalledWith(context, 1, input);
+    expect(editAlbum).toHaveBeenCalledWith(context, "019a0170-0000-7000-8000-000000000001", input);
   });
 
   it("returns 204 after deleting an album", async () => {
     deleteAlbum.mockResolvedValue(undefined);
 
     const response = await DELETE(
-      new Request("https://example.test/api/admin/albums/1", {
+      new Request("https://example.test/api/admin/albums/019a0170-0000-7000-8000-000000000001", {
         method: "DELETE",
         headers: { Origin: "http://127.0.0.1:3001" },
       }),
@@ -70,14 +70,14 @@ describe("/api/admin/albums/[id]", () => {
     );
 
     expect(response.status).toBe(204);
-    expect(deleteAlbum).toHaveBeenCalledWith(context, 1);
+    expect(deleteAlbum).toHaveBeenCalledWith(context, "019a0170-0000-7000-8000-000000000001");
   });
 
   it("maps a missing album to 404", async () => {
     deleteAlbum.mockRejectedValue(new AppError("ALBUM_NOT_FOUND"));
 
     const response = await DELETE(
-      new Request("https://example.test/api/admin/albums/1", {
+      new Request("https://example.test/api/admin/albums/019a0170-0000-7000-8000-000000000001", {
         method: "DELETE",
         headers: { Origin: "http://127.0.0.1:3001" },
       }),

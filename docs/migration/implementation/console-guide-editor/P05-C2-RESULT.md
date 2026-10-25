@@ -8,7 +8,7 @@ created_at: "2026-10-10"
 
 # P05-C2 결과
 
-[계획](P05-C2-PLAN.md)의 구현·검증 source는 위 커밋이다. 사용자 C1 승인과
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P05-C2-PLAN.md)의 구현·검증 source는 위 커밋이다. 사용자 C1 승인과
 [PR #125 Verify](https://github.com/goldmayo/oioi-bwg/actions/runs/38029030507) 필수 검사 성공 후
 #125를 squash 병합한 `4313eec`를 fetch해 분기했다. 최초 사용자 변경은 없었다.
 [PR #126](https://github.com/goldmayo/oioi-bwg/pull/126)을 `migration_main` 대상으로 생성했다.

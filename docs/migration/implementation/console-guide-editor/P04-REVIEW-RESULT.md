@@ -12,7 +12,7 @@ verified_at: "2026-10-10"
 
 # P04 리뷰 보완 결과
 
-[계획](P04-REVIEW-PLAN.md)의 세 지적을 `migration_main`의
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P04-REVIEW-PLAN.md)의 세 지적을 `migration_main`의
 `3d8fe31aa1007263f299cf431e01dc9ee983f01c`에서 모두 확인하고 수정했다.
 기존 P04 이관 결과는 당시 검증 기록으로 유지한다.
 

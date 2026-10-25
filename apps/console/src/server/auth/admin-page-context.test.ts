@@ -45,8 +45,8 @@ describe("admin page context", () => {
 
   it("denies an authenticated context without manage all", async () => {
     vi.mocked(getRequestContext).mockResolvedValue({
-      user: { id: "42" },
-      ability: buildAbility({ accountId: "42", role: "USER" }),
+      user: { id: "019a0170-0000-7000-8000-00000000002a" },
+      ability: buildAbility({ accountId: "019a0170-0000-7000-8000-00000000002a", role: "USER" }),
     });
     await expect(getAdminPageContext()).rejects.toBe(forbiddenSignal);
     expect(redirect).not.toHaveBeenCalled();
@@ -54,8 +54,8 @@ describe("admin page context", () => {
 
   it("returns the same request context for an administrator", async () => {
     const context: RequestContext = {
-      user: { id: "42" },
-      ability: buildAbility({ accountId: "42", role: "ADMIN" }),
+      user: { id: "019a0170-0000-7000-8000-00000000002a" },
+      ability: buildAbility({ accountId: "019a0170-0000-7000-8000-00000000002a", role: "ADMIN" }),
     };
     vi.mocked(getRequestContext).mockResolvedValue(context);
     await expect(getAdminPageContext()).resolves.toBe(context);

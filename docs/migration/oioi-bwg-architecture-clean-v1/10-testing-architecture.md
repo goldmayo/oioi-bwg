@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.15
+# oioi-bwg Testing Architecture v1.20
 
 ## 1. 목적
 

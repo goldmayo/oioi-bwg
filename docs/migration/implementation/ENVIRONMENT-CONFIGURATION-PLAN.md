@@ -11,6 +11,8 @@ revision: 4
 
 # 로컬 개발과 OCI 운영 환경변수 구성 개선 계획
 
+> 2026-10-26 정리: ENV-1/3의 이후 구현은 정상화/P06 결과를 따른다. ENV-2 전체 로컬 credential 전환은 미구현이다. 현재 상태·다음 행동은 [WORK](../../WORK.md)를 따른다.
+
 ## 1. 환경 구분과 범위
 
 **dev는 로컬 WSL·Docker Compose, prod는 현재 preview를 제공하는 OCI VM이다.**
@@ -31,7 +33,7 @@ revision: 4
 - [Architecture Constitution](../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md)
 - [Runtime §11–14](../oioi-bwg-architecture-clean-v1/11-content-i18n-assets-runtime-architecture.md): 앱 설정·빌드 입력·Vault 주입의 기준
 - [Deployment Runbook](../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md): Promotion 및 운영 실행 절차
-- [P06 계획](console-guide-editor/P06-PLAN.md): 두 앱 운영 전환 및 레거시 제거의 소유 문서
+- [P06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md): 두 앱 운영 전환 및 레거시 제거의 소유 문서
 - [로컬 개발 가이드](LOCAL-DEVELOPMENT-ENVIRONMENT.md): 구현 후 실제 실행법을 갱신할 소유 문서
 
 ## 2. 확인한 문제
@@ -39,16 +41,16 @@ revision: 4
 관찰 기준은 위 `source_commit`의 추적 파일이다. 개인 `.env*` 파일은 변경 가능한 로컬 설정이며
 저장소 계약의 근거로 삼거나 내용을 PR에 복사하지 않는다. 운영 VM의 실제 파일·DB 상태는 미검증이다.
 
-| 위치 | 확인한 현재 동작 | 개선 필요 |
-| --- | --- | --- |
-| `apps/web/.env.example` | `DATABASE_URL`이 없음 | 호스트에서 Web 실행 시 필요한 DB 입력과 시작 절차 누락 |
-| `compose.dev.yml` | DB명·사용자·비밀번호와 Web 연결 문자열을 고정 | 앱 파일·도구의 연결 정보와 별도 관리됨 |
-| `scripts/dev-console-local.mts` | Console 앱 URL과 별개로 migration URL을 고정 | 로컬 비밀번호 변경 시 migration 연결이 어긋남 |
-| `scripts/run-postgres-integration-tests.ts` | `--local` 관리자 연결 URL을 고정 | 같은 Compose DB의 credential을 따로 가정함 |
-| `scripts/assert-local-database.ts` | Web env 파일을 읽고 hostname만 제한 | 앱 선택·DB명·포트·실행 목적이 불명확함 |
-| `scripts/restore-local-dump.sh` | Compose의 사용자·DB명을 고정 | 연결 설정 전환 시 복원 경로도 함께 정리해야 함 |
-| `NEXT_PUBLIC_APP_ENV` consumer | `local`, `development`, `staging`, `production`을 서로 다르게 해석 | 로컬 로그·metadata·feature flag·Sentry의 기준 불일치 |
-| `NEXT_PUBLIC_ASSETS_URL` | 앱 코드 consumer는 찾지 못했고 로컬 Compose에서 주입 | 사용 중인 `ASSETS_PUBLIC_BASE_URL`과 역할 구분 필요 |
+| 위치                                        | 확인한 현재 동작                                                   | 개선 필요                                              |
+| ------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------ |
+| `apps/web/.env.example`                     | `DATABASE_URL`이 없음                                              | 호스트에서 Web 실행 시 필요한 DB 입력과 시작 절차 누락 |
+| `compose.dev.yml`                           | DB명·사용자·비밀번호와 Web 연결 문자열을 고정                      | 앱 파일·도구의 연결 정보와 별도 관리됨                 |
+| `scripts/dev-console-local.mts`             | Console 앱 URL과 별개로 migration URL을 고정                       | 로컬 비밀번호 변경 시 migration 연결이 어긋남          |
+| `scripts/run-postgres-integration-tests.ts` | `--local` 관리자 연결 URL을 고정                                   | 같은 Compose DB의 credential을 따로 가정함             |
+| `scripts/assert-local-database.ts`          | Web env 파일을 읽고 hostname만 제한                                | 앱 선택·DB명·포트·실행 목적이 불명확함                 |
+| `scripts/restore-local-dump.sh`             | Compose의 사용자·DB명을 고정                                       | 연결 설정 전환 시 복원 경로도 함께 정리해야 함         |
+| `NEXT_PUBLIC_APP_ENV` consumer              | `local`, `development`, `staging`, `production`을 서로 다르게 해석 | 로컬 로그·metadata·feature flag·Sentry의 기준 불일치   |
+| `NEXT_PUBLIC_ASSETS_URL`                    | 앱 코드 consumer는 찾지 못했고 로컬 Compose에서 주입               | 사용 중인 `ASSETS_PUBLIC_BASE_URL`과 역할 구분 필요    |
 
 `packages/server/src/db/index.ts`는 서버 프로세스의 `DATABASE_URL`을 읽는다. Vault를 직접 호출하지
 않으며 URL이 없으면 DB 획득 시 실패한다. `.env.example`은 템플릿이고 자동 로딩 대상이 아니다.
@@ -62,13 +64,13 @@ revision: 4
 
 ### 3.1 로컬 dev
 
-| 입력 | 소유 위치 | 소비자 |
-| --- | --- | --- |
+| 입력                      | 소유 위치                                         | 소비자                                        |
+| ------------------------- | ------------------------------------------------- | --------------------------------------------- |
 | 로컬 PostgreSQL 연결 요소 | 프로젝트 밖 `~/.config/oioi-bwg/postgres.dev.env` | Compose PostgreSQL·로컬 시작 스크립트·DB 도구 |
-| Web 전용 설정·로컬 키 | `apps/web/.env.local` | Web |
-| Console 전용 설정·로컬 키 | `apps/console/.env.local` | Console |
-| 변수 설명과 안전한 예시 | 추적되는 각 `.env.example` 및 로컬 DB 템플릿 | 개발자 |
-| 격리 테스트 credential | 기존 통합 runner의 명시적 테스트 입력 | 임시 DB 테스트 |
+| Web 전용 설정·로컬 키     | `apps/web/.env.local`                             | Web                                           |
+| Console 전용 설정·로컬 키 | `apps/console/.env.local`                         | Console                                       |
+| 변수 설명과 안전한 예시   | 추적되는 각 `.env.example` 및 로컬 DB 템플릿      | 개발자                                        |
+| 격리 테스트 credential    | 기존 통합 runner의 명시적 테스트 입력             | 임시 DB 테스트                                |
 
 로컬 DB 파일은 로컬 연결 요소를 한 번만 저장한다. 전체 URL을 Compose와 여러 스크립트에 복사하지
 않는다. 실제 소비자가 있는 작은 함수로 URL을 조립하고 비밀번호의 특수문자를 올바르게 인코딩한다.
@@ -100,14 +102,14 @@ Compose의 `--env-file`은 YAML 보간 입력이고 서비스의 `env_file`은 �
 
 ### 3.2 OCI prod
 
-| 입력 | 소유 위치 | 소비자 |
-| --- | --- | --- |
-| DB host/port/name/app user 등 host 설정 | 보호된 VM 배포 설정 | host 배포 스크립트 |
-| runtime 비밀 값 | OCI Vault | VM Instance Principal을 사용하는 host 주입 과정 |
-| Secret OCID 매핑 | 보호된 VM 설정 | host 주입 과정 |
-| 공개 앱 설정 | 검토된 host 공개 설정 및 CI 빌드 입력 | 필요한 앱·빌드 |
-| 앱별 runtime env | host가 생성하는 Web/Console별 보호된 파일 | 해당 앱만 |
-| OCIR·Run Command·소스맵 게시 credential | GitHub Environment Secrets | 필요한 CI job만 |
+| 입력                                    | 소유 위치                                 | 소비자                                          |
+| --------------------------------------- | ----------------------------------------- | ----------------------------------------------- |
+| DB host/port/name/app user 등 host 설정 | 보호된 VM 배포 설정                       | host 배포 스크립트                              |
+| runtime 비밀 값                         | OCI Vault                                 | VM Instance Principal을 사용하는 host 주입 과정 |
+| Secret OCID 매핑                        | 보호된 VM 설정                            | host 주입 과정                                  |
+| 공개 앱 설정                            | 검토된 host 공개 설정 및 CI 빌드 입력     | 필요한 앱·빌드                                  |
+| 앱별 runtime env                        | host가 생성하는 Web/Console별 보호된 파일 | 해당 앱만                                       |
+| OCIR·Run Command·소스맵 게시 credential | GitHub Environment Secrets                | 필요한 CI job만                                 |
 
 Vault가 runtime 비밀의 SSOT다. Web/Console 앱 파일은 host가 만드는 실행용 산출물이며 Git에
 저장하지 않는다. Console MFA 키와 서명 키를 Web 파일에 넣지 않는다. DB owner/migrator 비밀번호,

@@ -14,7 +14,7 @@ created_at: "2026-10-21"
 복원했고 Console 공개를 재개했다. 사용자가 일반 브라우저의 HTTPS 로그인·관리 조회·로그아웃 후 재접근 차단도 확인했다.
 아래 기존 미실행 표시는 당시 기록이며 이번 실증 결과로 갱신한다.
 
-[P06 계획 §6](P06-PLAN.md#6-https등록운영자-경계)의 운영자 CLI 경계를 구현했다.
+[P06 계획 §6](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#6-https등록운영자-경계)의 운영자 CLI 경계를 구현했다.
 기준은 위 integration commit이며 실제 구현·검증 commit은 이 결과를 포함한 PR head다.
 초기 구현에서는 실제 VM 설치·MFA reset·공개 접근 변경·Promotion을 수행하지 않았다.
 이 문장의 설치 상태는 아래 2026-10-21 실제 설치 결과로 갱신한다. 당시 검증 이력은 보존한다.
@@ -28,7 +28,7 @@ created_at: "2026-10-21"
   동일 요청 재실행을 막고 결과 불확실 시 자동 재시도하지 않는다.
   HTTP·일반 배포 workflow·ocarun sudoers에 mutation 경로를 추가하지 않았다.
 - 직접 esbuild 의존성만 추가했고 기타 lockfile resolution 변경은 포함하지 않았다.
-  자세한 설치·검토·복구 사용법은 [운영 안내 §10](../../../../ops/oci/README.md#10-console-운영자-cli-p06-d-운영-실증-전)에 둔다.
+  자세한 설치·검토·복구 사용법은 [운영 안내 §10](../../../../ops/oci/README.md#10-console-운영자-cli-p06-d)에 둔다.
 
 ## 실제 검증
 

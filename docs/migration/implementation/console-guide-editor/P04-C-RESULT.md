@@ -11,7 +11,7 @@ verified_at: "2026-10-07"
 
 # Console 편집기와 P04 통합 검증
 
-[P04 계획](P04-PLAN.md)의 마지막 concern이다. [실행 기반](P04-A-RESULT.md),
+[P04 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P04-PLAN.md)의 마지막 concern이다. [실행 기반](P04-A-RESULT.md),
 [관리 화면/API](P04-B-RESULT.md)를 포함하는 브랜치에 기존 편집기와 lyrics API를 연결했다.
 Web 구현과 공통 contracts/server, DB schema/migration은 변경하지 않았다.
 LRC·행/전체 offset·캡처/녹화·강조/추임새·Undo/Redo·저장 payload와 기존 테스트를 보존했다.

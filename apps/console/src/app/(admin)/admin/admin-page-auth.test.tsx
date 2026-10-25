@@ -60,8 +60,8 @@ beforeEach(() => {
     throw missing;
   });
   vi.mocked(getRequestContext).mockResolvedValue({
-    user: { id: "42" },
-    ability: buildAbility({ accountId: "42", role: "ADMIN" }),
+    user: { id: "019a0170-0000-7000-8000-00000000002a" },
+    ability: buildAbility({ accountId: "019a0170-0000-7000-8000-00000000002a", role: "ADMIN" }),
   });
   vi.mocked(listAdminAlbums).mockResolvedValue({ items: [], nextCursor: null });
   vi.mocked(listAdminSongs).mockResolvedValue({ items: [], nextCursor: null });
@@ -81,8 +81,8 @@ describe.each(pages)("%s RSC auth delivery", (_name, render, service) => {
 
   it("requests access denial before a service for an authenticated non-admin", async () => {
     vi.mocked(getRequestContext).mockResolvedValue({
-      user: { id: "42" },
-      ability: buildAbility({ accountId: "42", role: "USER" }),
+      user: { id: "019a0170-0000-7000-8000-00000000002a" },
+      ability: buildAbility({ accountId: "019a0170-0000-7000-8000-00000000002a", role: "USER" }),
     });
     await expect(render()).rejects.toBe(denied);
     expect(service).not.toHaveBeenCalled();

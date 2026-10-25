@@ -8,7 +8,7 @@ verified_at: "2026-10-16"
 
 # P06-B2-2 결과
 
-[P06 계획](P06-PLAN.md) §4/5의 다음 checkpoint다. #148 병합
+[P06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md) §4/5의 다음 checkpoint다. #148 병합
 `18de205ad1b187101922228dfe83678f927238d7`에서 `feature/p06b2-runtime-env`를 분기했다.
 기존 Web의 env 생성을 `materialize-runtime-env.py`로 연결하고 Console 임시 env 검증을 준비했다.
 installer/preflight에 helper를 포함했지만 실제 host에서는 실행하지 않았다. PR/원격 CI는 PR 본문에서 추적한다.

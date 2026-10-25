@@ -11,7 +11,7 @@ updated_at: "2026-10-22"
 # P06-E3 결과
 
 사용자가 공개 Web의 인증 기능을 제거하고 회원 기능은 나중에 추가하도록 확정했다.
-[P06 범위 개정](P06-PLAN.md#2026-10-21-web-인증-종료-개정), 헌법 §5, Auth §4.0,
+[P06 범위 개정](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-21-web-인증-종료-개정), 헌법 §5, Auth §4.0,
 Domain AUTH-001을 같은 변경 단위로 반영한다. 기준은 fetch한 `origin/migration_main`의 `1ae99bb`다.
 구현·검증 코드 commit은 `70b17910e8a5f49bfaf43200555de234145c845e`다.
 로컬 `migration_main`은 `5135f6e`여서 사용하지 않았다. 독립 `feature/p06-web-public-only`에서 작업했다.

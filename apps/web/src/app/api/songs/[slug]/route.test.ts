@@ -12,7 +12,7 @@ vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 import { GET } from "./route";
 
 const song = {
-  id: 104,
+  id: "019a0170-0000-7000-8000-000000000068",
   title: "Harmony",
   slug: "harmony",
   youtubeId: "abcdefghijk",
@@ -21,7 +21,7 @@ const song = {
   isTitle: true,
   order: 1,
   album: {
-    id: 1,
+    id: "019a0170-0000-7000-8000-000000000001",
     name: "Harmony",
     slug: "harmony-album",
     imgUrl: "https://assets.oioibawige.com/harmony.webp",

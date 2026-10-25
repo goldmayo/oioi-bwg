@@ -385,7 +385,7 @@ preview DB에 기존 MFA가 등록돼 있다면 해당 키를 먼저 확보·보
 로컬 개발 키를 재사용하지 않는다. 키 파일을 repo·PR·채팅에 붙여 넣지 않는다.
 
 생성 운영자의 Secret/Vault/Key 범위와 `SECRET_CREATE`·`VAULT_CREATE_SECRET`·`KEY_ENCRYPT`·
-`KEY_DECRYPT`를 먼저 확인한다. 정책별 범위·통과 조건은 [계획 §4.1](P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)을 따른다.
+`KEY_DECRYPT`를 먼저 확인한다. 정책별 범위·통과 조건은 [계획 §4.1](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)을 따른다.
 secret 생성 권한을 VM의 내용 읽기 권한이나 Resource Manager 권한과 합쳐 판단하지 않는다.
 OCI에서 기존 runtime secret이 있는 Vault의 Secrets → Create secret으로 이동한다.
 메뉴를 찾기 어려우면 OCI 검색창의 Vault/Secrets를 사용한다. 두 secret을 각각 생성한다.
@@ -414,7 +414,7 @@ OCI Container Registry에서 기존 `oioi-bwg`의 region·compartment·namespace
 Console repository 이름은 `oioi-bwg-console`을 제안하며 P06 후보 계약에서 확정한다.
 repository는 Terraform이 관리하므로 지금 수동 생성하지 않는다.
 **전체 ARM64 빌드보다 먼저 P06-B0를 통과해야 한다.** 정책 형식·주체별 권한·실제 통과 조건은
-[계획 §4.1](P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)이 소유한다. 다음을 기록한다.
+[계획 §4.1](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)이 소유한다. 다음을 기록한다.
 
 | 확인 화면/근거                                | 보관할 값                                                                                                                               |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -439,7 +439,7 @@ B0 구현 후 승인된 실행 시점에는 아래 순서대로 증거를 기록
 5. 네 단계 성공 후 전체 ARM64 빌드. 실패 시 중단하고 권한 수정 후 실패 검사만 재실행.
 
 helper 존재·`oci os ns get`·기존 probe marker는 위 실증을 대체하지 못한다.
-metadata 차단은 [계획 §4.2](P06-PLAN.md#42-p06-metadata-차단-완료-조건)에 따라 최종 실제 두 앱과
+metadata 차단은 [계획 §4.2](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#42-p06-metadata-차단-완료-조건)에 따라 최종 실제 두 앱과
 재생성/재시작/rollback까지 확인한다. P08로 미루지 않는다.
 
 GitHub → 저장소 Settings → Environments → `oci-development-image`에서 다음 **이름의 존재**를 확인한다.

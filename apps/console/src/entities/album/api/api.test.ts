@@ -15,7 +15,7 @@ import { createAdminAlbum, deleteAdminAlbum, getAdminAlbums, updateAdminAlbum } 
 import { albumQueries } from "./index";
 
 const album = {
-  id: 1,
+  id: "019a0170-0000-7000-8000-000000000001",
   name: "MANITO",
   slug: "manito",
   imgUrl: "https://assets.example.com/manito.webp",
@@ -59,7 +59,7 @@ describe("album browser API", () => {
   it("rejects an invalid response contract", async () => {
     http.get
       .mockResolvedValueOnce([album])
-      .mockResolvedValueOnce({ items: [{ ...album, id: "1" }], nextCursor: null });
+      .mockResolvedValueOnce({ items: [{ ...album, id: 1 }], nextCursor: null });
 
     await expect(getAdminAlbums()).rejects.toThrow("API response contract violation");
     await expect(getAdminAlbums()).rejects.toThrow("API response contract violation");
@@ -75,7 +75,12 @@ describe("album browser API", () => {
     await expect(deleteAdminAlbum(album.id)).resolves.toBeUndefined();
 
     expect(http.post).toHaveBeenCalledWith("/api/admin/albums", { json: input });
-    expect(http.patch).toHaveBeenCalledWith("/api/admin/albums/1", { json: input });
-    expect(http.delete).toHaveBeenCalledWith("/api/admin/albums/1");
+    expect(http.patch).toHaveBeenCalledWith(
+      "/api/admin/albums/019a0170-0000-7000-8000-000000000001",
+      { json: input },
+    );
+    expect(http.delete).toHaveBeenCalledWith(
+      "/api/admin/albums/019a0170-0000-7000-8000-000000000001",
+    );
   });
 });

@@ -60,24 +60,24 @@ export async function insertAlbum(executor: DbExecutor, data: InsertAlbumRow) {
   try {
     return await executor.insert(album).values(data).returning();
   } catch (error) {
-    if (isPostgresUniqueViolation(error, "Album_slug_key")) {
+    if (isPostgresUniqueViolation(error, "album_slug_key")) {
       throw new AlbumSlugConflictError();
     }
     throw error;
   }
 }
 
-export async function updateAlbum(executor: DbExecutor, id: number, data: Partial<InsertAlbumRow>) {
+export async function updateAlbum(executor: DbExecutor, id: string, data: Partial<InsertAlbumRow>) {
   try {
     return await executor.update(album).set(data).where(eq(album.id, id)).returning();
   } catch (error) {
-    if (isPostgresUniqueViolation(error, "Album_slug_key")) {
+    if (isPostgresUniqueViolation(error, "album_slug_key")) {
       throw new AlbumSlugConflictError();
     }
     throw error;
   }
 }
 
-export function removeAlbum(executor: DbExecutor, id: number) {
+export function removeAlbum(executor: DbExecutor, id: string) {
   return executor.delete(album).where(eq(album.id, id)).returning({ id: album.id });
 }

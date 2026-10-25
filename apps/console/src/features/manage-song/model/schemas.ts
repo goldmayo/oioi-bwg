@@ -1,3 +1,4 @@
+import { entityIdSchema } from "@oioi-bwg/contracts/entity-id";
 import type { UpdateAdminSong } from "@oioi-bwg/contracts/song";
 import { z } from "zod";
 
@@ -8,7 +9,7 @@ const songSlugSchema = z
 
 /** 곡 생성 폼의 입력 검증 schema다. */
 export const songFormSchema = z.object({
-  albumId: z.number({ error: "앨범을 선택해주세요." }).min(1, "앨범을 선택해주세요."),
+  albumId: z.string().min(1, "앨범을 선택해주세요.").pipe(entityIdSchema),
   title: z.string().min(1, "곡 제목을 입력해주세요."),
   slug: songSlugSchema,
   youtubeId: z.string().min(1, "YouTube ID를 입력해주세요."),

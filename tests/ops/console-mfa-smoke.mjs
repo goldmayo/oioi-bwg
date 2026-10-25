@@ -135,6 +135,7 @@ export async function assertConsoleSessionBoundary(browser, origin, sql) {
   const legacy = await browser.newContext();
   for (const token of [
     { sub: String(account.id) },
+    { sub: "1", mfaVerified: true, mfaVersion: mfa.version },
     { sub: String(account.id), mfaVerified: true, mfaVersion: mfa.version, expired: true },
   ]) {
     const encoded = await encode({

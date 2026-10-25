@@ -9,10 +9,12 @@ revision: 1
 
 # 순수 관측 정책 공통화 경계와 전환 계획
 
+> 2026-10-26 정리: FWA-04는 설계 완료·runtime 미구현 제안이다. 아래 #199 보류 문구는 10월 23일의 이력이며 P06 F는 이후 종료됐다. 현재 상태·다음 행동은 [WORK](../../WORK.md)를 따른다.
+
 ## 근거와 적용 범위
 
 [감사 FWA-04](FRAMEWORK-STRUCTURE-AUDIT.md)의 설계 산출물이며
-[후속 계획 단위 C](FRAMEWORK-IMPROVEMENT-PLAN.md)를 구체화한다.
+[후속 계획 단위 C](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/FRAMEWORK-IMPROVEMENT-PLAN.md)를 구체화한다.
 기준은 #220 squash인 위 source_commit이다. 감사 당시부터 두 앱의 safe-server-event와
 client-sentry-policy 네 파일이 불변임을 git diff로 확인해 기존 751줄 중복 근거를 재사용했다.
 현재 기능 불일치를 발견한 것은 아니며 공통화 코드는 아직 구현하지 않았다.
@@ -24,16 +26,16 @@ client-sentry-policy 네 파일이 불변임을 git diff로 확인해 기존 751
 
 ## 소유권
 
-| 대상 | 권고 위치와 이유 |
-| --- | --- |
-| toSafeSentryBuildPath / toSafeSentryBuildMetadata | 공통 순수 모듈. release·Debug ID·산출물 경로의 같은 정제 규칙 |
-| toSafeRequestId / toSafeEventId | 공통 순수 모듈 후보. UUID v4·event ID 형식/정규화 규칙 |
-| getSafeBuildRelease, APP_ENV 읽기 | 앱. env/globalThis 및 Next build 입력 해석 경계 |
-| route template·operation allowlist, 요청 header 처리 | 앱. Web 공개 route와 Console 인증/관리 route는 다른 정책 |
-| AppError·Drizzle 분류, 서버 request context | 앱 server adapter. persistence/framework 의존성을 browser로 보내지 않음 |
-| WeakMap correlation·capture 중복 억제 | 앱 lifecycle. 순수 정제와 상태/관측 수명을 분리 |
-| Sentry init/beforeSend 연결, SDK capture/Dedupe | 앱. 현재 SDK API와 최초 관측·중복 억제 계약 유지 |
-| 최종 client/server serializer | 우선 앱 유지. 순수 leaf를 추출하고, 전체 이동은 adapter 입력·출력 동등성을 확인한 후 검토 |
+| 대상                                                 | 권고 위치와 이유                                                                          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| toSafeSentryBuildPath / toSafeSentryBuildMetadata    | 공통 순수 모듈. release·Debug ID·산출물 경로의 같은 정제 규칙                             |
+| toSafeRequestId / toSafeEventId                      | 공통 순수 모듈 후보. UUID v4·event ID 형식/정규화 규칙                                    |
+| getSafeBuildRelease, APP_ENV 읽기                    | 앱. env/globalThis 및 Next build 입력 해석 경계                                           |
+| route template·operation allowlist, 요청 header 처리 | 앱. Web 공개 route와 Console 인증/관리 route는 다른 정책                                  |
+| AppError·Drizzle 분류, 서버 request context          | 앱 server adapter. persistence/framework 의존성을 browser로 보내지 않음                   |
+| WeakMap correlation·capture 중복 억제                | 앱 lifecycle. 순수 정제와 상태/관측 수명을 분리                                           |
+| Sentry init/beforeSend 연결, SDK capture/Dedupe      | 앱. 현재 SDK API와 최초 관측·중복 억제 계약 유지                                          |
+| 최종 client/server serializer                        | 우선 앱 유지. 순수 leaf를 추출하고, 전체 이동은 adapter 입력·출력 동등성을 확인한 후 검토 |
 
 Sentry의 sendDefaultPii=false는 프로젝트의 원문 비노출·allowlist를 대체하지 않는다.
 기존 라이브러리 API를 숨기는 capture framework, lifecycle/registry, 설정 DSL이나 새 전송 sink는 만들지 않는다.

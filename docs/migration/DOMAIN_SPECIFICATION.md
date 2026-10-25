@@ -141,6 +141,21 @@ Waveform은 Cue를 시각적으로 생성·편집하기 위한 편의 데이터�
 
 ---
 
+## DP-008. 도메인 identity는 UUIDv7 단일 PK를 사용한다
+
+2026-10-26 사용자 결정으로 Account·Album·Song 및 이후 독립 도메인 엔티티는 내부 PK와
+외부 DTO에 같은 UUIDv7을 사용한다. 영구 정수 PK + public_id를 두지 않는다. FK와 1:1 공유
+PK는 부모 UUID를 사용하며 순서·카운터·version은 숫자로 유지한다. UUID는 인가 증명이 아니다.
+
+기존 Album·Song의 내용·관계·공개 slug·자산 URL을 보존한다. 지정 Console 관리자의
+credential/MFA 재등록을 다른 계정·콘텐츠의 초기화로 확대하지 않는다. 공개 가입 폐쇄 정책도 유지한다.
+인증 challenge의 기존 UUIDv4와 rate-limit 자연 복합 PK는 별도 계약으로 보존한다.
+
+목표 계약이며 현재 숫자 스키마/DTO의 전환 완료 선언이 아니다. 전환 이유와 적용 경계는
+[ADR 0009](../adr/0009-uuid-domain-identity.md), 실제 진행 상태는 [WORK](../WORK.md)가 소유한다.
+
+---
+
 # 3. Domain Glossary
 
 | 용어 | 정의 |
@@ -297,6 +312,12 @@ Web은 기존 Account에도 일반 로그인·세션/권한 API를 제공하지 
 기존 Account·credential·기여 이력은 삭제하지 않는다. 이전 일반 로그인 유지 전제는 사용자 정정으로
 폐기하며, 일반 회원 기능은 별도 요구가 생길 때 추가한다. 아래 가입 방식과 프로세스는 향후 재개 시의 계약이며,
 이번 중단이 별도 관리자 생성이나 OAuth 가입을 허용하는 것은 아니다.
+
+2026-10-26 UUID 전환 예외로, 명시적으로 지정한 기존 ACTIVE ADMIN의 credential/MFA만
+재등록할 수 있다. Account/Profile은 UUID 매핑으로 보존하고 운영자 전용 경로가 대상·예상 MFA
+version·승인 사유·DB 인스턴스를 검증한다. 기존 credential이 없고 MFA가 초기화된 경우에만
+새 Email/Password를 등록한다. 이는 신규 Account 생성·권한 승격·공개 가입이나 HTTP bootstrap을
+허용하지 않는다. 재등록 후 기존 AUTH-009의 MFA 등록/확인·로그인 절차를 적용한다.
 
 Google/Kakao OAuth는 Account 생성 수단이 아니라 기존 Account에 연결되는 추가 로그인 수단이다.
 

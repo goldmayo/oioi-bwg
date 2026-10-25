@@ -25,37 +25,43 @@ describe("AUTH-009 Console MFA secret encryption", () => {
   });
 
   it("round trips with fresh 12-byte nonces and 16-byte tags without plaintext", () => {
-    const first = encryptAdminMfaSecret(1n, secret, key);
-    const second = encryptAdminMfaSecret(1n, secret, key);
+    const first = encryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", secret, key);
+    const second = encryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", secret, key);
     expect(first).not.toEqual(second);
     expect(first).not.toContain(secret);
     const parts = first.split(".");
     expect(parts[0]).toBe("v1");
     expect(Buffer.from(parts[1]!, "base64url")).toHaveLength(12);
     expect(Buffer.from(parts[2]!, "base64url")).toHaveLength(16);
-    expect(decryptAdminMfaSecret(1n, first, key)).toBe(secret);
-    expect(decryptAdminMfaSecret(1n, second, key)).toBe(secret);
+    expect(decryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", first, key)).toBe(secret);
+    expect(decryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", second, key)).toBe(secret);
   });
 
   it("rejects ciphertext transfer between accounts, wrong keys, and invalid key lengths", () => {
-    const envelope = encryptAdminMfaSecret(1n, secret, key);
-    expect(() => decryptAdminMfaSecret(2n, envelope, key)).toThrow(AdminMfaCryptoError);
-    expect(() => decryptAdminMfaSecret(1n, envelope, randomBytes(32))).toThrow(AdminMfaCryptoError);
-    expect(() => decryptAdminMfaSecret(1n, envelope, Buffer.alloc(16))).toThrow(
-      AdminMfaCryptoError,
-    );
-    expect(() => encryptAdminMfaSecret(1n, secret, Buffer.alloc(16))).toThrow(AdminMfaCryptoError);
+    const envelope = encryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", secret, key);
+    expect(() =>
+      decryptAdminMfaSecret("019a0170-0000-7000-8000-000000000002", envelope, key),
+    ).toThrow(AdminMfaCryptoError);
+    expect(() =>
+      decryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", envelope, randomBytes(32)),
+    ).toThrow(AdminMfaCryptoError);
+    expect(() =>
+      decryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", envelope, Buffer.alloc(16)),
+    ).toThrow(AdminMfaCryptoError);
+    expect(() =>
+      encryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", secret, Buffer.alloc(16)),
+    ).toThrow(AdminMfaCryptoError);
   });
 
   it("rejects tampered nonce, tag, and ciphertext with sanitized errors", () => {
-    const envelope = encryptAdminMfaSecret(1n, secret, key);
+    const envelope = encryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", secret, key);
     for (const index of [1, 2, 3]) {
       const parts = envelope.split(".");
       const bytes = Buffer.from(parts[index]!, "base64url");
       bytes[0] = bytes[0]! ^ 1;
       parts[index] = bytes.toString("base64url");
       try {
-        decryptAdminMfaSecret(1n, parts.join("."), key);
+        decryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", parts.join("."), key);
         throw new Error("변조를 거절해야 함");
       } catch (error) {
         expect(error).toBeInstanceOf(AdminMfaCryptoError);
@@ -66,7 +72,7 @@ describe("AUTH-009 Console MFA secret encryption", () => {
   });
 
   it("rejects unknown formats, malformed segments, and extra/truncated parts", () => {
-    const envelope = encryptAdminMfaSecret(1n, secret, key);
+    const envelope = encryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", secret, key);
     for (const value of [
       "",
       envelope.replace("v1.", "v2."),
@@ -76,8 +82,12 @@ describe("AUTH-009 Console MFA secret encryption", () => {
       envelope.replace("v1.", "v1.!"),
       `${envelope}=`,
     ]) {
-      expect(() => decryptAdminMfaSecret(1n, value, key)).toThrow(AdminMfaCryptoError);
+      expect(() =>
+        decryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", value, key),
+      ).toThrow(AdminMfaCryptoError);
     }
-    expect(() => encryptAdminMfaSecret(1n, "", key)).toThrow(AdminMfaCryptoError);
+    expect(() => encryptAdminMfaSecret("019a0170-0000-7000-8000-000000000001", "", key)).toThrow(
+      AdminMfaCryptoError,
+    );
   });
 });

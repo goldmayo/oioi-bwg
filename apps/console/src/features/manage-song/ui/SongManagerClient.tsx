@@ -45,7 +45,7 @@ export function SongManagerClient({
     const query = search.toLowerCase();
     return songs.filter(
       (song) =>
-        (albumFilter === "all" || song.albumId === Number(albumFilter)) &&
+        (albumFilter === "all" || song.albumId === albumFilter) &&
         (!query ||
           [song.title, song.slug ?? "", song.album.name].some((value) =>
             value.toLowerCase().includes(query),

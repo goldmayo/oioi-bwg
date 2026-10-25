@@ -12,7 +12,7 @@ verified_source:
 
 # P06 선택적 재사용 결과
 
-[P06 계획 개정](P06-PLAN.md#2026-10-17-선택적-재사용-개정)을 최신 main `18de205`에서 시작했다.
+[P06 계획 개정](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-17-선택적-재사용-개정)을 최신 main `18de205`에서 시작했다.
 #147/#148 MERGED, #149 OPEN(`c19d0a7`)을 GitHub에서 확인했다. 기존 worktree·개인 env·MFA/DB는 보존한다.
 
 첫 concern은 `promotion.mjs`의 릴리스 source와 image build source 분리, canonical pair hash,

@@ -12,10 +12,8 @@ revision: 19
 # 구현 순서와 PR 단위
 
 [설계](DESIGN.md)를 구현하는 **10개 checkpoint**다. 전체 방향 승인 후 runtime/검증 구조 수정 지시를 반영했다.
-Console 배포를 P06으로 앞당긴 독립 기능 작업선을 유지하고, P04 이후의 인증 checkpoint는
-[P05 설계 초안](P05-DESIGN.md)에서 상세화한다. 이번 개정은 Auth.js 실패 계약·동시 등록 응답·
-단계별 검증 fixture·운영 회수 경로를 보완한다. 이 문서 PR에는 앱·DB·인증·runner/worker 코드가 없다.
-전체 단계의 최초 소스 기준은 metadata에 유지하며 단계별 실행 내역은 각 PLAN/RESULT에서 확인한다.
+P01~P06의 완료·검증은 [완료 지도](../COMPLETED-DESIGN-INDEX.md)와 각 RESULT에 둔다.
+이 문서는 기능별 범위·의존성·완료 조건을 소유한다. 현재 상태·별도 후속의 유일한 목록은 [WORK](../../../WORK.md)다.
 
 **현재 checkpoint(2026-10-25): P06 A~F 전체 완료·종료 / 다음 P07.**
 [P06 전체 결과](P06-RESULT.md)가 완료 근거와 별도 후속을 소유한다. G 계정 관리·추가 부하 실험은
@@ -94,34 +92,9 @@ Runner의 내부 API 기록 후 socket 응답만 유실된 경우와, 기록도 
 그 이후에만 기존 stale-job 점검으로 정리하며, 늦은 전달 확인/consume과 경합해 진행된 상태를 역전하지 않아야 한다.
 이 검증에 Outbox/DB queue/retry scheduler/분산 transaction/범용 reconciliation·broker abstraction을 추가하지 않는다.
 
-P06 초기 순서는 Web 관리 종료 뒤 Console 공개였으나, 2026-10-21 회사 브라우저 검증 요청으로 개정했다.
-현재 순서는 **보안 패치·기존 MFA/HTTPS 경계 확인 → C의 Console 지속 개방·실제 로그인 검증 →
-D의 실물 회수/비공개 재등록·복구 → E의 Web 인증/관리/가입 종료 → F의 www·레거시 전환**이다.
-[공개 유지 개정](P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)이 정확한 범위와 실패 복구 조건을 소유한다.
-Console 접속에 30분 자동 종료를 적용하지 않는다. D 작업에 필요한 비공개 등록은 그대로 유지한다.
-2026-10-21 정상 HTTPS 지속 공개 후 사용자가 로그인 성공을 확인했고, 후속 로그인 UX 수정도 #182로 배포했다.
-사용자는 D 실물 MFA 회수·새 등록 뒤 HTTPS 새 로그인·관리 조회·로그아웃 후 재접근 차단을 확인했다.
-[D 운영 결과](P06-D1-RESULT.md#2026-10-21-실물-mfa-회수재등록과-https-설정-복원)를 따르며,
-기존 범위의 E host 차단과 #189 배포는 성공했으나, 사용자가 공개 Web의 일반 로그인도 제거하도록 정정했다.
-당시 E 완료 보고를 철회한 이력은 [E2 범위 정정](P06-E2-RESULT.md#2026-10-21-사용자-범위-정정--e-완료-보고-철회)에 보존한다.
-2026-10-22 상위 문서 개정·Web 인증 제거·host 인증 차단 및 정상 Promotion #193 배포를 마쳐 E를 완료했다.
-[E3 운영 결과](P06-E3-RESULT.md#2026-10-22-배포-완료와-실제-서비스-검증)가 최신 배포·검증 상태를 소유한다.
-실제로 관찰하지 못한 인증 cookie 속성/preview 격리는 최종 hostname 검증에서 대조한다.
-위 E 기록 이후 2026-10-25 정상 Promotion #246과 실제 검증으로 **F 운영 전환을 완료**했다.
-preview의 OCI Web을 최종 www로 전환했고 apex는 경로·query를 보존해 www로 이동한다.
-Console 실물 인증·업로드·cookie와 최종 www를 확인한 뒤 기존 Web Worker 두 개·staging·preview·옛 배포 경로를 종료했다.
-assets/R2·Console·기존 DB/MFA·독립 Worker·메일은 보존했다.
-[F 운영 결과](P06-F1-RESULT.md#2026-10-25-실제-운영-전환)가 최신 배포·실제 값·복구·한계를 소유한다.
-추가 동시 CRUD/장기 부하 실험은 이번 DB 불변 범위에서 수행하지 않았고, G·P07~P10은 후속이다.
-단일 VM의 기존 Promotion·OCI Run Command를 유지하는 세부 PR 분할과 두 앱 복구 계획은
-[P06 계획 초안](P06-PLAN.md)을 참조한다. 계획 작성은 환경 적용이나 공개 승인을 의미하지 않는다.
-기존 preview 관리자 계정을 사용하는 사전 준비 절차는 [P06 사전 준비 안내](P06-PREPARATION.md)에 둔다.
-A~F의 관리자 생성·공인 IP 설정 제외와 E의 공개 회원가입 종료 범위는 유지한다.
-2026-10-21 사용자 요청으로 F 뒤에 [P06-G 계정 관리 계획](P06-G-PLAN.md)을 추가한다.
-G는 계정 조회·관리자 초대·HTTPS MFA 등록/복구·권한/상태 변경·변경 이력의 후속 기능이며,
-상세 정책은 아직 제안이다. G0에서 Domain/active architecture를 개정한 뒤 구현한다.
-F까지의 운영 전환 완료와 G의 기능 완료를 분리하며 기존 D·E·F 검증을 G로 넘기지 않는다.
-P04/P05의 기존 기능과 인가 확인 전에는 기존 경로를 지우지 않는다. rollback도 password-only 관리 경로를 다시 공개하지 않는다.
+P06의 공개 유지·Web 인증 종료·F 전환은 [전체 결과](P06-RESULT.md)와 단계별 RESULT로 추적한다.
+사전 준비/임시 검증 창의 재개 지시는 현재 절차가 아니다. 반복 작업은 [운영 안내](../../../../ops/oci/README.md)를 따른다.
+P06-G는 별도 제안이며 구현 전 Domain/active 계약 개정이 필요하다. P07 선행 조건이 아니다.
 Guide writer 전환 뒤 rollback은 새 guide를 읽는 호환 앱으로 제한하고 Song.lyrics의 파괴적 정리는 후속으로 둔다.
 
 각 구현 PR은 `migration_main`을 대상으로 repository template과 한글 Conventional Commit → push → PR 절차를 따른다.

@@ -11,7 +11,7 @@ completed_at: "2026-10-25"
 
 # 모노레포 audit 후속 BuildKit 캐시 보관 개선 결과
 
-[후속 PLAN](MONOREPO-AUDIT-FOLLOWUP-PLAN.md)의 2단계다. 1단계 Root 정리는
+[후속 PLAN](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-AUDIT-FOLLOWUP-PLAN.md)의 2단계다. 1단계 Root 정리는
 [PR #242](https://github.com/goldmayo/oioi-bwg/pull/242)이며 이 브랜치의 구현과 독립적이다.
 두 브랜치는 확인한 같은 통합선에서 분기하고 동일한 계획 내용을 공유한다.
 

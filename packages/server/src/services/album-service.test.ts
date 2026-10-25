@@ -27,7 +27,7 @@ vi.mock("../repositories/album-repository", () => ({
 import { createAlbum, editAlbum, listAdminAlbums } from "./album-service";
 
 const context = {
-  user: { id: "1" },
+  user: { id: "019a0170-0000-7000-8000-000000000001" },
   ability: { cannot: () => false },
 } as never;
 const input = {
@@ -46,7 +46,7 @@ describe("album-service admin list DTO", () => {
     const album = {
       ...input,
       createdAt: "2026-01-01T00:00:00.000Z",
-      id: 1,
+      id: "019a0170-0000-7000-8000-000000000001",
     };
     findAllAlbums.mockResolvedValue([album]);
 
@@ -69,7 +69,9 @@ describe("album-service unique conflicts", () => {
     await expect(createAlbum(context, input)).rejects.toMatchObject({
       code: "ALBUM_SLUG_ALREADY_EXISTS",
     });
-    await expect(editAlbum(context, 1, input)).rejects.toMatchObject({
+    await expect(
+      editAlbum(context, "019a0170-0000-7000-8000-000000000001", input),
+    ).rejects.toMatchObject({
       code: "ALBUM_SLUG_ALREADY_EXISTS",
     });
   });

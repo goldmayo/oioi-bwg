@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { entityIdSchema } from "./entity-id";
+
 import { albumDetailSchema } from "./album";
 
 export const songSlugParamsSchema = z.object({
@@ -7,7 +9,7 @@ export const songSlugParamsSchema = z.object({
 });
 
 export const adminSongIdParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: entityIdSchema,
 });
 
 export const lyricSegmentSchema = z.object({
@@ -31,7 +33,7 @@ const adminSongSlugSchema = z
   .regex(/^[a-z0-9-]+$/);
 
 const adminSongFieldsSchema = z.object({
-  albumId: z.number().int().positive(),
+  albumId: entityIdSchema,
   title: z.string().trim().min(1),
   youtubeId: z.string().trim().min(1),
   hasOfficialCheer: z.boolean(),
@@ -56,7 +58,7 @@ export const saveAdminSongLyricsSchema = z.object({
 });
 
 export const adminSongSummarySchema = adminSongFieldsSchema.extend({
-  id: z.number().int().positive(),
+  id: entityIdSchema,
   slug: adminSongSlugSchema.nullable(),
   updatedAt: z.string(),
   album: z.object({ name: z.string() }),
@@ -68,11 +70,11 @@ export const adminSongListSchema = z.object({
 });
 
 export const adminSongMutationResultSchema = z.object({
-  id: z.number().int().positive(),
+  id: entityIdSchema,
 });
 
 export const songDetailSchema = z.object({
-  id: z.number().int(),
+  id: entityIdSchema,
   title: z.string(),
   slug: z.string(),
   youtubeId: z.string(),

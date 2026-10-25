@@ -9,6 +9,7 @@
     "./auth/ability": "./src/auth/ability.ts",
     "./auth/request-context": "./src/auth/request-context.ts",
     "./db": "./src/db/index.ts",
+    "./db/entity-id": "./src/db/entity-id.ts",
     "./db/postgres-error": "./src/db/postgres-error.ts",
     "./db/schema": "./src/db/schema.ts",
     "./email/oci-email-delivery": "./src/email/oci-email-delivery.ts",
@@ -25,6 +26,7 @@
     "./services/album-service": "./src/services/album-service.ts",
     "./services/authentication-service": "./src/services/authentication-service.ts",
     "./services/console-mfa-service": "./src/services/console-mfa-service.ts",
+    "./services/console-admin-bootstrap-service": "./src/services/console-admin-bootstrap-service.ts",
     "./services/console-mfa-revocation-service": "./src/services/console-mfa-revocation-service.ts",
     "./services/email-verification-service": "./src/services/email-verification-service.ts",
     "./services/signup-service": "./src/services/signup-service.ts",
@@ -46,7 +48,8 @@
     "otplib": "13.5.0",
     "postgres": "^3.4.8",
     "zod": "^4.3.6",
-    "server-only": "0.0.1"
+    "server-only": "0.0.1",
+    "uuid": "13.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",

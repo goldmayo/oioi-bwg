@@ -3,13 +3,21 @@ title: "As-Is 주요 사용자 프로세스 목록"
 document_id: "RE-PROCESS-001"
 version: "0.1.3"
 status: "draft"
-authority: "plan"
+kind: reverse-engineering
+snapshot_mode: frozen
+source:
+  repository: goldmayo/oioi-bwg
+  branch: unknown
+  commit: unknown
 updated_at: "2026-09-05"
 tags:
   - "reverse-engineering"
   - "process"
   - "as-is"
 ---
+
+> 2026-10-26 보존 안내: 2026-09-05의 문서 snapshot이며 분석한 코드 source는 unknown이다. 본문의 현재는 당시 관찰을 뜻한다. [대표 사본·출처](../README.md)를 따르며 현행 코드로 갱신한 문서가 아니다.
+
 
 ## Change Log
 

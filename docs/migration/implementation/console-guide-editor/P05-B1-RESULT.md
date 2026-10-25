@@ -8,7 +8,7 @@ created_at: "2026-10-10"
 
 # P05-B1 결과
 
-[계획](P05-B1-PLAN.md)의 첫 검증 단위인 암호화/TOTP 기반을 구현했다.
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P05-B1-PLAN.md)의 첫 검증 단위인 암호화/TOTP 기반을 구현했다.
 P05-A는 [최신 Verify](https://github.com/goldmayo/oioi-bwg/actions/runs/38016975845)의 필수 job 성공 후
 PR #121을 `7c65c9a`로 squash 병합했다. 위 source는 이를 기준으로 만든 B1 구현 커밋이다.
 

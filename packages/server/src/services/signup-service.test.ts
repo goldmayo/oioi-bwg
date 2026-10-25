@@ -34,20 +34,27 @@ describe("completeSignup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.consumeVerifiedChallenge.mockResolvedValue([{ email: "user@example.com" }]);
-    mocks.insertAccount.mockResolvedValue([{ id: 42n }]);
+    mocks.insertAccount.mockResolvedValue([{ id: "019a0170-0000-7000-8000-00000000002a" }]);
     mocks.insertProfile.mockResolvedValue(undefined);
     mocks.insertPasswordCredential.mockResolvedValue(undefined);
   });
 
   it("consumes a verified challenge and creates the identity rows", async () => {
     await expect(completeSignup("challenge-id", "Password!123", " user ")).resolves.toEqual({
-      accountId: "42",
+      accountId: "019a0170-0000-7000-8000-00000000002a",
     });
     expect(mocks.consumeVerifiedChallenge).toHaveBeenCalled();
-    expect(mocks.insertProfile).toHaveBeenCalledWith(expect.anything(), 42n, "user");
+    expect(mocks.insertProfile).toHaveBeenCalledWith(
+      expect.anything(),
+      "019a0170-0000-7000-8000-00000000002a",
+      "user",
+    );
     expect(mocks.insertPasswordCredential).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ email: "user@example.com", accountId: 42n }),
+      expect.objectContaining({
+        email: "user@example.com",
+        accountId: "019a0170-0000-7000-8000-00000000002a",
+      }),
     );
   });
 

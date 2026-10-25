@@ -14,7 +14,7 @@ export default defineConfig({
       enforce: "pre",
       transform(code, id) {
         if (
-          !/\/(?:AlbumManagerTable|SongManagerTable)\.tsx$|\/packages\/ui\/src\/data-table\.tsx$/.test(
+          !/\/(?:AlbumManagerTable|SongManagerTable)\.tsx$|\/packages\/ui\/src\/data-table(?:\/[^/]+)?\.tsx$/.test(
             id,
           )
         )

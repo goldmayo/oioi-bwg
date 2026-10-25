@@ -43,6 +43,13 @@
       "when": 1791598021368,
       "tag": "0005_p05a_admin_mfa",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792949287809,
+      "tag": "0006_uuid_pk_cutover",
+      "breakpoints": true
     }
   ]
 }

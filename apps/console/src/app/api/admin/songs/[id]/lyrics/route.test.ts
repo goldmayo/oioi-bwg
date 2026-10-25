@@ -19,8 +19,8 @@ vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
 import { PATCH } from "./route";
 
-const context = { ability: {}, user: { id: "1" } };
-const routeContext = { params: Promise.resolve({ id: "2" }) };
+const context = { ability: {}, user: { id: "019a0170-0000-7000-8000-000000000001" } };
+const routeContext = { params: Promise.resolve({ id: "019a0170-0000-7000-8000-000000000002" }) };
 const input = {
   lyrics: [
     {
@@ -39,40 +39,53 @@ describe("/api/admin/songs/[id]/lyrics", () => {
   });
 
   it("saves validated structured lyrics", async () => {
-    saveSongLyrics.mockResolvedValue({ id: 2 });
+    saveSongLyrics.mockResolvedValue({ id: "019a0170-0000-7000-8000-000000000002" });
 
     const response = await PATCH(
-      new Request("https://example.test/api/admin/songs/2/lyrics", {
-        body: JSON.stringify(input),
-        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
-        method: "PATCH",
-      }),
+      new Request(
+        "https://example.test/api/admin/songs/019a0170-0000-7000-8000-000000000002/lyrics",
+        {
+          body: JSON.stringify(input),
+          headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
+          method: "PATCH",
+        },
+      ),
       routeContext,
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ id: 2 });
-    expect(saveSongLyrics).toHaveBeenCalledWith(context, 2, input);
+    expect(await response.json()).toEqual({ id: "019a0170-0000-7000-8000-000000000002" });
+    expect(saveSongLyrics).toHaveBeenCalledWith(
+      context,
+      "019a0170-0000-7000-8000-000000000002",
+      input,
+    );
   });
 
   it("maps invalid input and a missing song", async () => {
     const invalid = await PATCH(
-      new Request("https://example.test/api/admin/songs/2/lyrics", {
-        body: JSON.stringify({ ...input, lyrics: [{ invalid: true }] }),
-        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
-        method: "PATCH",
-      }),
+      new Request(
+        "https://example.test/api/admin/songs/019a0170-0000-7000-8000-000000000002/lyrics",
+        {
+          body: JSON.stringify({ ...input, lyrics: [{ invalid: true }] }),
+          headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
+          method: "PATCH",
+        },
+      ),
       routeContext,
     );
     expect(invalid.status).toBe(400);
 
     saveSongLyrics.mockRejectedValue(new AppError("SONG_NOT_FOUND"));
     const missing = await PATCH(
-      new Request("https://example.test/api/admin/songs/2/lyrics", {
-        body: JSON.stringify(input),
-        headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
-        method: "PATCH",
-      }),
+      new Request(
+        "https://example.test/api/admin/songs/019a0170-0000-7000-8000-000000000002/lyrics",
+        {
+          body: JSON.stringify(input),
+          headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
+          method: "PATCH",
+        },
+      ),
       routeContext,
     );
     expect(missing.status).toBe(404);
