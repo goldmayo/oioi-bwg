@@ -23,12 +23,13 @@ export async function generateMetadata({ params }: AlbumPageProps) {
   const { slug } = await params;
   const album = await getAlbumDetail(slug);
 
-  if (!album) return {};
+  if (!album) notFound();
 
   return constructMetadata({
-    title: album.name,
+    title: `${album.name} 수록곡·응원법`,
+    path: `/albums/${encodeURIComponent(album.slug)}`,
     description: `${album.name} 앨범의 수록곡 리스트와 응원법 정보를 확인하세요.`,
-    image: `/images/albums/${album.slug}.webp`,
+    image: album.imgUrl || undefined,
   });
 }
 

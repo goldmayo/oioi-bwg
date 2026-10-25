@@ -49,6 +49,7 @@ export function findVisibleSongs(executor: DbExecutor) {
     columns: {
       id: true,
       title: true,
+      youtubeId: true,
       slug: true,
       albumId: true,
       order: true,
@@ -57,6 +58,7 @@ export function findVisibleSongs(executor: DbExecutor) {
       isTitle: true,
       isVisible: true,
     },
+    with: { album: { columns: { isVisible: true } } },
     orderBy: (table, { asc }) => [asc(table.order)],
   });
 }

@@ -5,6 +5,7 @@ import { AppError } from "../errors/app-error";
 import { SongSlugConflictError } from "../repositories/repository-error";
 
 const insertSong = vi.hoisted(() => vi.fn());
+const findVisibleSongs = vi.hoisted(() => vi.fn());
 const findAdminSongBySlug = vi.hoisted(() => vi.fn());
 const findSongBySlug = vi.hoisted(() => vi.fn());
 const findSongSlugById = vi.hoisted(() => vi.fn());
@@ -24,7 +25,7 @@ vi.mock("../repositories/song-repository", () => ({
   findSongBySlug,
   findSongSlugById,
   findSongsWithAlbum,
-  findVisibleSongs: vi.fn(),
+  findVisibleSongs,
   insertSong,
   removeSong: vi.fn(),
   updateSong,
@@ -37,6 +38,7 @@ import {
   getAdminSongEditorBySlug,
   getSongDetailBySlug,
   listAdminSongs,
+  listVisibleSongsForSitemap,
   saveSongLyrics,
 } from "./song-service";
 
@@ -359,5 +361,36 @@ describe("song-service public DTO boundary", () => {
         },
       ],
     });
+  });
+});
+
+describe("song-service sitemap public visibility", () => {
+  const visible = {
+    id: 7,
+    title: "Public song",
+    slug: "public-song",
+    youtubeId: "abcdefghijk",
+    updatedAt: "2026-10-25T01:00:00Z",
+    album: { isVisible: true },
+  };
+
+  it("excludes hidden-parent and unrenderable songs and exposes only sitemap fields", async () => {
+    findVisibleSongs.mockResolvedValue([
+      visible,
+      { ...visible, slug: "hidden-parent", album: { isVisible: false } },
+      { ...visible, slug: "missing-video", youtubeId: null },
+      { ...visible, slug: "missing-title", title: null },
+      { ...visible, slug: null },
+    ]);
+    await expect(listVisibleSongsForSitemap()).resolves.toEqual([
+      { slug: visible.slug, updatedAt: visible.updatedAt },
+    ]);
+  });
+
+  it("keeps a renderable song even when its legacy modification date is absent", async () => {
+    findVisibleSongs.mockResolvedValue([{ ...visible, updatedAt: null }]);
+    await expect(listVisibleSongsForSitemap()).resolves.toEqual([
+      { slug: visible.slug, updatedAt: null },
+    ]);
   });
 });

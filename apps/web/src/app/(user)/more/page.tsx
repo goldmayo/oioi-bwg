@@ -1,6 +1,7 @@
 import { AlertCircle, ChevronRight, History, Megaphone, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
+import { constructMetadata } from "@/shared/lib/metadata";
 import { cn } from "@/shared/lib/utils";
 
 import { MoreHeader } from "./_ui/more-common";
@@ -62,6 +63,12 @@ const MAIN_MENU = [
 // ----------------------------------------------------------------------
 // 2. 서버 컴포넌트 구현
 // ----------------------------------------------------------------------
+export const metadata = constructMetadata({
+  title: "서비스 안내",
+  path: "/more",
+  description: "어이어이바위게의 공지사항, 업데이트 내역과 이용 안내를 확인하세요.",
+});
+
 export default function MorePage() {
   return (
     <div className="container mx-auto min-h-screen px-4 pt-12 pb-32 lg:pt-24 lg:pb-40">

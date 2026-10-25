@@ -1,3 +1,4 @@
+import { listVisibleAlbumsWithSongs } from "@oioi-bwg/server/services/album-service";
 import { listVisibleSongsForSitemap } from "@oioi-bwg/server/services/song-service";
 import { MetadataRoute } from "next";
 
@@ -5,32 +6,25 @@ import { SITE_CONFIG } from "@/shared/config/site";
 
 export const dynamic = "force-dynamic";
 
-/**
- * 동적 사이트맵 생성
- * 모든 곡 상세 페이지를 검색 엔진에 노출시킵니다.
- */
+/** 실제 공개 reader가 제공하는 URL만 검색 엔진에 알린다. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = SITE_CONFIG.url;
+  const [songs, albums] = await Promise.all([
+    listVisibleSongsForSitemap(),
+    listVisibleAlbumsWithSongs(),
+  ]);
+  const url = (path: string) => new URL(path, SITE_CONFIG.url).toString();
 
-  // 1. 모든 곡 데이터 가져오기
-  const songs = await listVisibleSongsForSitemap();
-
-  // 2. 곡 상세 페이지 URL 목록 생성
-  const songUrls = songs.map((song) => ({
-    url: `${baseUrl}/songs/${song.slug}`,
-    lastModified: new Date(song.updatedAt),
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
-
-  // 3. 기본 페이지 URL 목록
   return [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1,
-    },
-    ...songUrls,
+    ...["/", "/chants", "/more", "/more/notice", "/more/updates", "/more/policy"].map((path) => ({
+      url: url(path),
+    })),
+    ...albums.map((album) => ({ url: url(`/albums/${encodeURIComponent(album.slug)}`) })),
+    ...songs.map((song) => {
+      const lastModified = song.updatedAt ? new Date(song.updatedAt) : undefined;
+      return {
+        url: url(`/songs/${encodeURIComponent(song.slug)}`),
+        ...(lastModified && !Number.isNaN(lastModified.getTime()) ? { lastModified } : {}),
+      };
+    }),
   ];
 }
