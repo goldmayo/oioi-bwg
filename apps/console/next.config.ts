@@ -1,59 +1,24 @@
-import path from "node:path";
-
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+import { createNextConfig } from "@oioi-bwg/config/next";
+import { createSentryBuildOptions } from "@oioi-bwg/config/sentry-build";
+import { validateAppEnvironment } from "./src/shared/config/app-env";
 import { getSentryBuildConfig } from "./src/shared/config/sentry-build";
 
+validateAppEnvironment();
+
+const sharedNextConfig = createNextConfig(import.meta.dirname);
 const nextConfig: NextConfig = {
-  output: "standalone",
-  transpilePackages: ["@oioi-bwg/contracts", "@oioi-bwg/server"],
-  outputFileTracingRoot: path.resolve(import.meta.dirname, "../.."),
+  ...sharedNextConfig,
   experimental: {
+    ...sharedNextConfig.experimental,
     authInterrupts: true,
-    turbopackFileSystemCacheForBuild: process.env.OIOI_EPHEMERAL_BUILD !== "true",
   },
-  reactCompiler: true,
-  allowedDevOrigins: ["localhost", "127.0.0.1"],
-  images: {
-    unoptimized: true,
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "assets.oioibawige.com",
-        port: "",
-        pathname: "/**",
-      },
-    ],
-  },
-  logging: {
-    fetches: {
-      fullUrl: true,
-    },
-  },
-  serverExternalPackages: ["postgres"],
 };
 
 const sentryBuildConfig = getSentryBuildConfig();
 
 export default sentryBuildConfig.enabled
-  ? withSentryConfig(nextConfig, {
-      authToken: sentryBuildConfig.authToken,
-      org: sentryBuildConfig.org,
-      project: sentryBuildConfig.project,
-      telemetry: false,
-      routeManifestInjection: false,
-      suppressOnRouterTransitionStartWarning: true,
-      errorHandler(error) {
-        throw error;
-      },
-      release: {
-        name: sentryBuildConfig.release,
-        create: true,
-        finalize: true,
-      },
-      sourcemaps: {
-        filesToDeleteAfterUpload: [".next/**/*.map"],
-      },
-    })
+  ? withSentryConfig(nextConfig, createSentryBuildOptions(sentryBuildConfig))
   : nextConfig;

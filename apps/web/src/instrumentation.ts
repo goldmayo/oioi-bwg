@@ -6,6 +6,8 @@ import {
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
 import { getSentryRuntimeConfig } from "@/shared/config/sentry";
+import { readRequestObservation } from "@/shared/lib/sentry/correlation";
+import { getSentryRouteMetadata } from "@/shared/lib/sentry-route-metadata";
 
 /**
  * Next.js instrumentation hook for the Node runtime.
@@ -37,9 +39,12 @@ export async function onRequestError(
   request: Readonly<{ method: string; [key: string]: unknown }>,
   context: unknown,
 ) {
+  const route = getSentryRouteMetadata(readContextValue(context, "routePath"));
   reportServerError(error, {
     event: "next.request_error",
     source: "next-instrumentation",
+    ...(route ? readRequestObservation(request.headers, route.template) : {}),
+    ...(route ? { route: route.template } : {}),
     request: {
       method: toSafeMethod(request.method),
       routerKind: toSafeRouterKind(readContextValue(context, "routerKind")),

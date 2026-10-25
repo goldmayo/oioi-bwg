@@ -35,7 +35,7 @@ class PairedDeployTest(unittest.TestCase):
         for path in (self.runtime / 'deploy', self.config, self.bin): path.mkdir(parents=True)
         self.state = self.runtime / 'deploy'
         self.file = self.runtime / 'compose.yml'
-        self.file.write_text((ROOT / 'compose.oci-development.yml').read_text())
+        self.file.write_text((ROOT / 'ops/oci/compose.yml').read_text())
         self.configuration = '''IMAGE_REPOSITORY=registry.test/namespace/web
 CONSOLE_IMAGE_REPOSITORY=registry.test/namespace/console
 POSTGRES_NETWORK=fixture-network
@@ -53,13 +53,13 @@ REQUIRED_RUNTIME_KEYS="DATABASE_URL AUTH_SECRET"
         (self.config / 'deploy.conf').write_text(self.configuration)
         (self.config / 'runtime-public.env').write_text('AUTH_TRUST_HOST=true\n')
         (self.config / 'runtime-secrets.env').write_text('DB_APP_PASSWORD=ocid1.vaultsecret.test.db\nAUTH_SECRET=ocid1.vaultsecret.test.web\n')
-        (self.config / 'console-runtime-public.env').write_text('CONSOLE_ORIGIN=http://127.0.0.1:3001\n')
-        (self.config / 'console-runtime-secrets.env').write_text('DB_APP_PASSWORD=ocid1.vaultsecret.test.db\nCONSOLE_AUTH_SECRET=ocid1.vaultsecret.test.auth\nCONSOLE_MFA_ENCRYPTION_KEY=ocid1.vaultsecret.test.mfa\n')
+        (self.config / 'console-runtime-public.env').write_text('CONSOLE_ORIGIN=http://127.0.0.1:3001\nR2_ENDPOINT=https://account.r2.cloudflarestorage.com\nR2_BUCKET=fixture-albums\nASSETS_PUBLIC_BASE_URL=https://assets.example.test\n')
+        (self.config / 'console-runtime-secrets.env').write_text('DB_APP_PASSWORD=ocid1.vaultsecret.test.db\nCONSOLE_AUTH_SECRET=ocid1.vaultsecret.test.auth\nCONSOLE_MFA_ENCRYPTION_KEY=ocid1.vaultsecret.test.mfa\nR2_ACCESS_KEY_ID=ocid1.vaultsecret.test.r2id\nR2_SECRET_ACCESS_KEY=ocid1.vaultsecret.test.r2secret\n')
         (self.bin / 'oci').write_text('''#!/usr/bin/python3
 import base64,os,sys
 if os.environ.get('MOCK_VAULT_FAIL'): print(''' + repr(SECRET) + ''', file=sys.stderr); sys.exit(1)
 key=sys.argv[sys.argv.index('--secret-id')+1].rsplit('.',1)[-1]
-values=dict(db='fixture-password',web=os.environ.get('MOCK_WEB_AUTH','fixture-web-secret'),auth=''' + repr(SECRET) + ''',mfa='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=')
+values=dict(db='fixture-password',web=os.environ.get('MOCK_WEB_AUTH','fixture-web-secret'),auth=''' + repr(SECRET) + ''',mfa='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',r2id='fixture-r2-id',r2secret='fixture-r2-secret')
 print(base64.b64encode(values[key].encode()).decode())
 ''')
         (self.bin / 'curl').write_text('''#!/usr/bin/python3
@@ -215,7 +215,8 @@ elif args[0]=='compose':
         value = self.next('web')
         original = {app: (self.runtime/(app+'.env')).read_bytes() for app in ('web','console')}
         old_compose = self.file.read_bytes()
-        (self.config/'console-runtime-public.env').write_text('CONSOLE_ORIGIN=http://127.0.0.1:3001\nR2_BUCKET=new-config\n')
+        public = self.config/'console-runtime-public.env'
+        public.write_text(public.read_text().replace('R2_BUCKET=fixture-albums', 'R2_BUCKET=new-config'))
         self.file.write_bytes(old_compose + b'\n# candidate configuration\n')
         result = self.execute(value, MOCK_FAIL_APP='web', MOCK_FAIL_DIGEST=digest('1'))
         self.assertEqual(result.returncode, 20, result.stderr)

@@ -23,26 +23,36 @@ import { sendEmail } from "./oci-email-delivery";
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.clearAllMocks();
 });
 
 describe("sendEmail", () => {
-  it("uses a no-send dev path outside production", async () => {
-    vi.stubEnv("EMAIL_DELIVERY_MODE", "dev");
-    vi.stubEnv("NODE_ENV", "test");
+  it.each(["development", "test", "production"] as const)(
+    "keeps local email no-send with NODE_ENV=%s",
+    async (nodeEnvironment) => {
+      vi.stubEnv("NEXT_PUBLIC_APP_ENV", "local");
+      vi.stubEnv("NODE_ENV", nodeEnvironment);
+      for (const mode of [undefined, "dev"]) {
+        vi.stubEnv("EMAIL_DELIVERY_MODE", mode);
 
-    await expect(
-      sendEmail({ to: "user@example.com", subject: "test", text: "test" }),
-    ).resolves.toEqual({
-      mode: "dev",
-      messageId: null,
-      envelopeId: null,
-      suppressedRecipients: [],
-      opcRequestId: null,
-    });
-  });
+        await expect(
+          sendEmail({ to: "user@example.com", subject: "test", text: "test" }),
+        ).resolves.toEqual({
+          mode: "dev",
+          messageId: null,
+          envelopeId: null,
+          suppressedRecipients: [],
+          opcRequestId: null,
+        });
+      }
+      expect(submitEmail).not.toHaveBeenCalled();
+    },
+  );
 
-  it("separates OCI message, envelope, suppression, and request identifiers", async () => {
-    vi.stubEnv("EMAIL_DELIVERY_MODE", "oci");
+  it.each([undefined, "oci"])("separates OCI identifiers with production mode %s", async (mode) => {
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("EMAIL_DELIVERY_MODE", mode);
     vi.stubEnv("OCI_EMAIL_COMPARTMENT_OCID", "ocid1.compartment.test");
     vi.stubEnv("OCI_EMAIL_SENDER_ADDRESS", "no-reply@example.com");
     vi.stubEnv("OCI_EMAIL_REGION", "ap-osaka-1");
@@ -66,12 +76,30 @@ describe("sendEmail", () => {
     });
   });
 
-  it("rejects the dev path in production", async () => {
-    vi.stubEnv("EMAIL_DELIVERY_MODE", "dev");
-    vi.stubEnv("NODE_ENV", "production");
+  it.each(["development", "test", "production"] as const)(
+    "rejects production dev delivery with NODE_ENV=%s",
+    async (nodeEnvironment) => {
+      vi.stubEnv("EMAIL_DELIVERY_MODE", "dev");
+      vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
+      vi.stubEnv("NODE_ENV", nodeEnvironment);
 
-    await expect(
-      sendEmail({ to: "user@example.com", subject: "test", text: "test" }),
-    ).rejects.toThrow("dev email delivery is not allowed in production");
-  });
+      await expect(
+        sendEmail({ to: "user@example.com", subject: "test", text: "test" }),
+      ).rejects.toThrow("dev email delivery is not allowed in production");
+      expect(submitEmail).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([undefined, "", "staging", "development"])(
+    "rejects unsupported environment %s before OCI",
+    async (environment) => {
+      vi.stubEnv("NEXT_PUBLIC_APP_ENV", environment);
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("EMAIL_DELIVERY_MODE", "oci");
+      await expect(
+        sendEmail({ to: "user@example.com", subject: "test", text: "test" }),
+      ).rejects.toThrow("NEXT_PUBLIC_APP_ENV must be local or production.");
+      expect(submitEmail).not.toHaveBeenCalled();
+    },
+  );
 });

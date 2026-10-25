@@ -1,9 +1,10 @@
 import { expect, test, vi } from "vitest";
 const http = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock("@/shared/api/http-client", () => ({ http }));
+import { songQueryKeys } from "../index";
+
 import { getSongDetail } from "./api";
-import { songQueries } from "./queries";
-import { songQueryKeys } from "./query-keys";
+import { songQueries } from "./index";
 
 test("public song requests keep the encoded slug, cancellation and query identity", async () => {
   const signal = new AbortController().signal;

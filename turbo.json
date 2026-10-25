@@ -1,15 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "cacheDir": "node_modules/.cache/turbo",
-  "globalDependencies": [
-    "config/**",
-    "harness/architecture/**",
-    "eslint.config.mts",
-    "steiger.config.ts",
-    "vitest.config.ts",
-    "vitest.setup.ts",
-    "tests/mocks/**"
-  ],
   "tasks": {
     "type-check": {
       "inputs": [
@@ -18,7 +9,10 @@
         "!**/.turbo/**",
         "!*.tsbuildinfo",
         "!**/*.tsbuildinfo",
-        "!next-env.d.ts"
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/typescript/base.json",
+        "$TURBO_ROOT$/packages/config/typescript/node.json",
+        "$TURBO_ROOT$/packages/config/eslint/**"
       ],
       "outputs": [],
       "dependsOn": ["^transit"]
@@ -30,7 +24,8 @@
         "!**/.turbo/**",
         "!*.tsbuildinfo",
         "!**/*.tsbuildinfo",
-        "!next-env.d.ts"
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/eslint/**"
       ],
       "outputs": [],
       "dependsOn": ["^transit"]
@@ -56,7 +51,11 @@
         "!**/.turbo/**",
         "!*.tsbuildinfo",
         "!**/*.tsbuildinfo",
-        "!next-env.d.ts"
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/next.ts",
+        "$TURBO_ROOT$/packages/config/sentry-build.ts",
+        "$TURBO_ROOT$/packages/config/typescript/base.json",
+        "$TURBO_ROOT$/packages/config/typescript/next.json"
       ],
       "outputs": [".next/**", "!.next/cache/**"],
       "passThroughEnv": ["SENTRY_AUTH_TOKEN"],
@@ -82,6 +81,145 @@
         "!**/*.tsbuildinfo",
         "!next-env.d.ts"
       ],
+      "outputs": []
+    },
+    "@oioi-bwg/config#transit": {
+      "dependsOn": [],
+      "inputs": ["package.json"],
+      "outputs": []
+    },
+    "@oioi-bwg/config#build": {
+      "dependsOn": [],
+      "inputs": ["package.json"],
+      "outputs": []
+    },
+    "@oioi-bwg/web#type-check": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/typescript/base.json",
+        "$TURBO_ROOT$/packages/config/typescript/node.json",
+        "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/typescript/next.json",
+        "$TURBO_ROOT$/packages/config/next.ts",
+        "$TURBO_ROOT$/packages/config/sentry-build.ts",
+        "$TURBO_ROOT$/packages/config/steiger.ts",
+        "$TURBO_ROOT$/packages/config/vitest/browser.js",
+        "$TURBO_ROOT$/packages/config/vitest/postgres.js"
+      ],
+      "outputs": []
+    },
+    "@oioi-bwg/web#lint": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/steiger.ts",
+        "$TURBO_ROOT$/packages/config/typescript/base.json",
+        "$TURBO_ROOT$/packages/config/typescript/next.json"
+      ],
+      "outputs": []
+    },
+    "@oioi-bwg/web#test": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/vitest/browser.js",
+        "$TURBO_ROOT$/packages/config/vitest/browser.setup.ts",
+        "$TURBO_ROOT$/packages/config/vitest/server-only.ts",
+        "$TURBO_ROOT$/packages/config/vitest/client-only.ts"
+      ],
+      "outputs": []
+    },
+    "@oioi-bwg/console#type-check": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/typescript/base.json",
+        "$TURBO_ROOT$/packages/config/typescript/node.json",
+        "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/typescript/next.json",
+        "$TURBO_ROOT$/packages/config/next.ts",
+        "$TURBO_ROOT$/packages/config/sentry-build.ts",
+        "$TURBO_ROOT$/packages/config/steiger.ts",
+        "$TURBO_ROOT$/packages/config/vitest/browser.js",
+        "$TURBO_ROOT$/packages/config/vitest/postgres.js"
+      ],
+      "outputs": []
+    },
+    "@oioi-bwg/console#lint": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/steiger.ts",
+        "$TURBO_ROOT$/packages/config/typescript/base.json",
+        "$TURBO_ROOT$/packages/config/typescript/next.json"
+      ],
+      "outputs": []
+    },
+    "@oioi-bwg/console#test": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/vitest/browser.js",
+        "$TURBO_ROOT$/packages/config/vitest/browser.setup.ts",
+        "$TURBO_ROOT$/packages/config/vitest/server-only.ts",
+        "$TURBO_ROOT$/packages/config/vitest/client-only.ts"
+      ],
+      "outputs": []
+    },
+    "@oioi-bwg/server#test": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/.next/**",
+        "!**/.turbo/**",
+        "!*.tsbuildinfo",
+        "!**/*.tsbuildinfo",
+        "!next-env.d.ts",
+        "$TURBO_ROOT$/packages/config/vitest/server-only.ts"
+      ],
+      "outputs": []
+    },
+    "@oioi-bwg/repository-tools#type-check": {
+      "dependsOn": ["^transit"],
+      "cache": false,
+      "outputs": []
+    },
+    "@oioi-bwg/repository-tools#lint": {
+      "dependsOn": ["^transit"],
+      "cache": false,
       "outputs": []
     }
   }

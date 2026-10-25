@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
-updated_at: "2026-10-21"
-revision: 12
+updated_at: "2026-10-25"
+revision: 14
 ---
 
 # P06 계획 초안
@@ -612,6 +612,16 @@ Caddy/VM/Cloudflare/DB·기존 고정 실행물을 변경하거나 Console을 �
 세션이 바뀌어도 PLAN의 이 개정과 HANDOFF 상단에서 시작한다. 결과는 기존 P06-C/D/E RESULT가 소유한다.
 
 
+## 2026-10-21 F 이후 G 계정 관리 계획 추가
+
+사용자 요청으로 F의 운영 전환 완료 뒤 [P06-G 계정 관리](P06-G-PLAN.md)를 후속 기능으로 계획한다.
+계정 조회·관리자 초대/수락·HTTPS MFA 등록과 복구·권한/상태 변경·감사 이력이 범위다.
+A~F의 완료 조건과 기존 비공개 등록/운영 CLI 계약은 유지하며, G를 기존 D·E·F 완료의 선행 조건으로 추가하지 않는다.
+위 §8에서 보류한 Web 전체 Session 회수는 G의 정지·비밀번호 재설정 기능에 필요한 범위로 G0/G2b에서 다룬다.
+초대 기반 계정 생성과 공개 HTTPS 등록은 현재 Domain/Auth 계약 변경이 필요하므로 G0에서 먼저 개정한다.
+이 추가는 계획 작성만 반영한다. active 계약·앱·DB·VM·Cloudflare 설정을 변경하거나 G 구현/배포를 실행하지 않는다.
+
+
 ## 2026-10-21 Web 인증 종료 개정
 
 사용자가 Web은 회원가입·로그인 없는 공개 조회 전용으로 확정하고 회원 기능은 나중에 추가하도록 지시했다.
@@ -631,3 +641,32 @@ Caddy/VM/Cloudflare/DB·기존 고정 실행물을 변경하거나 Console을 �
 - F의 www 검증도 일반 로그인 대신 공개 조회·인증 거절로 바꾼다. 전체 관리자 E2E는 재도입하지 않는다.
 
 구현·실제 검사·운영 적용 여부는 [E3 결과](P06-E3-RESULT.md)가 소유한다.
+
+
+
+## 2026-10-23 G 계획 통합 시 전제 정정
+
+F 이후 G의 계획은 유지한다. 위 G 추가 당시의 Web 전체 Session 회수 전제는 Web 인증 종료 개정으로
+폐기하며, G의 회수 설계 대상은 Console 세션이다. [G 계획의 통합 개정](P06-G-PLAN.md#2026-10-23-통합-개정--web-인증-종료-반영)을 따른다.
+F 전환 보류와 G 구현 전 G0 계약 개정 조건은 유지한다. 이번 병합은 계획 문서만 통합한다.
+
+
+## 2026-10-25 모노레포 개선 이후 F 재개
+
+사용자가 P06 완료를 지시해 F 준비 보류를 해제했다. A~E의 완료 증거를 유지하고 G·P07~P10을
+P06 완료의 선행 조건으로 추가하지 않는다. 기존 #199 브랜치에 #242/#243 통합 기준
+`c6c2f71b73235caa773de2ef56d51820b9e86b23`을 반영하며 과거 커밋은 재작성하지 않는다.
+
+- 일반 CI·로컬 build는 `local`, 실제 Promotion 후보는 `production`이라는 최신 Runtime §12를 따른다.
+  초기 F1의 일반 CI까지 production으로 바꾸는 준비는 이 계약으로 대체한다.
+- local metadata는 localhost를 보존하고 production metadata·sitemap·robots를 www로 통일한다.
+  앱별 prune·공통 blob cache·공용 Sentry·정상 paired Promotion 계약은 유지한다.
+- 남은 완료 조건은 실제 서비스/데이터·파일 비교, Console R2 설정/업로드, 정상 후보 검증·배포,
+  www origin TLS/라우팅·apex redirect, 최종 hostname 인증/조회 확인과 두 레거시 Web Worker·
+  staging/preview 종료다. R2/assets·독립 알림 Worker·MFA key/version·계정/DB는 보존한다.
+- 기존 §9의 데이터 보존·쓰기 중지·복구 기준을 먼저 확정하고 외부 적용의 구체적 대상과 복구안을
+  준비한다. 운영 DB/credential 사용과 실제 외부 전환은 해당 범위의 명시적 실행 승인을 따른다.
+  준비 PR·로컬/일반 CI 성공을 F 또는 P06 전체 완료로 보고하지 않는다.
+
+반복 실행 절차는 [www 전환 운영 안내](../../../../ops/oci/web-cutover.md),
+이번 재개의 구현·검증·남은 실행 결과는 [F1 RESULT](P06-F1-RESULT.md)가 소유한다.

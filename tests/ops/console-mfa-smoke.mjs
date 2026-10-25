@@ -251,6 +251,69 @@ export async function assertConsoleSessionBoundary(browser, origin, sql) {
   for (const item of contexts) await item.close();
 }
 
+/** AUTH-009: RSC에서도 인증 거부를 정상 이동으로 처리하고 회수된 JWT를 복구하지 않는다. */
+export async function assertConsoleRscAuth(browser, origin, sql, artifacts) {
+  const routes = ["/admin/albums", "/admin/songs", "/admin/edit/nonexistent-auth-smoke"];
+  const logPath = path.join(artifacts, "console.log");
+  const logStart = fs.statSync(logPath).size;
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const assertLogin = async () => {
+    for (const route of routes) {
+      await page.goto(`${origin}${route}`);
+      await page.waitForURL(`${origin}/admin-login`);
+      await page.getByLabel("Email", { exact: true }).waitFor();
+      assert.equal(await page.getByRole("heading", { name: "앨범 관리", exact: true }).count(), 0);
+      assert.equal(await page.getByRole("heading", { name: "곡 관리", exact: true }).count(), 0);
+    }
+  };
+  try {
+    await assertLogin();
+    const [account] = await sql`
+      select a.id, m.version from account a join admin_mfa m on m.account_id = a.id
+      where a.id = (select account_id from password_credential where email = ${fixtureEmail})
+    `;
+    const expired = await encode({
+      token: { sub: String(account.id), mfaVerified: true, mfaVersion: account.version },
+      secret: authSecret,
+      salt: "oioi-console.session-token",
+      maxAge: -60,
+    });
+    sensitiveValues.push(expired);
+    await context.addCookies([{ name: "oioi-console.session-token", value: expired, url: origin }]);
+    await assertLogin();
+    await context.clearCookies();
+    await loginConsole(context, origin, sql);
+    await page.goto(`${origin}/admin/albums`);
+    await page.getByRole("heading", { name: "앨범 관리", exact: true }).waitFor();
+    await changeConsoleAccess(sql, "USER");
+    // Sidebar의 실제 Link는 prefetch=false다. 새 navigation의 서버 인증 결과를 확인한다.
+    await page.getByRole("link", { name: "곡 관리", exact: true }).click();
+    await page.waitForURL(`${origin}/admin-login`);
+    await assertLogin();
+    await changeConsoleAccess(sql, "ADMIN");
+    await assertLogin();
+    await context.clearCookies();
+    await loginConsole(context, origin, sql);
+    await page.goto(`${origin}/admin/songs`);
+    await page.getByRole("heading", { name: "곡 관리", exact: true }).waitFor();
+    await page.screenshot({ path: path.join(artifacts, "console-rsc-reauthenticated.png") });
+    assert.deepEqual(errors, []);
+    const output = fs.readFileSync(logPath).subarray(logStart).toString();
+    assert.ok(
+      !output.includes('"event":"next.request_error"'),
+      "normal RSC rejection is not a render failure",
+    );
+    console.log(
+      "Console RSC auth passed: anonymous/expired direct entry, revoked navigation, stale JWT and re-login",
+    );
+  } finally {
+    await context.close();
+  }
+}
+
 export function assertConsoleLogsSafe(artifacts, additionalValues = []) {
   for (const app of ["web", "console"]) {
     const output = fs.readFileSync(path.join(artifacts, `${app}.log`), "utf8");

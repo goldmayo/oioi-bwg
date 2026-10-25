@@ -1,4 +1,19 @@
+---
+title: "배포 및 버전 관리 가이드 (과거 설계)"
+status: superseded
+source_commit: 52d8f0a36d6b1b769e83189415f635627b739cb3
+superseded_at: "2026-10-23"
+---
+
 # 배포 및 버전 관리 가이드 (Deployment Guide)
+
+이 문서는 이전 staging/tag/Cloudflare 앱 배포 설계 이력이다. 아래 명령은 현재 실행 절차가 아니다.
+ROOT-01에서 소비가 끝난 release-it 설정과 script·의존성을 제거했으며 버전과 CHANGELOG 이력은 보존했다.
+현재 구현 PR은 `feature/* → migration_main` squash, 운영 배포는 별도 승인된 Promotion의
+검증 source와 immutable digest 계약을 따른다. 배포 환경은 production이며 별도 staging을 운영하지 않는다.
+[AGENTS](../AGENTS.md), [active 배포 runbook §21](migration/oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md#21-cicd),
+[정상화 RESULT](migration/implementation/MONOREPO-CONFIGURATION-RESULT.md)가 현재 절차와 판정을 소유한다.
+원래 본문과 anchor는 아래에 이력으로 보존한다.
 
 본 프로젝트는 **GitHub Flow**와 **Semantic Versioning**을 기반으로 한 자동화된 배포 시스템을 사용합니다.
 

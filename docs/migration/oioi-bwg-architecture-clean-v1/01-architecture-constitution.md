@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.16"
+version: "2.19"
 status: "active"
 authority: "constitution"
-updated_at: "2026-10-21"
+updated_at: "2026-10-25"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.16
+# oioi-bwg Architecture Constitution v2.19
 
 ## 1. 목적
 
@@ -164,6 +164,27 @@ E 코드의 운영 적용은 Console 운영 검증 완료 후 별도 Promotion�
 별도 명시가 없으면 이 앱 루트를 기준으로 한다. 일반 사용자 route와 서버 boundary는 유지하고,
 `/admin`·`/admin-login`·`/api/admin/*` 및 관리 upload Action은 Web에 두지 않는다.
 저장소 루트에는 workspace 진입점, 기존 검증 도구, 운영 스크립트와 migration 이력을 유지한다.
+
+공통 tooling preset과 factory·검사 구현은 private `packages/config`가 소유한다.
+consumer는 명시적 package export와 workspace 개발 의존성을 사용한다. 자동 탐색 설정 entry는
+각 root/app에 유지하며 env 해석·request/instrumentation adapter는 앱에 둔다. 앱과 공용 서버·계약의
+runtime에서 tooling package를 import하지 않는다. package는 root harness/test 구현을 역으로
+참조하지 않으며 harness가 package의 공개 경계를 검증한다.
+
+저장소에서 내부 package를 소비하는 검증·설정 조합·operator 구현은 private
+`tools/repository` workspace가 소유한다. 자체 package 의존성과 검사 명령을 가지며 config의
+preset/factory와 server/contracts의 공개 export를 사용한다. 제품 runtime은 이 workspace를
+소비하지 않는다. 저장소 통합 테스트의 앱 참조는 10의 명시적 HTTP adapter 예외만 허용한다.
+root는 내부 workspace 의존성을 갖지 않는 orchestration 경계로 전환한다. 자동 탐색 설정과
+기존 CLI 호환 entry만 tooling의 등록된 공개 파일을 명시적 상대 경로로 연결할 수 있다.
+이는 root integration adapter의 제한적 예외이며 제품의 workspace 상대 경로 우회·사설 export
+접근을 허용하지 않는다. 전환 중에는 실제 consumer와 검사 수집을 이관한 뒤 root 의존성을 제거한다.
+
+기존 Sentry → Slack relay는 private `apps/sentry-slack-relay` workspace가 소유하는 독립 Cloudflare
+Worker다. Web/Console·공통 서버·tooling runtime을 import하지 않으며 FSD나 Next build·OCI Promotion에
+합치지 않는다. 자체 Node 타입/lint/unit 검사는 root 검증과 연결하고 수동 Wrangler 배포·secret은 별도로
+유지한다. workspace 경로 이관은 실제 Worker 배포나 외부 전송을 뜻하지 않는다. Cloudflare 앱 runtime
+제거 규칙은 Next 제품 앱의 이전 Vinext/Worker 의존성에 적용하며 이 독립 relay를 삭제하는 근거가 아니다.
 
 클라이언트와 서버가 함께 소비하는 serializable HTTP contract는 `packages/contracts`가 소유한다.
 `@oioi-bwg/contracts/<domain>`의 명시적 export로 소비하며 Zod schema/DTO/enum만 둔다.

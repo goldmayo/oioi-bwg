@@ -8,6 +8,11 @@ const local = {
   CONSOLE_AUTH_SECRET: "local-signing-secret-with-at-least-32-characters",
   CONSOLE_MFA_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
   CONSOLE_MFA_ENROLLMENT_ENABLED: "true",
+  R2_ENDPOINT: "https://account.r2.cloudflarestorage.com",
+  R2_BUCKET: "fixture-albums",
+  R2_ACCESS_KEY_ID: "fixture-r2-access-key",
+  R2_SECRET_ACCESS_KEY: "fixture-r2-secret-key",
+  ASSETS_PUBLIC_BASE_URL: "https://assets.example.test",
 };
 
 describe("Console 로컬 실행 경계", () => {
@@ -17,6 +22,35 @@ describe("Console 로컬 실행 경계", () => {
       validateLocalConsoleEnvironment({ ...local, CONSOLE_MFA_ENROLLMENT_ENABLED: "false" }),
     ).not.toThrow();
   });
+
+  it.each([
+    "R2_ENDPOINT",
+    "R2_BUCKET",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "ASSETS_PUBLIC_BASE_URL",
+  ])("업로드 설정 누락 시 실행 전에 키 이름만 안내한다", (name) => {
+    expect(() => validateLocalConsoleEnvironment({ ...local, [name]: "" })).toThrow(name);
+  });
+
+  it.each(["R2_ENDPOINT", "ASSETS_PUBLIC_BASE_URL"])(
+    "자격증명이 포함되거나 HTTPS가 아닌 업로드 URL을 거절한다",
+    (name) => {
+      for (const value of [
+        "http://example.test",
+        "https://private-value@example.test",
+        "private-value",
+      ]) {
+        try {
+          validateLocalConsoleEnvironment({ ...local, [name]: value });
+          expect.fail("잘못된 URL이 거절돼야 합니다.");
+        } catch (error) {
+          expect((error as Error).message).toContain(name);
+          expect((error as Error).message).not.toContain("private-value");
+        }
+      }
+    },
+  );
 
   it.each([
     "postgresql://owner:private-value@db.example.test:5432/oioibawige",
@@ -46,7 +80,7 @@ describe("Console 로컬 실행 경계", () => {
     },
   );
 
-  it.each([
+  it.each<Record<string, string>>([
     { CONSOLE_AUTH_SECRET: "" },
     { AUTH_SECRET: local.CONSOLE_AUTH_SECRET },
     { CONSOLE_MFA_ENCRYPTION_KEY: local.CONSOLE_MFA_ENCRYPTION_KEY + "\n" },

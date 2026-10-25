@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.18"
+version: "1.24"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-21"
+updated_at: "2026-10-25"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.17
+# oioi-bwg Deployment / Migration Runbook v1.24
 
 ## 1. 목적
 
@@ -273,6 +273,12 @@ Next standalone output을 기준으로 최소 runtime image를 구성한다.
 
 container 안에 development toolchain 전체를 넣지 않는다.
 
+Docker build는 Root와 같은 exact Turbo CLI로 대상 workspace를 prune한다. pruned JSON/partial lock을
+먼저 복사해 frozen install한 뒤 pruned full source를 복사한다. Web/Console 단독 target에는 상대 앱·
+Relay·repository-tools를 포함하지 않는다. 공통 source package·env/secret·standalone 계약은 유지한다.
+일반 CI와 Promotion 모두 각 Dockerfile의 BUILD_APP=web/console만 사용한다. all과 상대 앱 값은
+설치 전에 거절한다. 각 verification-cache target도 해당 앱 산출물만 검사한다.
+
 Image는 §21의 source SHA를 포함한 candidate tag로 traceability를 남기되 release identity는 OCIR
 manifest digest로 고정한다. `latest`, `development` 같은 mutable tag를 deployment input으로
 사용하지 않는다.
@@ -362,6 +368,17 @@ application business logic을 proxy config에 넣지 않는다.
 
 모든 external dependency를 deep-check해서 health endpoint 자체를 불안정하게 만들지 않는다.
 Response에 secret, connection string, raw DB error를 노출하지 않는다.
+
+Console `/readyz`는 인증·MFA 키에 더해 업로드의 R2 필수 입력 다섯 개를 DB 접근 전에 검사한다.
+`R2_ENDPOINT`·`ASSETS_PUBLIC_BASE_URL`은 credential·query·fragment 없는 HTTPS URL이어야 하며,
+값이 비어 있는 `?`·`#` 구분자도 거절한다. 두 URL은 파싱한 `URL.href`를 사용해 앞뒤 공백·호스트·
+기본 포트·경로를 정규화한다. public base URL의 끝 `/`는 제거한 뒤 object key를 연결하며,
+경로에 인코딩된 `%3F`·`%23`은 보존한다.
+`R2_BUCKET`·`R2_ACCESS_KEY_ID`·`R2_SECRET_ACCESS_KEY`는 공백뿐인 값을 허용하지 않는다.
+업로드도 같은 검사를 쓰며 설정이 잘못되면 외부 쓰기 전에 실패한다. readiness는 R2 client를 만들거나
+R2/asset 요청을 보내지 않는다. 권한·버킷 존재·실제 업로드 성공은 별도 운영 검증이다.
+실패는 원인이나 입력 값 없이 기존 503/no-store 응답을 유지한다. Web readiness는 R2 입력을 요구하지 않는다.
+CI·Promotion smoke에는 실제 credential 대신 `.test` HTTPS URL과 임시 문자열을 전달한다.
 
 `restart: unless-stopped`는 process/container 종료 후 재시작 정책이다. Docker healthcheck가
 `unhealthy` 상태만으로 container를 자동 restart한다고 가정하지 않는다. Runtime health failure는
@@ -489,7 +506,7 @@ Promotion은 문서만 달라도 전체 검증·후보 계약을 유지하며 �
 두 push에서는 성공한 동일 저장소 PR의 head/tree·검증 job·입력 key·미만료 artifact를 확인한 뒤
 검증용 BuildKit 캐시만 base branch에 발행할 수 있다. 캐시 누락은 직접 빌드로 복구하며
 다른 run의 cache를 verify 통과·검증 image·배포 candidate 증거로 사용하지 않는다.
-일반 CI는 같은 builder의 두 runtime image만 후속 smoke에 전달한다. 사용하지 않는 standalone tar는 별도로 생성·전송하지 않는다.
+일반 CI는 같은 run의 앱별 pruned builder에서 만든 두 runtime image만 후속 smoke에 전달한다. 사용하지 않는 standalone tar는 별도로 생성·전송하지 않는다.
 Docker builder는 다음 변경 build에 복원하지 않는 Next 파일시스템 cache와 Turbo output archive를 쓰지 않으며,
 의존성·빌드 레이어의 BuildKit cache와 로컬 개발 cache는 유지한다.
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
@@ -499,14 +516,28 @@ Promotion PR은 full verify 후 현재 `migration_main` head에서 하나의 논
 P06 선택적 재사용 계약은 마지막 **실제 배포 exit 0**의 immutable Actions receipt/candidate artifact만 기준으로 삼는다.
 최신 정상 배포의 PR/source/tree/run/attempt·artifact 미만료·성공 check·registry를 검증하고,
 그 기준 source부터 현재 source까지 앱 경로와 Turbo affected 결과를 함께 확인한다. 공통/알 수 없는 경로,
-lockfile·Dockerfile·공통 build 설정·build-time 공개 설정 변경, 이력/분석 오류는 두 이미지를 빌드한다.
+lockfile·앱 Dockerfile·공통 build 설정·build-time 공개 설정 변경, 이력/분석 오류는 두 이미지를 빌드한다.
 증거 누락/만료/불일치는 재사용을 금지한다. 첫 paired deployment는 두 이미지를 빌드한다.
 기존 source/run은 현재 조합 검증의 출처다. 각 image의 `buildSourceSha`와 `origin`(built/reused)을
 별도로 기록하고 Sentry release·OCI revision은 실제 build source를 유지한다. 재사용한 digest도 현재
 run에서 pull/smoke한다. B2는 후보의 baseline release ID와 lock 안의 VM current pair를 대조하고,
 불일치하면 서비스 변경 전에 거절한다. 기준이 null이면 기존 paired state가 없어야 한다.
 아래 후보 검증과 실제 배포 게이트는 그대로 적용한다. workflow는 검증된 기준에 따라 앱별 build를 선택하며
-Dockerfile의 기본 all builder는 일반 CI에 유지하고 Promotion은 BUILD_APP=web/console로 필요한 앱만 빌드한다.
+운영 Dockerfile은 apps/web·apps/console이 각각 소유하고 기본 BUILD_APP도 해당 앱이다. build context는
+저장소 root다. 일반 CI는 Web·Console의 pruned builder와 cache manifest를 앱별로 분리하고,
+각 builder의 verification-cache 검증 뒤 같은 입력으로 runner image를 만든다. v4 local cache는
+OCI 저장소 하나의 `web`·`console` tag로 각각 lookup/export하며 digest가 같은 blob만 공유한다.
+두 export는 직렬로 실행하고 새 출력 디렉터리에 누적해 다른 앱 tag를 보존한다. export 중 reset이나
+같은 tag 덮어쓰기를 사용하지 않는다. 이전 v1/v2/v3 layout은 복원하지 않는다.
+사용할 Buildx/BuildKit은 tag 지원을 검증한 버전으로 고정한다. 앱별 manifest와 참조 blob의 digest/size,
+공통/전체 blob bytes를 기록하며, 동일 조건의 비교가 없으면 전체 CI 시간 개선으로 일반화하지 않는다.
+단일 cache artifact의 source/tree·verify 확인 후 발행 계약은 유지한다. cache 저장소를 image·후보
+검증 증거로 사용하지 않으며 Promotion의 별도 cache와 immutable digest 계약은 유지한다.
+같은 run의 두 image artifact만 기존 native/readiness/browser·paired Compose smoke로 전달한다.
+이미지 크기·local image ID·build digest·checkout/source/tree는 해당 run의 metadata로 추적하며
+이를 OCIR release candidate나 다른 run의 성공 증거로 취급하지 않는다.
+Promotion은 BUILD_APP=web/console로 필요한 앱만 빌드한다.
+어느 앱의 Dockerfile 변경이든 기존 보수적 재사용 조건에 따라 두 이미지를 다시 빌드한다.
 두 exact digest를 같은 격리 DB에서 **동시에 실행**해 native/readiness/browser smoke를 통과해야 한다.
 현재 run/attempt·각 digest/buildSourceSha를 묶은 smoke proof가 없거나 다르면 candidate.json을 쓰지 않는다.
 실제 배포 exit 0 뒤에만 candidate와 command/merge/배포 run/attempt의 receipt를 하나의 immutable

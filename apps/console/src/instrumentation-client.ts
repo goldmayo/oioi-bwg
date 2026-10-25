@@ -7,7 +7,9 @@ import {
 } from "@/shared/lib/client-sentry-policy";
 
 const config = getSentryRuntimeConfig();
-const DISABLED_INTEGRATIONS = new Set(["BrowserTracing", "Replay"]);
+// Dedupe는 source/outcome과 Error identity를 비교하지 않아 서로 다른 관측을 잃게 한다.
+// 명시적 보고는 captureClientErrorOnce가 객체·source·outcome별로 중복을 제한한다.
+const DISABLED_INTEGRATIONS = new Set(["BrowserTracing", "Replay", "Dedupe"]);
 
 if (config.enabled) {
   Sentry.init({

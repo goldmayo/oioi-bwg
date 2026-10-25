@@ -1,0 +1,10 @@
+{
+  "extends": "../tools/repository/typescript/repository.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true
+  },
+  "include": ["ops/**/*.ts"],
+  "exclude": ["**/vitest.config.ts"]
+}

@@ -19,7 +19,7 @@ services:
   next:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: ops/docker/Dockerfile.dev
     restart: unless-stopped
     working_dir: /app
     command: pnpm dev --hostname 0.0.0.0
@@ -31,11 +31,15 @@ services:
       NODE_ENV: development
       DATABASE_URL: postgresql://oioibawige:oioibawige_dev_only@postgres:5432/oioibawige
       NEXT_PUBLIC_APP_ENV: local
-      NEXT_PUBLIC_ASSETS_URL: https://assets.oioibawige.com
     volumes:
       - .:/app
       - node_modules:/app/node_modules
       - web_node_modules:/app/apps/web/node_modules
+      - console_node_modules:/app/apps/console/node_modules
+      - relay_node_modules:/app/apps/sentry-slack-relay/node_modules
+      - config_node_modules:/app/packages/config/node_modules
+      - contracts_node_modules:/app/packages/contracts/node_modules
+      - server_node_modules:/app/packages/server/node_modules
       - next_cache:/app/apps/web/.next
     depends_on:
       postgres:
@@ -45,4 +49,9 @@ volumes:
   postgres_data:
   node_modules:
   web_node_modules:
+  console_node_modules:
+  relay_node_modules:
+  config_node_modules:
+  contracts_node_modules:
+  server_node_modules:
   next_cache:

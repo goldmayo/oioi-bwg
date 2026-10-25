@@ -11,7 +11,7 @@ const mockedReportServerError = vi.mocked(reportServerError);
 describe("onRequestError", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "staging");
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
   });
 

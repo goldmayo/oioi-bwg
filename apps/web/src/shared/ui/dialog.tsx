@@ -43,13 +43,17 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  overlayProps,
+  portalled = true,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
+  overlayProps?: React.ComponentProps<typeof DialogOverlay>;
+  portalled?: boolean;
 }) {
-  return (
-    <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
+  const content = (
+    <>
+      <DialogOverlay {...overlayProps} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
@@ -69,8 +73,9 @@ function DialogContent({
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
-    </DialogPortal>
+    </>
   );
+  return portalled ? <DialogPortal data-slot="dialog-portal">{content}</DialogPortal> : content;
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {

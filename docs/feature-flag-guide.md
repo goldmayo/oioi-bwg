@@ -1,4 +1,19 @@
+---
+title: "Feature Flag 가이드 (과거 설계)"
+status: superseded
+source_commit: 66255b973bc829437a296132ad480bf2ea7bb483
+superseded_at: "2026-10-23"
+---
+
 # Feature Flag 가이드 (Front + Back)
+
+이 문서는 Careon/TypeORM을 예로 든 이전 설계 이력이다. 현재 기능 consumer와 예정 도메인 요구가
+없는 flag·wrapper는 ENV-08에서 제거했다. 아래 예제와 경로를 현재 프로젝트의 실행 지침으로 사용하지 않는다.
+현재 APP_ENV는 `local | production`이며 local production build도 local이다. 환경 계약은
+[active Runtime](migration/oioi-bwg-architecture-clean-v1/11-content-i18n-assets-runtime-architecture.md),
+인증/인가는 [active Auth/Authz](migration/oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md),
+제거 근거와 검증은 [정상화 RESULT](migration/implementation/MONOREPO-CONFIGURATION-RESULT.md)를 따른다.
+새 flag는 실제 consumer·수명과 서버 경계 요구를 정한 별도 변경에서 설계한다. 기존 본문은 이력으로 보존한다.
 
 ## 1. 목적
 

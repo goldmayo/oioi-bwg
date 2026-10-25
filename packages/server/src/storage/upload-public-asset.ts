@@ -4,19 +4,38 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 function requiredEnvironment(name: string) {
   const value = process.env[name];
-  if (!value) throw new Error(`${name} is required`);
+  if (!value?.trim()) throw new Error(`${name} is required`);
   return value;
 }
 
-function createR2Client() {
-  return new S3Client({
-    endpoint: requiredEnvironment("R2_ENDPOINT"),
-    region: "auto",
-    credentials: {
-      accessKeyId: requiredEnvironment("R2_ACCESS_KEY_ID"),
-      secretAccessKey: requiredEnvironment("R2_SECRET_ACCESS_KEY"),
-    },
-  });
+function requiredHttpsUrl(name: string) {
+  const value = requiredEnvironment(name);
+  try {
+    const url = new URL(value);
+    // search/hash는 빈 구분자를 드러내지 않으므로 정규화한 URL 전체에서 거절한다.
+    if (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      !url.href.includes("?") &&
+      !url.href.includes("#")
+    )
+      return url.href;
+  } catch {
+    // URL parser 오류에는 입력이 포함될 수 있으므로 설정 이름만 노출한다.
+  }
+  throw new Error(`${name} must be an HTTPS URL without credentials, query or fragment`);
+}
+
+/** readiness와 업로드가 같은 입력을 검사하며 외부 요청이나 SDK client를 만들지 않는다. */
+export function getPublicAssetConfig() {
+  return {
+    endpoint: requiredHttpsUrl("R2_ENDPOINT"),
+    bucket: requiredEnvironment("R2_BUCKET"),
+    accessKeyId: requiredEnvironment("R2_ACCESS_KEY_ID"),
+    secretAccessKey: requiredEnvironment("R2_SECRET_ACCESS_KEY"),
+    publicBaseUrl: requiredHttpsUrl("ASSETS_PUBLIC_BASE_URL").replace(/\/+$/, ""),
+  };
 }
 
 /** R2에 public asset을 저장하고 custom domain 기반 canonical URL을 반환한다. */
@@ -29,9 +48,15 @@ export async function uploadPublicAsset({
   body: Uint8Array;
   contentType: string;
 }) {
-  await createR2Client().send(
+  const config = getPublicAssetConfig();
+  const client = new S3Client({
+    endpoint: config.endpoint,
+    region: "auto",
+    credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+  });
+  await client.send(
     new PutObjectCommand({
-      Bucket: requiredEnvironment("R2_BUCKET"),
+      Bucket: config.bucket,
       Key: objectKey,
       Body: body,
       ContentType: contentType,
@@ -39,6 +64,5 @@ export async function uploadPublicAsset({
     }),
   );
 
-  const publicBaseUrl = requiredEnvironment("ASSETS_PUBLIC_BASE_URL").replace(/\/$/, "");
-  return { url: `${publicBaseUrl}/${objectKey}` };
+  return { url: `${config.publicBaseUrl}/${objectKey}` };
 }

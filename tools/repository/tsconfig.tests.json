@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["tests/**/*.ts"],
+  "exclude": ["tests/integration/m7-foundation.postgres.test.ts"]
+}

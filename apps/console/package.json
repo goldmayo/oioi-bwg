@@ -7,9 +7,9 @@
     "dev": "next dev --hostname 127.0.0.1 --port 3001",
     "build": "next build && mkdir -p .next/standalone/apps/console/.next && cp -R .next/static .next/standalone/apps/console/.next/",
     "start": "HOSTNAME=127.0.0.1 PORT=3001 node .next/standalone/apps/console/server.js",
-    "lint": "pnpm --dir ../.. exec eslint apps/console && pnpm lint:fsd",
-    "lint:fsd": "steiger src --config steiger.config.ts",
-    "type-check": "tsc --noEmit --incremental false",
+    "lint": "eslint . && pnpm lint:fsd",
+    "lint:fsd": "NODE_OPTIONS=\"${NODE_OPTIONS:+$NODE_OPTIONS }--import tsx\" steiger src --config steiger.config.ts",
+    "type-check": "tsc --noEmit --incremental false && tsc --noEmit -p tsconfig.config.json",
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
@@ -40,7 +40,9 @@
     "@oioi-bwg/server": "workspace:*",
     "@gsap/react": "^2.1.2",
     "gsap": "^3.14.2",
-    "qrcode": "1.5.4"
+    "qrcode": "1.5.4",
+    "server-only": "0.0.1",
+    "client-only": "0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -53,7 +55,14 @@
     "typescript": "^5",
     "vitest": "^4.1.2",
     "shadcn": "^3.8.5",
-    "@types/qrcode": "1.5.6"
+    "@types/qrcode": "1.5.6",
+    "@oioi-bwg/config": "workspace:*",
+    "@testing-library/react": "^16.3.2",
+    "eslint": "^9",
+    "jiti": "2.6.1",
+    "jsdom": "^29.0.1",
+    "steiger": "0.6.0",
+    "tsx": "^4.21.0"
   },
   "postcss": {
     "plugins": {

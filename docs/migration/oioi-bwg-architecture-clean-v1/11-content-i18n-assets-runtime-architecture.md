@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.8"
+version: "1.13"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-19"
+updated_at: "2026-10-25"
 depends_on:
   - "01"
   - "05"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.8
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.13
 
 ## 1. 목적
 
@@ -220,6 +220,50 @@ runtime
 ```
 
 `NEXT_PUBLIC_*`는 실제 client exposure가 필요한 값만 사용한다.
+
+로컬 개인 입력은 앱별 `.env.local` 한 파일로 통일한다. `.env.example`은 모든 값이 빈 공유 템플릿이며
+일반 로컬 실행의 필수·선택 입력을 명시하며 CI 전용 입력은 기존 CI·Docker에서 관리한다.
+Console의 메일 설정은 주석으로 보관하며 실제 기능 연결·전송과 구분한다.
+기존 `.env`를 통합할 때는 실제 적용 값과 보존할 설정을 확인해 이관하고 원본을 ignored 백업에 보관한다.
+실제 값을 임의로 삭제하거나 외부 접속 대상을 바꾸지 않는다.
+Next의 process 우선순위와 NODE_ENV별 파일 탐색 자체는 바꾸지 않으며 테스트 입력은 개인 파일과 분리한다.
+VM·CI의 process/BuildKit/Vault 주입 계약은 로컬 파일 통일과 별개다.
+
+앱은 자신의 환경 입력만 읽는다. Web 설정에 값이 있다는 이유로 Console 설정 완료로 판단하지 않는다.
+Console 앨범 업로드에는 `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+`ASSETS_PUBLIC_BASE_URL` 다섯 항목이 필요하다. local launcher와 배포 env materializer는 누락을
+실행/승격 전에 거절한다. 공개 endpoint/bucket/base URL과 Vault의 쓰기 credential 매핑을 구분한다.
+Web은 공개 조회만 제공하며 R2 쓰기 credential을 새 Web의 설정 예제에 요구하지 않는다.
+기존 이미지 복구를 위한 host mapping은 해당 이미지 지원 종료까지 별도로 보존한다.
+
+Sentry는 현재 Web/Console이 같은 프로젝트를 사용한다. 앱 내부 변수 이름은
+`NEXT_PUBLIC_SENTRY_DSN`을 유지하고 앱별 입력 책임을 명시한다. 프로젝트 분리는 별도 결정과
+검증 없이 요구하지 않는다. `local`에서는 DSN 존재 여부와 무관하게 전송하지 않는 기존 정책을 유지한다.
+
+Web/Console의 `NEXT_PUBLIC_APP_ENV` 값 계약은 `local | production`이다. 비용상 별도 staging 환경은
+운영하지 않는다. `NODE_ENV`는 Next 실행 모드이며 앱 환경을 대신하지 않는다. 로컬 production build도
+앱 환경은 `local`이다. `staging/development/test`는 앱 환경의 별칭으로 허용하지 않는다.
+앱의 `shared/config/app-env.ts`가 해석을 소유하며 Next dev/build 진입점은 누락·미지원 값을 거절한다.
+local launcher·Docker 기본값·일반 CI/관리자 smoke는 `local`, VM용 Promotion candidate build는
+`production`을 명시한다. 공개 build 입력 변경은 새 image가 필요하며 실제 운영 배포는 별도 승인 대상이다.
+최종 www URL 전환은 P06-F의 실제 TLS/라우팅·Promotion·데이터 보존 검증을 거쳐 적용한다.
+이름에 staging이 있는 버킷·외부 리소스·기존 host 식별자는
+이 계약만으로 삭제·이름 변경·접속 대상 변경하지 않는다.
+
+공유 서버의 휴면 메일 provider도 명시적 앱 환경을 검증하고 NODE_ENV로 전송 모드를 추론하지 않는다.
+기본 모드는 local의 no-send dev, production의 OCI이며 production에서 dev 모드는 거절한다.
+이 값 계약은 메일 기능 재활성화나 실제 전송·OCI 인증/IMDS 정책 변경을 승인하지 않는다.
+휴면 provider의 Instance Principal 인증은 metadata 접근을 전제로 하므로 현재 컨테이너 IMDS 차단과
+충돌한다. 차단은 유지한다. 메일 재활성화 전에 이를 유지하는 인증·권한·비밀 관리와 전송 실패 계약을
+별도 요구와 승인 범위에서 설계·검증한다. legacy host 예제의 메일 키를 실제 발송 가능성의 증거로 삼지 않는다.
+
+Web의 기본 metadata와 곡/앨범 metadata helper·sitemap·robots는 같은 site URL을 사용한다. `local`에서는
+`http://localhost:3000`, `production`에서는 최종 `https://www.oioibawige.com`을 사용한다.
+이 URL 준비 자체는 DNS/Worker 연결 변경이나 운영 전환 완료를 뜻하지 않는다.
+누락·빈 값·미지원 값은 local로 추론하지 않고 최종 공개 URL을 사용하며, Sentry와 browser logging은
+비활성화한다. Sentry는 `production`과 비어 있지 않은 DSN이 함께 있을 때만 활성화한다.
+Sentry 최종 event와 Slack relay의 environment 허용값도 이 계약을 따르며 이전 staging 값은
+전송용 event에서 제거하거나 relay에서 unknown으로 표시한다. 기존 리소스 이름과 구분한다.
 
 ---
 

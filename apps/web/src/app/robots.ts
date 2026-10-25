@@ -1,5 +1,7 @@
 import { MetadataRoute } from "next";
 
+import { SITE_CONFIG } from "@/shared/config/site";
+
 /**
  * robots.txt 설정
  */
@@ -9,6 +11,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://oioibawige.com/sitemap.xml",
+    sitemap: `${SITE_CONFIG.url}/sitemap.xml`,
   };
 }

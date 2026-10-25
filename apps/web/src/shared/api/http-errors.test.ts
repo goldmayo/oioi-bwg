@@ -50,3 +50,26 @@ describe("normalizeHttpError", () => {
     expect(normalizeHttpError(sourceError)).toMatchObject({ code });
   });
 });
+
+it.each(["48be30fa-1441-4dc9-8ffa-9b618ec32652", "invalid-private"])(
+  "keeps only a valid HTTP request ID: %s",
+  async (id) => {
+    const { getErrorRequestId } = await import("../lib/sentry/correlation");
+    const error = await ky
+      .create({
+        fetch: async () =>
+          new Response(JSON.stringify({ code: "INTERNAL_SERVER_ERROR", message: "서버 오류" }), {
+            status: 500,
+            headers: { "content-type": "application/json", "X-Request-ID": String(id) },
+          }),
+        retry: 0,
+      })
+      .get("https://example.test")
+      .json()
+      .catch(normalizeHttpError);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(getErrorRequestId(error)).toBe(id.startsWith("48be") ? id : undefined);
+    if (!(error instanceof ApiError)) throw new Error("expected normalized error");
+    expect(Object.keys(error)).not.toContain("requestId");
+  },
+);
