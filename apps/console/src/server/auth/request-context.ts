@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { entityIdSchema } from "@oioi-bwg/contracts/entity-id";
 import type { GuestRequestContext, RequestContext } from "@oioi-bwg/server/auth/request-context";
 
 import { getRequestObservation } from "@/server/observability/request-observation";
@@ -26,13 +27,8 @@ function guestContext(): GuestRequestContext {
 }
 
 function toAccountId(value: string) {
-  if (!/^[1-9]\d{0,18}$/.test(value)) return null;
-  try {
-    const id = BigInt(value);
-    return id <= 9_223_372_036_854_775_807n ? id : null;
-  } catch {
-    return null;
-  }
+  const result = entityIdSchema.safeParse(value);
+  return result.success ? result.data : null;
 }
 
 export type AuthorizationDecision =

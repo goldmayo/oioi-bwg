@@ -29,7 +29,7 @@ challenge UUIDv4와 자연 복합 PK는 유지한다. R2 object key는 이 결�
 
 ## 전환 경계와 한계
 
-첫 checkpoint는 생성/검증 계약과 쓰기 없는 대응표 도구다. 현재 앱·DB는 숫자 ID를 유지한다.
+첫 checkpoint(#261)는 생성/검증 계약과 쓰기 없는 대응표 도구였다. 전환 후보는 그 이후 별도로 검증한다.
 대응표는 Album/Song 원본 ID와 부모 관계의 fingerprint를 고정하고 저장한 표를 재사용한다.
 콘텐츠 전체 보존은 별도 전후 payload 검증이 필요하다. UUID 발급 시각은 과거 생성일이 아니다.
 표는 한시적인 전환/복구 자료이며 정상 스키마에 영구 legacy_id를 남기는 근거가 아니다.
@@ -44,12 +44,17 @@ credential/MFA를 재설정하고 제한된 bootstrap 경로로 다시 등록한
 쓰기 재개 후에는 구 이미지 재배포만으로 복구할 수 없다. 대응표·백업과 신규 행 처리 정책이 필요하다.
 운영 READ ONLY 승인은 운영 migration 적용 승인으로 간주하지 않는다.
 
+2026-10-26 후속 구현에서는 v2 대응표에 Account의 role/status/MFA version과 명시적 reset 대상도
+포함한다. SQL이 table lock 아래 coverage·부모 관계·계정 상태를 재확인하고 같은 transaction에서
+타입/물리 이름을 바꾼 뒤 전체 Album/Song payload와 FK를 대조한다. 알 수 없는 MFA를 가진 계정은
+자동 초기화하지 않는다. 지정 ADMIN만 credential을 제거하고 MFA version을 올려 재등록한다.
+Console 정렬은 앨범 발매일 ASC(NULLS LAST) → 앨범 slug → 트랙 순서 → 곡 slug이며 UUID 순서를 쓰지 않는다.
+public의 기존 정렬은 유지한다. 운영 적용의 중단 시간과 쓰기 재개 후 복구는 여전히 별도 판단이다.
+
 ## 사용과 소유권
 
-`pnpm db:plan-uuid create source.json mapping.json`은 ID를 decimal string으로 기록한
-`{ "albums": [{ "id": "1" }], "songs": [{ "id": "79", "albumId": "1" }] }`을 입력받는다.
-출력은 새 0600 파일에만 생성하고 기존 파일을 덮어쓰지 않는다. 재실행은
-`pnpm db:plan-uuid verify source.json mapping.json`으로 검증한다. 이 도구는 DB에 접속하지 않는다.
+대응표·legacy dump 복원·재등록의 반복 절차는 [로컬 개발 안내](../migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#uuidv7-전환과-legacy-dump-복원)가 소유한다.
+v1은 초기 dry-run 자료이며 v2와 혼용하지 않는다. 저장한 v2 표는 재시도 시 재사용한다.
 
 [Notion 실측·계획](https://app.notion.com/p/404395eb18c28034b39debf1bd080612)이 조사/여러 PR 계획을,
 [WORK](../WORK.md)가 다음 행동을, PR 본문이 실제 검증과 실패를 소유한다. 이 ADR은 장기 선택의

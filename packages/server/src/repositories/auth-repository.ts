@@ -19,7 +19,7 @@ export function insertAccount(executor: DbExecutor) {
     .returning({ id: account.id });
 }
 
-export async function insertProfile(executor: DbExecutor, accountId: bigint, nickname: string) {
+export async function insertProfile(executor: DbExecutor, accountId: string, nickname: string) {
   try {
     return await executor.insert(profile).values({ accountId, nickname });
   } catch (error) {
@@ -62,7 +62,7 @@ export function findPasswordCredentialByEmail(executor: DbExecutor, email: strin
   });
 }
 
-export function findAuthorizationFactsByAccountId(executor: DbExecutor, accountId: bigint) {
+export function findAuthorizationFactsByAccountId(executor: DbExecutor, accountId: string) {
   return executor.query.account.findFirst({
     where: (table, { eq: equals }) => equals(table.id, accountId),
     columns: {
@@ -82,7 +82,7 @@ export function findConsolePasswordCredential(executor: DbExecutor, email: strin
 
 export function updateAccountAccess(
   executor: DbExecutor,
-  accountId: bigint,
+  accountId: string,
   role: AccountRole,
   status: AccountStatus,
 ) {

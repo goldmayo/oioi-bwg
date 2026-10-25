@@ -11,7 +11,11 @@ afterEach(() => vi.unstubAllEnvs());
 it("passes a runtime key and all credentials to the atomic MFA service", async () => {
   const key = Buffer.alloc(32, 9);
   vi.stubEnv("CONSOLE_MFA_ENCRYPTION_KEY", key.toString("base64"));
-  const identity = { id: "42", mfaVerified: true as const, mfaVersion: 7 };
+  const identity = {
+    id: "019a0170-0000-7000-8000-00000000002a",
+    mfaVerified: true as const,
+    mfaVersion: 7,
+  };
   vi.mocked(authenticateConsoleMfa).mockResolvedValue(identity);
   expect(await authenticateConsole("admin@example.test", "password", "123456")).toEqual(identity);
   expect(authenticateConsoleMfa).toHaveBeenCalledWith(

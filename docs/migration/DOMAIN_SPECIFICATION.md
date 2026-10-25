@@ -313,6 +313,12 @@ Web은 기존 Account에도 일반 로그인·세션/권한 API를 제공하지 
 폐기하며, 일반 회원 기능은 별도 요구가 생길 때 추가한다. 아래 가입 방식과 프로세스는 향후 재개 시의 계약이며,
 이번 중단이 별도 관리자 생성이나 OAuth 가입을 허용하는 것은 아니다.
 
+2026-10-26 UUID 전환 예외로, 명시적으로 지정한 기존 ACTIVE ADMIN의 credential/MFA만
+재등록할 수 있다. Account/Profile은 UUID 매핑으로 보존하고 운영자 전용 경로가 대상·예상 MFA
+version·승인 사유·DB 인스턴스를 검증한다. 기존 credential이 없고 MFA가 초기화된 경우에만
+새 Email/Password를 등록한다. 이는 신규 Account 생성·권한 승격·공개 가입이나 HTTP bootstrap을
+허용하지 않는다. 재등록 후 기존 AUTH-009의 MFA 등록/확인·로그인 절차를 적용한다.
+
 Google/Kakao OAuth는 Account 생성 수단이 아니라 기존 Account에 연결되는 추가 로그인 수단이다.
 
 ---

@@ -1,5 +1,7 @@
 import { constants, openSync, fstatSync, readFileSync, closeSync } from "node:fs";
 
+import { entityIdSchema } from "@oioi-bwg/contracts/entity-id";
+
 import { ACCOUNT_ROLES, type AccountRole } from "@oioi-bwg/server/db/schema";
 
 export class OperatorError extends Error {
@@ -31,15 +33,14 @@ export function parseOperatorArguments(args: string[]) {
   const id = fields.get("--account-id")!;
   const version = fields.get("--expected-version")!;
   if (
-    !/^[1-9]\d{0,18}$/.test(id) ||
-    BigInt(id) > 9_223_372_036_854_775_807n ||
+    !entityIdSchema.safeParse(id).success ||
     (version !== "none" && (!/^[1-9]\d{0,9}$/.test(version) || Number(version) > 2_147_483_647))
   )
     throw new OperatorError("INVALID_REQUEST");
   const base = {
     config: fields.get("--config")!,
     reasonFile: fields.get("--reason-file")!,
-    accountId: BigInt(id),
+    accountId: entityIdSchema.parse(id),
     version: version === "none" ? null : Number(version),
   };
   const readAccess = (prefix: string): Access => {

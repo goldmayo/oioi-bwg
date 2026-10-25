@@ -21,9 +21,9 @@ vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
 import { GET, POST } from "./route";
 
-const context = { ability: {}, user: { id: "1" } };
+const context = { ability: {}, user: { id: "019a0170-0000-7000-8000-000000000001" } };
 const input = {
-  albumId: 1,
+  albumId: "019a0170-0000-7000-8000-000000000001",
   title: "Test Song",
   slug: "test-song",
   youtubeId: "youtube-id",
@@ -35,7 +35,7 @@ const input = {
 };
 const song = {
   ...input,
-  id: 2,
+  id: "019a0170-0000-7000-8000-000000000002",
   lrcText: undefined,
   updatedAt: "2026-01-01T00:00:00.000Z",
   album: { name: "Test Album" },
@@ -59,7 +59,7 @@ describe("/api/admin/songs", () => {
   });
 
   it("creates a song with a validated LRC contract", async () => {
-    createSong.mockResolvedValue({ id: 2 });
+    createSong.mockResolvedValue({ id: "019a0170-0000-7000-8000-000000000002" });
 
     const response = await POST(
       new Request("https://example.test/api/admin/songs", {
@@ -70,7 +70,7 @@ describe("/api/admin/songs", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(await response.json()).toEqual({ id: 2 });
+    expect(await response.json()).toEqual({ id: "019a0170-0000-7000-8000-000000000002" });
     expect(createSong).toHaveBeenCalledWith(context, input);
   });
 

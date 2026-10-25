@@ -69,6 +69,10 @@ pnpm db:studio --env-file apps/console/.env.local
 host만 허용하고 query/fragment를 거절한다. guard가 확인한 URL을 같은 실행 환경에 전달하며
 Drizzle Kit가 다른 env 파일로 다시 덮어쓰지 않게 한다.
 
+2026-10-26 UUID 전환부터 `migrate`에만 `--legacy-schema`와 `--uuid-map <JSON>`을 추가했다.
+전자는 빈 target을 0005까지 준비하며 downgrade하지 않는다. 후자는 v2 대응표를 transaction 안에
+전달한다. 둘을 함께 사용할 수 없으며 host/입력 충돌 guard는 그대로 적용한다.
+
 Compose·Console launcher·격리 테스트가 이미 process URL을 명시하면 기존 명령 그대로 사용한다.
 개인 env·credential·볼륨은 자동 이관하거나 바꾸지 않는다. `db:generate`는 DB 입력을 사용하지 않고
 기존 생성 옵션을 전달한다. [Drizzle generate의 필수 입력](https://orm.drizzle.team/docs/drizzle-kit-generate)은
@@ -249,28 +253,83 @@ docker compose -f compose.dev.yml exec next pnpm db:migrate
 
 Compose는 PostgreSQL과 Next만 실행한다. migration은 실행 중인 Next 컨테이너에서 개발자가 명시적으로 실행한다. 빈 DB에서는 앱 페이지를 사용하기 전에 migration 성공을 확인한다.
 
-### 운영 데이터 dump의 로컬 복원
+### UUIDv7 전환과 legacy dump 복원
 
-`.local/`에 전달받은 PostgreSQL custom dump가 있는 경우에만 전체 개발 데이터를 복원할 수 있다. `.local/`은 Git에서 제외되며 운영 DB에 연결하지 않는다.
+2026-10-26부터 Account·Album·Song과 FK는 UUID이며 물리 테이블/컬럼은 단수 snake_case다.
+정수 ID를 가진 승인 dump를 UUID 스키마에 직접 넣지 않는다. `--legacy-schema`로 0005까지
+준비 → dump 복원 → v2 대응표 생성 → 0006 적용 순서를 사용한다. 이미 UUID migration을 적용한
+DB는 이 옵션으로 되돌릴 수 없다. 현재 데이터가 있는 DB/volume은 보존하고 먼저 별도 DB에서 검증한다.
+
+다음은 **새 격리 DB** 예시다. URL은 Compose의 공개된 로컬 개발 전용 값이며 운영 입력이 아니다.
+이미 같은 이름의 DB가 있으면 생성이 실패한다. 기존 DB를 삭제하는 명령은 포함하지 않는다.
 
 ```bash
 docker compose -f compose.dev.yml up -d postgres
-docker compose -f compose.dev.yml up -d next
-docker compose -f compose.dev.yml exec next pnpm db:migrate
-pnpm db:restore-local
+docker compose -f compose.dev.yml exec -T postgres createdb -U oioibawige oioi_m7_test_restore
+UUID_RESTORE_DATABASE_URL='postgresql://oioibawige:oioibawige_dev_only@127.0.0.1:5432/oioi_m7_test_restore'
+DATABASE_URL="$UUID_RESTORE_DATABASE_URL" pnpm db:migrate --legacy-schema
+pnpm db:restore-local .local/oioibawige_20260829_030417.dump --database oioi_m7_test_restore
 ```
 
-기본 경로는 `.local/oioibawige_20260829_030417.dump`이며 다른 파일은 인자로 지정한다.
+복원은 빈 legacy `Album/Song`에 data/sequence만 넣는다. schema·extension·constraint는
+migration이 만들며, 기존 행이 있거나 UUID 스키마이면 중단한다. 다른 승인 dump는 첫 인자로 고른다.
+`--database`는 같은 Compose의 `oioi_m7_test_*`만 허용한다. 생략하면 기존 로컬 `oioibawige`다.
+
+대응표 입력은 **현재 그 DB**에서 ID/FK와 계정 메타데이터만 조회해 만든다. 이메일·해시·OTP·MFA secret은
+선택하지 않는다. 기존 v1 dry-run은 v2 대신 사용하지 않으며 출력 파일은 덮어쓰지 않는다.
 
 ```bash
-pnpm db:restore-local -- .local/another.dump
+(umask 077; set -C
+docker compose -f compose.dev.yml exec -T postgres psql -qAt -U oioibawige -d oioi_m7_test_restore > .local/uuid-source-v2.json <<'SQL'
+SELECT jsonb_build_object(
+  'albums', coalesce((SELECT jsonb_agg(jsonb_build_object('id', id::text) ORDER BY id) FROM "Album"), '[]'::jsonb),
+  'songs', coalesce((SELECT jsonb_agg(jsonb_build_object('id', id::text, 'albumId', "albumId"::text) ORDER BY id) FROM "Song"), '[]'::jsonb),
+  'accounts', coalesce((SELECT jsonb_agg(jsonb_build_object('id', a.id::text, 'role', a.role, 'status', a.status, 'mfaVersion', m.version) ORDER BY a.id) FROM account a LEFT JOIN admin_mfa m ON m.account_id=a.id), '[]'::jsonb)
+);
+SQL
+)
+pnpm db:plan-uuid create .local/uuid-source-v2.json .local/uuid-map-v2.json
+pnpm db:plan-uuid verify .local/uuid-source-v2.json .local/uuid-map-v2.json
+DATABASE_URL="$UUID_RESTORE_DATABASE_URL" pnpm db:migrate --uuid-map .local/uuid-map-v2.json
 ```
 
-복원 명령은 dump의 schema/extension/constraint를 실행하지 않고 Album/Song 행과 sequence만 로컬 migration 결과에 넣는다. 따라서 로컬 canonical schema는 항상 Drizzle migration이 만들고, dump는 승인된 로컬 데이터 snapshot으로만 사용한다. dump에 포함된 운영 sequence 값은 로컬 개발 DB에만 적용된다.
+기존 ACTIVE ADMIN을 재등록하는 전환은 검토한 대상마다 create 명령에
+`--reset-admin-old-id '<기존 정수 ID>'`를 명시한다. 지정 대상의 credential만 제거하고 MFA를 reset/version
+증가하며 Account/Profile과 다른 계정의 credential은 보존한다. 지정하지 않은 MFA가 있거나 계정 상태가
+달라지면 SQL이 중단한다. 대응표를 저장해 같은 표로 재시도하며 ID를 재발급하지 않는다.
 
-저장소는 임의로 선별하거나 작성한 seed 데이터를 제공하지 않는다. 전체 데이터가 필요한 개발자는 전달받은 `.local/` dump를 명시적으로 복원하고, dump가 없으면 schema만 생성된 빈 로컬 DB를 사용한다.
+복원한 격리 DB는 자동으로 앱의 개인 env나 Console launcher 대상이 되지 않는다. 기존 개발 DB의
+실제 전환도 그 DB를 기준으로 새 source/대응표를 만들고 명시적으로 적용한다. snapshot의 내용·공개 상태·
+slug·이미지 URL·가사·곡 관계를 보존하며 production 데이터로 로컬을 자동 덮어쓰지 않는다.
 
-복원 대상 테이블이 비어 있지 않으면 중복 삽입을 막기 위해 명령이 실패한다. 다시 복원하려면 로컬 volume을 초기화한 후 migration을 재실행한다.
+로컬 리허설은 다음과 같이 재현한다. 기존 개발 DB를 초기화하지 않으며 임시 DB와 테스트 계정만 만들고 정리한다.
+실제 dump 모드의 native backup/restore에는 로컬 Compose PostgreSQL이 필요하다.
+
+```bash
+OIOI_UUID_REHEARSAL_DUMP=.local/oioibawige_20260829_030417.dump pnpm test:integration:postgres:local
+```
+
+기본 dump는 Album 7·Song 26의 2026-08-29 snapshot이다. 현재 운영 9·26 또는 기존 개발 DB 8·26과
+동일하다고 가정하지 않는다. 일반 CI는 격리 fixture로 전환/거부/rollback을 검증하며 이 private dump를 요구하지 않는다.
+
+### 지정 Console 관리자 credential 재등록
+
+전환으로 credential이 제거되고 MFA가 초기화된 **기존 ACTIVE ADMIN**만 재등록할 수 있다.
+신규 Account 생성·권한 승격·기존 credential 덮어쓰기는 지원하지 않는다. 공개 가입/API bootstrap은 닫힌 상태를 유지한다.
+
+기존 `console:mfa`와 같은 보호 operator 설정을 사용한다. config는 `scope=local-compose`, 실행자 UID,
+정확한 local app-role DB URL, `extract(epoch from pg_postmaster_start_time())::text`의 인스턴스 값을 담는다.
+main 로컬 DB는 `oioi_app`, 격리 DB는 runner가 준비한 대응 app role이어야 한다. config와 사유 파일은
+소유자 본인·0600·단일 regular file이어야 하며 내용을 출력하거나 커밋하지 않는다.
+
+```bash
+pnpm console:bootstrap --config .local/operator.json --account-id '<새 UUID>' --expected-version '<reset 후 version 또는 none>' --reason-file .local/reason.txt --apply
+```
+
+TTY에서 이메일·새 비밀번호·비밀번호 확인을 숨김 입력한다. 비밀번호를 argv·env·파일로 전달하지 않는다.
+DB 대상과 예상 version을 확인하고 한 번만 credential을 생성한다. 이후 위 Console MFA 절차로
+등록 허용 → QR 등록/확인 → 다음 OTP 로그인 → 등록 허용 false 복귀를 수행한다. 키를 바꾸지 않는다.
+이 로컬 절차는 운영 SSH target·migration·배포 적용 승인이 아니다.
 
 ### 상태와 로그
 
@@ -331,10 +390,10 @@ docker compose -f compose.dev.yml down -v
 docker compose -f compose.dev.yml up -d postgres
 docker compose -f compose.dev.yml up -d next
 docker compose -f compose.dev.yml exec next pnpm db:migrate
-pnpm db:restore-local
 ```
 
-마지막 복원 명령은 승인된 `.local/` dump가 있을 때만 실행한다.
+정수 dump를 복원하려면 최신 UUID migration 전에 위 legacy-schema 복원 순서를 선택한다.
+승인된 `.local/` dump가 없으면 빈 UUID 스키마만 사용한다.
 
 `down -v`는 로컬 개발 데이터와 cache를 복구 불가능하게 삭제한다. 운영 volume에는 사용할 수 없다.
 

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface Props {
   search: string;
   albumFilter: string;
-  albums: { id: number; name: string }[];
+  albums: { id: string; name: string }[];
   canManage: boolean;
   onSearchChange: (value: string) => void;
   onAlbumChange: (value: string) => void;

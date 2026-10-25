@@ -192,7 +192,7 @@ export function createSong(ctx: RequestContext, input: CreateAdminSong) {
     });
 }
 
-export async function editSong(ctx: RequestContext, id: number, input: UpdateAdminSong) {
+export async function editSong(ctx: RequestContext, id: string, input: UpdateAdminSong) {
   requireAdmin(ctx);
   const { lrcText, slug, ...fields } = input;
   const row = {
@@ -217,7 +217,7 @@ export async function editSong(ctx: RequestContext, id: number, input: UpdateAdm
   }
 }
 
-export async function saveSongLyrics(ctx: RequestContext, id: number, input: SaveAdminSongLyrics) {
+export async function saveSongLyrics(ctx: RequestContext, id: string, input: SaveAdminSongLyrics) {
   requireAdmin(ctx);
   const [song] = await updateSong(getDatabase(), id, {
     ...input,
@@ -227,7 +227,7 @@ export async function saveSongLyrics(ctx: RequestContext, id: number, input: Sav
   return song;
 }
 
-export function deleteSong(ctx: RequestContext, id: number) {
+export function deleteSong(ctx: RequestContext, id: string) {
   requireAdmin(ctx);
   return removeSong(getDatabase(), id).then(([song]) => {
     if (!song) throw new AppError("SONG_NOT_FOUND");

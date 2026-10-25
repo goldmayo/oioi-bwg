@@ -24,7 +24,7 @@ export interface ToolbarState {
   endOffset: number;
 }
 
-export type SaveSongDataAction = (songId: number, data: SaveAdminSongLyrics) => Promise<void>;
+export type SaveSongDataAction = (songId: string, data: SaveAdminSongLyrics) => Promise<void>;
 
 /**
  * AdminEditor의 모든 상태와 핸들러를 담는 단일 로직 게이트웨이.

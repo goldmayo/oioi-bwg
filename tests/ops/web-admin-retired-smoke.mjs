@@ -24,8 +24,8 @@ export async function assertWebAdminRetired(browser, origin, sql, artifacts) {
   const snapshot = async () =>
     JSON.stringify(
       await sql`select
-    (select coalesce(jsonb_agg(a order by id), '[]') from "Album" a) as albums,
-    (select coalesce(jsonb_agg(s order by id), '[]') from "Song" s) as songs`,
+    (select coalesce(jsonb_agg(a order by id), '[]') from "album" a) as albums,
+    (select coalesce(jsonb_agg(s order by id), '[]') from "song" s) as songs`,
     );
   const before = await snapshot();
   let admin;
@@ -57,10 +57,10 @@ export async function assertWebAdminRetired(browser, origin, sql, artifacts) {
       "/admin/edit/fixture",
       "/admin-login",
       "/api/admin/albums",
-      "/api/admin/albums/1",
+      "/api/admin/albums/019a0170-0000-7000-8000-000000000001",
       "/api/admin/songs",
-      "/api/admin/songs/1",
-      "/api/admin/songs/1/lyrics",
+      "/api/admin/songs/019a0170-0000-7000-8000-000000000001",
+      "/api/admin/songs/019a0170-0000-7000-8000-000000000001/lyrics",
     ]) {
       assert.equal(
         (await context.request.get(origin + route, { maxRedirects: 0 })).status(),

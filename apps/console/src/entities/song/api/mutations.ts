@@ -21,7 +21,7 @@ export const songMutations = {
   update: () =>
     mutationOptions({
       mutationKey: songMutationKeys.update(),
-      mutationFn: ({ id, input }: { id: number; input: UpdateAdminSong }) =>
+      mutationFn: ({ id, input }: { id: string; input: UpdateAdminSong }) =>
         updateAdminSong(id, input),
       meta: { skipGlobalError: true },
     }),
@@ -33,7 +33,7 @@ export const songMutations = {
   saveLyrics: () =>
     mutationOptions({
       mutationKey: songMutationKeys.saveLyrics(),
-      mutationFn: ({ id, input }: { id: number; input: SaveAdminSongLyrics }) =>
+      mutationFn: ({ id, input }: { id: string; input: SaveAdminSongLyrics }) =>
         saveAdminSongLyrics(id, input),
     }),
 };

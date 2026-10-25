@@ -5,8 +5,8 @@ import postgres, { type TransactionSql } from "postgres";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const PRODUCTION_ACK = "I_UNDERSTAND_THIS_CHANGES_DATABASE_ROLES";
 const APPLICATION_TABLES = [
-  "Album",
-  "Song",
+  "album",
+  "song",
   "account",
   "admin_mfa",
   "profile",
@@ -14,7 +14,7 @@ const APPLICATION_TABLES = [
   "email_verification_challenge",
   "email_verification_rate_limit",
 ] as const;
-const APPLICATION_SEQUENCES = ["Album_id_seq", "Song_id_seq", "account_id_seq"] as const;
+const APPLICATION_SEQUENCES: readonly string[] = [];
 const DRIZZLE_TABLE = "__drizzle_migrations";
 const DRIZZLE_SEQUENCE = "__drizzle_migrations_id_seq";
 

@@ -29,7 +29,7 @@ gsap.registerPlugin(ScrollToPlugin);
 
 interface LyricsViewerClientProps {
   song: {
-    id: number;
+    id: string;
     title: string;
     youtubeId: string;
     lyrics: LyricLine[];

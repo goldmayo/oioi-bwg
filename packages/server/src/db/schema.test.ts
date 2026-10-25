@@ -15,7 +15,7 @@ describe("M7 Song slug persistence policy", () => {
   it("keeps slug nullable and globally unique with the canonical constraint name", () => {
     expect(song.slug.notNull).toBe(false);
     expect(song.slug.isUnique).toBe(true);
-    expect(song.slug.uniqueName).toBe("Song_slug_key");
+    expect(song.slug.uniqueName).toBe("song_slug_key");
   });
 });
 

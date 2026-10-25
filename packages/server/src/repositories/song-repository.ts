@@ -1,10 +1,10 @@
 import "server-only";
 
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 
 import type { DbExecutor } from "../db";
 import { isPostgresUniqueViolation } from "../db/postgres-error";
-import { type InsertSongRow, song } from "../db/schema";
+import { album, type InsertSongRow, song } from "../db/schema";
 
 import { SongSlugConflictError } from "./repository-error";
 
@@ -36,7 +36,7 @@ export function findAdminSongBySlug(executor: DbExecutor, slug: string) {
   });
 }
 
-export function findSongSlugById(executor: DbExecutor, id: number) {
+export function findSongSlugById(executor: DbExecutor, id: string) {
   return executor.query.song.findFirst({
     where: (table, { eq: equals }) => equals(table.id, id),
     columns: { id: true, slug: true },
@@ -64,46 +64,43 @@ export function findVisibleSongs(executor: DbExecutor) {
 }
 
 export function findSongsWithAlbum(executor: DbExecutor) {
-  return executor.query.song.findMany({
-    columns: {
-      id: true,
-      title: true,
-      slug: true,
-      albumId: true,
-      order: true,
-      youtubeId: true,
-      updatedAt: true,
-      hasOfficialCheer: true,
-      isTitle: true,
-      isVisible: true,
-    },
-    with: {
-      album: {
-        columns: { name: true },
-      },
-    },
-    orderBy: (table, { asc }) => [asc(table.albumId), asc(table.order)],
-  });
+  return executor
+    .select({
+      id: song.id,
+      title: song.title,
+      slug: song.slug,
+      albumId: song.albumId,
+      order: song.order,
+      youtubeId: song.youtubeId,
+      updatedAt: song.updatedAt,
+      hasOfficialCheer: song.hasOfficialCheer,
+      isTitle: song.isTitle,
+      isVisible: song.isVisible,
+      album: { name: album.name },
+    })
+    .from(song)
+    .innerJoin(album, eq(album.id, song.albumId))
+    .orderBy(asc(album.releaseDate), asc(album.slug), asc(song.order), asc(song.slug));
 }
 
 export async function insertSong(executor: DbExecutor, data: InsertSongRow) {
   try {
     return await executor.insert(song).values(data).returning({ id: song.id });
   } catch (error) {
-    if (isPostgresUniqueViolation(error, "Song_slug_key")) {
+    if (isPostgresUniqueViolation(error, "song_slug_key")) {
       throw new SongSlugConflictError();
     }
     throw error;
   }
 }
 
-export function updateSong(executor: DbExecutor, id: number, data: SongUpdateRow) {
+export function updateSong(executor: DbExecutor, id: string, data: SongUpdateRow) {
   return executor.update(song).set(data).where(eq(song.id, id)).returning({ id: song.id });
 }
 
 export async function updateSongWithSlugPolicy(
   executor: DbExecutor,
-  id: number,
+  id: string,
   slug: string | null,
   data: SongUpdateRow,
 ) {
@@ -117,13 +114,13 @@ export async function updateSongWithSlugPolicy(
       .where(and(eq(song.id, id), slugCanBeSet))
       .returning({ id: song.id });
   } catch (error) {
-    if (isPostgresUniqueViolation(error, "Song_slug_key")) {
+    if (isPostgresUniqueViolation(error, "song_slug_key")) {
       throw new SongSlugConflictError();
     }
     throw error;
   }
 }
 
-export function removeSong(executor: DbExecutor, id: number) {
+export function removeSong(executor: DbExecutor, id: string) {
   return executor.delete(song).where(eq(song.id, id)).returning({ id: song.id });
 }
