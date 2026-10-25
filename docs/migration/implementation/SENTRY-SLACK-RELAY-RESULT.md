@@ -346,10 +346,18 @@ credential·개인 env가 없는 임시 source에서 API loopback·metrics/error
 | request ID                                 | `contexts.correlation.request_id`의 진단 연결 값이며 검색용 tag·custom fingerprint에 넣지 않는다.                                                                           |
 | relay 표시                                 | environment/level, 단일·유효한 app/failure.kind tag, 검증된 release만 추가한다. 나머지 임의 tag·사용자 정보·원문 request를 Slack에 복사하지 않는다.                         |
 
-Sentry 읽기 API token은 현재 shell/표준 로컬 설정에서 확인하지 못했다. 기존 Slack 채널의 최근 메시지는
-읽기만 했으며 과거 staging 표시를 새 production 수신 증거로 세지 않는다. **현재 Sentry alert rule의
-production 필터·실제 production event 태그·원격 소스맵 복원은 이번 코드 감사로 검증하지 않았다.**
-과거 §11의 staging 진단 수신을 이 확인으로 재사용하지 않는다. 새 알림을 전송하지 않았다.
+사용자가 요청한 범위는 SDK의 `setTag`/`setTags`를 통한 오류 식별 설정 검토다. 이 검토에는
+Sentry 읽기 API token이 필요하지 않다. 두 앱의 서버 `server-sentry-reporter.ts`는
+`Sentry.withScope()` 안에서 `scope.setTags()` 후 예외를 수집한다. 브라우저 `sentry` adapter는
+현재 scope를 복제하고 `scope.setTags()` 후 비동기 event를 수집하므로 각 수집의 식별값을 분리한다.
+최종 `beforeSend` sanitizer가 위 표의 허용값만 다시 구성한다. 현재 앱·실행 위치·발생 경계를
+식별할 태그가 이미 있어 전역 `setTag()`를 중복 추가하지 않는다.
+
+새 식별 태그가 필요하면 발생 경계의 scoped setter와 최종 sanitizer 허용 목록·회귀 검증을 함께
+갱신해야 한다. setter에만 임의 key를 추가하면 최종 전송에서 제거된다. 요청 ID·실제 경로·사용자
+입력을 검색 tag로 승격하지 않는다. 이 판정은 현재 소스의 수집 경로에 대한 것이며 원격 alert rule
+변경이나 production event 조회를 완료 조건으로 삼지 않는다. 기존 Slack 메시지는 읽기만 했으며
+과거 §11의 staging 수신을 새 production 검증으로 재사용하지 않는다. 새 알림을 전송하지 않았다.
 
 실제 Cloudflare Worker에 `wrangler secret list`와 settings GET을 실행해 이름·타입만 대조했다.
 `SENTRY_WEBHOOK_SECRET`/`SLACK_SENTRY_WEBHOOK_URL`의 정확히 두 `secret_text` binding이며
