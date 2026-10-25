@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 
 export function cacheKey() {
   const index = execFileSync("git", ["ls-files", "-s", "--", ".", ":(exclude)docs/**"]);
-  return `Linux-verify-amd64-v3-${createHash("sha256").update(index).digest("hex")}`;
+  return `Linux-verify-amd64-v4-${createHash("sha256").update(index).digest("hex")}`;
 }
 
 // Cache is optional build input, never evidence that a new run passed verification.

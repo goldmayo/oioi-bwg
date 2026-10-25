@@ -163,6 +163,8 @@ jobs:
       - uses: docker/setup-buildx-action@v3
         with:
           cleanup: false # The GitHub-hosted VM is discarded after this job.
+          version: v0.38.0
+          driver-opts: image=moby/buildkit:v0.33.1
       - name: Identify verification cache inputs
         id: cache-key
         run: node scripts/verification-cache.mjs >> "${GITHUB_OUTPUT}"
@@ -173,7 +175,7 @@ jobs:
           path: ${{ runner.temp }}/buildx-cache
           key: ${{ steps.cache-key.outputs.key }}
           restore-keys: |
-            ${{ runner.os }}-verify-amd64-v3-
+            ${{ runner.os }}-verify-amd64-v4-
       - name: Build web artifacts and cache
         uses: docker/build-push-action@v6
         with:
@@ -185,8 +187,8 @@ jobs:
             BUILD_APP=web
             NEXT_PUBLIC_APP_ENV=local
           outputs: type=cacheonly
-          cache-from: type=local,src=${{ runner.temp }}/buildx-cache/web
-          cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new/web,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
+          cache-from: type=local,src=${{ runner.temp }}/buildx-cache,tag=web
+          cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new,tag=web,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
       - name: Load Web container from its builder
         id: web-runtime
         uses: docker/build-push-action@v6
@@ -200,7 +202,7 @@ jobs:
           build-args: |
             BUILD_APP=web
             NEXT_PUBLIC_APP_ENV=local
-          cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}/web
+          cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }},tag=web
       - name: Archive verified Web container
         run: |
           mkdir -p "${{ runner.temp }}/ci-build"
@@ -216,8 +218,8 @@ jobs:
             BUILD_APP=console
             NEXT_PUBLIC_APP_ENV=local
           outputs: type=cacheonly
-          cache-from: type=local,src=${{ runner.temp }}/buildx-cache/console
-          cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new/console,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
+          cache-from: type=local,src=${{ runner.temp }}/buildx-cache,tag=console
+          cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/buildx-cache-new,tag=console,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
       - name: Load Console container from its builder
         id: console-runtime
         uses: docker/build-push-action@v6
@@ -231,11 +233,15 @@ jobs:
           build-args: |
             BUILD_APP=console
             NEXT_PUBLIC_APP_ENV=local
-          cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}/console
+          cache-from: type=local,src=${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }},tag=console
       - name: Archive verified Console container
         run: |
           mkdir -p "${{ runner.temp }}/ci-build"
           docker save --output "${{ runner.temp }}/ci-build/console-image.tar" oioi-bwg-console:workspace-check
+      - name: Inspect app cache manifests and shared storage
+        env:
+          CACHE_DIRECTORY: ${{ runner.temp }}/${{ steps.build-cache.outputs.cache-hit == 'true' && 'buildx-cache' || 'buildx-cache-new' }}
+        run: node scripts/buildkit-cache-report.mjs "${CACHE_DIRECTORY}" > "${{ runner.temp }}/ci-build/cache-metadata.json"
       - name: Record verified image metadata
         env:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -250,7 +256,8 @@ jobs:
             const [image] = JSON.parse(execFileSync('docker', ['image', 'inspect', tag + ':workspace-check'], { encoding: 'utf8' }));
             return [app, { id: image.Id, bytes: image.Size, buildDigest: process.env[app.toUpperCase() + '_BUILD_DIGEST'] }];
           }));
-          const metadata = { sourceSha: process.env.SOURCE_SHA, checkoutSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), tree: execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { encoding: 'utf8' }).trim(), runId: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT, images };
+          const cache = JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'ci-build/cache-metadata.json'), 'utf8'));
+          const metadata = { sourceSha: process.env.SOURCE_SHA, checkoutSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), tree: execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { encoding: 'utf8' }).trim(), runId: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT, images, cache };
           const report = JSON.stringify(metadata, null, 2);
           fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'ci-build/image-metadata.json'), report);
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '\n```json\n' + report + '\n```\n');
