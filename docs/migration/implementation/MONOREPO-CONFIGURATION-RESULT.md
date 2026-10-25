@@ -8,7 +8,7 @@ created_at: "2026-10-22"
 
 # 모노레포 구조 개선 실행 기록
 
-[계획과 원문 매핑](MONOREPO-CONFIGURATION-PLAN.md)을 따른다.
+[계획과 원문 매핑](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md)을 따른다.
 아래 체크는 구현뿐 아니라 적용 제외·보존 판단까지 근거를 점검했다는 의미다.
 운영 상태나 외부 전송 성공을 뜻하지 않는다.
 **2026-10-23 승인된 정상화 범위 완료.** 원문 38개는 모두 구현 또는 보존/적용 제외 판단을 마쳤고,
@@ -79,7 +79,7 @@ F/www 전환·미래 계정/메일 재활성화는 완료 주장에 포함하지
 | [x] | TEST-06 | tests 위치·책임 정리 | marker는 #206의 config, Worker unit은 #211의 앱, 서버 전용 DB 두 파일은 server tests/타입 프로그램이 소유한다. foundation·operator·ops/smoke/fixture와 앱 import 없는 수동 k6는 root 실행 책임으로 보존한다. 실제 PG 4파일/33건·격리 정리와 unit 중복 부재를 확인했다. |
 | [ ] | UI-03 | 정상화 이후 공통 UI | 정상화와 최종 통합 검증 뒤 별도로 실제 재사용을 조사한다. 패키지 선생성·일괄 이관을 승인하거나 완료한 상태가 아니다. |
 
-재개 순서와 각 ID의 완료 조건은 [PLAN의 추가 논의](MONOREPO-CONFIGURATION-PLAN.md#2026-10-22-추가-논의-반영--재개-순서와-소유권),
+재개 순서와 각 ID의 완료 조건은 [PLAN의 추가 논의](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#2026-10-22-추가-논의-반영--재개-순서와-소유권),
 조사 기준과 근거는 이 문서 끝의 중간 점검 기록을 따른다. 기존 단계별 이력의 수치와 당시 미배포 표시는
 그 시점의 사실로 보존한다.
 
@@ -258,7 +258,7 @@ F/www 전환·미래 계정/메일 재활성화는 완료 주장에 포함하지
 - 진입 기준: `d8713c59d44cb9ff5a9603f4693638546849169c`. fetch 후 로컬과 같은 이름의 원격
   작업 브랜치가 같고 작업 트리가 깨끗함을 확인했다. `origin/migration_main`은 `4d5e42d`다.
   로컬 `migration_main`의 오래된 `5135f6e`를 재판정 기준으로 사용하지 않았다.
-- [4단계 계획](MONOREPO-CONFIGURATION-PLAN.md#4단계-첫-단위--test-01-앱별-vitest-소유권)에
+- [4단계 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#4단계-첫-단위--test-01-앱별-vitest-소유권)에
   따라 TEST-01만 완료했다. 원문 38개 ID를 유지하며 누적 완료 8개, 대기 30개다.
   구현과 이 기록은 같은 커밋에 포함한다. 이전 계획·결과 이력은 보존했다.
 - Web에 앱 전용 `vitest.config.ts`를 추가하고 package test가 앱 cwd에서 실행되도록 했다.
@@ -324,7 +324,7 @@ F/www 전환·미래 계정/메일 재활성화는 완료 주장에 포함하지
 
 - 진입 기준: `99d4428816be36878b084c03c17606b3a7251858`. fetch 후 로컬과 같은 이름의 원격
   작업 브랜치가 같고 작업 트리가 깨끗함을 확인했다. `origin/migration_main`은 `4d5e42d`다.
-  [두 번째 단위 계획](MONOREPO-CONFIGURATION-PLAN.md#4단계-두-번째-단위--test-02-루트-실행-범위)에
+  [두 번째 단위 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#4단계-두-번째-단위--test-02-루트-실행-범위)에
   따라 TEST-02의 실행 범위를 정리했다. 원문 38개 중 완료 9개, 대기 29개다.
   구현과 이 기록은 같은 커밋에 포함하며 이전 이력과 PLAN 원문 매핑은 보존했다.
 - root Vitest의 `projects`는 두 앱과 두 package의 실제 `vitest.config.ts`를 선택한다.
@@ -375,7 +375,7 @@ F/www 전환·미래 계정/메일 재활성화는 완료 주장에 포함하지
 
 - 진입 기준: `6a6e90d760086a3d215c6464bf77b0aec3912772`. fetch 후 로컬과 같은 이름의 원격
   작업 브랜치가 같고 작업 트리가 깨끗함을 확인했다. `origin/migration_main`은 `4d5e42d`다.
-  [세 번째 단위 계획](MONOREPO-CONFIGURATION-PLAN.md#4단계-세-번째-단위--test-03-coverage-측정-경로)에
+  [세 번째 단위 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#4단계-세-번째-단위--test-03-coverage-측정-경로)에
   따라 TEST-03을 완료했다. 원문 38개 중 완료 10개, 대기 28개다. 구현과 이 기록은 같은 커밋에
   포함하며 과거의 coverage 0개 관찰과 PLAN 원문 매핑은 보존했다.
 - 기존의 없는 Web 경로 대신 `apps/*/src/**/*.{ts,tsx}`·`packages/*/src/**/*.{ts,tsx}`를 측정한다.
@@ -423,7 +423,7 @@ F/www 전환·미래 계정/메일 재활성화는 완료 주장에 포함하지
 
 - 진입 기준: `1a6f4b2f6be2c5895c8840ffa6f907495f17c334`. fetch 후 같은 이름의 원격 작업
   브랜치와 HEAD가 같고 작업 트리가 깨끗함을 확인했다. `origin/migration_main`은 `4d5e42d`다.
-  [네 번째 단위 계획](MONOREPO-CONFIGURATION-PLAN.md#4단계-네-번째-단위--test-04-postgresql-의존-책임)에
+  [네 번째 단위 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#4단계-네-번째-단위--test-04-postgresql-의존-책임)에
   따라 TEST-04를 완료했다. 원문 38개 중 완료 11개, 대기 27개다. 구현과 이 기록은 같은 커밋에
   포함하며 PLAN 원문 매핑과 이전 결과는 보존했다.
 - root `vitest.postgres.config.ts`는 전체 project 선택과 `fileParallelism:false`·`maxWorkers:1`을
@@ -476,7 +476,7 @@ F/www 전환·미래 계정/메일 재활성화는 완료 주장에 포함하지
 - 진입 기준: `6b65d7cabb0e84b54b8ac0cf0562d44c884cf4a8`. HEAD·같은 이름의 원격 추적 ref·
   `git ls-remote`가 일치하고 작업 트리가 깨끗함을 확인했다. `origin/migration_main`과 실제 원격
   기준은 `4d5e42d`다. Notion 원문의 최종 편집 시각도 `2026-10-21T17:17:49.914Z`로 동일하다.
-  [첫 단위 계획](MONOREPO-CONFIGURATION-PLAN.md#next-build-첫-단위--공통-정책과-앱별-옵션)에
+  [첫 단위 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#next-build-첫-단위--공통-정책과-앱별-옵션)에
   따라 공통 정책을 분리하고 RUN-02의 적용 제외·보존 판단을 완료했다. 원문 38개 ID는 유지하며
   누적 완료 12개, 대기 26개다. 구현과 이 기록은 같은 커밋에 포함한다.
 - `config/next.ts`는 실제로 같았던 standalone·두 source package transpile·tracing root·
@@ -535,7 +535,7 @@ F/www 전환·미래 계정/메일 재활성화는 완료 주장에 포함하지
 
 - 진입 기준: `18cc91ab173ee8ce87f9e3639b33d58fb70cb8a4`. HEAD·같은 이름의 원격 추적 ref·
   실제 원격 작업 브랜치가 일치하고 작업 트리가 깨끗함을 확인했다. 원격 `migration_main` 기준은
-  `4d5e42d`다. [두 번째 단위 계획](MONOREPO-CONFIGURATION-PLAN.md#next-build-두-번째-단위--sentry-옵션-조립)에
+  `4d5e42d`다. [두 번째 단위 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#next-build-두-번째-단위--sentry-옵션-조립)에
   따라 공통 옵션 조립만 분리했다. 원문 38개 ID와 완료 12개·대기 26개는 그대로다.
   DSN·프로젝트 공유 판단과 예제 정리인 OBS-01/02를 이 보조 단위의 완료로 합산하지 않는다.
   구현과 이 결과 기록은 같은 커밋에 포함한다.
@@ -909,7 +909,7 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   `feature/monorepo-app-env`를 원격 기준으로 분기했다. #187/#196/#197/#198/#200/#201의 merged 상태와
   각 최종 head의 CI success를 원격에서 대조했다. 열린 PR은 보류 대상 #199뿐이었다.
   기존 회수·통합과 완료된 BASE-01의 검증을 다시 실행하지 않았다.
-- [ENV-06 계획](MONOREPO-CONFIGURATION-PLAN.md#2026-10-23-정상화-재개--env-06과-관련-env-07-계약)에
+- [ENV-06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#2026-10-23-정상화-재개--env-06과-관련-env-07-계약)에
   따라 Web의 site URL을 정확한 `local`일 때 localhost로 선택한다. 기본 metadata·Open Graph와
   기존 곡/앨범 `constructMetadata()`가 같은 URL을 소비한다. staging/production의 기존 apex URL과
   robots/sitemap은 유지한다. `development`를 앱 환경으로 해석하던 분기를 제거했다.
@@ -947,7 +947,7 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 사용자는 ENV-06 중간에 앱 환경을 local/production 두 값으로 확정했다. 비용상 별도 staging 환경은
   없으며 VM용 build는 production, 로컬 개발·production build·검증은 local이다. NODE_ENV로 배포 환경을
   추론하지 않는다. 이 결정은 실제 운영 배포 승인이 아니다. 이전 3값 설명을 현재 계약으로 사용하지 않는다.
-- [확정 계획](MONOREPO-CONFIGURATION-PLAN.md#사용자-확정-반영--localproduction-계약)에 따라 같은
+- [확정 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#사용자-확정-반영--localproduction-계약)에 따라 같은
   [PR #202](https://github.com/goldmayo/oioi-bwg/pull/202)의 후속 커밋으로 구현한다. 기준은
   `fb6b91e40397dd4e3c57c3f159db3e4726b7859a`와 이 RESULT를 포함한 local/production 전환 diff다.
   기존 커밋은 보존하며 앞 head의 CI 성공은 새 계약의 병합 근거로 사용하지 않는다.
@@ -1014,7 +1014,7 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
   `e4e61bc2ac0bef35b3fd7987d91f2df185e51ed3`로 main에 squash 병합됐다. fetch한 main과 검증 head의
   전체 tree가 같았다. #199는 기존 `80af73d`의 미병합 Draft로 유지했고 운영/Worker 배포는 하지 않았다.
 - 그 최신 main의 clean tree에서 `feature/monorepo-console-build-inputs`를 분기했다.
-  [ENV-10 계획](MONOREPO-CONFIGURATION-PLAN.md#2026-10-23-다음-단위--env-10-console-build-입력)에 따라
+  [ENV-10 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#2026-10-23-다음-단위--env-10-console-build-입력)에 따라
   Console ARM64 candidate의 NEXT_PUBLIC_GTM_ID build 인자 한 줄만 제거했다. Console에는 해당 env의
   실제 consumer가 없으며 Web root layout은 사용한다. Web 전달·기존 pair buildConfigHash·앱 환경
   production 입력·Sentry 공용 설정은 그대로다. Docker의 선택적 공통 ARG도 변경하지 않았다.
@@ -1342,7 +1342,7 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 
 ## 2026-10-23 후속 — 루트 배치 정리 1: 저장소 도구
 
-- [추가 승인 계획](MONOREPO-CONFIGURATION-PLAN.md#사용자-후속-승인--루트-배치-정리)을 따른다.
+- [추가 승인 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#사용자-후속-승인--루트-배치-정리)을 따른다.
   기준 `1a5be78eddd12e0c83bfe17d7839dbfa017526dc`에서 시작한 작업을 사용자 설명 요청으로 중단한 뒤
   Before/After 승인에 따라 재개했다. code commit은 TS 이동 `c9b1e64`와 검증/수동 도구 `f149097`이다.
 - config/tsconfig.json을 root tsconfig.config.json으로 옮겼다. 두 Vitest config를 tests/ops와
@@ -1368,7 +1368,7 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 저장소 도구 [#214](https://github.com/goldmayo/oioi-bwg/pull/214)은 최종 head `907989a`의
   [Verify #510](https://github.com/goldmayo/oioi-bwg/actions/runs/39873159951) 전체 성공·리뷰 조건 충족 후
   `7f98682394d2c7464f96569a06ab2bdf037ed5cd`로 squash 병합했다. fetch한 tree와 검증 head 일치 후
-  feature/root-operational-assets를 분기했다. [추가 승인 계획](MONOREPO-CONFIGURATION-PLAN.md#사용자-후속-승인--루트-배치-정리)을 따른다.
+  feature/root-operational-assets를 분기했다. [추가 승인 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#사용자-후속-승인--루트-배치-정리)을 따른다.
 - code commit `efe2c52`에서 개발 Dockerfile은 ops/docker로, 운영 Compose·세 env 예제는 ops/oci
   하위로 옮겼다. [현재 경로](ROOT-FILE-INVENTORY.md#사용자-승인-후-배치-정리--운영-자산)를 기록했고
   다섯 파일 모두 baseline과 byte 동일함을 확인했다. source 호출·fixture·현재 개발 안내를 맞췄다.
@@ -1391,7 +1391,7 @@ BASE-01·#198 병합·운영 검증은 별도 대기다. 이번에는 ENV-03 한
 - 운영 자산 [#215](https://github.com/goldmayo/oioi-bwg/pull/215)은 최종 head `e621f48`의
   [Verify #511](https://github.com/goldmayo/oioi-bwg/actions/runs/39875516499) 전체 성공·리뷰 조건 충족 후
   `550a6883099744701e7900a9fd974d5b71ed1202`로 squash 병합했다. fetch한 tree와 검증 head 일치 후
-  feature/app-dockerfile-ownership를 분기했다. [추가 승인 계획](MONOREPO-CONFIGURATION-PLAN.md#사용자-후속-승인--루트-배치-정리)의 마지막 단위다.
+  feature/app-dockerfile-ownership를 분기했다. [추가 승인 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-CONFIGURATION-PLAN.md#사용자-후속-승인--루트-배치-정리)의 마지막 단위다.
 - code commit `96d3a26`에서 root 운영 Dockerfile을 앱별로 분리했다. 각 파일은 해당 앱을 기본
   BUILD_APP과 최종 runner로 사용한다. root context·기존 공통 설치/build 정책·local APP_ENV·
   source map secret·runtime user/healthcheck/CMD를 보존했다. 공통 builder는 기본 ARG를 all로 대응하면

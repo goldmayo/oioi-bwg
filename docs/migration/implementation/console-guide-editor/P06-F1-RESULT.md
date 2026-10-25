@@ -14,7 +14,7 @@ updated_at: "2026-10-25"
 갱신한다. 승인된 F 운영 전환을 완료했다. www/apex·Console 검증과 두 옛 Web Worker·staging/preview 종료까지 확인했다.
 
 사용자가 F 착수와 기존 Workers 두 개 종료·preview VM의 www 연결, R2 유지를 지시했다.
-[P06 계획](P06-PLAN.md#preview--www-전환과-레거시-종료)의 운영 build 입력과 최종 URL 준비를
+[P06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#preview--www-전환과-레거시-종료)의 운영 build 입력과 최종 URL 준비를
 독립 checkpoint로 수행한다. 최신 `origin/migration_main`의 위 commit에서 `feature/p06-f-cutover`를 만들었다.
 상위 기준은 Runtime §8의 R2 유지, 배포 runbook §21의 동일 candidate digest 승격이다.
 

@@ -11,7 +11,7 @@ verified_at: "2026-10-25"
 # P06 전체 종료 결과
 
 **2026-10-25 P06 A~F 전체를 완료·종료했다. 다음 checkpoint는 P07이다.**
-[P06 계획](P06-PLAN.md)과 [로드맵](ROADMAP.md)의 두 앱 배포·Web 관리/인증 종료·www 전환 범위를
+[P06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md)과 [로드맵](ROADMAP.md)의 두 앱 배포·Web 관리/인증 종료·www 전환 범위를
 닫는다. 이 문서는 전체 종료 판정과 후속 범위를 소유하며, 단계별 구현·실행·검증의 상세 근거는 아래 RESULT에 유지한다.
 
 ## 단계별 완료 근거

@@ -9,7 +9,7 @@ updated_at: "2026-10-16"
 
 # P06-B1 결과
 
-[P06 계획](P06-PLAN.md) §4의 B1 후보 계약을 구현했다. 기준은 #146 병합
+[P06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md) §4의 B1 후보 계약을 구현했다. 기준은 #146 병합
 `152d2a008ee620adcdf118b957e9ca945644113f`이며 `feature/p06b1-paired-candidate`에서 작업했다.
 PR 번호·push hook·원격 CI 결과는 생성 후 PR 본문에서 추적한다.
 

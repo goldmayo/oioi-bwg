@@ -25,6 +25,11 @@ source_commit: 4a517def6da34ea3c9ad883f8e9146112a032e37
 
 전용 secret·host-only cookie·Origin 검증이 필요하다. limiter는 단일 process 메모리이므로 복제 운영을 지원한다고 주장하지 않는다.
 
+승인된 repository/CLI 경로의 version 증가와 DB app role의 직접 SQL 우회 차단은 다르다.
+[P05-A 결과](../migration/implementation/console-guide-editor/P05-A-RESULT.md)의 DELETE/version 감소 한계를
+완료 설계 삭제 뒤에도 유지한다. DB role hardening과 계정 관리 G는 [WORK](../WORK.md)의 별도 후속이다.
+당시 등록·동시성·회수 결정의 원문은 [삭제 대응 지도](../migration/implementation/COMPLETED-DESIGN-INDEX.md)에 고정했다.
+
 ## 근거
 
 - [구현·검증 기록](../migration/implementation/console-guide-editor/P05-D-RESULT.md)

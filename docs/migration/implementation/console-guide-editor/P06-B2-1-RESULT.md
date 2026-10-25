@@ -9,7 +9,7 @@ updated_at: "2026-10-16"
 
 # P06-B2-1 결과
 
-[P06 계획](P06-PLAN.md) §4/5의 B2를 독립 검증 가능한 checkpoint로 나눴다.
+[P06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md) §4/5의 B2를 독립 검증 가능한 checkpoint로 나눴다.
 #147 병합 `f31471bceb0c04d18382f05b50ee0fa11a6b6b08`에서 `feature/p06b2-paired-transport`를 분기했다.
 이번 범위는 CI→Run Command의 두 digest 입력·전달·로그 보호다. PR 번호·push hook·원격 CI는 PR 본문에서 추적한다.
 

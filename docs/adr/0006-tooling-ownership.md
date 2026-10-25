@@ -25,6 +25,12 @@ workspace로 나눈 뒤에도 루트 설정·도구·캐시가 모든 앱에 결
 
 affected·캐시 적중과 전체 verify를 구분해 관측해야 한다. 공통 정책 변경의 재검사 범위와 도구 소유권을 회귀 검사로 유지한다.
 
+초기 GHA cache export가 전체 CI를 느리게 만든 실패와 local exporter로의 변경은 [CI 결과](../migration/implementation/ci-build-optimization/RESULT.md)에 남아 있다.
+후속 archive 제거·교체 근거는 [지연 조사](../migration/implementation/ci-build-optimization/LATENCY-AUDIT-2026-10-21.md),
+공통 blob 보관은 [BuildKit 결과](../migration/implementation/MONOREPO-AUDIT-BUILDKIT-CACHE-RESULT.md)가 소유한다.
+최종 결과의 13.1% 중복 보관 절감을 전체 CI 비용·시간 개선으로 일반화하지 않는다.
+config 분할·auth 타입 순환·추가 측정은 [WORK](../WORK.md)의 별도 후속이다.
+
 ## 근거
 
 - [구현·검증 기록](../migration/implementation/MONOREPO-BOUNDARIES-AND-EXECUTION-RESULT.md)

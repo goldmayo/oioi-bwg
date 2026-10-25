@@ -8,7 +8,7 @@ created_at: "2026-10-10"
 
 # P05-D 결과
 
-[계획](P05-D-PLAN.md)의 구현·직접 검증 source는 위 커밋이다. 사용자 #126 재검토 승인과
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P05-D-PLAN.md)의 구현·직접 검증 source는 위 커밋이다. 사용자 #126 재검토 승인과
 최신 Verify 전체 성공을 확인해 `e907024`로 squash 병합하고 fetch한 merge head에서 분기했다.
 기존 local migration_main은 분기 기준으로 쓰지 않았고 사용자 변경은 없었다.
 [PR #127](https://github.com/goldmayo/oioi-bwg/pull/127)을 migration_main 대상으로 생성했다.

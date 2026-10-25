@@ -19,7 +19,7 @@ D의 실물 MFA 회수·재등록·HTTPS 복구는 완료다. 기존 배포 증�
 F의 www 전환·레거시 종료로 이 제거를 미루지 않는다.
 후속 인증 제거의 구현·검증·운영 적용 여부는 [E3 결과](P06-E3-RESULT.md)를 따른다.
 
-[P06 계획](P06-PLAN.md#4-pr별-구현-순서와-완료-조건)의 Web 관리 종료 checkpoint를 구현했다.
+[P06 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#4-pr별-구현-순서와-완료-조건)의 Web 관리 종료 checkpoint를 구현했다.
 기준은 위 integration commit, 구현 commit은 이 결과가 포함된 PR head다.
 가입 API 종료는 별도 [E1 PR #168](https://github.com/goldmayo/oioi-bwg/pull/168)이다. 두 PR과 C/D 운영 증거가 갖춰진 후 실제 E를 적용한다.
 

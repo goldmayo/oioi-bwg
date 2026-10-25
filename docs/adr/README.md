@@ -14,6 +14,7 @@
 | [0005](0005-observability.md)             | 2026-09-20~10-25 | 안전한 오류 추적과 Slack relay의 책임       |
 | [0006](0006-tooling-ownership.md)         | 2026-10-23~25    | 모노레포 검사와 캐시의 실제 소비처 소유권   |
 | [0007](0007-composable-table.md)          | 2026-10-25       | 공용 테이블 지원 범위와 소비처 조합 책임    |
+| [0008](0008-documentation-lifecycle.md)   | 2026-10-25~26    | 현재·보류 목록과 완료 설계 삭제·근거 수명   |
 
 - [완료 설계 문서 지도](../migration/implementation/COMPLETED-DESIGN-INDEX.md)
 - [시간순 devlog](../devlog/README.md)

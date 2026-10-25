@@ -9,7 +9,7 @@ revision: 4
 
 # 프레임워크 활용 감사 후속 개선 결과
 
-[계획](FRAMEWORK-IMPROVEMENT-PLAN.md)과 #218의 [감사](FRAMEWORK-STRUCTURE-AUDIT.md)를 따른다.
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/FRAMEWORK-IMPROVEMENT-PLAN.md)과 #218의 [감사](FRAMEWORK-STRUCTURE-AUDIT.md)를 따른다.
 감사 원문은 발견 시점의 근거로 보존하며 현재 구현 결과는 이 문서가 소유한다.
 
 ## 단위 A — FWA-01/02 오류 복구

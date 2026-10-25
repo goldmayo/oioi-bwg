@@ -11,7 +11,7 @@ completed_at: "2026-10-25"
 
 # 모노레포 audit 후속 Root 의존성 정리 결과
 
-[후속 PLAN](MONOREPO-AUDIT-FOLLOWUP-PLAN.md)의 1단계다. 구현 commit은 위 verified source이며
+[후속 PLAN](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/MONOREPO-AUDIT-FOLLOWUP-PLAN.md)의 1단계다. 구현 commit은 위 verified source이며
 `feature/monorepo-audit-root-dependencies`에서 실행했다. 병합 완료를 뜻하지 않는다.
 
 ## 변경과 소비자 확인

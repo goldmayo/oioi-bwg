@@ -224,7 +224,7 @@ Environment에는 기존 development branch를 유지하면서 `refs/pull/*/merg
 
 ## 7. P06 Metadata 차단
 
-실제 VM 적용은 [B0 계획](../../docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의
+실제 VM 적용은 [B0 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의
 B0-1 승인 작업이다. 기존 SSH에서 nft/iptables backend·forward/flowtable·firewall reload 규칙,
 Docker unit/drop-in·live-restore와 Web container를 선택 조회한다. env/inspect 전체는 출력하지 않는다.
 probe는 mount·추가 capability·privileged가 없는 bridge container만 허용한다.
@@ -272,7 +272,7 @@ Web readiness·DNS/일반 outbound, container 재생성·Docker/VM 재시작·�
 > `B0 publish probe` job과 `p06-b0-command` workflow는 제거했으므로 label을 추가해 재실행하지 않는다.
 > 현재 release는 이 문서 §3·§6의 정상 Promotion을 따른다. helper와 기존 증거는 보존한다.
 
-[B0 계획](../../docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의 실제 Web 차단·
+[B0 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의 실제 Web 차단·
 재시작 증거와 검토한 Stack Plan/Apply·게시 정책 교체를 완료한 뒤, 별도 승인된 probe만 실행한다.
 일반 feature PR은 OCI credential을 사용하지 않는다. B0 동안 전체 ARM64 candidate는 비활성이고
 required `promotion`은 실패하므로 probe용 Promotion PR을 병합하지 않는다.
@@ -338,7 +338,7 @@ VM metadata/재시작 지속성의 실제 증거를 확인하기 전 B2 완료�
 
 적용 기준은 `d95d368a425ca59991ac3834b421508b56447919`다. 현재 관찰은
 [B2-3 RESULT](../../docs/migration/implementation/console-guide-editor/P06-B2-3-RESULT.md#2026-10-17-병합-후-vm-읽기-조회),
-실행 승인 범위는 [P06 PLAN](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-17-host-전환-준비)이 소유한다.
+실행 승인 범위는 [P06 PLAN](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-17-host-전환-준비)이 소유한다.
 아래는 **승인 후 실행할 제안**이며 이번 문서 갱신에서는 실행하지 않았다.
 
 ### 9.1. Asset 설치만 먼저 승인
@@ -484,7 +484,7 @@ Web의 가입 POST도 현재 종료된 상태다. 공통 메일 구현의 `dev`�
 
 ## 10. Console 운영자 CLI (P06-D)
 
-공통 계약은 [P06 계획 §6](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#6-https등록운영자-경계)과
+공통 계약은 [P06 계획 §6](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#6-https등록운영자-경계)과
 [AUTH-009](../../docs/migration/DOMAIN_SPECIFICATION.md#auth-009-console-mfa-등록과-회수)를 따른다.
 기존 `pnpm console:mfa`는 로컬 Compose 전용으로 유지한다.
 운영 경로는 개인 SSH 운영자가 검토한 요청을 sudo로 실행하며 배포·HTTP 경로에 연결하지 않는다.

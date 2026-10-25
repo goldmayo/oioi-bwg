@@ -9,7 +9,7 @@ updated_at: "2026-10-21"
 
 # P06 Next.js 보안 패치 결과
 
-[승인 계획](P06-NEXT-SECURITY-PLAN.md)에 따라 두 앱의 보안 패치와 로컬 검증을 완료했다.
+[승인 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-NEXT-SECURITY-PLAN.md)에 따라 두 앱의 보안 패치와 로컬 검증을 완료했다.
 기준은 `origin/migration_main`의 `ed19b6d9f033009349708dc35cb7bed2cd7be5cd`,
 구현 커밋은 `6d3f4d485dd1dc791bf4c1fcd5d721d3f5bcd7a1`이다.
 통합 PR·CI와 실제 Promotion 배포를 구분한다. 아래 로컬 기록 이후 **2026-10-21 실제 보안 패치 배포를 완료**했으며 마지막 절에 증거를 기록했다. P06-C의 실제 HTTPS 검증 완료와는 별개다.

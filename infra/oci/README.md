@@ -59,7 +59,7 @@ production infrastructure의 기본 실행 경로는 Resource Manager Plan → h
 
 ## P06-B0 Console repository와 읽기 권한
 
-[B0 계획](../../docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의
+[B0 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의
 실제 Web metadata 차단·재시작 지속성 proof를 확인한 뒤 같은 Resource Manager Stack에서 검토한다.
 `console_ocir_repository_name` 기본값은 `oioi-bwg-console`이며 기존 Web repository와 달라야 한다.
 비공개 Stack 입력 `console_auth_secret_ocid`와 `console_mfa_secret_ocid`에 이미 생성한
@@ -144,7 +144,7 @@ sudo /srv/oioibawige/scripts/preflight-host.sh
 현재 preflight의 helper 존재·Object Storage namespace 조회·과거 probe marker만으로 새 repository
 pull·새 secret 읽기·현재 CI 계정의 Run Command 권한까지 증명하지 못한다.
 P06의 빌드 전 주체별 실증과 Web/Console metadata 차단은
-[P06-B0 계획](../../docs/migration/implementation/console-guide-editor/P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)을 따른다.
+[P06-B0 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#41-p06-b0-arm64-빌드-전-iam-준비실증)을 따른다.
 이는 현재 OCI 정책/VM 적용 상태를 확인했다는 기록이 아니다.
 
 ## Existing backup IaC adoption

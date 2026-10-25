@@ -11,7 +11,7 @@ verified_at: "2026-10-07"
 
 # P03 공통 서버 패키지 분리 결과
 
-[P03 계획](P03-PLAN.md)의 두 번째 concern을 구현했다.
+[P03 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P03-PLAN.md)의 두 번째 concern을 구현했다.
 계약 선행 PR [#111](https://github.com/goldmayo/oioi-bwg/pull/111)의 `3293d68`을 포함한다.
 `migration_main` 기준은 `d2b5e9e`이며 서버 PR은 #111 이후 병합할 draft다.
 

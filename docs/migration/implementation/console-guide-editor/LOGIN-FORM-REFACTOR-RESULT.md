@@ -9,7 +9,7 @@ created_at: "2026-10-10"
 # 로그인 폼 리팩터링 결과
 
 사용자의 코드 정리/인증 흐름 주석 요청에 따라 `9e1e6ba`에서 분기했다.
-기존 [P05-D 계획](P05-D-PLAN.md)의 RHF/local memory와 입력/QR 폐기 계약을 유지한다.
+기존 [P05-D 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P05-D-PLAN.md)의 RHF/local memory와 입력/QR 폐기 계약을 유지한다.
 사용자가 수정한 등록/로그인 복귀 버튼의 두 스타일을 보존했다. 별도 열린 로컬 실행 PR은 합치지 않았다.
 
 LoginForm은 296줄에서 118줄로 줄이고 요청·상태·검증·폐기를 auth model hook으로 옮겼다.

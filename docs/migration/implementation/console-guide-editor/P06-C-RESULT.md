@@ -23,7 +23,7 @@ F의 실제 요청 검사다. preview는 종료했다. Console은 자동 종료 
 구현 브랜치는 `feature/p06-c-console-https`다. 구현 `6ed4ece`, 추가 Action 검증 `3822d13`, 배포 호스트 보완 `16c317d`, 로컬 HTTPS/DB 검증 확장 `2a274cd`를 거쳤다.
 metadata의 source는 최신 로그인 UX Promotion #182의 squash merge다. #175는 최초 정상 HTTPS 배포 이력이다. 아래 초기 HTTP 배포 #164와 ARM64 후보 source·로컬 검증은 각 실행 시점의 이력으로 구분한다.
 검토 PR은 [#163](https://github.com/goldmayo/oioi-bwg/pull/163)이다.
-[P06-PLAN §6](P06-PLAN.md#6-https등록운영자-경계), active [Auth/Authz](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md),
+[P06-PLAN §6](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#6-https등록운영자-경계), active [Auth/Authz](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md),
 [B 완료 결과](P06-B2-3-RESULT.md#2026-10-18-b-운영-실증-완료와-최종-상태)를 따른다.
 
 ## 구현과 신뢰 경계
@@ -557,7 +557,7 @@ E host 차단/Promotion과 F 전환은 이번 창에서 수행하지 않았다.
 
 ## 2026-10-21 정상 HTTPS 배포와 Console 지속 공개
 
-[회사 검증용 공개 유지 개정](P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)에 대한
+[회사 검증용 공개 유지 개정](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)에 대한
 사용자의 실행·sudo 위임과 #174 한정 이력 연결 승인에 따라 진행했다. 공개 설정은 13:48:26 KST에 확정됐다.
 상태는 **배포 완료 / Console 공개 유지 / 실제 인증 확인 대기 / D·E 미실행·F 보류**다.
 기존 시간 제한 창의 실행물·백업·marker는 보존했고 재사용하지 않았다.
@@ -730,7 +730,7 @@ Impeccable `detect --json`은 변경 UI/model 두 파일에서 발견 사항0개
 
 [UX #177](https://github.com/goldmayo/oioi-bwg/pull/177)의 수정은
 [Promotion #182](https://github.com/goldmayo/oioi-bwg/pull/182)로 배포됐다.
-[공개 유지 계획](P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)과 active 배포 runbook §21을 따른다.
+[공개 유지 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)과 active 배포 runbook §21을 따른다.
 #180에 한정해 승인된 파일 변경 없는 이력 연결 merge60ad66ed6055a74c5c5cef1178b210d696f47c11 뒤
 저장소 merge 설정과 main ruleset을 원복·원본 대조했다. 이후 #182는 정상 squash 경로다.
 

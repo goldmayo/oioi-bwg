@@ -10,7 +10,7 @@ revision: 2
 
 # P06-A 결과
 
-[계획](P06-A-PLAN.md)을 [PR #134](https://github.com/goldmayo/oioi-bwg/pull/134)로 구현했다.
+[계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-A-PLAN.md)을 [PR #134](https://github.com/goldmayo/oioi-bwg/pull/134)로 구현했다.
 기준 코드 commit은 위 source_commit이다. Web runner를 유지하고 Console runner-console,
 인증 설정/DB readiness, 두 실제 이미지 CI artifact/smoke를 추가했다. Console public은 현재
 빈 경로이며 Web public과 각 앱 static/server 경로를 검증했다. OCI 배포 계약은 변경하지 않았다.
@@ -32,7 +32,7 @@ liveness 확인 후 재검증했다. 기존 개인 env·DB 볼륨·MFA 키·사�
 commit hook의 lint-staged와 push hook의 affected type-check/lint/test·repo 검사·harness/ops/format은
 직접 검사와 별도로 실행돼 통과했다. 이 결과는 기록 변경 commit의 새 CI까지 대신하지 않는다.
 ENV-1은 독립 PR, ENV-2는 비차단 후속이다. B0 IAM/metadata·ARM64 게시·VM/HTTPS·Web 관리 종료는
-미실행이다. 다음 진입점과 운영 실행 gate는 [P06-HANDOFF](P06-HANDOFF.md)에 유지한다.
+미실행이다. 다음 진입점과 운영 실행 gate는 [P06-HANDOFF](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-HANDOFF.md)에 유지한다.
 
 2026-10-13 상태 재확인: #134는 Open·리뷰 기록 없음이며, 기록 commit
 `1c3bff1c3f72cf273de646fabd79b8dcec7baa30`의 [Verify 38265204560](https://github.com/goldmayo/oioi-bwg/actions/runs/38265204560)은

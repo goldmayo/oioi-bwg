@@ -11,7 +11,7 @@ verified_at: "2026-10-07"
 
 # 앨범과 곡 관리 이관
 
-[P04 계획](P04-PLAN.md)의 두 번째 concern이다. [P04-A](P04-A-RESULT.md)를 포함하는
+[P04 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P04-PLAN.md)의 두 번째 concern이다. [P04-A](P04-A-RESULT.md)를 포함하는
 후속 브랜치이며, Web 원본의 앨범/곡 관리 route·API·이미지 업로드 Action·LRC file import와
 실제 entity/UI 의존성 및 테스트를 Console에 복사했다. 관리 entry는 `/admin/albums`로 이동한다.
 
