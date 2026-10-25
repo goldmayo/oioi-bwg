@@ -1,16 +1,22 @@
 ---
 title: "P06-C Console HTTPS 및 인증 요청 보안 경계 구현 결과"
 kind: migration-result
-status: in-progress
+status: complete
 source_commit: 07639caac10e5c826e14fd415372e841c6c2d52f
 verified_at: "2026-10-21"
-updated_at: "2026-10-21"
-revision: 32
+updated_at: "2026-10-25"
+revision: 33
 ---
 
 # P06-C 구현 결과
 
-**최신 상태:** [정상 HTTPS 배포·지속 공개](#2026-10-21-정상-https-배포와-console-지속-공개)를 완료했다. 회사 브라우저의 [Console 로그인](https://console.oioibawige.com/admin-login)을 자동 종료 없이 유지한다. 실제 IP 전달·위조 헤더 방어·직접 origin 차단·등록 거절과 익명 쿠키 검사는 통과했다. 사용자가 후속 실제 로그인 성공을 확인했다. 성공 직전 오류 표시와 인증 코드 입력 중 오류 상태를 수정하고 [정상 Promotion 배포](#2026-10-21-로그인-ux-정상-promotion-배포-완료)까지 완료했다. 새 UI의 사용자 재확인은 별도다. 관리 조회·세션 쿠키/preview 격리·로그아웃은 별도 미확인이므로 C 전체는 미완료다. 국가 보호 규칙은 변경하지 않았다. 두 회선 실험은 제외·미실시이며 D/E/F도 별도 미완료다. 아래 창2/3/4의 개방·종료 표시는 당시 이력이다.
+**최신 상태(2026-10-25): C 완료.** 기존 HTTPS·IP/Origin·익명 쿠키 검증 뒤 남았던 실물 로그인·관리 조회·
+로그아웃은 [D 결과](P06-D1-RESULT.md#2026-10-21-실물-mfa-회수재등록과-https-설정-복원)와
+[F 결과](P06-F1-RESULT.md#2026-10-25-실제-운영-전환)에서 확인했다. 인증 세션 쿠키의
+Secure/HttpOnly/Lax·Console 범위는 F의 사용자 확인, 사전 인증 쿠키의 host-only/최종 www 비전달은
+F의 실제 요청 검사다. preview는 종료했다. Console은 자동 종료 없이 공개 유지·등록 닫힘이다.
+두 회선/한도 소진 실험은 사용자 제외·미실시로 유지한다. [P06 전체 종료 결과](P06-RESULT.md)를 따르며
+아래 미완료·보류·임시 창 표시는 당시 이력이다. metadata의 source/verified_at은 기존 #182 검증 기준으로 보존한다.
 
 **코드 병합·로컬 HTTP/HTTPS·Docker PostgreSQL·ARM64 후보 검증·HTTP 공동 VM 배포·DNS 전 HTTP 차단·사용자 Cloudflare DNS/cache 변경과 공개 HTTP 도달 확인 완료 / 최초 인증서 단계 exit20·HTTP403 복구 완료 / Cloudflare 국가 규칙의 ACME 예외 승인·사용자 적용·경계 확인 완료 / 승인된 재시도1 발급 성공(exit0)·origin/Cloudflare HTTPS403·기존 서비스 보존 확인 / 최소 HTTPS 창2 전환·개방 후 helper 중단·exit20 원복 완료. C 전체 완료가 아니다. 아래 미실행 표시는 각 기록 시점의 이력이다.**
 기준은 `goldmayo/oioi-bwg`의 `migration_main` `655b593d61ec937e9a3cc4b5fee927f11f431647`(#162),

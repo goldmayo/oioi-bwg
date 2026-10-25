@@ -1,15 +1,19 @@
 ---
 title: "P06 단일 VM의 두 앱 배포와 Web 관리 경로 종료 계획"
 kind: migration-plan
-status: draft
+status: complete
 authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
 updated_at: "2026-10-25"
-revision: 15
+revision: 16
 ---
 
 # P06 계획 초안
+
+**종료 상태(2026-10-25): P06 A~F 전체 완료.** [전체 종료 결과](P06-RESULT.md)가 단계별 근거·보존 상태·
+별도 후속과 다음 P07 진입점을 소유한다. 아래 초안과 날짜별 개정은 당시 계획/승인 이력으로 보존한다.
+G 계정 관리와 추가 부하 실험은 별도 후속이며 P06 운영 전환을 다시 열거나 P07의 선행 조건으로 추가하지 않는다.
 
 **Web 범위 정정:** [비로그인 공개 Web 개정](#2026-10-21-web-인증-종료-개정)이 아래 일반 로그인 유지 문구를 대체한다.
 관리·가입 종료에 더해 Web 인증 제거까지 E에서 완료하며 F로 미루지 않는다.
