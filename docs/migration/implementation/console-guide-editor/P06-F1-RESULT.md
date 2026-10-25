@@ -5,9 +5,13 @@ status: partial
 authority: evidence
 source_commit: 4d5e42dac37aeb13b3279b47a7907fbb7bc91be2
 created_at: "2026-10-22"
+updated_at: "2026-10-25"
 ---
 
 # P06-F1 결과
+
+**최신 실행 상태:** [2026-10-25 실제 운영 전환](#2026-10-25-실제-운영-전환)이 아래 초기 준비·회수 기록을
+갱신한다. 정상 paired 배포와 www origin TLS는 완료했으며 Console 실물 확인·DNS 전환·레거시 종료는 남았다.
 
 사용자가 F 착수와 기존 Workers 두 개 종료·preview VM의 www 연결, R2 유지를 지시했다.
 [P06 계획](P06-PLAN.md#preview--www-전환과-레거시-종료)의 운영 build 입력과 최종 URL 준비를
@@ -58,7 +62,6 @@ Workers 요금제 해지와 브랜치 이름 변경은 이번 checkpoint에서 �
 
 관찰과 Cloudflare CLI 진단은 이 worktree의 ignored `.local/p06-f/`에 보관한다.
 
-
 ## 2026-10-23 기존 준비 커밋 회수 — F 전환 보류
 
 `a595cca`의 production build 입력·www 기준 URL 준비 변경을 검토하고 원격 보존·Draft PR로 연결한다.
@@ -76,7 +79,6 @@ FSD·ops 21파일·262건·format 모두 성공했다. 두 앱 실제 build도 2
 ops, format을 순서대로 실행한 뒤 `pnpm build --force --env-mode=loose --concurrency=1`을 실행했다.
 로그는 저장소 밖 `/tmp/oioi-monorepo-recovery-20261023-0b6s5a9k/validation-f/`에 둔다.
 commit/push hook 결과는 PR에 별도로 기록한다. www robots 산출물의 URL도 로컬 파일에서 확인한다.
-
 
 ## 2026-10-25 모노레포 개선 이후 F 재개와 로컬 검증
 
@@ -101,16 +103,16 @@ Node 22.16.0·pnpm 10.15.1에서 frozen offline 설치에 성공했다. 앱의 �
 운영 credential·DB 연결·Sentry 전송/업로드를 사용하지 않았다. 로그는 이 worktree의 ignored
 `.local/p06-f-resume/`에 보존한다.
 
-| 명령/방법 | 실제 결과 |
-| --- | --- |
-| `pnpm type-check`, `pnpm lint`, `pnpm lint:fsd` | 성공, workspace 타입/lint 각각 실제 6 task·캐시 0 |
-| `pnpm test:harness` | 46/46 성공 |
-| `pnpm test:unit:run` | 99파일/700건 성공, 실제 5 task·캐시 0 |
-| `pnpm test:ops` | 22파일/287건 성공 |
-| `pnpm format:check`, `git diff --check` | 성공 |
-| `pnpm build --concurrency=1 --force --env-mode=loose` | 양 앱 실제 2 task·캐시 0 성공, standalone 진입점 확인 |
-| local build의 robots 산출물 | localhost sitemap URL 확인 |
-| 운영 안내 format·로컬 링크 | format 성공, PLAN/운영 안내의 로컬 링크 대상 27개 확인 |
+| 명령/방법                                             | 실제 결과                                              |
+| ----------------------------------------------------- | ------------------------------------------------------ |
+| `pnpm type-check`, `pnpm lint`, `pnpm lint:fsd`       | 성공, workspace 타입/lint 각각 실제 6 task·캐시 0      |
+| `pnpm test:harness`                                   | 46/46 성공                                             |
+| `pnpm test:unit:run`                                  | 99파일/700건 성공, 실제 5 task·캐시 0                  |
+| `pnpm test:ops`                                       | 22파일/287건 성공                                      |
+| `pnpm format:check`, `git diff --check`               | 성공                                                   |
+| `pnpm build --concurrency=1 --force --env-mode=loose` | 양 앱 실제 2 task·캐시 0 성공, standalone 진입점 확인  |
+| local build의 robots 산출물                           | localhost sitemap URL 확인                             |
+| 운영 안내 format·로컬 링크                            | format 성공, PLAN/운영 안내의 로컬 링크 대상 27개 확인 |
 
 Build는 allowlist로 구성한 임시 process env·local 입력·빈 DSN/분석 ID·전송/업로드 OFF·
 접속 불가능한 loopback DB·임시 Console 키를 사용했다. `--env-mode=loose`는 이 제한된 env만
@@ -133,3 +135,82 @@ VM에 `/songs/bad-habit` 하나가 더 있었다. Worker에만 있는 path는 �
 운영 VM/Cloudflare와 필요한 DB의 읽기 대조, Console R2 주입·실제 업로드, 정상 ARM64 후보·배포,
 www origin 인증서/SNI/라우팅·apex redirect, 최종 cookie/조회·인증 거절 확인, 두 옛 Web Workers와
 staging/preview 종료는 아직 미완료다. DNS 변경 전에 실제 www origin TLS를 확인한다.
+
+## 2026-10-25 실제 운영 전환
+
+사용자가 #199 CI 통과 후 병합·정상 Promotion·운영 credential을 사용하는 VM/DB 읽기 점검·www TLS·
+DNS 전환·검증 뒤 두 옛 Web Worker와 staging/preview 종료까지 명시적으로 승인했다.
+DB 데이터·MFA 키/version·R2/assets/Console/독립 relay는 보존한다. 승인된 범위에서만 실행했다.
+원문 토큰·비밀번호·OTP·cookie·개인키는 이 문서나 GitHub artifact에 기록하지 않는다.
+
+### 통합·이력 연결과 정상 배포
+
+- #199의 [전체 Verify](https://github.com/goldmayo/oioi-bwg/actions/runs/40165554364)가 성공한 뒤
+  `31cd5b55683436714dc950402df20c44f33cd49d`로 squash 병합했다.
+- 과거 squash 배포 조상 때문에 정상 merge tree가 달라지는 문제는 파일 변경 0개의
+  [#245](https://github.com/goldmayo/oioi-bwg/pull/245)로 해결했다. 자동 승인 검토의 최초 차단 뒤 사용자가
+  이 PR 한 건의 이력 연결·일반 merge·즉시 설정 원복을 별도로 승인했다.
+  [전체 Verify](https://github.com/goldmayo/oioi-bwg/actions/runs/40166734732) 성공 후 일반 merge한
+  `541f02d5c353424b1bd616030a8e016c8547f8f3`의 파일 tree는 그대로다.
+  저장소 merge 설정 세 항목과 migration_main ruleset의 writable 필드 전체를 저장한 원본과 대조해 원복했다.
+- 정상 [Promotion #246](https://github.com/goldmayo/oioi-bwg/pull/246)의
+  [전체 Verify와 ARM64 paired candidate](https://github.com/goldmayo/oioi-bwg/actions/runs/40167421715)가 성공했다.
+  source/test-merge/squash tree는 모두 `a4279947f56be84f5b90b050218a39f437a91b38`이다.
+  squash 결과는 `3727f94517ab3890afabdc72f69d52ee1b27223d`다.
+- [Deploy promotion](https://github.com/goldmayo/oioi-bwg/actions/runs/40168460344)이 exit 0으로 성공했다.
+  immutable `paired-deployment-40168460344-1`의 candidate/receipt와 실제 VM 두 digest를 대조했다.
+  기존 #193 성공 receipt의 baseline과 현재 공개 build 설정 hash도 병합 전에 대조했다.
+
+| 앱      | 실제 실행·검증한 digest                                                   |
+| ------- | ------------------------------------------------------------------------- |
+| Web     | `sha256:1442a9a8bd25c06e199ebbcbb102e68e02df1190856c0907c62a657c33f4f296` |
+| Console | `sha256:cb156dafa844ee1dc650b12d79f865ea3bab443ecc7303c5e3fe7ada5bd8670c` |
+
+두 앱 모두 source `541f02d5c353424b1bd616030a8e016c8547f8f3`에서 새로 빌드했다.
+`NEXT_PUBLIC_APP_ENV=production`의 공개 build hash는
+`e305c103b10021bbf347f2b65b6eb350780fc628d142e0617c792f6d3ce47366`이다.
+두 앱은 healthy·네 loopback health/readiness는 200이며 DB container ID/시작 시각은 불변이다.
+Console의 HTTPS origin·enrollment=false와 기존 R2 endpoint/bucket/assets 입력·credential 존재를 확인했다.
+
+### 콘텐츠 기준과 보존
+
+기존 www의 공개 Vinext Flight JSON을 JSON으로만 파싱해 25곡·1,223 lyric line을 VM의 짧은 READ ONLY
+콘텐츠 조회와 비교했다. 옛 DB credential을 찾는 로컬 env 탐색은 자동 승인 검토에서 범위를 벗어났다고
+차단해 실행하지 않았다. 대신 공개 응답과 승인된 현재 VM만 비교했다. 옛 비공개 회원 데이터 일치를 주장하지 않는다.
+
+- VM에는 `bad-habit`이 추가로 있다. 세 곡의 응원 segment/flag가 다르다.
+  `ceremony`는 VM 수정 시각이 최신이고, `soda`·`free-dumb`은 기존 www 수정 시각이 최신이다.
+  두 버전의 공개 비교 자료를 보존했다.
+- `blue-whale`은 VM의 숨김 앨범에 속해 공개 service가404를 반환한다. 데이터는 삭제하지 않았다.
+- 사용자가 위 차이를 확인하고 **현재 VM을 정식 www 기준으로 전환**한다고 명시적으로 선택했다.
+  옛 DB·Hyperdrive·keep-alive Worker는 보존하며 콘텐츠 이관·덮어쓰기·seed·계정 변경을 수행하지 않는다.
+- 배포 후 같은 비소유자 credential의 READ ONLY transaction으로 26곡·7앨범 전체 row가 배포 전과 같고,
+  계정 1개·MFA 활성/version 4가 유지됨을 대조했다. 암호 hash·MFA 암호문은 조회하지 않았다.
+  원래 참조하던 이미지 7개의 공개 URL은 모두200이다.
+
+### 호스트·TLS와 실제 공개 검사
+
+사용자가 sudo 비밀번호를 자기 터미널에서 입력해 보호 백업·최신 host asset upgrade·Console public R2 입력과
+서버 내 RSA 개인키/CSR 준비를 완료했다. 이때 두 앱과 DB는 교체하지 않았고 이후 정상 Promotion이 새 환경을 생성했다.
+기존 Auth/MFA/R2 secret mapping과 Console origin/enrollment 입력은 보존했다.
+
+Cloudflare의 제한된 token으로 DNS·SSL·인증서 목록을 읽어 변경 전 snapshot을 저장했다.
+Full (strict)를 유지하고 서버 CSR로 www/apex Origin CA 인증서 한 장을 발급했다.
+인증서의 서명·두 hostname·CSR public key 일치와 만료일을 검증했으며 개인키는 서버 밖으로 옮기지 않았다.
+유효기간은 2027-10-25 06:04 UTC까지다.
+
+처음 Caddy 적용은 한 줄 `handle` block이 Caddy2.6 parser에서 거절돼 적용 전 멈췄다.
+여러 줄 문법으로 수정한 뒤 같은 서버 바이너리의 실제 구문 검사를 통과했고 사용자 재실행으로 validate/reload에 성공했다.
+기존 Console route는 동일하며 www/apex를 올바른 SNI·Origin CA 신뢰로 외부에서 조회해 직접 원본403을 확인했다.
+
+새 preview의 홈·곡 화면·robots/sitemap·health/readiness·관리/인증/쓰기/Next-Action 거절 15개 검사,
+26곡의 공개 DTO/숨김404와 7앨범·이미지 검사를 통과했다. metadata/robots/sitemap은 최종 www를 사용한다.
+Console 실제 사전 인증 cookie의 Secure/HttpOnly/Lax·host-only와 www 요청에 cookie가 안 붙는 것을 확인했다.
+Python urllib의 공개 hostname 요청은403이었고 일반 curl은200이었다. WAF를 바꾸지 않고 curl로 실제 검사를 수행했다.
+인증된 session cookie·실제 로그인/목록/로그아웃·R2 업로드는 사용자 브라우저 확인 대기다.
+
+### 남은 실행
+
+Console 실제 인증·독립 이미지 한 건 업로드/확인/정리 후 www/apex Worker Custom Domain을 해제해
+기존 VM의 Proxied A로 전환한다. 최종 www 검사 성공 뒤에만 옛 Web Worker 두 개·staging/preview DNS·
+Caddy preview route·옛 배포 workflow와 전용 token 저장을 종료한다. R2/assets·Console·메일 DNS·독립 Worker·DB는 보존한다.

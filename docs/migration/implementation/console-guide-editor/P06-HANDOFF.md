@@ -3,10 +3,17 @@ title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
 updated_at: "2026-10-25"
-revision: 68
+revision: 69
 ---
 
 # P06 작업 인계
+
+- **2026-10-25 실제 F 진행: 정상 배포/TLS 완료, Console 실물 확인·DNS 전환 전.** #199와 파일 변경 없는
+  #245 이력 연결을 병합했고 두 squash-only 설정은 원복했다. 정상 Promotion #246의 candidate·실제 Deploy exit0·
+  VM 두 digest와 DB 불변을 대조했다. www/apex origin TLS·직접 원본403·Console route 보존을 확인했다.
+  현재 VM을 정식 콘텐츠 기준으로 삼는 사용자 결정을 받았으며 세 곡 차이·숨김 앨범은
+  [F1 결과](P06-F1-RESULT.md#2026-10-25-실제-운영-전환)에 기록했다.
+  Console 실물 인증·업로드, www/apex DNS와 최종 검사, 두 Web Worker·staging/preview 종료는 남았다.
 
 - **2026-10-25 재개: A~E 완료 기록을 유지하고 F를 마무리한다.** 사용자 P06 완료 지시로 아래
   F 준비 보류를 해제했다. #199를 #242/#243 통합 기준으로 갱신하고 최신 환경·prune/cache 계약을
