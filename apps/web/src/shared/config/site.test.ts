@@ -21,15 +21,17 @@ describe("Web metadata environment", () => {
   );
 
   it.each(["staging", "production", "development", "unexpected", "", undefined])(
-    "preserves the existing public metadata URL for %s",
+    "uses the www public metadata URL for %s",
     async (appEnvironment) => {
       vi.stubEnv("NEXT_PUBLIC_APP_ENV", appEnvironment);
       const { DEFAULT_METADATA } = await import("./site");
       const { constructMetadata } = await import("../lib/metadata");
 
-      expect(new URL(String(DEFAULT_METADATA.metadataBase)).href).toBe("https://oioibawige.com/");
-      expect(DEFAULT_METADATA.openGraph).toMatchObject({ url: "https://oioibawige.com" });
-      expect(constructMetadata().metadataBase?.toString()).toBe("https://oioibawige.com/");
+      expect(new URL(String(DEFAULT_METADATA.metadataBase)).href).toBe(
+        "https://www.oioibawige.com/",
+      );
+      expect(DEFAULT_METADATA.openGraph).toMatchObject({ url: "https://www.oioibawige.com" });
+      expect(constructMetadata().metadataBase?.toString()).toBe("https://www.oioibawige.com/");
     },
   );
 });

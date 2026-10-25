@@ -2,17 +2,26 @@
 title: "P06 세션 간 작업 인계"
 kind: migration-handoff
 status: active
-updated_at: "2026-10-22"
-revision: 66
+updated_at: "2026-10-25"
+revision: 68
 ---
 
 # P06 작업 인계
+
+- **2026-10-25 재개: A~E 완료 기록을 유지하고 F를 마무리한다.** 사용자 P06 완료 지시로 아래
+  F 준비 보류를 해제했다. #199를 #242/#243 통합 기준으로 갱신하고 최신 환경·prune/cache 계약을
+  유지한다. [계획 개정](P06-PLAN.md#2026-10-25-모노레포-개선-이후-f-재개)과
+  [F1 결과](P06-F1-RESULT.md)를 따른다. 실제 www/배포/레거시 종료는 아직 미완료다.
 
 단계별 사실·검증의 소유자는 PLAN/RESULT이며
 여기는 현재 작업과 다음 진입점만 남긴다. 운영 원문 식별자는 비공개 Notion 기록에 둔다.
 
 - 계획: [P06-PLAN](P06-PLAN.md), [작업 순서](https://app.notion.com/p/3f5395eb18c28036b8f4e5314ba80541).
-- **최신 상태(2026-10-22): E 완료 / Web 공개 조회 전용 / 정상 Promotion #193 배포 성공.**
+- **F 전환 보류(2026-10-23 회수):** `feature/p06-f-cutover`에서 production build 입력·www metadata/sitemap/robots를 준비했다.
+  [F1 결과](P06-F1-RESULT.md)가 기존 준비·검증과 이번 회수 범위를 소유한다. Draft 검토만 진행하며 실제 서비스는 #193을 유지한다.
+  R2는 유지하며 Console runtime의 R2 설정 누락을 확인했다. www TLS/라우팅·콘텐츠 비교와 Cloudflare 재로그인이 남았다.
+  Workers/DNS 변경·레거시 종료·요금제 해지·브랜치 개명은 미실행이다.
+- **E 완료 상태(2026-10-22): Web 공개 조회 전용 / 정상 Promotion #193 배포 성공.**
   [E3 결과](P06-E3-RESULT.md#2026-10-22-배포-완료와-실제-서비스-검증)가 source/digest/receipt와 실제 검증을 소유한다.
   #191의 인증 제거·CI 보정, #192의 파일 변경 없는 이력 연결을 병합했다. #192 한정 일반 merge 후 두 설정은 squash-only로 복원했다.
   #193은 `12013d0`으로 squash했고 Deploy `39627995228` exit 0·실제 두 이미지와 영수증 일치를 확인했다.
