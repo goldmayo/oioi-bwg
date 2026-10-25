@@ -141,6 +141,21 @@ Waveform은 Cue를 시각적으로 생성·편집하기 위한 편의 데이터�
 
 ---
 
+## DP-008. 도메인 identity는 UUIDv7 단일 PK를 사용한다
+
+2026-10-26 사용자 결정으로 Account·Album·Song 및 이후 독립 도메인 엔티티는 내부 PK와
+외부 DTO에 같은 UUIDv7을 사용한다. 영구 정수 PK + public_id를 두지 않는다. FK와 1:1 공유
+PK는 부모 UUID를 사용하며 순서·카운터·version은 숫자로 유지한다. UUID는 인가 증명이 아니다.
+
+기존 Album·Song의 내용·관계·공개 slug·자산 URL을 보존한다. 지정 Console 관리자의
+credential/MFA 재등록을 다른 계정·콘텐츠의 초기화로 확대하지 않는다. 공개 가입 폐쇄 정책도 유지한다.
+인증 challenge의 기존 UUIDv4와 rate-limit 자연 복합 PK는 별도 계약으로 보존한다.
+
+목표 계약이며 현재 숫자 스키마/DTO의 전환 완료 선언이 아니다. 전환 이유와 적용 경계는
+[ADR 0009](../adr/0009-uuid-domain-identity.md), 실제 진행 상태는 [WORK](../WORK.md)가 소유한다.
+
+---
+
 # 3. Domain Glossary
 
 | 용어 | 정의 |

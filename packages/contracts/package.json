@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./entity-id": "./src/entity-id.ts",
     "./album": "./src/album.ts",
     "./authorization": "./src/authorization.ts",
     "./console-mfa": "./src/console-mfa.ts",
