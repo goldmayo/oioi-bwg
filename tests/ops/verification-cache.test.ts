@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { findMergedCache } from "../../scripts/verification-cache.mjs";
 
 function fixture() {
-  const key = "Linux-verify-amd64-v2-input";
+  const key = "Linux-verify-amd64-v4-input";
   const context = {
     eventName: "push",
     ref: "refs/heads/migration_main",

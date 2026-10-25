@@ -32,9 +32,14 @@ test("uses the installed Turbo graph and real Git history for each app and share
       "pnpm-workspace.yaml",
       "turbo.json",
       ".gitignore",
-      ...["apps/web", "apps/console", "packages/server", "packages/contracts"].map(
-        (p) => p + "/package.json",
-      ),
+      ...[
+        "apps/web",
+        "apps/console",
+        "apps/sentry-slack-relay",
+        "packages/server",
+        "packages/contracts",
+        "packages/config",
+      ].map((p) => p + "/package.json"),
     ]) {
       mkdirSync(dirname(join(root, file)), { recursive: true });
       copyFileSync(file, join(root, file));
@@ -66,7 +71,16 @@ test("uses the installed Turbo graph and real Git history for each app and share
     git(["init", "-q"]);
     expect(git(["rev-parse", "--show-toplevel"])).toBe(root);
     let sourceSha = commit();
-    for (const app of ["web", "console", "shared", "rename"]) {
+    for (const app of [
+      "web",
+      "console",
+      "shared",
+      "config",
+      "sentry-slack-relay",
+      "web-docker",
+      "console-docker",
+      "rename",
+    ]) {
       const baseline = {
         prNumber: 142,
         sourceSha,
@@ -90,7 +104,16 @@ test("uses the installed Turbo graph and real Git history for each app and share
       if (app === "rename") git(["mv", "apps/web/fixture.ts", "apps/console/moved.ts"]);
       else {
         writeFileSync(
-          join(root, app === "shared" ? "packages/server/fixture.ts" : `apps/${app}/fixture.ts`),
+          join(
+            root,
+            app === "shared"
+              ? "packages/server/fixture.ts"
+              : app === "config"
+                ? "packages/config/fixture.ts"
+                : app.endsWith("-docker")
+                  ? `apps/${app.replace("-docker", "")}/Dockerfile`
+                  : `apps/${app}/fixture.ts`,
+          ),
           `// ${app}\n`,
         );
       }

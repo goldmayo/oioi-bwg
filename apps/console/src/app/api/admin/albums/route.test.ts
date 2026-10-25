@@ -8,7 +8,14 @@ const createAlbum = vi.hoisted(() => vi.fn());
 const listAdminAlbums = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/server/auth/request-context", () => ({ getRequestContext }));
+vi.mock("@/server/auth/request-context", () => ({
+  getRequestContext,
+  getRequestAuthorization: async () => ({
+    context: await getRequestContext(),
+    decision: "unknown",
+    rejectionLogged: false,
+  }),
+}));
 vi.mock("@oioi-bwg/server/services/album-service", () => ({ createAlbum, listAdminAlbums }));
 vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
@@ -36,7 +43,7 @@ describe("/api/admin/albums", () => {
     const list = { items: [album], nextCursor: null };
     listAdminAlbums.mockResolvedValue(list);
 
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/admin/albums"));
 
     expect(response.status).toBe(200);
     expect(adminAlbumListSchema.parse(await response.json())).toEqual(list);
@@ -66,7 +73,7 @@ describe("/api/admin/albums", () => {
   it("maps an unauthenticated admin request to 401", async () => {
     listAdminAlbums.mockRejectedValue(new AppError("UNAUTHENTICATED"));
 
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/admin/albums"));
 
     expect(response.status).toBe(401);
     expect(apiErrorResponseSchema.parse(await response.json()).code).toBe("UNAUTHENTICATED");

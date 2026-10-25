@@ -84,3 +84,10 @@ export function toSafeSentryBuildMetadata(event: ErrorEvent) {
     ...(debugMeta ? { debug_meta: debugMeta } : {}),
   };
 }
+
+/** immutable build release만 JSON sink에 투영한다. Git HEAD나 배포 source를 추측하지 않는다. */
+export function getSafeBuildRelease(): string | undefined {
+  const value =
+    process.env.SENTRY_RELEASE ?? readProperty(readProperty(globalThis, "SENTRY_RELEASE"), "id");
+  return typeof value === "string" && SENTRY_RELEASE_PATTERN.test(value) ? value : undefined;
+}

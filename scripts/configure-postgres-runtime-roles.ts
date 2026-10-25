@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 
-import postgres, { type Sql } from "postgres";
+import postgres, { type TransactionSql } from "postgres";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const PRODUCTION_ACK = "I_UNDERSTAND_THIS_CHANGES_DATABASE_ROLES";
@@ -36,7 +36,7 @@ function quoteIdentifier(value: string) {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
-async function requireRelation(sql: Sql, schema: string, name: string, kinds: string[]) {
+async function requireRelation(sql: TransactionSql, schema: string, name: string, kinds: string[]) {
   const [relation] = await sql<{ kind: string }[]>`
     select relation.relkind as kind
     from pg_class relation
@@ -50,17 +50,17 @@ async function requireRelation(sql: Sql, schema: string, name: string, kinds: st
   }
 }
 
-async function transferTable(sql: Sql, schema: string, name: string, owner: string) {
+async function transferTable(sql: TransactionSql, schema: string, name: string, owner: string) {
   await requireRelation(sql, schema, name, ["r", "p"]);
   await sql`alter table ${sql(schema)}.${sql(name)} owner to ${sql(owner)}`;
 }
 
-async function transferSequence(sql: Sql, schema: string, name: string, owner: string) {
+async function transferSequence(sql: TransactionSql, schema: string, name: string, owner: string) {
   await requireRelation(sql, schema, name, ["S"]);
   await sql`alter sequence ${sql(schema)}.${sql(name)} owner to ${sql(owner)}`;
 }
 
-async function setLoginPassword(sql: Sql, role: string, password: string) {
+async function setLoginPassword(sql: TransactionSql, role: string, password: string) {
   const [row] = await sql<{ statement: string }[]>`
     select format(
       'alter role %I login password %L',
@@ -72,7 +72,7 @@ async function setLoginPassword(sql: Sql, role: string, password: string) {
   await sql.unsafe(row.statement);
 }
 
-async function ensureRole(sql: Sql, role: string, password: string) {
+async function ensureRole(sql: TransactionSql, role: string, password: string) {
   const [existing] = await sql<{ exists: boolean }[]>`
     select exists(select 1 from pg_roles where rolname = ${role})
   `;

@@ -1,0 +1,16 @@
+{
+  "extends": "./tools/repository/typescript/repository.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "allowJs": true
+  },
+  "include": [
+    "eslint.config.ts",
+    "drizzle.config.ts",
+    "steiger.config.ts",
+    "vitest.config.ts",
+    "tests/*/vitest.config.ts"
+  ]
+}

@@ -12,7 +12,8 @@ import {
 } from "@/features/auth";
 import { LazyLyricsEditor, type SongEditor } from "@/features/manage-lyrics";
 
-import { songMutations, songQueryKeys } from "@/entities/song";
+import { songQueryKeys } from "@/entities/song";
+import { songMutations } from "@/entities/song/api";
 
 import { ApiError } from "@/shared/api/http-errors";
 

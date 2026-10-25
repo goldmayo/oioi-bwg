@@ -9,9 +9,10 @@ const http = vi.hoisted(() => ({
 
 vi.mock("@/shared/api/http-client", () => ({ http }));
 
+import { albumQueryKeys } from "../index";
+
 import { createAdminAlbum, deleteAdminAlbum, getAdminAlbums, updateAdminAlbum } from "./api";
-import { albumQueries } from "./queries";
-import { albumQueryKeys } from "./query-keys";
+import { albumQueries } from "./index";
 
 const album = {
   id: 1,

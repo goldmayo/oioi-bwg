@@ -1,12 +1,17 @@
 import "server-only";
 
+import { appErrorCodeSchema } from "@oioi-bwg/contracts/error";
+import { AppError } from "@oioi-bwg/server/errors/app-error";
 import type { ErrorEvent } from "@sentry/nextjs";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 
+import { APP_ENVIRONMENTS } from "@/shared/config/app-env";
+import { toSafeRequestId } from "@/shared/lib/sentry/correlation";
 import {
   toSafeSentryBuildMetadata,
   toSafeSentryBuildPath,
 } from "@/shared/lib/sentry-build-metadata";
+import { getSentryRouteMetadata, SENTRY_OPERATIONS } from "@/shared/lib/sentry-route-metadata";
 
 export const SERVER_ERROR_EVENTS = [
   "api.unexpected_error",
@@ -25,23 +30,46 @@ export const SERVER_ERROR_SOURCES = [
   "upload-album-image-action",
 ] as const;
 
-export const SERVER_OPERATIONS = ["album-image-upload"] as const;
+export { SENTRY_OPERATIONS as SERVER_OPERATIONS } from "@/shared/lib/sentry-route-metadata";
 
-export const SAFE_ERROR_TYPES = ["auth", "database", "output-contract", "unknown"] as const;
+export const SAFE_ERROR_TYPES = [
+  "application",
+  "auth",
+  "database",
+  "output-contract",
+  "unknown",
+] as const;
+const ERROR_HANDLINGS = ["handled", "unhandled", "unknown"] as const;
+const ERROR_OUTCOMES = [
+  "response_created",
+  "login_redirect_requested",
+  "access_denied_requested",
+  "action_rejection_returned",
+  "render_error_captured",
+  "error_boundary_mounted",
+  "unknown",
+] as const;
 
 const SAFE_LEVELS = ["fatal", "error", "warning", "log", "info", "debug"] as const;
-const SAFE_ENVIRONMENTS = ["development", "staging", "production", "test"] as const;
 const SAFE_METHODS = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"] as const;
 const SAFE_ROUTER_KINDS = ["App Router", "Pages Router"] as const;
 const SAFE_ROUTE_TYPES = ["action", "proxy", "render", "route"] as const;
 
 export type ServerErrorEvent = (typeof SERVER_ERROR_EVENTS)[number];
 export type ServerErrorSource = (typeof SERVER_ERROR_SOURCES)[number];
-export type ServerOperation = (typeof SERVER_OPERATIONS)[number];
+export type ServerOperation = (typeof SENTRY_OPERATIONS)[number];
 export type SafeErrorType = (typeof SAFE_ERROR_TYPES)[number];
 export type SafeMethod = (typeof SAFE_METHODS)[number];
 export type SafeRouterKind = (typeof SAFE_ROUTER_KINDS)[number];
 export type SafeRouteType = (typeof SAFE_ROUTE_TYPES)[number];
+
+const EXCEPTION_NAMES: Record<SafeErrorType, string> = {
+  application: "ApplicationError",
+  auth: "AuthError",
+  database: "DatabaseError",
+  "output-contract": "OutputContractError",
+  unknown: "UnknownError",
+};
 
 export interface SafeRequestMetadata {
   method?: SafeMethod;
@@ -58,8 +86,18 @@ export interface ServerErrorContext {
   event: ServerErrorEvent;
   source: ServerErrorSource;
   operation?: ServerOperation;
+  route?: string;
+  requestId?: string;
   error?: Partial<SafeErrorDescriptor>;
   request?: SafeRequestMetadata;
+  handling?: (typeof ERROR_HANDLINGS)[number];
+  outcome?: (typeof ERROR_OUTCOMES)[number];
+}
+
+export interface SafeFailureMetadata {
+  kind: "contract" | "delivery" | "system" | "unknown";
+  handling: (typeof ERROR_HANDLINGS)[number];
+  outcome: (typeof ERROR_OUTCOMES)[number];
 }
 
 function isOneOf<const T extends readonly string[]>(value: unknown, values: T): value is T[number] {
@@ -85,6 +123,14 @@ function isSafeCode(value: unknown): value is string {
   );
 }
 
+function isAppError(error: unknown): error is AppError {
+  try {
+    return error instanceof AppError;
+  } catch {
+    return false;
+  }
+}
+
 function isDrizzleQueryError(error: unknown): error is DrizzleQueryError {
   try {
     return error instanceof DrizzleQueryError;
@@ -104,14 +150,50 @@ export function describeServerError(
   error: unknown,
   preferred?: Partial<SafeErrorDescriptor>,
 ): SafeErrorDescriptor {
+  if (isAppError(error)) {
+    const code = readProperty(error, "code");
+    return isOneOf(code, appErrorCodeSchema.options)
+      ? { type: "application", code }
+      : { type: "unknown" };
+  }
   const code = isSafeCode(preferred?.code) ? preferred.code : findSafeCode(error);
-  const type = isOneOf(preferred?.type, SAFE_ERROR_TYPES)
-    ? preferred.type
-    : code && /^[0-9A-Z]{5}$/.test(code)
-      ? "database"
-      : "unknown";
+  const type =
+    preferred?.type !== "application" && isOneOf(preferred?.type, SAFE_ERROR_TYPES)
+      ? preferred.type
+      : code && /^[0-9A-Z]{5}$/.test(code)
+        ? "database"
+        : "unknown";
 
   return code ? { type, code } : { type };
+}
+
+/** A render error hook observes an escaped exception, not a final HTTP/UI outcome. */
+export function describeServerFailure(
+  descriptor: SafeErrorDescriptor,
+  context: ServerErrorContext,
+): SafeFailureMetadata {
+  const renderError =
+    context.event === "next.request_error" &&
+    context.source === "next-instrumentation" &&
+    readProperty(context.request, "routeType") === "render";
+  const handling = readProperty(context, "handling");
+  const outcome = readProperty(context, "outcome");
+  return {
+    kind:
+      descriptor.type === "output-contract"
+        ? "contract"
+        : descriptor.type === "application" && renderError
+          ? "delivery"
+          : descriptor.type === "database" || descriptor.type === "auth"
+            ? "system"
+            : "unknown",
+    handling: renderError ? "unhandled" : isOneOf(handling, ERROR_HANDLINGS) ? handling : "unknown",
+    outcome: renderError
+      ? "render_error_captured"
+      : isOneOf(outcome, ERROR_OUTCOMES)
+        ? outcome
+        : "unknown",
+  };
 }
 
 export function toSafeMethod(value: unknown): SafeMethod | undefined {
@@ -127,7 +209,7 @@ export function toSafeServerErrorSource(value: unknown): ServerErrorSource {
 }
 
 export function toSafeServerOperation(value: unknown): ServerOperation | undefined {
-  return isOneOf(value, SERVER_OPERATIONS) ? value : undefined;
+  return isOneOf(value, SENTRY_OPERATIONS) ? value : undefined;
 }
 
 export function toSafeRequestMetadata(value: unknown): SafeRequestMetadata | undefined {
@@ -227,21 +309,51 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
   const errorTypeTag = safeTag(event, "error.type");
   const eventName = toSafeServerErrorEvent(eventTag);
   const source = toSafeServerErrorSource(sourceTag);
-  const operation = toSafeServerOperation(safeTag(event, "operation"));
-  const errorType = isOneOf(errorTypeTag, SAFE_ERROR_TYPES) ? errorTypeTag : "unknown";
+  const route = getSentryRouteMetadata(safeTag(event, "route.template"));
+  const operation = toSafeServerOperation(safeTag(event, "operation")) ?? route?.operation;
   const errorCode = safeTag(event, "error.code");
+  const errorType =
+    errorTypeTag === "application" && !isOneOf(errorCode, appErrorCodeSchema.options)
+      ? "unknown"
+      : isOneOf(errorTypeTag, SAFE_ERROR_TYPES)
+        ? errorTypeTag
+        : "unknown";
   const method = safeTag(event, "request.method");
   const routerKind = safeTag(event, "next.router_kind");
   const routeType = safeTag(event, "next.route_type");
+  const handling = safeTag(event, "handling");
+  const outcome = safeTag(event, "outcome");
+  const failure = describeServerFailure(
+    { type: errorType },
+    {
+      event: eventName,
+      source,
+      request: toSafeRequestMetadata({ method, routerKind, routeType }),
+      ...(isOneOf(handling, ERROR_HANDLINGS) ? { handling } : {}),
+      ...(isOneOf(outcome, ERROR_OUTCOMES) ? { outcome } : {}),
+    },
+  );
   const trace = safeTraceContext(event);
+  const requestId = toSafeRequestId(
+    readProperty(readProperty(event.contexts, "correlation"), "request_id"),
+  );
   const stacktrace = safeStacktrace(event);
 
   const tags = {
+    app: "web",
+    runtime: "node",
+    ...(route ? { "route.template": route.template } : {}),
     event: eventName,
     source,
     ...(operation ? { operation } : {}),
     "error.type": errorType,
-    ...(isSafeCode(errorCode) ? { "error.code": errorCode } : {}),
+    "failure.kind": failure.kind,
+    handling: failure.handling,
+    outcome: failure.outcome,
+    ...(isSafeCode(errorCode) ||
+    (errorType === "application" && isOneOf(errorCode, appErrorCodeSchema.options))
+      ? { "error.code": errorCode }
+      : {}),
     ...(isOneOf(method, SAFE_METHODS) ? { "request.method": method } : {}),
     ...(isOneOf(routerKind, SAFE_ROUTER_KINDS) ? { "next.router_kind": routerKind } : {}),
     ...(isOneOf(routeType, SAFE_ROUTE_TYPES) ? { "next.route_type": routeType } : {}),
@@ -255,25 +367,28 @@ export function sanitizeServerSentryEvent(event: ErrorEvent): ErrorEvent {
     ...(typeof event.timestamp === "number" ? { timestamp: event.timestamp } : {}),
     ...(isOneOf(event.level, SAFE_LEVELS) ? { level: event.level } : { level: "error" }),
     platform: "node",
-    ...(isOneOf(event.environment, SAFE_ENVIRONMENTS) ? { environment: event.environment } : {}),
+    ...(isOneOf(event.environment, APP_ENVIRONMENTS) ? { environment: event.environment } : {}),
     ...toSafeSentryBuildMetadata(event),
     exception: {
       values: [
         {
-          type:
-            errorType === "auth"
-              ? "AuthError"
-              : errorType === "database"
-                ? "DatabaseError"
-                : errorType === "output-contract"
-                  ? "OutputContractError"
-                  : "UnknownError",
-          value: "Unexpected server error",
+          type: failure.kind === "delivery" ? "DeliveryError" : EXCEPTION_NAMES[errorType],
+          value:
+            failure.kind === "delivery"
+              ? "Unhandled application delivery failure"
+              : "Unexpected server error",
           ...(stacktrace ? { stacktrace } : {}),
         },
       ],
     },
     tags,
-    ...(trace ? { contexts: { trace } } : {}),
+    ...(trace || requestId
+      ? {
+          contexts: {
+            ...(trace ? { trace } : {}),
+            ...(requestId ? { correlation: { request_id: requestId } } : {}),
+          },
+        }
+      : {}),
   };
 }

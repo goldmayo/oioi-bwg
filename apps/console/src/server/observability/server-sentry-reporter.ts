@@ -3,9 +3,12 @@ import "server-only";
 import * as Sentry from "@sentry/nextjs";
 
 import { getSentryRuntimeConfig } from "@/shared/config/sentry";
+import { toSafeRequestId } from "@/shared/lib/observability-correlation";
+import { getSentryRouteMetadata } from "@/shared/lib/sentry-route-metadata";
 
 import {
   describeServerError,
+  describeServerFailure,
   type ServerErrorContext,
   toSafeRequestMetadata,
   toSafeServerErrorEvent,
@@ -26,9 +29,12 @@ export function captureServerException(error: unknown, context: ServerErrorConte
   if (!getSentryRuntimeConfig().enabled) return null;
 
   const descriptor = describeServerError(error, context.error);
+  const failure = describeServerFailure(descriptor, context);
+  if (descriptor.type === "application" && failure.handling === "handled") return null;
   const event = toSafeServerErrorEvent(context.event);
   const source = toSafeServerErrorSource(context.source);
-  const operation = toSafeServerOperation(context.operation);
+  const route = getSentryRouteMetadata(context.route);
+  const operation = toSafeServerOperation(context.operation) ?? route?.operation;
   const request = toSafeRequestMetadata(context.request);
   const capturedError = isError(error) ? error : new Error("Unexpected server error");
 
@@ -36,14 +42,22 @@ export function captureServerException(error: unknown, context: ServerErrorConte
   Sentry.withScope((scope) => {
     scope.setTags({
       event,
+      app: "console",
+      runtime: "node",
+      "route.template": route?.template,
       source,
-      ...(operation ? { operation } : {}),
+      operation,
       "error.type": descriptor.type,
-      ...(descriptor.code ? { "error.code": descriptor.code } : {}),
-      ...(request?.method ? { "request.method": request.method } : {}),
-      ...(request?.routerKind ? { "next.router_kind": request.routerKind } : {}),
-      ...(request?.routeType ? { "next.route_type": request.routeType } : {}),
+      "failure.kind": failure.kind,
+      handling: failure.handling,
+      outcome: failure.outcome,
+      "error.code": descriptor.code,
+      "request.method": request?.method,
+      "next.router_kind": request?.routerKind,
+      "next.route_type": request?.routeType,
     });
+    const requestId = toSafeRequestId(context.requestId);
+    scope.setContext("correlation", requestId ? { request_id: requestId } : null);
     eventId = Sentry.captureException(capturedError);
   });
 

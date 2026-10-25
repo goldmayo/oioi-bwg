@@ -19,6 +19,13 @@ Container Instance나 build runtime을 만들지 않고 기존 Compute와 GitHub
 
 ## 1. Install and configure
 
+현재 source Compose는 `ops/oci/compose.yml`, 초기 공개/secret 예제는
+`ops/oci/env/runtime-{public,secrets}.env.example`이다. installer는 이를 기존 호스트의
+`/srv/oioibawige/compose.oci-development.yml`과 `/etc/oioibawige/runtime-{public,secrets}.env`로
+설치한다. legacy release.env 예제는 `ops/oci/env/legacy/release.env.example`에 보존한다.
+경로 이관 근거는 [루트 배치 결과](../../docs/migration/implementation/ROOT-FILE-INVENTORY.md)를 따른다.
+아래 §9의 고정 commit·archive 명령은 당시 증거이며 현재 checkout의 source 경로와 구분한다.
+
 설치 전 root 실행 경로의 전체 상위 경로를 확인한다. installer는 runtime·scripts·deploy·config와
 각 ancestor가 root 소유·group/other 쓰기 금지인 일반 디렉터리인지 **첫 mkdir/lock 전에** 검사한다.
 기존 설치 대상과 lock의 symlink/hardlink·비보호 파일도 거절한다. preflight도 같은 디렉터리 조건을
@@ -431,6 +438,28 @@ SH
 `sudo /srv/oioibawige/scripts/preflight-host.sh`는 설정·root 경로·Agent·Compose·Instance Principal을 확인한다.
 이 검사는 두 앱 Vault env materialization·digest pull·앱 간 키/DB 비교·실제 metadata 차단을 대신하지 않는다.
 DB journal/schema·app 권한 확인 및 필요한 migration은 별도 승인 작업이며 installer/deploy에서 실행하지 않는다.
+
+### 9.2.1. Console 업로드 설정과 앱별 Sentry
+
+Console의 활성 업로드 consumer에는 R2 설정 5개가 필수다. `console-runtime-public.env`에
+`R2_ENDPOINT`, `R2_BUCKET`, `ASSETS_PUBLIC_BASE_URL`을 설정하고, `console-runtime-secrets.env`에는
+기존 Vault의 `R2_ACCESS_KEY_ID`·`R2_SECRET_ACCESS_KEY` Secret OCID를 매핑한다. 값 자체를 기록하지 않는다.
+새 materializer 설치 전에 기존 보호 파일을 백업하고 이 설정을 준비한다. 새 materializer는 누락 시
+임시 env를 승격하지 않고 실패하므로 예전 auth/MFA-only 설정으로 새 배포를 실행하지 않는다.
+기존 R2 bucket·assets 도메인과 Auth/MFA key/version을 보존하며 자동으로 키를 새로 만들지 않는다.
+
+로컬은 `apps/console/.env.example`을 기준으로 Console의 `.env.local`에 같은 5개를 설정한다.
+Web `.env`는 자동으로 읽지 않는다. `dev:console:local`은 DB/Auth/MFA에 더해 R2 누락도 검사한다.
+기존 개인 `.env*`는 Git에 추가하지 않고 값이 포함된 로그를 남기지 않는다.
+
+Sentry는 기존 공용 프로젝트를 유지한다. GitHub `oci-development-image`의
+`NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`가 두 앱 build에 전달되며,
+각 앱의 로컬 입력은 자신의 `.env.local`에 명시한다. `local`에서는 전송하지 않는다.
+새 프로젝트·DSN·GitHub 변수 생성을 이번 회수의 선행 조건으로 추가하지 않는다.
+
+Console 로그인은 TOTP이고 현재 메일 호출 consumer가 없다. 메일 설정을 Console에 복사하지 않는다.
+Web의 가입 POST도 현재 종료된 상태다. 공통 메일 구현의 `dev`는 실제 발송이 아니며, 향후 consumer를
+연결할 때 해당 앱에 `oci` mode·발신자·compartment와 Instance Principal 권한을 별도로 준비한다.
 
 ### 9.3. 첫 배포와 실패 복구의 구분
 

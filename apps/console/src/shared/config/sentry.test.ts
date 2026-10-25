@@ -5,7 +5,7 @@ import { getSentryRuntimeConfig } from "./sentry";
 describe("getSentryRuntimeConfig", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it.each(["local", "development", "test", "", undefined])(
+  it.each(["local", "staging", "development", "test", "", undefined])(
     "keeps Sentry disabled for %s",
     (appEnvironment) => {
       vi.stubEnv("NEXT_PUBLIC_APP_ENV", appEnvironment);
@@ -19,7 +19,7 @@ describe("getSentryRuntimeConfig", () => {
     },
   );
 
-  it.each(["staging", "production"])("enables %s only when a DSN exists", (appEnvironment) => {
+  it.each(["production"])("enables %s only when a DSN exists", (appEnvironment) => {
     vi.stubEnv("NEXT_PUBLIC_APP_ENV", appEnvironment);
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://public@example.test/1");
 

@@ -32,7 +32,7 @@
     "./storage/upload-public-asset": "./src/storage/upload-public-asset.ts"
   },
   "scripts": {
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",
     "lint": "eslint .",
     "test": "vitest run"
   },
@@ -51,6 +51,9 @@
   "devDependencies": {
     "@types/node": "^20",
     "typescript": "^5",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "@oioi-bwg/config": "workspace:*",
+    "eslint": "^9",
+    "jiti": "2.6.1"
   }
 }

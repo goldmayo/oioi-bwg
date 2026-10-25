@@ -1,10 +1,10 @@
 ---
 title: "Error UX / Observability Architecture"
 document_id: "09"
-version: "1.3"
+version: "1.5"
 status: "active"
 authority: "architecture"
-updated_at: "2026-09-21"
+updated_at: "2026-10-23"
 depends_on:
   - "03"
   - "04"
@@ -21,7 +21,7 @@ tags:
   - "observability"
 ---
 
-# oioi-bwg Error UX / Observability Architecture v1.3
+# oioi-bwg Error UX / Observability Architecture v1.5
 
 ## 1. 목적
 
@@ -217,7 +217,7 @@ raw Zod detail을 사용자에게 그대로 노출하지 않는다.
 capture 하지 않는 기본 항목:
 
 ```text
-expected AppError
+delivery adapter가 정상 번역한 expected AppError
 request validation failure
 정상적인 401/403/404/409
 ```
@@ -229,7 +229,24 @@ unexpected server exception
 output contract violation
 ClientContractError
 unexpected client runtime failure
+번역되지 않고 render 오류 hook으로 탈출한 AppError
 ```
+
+AppError code는 기존 contract enum만 허용하며 `error.type=application`으로 보존한다. type·status만으로
+전역 discard하지 않는다. 정상 401/403/404/409의 응답 계약과 Sentry 제외는 유지한다.
+안전한 오류 descriptor와 관측한 경계에서 다음 metadata를 생성하고 최종 beforeSend에서도 재검증한다.
+
+- `failure.kind`: `contract | delivery | system | unknown`. output contract는 contract, 확인된 DB/auth
+  장애는 system, render hook으로 탈출한 application failure는 delivery다. 근거가 부족하면 unknown이다.
+- `handling`: `handled | unhandled | unknown`. Next render 오류 hook에서 관측한 예외는 unhandled이며
+  caller가 임의로 붙인 handled 값으로 이 사실을 덮지 않는다. 처리된 AppError는 장애 sink에서 제외한다.
+- `outcome`: `response_created | login_redirect_requested | access_denied_requested | action_rejection_returned |
+  render_error_captured | error_boundary_mounted | unknown`. 직접 관측한 사실만 기록한다. render hook은
+  `render_error_captured`이며 실제 HTTP 500·브라우저 오류 화면 표시·사용자 영향 확정으로 해석하지 않는다.
+
+SDK에는 원본 Error를 넘겨 frame을 유지하고 exception 표시 값은 고정 문구로 정제한다.
+message·arbitrary cause를 역추적해 code나 사용자 처리 결과를 복원하지 않는다. unknown 수집은 유지한다.
+Console에서 먼저 검증한 뒤 Web에 별도 적용할 수 있으며 전환 중 missing metadata는 unknown으로 취급한다.
 
 ---
 
@@ -258,8 +275,8 @@ Script / CLI progress
 ```
 
 `clientLogger`는 `NEXT_PUBLIC_APP_ENV=local`에서만 `debug/info/warn/error`를 browser console에
-출력한다. staging과 production에서는 기본적으로 출력하지 않으며 Sentry API, breadcrumb 또는 message
-capture를 호출하지 않는다.
+출력한다. production과 미지원 값에서는 출력하지 않으며 Sentry API, breadcrumb 또는 message capture를
+호출하지 않는다. 환경 값과 Sentry 활성화의 계약은 11 §12를 따른다. NODE_ENV로 배포 환경을 추론하지 않는다.
 
 server log는 자유형 객체 전체를 직렬화하는 범용 API보다 다음과 같은 고정 schema와 allowlist를 사용한다.
 
@@ -270,6 +287,7 @@ event
 source
 typed operation
 safe error descriptor
+failure.kind / handling / observed outcome
 allowlisted request metadata
 ```
 
@@ -315,6 +333,9 @@ Error details도 03의 client-safe 원칙을 따른다.
 단 single-server 환경에서도 request correlation이 실제 debugging에 유용하면 request ID를 도입할 수 있다.
 
 도입 시 logger/Sentry/HTTP response 간 일관된 vocabulary를 사용한다.
+
+작은 enum은 검색용 tag로, 고유 request ID는 진단 context로 둔다. request/user ID·timestamp·release를
+custom fingerprint에 넣지 않는다. 요청 ID의 실제 생성·전달·동시성 검증은 별도 runtime checkpoint다.
 
 ---
 
@@ -379,7 +400,7 @@ feature
 
 ```text
 모든 error를 toast
-expected AppError를 Sentry capture
+정상 번역된 expected AppError를 Sentry capture
 raw internal message 사용자 노출
 console.log 중심 운영
 Error class 중복 정의
@@ -398,7 +419,7 @@ global catch에서 모든 error 의미 소실
 5. Mutation error는 global 기본 UX + feature escape hatch를 고려한다.
 6. 401/403/404/409는 서로 다른 UX 의미를 가진다.
 7. Unexpected/System failure는 generic UX로 처리한다.
-8. Expected application failure는 기본적으로 Sentry capture하지 않는다.
+8. 정상 번역된 expected application failure는 Sentry capture하지 않는다. 탈출한 delivery failure는 수집한다.
 9. Contract violation과 unexpected exception은 capture한다.
 10. Structured logger를 사용한다.
 11. Sensitive data는 log/capture하지 않는다.

@@ -9,7 +9,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 MFA = base64.b64encode(bytes(32)).decode()
 VALUES = dict(db='fixture-p@ss', web='fixture-web-auth-secret',
-              auth='fixture-console-auth-secret-32-characters', mfa=MFA)
+              auth='fixture-console-auth-secret-32-characters', mfa=MFA,
+              r2id='fixture-r2-id', r2secret='fixture-r2-secret')
 
 
 class RuntimeEnvTest(unittest.TestCase):
@@ -18,7 +19,8 @@ class RuntimeEnvTest(unittest.TestCase):
             root = Path(temporary)
             public = 'R2_BUCKET=literal$bucket#"quote\n' if app == 'web' else 'CONSOLE_ORIGIN=http://127.0.0.1:3001\n'
             names = {'db': 'DB_APP_PASSWORD', **({'web': 'AUTH_SECRET'} if app == 'web' else
-                     {'auth': 'CONSOLE_AUTH_SECRET', 'mfa': 'CONSOLE_MFA_ENCRYPTION_KEY'})}
+                     {'auth': 'CONSOLE_AUTH_SECRET', 'mfa': 'CONSOLE_MFA_ENCRYPTION_KEY',
+                      'r2id': 'R2_ACCESS_KEY_ID', 'r2secret': 'R2_SECRET_ACCESS_KEY'})}
             mapping = ''.join(f'{name}=ocid1.vaultsecret.test.{key}\n' for key, name in names.items())
             secrets = dict(VALUES)
             if variant == 'foreign-public': public += 'CONSOLE_ORIGIN=http://localhost:3001\n' if app == 'web' else 'EMAIL_DELIVERY_MODE=dev\n'
@@ -35,6 +37,13 @@ class RuntimeEnvTest(unittest.TestCase):
             if variant == 'invalid-mfa': secrets['mfa'] = MFA[:-1]
             if variant == 'same-key': secrets['auth'] = MFA
             if variant == 'newline': secrets['db'] += '\n'
+            if app == 'console':
+                public += ('R2_ENDPOINT=https://account.r2.cloudflarestorage.com\n'
+                           'R2_BUCKET=fixture-albums\nASSETS_PUBLIC_BASE_URL=https://assets.example.test\n')
+                if variant.startswith('missing-upload:'):
+                    field = variant.split(':', 1)[1]
+                    public = '\n'.join(line for line in public.splitlines() if not line.startswith(field + '=')) + '\n'
+                    mapping = '\n'.join(line for line in mapping.splitlines() if not line.startswith(field + '=')) + '\n'
             for name, value in {'public': public, 'mapping': mapping, 'output': 'previous-env', 'values': json.dumps(secrets)}.items():
                 (root / name).write_text(value)
             (root / 'output').chmod(0o644)
@@ -99,6 +108,14 @@ print(base64.b64encode(json.loads((root/'values').read_text())[key].encode()).de
             self.assertEqual(result.returncode, 1)
             self.assertEqual(output, 'previous-env')
             self.assertEqual(calls, [])
+
+    def test_missing_upload_configuration(self):
+        for field in ('R2_ENDPOINT', 'R2_BUCKET', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'ASSETS_PUBLIC_BASE_URL'):
+            with self.subTest(field=field):
+                result, output, calls, _ = self.run_case('console', 'missing-upload:' + field)
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(output, 'previous-env')
+                self.assertEqual(calls, [])
 
     def test_console_contract(self):
         for variant in ('origin', 'short-auth', 'invalid-mfa', 'same-key', 'missing-auth'):

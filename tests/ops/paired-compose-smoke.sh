@@ -7,7 +7,7 @@ export POSTGRES_NETWORK="${project}"
 export APP_BIND_ADDRESS=127.0.0.1 APP_PORT=3000 CONSOLE_PORT=3001
 export WEB_IMAGE=oioi-bwg:workspace-check CONSOLE_IMAGE=oioi-bwg-console:workspace-check
 export WEB_ENV_FILE="${root}/web.env" CONSOLE_ENV_FILE="${root}/console.env"
-compose() { docker compose -p "${project}" -f compose.oci-development.yml -f "${root}/override.yml" "$@"; }
+compose() { docker compose -p "${project}" -f ops/oci/compose.yml -f "${root}/override.yml" "$@"; }
 cleanup() {
   compose rm -sf web console >/dev/null 2>&1 || true
   docker network rm "${POSTGRES_NETWORK}" >/dev/null 2>&1 || true
@@ -22,7 +22,10 @@ services:
     extra_hosts: ["host.docker.internal:host-gateway"]
 YAML
 printf '%s\n' 'DATABASE_URL=postgresql://postgres@host.docker.internal:5432/image_smoke' >"${WEB_ENV_FILE}"
-printf '%s\n' 'DATABASE_URL=postgresql://postgres@host.docker.internal:5432/image_smoke' 'CONSOLE_AUTH_SECRET=console-workspace-smoke-local-only-secret' 'CONSOLE_ORIGIN=http://127.0.0.1:3001' 'CONSOLE_MFA_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' >"${CONSOLE_ENV_FILE}"
+printf '%s\n' 'DATABASE_URL=postgresql://postgres@host.docker.internal:5432/image_smoke' 'CONSOLE_AUTH_SECRET=console-workspace-smoke-local-only-secret' 'CONSOLE_ORIGIN=http://127.0.0.1:3001' 'CONSOLE_MFA_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' \
+  'R2_ENDPOINT=https://r2.example.test' 'R2_BUCKET=smoke' \
+  'R2_ACCESS_KEY_ID=smoke-only' 'R2_SECRET_ACCESS_KEY=smoke-only' \
+  'ASSETS_PUBLIC_BASE_URL=https://assets.example.test' >"${CONSOLE_ENV_FILE}"
 cp "${CONSOLE_ENV_FILE}" "${root}/console-good.env"
 docker network create "${POSTGRES_NETWORK}" >/dev/null
 # Distinct real image IDs without rebuilding app code or pulling another base.

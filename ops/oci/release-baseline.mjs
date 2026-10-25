@@ -173,12 +173,15 @@ export async function validateBaseline({
   return { ...proof, releaseId: receipt.releaseId };
 }
 
+/** @type {(file: string, args: string[], options: import('node:child_process').ExecFileSyncOptions) => string | Buffer} */
+const executeImagePlanCommand = execFileSync;
+
 export function planImages({
   baseline,
   proof,
   sourceSha,
   configHash = buildConfigHash(),
-  execute = execFileSync,
+  execute = executeImagePlanCommand,
 }) {
   const built = { web: true, console: true };
   if (!baseline || !proof) return { build: built, baseline: null };
@@ -190,25 +193,26 @@ export function planImages({
     execute("git", ["merge-base", "--is-ancestor", baseline.sourceSha, sourceSha], {
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const files = execute(
-      "git",
-      ["diff", "--no-renames", "--name-only", "-z", baseline.sourceSha, sourceSha],
-      {
+    const files = String(
+      execute("git", ["diff", "--no-renames", "--name-only", "-z", baseline.sourceSha, sourceSha], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
-      },
+      }),
     )
       .split("\0")
       .filter(Boolean);
     // Root configuration, shared packages, lockfile, Dockerfile, workflows, or any
     // unknown path invalidate both. Turbo supplies the existing dependency graph.
-    if (files.some((f) => !/^apps\/(web|console)\//.test(f))) return result;
+    if (files.some((f) => f.endsWith("/Dockerfile") || !/^apps\/(web|console)\//.test(f)))
+      return result;
     const dry = JSON.parse(
-      execute("pnpm", ["exec", "turbo", "run", "build", "--affected", "--dry=json"], {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-        env: { ...process.env, TURBO_SCM_BASE: baseline.sourceSha, TURBO_SCM_HEAD: sourceSha },
-      }),
+      String(
+        execute("pnpm", ["exec", "turbo", "run", "build", "--affected", "--dry=json"], {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+          env: { ...process.env, TURBO_SCM_BASE: baseline.sourceSha, TURBO_SCM_HEAD: sourceSha },
+        }),
+      ),
     );
     if (
       !Array.isArray(dry.tasks) ||
@@ -218,6 +222,7 @@ export function planImages({
             "@oioi-bwg/web",
             "@oioi-bwg/console",
             "@oioi-bwg/contracts",
+            "@oioi-bwg/config",
             "@oioi-bwg/server",
           ].includes(t.package),
       )

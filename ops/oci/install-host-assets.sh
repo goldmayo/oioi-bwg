@@ -57,7 +57,7 @@ if [[ -e "${runtime_root}/compose.oci-development.yml" ]] && grep -q '^  app:' "
 fi
 
 install -d -o root -g root -m 0750 "${runtime_root}" "${runtime_root}/deploy" "${runtime_root}/scripts" "${config_root}"
-install -m 0644 "${repository_root}/compose.oci-development.yml" "${runtime_root}/compose.oci-development.yml"
+install -m 0644 "${repository_root}/ops/oci/compose.yml" "${runtime_root}/compose.oci-development.yml"
 for script in "${host_scripts[@]}"; do
   install -m 0755 "${repository_root}/ops/oci/${script}" "${runtime_root}/scripts/${script}"
 done
@@ -66,10 +66,10 @@ if [[ ! -e "${config_root}/deploy.conf" ]]; then
   install -m 0600 "${repository_root}/ops/oci/deploy.conf.example" "${config_root}/deploy.conf"
 fi
 if [[ ! -e "${config_root}/runtime-public.env" ]]; then
-  install -m 0600 "${repository_root}/app.env.oci-development.example" "${config_root}/runtime-public.env"
+  install -m 0600 "${repository_root}/ops/oci/env/runtime-public.env.example" "${config_root}/runtime-public.env"
 fi
 if [[ ! -e "${config_root}/runtime-secrets.env" ]]; then
-  install -m 0600 "${repository_root}/.env.oci-secrets.example" "${config_root}/runtime-secrets.env"
+  install -m 0600 "${repository_root}/ops/oci/env/runtime-secrets.env.example" "${config_root}/runtime-secrets.env"
 fi
 
 install -m 0440 "${repository_root}/ops/oci/ocarun.sudoers" /etc/sudoers.d/oioi-bwg-ocarun
