@@ -11,6 +11,7 @@ const rootToolEntries: Record<string, string> = {
   "eslint.config.ts": "./eslint",
   "steiger.config.ts": "./steiger",
   "scripts/check-workspace-dependencies.ts": "./cli/dependencies",
+  "scripts/plan-uuid-cutover.ts": "./cli/plan-uuid-cutover",
   "scripts/console-mfa-execution.ts": "./operator/execution",
   "scripts/console-mfa-operator-policy.ts": "./operator/policy",
   "tests/ops/console-mfa-fixture.ts": "./fixture/console-mfa",

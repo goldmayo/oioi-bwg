@@ -9,8 +9,12 @@
 
 ## 진행할 작업과 보류
 
+UUIDv7 전환은 2026-10-26 사용자 요청으로 착수했다. 아래 항목은 운영 READ ONLY 재실측과
+`migration_main@e447c87b12008f3c94df63b70d30ef969df6a6fb`를 기준으로 하며 위의 과거 기준을 대체하지 않는다.
+
 | 작업                            | 상태                  | 다음 행동                                                                                             | 완료 조건                                               | 근거                                                                                                                                                                                                                                |
 | ------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UUIDv7 PK·DB 네이밍 전환 | 기반 구현 중 | 생성·검증/대응표 도구 PR 이후 data-preserving migration·앱·auth 전환 후보 준비 | 로컬 전환/복구·전체 payload/FK 보존·관리자 재등록·검증된 운영 적용 | [실측·실행 계획](https://app.notion.com/p/404395eb18c28034b39debf1bd080612), [ADR 0009](adr/0009-uuid-domain-identity.md). 운영 쓰기 미실시; 기존 공지 초안 보존 |
 | P07 세 종류 응원법              | 미착수                | Domain의 FAN 분리·초기 이력 범위와 저장 계약부터 검토                                                 | 분류·내용 보존·저장 충돌·선택/재생 유지 검증            | [설계 §5](migration/implementation/console-guide-editor/DESIGN.md#5-cheerguide), [P06 결과](migration/implementation/console-guide-editor/P06-RESULT.md#다음-checkpoint-p07)                                                        |
 | P08 파형 작업                   | 미착수                | Queue/runner/job 계약과 실제 환경 검증 범위 확정                                                      | 전달 불확실성·멱등성·음원 비영속·offset/drift 검증      | [설계 §6](migration/implementation/console-guide-editor/DESIGN.md#6-waveform-worker), [기술 검토](migration/implementation/console-guide-editor/AUDIO-FEASIBILITY.md)                                                               |
 | P09 파형·Cue 편집               | 미착수                | P08 결과와 기존 JSON으로 editor 연결 검토                                                             | 재생/seek·drag/Undo·기존 기능 보존, 누적 drift 해결     | [설계 §7](migration/implementation/console-guide-editor/DESIGN.md#7-audio-editor), [로드맵](migration/implementation/console-guide-editor/ROADMAP.md)                                                                               |

@@ -15,6 +15,7 @@
     "verify": "turbo run type-check lint test --filter=!@oioi-bwg/repository-tools && pnpm type-check:repo && pnpm lint:repo && pnpm lint:deps && pnpm test:harness && pnpm test:ops && pnpm format:check && turbo run build",
     "prepare": "husky",
     "db:generate": "node --import tsx -- scripts/run-local-database-tool.ts generate",
+    "db:plan-uuid": "node --conditions=react-server --import tsx scripts/plan-uuid-cutover.ts",
     "db:migrate": "node --import tsx -- scripts/run-local-database-tool.ts migrate",
     "db:restore-local": "sh scripts/restore-local-dump.sh",
     "db:configure-runtime-roles": "tsx scripts/configure-postgres-runtime-roles.ts",
