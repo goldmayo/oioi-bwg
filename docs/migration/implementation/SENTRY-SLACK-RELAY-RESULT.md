@@ -1,10 +1,10 @@
 ---
 title: "Sentry 오류 알림 Slack relay 구현 결과"
 document_id: "SENTRY-SLACK-RELAY-RESULT"
-version: "1.7"
+version: "1.8"
 status: "completed"
 authority: "result"
-updated_at: "2026-10-23"
+updated_at: "2026-10-25"
 depends_on:
   - "OBSERVABILITY-AUDIT"
   - "OBSERVABILITY-CLIENT-SENTRY-RESULT"
@@ -20,7 +20,7 @@ tags:
 # Sentry 오류 알림 Slack relay 구현 결과
 
 **현재 상태: 2026-10-22 새 알림 형식의 Worker 배포·실제 Slack 수신 완료.**
-마지막 실제 배포/수신 판정은 §11, 현재 소스 경로·검사 소유권은 §12가 소유하며, §8~10의 미배포·사용자 수동 배포 대기는 당시 기록으로 보존한다.
+2026-10-25 태그/환경 감사는 §13, 마지막 실제 배포/수신 판정은 §11, 현재 소스 경로·검사 소유권은 §12가 소유하며, §8~10의 미배포·사용자 수동 배포 대기는 당시 기록으로 보존한다.
 
 ## 1. 범위와 기존 구조 조사
 
@@ -325,3 +325,50 @@ root ops의 단위 테스트는 앱 tests가 소유하며 root unit/coverage와 
 실행 결과·범위는 [정상화 RESULT](MONOREPO-CONFIGURATION-RESULT.md)의 RUN-03 절을 따른다.
 credential·개인 env가 없는 임시 source에서 API loopback·metrics/error reports OFF로 Wrangler
 `deploy --dry-run` 번들만 검증했으며, login/whoami/실제 deploy·secret 등록·외부 전송은 실행하지 않았다.
+
+## 13. 2026-10-25 서비스 태그와 relay 환경 감사
+
+`goldmayo/oioi-bwg`의 `migration_main` `7f16a9d74e526f50a5f17e6821ed980d1057cabd`를
+기준으로 Web/Console 최종 sanitizer·SDK/build 입력·relay 소비를 대조했다. Worker 소스 blob은
+`3d7a75805e6c438ada049a05398e34a2c1c15899`다. source 계약은 active [09](../oioi-bwg-architecture-clean-v1/09-error-ux-observability.md)와
+[11 §12](../oioi-bwg-architecture-clean-v1/11-content-i18n-assets-runtime-architecture.md#12-runtime)를 따른다.
+이번 감사는 기존 앱 수집 정책을 바꾸거나 새로운 진단 태그를 추측해 채우지 않는다.
+
+| 필드                                       | 현재 코드의 의미와 판정                                                                                                                                                     |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app`, `runtime`                           | 각 앱 최종 sanitizer가 web/console 및 browser/node로 고정한다. 공용 프로젝트에서도 앱을 구분하며 외부 임의 tag로 덮어쓰지 못한다.                                           |
+| `environment`                              | 앱은 production+DSN에서만 전송한다. local은 비활성, 이전 staging 값은 현재 허용값이 아니다. relay source는 local/production 외 unknown으로 표시한다.                        |
+| `route.template`, `operation`, `source`    | 앱이 소유한 고정 경로/작업/발생 경계 allowlist다. 실제 slug·query·관리 ID는 tag에 복사하지 않는다.                                                                          |
+| 서버 `error.type`, `error.code`            | application/auth/database/output-contract/unknown과 제한된 code만 남긴다. 정상 번역한 expected error는 수집하지 않는다.                                                     |
+| 서버 `failure.kind`, `handling`, `outcome` | contract/delivery/system/unknown 및 관측한 처리 경계다. render hook 수집을 실제 HTTP 500·사용자 화면 표시로 과장하지 않는다.                                                |
+| 브라우저 `error.type`, `outcome`           | client-contract/client-transport/runtime과 관측한 결과다. 서버의 failure kind/handling을 그대로 생산하지 않으므로 relay의 kind가 없을 수 있다. 값이 없으면 추정하지 않는다. |
+| release·Debug ID                           | 실제 build source에 맞는 검증된 release/debug metadata를 별도 필드로 보존한다. 현재 Git HEAD로 대체하지 않는다.                                                             |
+| request ID                                 | `contexts.correlation.request_id`의 진단 연결 값이며 검색용 tag·custom fingerprint에 넣지 않는다.                                                                           |
+| relay 표시                                 | environment/level, 단일·유효한 app/failure.kind tag, 검증된 release만 추가한다. 나머지 임의 tag·사용자 정보·원문 request를 Slack에 복사하지 않는다.                         |
+
+사용자가 요청한 범위는 SDK의 `setTag`/`setTags`를 통한 오류 식별 설정 검토다. 이 검토에는
+Sentry 읽기 API token이 필요하지 않다. 두 앱의 서버 `server-sentry-reporter.ts`는
+`Sentry.withScope()` 안에서 `scope.setTags()` 후 예외를 수집한다. 브라우저 `sentry` adapter는
+현재 scope를 복제하고 `scope.setTags()` 후 비동기 event를 수집하므로 각 수집의 식별값을 분리한다.
+최종 `beforeSend` sanitizer가 위 표의 허용값만 다시 구성한다. 현재 앱·실행 위치·발생 경계를
+식별할 태그가 이미 있어 전역 `setTag()`를 중복 추가하지 않는다.
+
+새 식별 태그가 필요하면 발생 경계의 scoped setter와 최종 sanitizer 허용 목록·회귀 검증을 함께
+갱신해야 한다. setter에만 임의 key를 추가하면 최종 전송에서 제거된다. 요청 ID·실제 경로·사용자
+입력을 검색 tag로 승격하지 않는다. 이 판정은 현재 소스의 수집 경로에 대한 것이며 원격 alert rule
+변경이나 production event 조회를 완료 조건으로 삼지 않는다. 기존 Slack 메시지는 읽기만 했으며
+과거 §11의 staging 수신을 새 production 검증으로 재사용하지 않는다. 새 알림을 전송하지 않았다.
+
+실제 Cloudflare Worker에 `wrangler secret list`와 settings GET을 실행해 이름·타입만 대조했다.
+`SENTRY_WEBHOOK_SECRET`/`SLACK_SENTRY_WEBHOOK_URL`의 정확히 두 `secret_text` binding이며
+일반 binding은 없다. 소스 Env·wrangler required 이름과 일치하므로 삭제할 불필요한 환경변수는 없었다.
+secret 값을 출력/기록·교체·회전하지 않았다. 앱·GitHub 배포용 변수를 relay와 구분한 반복 안내는
+[README](../../../apps/sentry-slack-relay/README.md#환경변수-책임)가 소유한다.
+
+실제 실행한 relay 단독 `type-check`, `lint`, `test` 32건이 모두 통과했다. Wrangler 4.135.0의
+`deploy --dry-run`은 12.50 KiB/gzip 4.09 KiB 번들을 생성하고 업로드 없이 종료했다.
+이 dry-run의 `No bindings found`는 secret을 공급하지 않은 **로컬 번들** 상태이며 위 실제 원격 binding
+두 개의 부재를 뜻하지 않는다. Worker 실제 배포·Sentry/Slack 설정 변경·메시지 전송은 없었다.
+
+이름 변경은 보류한다. `apps/sentry-slack-relay`, `@oioi-bwg/sentry-slack-relay`, 현재 Worker 이름/URL을
+유지하며 알림 채널을 확장할 별도 요구가 생기면 alerts/notification 범위를 검토한다.
