@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-23"
-revision: 17
+updated_at: "2026-10-25"
+revision: 18
 ---
 
 # 구현 순서와 PR 단위
@@ -102,9 +102,12 @@ Console 접속에 30분 자동 종료를 적용하지 않는다. D 작업에 필
 2026-10-22 상위 문서 개정·Web 인증 제거·host 인증 차단 및 정상 Promotion #193 배포를 마쳐 E를 완료했다.
 [E3 운영 결과](P06-E3-RESULT.md#2026-10-22-배포-완료와-실제-서비스-검증)가 최신 배포·검증 상태를 소유한다.
 실제로 관찰하지 못한 인증 cookie 속성/preview 격리는 최종 hostname 검증에서 대조한다.
-F의 www 전환·레거시 종료는 아직 시작하지 않았다.
-현재 preview의 OCI Web이 최종 www가 되며 Console은 같은 VM을 사용한다. 상시 staging을 추가하지 않고
-전환 검증 후 기존 Web Worker·staging·preview 경로를 종료한다. assets/R2·메일은 실제 의존성 확인 후 정리한다.
+위 E 기록 이후 2026-10-25 정상 Promotion #246과 실제 검증으로 **F 운영 전환을 완료**했다.
+preview의 OCI Web을 최종 www로 전환했고 apex는 경로·query를 보존해 www로 이동한다.
+Console 실물 인증·업로드·cookie와 최종 www를 확인한 뒤 기존 Web Worker 두 개·staging·preview·옛 배포 경로를 종료했다.
+assets/R2·Console·기존 DB/MFA·독립 Worker·메일은 보존했다.
+[F 운영 결과](P06-F1-RESULT.md#2026-10-25-실제-운영-전환)가 최신 배포·실제 값·복구·한계를 소유한다.
+추가 동시 CRUD/장기 부하 실험은 이번 DB 불변 범위에서 수행하지 않았고, G·P07~P10은 후속이다.
 단일 VM의 기존 Promotion·OCI Run Command를 유지하는 세부 PR 분할과 두 앱 복구 계획은
 [P06 계획 초안](P06-PLAN.md)을 참조한다. 계획 작성은 환경 적용이나 공개 승인을 의미하지 않는다.
 기존 preview 관리자 계정을 사용하는 사전 준비 절차는 [P06 사전 준비 안내](P06-PREPARATION.md)에 둔다.
