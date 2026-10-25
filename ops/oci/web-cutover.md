@@ -76,3 +76,15 @@
 전환 실패 시 레거시 종료를 진행하지 않는다. 검증한 VM pair와 보호한 Caddy/DNS 설정을 복구하고
 실제 공개 응답을 다시 확인한다. 이미 중단한 Worker를 다시 켜는 것만으로 복구 완료라 하지 않는다.
 데이터가 갈라졌거나 안전한 복구가 불명확하면 쓰기를 제한하고 마지막 검증 상태와 남은 작업을 보고한다.
+
+## 2026-10-25 적용 상태와 인증서 유지
+
+www/apex는 VM Proxied A·Full(strict), Console은 기존 HTTPS를 유지한다. 옛 두 Web Worker와
+staging/preview 연결은 종료했다. 실제 검증·보존 대상과 복구 기준은 [F 결과](../../docs/migration/implementation/console-guide-editor/P06-F1-RESULT.md#2026-10-25-실제-운영-전환)를 따른다.
+
+Origin TLS는 서버에서 생성한 CSR에 Cloudflare Origin CA가 서명한 인증서다.
+인증서 만료는 **2027-10-25 15:04 KST(06:04 UTC)**이며 자동 ACME 갱신을 구성했다고 해석하지 않는다.
+키/CSR/인증서는 `/etc/caddy/p06-f/origin.key`, `origin.csr`, `origin.pem`에 있고 root:caddy·0640,
+디렉터리는0750이다. 개인키는 서버 밖으로 옮기지 않는다. 갱신 시 두 hostname의 CSR/인증서를 대조하고
+Origin CA chain·SAN·만료를 검증한 뒤 Caddy validate/reload·Full(strict) 실제 공개 요청을 확인한다.
+직접 origin 점검은 올바른 SNI와 Origin CA trust를 사용하며 `-k`로 대체하지 않는다.
