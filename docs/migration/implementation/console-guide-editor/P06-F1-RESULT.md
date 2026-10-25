@@ -76,3 +76,60 @@ FSD·ops 21파일·262건·format 모두 성공했다. 두 앱 실제 build도 2
 ops, format을 순서대로 실행한 뒤 `pnpm build --force --env-mode=loose --concurrency=1`을 실행했다.
 로그는 저장소 밖 `/tmp/oioi-monorepo-recovery-20261023-0b6s5a9k/validation-f/`에 둔다.
 commit/push hook 결과는 PR에 별도로 기록한다. www robots 산출물의 URL도 로컬 파일에서 확인한다.
+
+
+## 2026-10-25 모노레포 개선 이후 F 재개와 로컬 검증
+
+사용자의 P06 완료 지시로 F 준비 보류를 해제했다. #199 기존 브랜치에 최신 통합선
+`c6c2f71b73235caa773de2ef56d51820b9e86b23`을 merge했고 과거 커밋을 재작성하지 않았다.
+검증 구현은 `15c6f21301abff20af564cd597db0669c836a692`다. 아래는 이 구현의 실제 검증이며
+2026-10-22/23 기록이나 운영 배포 성공을 재사용한 판정이 아니다.
+
+### 실제 변경
+
+- 초기 F1의 일반 CI production 전환은 최신 환경 계약으로 대체했다. workflow는 현재 통합선과
+  동일하며 일반 CI/local은 local, 운영 Promotion 후보만 production을 유지한다.
+- local URL은 localhost를 유지하고 최종 공개 metadata·sitemap·robots는 www 설정을 공유한다.
+  기존 환경별 metadata 회귀 검사의 기대값과 Runtime §12의 최종 URL 계약을 함께 갱신했다.
+- 앱별 prune·공통 blob cache·Sentry·paired Promotion은 유지한다.
+  [운영 안내](../../../../ops/oci/web-cutover.md)에 데이터/파일 비교·Console R2·TLS/라우팅·
+  정상 승격·레거시 종료 순서와 보존 대상·실패 복구를 기록했다.
+
+### 직접 실행한 검증
+
+Node 22.16.0·pnpm 10.15.1에서 frozen offline 설치에 성공했다. 앱의 개인 env 파일은 없었고
+운영 credential·DB 연결·Sentry 전송/업로드를 사용하지 않았다. 로그는 이 worktree의 ignored
+`.local/p06-f-resume/`에 보존한다.
+
+| 명령/방법 | 실제 결과 |
+| --- | --- |
+| `pnpm type-check`, `pnpm lint`, `pnpm lint:fsd` | 성공, workspace 타입/lint 각각 실제 6 task·캐시 0 |
+| `pnpm test:harness` | 46/46 성공 |
+| `pnpm test:unit:run` | 99파일/700건 성공, 실제 5 task·캐시 0 |
+| `pnpm test:ops` | 22파일/287건 성공 |
+| `pnpm format:check`, `git diff --check` | 성공 |
+| `pnpm build --concurrency=1 --force --env-mode=loose` | 양 앱 실제 2 task·캐시 0 성공, standalone 진입점 확인 |
+| local build의 robots 산출물 | localhost sitemap URL 확인 |
+| 운영 안내 format·로컬 링크 | format 성공, PLAN/운영 안내의 로컬 링크 대상 27개 확인 |
+
+Build는 allowlist로 구성한 임시 process env·local 입력·빈 DSN/분석 ID·전송/업로드 OFF·
+접속 불가능한 loopback DB·임시 Console 키를 사용했다. `--env-mode=loose`는 이 제한된 env만
+전달했으며 운영 env/실제 candidate 검증을 뜻하지 않는다. production의 www URL은 기존
+환경별 metadata unit 검사에서 확인했고 실제 production image/공개 응답 검증은 남았다.
+첫 Web test 명령의 추가 인자는 현재 runner에서 필터로 적용되지 않아 Web 전체 31파일/180건이
+실행돼 성공했다. 위 unit 700건에는 이 검사가 포함된다.
+
+구현 commit hook의 lint-staged(ESLint fix/Prettier)·commitlint가 성공했다. push hook과 원격 CI는
+PR #199에 별도로 실제 결과를 기록한다. 로컬 Docker/운영 DB integration·전체 관리자 E2E는 미실행이다.
+
+### 공개 관찰과 아직 남은 실행
+
+2026-10-25 credential 없는 HTTPS 읽기에서 www/apex/preview/staging 홈과 Console 로그인 화면은
+각각 200이었다. assets 루트의404는 object 조회나 업로드 실패 판정으로 사용하지 않았다.
+공개 sitemap GET은 www 26개, preview/staging 각각27개였고 host를 제외한 path 비교에서
+VM에 `/songs/bad-habit` 하나가 더 있었다. Worker에만 있는 path는 없고 preview/staging path 집합은
+같았다. 이 관찰만으로 전체 DB·파일 일치나 최신성/데이터 보존을 확정하지 않는다.
+
+운영 VM/Cloudflare와 필요한 DB의 읽기 대조, Console R2 주입·실제 업로드, 정상 ARM64 후보·배포,
+www origin 인증서/SNI/라우팅·apex redirect, 최종 cookie/조회·인증 거절 확인, 두 옛 Web Workers와
+staging/preview 종료는 아직 미완료다. DNS 변경 전에 실제 www origin TLS를 확인한다.
