@@ -1,7 +1,7 @@
 ---
-title: "P06-F1 운영 빌드와 www URL 준비 결과"
+title: "P06-F1 준비·운영 전환·레거시 종료 결과"
 kind: migration-result
-status: partial
+status: complete
 authority: evidence
 source_commit: 4d5e42dac37aeb13b3279b47a7907fbb7bc91be2
 created_at: "2026-10-22"
@@ -11,7 +11,7 @@ updated_at: "2026-10-25"
 # P06-F1 결과
 
 **최신 실행 상태:** [2026-10-25 실제 운영 전환](#2026-10-25-실제-운영-전환)이 아래 초기 준비·회수 기록을
-갱신한다. 정상 paired 배포와 www origin TLS는 완료했으며 Console 실물 확인·DNS 전환·레거시 종료는 남았다.
+갱신한다. 승인된 F 운영 전환을 완료했다. www/apex·Console 검증과 두 옛 Web Worker·staging/preview 종료까지 확인했다.
 
 사용자가 F 착수와 기존 Workers 두 개 종료·preview VM의 www 연결, R2 유지를 지시했다.
 [P06 계획](P06-PLAN.md#preview--www-전환과-레거시-종료)의 운영 build 입력과 최종 URL 준비를
@@ -197,7 +197,7 @@ Console의 HTTPS origin·enrollment=false와 기존 R2 endpoint/bucket/assets �
 Cloudflare의 제한된 token으로 DNS·SSL·인증서 목록을 읽어 변경 전 snapshot을 저장했다.
 Full (strict)를 유지하고 서버 CSR로 www/apex Origin CA 인증서 한 장을 발급했다.
 인증서의 서명·두 hostname·CSR public key 일치와 만료일을 검증했으며 개인키는 서버 밖으로 옮기지 않았다.
-유효기간은 2027-10-25 06:04 UTC까지다.
+유효기간은 2027-10-25 15:04 KST(06:04 UTC)까지다.
 
 처음 Caddy 적용은 한 줄 `handle` block이 Caddy2.6 parser에서 거절돼 적용 전 멈췄다.
 여러 줄 문법으로 수정한 뒤 같은 서버 바이너리의 실제 구문 검사를 통과했고 사용자 재실행으로 validate/reload에 성공했다.
@@ -207,10 +207,51 @@ Full (strict)를 유지하고 서버 CSR로 www/apex Origin CA 인증서 한 장
 26곡의 공개 DTO/숨김404와 7앨범·이미지 검사를 통과했다. metadata/robots/sitemap은 최종 www를 사용한다.
 Console 실제 사전 인증 cookie의 Secure/HttpOnly/Lax·host-only와 www 요청에 cookie가 안 붙는 것을 확인했다.
 Python urllib의 공개 hostname 요청은403이었고 일반 curl은200이었다. WAF를 바꾸지 않고 curl로 실제 검사를 수행했다.
-인증된 session cookie·실제 로그인/목록/로그아웃·R2 업로드는 사용자 브라우저 확인 대기다.
+이후 사용자가 실제 로그인·업로드 성공과 로그아웃 후 관리 접근 차단·인증된 session cookie의
+Secure/HttpOnly/Lax·Console domain을 확인했다. 이 실물 확인은 자동 사전 인증 cookie 검사와 구분한다.
 
-### 남은 실행
+### DNS 전환·레거시 종료와 최종 확인
 
-Console 실제 인증·독립 이미지 한 건 업로드/확인/정리 후 www/apex Worker Custom Domain을 해제해
-기존 VM의 Proxied A로 전환한다. 최종 www 검사 성공 뒤에만 옛 Web Worker 두 개·staging/preview DNS·
-Caddy preview route·옛 배포 workflow와 전용 token 저장을 종료한다. R2/assets·Console·메일 DNS·독립 Worker·DB는 보존한다.
+1. 사용자가 제공한 신규 WebP URL의 공개200·Content-Type·RIFF/WEBP 형식과 45,836bytes를 확인했다.
+   정리 도구의 문자열 구문 오류를 수정한 뒤 READ ONLY 참조 검사를 통과시켰으나, 실제 앨범에서 참조 중인
+   이미지여서 삭제 조건에서 멈췄다. 해당 이미지나 DB row는 삭제·수정하지 않았다.
+   Console 확인 후 관측된 신규 앨범은 id8/9이며 원래 26곡·7앨범 전체 row는 그대로다.
+   최종 기준은 26곡·9앨범으로 기록하고 모든 공개 DTO/숨김404·이미지를 다시 검증했다.
+2. www/apex 두 Worker Custom Domain을 해제한 뒤 기존 VM의 Proxied A 두 개를 생성했다.
+   Cloudflare의 빈 성공 DELETE 응답을 JSON으로 처리하던 도구가 중단돼 실제 Domain/DNS를 먼저 재조회했고,
+   이미 해제된 연결을 반복 삭제하지 않고 남은 A 생성부터 이어서 완료했다. Full(strict)와 다른 DNS는 그대로다.
+3. 실제 최종 www에서 홈·곡 화면·robots/sitemap·health/readiness·관리/인증/쓰기/Next-Action 거절
+   15개 검사와 26곡·현재 9앨범·이미지 검사를 통과했다. apex HTTPS308의 경로·query 보존도 확인했다.
+   이 검증 뒤에만 두 옛 Web Worker 종료를 진행했다.
+4. Cloudflare의 정확한 `oioibawige`·`oioibawige-staging` 두 Worker를 force=false로 삭제했다.
+   staging/www.staging Custom Domain·잔여 route·preview A를 제거했다. 최종 DNS는9개이며
+   www/apex/Console은 같은 VM의 Proxied A, assets/R2·메일 DNS는 원본값을 유지한다.
+5. GitHub의 옛 Production/Staging 배포 workflow 두 개를 disabled_manually로 바꿨다.
+   production/staging 환경에서 전용 `CLOUDFLARE_API_TOKEN` 저장 두 개만 제거했고 나머지 secret은 보존했다.
+   backing token 전체 폐기나 공유 credential 회수를 수행했다고 주장하지 않는다. 정상 OCI Promotion은 active다.
+6. `oioi-bwg-sentry-slack-relay`·`oci-par`·`supabase-keep-alive`·`staging-supabase-keep-alive`와
+   두 기존 Hyperdrive가 그대로 존재한다. R2 버킷·기존 DB·독립 relay는 삭제하지 않았다.
+7. 사용자가 마지막 보호 명령을 실행해 Caddy의 정확한 preview block만 제거했다.
+   기존 Console/www/apex route는 동일하고 current/previous snapshot의 Auth·MFA·R2 키·DB 연결이 같음을
+   값 노출 없이 대조했다. enrollment=false·현재 release·DB container·두 앱 health는 유지된다.
+   SSH 후속 읽기에서도 Caddy에는 최종 세 hostname만 남았다.
+8. 옛 두 workers.dev는 실제404, preview/staging/www.staging은 curl DNS 해석 실패(exit6)다.
+   Worker 삭제로 해당 Worker의 preview 경로도 남지 않는다. 원래 두 squash-only 설정·보호 규칙 전체를
+   다시 대조했고 P06/Console 접속 자동 종료 timer도 없다.
+9. 작업용 Cloudflare token의 로컬 임시 파일을 정리했다. 계정의 다른 token·Wrangler OAuth는 보존했으며
+   이번 token의 원격 자체 폐기는 수행하지 않았다. 사용자 지정 TTL은7일이다.
+
+### 복구 기준과 검증의 한계
+
+복구 기준은 현재 #246의 성공 pair/receipt·현 VM DB·최종 www/Console Caddy 설정이다.
+host asset/public 입력·이전 Caddy 및 단계별 적용 묶음은 root 보호 경계에 보존했다.
+current/previous snapshot·Vault mapping을 재작성하지 않는다. 이전 #193 snapshot에는 Console R2 public 입력이
+누락됐으므로 이를 완전한 R2 복구 증거로 사용하지 않는다. 옛 Worker DNS나 password-only 관리 경로를
+다시 여는 것을 정상 복구로 취급하지 않는다.
+
+읽기 전용 단일 자원 관찰에서 메모리 가용 약10.61GiB·디스크 여유 약75.14GiB,
+Web/Console Docker working set은 각각 약82.06/117MiB였다. PostgreSQL max_connections=50·
+superuser_reserved_connections=3이며 두 앱 pool 상한 합은20이다. 운영/monitoring 여유를 포함한
+실측 수용량으로 일반화하지 않는다. DB 변경 금지 범위이므로 추가 동시 CRUD·장기 부하 실험은 수행하지 않았다.
+기존 B/D/E의 실제 재시작·rollback·IMDS·MFA 복구 증거는 유지하며 이번에 반복했다고 하지 않는다.
+G 계정 관리·P07~P10은 후속이다. F의 실제 전환 작업은 남지 않았다.

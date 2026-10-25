@@ -6,7 +6,7 @@ authority: plan
 source_commit: 9e1e6ba32d0fbd33c1840a0b7bd2f9f517ef18fa
 created_at: "2026-10-10"
 updated_at: "2026-10-25"
-revision: 14
+revision: 15
 ---
 
 # P06 계획 초안
@@ -670,3 +670,13 @@ P06 완료의 선행 조건으로 추가하지 않는다. 기존 #199 브랜치�
 
 반복 실행 절차는 [www 전환 운영 안내](../../../../ops/oci/web-cutover.md),
 이번 재개의 구현·검증·남은 실행 결과는 [F1 RESULT](P06-F1-RESULT.md)가 소유한다.
+
+## 2026-10-25 F 운영 전환 완료
+
+승인된 정상 Promotion #246·www/apex TLS/DNS·Console 실물 인증/업로드·최종 공개 검증과
+두 옛 Web Worker·staging/preview·옛 배포 경로 종료를 완료했다.
+[실제 결과](P06-F1-RESULT.md#2026-10-25-실제-운영-전환)가 source/digest/receipt·콘텐츠 기준·복구 상태를 소유한다.
+기존 A~E의 완료 증거를 유지하며 F의 외부 전환 작업은 남지 않았다. G·P07~P10은 후속이다.
+
+§7의 자원 검증 목표는 유지한다. 이번 사용자의 DB 불변 범위에서는 단일 읽기 관찰만 추가했고
+추가 동시 CRUD·장기 부하 실험은 수행하지 않았다. 운영 전환 완료를 성능 검증 완료로 해석하지 않는다.
