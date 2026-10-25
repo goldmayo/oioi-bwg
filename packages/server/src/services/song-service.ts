@@ -145,18 +145,8 @@ export async function listVisibleSongsForSitemap() {
   const rows = await findVisibleSongs(getDatabase());
 
   return rows.flatMap((song) => {
-    if (!song.title || !song.slug || !song.updatedAt) return [];
-
-    return [
-      {
-        ...song,
-        title: song.title,
-        slug: song.slug,
-        updatedAt: song.updatedAt,
-        hasOfficialCheer: song.hasOfficialCheer ?? false,
-        order: song.order ?? 0,
-      },
-    ];
+    if (!song.album.isVisible || !song.title || !song.slug || song.youtubeId === null) return [];
+    return [{ slug: song.slug, updatedAt: song.updatedAt }];
   });
 }
 

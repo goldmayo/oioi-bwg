@@ -3,6 +3,8 @@ import { listVisibleAlbumsWithSongs } from "@oioi-bwg/server/services/album-serv
 
 import { AlbumListSkeleton } from "@/entities/album";
 
+import { constructMetadata } from "@/shared/lib/metadata";
+
 import { FilteredChantList } from "./_ui/filtered-chant-list";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +29,12 @@ async function ChantsDataWrapper() {
 
   return <FilteredChantList initialSongs={allSongs} />;
 }
+
+export const metadata = constructMetadata({
+  title: "QWER 응원법 리스트",
+  path: "/chants",
+  description: "QWER 곡별 공식·비공식 응원법을 검색하고 싱크 가사와 함께 연습하세요.",
+});
 
 export default function ChantsPage() {
   return (
