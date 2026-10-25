@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { createAppColumnHelper, useAppTable } from "@oioi-bwg/ui/data-table";
+import { DataTable } from "@oioi-bwg/ui/data-table";
 import { Edit, FileMusic, Trash2 } from "lucide-react";
 import Link from "next/link";
 
@@ -9,6 +9,7 @@ import type { AdminSongSummary } from "@/entities/song";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { createAppColumnHelper, dataTableComponents, useAppTable } from "@/shared/ui/data-table";
 
 interface Props {
   songs: AdminSongSummary[];
@@ -141,19 +142,21 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
     initialState: { pagination: { pageIndex: 0, pageSize: 15 } },
   });
   return (
-    <table.AppTable>
+    <DataTable.Root table={table} components={dataTableComponents}>
       <div className="space-y-4">
-        <table.Body
-          caption="곡 관리 목록"
-          emptyState={
-            <>
-              <FileMusic className="mx-auto mb-2 h-8 w-8 opacity-50" />
-              {hasFilter ? "검색 결과가 없습니다." : "등록된 곡이 없습니다."}
-            </>
-          }
-        />
-        <table.Pagination label="곡 목록 페이지" />
+        <DataTable.Table caption="곡 관리 목록">
+          <DataTable.Header />
+          <DataTable.Body
+            emptyState={
+              <>
+                <FileMusic className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                {hasFilter ? "검색 결과가 없습니다." : "등록된 곡이 없습니다."}
+              </>
+            }
+          />
+        </DataTable.Table>
+        <DataTable.Pagination label="곡 목록 페이지" />
       </div>
-    </table.AppTable>
+    </DataTable.Root>
   );
 }

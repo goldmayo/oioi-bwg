@@ -1,7 +1,7 @@
 ---
 title: "Frontend Architecture & Refactoring Rules"
 document_id: "02"
-version: "1.11"
+version: "1.12"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-25"
@@ -17,7 +17,7 @@ tags:
   - "refactoring"
 ---
 
-# oioi-bwg Frontend Architecture & Refactoring Rules v1.11
+# oioi-bwg Frontend Architecture & Refactoring Rules v1.12
 
 ## 1. 목적
 
@@ -47,11 +47,15 @@ src/
 `src/server`는 별도 서버 boundary이며 이 문서의 FSD 계층에 포함하지 않는다.
 
 실제 여러 consumer가 사용하는 도메인 독립 UI는 `@oioi-bwg/ui`의 명시적 export로 소비할 수 있다.
-Console 앨범·곡 관리가 공유하는 Data Table은 공식 TanStack Table v9의 `createTableHook`,
-`useAppTable`, `ColumnDef`, `Subscribe` vocabulary를 그대로 사용한다. 공용 UI는 정렬·페이지 이동의
-표시만 소유하며 domain 열·권한·mutation·검색 정책은 앱 feature에 남긴다. 앱·server·contracts·Next
-runtime 참조와 별도 controller/plugin/state DSL을 금지한다. 브라우저 전건 계산 profile을 서버
-페이지 응답에 재사용하지 않는다.
+Data Table은 공식 TanStack Table v9의 `tableFeatures`, `useTable`/`createTableHook`, `ColumnDef`,
+`state/on*Change`, `Subscribe` vocabulary를 그대로 사용한다. 소비처가 정적인 feature 집합과 행 모델을
+선택하고 `DataTable.Root` 아래 표·헤더·본문·푸터·검색·필터·열 설정·선택·페이징 부품을 조합한다.
+공용 UI는 원본의 15개 공식 기능(정렬, 열 필터, 전역 검색, 패싯, 페이징, 선택, 펼침, 그룹핑, 집계,
+열 순서·고정·표시·너비·리사이즈, 행 고정)을 제공하며 Console의 두 기능으로 지원 범위를 제한하지 않는다.
+모든 기능을 모든 표의 기본값으로 강제하지 않는다. domain 열·권한·mutation·검색 적용 정책·URL/저장은
+앱에 남긴다. 앱·server·contracts·Next runtime 참조와 별도 controller/plugin/state DSL을 금지한다.
+공식 context/구독을 사용하고 등록되지 않은 feature의 표시/API를 실행하지 않는다. 브라우저 전건 계산
+행 모델은 서버 페이지 응답에 재사용하지 않으며 manual 처리·서버 totals/facets 계약은 소비처가 명시한다.
 
 client/server 공통 HTTP 계약은 `packages/contracts`의 명시적 package export를 소비한다.
 이 package는 기존 `shared/contracts`와 동일한 Zod schema/DTO-only 예외이며 도메인 UI나

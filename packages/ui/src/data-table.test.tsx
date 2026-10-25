@@ -1,8 +1,28 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  createPaginatedRowModel,
+  createSortedRowModel,
+  createTableHook,
+  rowPaginationFeature,
+  rowSortingFeature,
+  sortFn_basic,
+  tableFeatures,
+} from "@tanstack/react-table";
 
-import { createAppColumnHelper, useAppTable } from "./data-table";
+import { DataTable } from "./data-table";
+
+const { createAppColumnHelper, useAppTable } = createTableHook({
+  defaultColumn: { sortDescFirst: false },
+  features: tableFeatures({
+    rowPaginationFeature,
+    rowSortingFeature,
+    paginatedRowModel: createPaginatedRowModel(),
+    sortedRowModel: createSortedRowModel(),
+    sortFns: { basic: sortFn_basic },
+  }),
+});
 
 type Item = { id: number; name: string };
 const helper = createAppColumnHelper<Item>();
@@ -23,10 +43,13 @@ function Fixture({ data }: { data: Item[] }) {
     initialState: { pagination: { pageIndex: 0, pageSize: 2 } },
   });
   return (
-    <table.AppTable>
-      <table.Body caption="예제 목록" emptyState="일치하는 항목이 없습니다." />
-      <table.Pagination />
-    </table.AppTable>
+    <DataTable.Root table={table}>
+      <DataTable.Table caption="예제 목록">
+        <DataTable.Header />
+        <DataTable.Body emptyState="일치하는 항목이 없습니다." />
+      </DataTable.Table>
+      <DataTable.Pagination />
+    </DataTable.Root>
   );
 }
 afterEach(cleanup);

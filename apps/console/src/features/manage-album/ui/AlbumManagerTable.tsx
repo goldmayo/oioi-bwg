@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import { createAppColumnHelper, useAppTable } from "@oioi-bwg/ui/data-table";
+import { DataTable } from "@oioi-bwg/ui/data-table";
 import { Edit, Trash2 } from "lucide-react";
 
 import type { AdminAlbumSummary } from "@/entities/album";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { createAppColumnHelper, dataTableComponents, useAppTable } from "@/shared/ui/data-table";
 
 interface Props {
   albums: AdminAlbumSummary[];
@@ -121,14 +122,16 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
     initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
   });
   return (
-    <table.AppTable>
+    <DataTable.Root table={table} components={dataTableComponents}>
       <div className="space-y-4">
-        <table.Body
-          caption="앨범 관리 목록"
-          emptyState={<>{hasFilter ? "검색 결과가 없습니다." : "등록된 앨범이 없습니다."}</>}
-        />
-        <table.Pagination label="앨범 목록 페이지" />
+        <DataTable.Table caption="앨범 관리 목록">
+          <DataTable.Header />
+          <DataTable.Body
+            emptyState={<>{hasFilter ? "검색 결과가 없습니다." : "등록된 앨범이 없습니다."}</>}
+          />
+        </DataTable.Table>
+        <DataTable.Pagination label="앨범 목록 페이지" />
       </div>
-    </table.AppTable>
+    </DataTable.Root>
   );
 }
