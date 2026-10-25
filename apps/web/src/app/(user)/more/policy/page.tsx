@@ -1,6 +1,8 @@
 import { ChevronRight, FileText } from "lucide-react";
 import Link from "next/link";
 
+import { constructMetadata } from "@/shared/lib/metadata";
+
 import { MoreBackButton, MoreHeader } from "../_ui/more-common";
 
 // 기획서 기반 약관 목록 (Server Side)
@@ -31,6 +33,12 @@ const POLICIES = [
     desc: "더 나은 서비스 경험을 위한 통계 데이터 수집에 관한 안내입니다.",
   },
 ];
+
+export const metadata = constructMetadata({
+  title: "안내 및 약관",
+  path: "/more/policy",
+  description: "어이어이바위게의 서비스 이용 안내와 정책을 확인하세요.",
+});
 
 export default function PoliciesPage() {
   return (
