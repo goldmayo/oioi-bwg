@@ -119,6 +119,9 @@ test("repository hooks and package commands apply the same dependency boundaries
     ["server", "src/services/album-image-service.ts", "drizzle-orm"],
     ["server", "src/repositories/song-repository.ts", "../services/song-service"],
     ["contracts", "src/song.ts", "node:fs"],
+    ["ui", "src/data-table.tsx", "next/server"],
+    ["ui", "src/data-table.tsx", "@oioi-bwg/server/db"],
+    ["ui", "src/data-table.tsx", "@oioi-bwg/contracts/song"],
   ]) {
     const filePath = path.join(root, "packages", workspace, filename);
     const configs = [];

@@ -219,3 +219,26 @@ it("preserves the open draft and blocks submission until authorization returns",
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ title: "Unsaved song" })),
   );
 });
+
+describe("SongManagerTable Compiler 갱신 회귀", () => {
+  it("같은 목록에서 권한이 회수되면 관리 버튼을 제거한다", () => {
+    const props = { songs: [song], hasFilter: false, onEdit: vi.fn(), onDelete: vi.fn() };
+    const { rerender } = render(<SongManagerTable {...props} canManage />);
+    expect(screen.getByTitle("수정")).toBeTruthy();
+    rerender(<SongManagerTable {...props} canManage={false} />);
+    expect(screen.queryByTitle("수정")).toBeNull();
+    expect(screen.queryByTitle("삭제")).toBeNull();
+  });
+
+  it("정렬·페이지 상태가 같아도 새 DTO의 셀과 callback을 반영한다", () => {
+    const onEdit = vi.fn();
+    const props = { canManage: true, hasFilter: false, onEdit, onDelete: vi.fn() };
+    const { rerender } = render(<SongManagerTable {...props} songs={[song]} />);
+    const updated = { ...song, title: "새 DTO 제목" };
+    rerender(<SongManagerTable {...props} songs={[updated]} />);
+    expect(screen.getByRole("link", { name: updated.title })).toBeTruthy();
+    expect(screen.queryByText(song.title)).toBeNull();
+    fireEvent.click(screen.getByTitle("수정"));
+    expect(onEdit).toHaveBeenCalledWith(updated);
+  });
+});

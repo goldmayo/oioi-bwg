@@ -1,7 +1,7 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.19"
+version: "2.20"
 status: "active"
 authority: "constitution"
 updated_at: "2026-10-25"
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.19
+# oioi-bwg Architecture Constitution v2.20
 
 ## 1. 목적
 
@@ -158,7 +158,10 @@ Web은 회원가입·로그인 없는 공개 조회 전용이다. `/login`·Auth
 Web 인증 adapter를 두지 않는다. 인증·관리는 Console만 제공하며 04 §4.1을 따른다.
 이전 일반 로그인 유지 전제는 사용자 범위 정정으로 폐기한다. 향후 회원 기능은 별도 요구로 추가한다.
 E 코드의 운영 적용은 Console 운영 검증 완료 후 별도 Promotion으로 수행한다.
-공용 UI/domain/api-client package를 선생성하지 않고 실제 이관에 필요한 UI만 앱 내부에 둔다.
+공용 domain/api-client package를 선생성하지 않는다. UI는 먼저 앱 내부에 두며, 실제 여러 consumer의
+중복이 확인된 도메인 독립 UI만 private `packages/ui`의 명시적 export로 승격한다. 첫 승격은 Console
+앨범·곡 관리 테이블의 정렬·페이지 이동 UI다. 도메인 열·행동·권한·Query·폼은 consumer 앱이 소유한다.
+UI package는 앱·server·contracts·Next runtime에 의존하지 않으며 빈 기반 package를 미리 만들지 않는다.
 
 현재 Next 앱의 루트는 `apps/web`이다. 아래 구조와 active 문서의 `src/...` 경로는
 별도 명시가 없으면 이 앱 루트를 기준으로 한다. 일반 사용자 route와 서버 boundary는 유지하고,
