@@ -282,6 +282,13 @@ pnpm build
 
 ## 9. 문서 및 변경 원칙
 
+- 문서 진입점은 `docs/README.md`, 현재·보류 작업의 유일한 목록은 `docs/WORK.md`다.
+- 작업 종료 시 WORK의 상태·다음 행동·완료 조건·근거를 갱신한다. 결정은 ADR, 과정은 날짜순
+  devlog, 실제 변경·실패·검증은 기존 RESULT에 기록하며 상세 내용을 WORK에 복제하지 않는다.
+- 완료 PLAN/DESIGN은 결정→ADR, 실행·검증→RESULT 또는 고정 Git 근거,
+  반복 절차→현행 개발/운영 안내, 잔여 작업→WORK·미완료 계획의 대응을 확인한 뒤 삭제하고
+  유입 링크를 같은 변경에서 이관한다. 삭제 이유·대응은 기존 완료 지도/결과에 남긴다.
+- 새 세션이나 작업 종료마다 비슷한 PLAN/CHECKPOINT/HANDOFF를 반복 생성하지 않는다.
 - 변경 전 관련 constitution/architecture/implementation 문서를 읽는다.
 - 구현과 함께 필요한 plan/result/handoff 문서를 `docs/migration/implementation/`에 기록한다.
 - 기존 문서를 조용히 삭제하거나 의미를 바꾸지 않는다. superseded 상태와 이유를 남긴다.

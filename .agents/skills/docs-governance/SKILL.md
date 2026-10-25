@@ -76,6 +76,17 @@ Read multiple references only when the operation crosses those concerns.
 
 ## Complete the task
 
+Use `docs/README.md` as the document entrance and `docs/WORK.md` as the only current/deferred
+work list. At closure, update status, next action, completion criteria, and evidence links there;
+keep detailed decisions in ADRs, chronological development in devlog, and actual verification in
+the existing result. Do not create another PLAN/CHECKPOINT/HANDOFF just for a new session.
+
+When completed-plan deletion is authorized, verify each file's decision → ADR, execution/failure
+→ result or pinned Git source, reusable procedure → current developer/operations guide, and
+remaining work → WORK/unfinished plan. Record the replacement and deletion reason in the
+existing completion map/result, then delete the file and migrate inbound links together.
+Preserve unfinished proposals, unique evidence, and historical source identity.
+
 Report:
 
 - classification and chosen canonical home
