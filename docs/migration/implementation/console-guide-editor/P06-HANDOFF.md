@@ -1,12 +1,17 @@
 ---
 title: "P06 세션 간 작업 인계"
 kind: migration-handoff
-status: active
+status: complete
 updated_at: "2026-10-25"
-revision: 70
+revision: 71
 ---
 
 # P06 작업 인계
+
+- **2026-10-25 P06 A~F 전체 종료 / 다음 P07.** [전체 종료 결과](P06-RESULT.md)가 완료 판정과 단계별
+  근거·후속 범위를 소유한다. 이 인계의 P06 재개 작업은 없다. 다음은 [로드맵](ROADMAP.md#2-실제-pr-단위)의
+  P07 세 종류 응원법/선택 화면이며 [기존 설계](DESIGN.md#5-cheerguide)에서 계약·저장·선택 단위로 구체화한다.
+  G 계정 관리·추가 부하 실험은 별도 후속이다. 아래 실행 지시와 보류/재개 표시는 당시 이력이다.
 
 - **2026-10-25 F 완료: www 전환·Console 유지·옛 Web 환경 종료.** #199→한정 이력 연결 #245→정상
   Promotion #246의 성공 candidate/receipt와 실제 두 digest를 대조했다. 두 squash-only 설정은 원복했다.

@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-25"
-revision: 18
+revision: 19
 ---
 
 # 구현 순서와 PR 단위
@@ -17,13 +17,18 @@ Console 배포를 P06으로 앞당긴 독립 기능 작업선을 유지하고, P
 단계별 검증 fixture·운영 회수 경로를 보완한다. 이 문서 PR에는 앱·DB·인증·runner/worker 코드가 없다.
 전체 단계의 최초 소스 기준은 metadata에 유지하며 단계별 실행 내역은 각 PLAN/RESULT에서 확인한다.
 
+**현재 checkpoint(2026-10-25): P06 A~F 전체 완료·종료 / 다음 P07.**
+[P06 전체 결과](P06-RESULT.md)가 완료 근거와 별도 후속을 소유한다. G 계정 관리·추가 부하 실험은
+독립 후속이며 P07의 선행 조건이 아니다. P07~P10 구현은 아직 시작하지 않았다.
+
 ## 1. 코드 의존성과 운영 순서
 
 ```text
 Console 전환 작업선
 P01 앱 이동 → P02 Turbo/config/harness → P03 실제 공통 코드 추출
   → P04 Console 이관 → P05 TOTP → P06 두 앱 배포·Web Admin 종료
-  → P06-F 운영 전환 완료 → P06-G 계정 관리 후속 기능
+  → P06 A~F 전체 종료
+       └─ P06-G 계정 관리: 별도 후속 기능 / P07 선행 조건 아님
 
 Console 전환 뒤의 기능 작업선
   ├─ P07 CheerGuide 세 종류 / 사용자 선택
