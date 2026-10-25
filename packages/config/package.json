@@ -23,7 +23,8 @@
     "./typescript/next.json": "./typescript/next.json",
     "./typescript/node.json": "./typescript/node.json",
     "./eslint/worker": "./eslint/worker.ts",
-    "./dependencies": "./dependencies.ts"
+    "./dependencies": "./dependencies.ts",
+    "./eslint/ui": "./eslint/ui.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit",
@@ -41,7 +42,8 @@
     "globals": "^16.4.0",
     "steiger": "0.6.0",
     "typescript-eslint": "8.56.1",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "eslint-plugin-react-hooks": "7.1.1"
   },
   "devDependencies": {
     "@types/node": "^20",

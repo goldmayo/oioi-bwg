@@ -52,6 +52,12 @@ test("Next app entries preserve tracing roots, shared build cache policy and Con
     assert.equal(configs.web.experimental.authInterrupts, undefined);
     assert.equal(configs.console.experimental.authInterrupts, true);
     delete configs.console.experimental.authInterrupts;
+    assert.ok(!configs.web.transpilePackages.includes("@oioi-bwg/ui"));
+    assert.deepEqual(configs.console.transpilePackages, [
+      ...configs.web.transpilePackages,
+      "@oioi-bwg/ui",
+    ]);
+    configs.console.transpilePackages = configs.web.transpilePackages;
     assert.deepEqual(configs.console, configs.web);
   }
 });

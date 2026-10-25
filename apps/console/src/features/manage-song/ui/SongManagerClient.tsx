@@ -15,7 +15,6 @@ import { SongFormDialog } from "./SongFormDialog";
 import { SongManagerTable } from "./SongManagerTable";
 import { SongManagerToolbar } from "./SongManagerToolbar";
 
-const PAGE_SIZE = 15;
 interface SongManagerClientProps {
   canManage: boolean;
   submissionNotice?: ReactNode;
@@ -36,7 +35,6 @@ export function SongManagerClient({
   } = useSuspenseQuery(albumQueries.adminList());
   const [search, setSearch] = useState("");
   const [albumFilter, setAlbumFilter] = useState("all");
-  const [page, setPage] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
   const [editingSong, setEditingSong] = useState<AdminSongSummary>();
   const [deleteTarget, setDeleteTarget] = useState<AdminSongSummary | null>(null);
@@ -54,12 +52,6 @@ export function SongManagerClient({
           )),
     );
   }, [albumFilter, search, songs]);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages - 1);
-  const paged = useMemo(
-    () => filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE),
-    [currentPage, filtered],
-  );
   const invalidateSongs = useCallback(
     () => queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() }),
     [queryClient],
@@ -91,11 +83,9 @@ export function SongManagerClient({
         canManage={canManage}
         onSearchChange={(value) => {
           setSearch(value);
-          setPage(0);
         }}
         onAlbumChange={(value) => {
           setAlbumFilter(value);
-          setPage(0);
         }}
         onAdd={() => {
           setEditingSong(undefined);
@@ -103,7 +93,7 @@ export function SongManagerClient({
         }}
       />
       <SongManagerTable
-        songs={paged}
+        songs={filtered}
         canManage={canManage}
         hasFilter={!!search || albumFilter !== "all"}
         onEdit={(song) => {
@@ -116,29 +106,6 @@ export function SongManagerClient({
         <span className="text-muted-foreground text-sm">
           총 {filtered.length}곡 {(search || albumFilter !== "all") && `(전체 ${songs.length}곡)`}
         </span>
-        {totalPages > 1 && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="border-input rounded-md border px-3 py-1 text-sm"
-              disabled={currentPage === 0}
-              onClick={() => setPage((value) => value - 1)}
-            >
-              이전
-            </button>
-            <span className="text-muted-foreground text-sm">
-              {currentPage + 1} / {totalPages}
-            </span>
-            <button
-              type="button"
-              className="border-input rounded-md border px-3 py-1 text-sm"
-              disabled={currentPage >= totalPages - 1}
-              onClick={() => setPage((value) => value + 1)}
-            >
-              다음
-            </button>
-          </div>
-        )}
       </div>
       {formOpen && (
         <SongFormDialog

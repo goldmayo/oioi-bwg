@@ -194,7 +194,7 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
     ({ command, resolvedTaskDefinition }) =>
       command !== "<NONEXISTENT>" && resolvedTaskDefinition.cache,
   );
-  assert.equal(baseline.length, 19);
+  assert.equal(baseline.length, 22);
   for (const name of ["type-check", "lint"])
     assert.equal(
       tasks.find(({ taskId }) => taskId === `@oioi-bwg/repository-tools#${name}`)
@@ -206,7 +206,7 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
   const ids = (names, tasks) =>
     names.flatMap((name) => tasks.map((task) => `@oioi-bwg/${name}#${task}`));
   const apps = ["web", "console"];
-  const products = [...apps, "server", "contracts", "sentry-slack-relay"];
+  const products = [...apps, "server", "contracts", "sentry-slack-relay", "ui"];
   const appTypes = ids(apps, ["type-check"]);
   const appBuilds = ids(apps, ["build"]);
   const appLint = ids(apps, ["lint"]);
@@ -218,6 +218,7 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
     "apps/sentry-slack-relay",
     "packages/server",
     "packages/contracts",
+    "packages/ui",
     "packages/config",
   ]) {
     const task = baseline.find(
@@ -260,8 +261,11 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
     ["tools/repository/harness/architecture/app-dependencies.test.js", []],
     ["packages/config/vitest/server-only.ts", [...appUnit, ...ids(["server"], ["test"])]],
     ["packages/config/vitest/client-only.ts", appUnit],
-    ["packages/config/vitest/browser.js", [...appUnit, ...appTypes]],
-    ["packages/config/vitest/browser.setup.ts", appUnit],
+    [
+      "packages/config/vitest/browser.js",
+      [...appUnit, ...appTypes, ...ids(["ui"], ["type-check", "test"])],
+    ],
+    ["packages/config/vitest/browser.setup.ts", [...appUnit, ...ids(["ui"], ["test"])]],
     ["packages/config/vitest/postgres.js", appTypes],
     ["packages/config/next.ts", [...appBuilds, ...appTypes]],
     ["packages/config/sentry-build.ts", [...appBuilds, ...appTypes]],

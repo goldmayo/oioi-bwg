@@ -1,10 +1,10 @@
 ---
 title: "Frontend Architecture & Refactoring Rules"
 document_id: "02"
-version: "1.10"
+version: "1.11"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-07"
+updated_at: "2026-10-25"
 depends_on:
   - "01"
 supersedes:
@@ -17,7 +17,7 @@ tags:
   - "refactoring"
 ---
 
-# oioi-bwg Frontend Architecture & Refactoring Rules v1.10
+# oioi-bwg Frontend Architecture & Refactoring Rules v1.11
 
 ## 1. 목적
 
@@ -45,6 +45,13 @@ src/
 ```
 
 `src/server`는 별도 서버 boundary이며 이 문서의 FSD 계층에 포함하지 않는다.
+
+실제 여러 consumer가 사용하는 도메인 독립 UI는 `@oioi-bwg/ui`의 명시적 export로 소비할 수 있다.
+Console 앨범·곡 관리가 공유하는 Data Table은 공식 TanStack Table v9의 `createTableHook`,
+`useAppTable`, `ColumnDef`, `Subscribe` vocabulary를 그대로 사용한다. 공용 UI는 정렬·페이지 이동의
+표시만 소유하며 domain 열·권한·mutation·검색 정책은 앱 feature에 남긴다. 앱·server·contracts·Next
+runtime 참조와 별도 controller/plugin/state DSL을 금지한다. 브라우저 전건 계산 profile을 서버
+페이지 응답에 재사용하지 않는다.
 
 client/server 공통 HTTP 계약은 `packages/contracts`의 명시적 package export를 소비한다.
 이 package는 기존 `shared/contracts`와 동일한 Zod schema/DTO-only 예외이며 도메인 UI나

@@ -1,0 +1,37 @@
+{
+  "name": "@oioi-bwg/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./data-table": "./src/data-table.tsx"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "9.1.2"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@oioi-bwg/config": "workspace:*",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "jsdom": "^29.0.1",
+    "typescript": "^5",
+    "vitest": "^4.1.2",
+    "eslint": "^9",
+    "jiti": "2.6.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@types/node": "^20"
+  }
+}

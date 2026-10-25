@@ -11,6 +11,7 @@ validateAppEnvironment();
 const sharedNextConfig = createNextConfig(import.meta.dirname);
 const nextConfig: NextConfig = {
   ...sharedNextConfig,
+  transpilePackages: [...(sharedNextConfig.transpilePackages ?? []), "@oioi-bwg/ui"],
   experimental: {
     ...sharedNextConfig.experimental,
     authInterrupts: true,

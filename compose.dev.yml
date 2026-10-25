@@ -40,6 +40,7 @@ services:
       - config_node_modules:/app/packages/config/node_modules
       - contracts_node_modules:/app/packages/contracts/node_modules
       - server_node_modules:/app/packages/server/node_modules
+      - ui_node_modules:/app/packages/ui/node_modules
       - next_cache:/app/apps/web/.next
     depends_on:
       postgres:
@@ -54,4 +55,5 @@ volumes:
   config_node_modules:
   contracts_node_modules:
   server_node_modules:
+  ui_node_modules:
   next_cache:
