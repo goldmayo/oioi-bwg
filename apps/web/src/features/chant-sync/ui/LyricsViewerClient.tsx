@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
-import type { LyricLine } from "@oioi-bwg/contracts/song";
+import type { LyricLine, PublishedCheerGuide } from "@oioi-bwg/contracts/song";
 import { cva } from "class-variance-authority";
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
@@ -25,7 +25,12 @@ import {
 } from "@/shared/ui/accordion";
 import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
 
+import { usePublishedGuide } from "../model/use-published-guide";
+
+import { CheerGuideInfo } from "./CheerGuideInfo";
+
 gsap.registerPlugin(ScrollToPlugin);
+const emptyLyrics: LyricLine[] = [];
 
 interface LyricsViewerClientProps {
   song: {
@@ -33,6 +38,7 @@ interface LyricsViewerClientProps {
     title: string;
     youtubeId: string;
     lyrics: LyricLine[];
+    cheerGuides?: PublishedCheerGuide[];
     hasOfficialCheer?: boolean;
   };
   album?: Album;
@@ -40,8 +46,16 @@ interface LyricsViewerClientProps {
 
 export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
   const [player, setPlayer] = useState<YouTubePlayerInstance | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(-1);
-  const [activeSegmentIndex, setActiveSegmentIndex] = useState(-1);
+  const { selectedGuide, setGuideId } = usePublishedGuide(song.cheerGuides);
+  const lyrics =
+    song.cheerGuides === undefined ? song.lyrics : (selectedGuide?.lyrics ?? emptyLyrics);
+  const [cursor, setCursor] = useState<{
+    lyrics: LyricLine[] | null;
+    line: number;
+    segment: number;
+  }>({ lyrics: null, line: -1, segment: -1 });
+  const currentIndex = cursor.lyrics === lyrics ? cursor.line : -1;
+  const activeSegmentIndex = cursor.lyrics === lyrics ? cursor.segment : -1;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -50,10 +64,13 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
 
   const handleShare = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      toast("링크가 복사되었습니다.");
+      const url = new URL(window.location.href);
+      if (selectedGuide) url.searchParams.set("guide", selectedGuide.id);
+      else url.searchParams.delete("guide");
+      await navigator.clipboard.writeText(url.href);
+      toast("응원법 링크를 복사했어요.");
     } catch {
-      toast.error("링크 복사에 실패했습니다.");
+      toast.error("링크를 복사하지 못했어요. 다시 시도해 주세요.");
     }
   };
 
@@ -67,27 +84,28 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
    * 유튜브 재생 시간 업데이트 콜백
    * 라인 레벨 + isExtra 라인은 세그먼트 레벨까지 추적
    */
+  const updatePosition = (lines: LyricLine[], time: number) => {
+    const line = lines.findLastIndex((item) => item.startTime <= time);
+    const current = lines[line];
+    const segment = current?.isExtra
+      ? current.segments.findLastIndex(
+          (item) => current.startTime + (item.startTimeOffset ?? 0) <= time,
+        )
+      : -1;
+    setCursor((previous) =>
+      previous.lyrics === lines && previous.line === line && previous.segment === segment
+        ? previous
+        : { lyrics: lines, line, segment },
+    );
+  };
   const handleTimeUpdate = (time: number) => {
-    if (isAdPlaying) return;
-
-    const lineIndex = song.lyrics.findLastIndex((line) => line.startTime <= time);
-    if (lineIndex !== currentIndex) {
-      setCurrentIndex(lineIndex);
-      setActiveSegmentIndex(-1); // 라인 변경 시 세그먼트 초기화
-    }
-
-    if (lineIndex !== -1) {
-      const line = song.lyrics[lineIndex];
-      // isExtra 라인에서만 세그먼트 레벨 추적
-      if (line.isExtra) {
-        const segIndex = line.segments.findLastIndex(
-          (seg) => line.startTime + (seg.startTimeOffset ?? 0) <= time,
-        );
-        if (segIndex !== activeSegmentIndex) {
-          setActiveSegmentIndex(segIndex);
-        }
-      }
-    }
+    if (!isAdPlaying) updatePosition(lyrics, time);
+  };
+  const handleGuideChange = (id: string) => {
+    const next = song.cheerGuides?.find((guide) => guide.id === id);
+    if (!next) return;
+    if (!isAdPlaying) updatePosition(next.lyrics, player?.getCurrentTime() ?? 0);
+    void setGuideId(id);
   };
 
   /**
@@ -113,7 +131,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
         ease: "power2.out",
       });
     }
-  }, [currentIndex]);
+  }, [currentIndex, lyrics]);
 
   /**
    * isExtra 세그먼트 활성화 시 Pop & Glow 애니메이션
@@ -133,7 +151,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
         ease: "power2.out",
       },
     );
-  }, [currentIndex, activeSegmentIndex]);
+  }, [currentIndex, activeSegmentIndex, lyrics]);
 
   return (
     <div className="bg-background flex h-[calc(100vh-64px)] flex-col overflow-hidden md:flex-row">
@@ -153,7 +171,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
             <Accordion type="single" collapsible className="border-none">
               <AccordionItem value="song-info" className="border-none">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-1 items-center gap-3 overflow-hidden">
                       <h1 className="truncate text-xl font-black tracking-tight text-white md:text-2xl">
                         {song.title}
@@ -164,15 +182,15 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
                       <div className="flex items-center justify-between gap-1">
                         <Link
                           href={`/albums/${album.imageSlug}`}
-                          className="text-qwer-w inline-block text-sm font-bold transition-colors hover:underline"
+                          className="text-qwer-w min-w-0 truncate text-sm font-bold transition-colors hover:underline"
                         >
                           {album.name}
                         </Link>
                         <button
                           onClick={handleShare}
-                          className="text-white/60 transition-colors hover:text-white"
-                          aria-label="공유하기"
-                          title="공유하기"
+                          className="inline-flex size-11 shrink-0 items-center justify-center text-white/75 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                          aria-label="링크 복사"
+                          title="링크 복사"
                         >
                           <Link2 className="size-5 md:size-5" />
                         </button>
@@ -180,8 +198,8 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
                     )}
                   </div>
 
-                  <AccordionTrigger className="py-2 text-white/50 hover:no-underline">
-                    <span className="sr-only">Toggle Info</span>
+                  <AccordionTrigger className="min-h-11 min-w-11 justify-center py-2 text-white/50 hover:no-underline">
+                    <span className="sr-only">곡과 응원법 정보</span>
                   </AccordionTrigger>
                 </div>
 
@@ -198,11 +216,36 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
                         {album.name}
                       </Link>
                     )}
-                    {/* 향후 여기에 작곡/작사 등 추가 정보 삽입 가능 */}
+                    {selectedGuide && (
+                      <div className="space-y-2 text-sm leading-relaxed text-white/75">
+                        <p>
+                          {selectedGuide.sourceType === "OFFICIAL"
+                            ? "공식 응원법이에요."
+                            : "팬들 사이에서 자연스럽게 생겨난 응원법이에요."}
+                        </p>
+                        {selectedGuide.description && (
+                          <p
+                            role="region"
+                            aria-label="응원법 설명"
+                            tabIndex={0}
+                            className="max-h-40 overflow-y-auto wrap-break-word whitespace-pre-wrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                          >
+                            {selectedGuide.description}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+            {selectedGuide && (
+              <CheerGuideInfo
+                guides={song.cheerGuides ?? []}
+                selected={selectedGuide}
+                onSelect={handleGuideChange}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -215,7 +258,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
         <div className="mx-auto max-w-3xl py-12 md:py-20">
           {/* 가사 목록 */}
           <div className="xs:space-y-6 space-y-5 text-center text-lg sm:space-y-7 sm:text-xl md:space-y-9 md:text-2xl">
-            {song.lyrics.map((line, index) => (
+            {lyrics.map((line, index) => (
               <LyricLineItem
                 key={index}
                 line={line}
@@ -228,6 +271,11 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
                 onClick={() => handleLyricClick(line)}
               />
             ))}
+            {lyrics.length === 0 && (
+              <p className="text-muted-foreground text-base leading-relaxed font-medium">
+                아직 공개된 응원법이 없어요.
+              </p>
+            )}
           </div>
 
           {/* [Bottom Spacer] 마지막 가사가 중앙에 올 수 있도록 공간 확보 */}
