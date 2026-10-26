@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { constructMetadata } from "@/shared/lib/metadata";
 
-import { PolicyPageFrame } from "../_ui/policy-page-frame";
+import { MoreDocumentFrame } from "../../_ui/more-document-frame";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ s
   const detail = await getPolicy(slug);
 
   return (
-    <PolicyPageFrame>
+    <MoreDocumentFrame title="안내 및 약관" href="/more/policy">
       <article aria-labelledby="policy-title">
         <div className="text-muted-foreground mb-6 flex flex-wrap items-center gap-3 text-sm md:text-base">
           <span className="text-foreground dark:text-qwer-w inline-flex items-center gap-2 font-semibold">
@@ -63,6 +63,6 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ s
           </p>
         )}
       </article>
-    </PolicyPageFrame>
+    </MoreDocumentFrame>
   );
 }
