@@ -6,11 +6,12 @@ import { afterAll, beforeAll, expect, test, vi } from "vitest";
 
 import * as schema from "@oioi-bwg/server/db/schema";
 import { buildAbility } from "@oioi-bwg/server/auth/ability";
-import { deleteAlbum } from "@oioi-bwg/server/services/album-service";
+import { deleteAlbum, getAlbumDetailBySlug } from "@oioi-bwg/server/services/album-service";
 import {
   deleteSong,
   editSong,
   getAdminSongEditorBySlug,
+  getSongDetailBySlug,
   saveSongLyrics,
 } from "@oioi-bwg/server/services/song-service";
 import {
@@ -39,7 +40,11 @@ if (url.host !== ownerUrl.host || url.pathname !== ownerUrl.pathname) {
 }
 const client = postgres(url.toString(), { max: 4, connection: { statement_timeout: 10_000 } });
 const owner = postgres(ownerUrl.toString(), { max: 1, connection: { statement_timeout: 10_000 } });
-const database = drizzle(client, { schema });
+const observedQueries: string[] = [];
+const database = drizzle(client, {
+  schema,
+  logger: { logQuery: (query) => observedQueries.push(query) },
+});
 afterAll(async () => {
   await client.end();
   await owner.end();
@@ -710,4 +715,118 @@ test("Domain §8.0 rejects changed source fingerprints and conflicting mapping I
       .from(schema.cheerGuideSnapshot)
       .where(eq(schema.cheerGuideSnapshot.cheerGuideId, f.entry.guideId)),
   ).toHaveLength(1);
+});
+
+test("Domain §8.0 serves current published modes in default order without internal history fields", async () => {
+  const f = await importFixture();
+  await importLegacyGuide(f.context, f.entry, true);
+  const [festival] = await database
+    .insert(schema.cheerGuide)
+    .values({ songId: f.row.id, mode: "FESTIVAL" })
+    .returning();
+  const festivalLyrics = [
+    { ...lyrics[0]!, startTime: 74, segments: [{ text: "떼창", isCheer: true, isEcho: false }] },
+  ];
+  const [snapshot] = await database
+    .insert(schema.cheerGuideSnapshot)
+    .values({
+      ...snapshotInput(),
+      cheerGuideId: festival!.id,
+      sourceType: "OFFICIAL",
+      sourceUrl: "https://example.invalid/official",
+      lyrics: festivalLyrics,
+    })
+    .returning();
+  const [publication] = await database
+    .insert(schema.cheerGuidePublication)
+    .values({
+      ...publicationInput(),
+      cheerGuideId: festival!.id,
+      snapshotId: snapshot!.id,
+    })
+    .returning();
+  await database
+    .update(schema.cheerGuide)
+    .set({ currentPublicationId: publication!.id })
+    .where(eq(schema.cheerGuide.id, festival!.id));
+  observedQueries.length = 0;
+  const result = await getSongDetailBySlug(f.row.slug!);
+  expect(observedQueries).toHaveLength(1);
+  expect(result).toMatchObject({
+    lyrics,
+    hasOfficialCheer: false,
+    cheerGuides: [
+      { id: f.entry.guideId, mode: "CONCERT", sourceType: "FANDOM", lyrics },
+      { id: festival!.id, mode: "FESTIVAL", sourceType: "OFFICIAL", lyrics: festivalLyrics },
+    ],
+  });
+  for (const guide of result!.cheerGuides!)
+    expect(Object.keys(guide).sort()).toEqual([
+      "description",
+      "guideVideoUrl",
+      "id",
+      "lyrics",
+      "mode",
+      "sourceType",
+      "sourceUrl",
+    ]);
+  for (const [guideId, snapshotId, expected] of [
+    [f.entry.guideId, f.entry.snapshotId, [festivalLyrics, true]],
+    [festival!.id, snapshot!.id, [[], false]],
+  ] as const) {
+    const [unpublish] = await database
+      .insert(schema.cheerGuidePublication)
+      .values({
+        ...publicationInput(),
+        cheerGuideId: guideId,
+        snapshotId,
+        publicationNo: 2,
+        action: "UNPUBLISH",
+      })
+      .returning();
+    await database
+      .update(schema.cheerGuide)
+      .set({ currentPublicationId: unpublish!.id })
+      .where(eq(schema.cheerGuide.id, guideId));
+    const current = await getSongDetailBySlug(f.row.slug!);
+    expect(current!.lyrics).toEqual(expected[0]);
+    expect(current!.hasOfficialCheer).toBe(expected[1]);
+    const album = await getAlbumDetailBySlug("p07-constraints");
+    expect(album!.songs.find(({ id }) => id === f.row.id)!.hasOfficialCheer).toBe(expected[1]);
+  }
+  expect((await getSongDetailBySlug(f.row.slug!))!.cheerGuides).toEqual([]);
+  // Both shadow lyrics and the original publication still exist, and must stay hidden.
+  expect(
+    (await database.select().from(schema.song).where(eq(schema.song.id, f.row.id)))[0]!.lyrics,
+  ).toEqual(lyrics);
+});
+
+test("Domain §8.0 keeps legacy reads only before publication history and applies visibility/reference checks", async () => {
+  const f = await importFixture();
+  expect(await getSongDetailBySlug(f.row.slug!)).toMatchObject({ lyrics });
+  await importLegacyGuide(f.context, f.entry, true);
+  await database
+    .update(schema.song)
+    .set({ youtubeId: "different-reference" })
+    .where(eq(schema.song.id, f.row.id));
+  expect(await getSongDetailBySlug(f.row.slug!)).toMatchObject({
+    lyrics: [],
+    cheerGuides: [],
+    hasOfficialCheer: false,
+  });
+  await database.update(schema.song).set({ isVisible: false }).where(eq(schema.song.id, f.row.id));
+  expect(await getSongDetailBySlug(f.row.slug!)).toBeUndefined();
+  await database
+    .update(schema.song)
+    .set({ isVisible: true, youtubeId: f.row.youtubeId })
+    .where(eq(schema.song.id, f.row.id));
+  await database.update(schema.album).set({ isVisible: false }).where(eq(schema.album.id, albumId));
+  try {
+    expect(await getSongDetailBySlug(f.row.slug!)).toBeUndefined();
+  } finally {
+    await database
+      .update(schema.album)
+      .set({ isVisible: true })
+      .where(eq(schema.album.id, albumId));
+  }
 });

@@ -21,6 +21,8 @@ import {
 } from "../repositories/album-repository";
 import { AlbumSlugConflictError, CheerGuideReferenceError } from "../repositories/repository-error";
 
+import { defaultGuideIsOfficial } from "./cheer-guide-read";
+
 type AlbumPersistenceRow = Awaited<ReturnType<typeof findAllAlbums>>[number];
 type AlbumWithSongsPersistenceRow = Awaited<ReturnType<typeof findVisibleAlbumsWithSongs>>[number];
 type AlbumSongPersistenceRow = AlbumWithSongsPersistenceRow["songs"][number];
@@ -43,11 +45,12 @@ function mapRenderableSong(song: AlbumSongPersistenceRow): RenderableAlbumSong |
   if (!title || !slug || youtubeId === null) return null;
 
   return {
-    ...song,
+    id: song.id,
     title,
     slug,
     youtubeId,
-    hasOfficialCheer: song.hasOfficialCheer ?? false,
+    isTitle: song.isTitle,
+    hasOfficialCheer: defaultGuideIsOfficial(song.cheerGuides, youtubeId, song.hasOfficialCheer),
   };
 }
 

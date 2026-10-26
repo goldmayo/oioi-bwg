@@ -83,7 +83,30 @@ export const adminSongMutationResultSchema = z.object({
   guideWrite: guideWriteVersionSchema.optional(),
 });
 
+export const publishedCheerGuideSchema = z
+  .object({
+    id: entityIdSchema,
+    mode: z.enum(["CONCERT", "FESTIVAL"]),
+    sourceType: z.enum(["OFFICIAL", "FANDOM"]),
+    sourceUrl: z.url({ protocol: /^https?$/ }).nullable(),
+    guideVideoUrl: z.url({ protocol: /^https?$/ }).nullable(),
+    description: z.string().nullable(),
+    lyrics: lyricsDataSchema,
+  })
+  .refine((guide) => guide.sourceType !== "OFFICIAL" || guide.sourceUrl !== null)
+  .refine((guide) => guide.lyrics.some((line) => line.segments.some(({ text }) => text.trim())));
+export type PublishedCheerGuide = z.infer<typeof publishedCheerGuideSchema>;
+
 export const songDetailSchema = z.object({
+  cheerGuides: z
+    .array(publishedCheerGuideSchema)
+    .max(2)
+    .refine(
+      (guides) =>
+        new Set(guides.map(({ mode }) => mode)).size === guides.length &&
+        new Set(guides.map(({ id }) => id)).size === guides.length,
+    )
+    .optional(),
   id: entityIdSchema,
   title: z.string(),
   slug: z.string(),

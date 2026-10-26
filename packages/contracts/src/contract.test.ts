@@ -1,3 +1,4 @@
+import { publishedCheerGuideSchema } from "./song";
 import { describe, expect, it } from "vitest";
 
 import { albumDetailSchema } from "./album";
@@ -68,4 +69,25 @@ it("keeps the guide version through save requests/responses and rejects invalid 
       false,
     );
   }
+});
+
+it("accepts distinct published modes and rejects duplicate identity/mode or missing official sources", () => {
+  const guide = {
+    id: album.id,
+    mode: "CONCERT",
+    sourceType: "FANDOM",
+    sourceUrl: null,
+    guideVideoUrl: null,
+    description: null,
+    lyrics: [{ startTime: 1, segments: [{ text: "네임콜" }], isExtra: false }],
+  };
+  const field = songDetailSchema.shape.cheerGuides;
+  expect(
+    field.safeParse([guide, { ...guide, id: album.songs[0].id, mode: "FESTIVAL" }]).success,
+  ).toBe(true);
+  expect(field.safeParse([guide, { ...guide, mode: "FESTIVAL" }]).success).toBe(false);
+  expect(field.safeParse([guide, { ...guide, id: album.songs[0].id }]).success).toBe(false);
+  expect(publishedCheerGuideSchema.safeParse({ ...guide, sourceType: "OFFICIAL" }).success).toBe(
+    false,
+  );
 });

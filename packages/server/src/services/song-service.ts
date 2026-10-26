@@ -5,6 +5,7 @@ import {
   type CreateAdminSong,
   type LyricsData,
   lyricsDataSchema,
+  publishedCheerGuideSchema,
   type SaveAdminSongLyrics,
   type SongDetail,
   type UpdateAdminSong,
@@ -30,6 +31,11 @@ import {
 } from "../repositories/song-repository";
 
 import { lockSongForGuideWrite } from "../repositories/cheer-guide-repository";
+import {
+  currentPublishedGuides,
+  defaultGuideIsOfficial,
+  hasGuidePublication,
+} from "./cheer-guide-read";
 import { writeLegacyGuide } from "./cheer-guide-write-service";
 
 function guideVersion(row: { guideId?: string | null; guideLockVersion?: number | null }) {
@@ -50,7 +56,7 @@ function mapRenderableAlbumSong(song: PublicAlbumSongRow) {
     title,
     slug,
     youtubeId,
-    hasOfficialCheer: song.hasOfficialCheer ?? false,
+    hasOfficialCheer: defaultGuideIsOfficial(song.cheerGuides, youtubeId, song.hasOfficialCheer),
     isTitle: song.isTitle,
   };
 }
@@ -65,6 +71,35 @@ function parseStoredLyrics(value: unknown): LyricsData {
   return parsed.data;
 }
 
+function mapPublicCheering(row: PublicSongRow, youtubeId: string) {
+  if (!hasGuidePublication(row.cheerGuides))
+    return {
+      lyrics: parseStoredLyrics(row.lyrics),
+      hasOfficialCheer: row.hasOfficialCheer ?? false,
+    };
+  const cheerGuides = currentPublishedGuides(row.cheerGuides, youtubeId).map(
+    ({ id, mode, snapshot }) => {
+      const parsed = publishedCheerGuideSchema.safeParse({
+        id,
+        mode,
+        lyrics: snapshot.lyrics,
+        sourceType: snapshot.sourceType,
+        sourceUrl: snapshot.sourceUrl,
+        guideVideoUrl: snapshot.guideVideoUrl,
+        description: snapshot.description,
+      });
+      if (!parsed.success)
+        throw new Error("Stored cheer guide contract violation", { cause: parsed.error });
+      return parsed.data;
+    },
+  );
+  return {
+    cheerGuides,
+    lyrics: cheerGuides[0]?.lyrics ?? [],
+    hasOfficialCheer: cheerGuides[0]?.sourceType === "OFFICIAL",
+  };
+}
+
 function mapSongDetail(row: PublicSongRow): SongDetail | undefined {
   const { album, title, slug, youtubeId } = row;
   if (!album.isVisible || !title || !slug || youtubeId === null) return undefined;
@@ -74,8 +109,7 @@ function mapSongDetail(row: PublicSongRow): SongDetail | undefined {
     title,
     slug,
     youtubeId,
-    lyrics: parseStoredLyrics(row.lyrics),
-    hasOfficialCheer: row.hasOfficialCheer ?? false,
+    ...mapPublicCheering(row, youtubeId),
     isTitle: row.isTitle,
     order: row.order ?? 0,
     album: {

@@ -94,3 +94,35 @@ export function setGuidePublication(executor: DbExecutor, id: string, publicatio
     .set({ currentPublicationId: publicationId })
     .where(eq(cheerGuide.id, id));
 }
+
+export const publicGuideSummarySelection = {
+  columns: { id: true, mode: true },
+  with: {
+    publications: { columns: { id: true }, limit: 1 },
+    currentPublication: {
+      columns: { action: true },
+      with: { snapshot: { columns: { sourceType: true, referenceYoutubeId: true } } },
+    },
+  },
+} as const;
+export const publicGuideDetailSelection = {
+  ...publicGuideSummarySelection,
+  with: {
+    ...publicGuideSummarySelection.with,
+    currentPublication: {
+      columns: { action: true },
+      with: {
+        snapshot: {
+          columns: {
+            sourceType: true,
+            referenceYoutubeId: true,
+            lyrics: true,
+            sourceUrl: true,
+            guideVideoUrl: true,
+            description: true,
+          },
+        },
+      },
+    },
+  },
+} as const;

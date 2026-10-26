@@ -6,6 +6,7 @@ import type { DbExecutor } from "../db";
 import { isPostgresForeignKeyViolation, isPostgresUniqueViolation } from "../db/postgres-error";
 import { album, cheerGuide, type InsertSongRow, song } from "../db/schema";
 
+import { publicGuideDetailSelection, publicGuideSummarySelection } from "./cheer-guide-repository";
 import { SongSlugConflictError, CheerGuideReferenceError } from "./repository-error";
 
 type SongUpdateRow = Partial<Omit<InsertSongRow, "slug">>;
@@ -15,11 +16,8 @@ export function findSongBySlug(executor: DbExecutor, slug: string) {
     where: (table, { and, eq: equals }) =>
       and(equals(table.slug, slug), equals(table.isVisible, true)),
     with: {
-      album: {
-        with: {
-          songs: true,
-        },
-      },
+      cheerGuides: publicGuideDetailSelection,
+      album: { with: { songs: { with: { cheerGuides: publicGuideSummarySelection } } } },
     },
   });
 }
