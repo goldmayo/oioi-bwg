@@ -3,16 +3,18 @@ import "server-only";
 import { eq } from "drizzle-orm";
 
 import type { DbExecutor } from "../db";
-import { isPostgresUniqueViolation } from "../db/postgres-error";
+import { isPostgresForeignKeyViolation, isPostgresUniqueViolation } from "../db/postgres-error";
 import { album, type InsertAlbumRow } from "../db/schema";
 
-import { AlbumSlugConflictError } from "./repository-error";
+import { publicGuideSummarySelection } from "./cheer-guide-repository";
+import { AlbumSlugConflictError, CheerGuideReferenceError } from "./repository-error";
 
 export function findVisibleAlbumsWithSongs(executor: DbExecutor) {
   return executor.query.album.findMany({
     where: (table, { eq: equals }) => equals(table.isVisible, true),
     with: {
       songs: {
+        with: { cheerGuides: publicGuideSummarySelection },
         where: (table, { eq: equals }) => equals(table.isVisible, true),
         orderBy: (table, { asc }) => [asc(table.order)],
         columns: {
@@ -35,6 +37,7 @@ export function findAlbumBySlug(executor: DbExecutor, slug: string) {
       and(equals(table.slug, slug), equals(table.isVisible, true)),
     with: {
       songs: {
+        with: { cheerGuides: publicGuideSummarySelection },
         where: (table, { eq: equals }) => equals(table.isVisible, true),
         orderBy: (table, { asc }) => [asc(table.order)],
         columns: {
@@ -60,24 +63,31 @@ export async function insertAlbum(executor: DbExecutor, data: InsertAlbumRow) {
   try {
     return await executor.insert(album).values(data).returning();
   } catch (error) {
-    if (isPostgresUniqueViolation(error, "Album_slug_key")) {
+    if (isPostgresUniqueViolation(error, "album_slug_key")) {
       throw new AlbumSlugConflictError();
     }
     throw error;
   }
 }
 
-export async function updateAlbum(executor: DbExecutor, id: number, data: Partial<InsertAlbumRow>) {
+export async function updateAlbum(executor: DbExecutor, id: string, data: Partial<InsertAlbumRow>) {
   try {
     return await executor.update(album).set(data).where(eq(album.id, id)).returning();
   } catch (error) {
-    if (isPostgresUniqueViolation(error, "Album_slug_key")) {
+    if (isPostgresUniqueViolation(error, "album_slug_key")) {
       throw new AlbumSlugConflictError();
     }
     throw error;
   }
 }
 
-export function removeAlbum(executor: DbExecutor, id: number) {
-  return executor.delete(album).where(eq(album.id, id)).returning({ id: album.id });
+export async function removeAlbum(executor: DbExecutor, id: string) {
+  try {
+    return await executor.delete(album).where(eq(album.id, id)).returning({ id: album.id });
+  } catch (error) {
+    if (isPostgresForeignKeyViolation(error, "cheer_guide_song_id_fkey")) {
+      throw new CheerGuideReferenceError();
+    }
+    throw error;
+  }
 }

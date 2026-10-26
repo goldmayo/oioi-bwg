@@ -20,10 +20,10 @@ vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
 import { DELETE, PATCH } from "./route";
 
-const context = { ability: {}, user: { id: "1" } };
-const routeContext = { params: Promise.resolve({ id: "2" }) };
+const context = { ability: {}, user: { id: "019a0170-0000-7000-8000-000000000001" } };
+const routeContext = { params: Promise.resolve({ id: "019a0170-0000-7000-8000-000000000002" }) };
 const input = {
-  albumId: 1,
+  albumId: "019a0170-0000-7000-8000-000000000001",
   title: "Updated Song",
   slug: "updated-song",
   youtubeId: "youtube-id",
@@ -41,10 +41,10 @@ describe("/api/admin/songs/[id]", () => {
   });
 
   it("updates a song with validated path and body contracts", async () => {
-    editSong.mockResolvedValue({ id: 2 });
+    editSong.mockResolvedValue({ id: "019a0170-0000-7000-8000-000000000002" });
 
     const response = await PATCH(
-      new Request("https://example.test/api/admin/songs/2", {
+      new Request("https://example.test/api/admin/songs/019a0170-0000-7000-8000-000000000002", {
         body: JSON.stringify(input),
         headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "PATCH",
@@ -53,16 +53,16 @@ describe("/api/admin/songs/[id]", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ id: 2 });
-    expect(editSong).toHaveBeenCalledWith(context, 2, input);
+    expect(await response.json()).toEqual({ id: "019a0170-0000-7000-8000-000000000002" });
+    expect(editSong).toHaveBeenCalledWith(context, "019a0170-0000-7000-8000-000000000002", input);
   });
 
   it("allows a legacy null slug to remain null", async () => {
-    editSong.mockResolvedValue({ id: 2 });
+    editSong.mockResolvedValue({ id: "019a0170-0000-7000-8000-000000000002" });
     const legacyInput = { ...input, slug: null };
 
     const response = await PATCH(
-      new Request("https://example.test/api/admin/songs/2", {
+      new Request("https://example.test/api/admin/songs/019a0170-0000-7000-8000-000000000002", {
         body: JSON.stringify(legacyInput),
         headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
         method: "PATCH",
@@ -71,7 +71,11 @@ describe("/api/admin/songs/[id]", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(editSong).toHaveBeenCalledWith(context, 2, legacyInput);
+    expect(editSong).toHaveBeenCalledWith(
+      context,
+      "019a0170-0000-7000-8000-000000000002",
+      legacyInput,
+    );
   });
 
   it.each(["SONG_SLUG_ALREADY_EXISTS", "SONG_SLUG_IMMUTABLE"] as const)(
@@ -80,7 +84,7 @@ describe("/api/admin/songs/[id]", () => {
       editSong.mockRejectedValue(new AppError(code));
 
       const response = await PATCH(
-        new Request("https://example.test/api/admin/songs/2", {
+        new Request("https://example.test/api/admin/songs/019a0170-0000-7000-8000-000000000002", {
           body: JSON.stringify(input),
           headers: { "content-type": "application/json", Origin: "http://127.0.0.1:3001" },
           method: "PATCH",
@@ -97,7 +101,7 @@ describe("/api/admin/songs/[id]", () => {
     deleteSong.mockResolvedValue(undefined);
 
     const response = await DELETE(
-      new Request("https://example.test/api/admin/songs/2", {
+      new Request("https://example.test/api/admin/songs/019a0170-0000-7000-8000-000000000002", {
         method: "DELETE",
         headers: { Origin: "http://127.0.0.1:3001" },
       }),
@@ -105,13 +109,13 @@ describe("/api/admin/songs/[id]", () => {
     );
 
     expect(response.status).toBe(204);
-    expect(deleteSong).toHaveBeenCalledWith(context, 2);
+    expect(deleteSong).toHaveBeenCalledWith(context, "019a0170-0000-7000-8000-000000000002");
   });
 
   it("maps a missing song and an invalid path", async () => {
     deleteSong.mockRejectedValue(new AppError("SONG_NOT_FOUND"));
     const missing = await DELETE(
-      new Request("https://example.test/api/admin/songs/2", {
+      new Request("https://example.test/api/admin/songs/019a0170-0000-7000-8000-000000000002", {
         method: "DELETE",
         headers: { Origin: "http://127.0.0.1:3001" },
       }),

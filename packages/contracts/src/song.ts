@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { entityIdSchema } from "./entity-id";
+
 import { albumDetailSchema } from "./album";
 
 export const songSlugParamsSchema = z.object({
@@ -7,7 +9,7 @@ export const songSlugParamsSchema = z.object({
 });
 
 export const adminSongIdParamsSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: entityIdSchema,
 });
 
 export const lyricSegmentSchema = z.object({
@@ -30,8 +32,14 @@ const adminSongSlugSchema = z
   .trim()
   .regex(/^[a-z0-9-]+$/);
 
+export const guideWriteVersionSchema = z.object({
+  guideId: entityIdSchema,
+  lockVersion: z.number().int().positive(),
+});
+export type GuideWriteVersion = z.infer<typeof guideWriteVersionSchema>;
+
 const adminSongFieldsSchema = z.object({
-  albumId: z.number().int().positive(),
+  albumId: entityIdSchema,
   title: z.string().trim().min(1),
   youtubeId: z.string().trim().min(1),
   hasOfficialCheer: z.boolean(),
@@ -48,17 +56,20 @@ export const createAdminSongSchema = adminSongFieldsSchema.extend({
 export const updateAdminSongSchema = adminSongFieldsSchema.extend({
   slug: adminSongSlugSchema.nullable(),
   lrcText: z.string().optional(),
+  guideWrite: guideWriteVersionSchema.optional(),
 });
 
 export const saveAdminSongLyricsSchema = z.object({
   lyrics: lyricsDataSchema,
   youtubeId: z.string().trim(),
+  guideWrite: guideWriteVersionSchema.optional(),
 });
 
 export const adminSongSummarySchema = adminSongFieldsSchema.extend({
-  id: z.number().int().positive(),
+  id: entityIdSchema,
   slug: adminSongSlugSchema.nullable(),
   updatedAt: z.string(),
+  guideWrite: guideWriteVersionSchema.optional(),
   album: z.object({ name: z.string() }),
 });
 
@@ -68,11 +79,35 @@ export const adminSongListSchema = z.object({
 });
 
 export const adminSongMutationResultSchema = z.object({
-  id: z.number().int().positive(),
+  id: entityIdSchema,
+  guideWrite: guideWriteVersionSchema.optional(),
 });
 
+export const publishedCheerGuideSchema = z
+  .object({
+    id: entityIdSchema,
+    mode: z.enum(["CONCERT", "FESTIVAL"]),
+    sourceType: z.enum(["OFFICIAL", "FANDOM"]),
+    sourceUrl: z.url({ protocol: /^https?$/ }).nullable(),
+    guideVideoUrl: z.url({ protocol: /^https?$/ }).nullable(),
+    description: z.string().nullable(),
+    lyrics: lyricsDataSchema,
+  })
+  .refine((guide) => guide.sourceType !== "OFFICIAL" || guide.sourceUrl !== null)
+  .refine((guide) => guide.lyrics.some((line) => line.segments.some(({ text }) => text.trim())));
+export type PublishedCheerGuide = z.infer<typeof publishedCheerGuideSchema>;
+
 export const songDetailSchema = z.object({
-  id: z.number().int(),
+  cheerGuides: z
+    .array(publishedCheerGuideSchema)
+    .max(2)
+    .refine(
+      (guides) =>
+        new Set(guides.map(({ mode }) => mode)).size === guides.length &&
+        new Set(guides.map(({ id }) => id)).size === guides.length,
+    )
+    .optional(),
+  id: entityIdSchema,
   title: z.string(),
   slug: z.string(),
   youtubeId: z.string(),

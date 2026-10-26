@@ -108,7 +108,7 @@ function SongFormSession({
   const form = useForm<SongEditInput, unknown, SongEditValues>({
     resolver: zodResolver(songEditSchema),
     defaultValues: {
-      albumId: song?.albumId ?? 0,
+      albumId: song?.albumId ?? "",
       title: song?.title ?? "",
       slug: song?.slug ?? "",
       youtubeId: song?.youtubeId ?? "",
@@ -170,7 +170,7 @@ function SongFormSession({
                   <FormLabel>앨범</FormLabel>
                   <Select
                     value={field.value ? String(field.value) : ""}
-                    onValueChange={(v: string) => field.onChange(Number(v))}
+                    onValueChange={(v: string) => field.onChange(v)}
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">

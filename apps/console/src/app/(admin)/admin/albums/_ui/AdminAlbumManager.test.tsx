@@ -51,14 +51,16 @@ describe("AdminAlbumManager cache composition", () => {
       rules: [{ action: "manage", subject: "all" }],
     });
     queryClient.setQueryData(albumQueryKeys.adminList(), {
-      items: [{ id: 1 }],
+      items: [{ id: "019a0170-0000-7000-8000-000000000001" }],
       nextCursor: null,
     });
     queryClient.setQueryData(songQueryKeys.adminList(), {
-      items: [{ id: 2 }],
+      items: [{ id: "019a0170-0000-7000-8000-000000000002" }],
       nextCursor: null,
     });
-    queryClient.setQueryData(songQueryKeys.detail("test-song"), { id: 2 });
+    queryClient.setQueryData(songQueryKeys.detail("test-song"), {
+      id: "019a0170-0000-7000-8000-000000000002",
+    });
 
     render(
       <QueryClientProvider client={queryClient}>

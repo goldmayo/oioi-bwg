@@ -56,12 +56,12 @@ export async function assertConsoleAuthIngress(browser, origin, sql, artifacts) 
     const headers = suppliedOrigin === undefined ? {} : { Origin: suppliedOrigin };
     for (const [method, route] of [
       ["POST", "/api/admin/albums"],
-      ["PATCH", "/api/admin/albums/1"],
-      ["DELETE", "/api/admin/albums/1"],
+      ["PATCH", "/api/admin/albums/019a0170-0000-7000-8000-000000000001"],
+      ["DELETE", "/api/admin/albums/019a0170-0000-7000-8000-000000000001"],
       ["POST", "/api/admin/songs"],
-      ["PATCH", "/api/admin/songs/1"],
-      ["DELETE", "/api/admin/songs/1"],
-      ["PATCH", "/api/admin/songs/1/lyrics"],
+      ["PATCH", "/api/admin/songs/019a0170-0000-7000-8000-000000000001"],
+      ["DELETE", "/api/admin/songs/019a0170-0000-7000-8000-000000000001"],
+      ["PATCH", "/api/admin/songs/019a0170-0000-7000-8000-000000000001/lyrics"],
       ["POST", "/api/auth/callback/credentials"],
       ["POST", "/api/auth/signout"],
       ["POST", "/api/auth/session"],

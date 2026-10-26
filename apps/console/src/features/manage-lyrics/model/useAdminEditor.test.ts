@@ -19,7 +19,7 @@ describe("useAdminEditor 훅 테스트", () => {
   });
 
   const mockSong = {
-    id: 1,
+    id: "019a0170-0000-7000-8000-000000000001",
     title: "Test Song",
     youtubeId: "test_initial_id",
     lyrics: [
@@ -124,11 +124,48 @@ describe("useAdminEditor 훅 테스트", () => {
   });
 
   describe("handleSave (Inverse / Error 처리)", () => {
+    it("연속 저장은 응답 버전을 쓰고 충돌 뒤에는 입력과 원래 버전을 유지한다", async () => {
+      const guideWrite = { guideId: mockSong.id, lockVersion: 1 };
+      const { result, rerender } = renderHook(
+        ({ version }) =>
+          useAdminEditor(
+            {
+              ...mockSong,
+              guideWrite: { ...guideWrite, lockVersion: version },
+            },
+            saveSongData,
+          ),
+        { initialProps: { version: 1 } },
+      );
+      saveSongData.mockResolvedValueOnce({
+        id: mockSong.id,
+        guideWrite: { ...guideWrite, lockVersion: 2 },
+      });
+      await act(() => result.current.handleSave());
+      expect(saveSongData.mock.calls[0][1].guideWrite).toEqual(guideWrite);
+      act(() => result.current.applyRowOffset(0.3));
+      const draft = result.current.lyrics;
+      saveSongData.mockRejectedValueOnce(new Error("CHEER_GUIDE_CONFLICT"));
+      await act(() => result.current.handleSave());
+      expect(result.current.lyrics).toEqual(draft);
+      expect(saveSongData.mock.calls[1][1].guideWrite.lockVersion).toBe(2);
+      rerender({ version: 10 });
+      saveSongData.mockResolvedValueOnce({
+        id: mockSong.id,
+        guideWrite: { ...guideWrite, lockVersion: 3 },
+      });
+      await act(() => result.current.handleSave());
+      expect(saveSongData.mock.calls[2][1]).toMatchObject({
+        lyrics: draft,
+        guideWrite: { ...guideWrite, lockVersion: 2 },
+      });
+    });
+
     it("성공은 toast로 알리고 실패 UX는 MutationCache에 위임한다", async () => {
       const { result } = renderHook(() => useAdminEditor(mockSong, saveSongData));
 
       // Success 케이스
-      vi.mocked(saveSongData).mockResolvedValueOnce(undefined);
+      vi.mocked(saveSongData).mockResolvedValueOnce({ id: mockSong.id });
 
       await act(async () => {
         await result.current.handleSave();

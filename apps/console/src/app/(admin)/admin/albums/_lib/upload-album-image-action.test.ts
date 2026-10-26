@@ -24,7 +24,7 @@ vi.mock("@oioi-bwg/server/services/album-image-service", () => ({ uploadAlbumIma
 
 import { uploadAlbumImageAction } from "./upload-album-image-action";
 
-const context = { ability: {}, user: { id: "42" } };
+const context = { ability: {}, user: { id: "019a0170-0000-7000-8000-00000000002a" } };
 
 describe("uploadAlbumImageAction", () => {
   beforeEach(() => {

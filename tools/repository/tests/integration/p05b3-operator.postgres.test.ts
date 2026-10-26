@@ -56,7 +56,7 @@ async function fixture(version: number | null = 1) {
 }
 
 async function cli(
-  id: bigint,
+  id: string,
   version: number | "none",
   access?: [string, string, string, string],
   file = config,

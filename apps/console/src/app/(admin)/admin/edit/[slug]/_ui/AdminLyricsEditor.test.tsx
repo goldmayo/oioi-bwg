@@ -41,8 +41,8 @@ vi.mock("@/features/manage-lyrics", async () => {
       saveSongData,
       song,
     }: {
-      saveSongData: (id: number, input: { lyrics: []; youtubeId: string }) => Promise<void>;
-      song: { id: number; youtubeId: string };
+      saveSongData: (id: string, input: { lyrics: []; youtubeId: string }) => Promise<void>;
+      song: { id: string; youtubeId: string };
     }) => {
       const [youtubeId, setYoutubeId] = useState(song.youtubeId);
       return (
@@ -67,7 +67,7 @@ vi.mock("@/features/manage-lyrics", async () => {
 });
 
 const song = {
-  id: 2,
+  id: "019a0170-0000-7000-8000-000000000002",
   title: "고민중독",
   youtubeId: "initial-id",
   lyrics: [],
@@ -82,7 +82,7 @@ function renderEditor() {
     rules: [{ action: "manage", subject: "all" }],
   });
   queryClient.setQueryData(albumQueryKeys.adminList(), {
-    items: [{ id: 1 }],
+    items: [{ id: "019a0170-0000-7000-8000-000000000001" }],
     nextCursor: null,
   });
   queryClient.setQueryData(songQueryKeys.adminList(), {

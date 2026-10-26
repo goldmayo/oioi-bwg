@@ -55,7 +55,7 @@ vi.mock("@/shared/ui/dialog", () => {
 });
 
 const album: AdminAlbumSummary = {
-  id: 1,
+  id: "019a0170-0000-7000-8000-000000000001",
   name: "MANITO",
   slug: "manito",
   imgUrl: "https://assets.example.com/manito.webp",
@@ -64,7 +64,10 @@ const album: AdminAlbumSummary = {
   isVisible: true,
   createdAt: "2026-04-02T18:00:57.794Z",
 };
-const songCache = { items: [{ id: 2, album: { name: album.name } }], nextCursor: null };
+const songCache = {
+  items: [{ id: "019a0170-0000-7000-8000-000000000002", album: { name: album.name } }],
+  nextCursor: null,
+};
 
 let queryClient: QueryClient;
 
@@ -116,7 +119,12 @@ afterEach(() => {
 
 describe("AlbumManagerClient cache orchestration", () => {
   it("keeps the Song list fresh after create", async () => {
-    const created = { ...album, id: 3, name: "NEW", slug: "new" };
+    const created = {
+      ...album,
+      id: "019a0170-0000-7000-8000-000000000003",
+      name: "NEW",
+      slug: "new",
+    };
     http.post.mockResolvedValue(created);
     http.get.mockResolvedValue({ items: [album, created], nextCursor: null });
     const onNameChangeOrDelete = renderManager();
@@ -168,7 +176,11 @@ describe("AlbumManagerClient cache orchestration", () => {
     const deleteButtons = screen.getAllByRole("button", { name: "삭제" });
     fireEvent.click(deleteButtons[deleteButtons.length - 1]);
 
-    await waitFor(() => expect(http.delete).toHaveBeenCalledWith("/api/admin/albums/1"));
+    await waitFor(() =>
+      expect(http.delete).toHaveBeenCalledWith(
+        "/api/admin/albums/019a0170-0000-7000-8000-000000000001",
+      ),
+    );
     await waitFor(() => expect(http.get).toHaveBeenCalledOnce());
     expect(onNameChangeOrDelete).toHaveBeenCalledOnce();
     expect(queryClient.getQueryData(albumQueryKeys.adminList())).toEqual({

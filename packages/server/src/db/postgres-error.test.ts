@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { isPostgresUniqueViolation } from "./postgres-error";
+import { isPostgresForeignKeyViolation, isPostgresUniqueViolation } from "./postgres-error";
 
 function postgresError(code: string, constraintName: string) {
   return Object.assign(new Error("database error"), {
@@ -63,4 +63,18 @@ describe("isPostgresUniqueViolation", () => {
       isPostgresUniqueViolation(new DrizzleQueryError("select 1", [], throwingCause), "key"),
     ).toBe(false);
   });
+});
+
+it("recognizes only the direct known FK violation", () => {
+  const constraint = "cheer_guide_song_id_fkey";
+  const error = postgresError("23503", constraint);
+  expect(isPostgresForeignKeyViolation(drizzleError(error), constraint)).toBe(true);
+  expect(isPostgresForeignKeyViolation(drizzleError(error), "other_fkey")).toBe(false);
+  expect(isPostgresForeignKeyViolation(error, constraint)).toBe(false);
+  expect(
+    isPostgresForeignKeyViolation(drizzleError(postgresError("23505", constraint)), constraint),
+  ).toBe(false);
+  expect(
+    isPostgresForeignKeyViolation(drizzleError(new Error("wrapper", { cause: error })), constraint),
+  ).toBe(false);
 });

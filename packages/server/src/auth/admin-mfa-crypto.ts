@@ -1,5 +1,7 @@
 import "server-only";
 
+import { entityIdSchema } from "@oioi-bwg/contracts/entity-id";
+
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 export class AdminMfaCryptoError extends Error {
@@ -27,11 +29,11 @@ function decodePart(value: string, length?: number) {
   return bytes;
 }
 
-function associatedData(accountId: bigint) {
-  return Buffer.from(`oioi-bwg:console-mfa:v1:${accountId}`);
+function associatedData(accountId: string) {
+  return Buffer.from(`oioi-bwg:console-mfa:v1:${entityIdSchema.parse(accountId)}`);
 }
 
-export function encryptAdminMfaSecret(accountId: bigint, secret: string, key: Uint8Array): string {
+export function encryptAdminMfaSecret(accountId: string, secret: string, key: Uint8Array): string {
   try {
     if (key.length !== 32 || !secret) throw new AdminMfaCryptoError();
     const nonce = randomBytes(12);
@@ -50,7 +52,7 @@ export function encryptAdminMfaSecret(accountId: bigint, secret: string, key: Ui
 }
 
 export function decryptAdminMfaSecret(
-  accountId: bigint,
+  accountId: string,
   envelope: string,
   key: Uint8Array,
 ): string {

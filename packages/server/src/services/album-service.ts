@@ -19,7 +19,9 @@ import {
   removeAlbum,
   updateAlbum,
 } from "../repositories/album-repository";
-import { AlbumSlugConflictError } from "../repositories/repository-error";
+import { AlbumSlugConflictError, CheerGuideReferenceError } from "../repositories/repository-error";
+
+import { defaultGuideIsOfficial } from "./cheer-guide-read";
 
 type AlbumPersistenceRow = Awaited<ReturnType<typeof findAllAlbums>>[number];
 type AlbumWithSongsPersistenceRow = Awaited<ReturnType<typeof findVisibleAlbumsWithSongs>>[number];
@@ -43,11 +45,12 @@ function mapRenderableSong(song: AlbumSongPersistenceRow): RenderableAlbumSong |
   if (!title || !slug || youtubeId === null) return null;
 
   return {
-    ...song,
+    id: song.id,
     title,
     slug,
     youtubeId,
-    hasOfficialCheer: song.hasOfficialCheer ?? false,
+    isTitle: song.isTitle,
+    hasOfficialCheer: defaultGuideIsOfficial(song.cheerGuides, youtubeId, song.hasOfficialCheer),
   };
 }
 
@@ -112,7 +115,7 @@ export async function createAlbum(
 
 export async function editAlbum(
   ctx: RequestContext,
-  id: number,
+  id: string,
   input: SaveAdminAlbum,
 ): Promise<AlbumSummary> {
   requireAdmin(ctx);
@@ -128,8 +131,13 @@ export async function editAlbum(
   }
 }
 
-export async function deleteAlbum(ctx: RequestContext, id: number) {
+export async function deleteAlbum(ctx: RequestContext, id: string) {
   requireAdmin(ctx);
-  const [album] = await removeAlbum(getDatabase(), id);
-  if (!album) throw new AppError("ALBUM_NOT_FOUND");
+  try {
+    const [album] = await removeAlbum(getDatabase(), id);
+    if (!album) throw new AppError("ALBUM_NOT_FOUND");
+  } catch (error) {
+    if (error instanceof CheerGuideReferenceError) throw new AppError("CONTENT_HAS_CHEER_GUIDE");
+    throw error;
+  }
 }

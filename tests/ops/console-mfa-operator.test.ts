@@ -25,7 +25,7 @@ const args = [
   "--config",
   "operator.json",
   "--account-id",
-  "1",
+  "019a0170-0000-7000-8000-000000000001",
   "--expected-version",
   "none",
   "--reason-file",
@@ -42,14 +42,14 @@ const configuration = {
 test("operator requires explicit target, expected values, apply, and a nonempty reason", () => {
   expect(parseOperatorArguments(args)).toMatchObject({
     command: "mfa-reset",
-    accountId: 1n,
+    accountId: "019a0170-0000-7000-8000-000000000001",
     version: null,
   });
   for (const input of [
     args.slice(0, -1),
     [...args, "--apply"],
     [...args, "--allow-production"],
-    args.map((v) => (v === "1" ? "0" : v)),
+    args.map((v) => (v === "019a0170-0000-7000-8000-000000000001" ? "1" : v)),
     args.map((v) => (v === "none" ? "2147483648" : v)),
   ]) {
     expect(() => parseOperatorArguments(input)).toThrow("INVALID_REQUEST");

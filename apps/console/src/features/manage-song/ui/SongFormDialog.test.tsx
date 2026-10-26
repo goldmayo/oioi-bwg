@@ -49,7 +49,7 @@ vi.mock("./LrcUploader", () => ({
 }));
 
 const album: AdminAlbumSummary = {
-  id: 1,
+  id: "019a0170-0000-7000-8000-000000000001",
   name: "Test Album",
   slug: "test-album",
   imgUrl: "https://assets.example.com/test.webp",
@@ -60,7 +60,7 @@ const album: AdminAlbumSummary = {
 };
 
 const song: AdminSongSummary = {
-  id: 2,
+  id: "019a0170-0000-7000-8000-000000000002",
   albumId: album.id,
   title: "Test Song",
   slug: "test-song",

@@ -85,6 +85,36 @@ describe("offline UUID cutover map", () => {
     ).toThrow();
   });
 
+  it("binds account facts and authorizes only explicitly selected active administrators", () => {
+    const input = {
+      ...source,
+      accounts: [
+        { id: "5", role: "ADMIN", status: "ACTIVE", mfaVersion: 4 },
+        { id: "6", role: "USER", status: "ACTIVE", mfaVersion: null },
+      ],
+    };
+    const map = createUuidCutoverMap(input, allocator(), ["5"]);
+    expect(map.formatVersion).toBe(2);
+    expect(validateUuidCutoverMap(input, map)).toEqual(map);
+    for (const broken of [
+      { ...map, formatVersion: 1 },
+      { ...map, accounts: map.accounts.slice(1) },
+      { ...map, accounts: [map.accounts[0], map.accounts[0]] },
+      { ...map, accounts: [{ ...map.accounts[0], mfaVersion: 3 }, map.accounts[1]] },
+      { ...map, accounts: [{ ...map.accounts[0], id: map.albums[0]!.id }, map.accounts[1]] },
+      { ...map, resetAdminOldIds: ["5", "5"] },
+      { ...map, resetAdminOldIds: ["6"] },
+      { ...map, resetAdminOldIds: ["99"] },
+    ])
+      expect(() => validateUuidCutoverMap(input, broken)).toThrow();
+    expect(() =>
+      validateUuidCutoverMap(
+        { ...input, accounts: [{ ...input.accounts[0], status: "SUSPENDED" }, input.accounts[1]] },
+        map,
+      ),
+    ).toThrow();
+  });
+
   it.each([
     { ...source, albums: [{ id: 1 }] },
     { ...source, albums: [{ id: "01" }] },

@@ -83,7 +83,7 @@ function albumInput(slug: string): SaveAdminAlbum {
   };
 }
 
-function songInput(albumId: number, slug: string, order = 1): CreateAdminSong {
+function songInput(albumId: string, slug: string, order = 1): CreateAdminSong {
   return {
     albumId,
     hasOfficialCheer: false,
@@ -414,17 +414,19 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
 
   test("limits ownership transfer to tracked application and Drizzle objects", async () => {
     const applicationObjects = [
-      "Album",
-      "Song",
+      "album",
+      "song",
+      "service_publication",
+      "service_policy",
+      "cheer_guide",
+      "cheer_guide_snapshot",
+      "cheer_guide_publication",
       "account",
       "admin_mfa",
       "profile",
       "password_credential",
       "email_verification_challenge",
       "email_verification_rate_limit",
-      "Album_id_seq",
-      "Song_id_seq",
-      "account_id_seq",
     ];
     const owners = await verificationSql<{ name: string; owner: string }[]>`
       select relation.relname as name, pg_get_userbyid(relation.relowner) as owner
@@ -495,7 +497,7 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
     });
   });
 
-  test("applies tracked migrations 0000 through 0005 with exact hashes", async () => {
+  test("applies tracked migrations 0000 through 0010 with exact hashes", async () => {
     const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as {
       entries: { tag: string }[];
     };
@@ -510,6 +512,11 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
       "0003_email_verification_rate_limit",
       "0004_violet_deadpool",
       "0005_p05a_admin_mfa",
+      "0006_uuid_pk_cutover",
+      "0007_p07_cheer_guide_foundation",
+      "0008_service_publications",
+      "0009_service_policies",
+      "0010_policy_content_drafts",
     ]);
     expect(rows.map(({ hash }) => hash)).toEqual(
       journal.entries.map(({ tag }) =>
@@ -543,14 +550,14 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
       { albumId: existingAlbum.id, slug: null },
       { albumId: otherAlbum.id, slug: null },
     ]);
-    expect(await sql`select id from "Song" where slug is null`).toHaveLength(2);
+    expect(await sql`select id from "song" where slug is null`).toHaveLength(2);
   });
 
   test("denies guest, USER, and REVIEWER at every privileged Album/Song Service", async () => {
     const before = await sql`
       select
-        (select count(*)::int from "Album") as albums,
-        (select count(*)::int from "Song") as songs
+        (select count(*)::int from "album") as albums,
+        (select count(*)::int from "song") as songs
     `;
 
     for (const role of [null, "USER", "REVIEWER"] as const) {
@@ -559,14 +566,31 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
       const operations: (() => Promise<unknown>)[] = [
         () => albums.listAdminAlbums(context),
         () => albums.createAlbum(context, albumInput("m7-denied-album")),
-        () => albums.editAlbum(context, 1, albumInput("m7-denied-album")),
-        () => albums.deleteAlbum(context, 1),
+        () =>
+          albums.editAlbum(
+            context,
+            "019a0170-0000-7000-8000-000000000001",
+            albumInput("m7-denied-album"),
+          ),
+        () => albums.deleteAlbum(context, "019a0170-0000-7000-8000-000000000001"),
         () => songs.listAdminSongs(context),
         () => songs.getAdminSongEditorBySlug(context, "m7-denied-song"),
-        () => songs.createSong(context, songInput(1, "m7-denied-song")),
-        () => songs.editSong(context, 1, { ...songInput(1, "m7-denied-song"), lrcText: "" }),
-        () => songs.deleteSong(context, 1),
-        () => songs.saveSongLyrics(context, 1, { lyrics: [], youtubeId: "abcdefghijk" }),
+        () =>
+          songs.createSong(
+            context,
+            songInput("019a0170-0000-7000-8000-000000000001", "m7-denied-song"),
+          ),
+        () =>
+          songs.editSong(context, "019a0170-0000-7000-8000-000000000001", {
+            ...songInput("019a0170-0000-7000-8000-000000000001", "m7-denied-song"),
+            lrcText: "",
+          }),
+        () => songs.deleteSong(context, "019a0170-0000-7000-8000-000000000001"),
+        () =>
+          songs.saveSongLyrics(context, "019a0170-0000-7000-8000-000000000001", {
+            lyrics: [],
+            youtubeId: "abcdefghijk",
+          }),
       ];
 
       for (const operation of operations) {
@@ -577,8 +601,8 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
     expect(
       await sql`
         select
-          (select count(*)::int from "Album") as albums,
-          (select count(*)::int from "Song") as songs
+          (select count(*)::int from "album") as albums,
+          (select count(*)::int from "song") as songs
       `,
     ).toEqual(before);
   });
@@ -653,12 +677,12 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
           albumId: visibleAlbum.id,
           slug: "m7-fk-rollback-first",
         });
-        await transaction.insert(song).values({ albumId: 2_147_483_647 });
+        await transaction.insert(song).values({ albumId: "019a0170-0000-7000-8000-ffffffffffff" });
       }),
     ).rejects.toMatchObject({ cause: { code: "23503" } });
-    expect(await sql`select id from "Song" where slug = 'm7-fk-rollback-first'`).toHaveLength(0);
+    expect(await sql`select id from "song" where slug = 'm7-fk-rollback-first'`).toHaveLength(0);
 
     await albums.deleteAlbum(admin, visibleAlbum.id);
-    expect(await sql`select id from "Song" where "albumId" = ${visibleAlbum.id}`).toHaveLength(0);
+    expect(await sql`select id from "song" where "album_id" = ${visibleAlbum.id}`).toHaveLength(0);
   });
 });

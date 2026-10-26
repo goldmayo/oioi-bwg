@@ -29,13 +29,13 @@ describe("authenticateCredentials", () => {
 
   it("canonicalizes email and returns only the account identity", async () => {
     mockedFindCredential.mockResolvedValue({
-      accountId: 42n,
+      accountId: "019a0170-0000-7000-8000-00000000002a",
       passwordHash: "$argon2id$stored-hash",
-      account: { id: 42n, status: "ACTIVE" },
+      account: { id: "019a0170-0000-7000-8000-00000000002a", status: "ACTIVE" },
     });
 
     await expect(authenticateCredentials("  ADMIN@EXAMPLE.COM ", "password")).resolves.toEqual({
-      id: "42",
+      id: "019a0170-0000-7000-8000-00000000002a",
     });
     expect(mockedFindCredential).toHaveBeenCalledWith(expect.anything(), "admin@example.com");
     expect(mockedVerify).toHaveBeenCalledWith("$argon2id$stored-hash", "password");
@@ -43,9 +43,9 @@ describe("authenticateCredentials", () => {
 
   it("rejects invalid credentials and non-active accounts", async () => {
     mockedFindCredential.mockResolvedValue({
-      accountId: 42n,
+      accountId: "019a0170-0000-7000-8000-00000000002a",
       passwordHash: "$argon2id$stored-hash",
-      account: { id: 42n, status: "SUSPENDED" },
+      account: { id: "019a0170-0000-7000-8000-00000000002a", status: "SUSPENDED" },
     });
 
     await expect(authenticateCredentials("admin@example.com", "password")).resolves.toBeNull();

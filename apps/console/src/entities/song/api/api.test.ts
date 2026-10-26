@@ -21,8 +21,8 @@ import {
 import { songQueries } from "./index";
 
 const song = {
-  id: 2,
-  albumId: 1,
+  id: "019a0170-0000-7000-8000-000000000002",
+  albumId: "019a0170-0000-7000-8000-000000000001",
   title: "Test Song",
   slug: "test-song",
   youtubeId: "youtube-id",
@@ -66,7 +66,7 @@ describe("song browser API", () => {
   it("rejects an invalid response contract", async () => {
     http.get
       .mockResolvedValueOnce([song])
-      .mockResolvedValueOnce({ items: [{ ...song, id: "2" }], nextCursor: null });
+      .mockResolvedValueOnce({ items: [{ ...song, id: 2 }], nextCursor: null });
     await expect(getAdminSongs()).rejects.toThrow("API response contract violation");
     await expect(getAdminSongs()).rejects.toThrow("API response contract violation");
   });
@@ -83,10 +83,18 @@ describe("song browser API", () => {
       saveAdminSongLyrics(song.id, { lyrics: [], youtubeId: input.youtubeId }),
     ).resolves.toEqual({ id: song.id });
     expect(http.post).toHaveBeenCalledWith("/api/admin/songs", { json: input });
-    expect(http.patch).toHaveBeenCalledWith("/api/admin/songs/2", { json: input });
-    expect(http.delete).toHaveBeenCalledWith("/api/admin/songs/2");
-    expect(http.patch).toHaveBeenCalledWith("/api/admin/songs/2/lyrics", {
-      json: { lyrics: [], youtubeId: input.youtubeId },
-    });
+    expect(http.patch).toHaveBeenCalledWith(
+      "/api/admin/songs/019a0170-0000-7000-8000-000000000002",
+      { json: input },
+    );
+    expect(http.delete).toHaveBeenCalledWith(
+      "/api/admin/songs/019a0170-0000-7000-8000-000000000002",
+    );
+    expect(http.patch).toHaveBeenCalledWith(
+      "/api/admin/songs/019a0170-0000-7000-8000-000000000002/lyrics",
+      {
+        json: { lyrics: [], youtubeId: input.youtubeId },
+      },
+    );
   });
 });

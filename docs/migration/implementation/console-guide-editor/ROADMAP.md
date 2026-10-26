@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-25"
-revision: 19
+updated_at: "2026-10-26"
+revision: 21
 ---
 
 # 구현 순서와 PR 단위
@@ -15,9 +15,9 @@ revision: 19
 P01~P06의 완료·검증은 [완료 지도](../COMPLETED-DESIGN-INDEX.md)와 각 RESULT에 둔다.
 이 문서는 기능별 범위·의존성·완료 조건을 소유한다. 현재 상태·별도 후속의 유일한 목록은 [WORK](../../../WORK.md)다.
 
-**현재 checkpoint(2026-10-25): P06 A~F 전체 완료·종료 / 다음 P07.**
-[P06 전체 결과](P06-RESULT.md)가 완료 근거와 별도 후속을 소유한다. G 계정 관리·추가 부하 실험은
-독립 후속이며 P07의 선행 조건이 아니다. P07~P10 구현은 아직 시작하지 않았다.
+**2026-10-26 결과 반영:** P07 구현·로컬 검증을 완료했다. 운영 적용은 별도이며 P08~P10은 미착수다.
+[P06 전체 결과](P06-RESULT.md)와 [P07 결과](P07-RESULT.md)가 각 완료 근거를 소유한다.
+G 계정 관리·추가 부하 실험은 독립 후속이며 P07의 선행 조건이 아니다. 현재·보류 상태는 WORK에서 관리한다.
 
 ## 1. 코드 의존성과 운영 순서
 
@@ -29,7 +29,7 @@ P01 앱 이동 → P02 Turbo/config/harness → P03 실제 공통 코드 추출
        └─ P06-G 계정 관리: 별도 후속 기능 / P07 선행 조건 아님
 
 Console 전환 뒤의 기능 작업선
-  ├─ P07 CheerGuide 세 종류 / 사용자 선택
+  ├─ P07 CONCERT/FESTIVAL · 공식/팬덤 · 데이터/조회
   └─ P08 Waveform Job / OCI Queue / VM runner / SSE
        → P09 JSON 파형·Cue timeline → P10 수동 Grid/Snap/Nudge/Loop
 ```
@@ -53,7 +53,7 @@ P09~P10도 기존 가사 JSON을 입력으로 사용한다. BPM/beatOffset은 So
 | P04 `feat(console): 운영 화면과 API 이관`                   | Console entry·기존 Admin UI/API/업로드 Action 이관. Web 경로 임시 유지.                                                                                                              | P03                                                   | 접근 제한 환경에서 두 경로의 기존 작업 완주. 독립 build, direct import 없음.                                                                                                          |
 | P05 `feat(auth): 콘솔에 간단한 TOTP 인증 적용`              | admin_mfa migration·Auth.js+otplib·등록 UI·limiter·Origin/CSRF·CLI reset·관리 guard. Auth/Domain 회수 규칙 반영.                                                                     | P04                                                   | password-only/비ADMIN/미등록/다른 앱 cookie 거절. replay·동시성·version 회수·제한된 재등록 검증.                                                                                      |
 | P06 `feat(deploy): 두 앱 배포와 기존 관리 경로 종료`        | 두 image·기존 CD/Compose/Caddy/env/health/rollback 보정, preview Web을 www로 전환. Web 관리 route/API/Action·회원가입 페이지/가입 API 및 기존 Web Worker·staging 경로 종료.          | P04/P05. Audio/Guide 불필요.                          | ARM64 빌드 전 B0 IAM 실증·실제 Web/Console metadata 차단 후 Console 공개. 데이터/파일 보존, 최종 두 hostname·전용 cookie·인가·pool·복구 smoke, www 관리·가입 API 직접 호출 실패.      |
-| P07 `feat(guide): 세 종류 응원법과 선택 화면 추가`          | 최소 CheerGuide migration·기존 가사 JSON/쓰기·수동 분류·조회·segmented/nuqs. Domain의 FAN 분리·초기 이력 적용 범위 반영.                                                             | 모델 P03, 관리 화면 P04의 공통 guard. 운영상 P06 후.  | 0/1/2~3개·우선순위·URL/재생 유지, 미분류/내용 보존, LRC/삭제 경로·동시 저장 충돌 검증.                                                                                                |
+| P07 `feat(guide): 두 공연 모드의 데이터와 조회 기반 추가`          | Guide/Snapshot/Publication·공식/팬덤·수동 이관·기존 writer 호환·공개 조회/선택. 새 관리자 편집은 후속.                                                             | 모델 P03, 관리 화면 P04의 공통 guard. 운영상 P06 후.  | 0/1/2개·URL/재생·출처·visibility·내용 보존. 이관/LRC/삭제·동시성·불변성·rollback 검증 후 reader 전환.                                                                                                |
 | P08 `feat(waveform): 큐 기반 일회성 파형 작업 추가`         | WaveformJob/결과 migration·active Job 재사용·202/status API·OCI Queue/DLQ·Runner Instance Principal/Unix socket·worker·내부 결과 API·EventEmitter/SSE. Domain source/lifecycle 반영. | P03/P04 및 관리 guard P05. 운영상 P06 후, P07 불필요. | 동시 생성/재전달·visibility 연장·저장 전 delete 금지·DLQ→FAILED·enqueue/DB 경계·IAM/socket/metadata 제한·SSE 재연결/알림 실패 검증. ARM64/비영속성 및 3개 anchor의 offset/drift 검증. |
 | P09 `feat(editor): 파형과 큐 타임라인 편집 제공`            | Peaks.js·YouTube adapter·overview/zoom/playhead·point drag·RHF draft/history.                                                                                                        | P04/P08, 기존 가사 JSON 사용 가능.                    | JSON만으로 표시·재생/seek 동기화·1회 Undo/취소·기존 캡처/LRC/강조 보존. 누적 drift 미해결이면 integration 완료로 처리하지 않음.                                                       |
 | P10 `feat(editor): 박자 격자와 이동 반복 도구 추가`         | Song의 BPM/beatOffset 편집 설정 JSON·Grid/Snap·Nudge/Fine Nudge·Cue/A-B Loop·focus/IME 단축키.                                                                                       | P09, P07 불필요.                                      | 120 BPM 수식·Snap ON/OFF·기존 Cue 불변·경계/Undo 검증, 같은 작업의 소요 시간·오차 확인.                                                                                               |
@@ -62,10 +62,15 @@ P09~P10도 기존 가사 JSON을 입력으로 사용한다. BPM/beatOffset은 So
 이 경우 이동→경로 보정→동작 검증 순서를 PR에 적는다. 실제 diff가 20파일/400줄 목표를 크게 넘으면
 해당 checkpoint 안에서 준비/계약/구현으로 나누며 빈 패키지나 범용 플랫폼 PR을 선생성하지 않는다.
 
+2026-10-26 사용자 지시로 세 종류 분류를 두 모드와 출처 속성으로 개정했다.
+P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조건)의 계약/persistence → 이관/기존 writer 호환 → 조회/선택 순서로 나눈다.
+새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
+
 ## 3. 검증과 전환 조건
 
 - P02 전에는 기존 type-check/harness/lint/FSD/unit/format과 필요한 build를 실행한다. 이후 root `pnpm verify`가 workspace별 검사·독립 앱 Steiger·repo 경계 harness·운영 테스트·format·두 앱 build를 실행한다.
 - schema 수정 → Drizzle migration 생성 → SQL 검토 → guarded local 적용 → 검증 순서를 지킨다. MFA replay·job 상태/멱등성·동시 저장은 local Docker PostgreSQL에서 확인하고 production 적용은 별도 실행 범위로 둔다.
+- P07의 새 reader는 기존 가사/LRC writer 호환과 이관 경합·stale 탭 거절·다른 모드 불변·실패 rollback·공개 중단 후 legacy 재노출 방지를 검증하기 전 활성화하지 않는다.
 - UI는 바뀐 selector·로그인·editor/SSE 연결 흐름을 Playwright로 확인한다. root config/harness 변경이 affected 검증에서 빠지거나 다른 workspace 정책을 섞지 않는지도 확인한다.
 - P08은 실제 OCI Queue staging에서 long poll·재전달·visibility 연장·DLQ·runner/VM 재시작·결과 commit 후 ack 실패를 확인한다. mock만으로 완료하지 않는다.
 - P08에서 연속 클릭·응답 유실 후 재요청·동시 POST가 동일 songId/videoId의 active Job 한 개를 재사용하고 새 message를 추가하지 않는지 검증한다. DB 원자성 수단은 구현 시 선택하고 terminal 이후 재생성은 허용한다.
@@ -99,5 +104,5 @@ Guide writer 전환 뒤 rollback은 새 guide를 읽는 호환 앱으로 제한�
 
 각 구현 PR은 `migration_main`을 대상으로 repository template과 한글 Conventional Commit → push → PR 절차를 따른다.
 OCI Development 배포는 별도 `migration_main → migration_develop` Promotion PR로 진행하며 active 배포 runbook §21을 따른다.
-후속 보류는 Revision 이력/승인, 공연별 다수 variant, DB role hardening, 닫힌 탭/서비스 전체 Web Push다.
+후속 보류는 새 관리자 편집·초안/공개 UI·복원, Contribution/Discussion·Revision 승인, 현황판·팬 숙지/참여 응답, 공연별 다수 variant, DB role hardening, 닫힌 탭/서비스 전체 Web Push다.
 자동 BPM/Alignment/GPU/ML, 자체 Queue/Notification framework는 로드맵에 넣지 않는다.

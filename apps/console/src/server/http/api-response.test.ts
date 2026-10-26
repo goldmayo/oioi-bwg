@@ -49,6 +49,10 @@ describe("toErrorResponse", () => {
     ["FORBIDDEN", 403],
     ["SONG_NOT_FOUND", 404],
     ["SONG_SLUG_ALREADY_EXISTS", 409],
+    ["CONTENT_HAS_CHEER_GUIDE", 409],
+    ["CHEER_GUIDE_CONFLICT", 409],
+    ["CHEER_GUIDE_CHANGE_RESTRICTED", 409],
+    ["CHEER_GUIDE_CONTENT_INVALID", 400],
   ] as const)("keeps handled %s out of error reporting", async (code, status) => {
     const response = toErrorResponse(new AppError(code));
     expect(response.status).toBe(status);

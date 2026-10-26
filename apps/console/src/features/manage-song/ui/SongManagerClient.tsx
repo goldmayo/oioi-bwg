@@ -45,7 +45,7 @@ export function SongManagerClient({
     const query = search.toLowerCase();
     return songs.filter(
       (song) =>
-        (albumFilter === "all" || song.albumId === Number(albumFilter)) &&
+        (albumFilter === "all" || song.albumId === albumFilter) &&
         (!query ||
           [song.title, song.slug ?? "", song.album.name].some((value) =>
             value.toLowerCase().includes(query),
@@ -59,7 +59,10 @@ export function SongManagerClient({
   const handleSubmit = useCallback(
     async (values: SongEditValues) => {
       if (editingSong) {
-        await updateMutation.mutateAsync({ id: editingSong.id, input: toAdminSongUpdate(values) });
+        await updateMutation.mutateAsync({
+          id: editingSong.id,
+          input: { ...toAdminSongUpdate(values), guideWrite: editingSong.guideWrite },
+        });
       } else await createMutation.mutateAsync({ ...values, lrcText: values.lrcText ?? "" });
       await invalidateSongs();
     },

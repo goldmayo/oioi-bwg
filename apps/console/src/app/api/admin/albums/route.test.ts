@@ -21,11 +21,11 @@ vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
 import { GET, POST } from "./route";
 
-const context = { ability: {}, user: { id: "1" } };
+const context = { ability: {}, user: { id: "019a0170-0000-7000-8000-000000000001" } };
 const album = {
   color: "#000000",
   createdAt: "2026-01-01T00:00:00.000Z",
-  id: 1,
+  id: "019a0170-0000-7000-8000-000000000001",
   imgUrl: "https://assets.oioibawige.com/images/albums/test.webp",
   isVisible: true,
   name: "Test Album",

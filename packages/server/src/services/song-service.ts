@@ -5,19 +5,23 @@ import {
   type CreateAdminSong,
   type LyricsData,
   lyricsDataSchema,
+  publishedCheerGuideSchema,
   type SaveAdminSongLyrics,
   type SongDetail,
   type UpdateAdminSong,
 } from "@oioi-bwg/contracts/song";
 
-import { type RequestContext, requireUser } from "../auth/request-context";
+import {
+  type AuthenticatedRequestContext,
+  type RequestContext,
+  requireUser,
+} from "../auth/request-context";
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
-import { SongSlugConflictError } from "../repositories/repository-error";
+import { SongSlugConflictError, CheerGuideReferenceError } from "../repositories/repository-error";
 import {
   findAdminSongBySlug,
   findSongBySlug,
-  findSongSlugById,
   findSongsWithAlbum,
   findVisibleSongs,
   insertSong,
@@ -25,6 +29,20 @@ import {
   updateSong,
   updateSongWithSlugPolicy,
 } from "../repositories/song-repository";
+
+import { lockSongForGuideWrite } from "../repositories/cheer-guide-repository";
+import {
+  currentPublishedGuides,
+  defaultGuideIsOfficial,
+  hasGuidePublication,
+} from "./cheer-guide-read";
+import { writeLegacyGuide } from "./cheer-guide-write-service";
+
+function guideVersion(row: { guideId?: string | null; guideLockVersion?: number | null }) {
+  return row.guideId && row.guideLockVersion
+    ? { guideWrite: { guideId: row.guideId, lockVersion: row.guideLockVersion } }
+    : {};
+}
 
 type PublicSongRow = NonNullable<Awaited<ReturnType<typeof findSongBySlug>>>;
 type PublicAlbumSongRow = PublicSongRow["album"]["songs"][number];
@@ -38,7 +56,7 @@ function mapRenderableAlbumSong(song: PublicAlbumSongRow) {
     title,
     slug,
     youtubeId,
-    hasOfficialCheer: song.hasOfficialCheer ?? false,
+    hasOfficialCheer: defaultGuideIsOfficial(song.cheerGuides, youtubeId, song.hasOfficialCheer),
     isTitle: song.isTitle,
   };
 }
@@ -53,6 +71,35 @@ function parseStoredLyrics(value: unknown): LyricsData {
   return parsed.data;
 }
 
+function mapPublicCheering(row: PublicSongRow, youtubeId: string) {
+  if (!hasGuidePublication(row.cheerGuides))
+    return {
+      lyrics: parseStoredLyrics(row.lyrics),
+      hasOfficialCheer: row.hasOfficialCheer ?? false,
+    };
+  const cheerGuides = currentPublishedGuides(row.cheerGuides, youtubeId).map(
+    ({ id, mode, snapshot }) => {
+      const parsed = publishedCheerGuideSchema.safeParse({
+        id,
+        mode,
+        lyrics: snapshot.lyrics,
+        sourceType: snapshot.sourceType,
+        sourceUrl: snapshot.sourceUrl,
+        guideVideoUrl: snapshot.guideVideoUrl,
+        description: snapshot.description,
+      });
+      if (!parsed.success)
+        throw new Error("Stored cheer guide contract violation", { cause: parsed.error });
+      return parsed.data;
+    },
+  );
+  return {
+    cheerGuides,
+    lyrics: cheerGuides[0]?.lyrics ?? [],
+    hasOfficialCheer: cheerGuides[0]?.sourceType === "OFFICIAL",
+  };
+}
+
 function mapSongDetail(row: PublicSongRow): SongDetail | undefined {
   const { album, title, slug, youtubeId } = row;
   if (!album.isVisible || !title || !slug || youtubeId === null) return undefined;
@@ -62,8 +109,7 @@ function mapSongDetail(row: PublicSongRow): SongDetail | undefined {
     title,
     slug,
     youtubeId,
-    lyrics: parseStoredLyrics(row.lyrics),
-    hasOfficialCheer: row.hasOfficialCheer ?? false,
+    ...mapPublicCheering(row, youtubeId),
     isTitle: row.isTitle,
     order: row.order ?? 0,
     album: {
@@ -99,7 +145,7 @@ export async function requireSongDetailBySlug(slug: string) {
   return song;
 }
 
-function requireAdmin(ctx: RequestContext) {
+function requireAdmin(ctx: RequestContext): asserts ctx is AuthenticatedRequestContext {
   requireUser(ctx);
   if (ctx.ability.cannot("manage", "all")) throw new AppError("FORBIDDEN");
 }
@@ -138,6 +184,7 @@ export async function getAdminSongEditorBySlug(ctx: RequestContext, slug: string
     title: row.title ?? "",
     youtubeId: row.youtubeId ?? "",
     lyrics: parseStoredLyrics(row.lyrics),
+    ...guideVersion(row),
   };
 }
 
@@ -155,7 +202,8 @@ export async function listAdminSongs(ctx: RequestContext): Promise<AdminSongList
   const rows = await findSongsWithAlbum(getDatabase());
 
   return {
-    items: rows.map((song) => ({
+    items: rows.map(({ guideId, guideLockVersion, ...song }) => ({
+      ...guideVersion({ guideId, guideLockVersion }),
       ...song,
       title: song.title ?? "",
       slug: song.slug,
@@ -192,9 +240,9 @@ export function createSong(ctx: RequestContext, input: CreateAdminSong) {
     });
 }
 
-export async function editSong(ctx: RequestContext, id: number, input: UpdateAdminSong) {
+export async function editSong(ctx: RequestContext, id: string, input: UpdateAdminSong) {
   requireAdmin(ctx);
-  const { lrcText, slug, ...fields } = input;
+  const { lrcText, slug, guideWrite, ...fields } = input;
   const row = {
     ...fields,
     ...(lrcText?.trim() ? { lyrics: parseSongLyrics(lrcText) } : {}),
@@ -202,13 +250,14 @@ export async function editSong(ctx: RequestContext, id: number, input: UpdateAdm
   };
 
   try {
-    const database = getDatabase();
-    const [updated] = await updateSongWithSlugPolicy(database, id, slug, row);
-    if (updated) return updated;
-
-    const existing = await findSongSlugById(database, id);
-    if (existing) throw new AppError("SONG_SLUG_IMMUTABLE");
-    throw new AppError("SONG_NOT_FOUND");
+    return await getDatabase().transaction(async (tx) => {
+      const existing = await lockSongForGuideWrite(tx, id);
+      if (!existing) throw new AppError("SONG_NOT_FOUND");
+      const next = await writeLegacyGuide(tx, existing, ctx.user.id, row, guideWrite);
+      const [updated] = await updateSongWithSlugPolicy(tx, id, slug, row);
+      if (!updated) throw new AppError("SONG_SLUG_IMMUTABLE");
+      return { ...updated, ...(next ? { guideWrite: next } : {}) };
+    });
   } catch (error) {
     if (error instanceof SongSlugConflictError) {
       throw new AppError("SONG_SLUG_ALREADY_EXISTS");
@@ -217,19 +266,26 @@ export async function editSong(ctx: RequestContext, id: number, input: UpdateAdm
   }
 }
 
-export async function saveSongLyrics(ctx: RequestContext, id: number, input: SaveAdminSongLyrics) {
+export async function saveSongLyrics(ctx: RequestContext, id: string, input: SaveAdminSongLyrics) {
   requireAdmin(ctx);
-  const [song] = await updateSong(getDatabase(), id, {
-    ...input,
-    updatedAt: new Date().toISOString(),
+  const { guideWrite, ...changes } = input;
+  return getDatabase().transaction(async (tx) => {
+    const existing = await lockSongForGuideWrite(tx, id);
+    if (!existing) throw new AppError("SONG_NOT_FOUND");
+    const next = await writeLegacyGuide(tx, existing, ctx.user.id, changes, guideWrite);
+    const [song] = await updateSong(tx, id, { ...changes, updatedAt: new Date().toISOString() });
+    if (!song) throw new AppError("SONG_NOT_FOUND");
+    return { ...song, ...(next ? { guideWrite: next } : {}) };
   });
-  if (!song) throw new AppError("SONG_NOT_FOUND");
-  return song;
 }
 
-export function deleteSong(ctx: RequestContext, id: number) {
+export async function deleteSong(ctx: RequestContext, id: string) {
   requireAdmin(ctx);
-  return removeSong(getDatabase(), id).then(([song]) => {
+  try {
+    const [song] = await removeSong(getDatabase(), id);
     if (!song) throw new AppError("SONG_NOT_FOUND");
-  });
+  } catch (error) {
+    if (error instanceof CheerGuideReferenceError) throw new AppError("CONTENT_HAS_CHEER_GUIDE");
+    throw error;
+  }
 }

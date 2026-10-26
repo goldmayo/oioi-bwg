@@ -2,13 +2,13 @@ import { adminSongListSchema } from "@oioi-bwg/contracts/song";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "../errors/app-error";
-import { SongSlugConflictError } from "../repositories/repository-error";
+import { SongSlugConflictError, CheerGuideReferenceError } from "../repositories/repository-error";
 
+const removeSong = vi.hoisted(() => vi.fn());
 const insertSong = vi.hoisted(() => vi.fn());
 const findVisibleSongs = vi.hoisted(() => vi.fn());
 const findAdminSongBySlug = vi.hoisted(() => vi.fn());
 const findSongBySlug = vi.hoisted(() => vi.fn());
-const findSongSlugById = vi.hoisted(() => vi.fn());
 const findSongsWithAlbum = vi.hoisted(() => vi.fn());
 const updateSong = vi.hoisted(() => vi.fn());
 const updateSongWithSlugPolicy = vi.hoisted(() => vi.fn());
@@ -19,21 +19,31 @@ vi.mock("../auth/request-context", () => ({
     if (!ctx.user) throw new AppError("UNAUTHENTICATED");
   },
 }));
-vi.mock("../db", () => ({ getDatabase: () => ({}) }));
+const lockSongForGuideWrite = vi.hoisted(() => vi.fn());
+const writeLegacyGuide = vi.hoisted(() => vi.fn());
+vi.mock("../db", () => ({
+  getDatabase: () => ({ transaction: (work: (tx: object) => unknown) => work({}) }),
+}));
+vi.mock("../repositories/cheer-guide-repository", () => ({ lockSongForGuideWrite }));
+vi.mock("./cheer-guide-write-service", () => ({ writeLegacyGuide }));
+beforeEach(() => {
+  lockSongForGuideWrite.mockResolvedValue({ id: "019a0170-0000-7000-8000-000000000002" });
+  writeLegacyGuide.mockResolvedValue(undefined);
+});
 vi.mock("../repositories/song-repository", () => ({
   findAdminSongBySlug,
   findSongBySlug,
-  findSongSlugById,
   findSongsWithAlbum,
   findVisibleSongs,
   insertSong,
-  removeSong: vi.fn(),
+  removeSong,
   updateSong,
   updateSongWithSlugPolicy,
 }));
 
 import {
   createSong,
+  deleteSong,
   editSong,
   getAdminSongEditorBySlug,
   getSongDetailBySlug,
@@ -43,11 +53,11 @@ import {
 } from "./song-service";
 
 const context = {
-  user: { id: "1" },
+  user: { id: "019a0170-0000-7000-8000-000000000001" },
   ability: { cannot: () => false },
 } as never;
 const input = {
-  albumId: 1,
+  albumId: "019a0170-0000-7000-8000-000000000001",
   title: "Test Song",
   slug: "test-song",
   youtubeId: "youtube-id",
@@ -66,7 +76,7 @@ describe("song-service admin list DTO", () => {
         ...input,
         album: { name: "Test Album" },
         hasOfficialCheer: null,
-        id: 2,
+        id: "019a0170-0000-7000-8000-000000000002",
         order: null,
         updatedAt: null,
       },
@@ -80,7 +90,7 @@ describe("song-service admin list DTO", () => {
           ...input,
           album: { name: "Test Album" },
           hasOfficialCheer: false,
-          id: 2,
+          id: "019a0170-0000-7000-8000-000000000002",
           order: 0,
           updatedAt: "",
         },
@@ -94,14 +104,14 @@ describe("song-service admin list DTO", () => {
       {
         ...input,
         album: { name: "Test Album" },
-        id: 2,
+        id: "019a0170-0000-7000-8000-000000000002",
         slug: null,
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
     ]);
 
     await expect(listAdminSongs(context)).resolves.toMatchObject({
-      items: [{ id: 2, slug: null }],
+      items: [{ id: "019a0170-0000-7000-8000-000000000002", slug: null }],
     });
   });
 });
@@ -110,10 +120,10 @@ describe("song-service LRC boundary", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("parses LRC before creating a song", async () => {
-    insertSong.mockResolvedValue([{ id: 2 }]);
+    insertSong.mockResolvedValue([{ id: "019a0170-0000-7000-8000-000000000002" }]);
 
     await expect(createSong(context, { ...input, lrcText: "[00:01.00]가사" })).resolves.toEqual({
-      id: 2,
+      id: "019a0170-0000-7000-8000-000000000002",
     });
     expect(insertSong).toHaveBeenCalledWith(
       expect.anything(),
@@ -137,13 +147,13 @@ describe("song-service LRC boundary", () => {
   });
 
   it("preserves lyrics when an edit has an empty LRC input", async () => {
-    updateSongWithSlugPolicy.mockResolvedValue([{ id: 2 }]);
+    updateSongWithSlugPolicy.mockResolvedValue([{ id: "019a0170-0000-7000-8000-000000000002" }]);
 
-    await editSong(context, 2, { ...input, lrcText: "" });
+    await editSong(context, "019a0170-0000-7000-8000-000000000002", { ...input, lrcText: "" });
 
     expect(updateSongWithSlugPolicy).toHaveBeenCalledWith(
       expect.anything(),
-      2,
+      "019a0170-0000-7000-8000-000000000002",
       input.slug,
       expect.not.objectContaining({ lyrics: expect.anything() }),
     );
@@ -153,7 +163,10 @@ describe("song-service LRC boundary", () => {
     updateSong.mockResolvedValue([]);
 
     await expect(
-      saveSongLyrics(context, 404, { lyrics: [], youtubeId: "youtube-id" }),
+      saveSongLyrics(context, "019a0170-0000-7000-8000-000000000194", {
+        lyrics: [],
+        youtubeId: "youtube-id",
+      }),
     ).rejects.toMatchObject({ code: "SONG_NOT_FOUND" });
   });
 });
@@ -168,9 +181,13 @@ describe("song-service slug policy", () => {
     await expect(
       createSong(context, { ...input, lrcText: "[00:01.00]가사" }),
     ).rejects.toMatchObject({ code: "SONG_SLUG_ALREADY_EXISTS" });
-    await expect(editSong(context, 2, { ...input, slug: null, lrcText: "" })).rejects.toMatchObject(
-      { code: "SONG_SLUG_ALREADY_EXISTS" },
-    );
+    await expect(
+      editSong(context, "019a0170-0000-7000-8000-000000000002", {
+        ...input,
+        slug: null,
+        lrcText: "",
+      }),
+    ).rejects.toMatchObject({ code: "SONG_SLUG_ALREADY_EXISTS" });
   });
 
   it("preserves an unrelated repository failure as an unexpected error", async () => {
@@ -186,26 +203,36 @@ describe("song-service slug policy", () => {
   });
 
   it("allows null retention, first assignment, and edits with the same slug", async () => {
-    updateSongWithSlugPolicy.mockResolvedValue([{ id: 2 }]);
+    updateSongWithSlugPolicy.mockResolvedValue([{ id: "019a0170-0000-7000-8000-000000000002" }]);
 
-    await expect(editSong(context, 2, { ...input, slug: null, lrcText: "" })).resolves.toEqual({
-      id: 2,
+    await expect(
+      editSong(context, "019a0170-0000-7000-8000-000000000002", {
+        ...input,
+        slug: null,
+        lrcText: "",
+      }),
+    ).resolves.toEqual({
+      id: "019a0170-0000-7000-8000-000000000002",
     });
     await expect(
-      editSong(context, 2, { ...input, slug: "first-slug", lrcText: "" }),
-    ).resolves.toEqual({ id: 2 });
+      editSong(context, "019a0170-0000-7000-8000-000000000002", {
+        ...input,
+        slug: "first-slug",
+        lrcText: "",
+      }),
+    ).resolves.toEqual({ id: "019a0170-0000-7000-8000-000000000002" });
 
     expect(updateSongWithSlugPolicy).toHaveBeenNthCalledWith(
       1,
       expect.anything(),
-      2,
+      "019a0170-0000-7000-8000-000000000002",
       null,
       expect.objectContaining({ albumId: input.albumId, title: input.title }),
     );
     expect(updateSongWithSlugPolicy).toHaveBeenNthCalledWith(
       2,
       expect.anything(),
-      2,
+      "019a0170-0000-7000-8000-000000000002",
       "first-slug",
       expect.objectContaining({ albumId: input.albumId, title: input.title }),
     );
@@ -213,23 +240,31 @@ describe("song-service slug policy", () => {
 
   it("distinguishes an immutable slug from a missing song", async () => {
     updateSongWithSlugPolicy.mockResolvedValue([]);
-    findSongSlugById
-      .mockResolvedValueOnce({ id: 2, slug: "original-slug" })
+    lockSongForGuideWrite
+      .mockResolvedValueOnce({ id: "019a0170-0000-7000-8000-000000000002", slug: "original-slug" })
       .mockResolvedValueOnce(undefined);
 
     await expect(
-      editSong(context, 2, { ...input, slug: "changed-slug", lrcText: "" }),
+      editSong(context, "019a0170-0000-7000-8000-000000000002", {
+        ...input,
+        slug: "changed-slug",
+        lrcText: "",
+      }),
     ).rejects.toMatchObject({ code: "SONG_SLUG_IMMUTABLE" });
     await expect(
-      editSong(context, 404, { ...input, slug: "missing-slug", lrcText: "" }),
+      editSong(context, "019a0170-0000-7000-8000-000000000194", {
+        ...input,
+        slug: "missing-slug",
+        lrcText: "",
+      }),
     ).rejects.toMatchObject({ code: "SONG_NOT_FOUND" });
   });
 });
 
 describe("song-service public DTO boundary", () => {
   const row = {
-    id: 2,
-    albumId: 1,
+    id: "019a0170-0000-7000-8000-000000000002",
+    albumId: "019a0170-0000-7000-8000-000000000001",
     title: "Test Song",
     slug: "test-song",
     youtubeId: "youtube-id",
@@ -241,7 +276,7 @@ describe("song-service public DTO boundary", () => {
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-02T00:00:00.000Z",
     album: {
-      id: 1,
+      id: "019a0170-0000-7000-8000-000000000001",
       name: "Test Album",
       slug: "test-album",
       imgUrl: "https://assets.oioibawige.com/test.webp",
@@ -251,8 +286,8 @@ describe("song-service public DTO boundary", () => {
       createdAt: "2026-01-01T00:00:00.000Z",
       songs: [
         {
-          id: 2,
-          albumId: 1,
+          id: "019a0170-0000-7000-8000-000000000002",
+          albumId: "019a0170-0000-7000-8000-000000000001",
           title: "Test Song",
           slug: "test-song",
           youtubeId: "youtube-id",
@@ -265,8 +300,8 @@ describe("song-service public DTO boundary", () => {
           updatedAt: null,
         },
         {
-          id: 3,
-          albumId: 1,
+          id: "019a0170-0000-7000-8000-000000000003",
+          albumId: "019a0170-0000-7000-8000-000000000001",
           title: "Hidden Song",
           slug: "hidden-song",
           youtubeId: "hidden-id",
@@ -288,7 +323,7 @@ describe("song-service public DTO boundary", () => {
     findSongBySlug.mockResolvedValue(row);
 
     await expect(getSongDetailBySlug("test-song")).resolves.toEqual({
-      id: 2,
+      id: "019a0170-0000-7000-8000-000000000002",
       title: "Test Song",
       slug: "test-song",
       youtubeId: "youtube-id",
@@ -303,7 +338,7 @@ describe("song-service public DTO boundary", () => {
       isTitle: true,
       order: 0,
       album: {
-        id: 1,
+        id: "019a0170-0000-7000-8000-000000000001",
         name: "Test Album",
         slug: "test-album",
         imgUrl: "https://assets.oioibawige.com/test.webp",
@@ -313,7 +348,7 @@ describe("song-service public DTO boundary", () => {
         createdAt: "2026-01-01T00:00:00.000Z",
         songs: [
           {
-            id: 2,
+            id: "019a0170-0000-7000-8000-000000000002",
             title: "Test Song",
             slug: "test-song",
             youtubeId: "youtube-id",
@@ -323,6 +358,33 @@ describe("song-service public DTO boundary", () => {
         ],
       },
     });
+  });
+
+  it("treats invalid stored guide metadata as an internal contract failure", async () => {
+    findSongBySlug.mockResolvedValue({
+      ...row,
+      cheerGuides: [
+        {
+          id: row.id,
+          mode: "CONCERT",
+          publications: [{ id: row.id }],
+          currentPublication: {
+            action: "PUBLISH",
+            snapshot: {
+              lyrics: row.lyrics,
+              referenceYoutubeId: row.youtubeId,
+              sourceType: "OFFICIAL",
+              sourceUrl: null,
+              guideVideoUrl: null,
+              description: null,
+            },
+          },
+        },
+      ],
+    });
+    await expect(getSongDetailBySlug("test-song")).rejects.toThrow(
+      "Stored cheer guide contract violation",
+    );
   });
 
   it("normalizes nullable lyrics and hides songs whose album is not public", async () => {
@@ -343,14 +405,14 @@ describe("song-service public DTO boundary", () => {
 
   it("validates the admin editor snapshot at the service boundary", async () => {
     findAdminSongBySlug.mockResolvedValue({
-      id: 2,
+      id: "019a0170-0000-7000-8000-000000000002",
       title: "Test Song",
       youtubeId: "youtube-id",
       lyrics: [{ startTime: 1, segments: [{ text: "가사" }] }],
     });
 
     await expect(getAdminSongEditorBySlug(context, "test-song")).resolves.toEqual({
-      id: 2,
+      id: "019a0170-0000-7000-8000-000000000002",
       title: "Test Song",
       youtubeId: "youtube-id",
       lyrics: [
@@ -366,7 +428,7 @@ describe("song-service public DTO boundary", () => {
 
 describe("song-service sitemap public visibility", () => {
   const visible = {
-    id: 7,
+    id: "019a0170-0000-7000-8000-000000000007",
     title: "Public song",
     slug: "public-song",
     youtubeId: "abcdefghijk",
@@ -392,5 +454,19 @@ describe("song-service sitemap public visibility", () => {
     await expect(listVisibleSongsForSitemap()).resolves.toEqual([
       { slug: visible.slug, updatedAt: null },
     ]);
+  });
+});
+
+it("Domain §8.0 maps referenced song deletion and preserves unexpected failures", async () => {
+  removeSong.mockRejectedValueOnce(new CheerGuideReferenceError());
+  await expect(deleteSong(context, "019a0170-0000-7000-8000-000000000001")).rejects.toMatchObject({
+    code: "CONTENT_HAS_CHEER_GUIDE",
+  });
+  const error = new Error("unexpected persistence failure");
+  removeSong.mockRejectedValueOnce(error);
+  await expect(deleteSong(context, "019a0170-0000-7000-8000-000000000001")).rejects.toBe(error);
+  removeSong.mockResolvedValueOnce([]);
+  await expect(deleteSong(context, "019a0170-0000-7000-8000-000000000001")).rejects.toMatchObject({
+    code: "SONG_NOT_FOUND",
   });
 });

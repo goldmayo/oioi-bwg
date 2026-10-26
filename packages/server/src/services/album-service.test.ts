@@ -2,9 +2,10 @@ import { adminAlbumListSchema } from "@oioi-bwg/contracts/album";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "../errors/app-error";
-import { AlbumSlugConflictError } from "../repositories/repository-error";
+import { AlbumSlugConflictError, CheerGuideReferenceError } from "../repositories/repository-error";
 
 const findAllAlbums = vi.hoisted(() => vi.fn());
+const removeAlbum = vi.hoisted(() => vi.fn());
 const insertAlbum = vi.hoisted(() => vi.fn());
 const updateAlbum = vi.hoisted(() => vi.fn());
 
@@ -20,14 +21,14 @@ vi.mock("../repositories/album-repository", () => ({
   findAllAlbums,
   findVisibleAlbumsWithSongs: vi.fn(),
   insertAlbum,
-  removeAlbum: vi.fn(),
+  removeAlbum,
   updateAlbum,
 }));
 
-import { createAlbum, editAlbum, listAdminAlbums } from "./album-service";
+import { createAlbum, deleteAlbum, editAlbum, listAdminAlbums } from "./album-service";
 
 const context = {
-  user: { id: "1" },
+  user: { id: "019a0170-0000-7000-8000-000000000001" },
   ability: { cannot: () => false },
 } as never;
 const input = {
@@ -46,7 +47,7 @@ describe("album-service admin list DTO", () => {
     const album = {
       ...input,
       createdAt: "2026-01-01T00:00:00.000Z",
-      id: 1,
+      id: "019a0170-0000-7000-8000-000000000001",
     };
     findAllAlbums.mockResolvedValue([album]);
 
@@ -69,7 +70,9 @@ describe("album-service unique conflicts", () => {
     await expect(createAlbum(context, input)).rejects.toMatchObject({
       code: "ALBUM_SLUG_ALREADY_EXISTS",
     });
-    await expect(editAlbum(context, 1, input)).rejects.toMatchObject({
+    await expect(
+      editAlbum(context, "019a0170-0000-7000-8000-000000000001", input),
+    ).rejects.toMatchObject({
       code: "ALBUM_SLUG_ALREADY_EXISTS",
     });
   });
@@ -81,5 +84,19 @@ describe("album-service unique conflicts", () => {
     const caught = await createAlbum(context, input).catch((cause: unknown) => cause);
 
     expect(caught).toBe(error);
+  });
+});
+
+it("Domain §8.0 maps referenced album deletion and preserves unexpected failures", async () => {
+  removeAlbum.mockRejectedValueOnce(new CheerGuideReferenceError());
+  await expect(deleteAlbum(context, "019a0170-0000-7000-8000-000000000001")).rejects.toMatchObject({
+    code: "CONTENT_HAS_CHEER_GUIDE",
+  });
+  const error = new Error("unexpected persistence failure");
+  removeAlbum.mockRejectedValueOnce(error);
+  await expect(deleteAlbum(context, "019a0170-0000-7000-8000-000000000001")).rejects.toBe(error);
+  removeAlbum.mockResolvedValueOnce([]);
+  await expect(deleteAlbum(context, "019a0170-0000-7000-8000-000000000001")).rejects.toMatchObject({
+    code: "ALBUM_NOT_FOUND",
   });
 });

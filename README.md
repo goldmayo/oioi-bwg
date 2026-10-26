@@ -142,11 +142,10 @@ docker compose -f compose.dev.yml exec next pnpm db:migrate
 
 브라우저에서 `http://localhost:3000`을 엽니다. 자세한 migration, reset, 운영 DB 안전 원칙은 [로컬 개발환경 문서](docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md)를 따릅니다.
 
-팀에서 전달받은 `.local/` PostgreSQL dump가 있으면 전체 개발 데이터를 명시적으로 복원합니다. 저장소는 임의의 seed 데이터를 제공하지 않습니다.
-
-```bash
-pnpm db:restore-local
-```
+팀에서 전달받은 `.local/` PostgreSQL dump는 명시적으로 복원하며 임의 seed를 제공하지 않습니다.
+정수 ID의 legacy dump는 [UUIDv7 복원 순서](docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#uuidv7-전환과-legacy-dump-복원)에 따라
+전환 직전 스키마 준비 → 복원 → 대응표 생성 → UUID migration 순서로 처리합니다.
+이미 데이터가 있는 로컬 DB는 초기화하지 말고 별도 격리 DB로 먼저 리허설합니다.
 
 ### 컨테이너 종료
 
@@ -201,5 +200,5 @@ pnpm start # Web standalone
 
 ---
 
-_Last Updated: 2026-10-26_
+_Last Updated: 2026-10-27_
 _Copyright © 2026 CheerRockCrab Team._

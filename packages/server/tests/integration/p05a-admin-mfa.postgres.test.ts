@@ -73,7 +73,9 @@ test("AUTH-009 enforces account PK/FK and RESTRICT to preserve the tombstone ref
     code: "23505",
     constraint_name: "admin_mfa_pkey",
   });
-  await expect(client`insert into admin_mfa (account_id) values (-1)`).rejects.toMatchObject({
+  await expect(
+    client`insert into admin_mfa (account_id) values ('019a0170-0000-7000-8000-ffffffffffff')`,
+  ).rejects.toMatchObject({
     code: "23503",
     constraint_name: "admin_mfa_account_id_fkey",
   });
