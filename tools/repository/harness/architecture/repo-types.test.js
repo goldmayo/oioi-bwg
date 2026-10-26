@@ -191,7 +191,7 @@ test("repository settings and tests have strict type owners without leaking Web 
   })
     .split("\0")
     .filter((file) => file.endsWith(".ts"));
-  assert.equal(serverTests.length, 3);
+  assert.equal(serverTests.length, 4);
   for (const filename of serverTests) {
     const absolute = path.join(root, filename);
     assert.ok(server.fileNames.includes(absolute), `${filename} needs the server type owner`);
