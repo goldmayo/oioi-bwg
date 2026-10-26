@@ -5,6 +5,7 @@ import {
   bigint,
   boolean,
   check,
+  date,
   foreignKey,
   index,
   inet,
@@ -455,3 +456,49 @@ export const cheerGuidePublicationRelations = relations(cheerGuidePublication, (
     references: [cheerGuideSnapshot.cheerGuideId, cheerGuideSnapshot.id],
   }),
 }));
+
+/** 공지·업데이트 게시 내용. 현재 공개 조회 전환만 제공한다. */
+export const servicePublication = pgTable(
+  "service_publication",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    kind: text().$type<"notice" | "update">().notNull(),
+    title: text().notNull(),
+    publishedOn: date("published_on", { mode: "string" }).notNull(),
+    isPublished: boolean("is_published").notNull().default(false),
+    category: text(),
+    releaseVersion: text("release_version"),
+    content: jsonb().$type<string | string[]>().notNull(),
+    lockVersion: integer("lock_version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check("service_publication_title_check", sql`length(btrim(${t.title})) between 1 and 200`),
+    check("service_publication_lock_version_check", sql`${t.lockVersion} > 0`),
+    check(
+      "service_publication_shape_check",
+      sql`case
+      when ${t.kind} = 'notice' then
+        ${t.category} is not null and length(btrim(${t.category})) between 1 and 40
+        and ${t.releaseVersion} is null and jsonb_typeof(${t.content}) = 'string'
+        and length(btrim(${t.content} #>> '{}')) between 1 and 20000
+      when ${t.kind} = 'update' then
+        ${t.category} is null and ${t.releaseVersion} is not null
+        and length(btrim(${t.releaseVersion})) between 1 and 40
+        and case when jsonb_typeof(${t.content}) = 'array' then
+          jsonb_array_length(${t.content}) between 1 and 100
+          and not jsonb_path_exists(${t.content}, 'strict $[*] ? (@.type() != "string")')
+        else false end
+      else false end`,
+    ),
+    uniqueIndex("service_publication_release_version_key")
+      .on(t.releaseVersion)
+      .where(sql`${t.kind} = 'update'`),
+    index("service_publication_list_idx").on(t.kind, t.isPublished, t.publishedOn, t.id),
+  ],
+);
