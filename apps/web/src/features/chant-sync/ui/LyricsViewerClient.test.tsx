@@ -89,10 +89,10 @@ it("모드·출처·URL을 바꾸면서 재생기와 현재 시각을 유지하�
   const player = screen.getByTestId("player");
   expect(screen.getByText("콘서트 응원")).toBeInTheDocument();
   expect(screen.getByText("팬덤", { exact: true })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("radio", { name: "페스티벌용" }));
+  fireEvent.click(screen.getByRole("radio", { name: "페스티벌" }));
   await screen.findByText("페스티벌 응원");
   expect(screen.getByText("공식", { exact: true })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "원본 보기" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "공식 응원법 원본 보기" })).toHaveAttribute(
     "href",
     guides[1].sourceUrl,
   );
@@ -103,6 +103,12 @@ it("모드·출처·URL을 바꾸면서 재생기와 현재 시각을 유지하�
   expect(life.created).toHaveBeenCalledOnce();
   expect(life.destroyed).not.toHaveBeenCalled();
   expect(life.seek).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "페스티벌 응원" }));
+  expect(life.seek).toHaveBeenCalledWith(1, true);
+  expect(screen.getByRole("button", { name: "페스티벌 응원" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
   fireEvent.click(screen.getByRole("button", { name: "링크 복사" }));
   await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
   const copied = new URL(writeText.mock.calls[0][0]);
@@ -137,7 +143,7 @@ it("복사가 실패하면 선택을 보존하고 재시도 안내를 표시한�
   await waitFor(() =>
     expect(life.error).toHaveBeenCalledWith("링크를 복사하지 못했어요. 다시 시도해 주세요."),
   );
-  expect(screen.getByRole("radio", { name: "페스티벌용" })).toBeChecked();
+  expect(screen.getByRole("radio", { name: "페스티벌" })).toBeChecked();
 });
 
 it("이관 전 곡은 기존 가사를 유지하고 출처를 임의 표시하지 않는다", () => {

@@ -1,0 +1,32 @@
+.viewer {
+  height: calc(100svh - 124px);
+}
+
+.lyrics {
+  --lyrics-bottom-space: 68px;
+  scrollbar-color: var(--muted-foreground) transparent;
+  scrollbar-width: thin;
+}
+
+@media (min-width: 48rem) {
+  .viewer {
+    height: calc(100svh - 72px);
+  }
+
+  .lyrics {
+    --lyrics-bottom-space: 0px;
+  }
+}
+
+@media (max-width: 47.999rem) and (max-height: 44rem) {
+  .viewer {
+    height: auto;
+    overflow: visible;
+  }
+
+  .lyrics {
+    flex: none;
+    height: 50svh;
+    min-height: 12rem;
+  }
+}
