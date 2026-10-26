@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { getSongDetailBySlug } from "@oioi-bwg/server/services/song-service";
 import { notFound } from "next/navigation";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { LyricsViewerClient } from "@/features/chant-sync";
 
@@ -29,7 +30,7 @@ export async function generateMetadata({ params }: SongPageProps) {
     title: `QWER ${song.title} 응원법`,
     path: `/songs/${encodeURIComponent(song.slug)}`,
     image: song.album.imgUrl || undefined,
-    description: `${song.album.name} 수록곡 '${song.title}'의 비공식 응원법 가이드입니다.`,
+    description: `${song.album.name} 수록곡 '${song.title}'의 응원법을 확인하고 함께 즐겨요.`,
   });
 }
 
@@ -52,16 +53,19 @@ export default async function SongDetailPage({ params }: SongPageProps) {
 
   return (
     <main className="bg-background flex flex-col">
-      <LyricsViewerClient
-        song={{
-          id: song.id,
-          title: song.title,
-          youtubeId: song.youtubeId,
-          lyrics: song.lyrics,
-          hasOfficialCheer: song.hasOfficialCheer,
-        }}
-        album={toAlbumViewModel(song.album)}
-      />
+      <NuqsAdapter>
+        <LyricsViewerClient
+          song={{
+            id: song.id,
+            title: song.title,
+            youtubeId: song.youtubeId,
+            lyrics: song.lyrics,
+            cheerGuides: song.cheerGuides,
+            hasOfficialCheer: song.hasOfficialCheer,
+          }}
+          album={toAlbumViewModel(song.album)}
+        />
+      </NuqsAdapter>
     </main>
   );
 }

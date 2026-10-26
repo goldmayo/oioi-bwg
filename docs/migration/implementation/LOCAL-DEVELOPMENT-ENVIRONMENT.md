@@ -109,6 +109,27 @@ schema와 dialect이며 이 명령으로 DB에 접속하거나 migration을 적�
 
 ## Local development workflow
 
+### Node.js 런타임
+
+호스트·개발 이미지·운영 이미지·CI는 `.nvmrc`의 Node.js 22.23.4를 기준으로 사용한다.
+이 파일은 Turbo 공통 입력이므로 Node 버전 변경 시 기존 검사·빌드 캐시를 재사용하지 않는다.
+2026-10-26 Node2Shell(CVE-2026-111497) 대응으로 기존 22.16.0에서 올렸다.
+[공식 보안 릴리스](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)의
+Brotli 디코더 수정은 npm 의존성 갱신만으로 적용되지 않는다.
+
+```bash
+nvm install
+nvm use
+corepack enable
+corepack prepare pnpm@10.15.1 --activate
+node --version
+```
+
+기존 Node 프로세스는 새 버전으로 다시 시작한다. 개발 컨테이너는
+`docker compose -f compose.dev.yml up -d --build --no-deps next`로 재생성하며 DB·volume은 보존한다.
+운영 두 이미지는 정상 Promotion에서 재빌드·검증·배포한다. 일반 CI와 Promotion의 컨테이너 검사는
+실제 Node 버전이 `.nvmrc`와 같은지 확인하고 Node·Brotli 버전을 출력한다.
+
 ### 환경 파일의 역할과 작성 순서
 
 각 앱의 `.env.example`은 **값이 전부 빈 템플릿**이다. 2026-10-24 사용자의 단일 파일 관리 요청에 따라
@@ -311,6 +332,37 @@ OIOI_UUID_REHEARSAL_DUMP=.local/oioibawige_20260829_030417.dump pnpm test:integr
 
 기본 dump는 Album 7·Song 26의 2026-08-29 snapshot이다. 현재 운영 9·26 또는 기존 개발 DB 8·26과
 동일하다고 가정하지 않는다. 일반 CI는 격리 fixture로 전환/거부/rollback을 검증하며 이 private dump를 요구하지 않는다.
+
+### P07 기존 응원법 수동 이관
+
+UUID 전환과 P07 schema 적용을 마친 로컬 Compose DB에서만 실행한다. 기존 ACTIVE ADMIN의
+UUID를 `--actor`에 지정한다. CLI는 공용 local DB guard를 통과한 URL만 사용하며 운영 입력은 지원하지 않는다.
+새 계정·임의 가사를 만들거나 공개 reader를 자동 전환하지 않는다. 로컬 migration operator가
+DB 권한으로 실행하는 도구이며 `--actor`로 Console 로그인·MFA 세션을 발급하지 않는다. 기존 Console
+저장 경로의 MFA 검증은 유지하며 운영 적용 도구로 사용하지 않는다.
+
+```bash
+pnpm db:import-guides plan .local/p07-guide-map.json --actor '<ADMIN UUID>' --env-file apps/console/.env.local
+# 대응표의 mode·sourceType·sourceUrl·안내 영상·설명을 직접 검토한 뒤 실행
+pnpm db:import-guides check .local/p07-guide-map.json --actor '<ADMIN UUID>' --env-file apps/console/.env.local
+pnpm db:import-guides apply .local/p07-guide-map.json --actor '<ADMIN UUID>' --env-file apps/console/.env.local
+```
+
+`plan`은 파일을 0600으로 새로 만들고 기존 파일을 덮어쓰지 않는다. 내용이 있는 가사와 기준 영상이
+있는 곡만 후보로 넣고 제외한 곡 ID를 별도로 기록한다. `mode`와 `sourceType`은 미분류 null로 시작한다.
+운영자가 `CONCERT / FESTIVAL`, `OFFICIAL / FANDOM`을 정하고 공식이면 원본 링크를 입력해야
+`check/apply`를 통과한다. title/slug는 검토용이며 이관으로 변경하지 않는다. 검토하지 않은 항목은
+이번 대응표에서 제외하고 추후 별도 검토한다. 기존 false/null flag를 팬덤으로 자동 추정하지 않는다.
+
+생성 UUID·sourceFingerprint·referenceYoutubeId는 고정한 원본 기준이다. 원본이 달라지면 기존 표를
+다시 검토하며 UUID나 fingerprint만 최신값으로 덮어 충돌을 우회하지 않는다. 승인된 JSON을 정규화해서
+다시 쓰지 않고 원본 그대로 복사한다. Song의 가사·기존 flag·slug·연결 관계는 보존한다.
+
+`check`는 이관 가능 여부만 검사한다. `apply`는 Song별 transaction으로 guide·snapshot·PUBLISH와
+포인터를 함께 만든다. 파일 전체가 하나의 transaction은 아니므로 처리한 곡별 결과를 보존하고,
+중간 실패 시 같은 대응표로 재확인한다. 같은 UUID·내용이 이미 이관됐으면 unchanged이며 이후 저장이나
+다른 대응표가 적용됐으면 중단한다. 같은 곡을 두 모드로 자동 복제하지 않는다. 원 작성자는 미상 null,
+공개 행위자는 실제 지정 ADMIN이다. 기존 편집기와 경합하면 둘 중 하나만 성공하고 다른 입력은 거절한다.
 
 ### 지정 Console 관리자 credential 재등록
 

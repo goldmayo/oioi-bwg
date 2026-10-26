@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
-import type { LyricLine } from "@oioi-bwg/contracts/song";
+import type { LyricLine, PublishedCheerGuide } from "@oioi-bwg/contracts/song";
 import { cva } from "class-variance-authority";
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
@@ -14,18 +14,18 @@ import type { Album } from "@/entities/album";
 
 import { analytics } from "@/shared/lib/analytics";
 import { cn } from "@/shared/lib/utils";
-// import { OfficialBadge } from "@/components/common/OfficialBadge";
 import { useAdWatcher } from "@/shared/model/useAdWatcher";
 import type { YouTubePlayerInstance } from "@/shared/model/youtube";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/shared/ui/accordion";
 import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
 
+import { usePublishedGuide } from "../model/use-published-guide";
+
+import { CheerGuideInfo } from "./CheerGuideInfo";
+
+import styles from "./lyrics-viewer.module.css";
+
 gsap.registerPlugin(ScrollToPlugin);
+const emptyLyrics: LyricLine[] = [];
 
 interface LyricsViewerClientProps {
   song: {
@@ -33,6 +33,7 @@ interface LyricsViewerClientProps {
     title: string;
     youtubeId: string;
     lyrics: LyricLine[];
+    cheerGuides?: PublishedCheerGuide[];
     hasOfficialCheer?: boolean;
   };
   album?: Album;
@@ -40,25 +41,37 @@ interface LyricsViewerClientProps {
 
 export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
   const [player, setPlayer] = useState<YouTubePlayerInstance | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(-1);
-  const [activeSegmentIndex, setActiveSegmentIndex] = useState(-1);
+  const { selectedGuide, setGuideId } = usePublishedGuide(song.cheerGuides);
+  const lyrics =
+    song.cheerGuides === undefined ? song.lyrics : (selectedGuide?.lyrics ?? emptyLyrics);
+  const [cursor, setCursor] = useState<{
+    lyrics: LyricLine[] | null;
+    line: number;
+    segment: number;
+  }>({ lyrics: null, line: -1, segment: -1 });
+  const currentIndex = cursor.lyrics === lyrics ? cursor.line : -1;
+  const activeSegmentIndex = cursor.lyrics === lyrics ? cursor.segment : -1;
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const lineRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // 광고 감시 훅 연동
   const isAdPlaying = useAdWatcher(player, song.youtubeId);
 
   const handleShare = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      toast("링크가 복사되었습니다.");
+      const url = new URL(window.location.href);
+      if (selectedGuide) url.searchParams.set("guide", selectedGuide.id);
+      else url.searchParams.delete("guide");
+      await navigator.clipboard.writeText(url.href);
+      toast("응원법 링크를 복사했어요.");
     } catch {
-      toast.error("링크 복사에 실패했습니다.");
+      toast.error("링크를 복사하지 못했어요. 다시 시도해 주세요.");
     }
   };
 
   const handleLyricClick = (line: LyricLine) => {
     player?.seekTo(line.startTime, true);
+    if (player && !isAdPlaying) updatePosition(lyrics, line.startTime);
     const fullText = line.segments.map((s) => s.text).join(" ");
     analytics.trackLyricClick(song.title, fullText, line.startTime);
   };
@@ -67,31 +80,32 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
    * 유튜브 재생 시간 업데이트 콜백
    * 라인 레벨 + isExtra 라인은 세그먼트 레벨까지 추적
    */
+  const updatePosition = (lines: LyricLine[], time: number) => {
+    const line = lines.findLastIndex((item) => item.startTime <= time);
+    const current = lines[line];
+    const segment = current?.isExtra
+      ? current.segments.findLastIndex(
+          (item) => current.startTime + (item.startTimeOffset ?? 0) <= time,
+        )
+      : -1;
+    setCursor((previous) =>
+      previous.lyrics === lines && previous.line === line && previous.segment === segment
+        ? previous
+        : { lyrics: lines, line, segment },
+    );
+  };
   const handleTimeUpdate = (time: number) => {
-    if (isAdPlaying) return;
-
-    const lineIndex = song.lyrics.findLastIndex((line) => line.startTime <= time);
-    if (lineIndex !== currentIndex) {
-      setCurrentIndex(lineIndex);
-      setActiveSegmentIndex(-1); // 라인 변경 시 세그먼트 초기화
-    }
-
-    if (lineIndex !== -1) {
-      const line = song.lyrics[lineIndex];
-      // isExtra 라인에서만 세그먼트 레벨 추적
-      if (line.isExtra) {
-        const segIndex = line.segments.findLastIndex(
-          (seg) => line.startTime + (seg.startTimeOffset ?? 0) <= time,
-        );
-        if (segIndex !== activeSegmentIndex) {
-          setActiveSegmentIndex(segIndex);
-        }
-      }
-    }
+    if (!isAdPlaying) updatePosition(lyrics, time);
+  };
+  const handleGuideChange = (id: string) => {
+    const next = song.cheerGuides?.find((guide) => guide.id === id);
+    if (!next) return;
+    if (!isAdPlaying) updatePosition(next.lyrics, player?.getCurrentTime() ?? 0);
+    void setGuideId(id);
   };
 
   /**
-   * 가사 스냅 스크롤 (상단에서 15% 지점에 정렬)
+   * 현재 줄을 가사 영역의 가운데에 맞춘다.
    */
   useGSAP(() => {
     if (currentIndex >= 0 && lineRefs.current[currentIndex] && scrollContainerRef.current) {
@@ -100,8 +114,15 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
 
       if (!target || !container) return;
 
-      const containerHeight = container.offsetHeight;
-      const topOffset = containerHeight * 0.15;
+      const bounds = container.getBoundingClientRect();
+      const bottomSpace =
+        parseFloat(getComputedStyle(container).getPropertyValue("--lyrics-bottom-space")) || 0;
+      const visibleTop = Math.max(bounds.top, 0);
+      const visibleBottom = Math.min(bounds.bottom, window.innerHeight - bottomSpace);
+      const topOffset = Math.max(
+        0,
+        visibleTop - bounds.top + (visibleBottom - visibleTop - target.offsetHeight) / 2,
+      );
 
       gsap.to(container, {
         scrollTo: {
@@ -109,18 +130,23 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
           offsetY: topOffset,
           autoKill: false,
         },
-        duration: 0.6,
+        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 0.45,
         ease: "power2.out",
       });
     }
-  }, [currentIndex]);
+  }, [currentIndex, lyrics]);
 
   /**
    * isExtra 세그먼트 활성화 시 Pop & Glow 애니메이션
    * className 셀렉터 방식으로 특정 세그먼트 span을 타겟황니다.
    */
   useGSAP(() => {
-    if (activeSegmentIndex < 0 || currentIndex < 0) return;
+    if (
+      activeSegmentIndex < 0 ||
+      currentIndex < 0 ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
     const selector = `.seg-${currentIndex}-${activeSegmentIndex}`;
     gsap.fromTo(
       selector,
@@ -133,89 +159,79 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
         ease: "power2.out",
       },
     );
-  }, [currentIndex, activeSegmentIndex]);
+  }, [currentIndex, activeSegmentIndex, lyrics]);
 
   return (
-    <div className="bg-background flex h-[calc(100vh-64px)] flex-col overflow-hidden md:flex-row">
-      {/* 고정 영역: 동영상 + 정보 헤더 */}
-      <div className="border-border relative z-20 w-full shrink-0 border-b bg-black shadow-2xl md:h-full md:w-[40%] md:border-r md:border-b-0">
-        <div className="flex h-full flex-col">
-          <div className="aspect-video w-full border-b">
-            <YouTubePlayer
-              videoId={song.youtubeId}
-              onTimeUpdate={handleTimeUpdate}
-              onPlayerReady={setPlayer}
-            />
-          </div>
-
-          {/* 곡 정보 아코디언 (Desktop & Mobile 통합) */}
-          <div className="bg-black px-6 py-2 md:p-8">
-            <Accordion type="single" collapsible className="border-none">
-              <AccordionItem value="song-info" className="border-none">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex flex-1 items-center gap-3 overflow-hidden">
-                      <h1 className="truncate text-xl font-black tracking-tight text-white md:text-2xl">
-                        {song.title}
-                      </h1>
-                      {/* {song.hasOfficialCheer && <OfficialBadge type="e" className="shrink-0" />} */}
-                    </div>
-                    {album && (
-                      <div className="flex items-center justify-between gap-1">
-                        <Link
-                          href={`/albums/${album.imageSlug}`}
-                          className="text-qwer-w inline-block text-sm font-bold transition-colors hover:underline"
-                        >
-                          {album.name}
-                        </Link>
-                        <button
-                          onClick={handleShare}
-                          className="text-white/60 transition-colors hover:text-white"
-                          aria-label="공유하기"
-                          title="공유하기"
-                        >
-                          <Link2 className="size-5 md:size-5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <AccordionTrigger className="py-2 text-white/50 hover:no-underline">
-                    <span className="sr-only">Toggle Info</span>
-                  </AccordionTrigger>
-                </div>
-
-                <AccordionContent className="pt-2 pb-4">
-                  <div className="space-y-4">
-                    {album?.name}
-                    {album?.officialLink && (
-                      <Link
-                        href={album.officialLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-qwer-w hover:underline"
-                      >
-                        {album.name}
-                      </Link>
-                    )}
-                    {/* 향후 여기에 작곡/작사 등 추가 정보 삽입 가능 */}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
+    <div
+      className={cn(
+        "dark bg-background text-foreground flex flex-col overflow-x-hidden overflow-y-auto md:flex-row md:overflow-hidden",
+        styles.viewer,
+      )}
+    >
+      <section
+        aria-label="영상과 곡 정보"
+        className="border-border w-full shrink-0 border-b md:h-full md:w-2/5 md:overflow-y-auto md:border-r md:border-b-0"
+      >
+        <div className="aspect-[4/3] max-h-[32svh] w-full bg-black md:aspect-[5/4] md:max-h-none">
+          <YouTubePlayer
+            key={song.youtubeId}
+            videoId={song.youtubeId}
+            posterUrl={album?.imgUrl}
+            onTimeUpdate={handleTimeUpdate}
+            onPlayerReady={setPlayer}
+            className="aspect-auto h-full border-0"
+          />
         </div>
-      </div>
+        <div className="px-6 pt-5 md:px-8 md:pt-7">
+          <div className="mb-5 flex items-end justify-between gap-4 md:mb-6">
+            <div className="min-w-0">
+              <p className="mb-2 text-sm leading-none md:text-base">QWER</p>
+              <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-balance break-keep md:text-4xl">
+                {song.title}
+              </h1>
+              {album && (
+                <Link
+                  href={`/albums/${album.imageSlug}`}
+                  className="focus-visible:outline-qwer-w mt-3 block text-base leading-relaxed break-keep whitespace-pre-line hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 md:text-base"
+                >
+                  {album.name.replace(":", ":\n")}
+                </Link>
+              )}
+            </div>
+            <button
+              onClick={handleShare}
+              className="text-foreground/80 hover:text-foreground focus-visible:outline-qwer-w inline-flex size-11 shrink-0 items-center justify-center rounded-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              aria-label="링크 복사"
+              title="링크 복사"
+            >
+              <Link2 className="size-5" />
+            </button>
+          </div>
+          {selectedGuide && (
+            <CheerGuideInfo
+              guides={song.cheerGuides ?? []}
+              selected={selectedGuide}
+              onSelect={handleGuideChange}
+            />
+          )}
+        </div>
+      </section>
 
       {/* 가사 스크롤 영역 */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-x-hidden overflow-y-auto px-6 md:px-10"
+        role="region"
+        aria-label="응원법 가사"
+        tabIndex={0}
+        className={cn(
+          "focus-visible:outline-qwer-w min-h-48 flex-1 overflow-x-hidden overflow-y-auto px-6 focus-visible:outline-2 focus-visible:outline-offset-[-2px] md:min-h-0 md:px-10",
+          styles.lyrics,
+        )}
       >
-        <div className="mx-auto max-w-3xl py-12 md:py-20">
+        <div className="mx-auto max-w-3xl pt-4 md:pt-[12vh]">
           {/* 가사 목록 */}
-          <div className="xs:space-y-6 space-y-5 text-center text-lg sm:space-y-7 sm:text-xl md:space-y-9 md:text-2xl">
-            {song.lyrics.map((line, index) => (
+          <div className="space-y-0.5 text-left text-xl leading-relaxed md:space-y-9 md:text-center md:text-3xl">
+            {lyrics.map((line, index) => (
               <LyricLineItem
                 key={index}
                 line={line}
@@ -228,6 +244,11 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
                 onClick={() => handleLyricClick(line)}
               />
             ))}
+            {lyrics.length === 0 && (
+              <p className="text-muted-foreground text-base leading-relaxed font-medium">
+                아직 공개된 응원법이 없어요.
+              </p>
+            )}
           </div>
 
           {/* [Bottom Spacer] 마지막 가사가 중앙에 올 수 있도록 공간 확보 */}
@@ -245,8 +266,8 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
 const lyricContainerVariants = cva("transition-colors", {
   variants: {
     variant: {
-      extra: "inline-flex flex-wrap gap-2 shadow-lg",
-      normal: "leading-tight font-bold tracking-tighter",
+      extra: "inline-flex flex-wrap gap-x-2 font-extrabold",
+      normal: "font-bold tracking-tight",
     },
     isActive: {
       true: "",
@@ -254,24 +275,23 @@ const lyricContainerVariants = cva("transition-colors", {
     },
   },
   compoundVariants: [
-    { variant: "normal", isActive: true, className: "text-foreground" },
-    { variant: "normal", isActive: false, className: "text-muted-foreground" },
+    { isActive: true, className: "text-qwer-w" },
+    { isActive: false, className: "text-foreground/65" },
   ],
 });
 
 const lyricSegmentVariants = cva("transition-colors", {
   variants: {
     variant: {
-      extra: "inline-block font-black italic duration-100 md:text-xl",
+      extra: "inline-block duration-100",
       normal: "wrap-break-word whitespace-pre-wrap",
     },
     colorState: {
       default: "",
-      extraTarget: "text-qwer-e",
-      extraUntarget: "text-qwer-e/60",
-      echo: "text-qwer-r decoration-qwer-r/40 underline underline-offset-8 md:underline-offset-12",
-      cheer:
-        "text-qwer-bwg decoration-qwer-bwg/40 underline underline-offset-8 md:underline-offset-12",
+      extraTarget: "underline underline-offset-4",
+      extraUntarget: "",
+      echo: "decoration-current/35 underline underline-offset-4",
+      cheer: "decoration-current/35 underline underline-offset-4",
     },
   },
 });
@@ -281,7 +301,7 @@ interface LyricLineItemProps {
   index: number;
   isActive: boolean;
   activeSeg: number;
-  onLineRef: (el: HTMLDivElement | null) => void;
+  onLineRef: (el: HTMLButtonElement | null) => void;
   onClick: () => void;
 }
 
@@ -294,14 +314,21 @@ function LyricLineItem({
   onClick,
 }: LyricLineItemProps) {
   const variantType = line.isExtra ? "extra" : "normal";
-  const wrapperClass = cn(
-    "group origin-center cursor-pointer transition-all duration-700 ease-out",
-    isActive ? "scale-105 opacity-100" : "blur-0 scale-100 opacity-50 hover:opacity-70",
-  );
-
   return (
-    <div ref={onLineRef} onClick={onClick} className={wrapperClass}>
-      <div className={lyricContainerVariants({ variant: variantType, isActive })}>
+    <button
+      ref={onLineRef}
+      type="button"
+      onClick={onClick}
+      aria-current={isActive ? "true" : undefined}
+      className="focus-visible:outline-qwer-w block min-h-9 w-full cursor-pointer rounded-sm py-0.5 text-left transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 md:py-1 md:text-center"
+    >
+      <span
+        className={cn(
+          "relative inline-block border-l-4 pl-3 text-balance break-keep transition-colors duration-200 md:pr-3",
+          isActive ? "border-qwer-w" : "border-transparent",
+          lyricContainerVariants({ variant: variantType, isActive }),
+        )}
+      >
         {line.segments.map((seg, sIdx) => {
           let colorState: "default" | "extraTarget" | "extraUntarget" | "echo" | "cheer" =
             "default";
@@ -324,7 +351,7 @@ function LyricLineItem({
             </span>
           );
         })}
-      </div>
-    </div>
+      </span>
+    </button>
   );
 }

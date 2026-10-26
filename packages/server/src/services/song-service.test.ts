@@ -2,13 +2,13 @@ import { adminSongListSchema } from "@oioi-bwg/contracts/song";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "../errors/app-error";
-import { SongSlugConflictError } from "../repositories/repository-error";
+import { SongSlugConflictError, CheerGuideReferenceError } from "../repositories/repository-error";
 
+const removeSong = vi.hoisted(() => vi.fn());
 const insertSong = vi.hoisted(() => vi.fn());
 const findVisibleSongs = vi.hoisted(() => vi.fn());
 const findAdminSongBySlug = vi.hoisted(() => vi.fn());
 const findSongBySlug = vi.hoisted(() => vi.fn());
-const findSongSlugById = vi.hoisted(() => vi.fn());
 const findSongsWithAlbum = vi.hoisted(() => vi.fn());
 const updateSong = vi.hoisted(() => vi.fn());
 const updateSongWithSlugPolicy = vi.hoisted(() => vi.fn());
@@ -19,21 +19,31 @@ vi.mock("../auth/request-context", () => ({
     if (!ctx.user) throw new AppError("UNAUTHENTICATED");
   },
 }));
-vi.mock("../db", () => ({ getDatabase: () => ({}) }));
+const lockSongForGuideWrite = vi.hoisted(() => vi.fn());
+const writeLegacyGuide = vi.hoisted(() => vi.fn());
+vi.mock("../db", () => ({
+  getDatabase: () => ({ transaction: (work: (tx: object) => unknown) => work({}) }),
+}));
+vi.mock("../repositories/cheer-guide-repository", () => ({ lockSongForGuideWrite }));
+vi.mock("./cheer-guide-write-service", () => ({ writeLegacyGuide }));
+beforeEach(() => {
+  lockSongForGuideWrite.mockResolvedValue({ id: "019a0170-0000-7000-8000-000000000002" });
+  writeLegacyGuide.mockResolvedValue(undefined);
+});
 vi.mock("../repositories/song-repository", () => ({
   findAdminSongBySlug,
   findSongBySlug,
-  findSongSlugById,
   findSongsWithAlbum,
   findVisibleSongs,
   insertSong,
-  removeSong: vi.fn(),
+  removeSong,
   updateSong,
   updateSongWithSlugPolicy,
 }));
 
 import {
   createSong,
+  deleteSong,
   editSong,
   getAdminSongEditorBySlug,
   getSongDetailBySlug,
@@ -230,7 +240,7 @@ describe("song-service slug policy", () => {
 
   it("distinguishes an immutable slug from a missing song", async () => {
     updateSongWithSlugPolicy.mockResolvedValue([]);
-    findSongSlugById
+    lockSongForGuideWrite
       .mockResolvedValueOnce({ id: "019a0170-0000-7000-8000-000000000002", slug: "original-slug" })
       .mockResolvedValueOnce(undefined);
 
@@ -350,6 +360,33 @@ describe("song-service public DTO boundary", () => {
     });
   });
 
+  it("treats invalid stored guide metadata as an internal contract failure", async () => {
+    findSongBySlug.mockResolvedValue({
+      ...row,
+      cheerGuides: [
+        {
+          id: row.id,
+          mode: "CONCERT",
+          publications: [{ id: row.id }],
+          currentPublication: {
+            action: "PUBLISH",
+            snapshot: {
+              lyrics: row.lyrics,
+              referenceYoutubeId: row.youtubeId,
+              sourceType: "OFFICIAL",
+              sourceUrl: null,
+              guideVideoUrl: null,
+              description: null,
+            },
+          },
+        },
+      ],
+    });
+    await expect(getSongDetailBySlug("test-song")).rejects.toThrow(
+      "Stored cheer guide contract violation",
+    );
+  });
+
   it("normalizes nullable lyrics and hides songs whose album is not public", async () => {
     findSongBySlug.mockResolvedValue({ ...row, lyrics: null });
     await expect(getSongDetailBySlug("test-song")).resolves.toMatchObject({ lyrics: [] });
@@ -417,5 +454,19 @@ describe("song-service sitemap public visibility", () => {
     await expect(listVisibleSongsForSitemap()).resolves.toEqual([
       { slug: visible.slug, updatedAt: null },
     ]);
+  });
+});
+
+it("Domain §8.0 maps referenced song deletion and preserves unexpected failures", async () => {
+  removeSong.mockRejectedValueOnce(new CheerGuideReferenceError());
+  await expect(deleteSong(context, "019a0170-0000-7000-8000-000000000001")).rejects.toMatchObject({
+    code: "CONTENT_HAS_CHEER_GUIDE",
+  });
+  const error = new Error("unexpected persistence failure");
+  removeSong.mockRejectedValueOnce(error);
+  await expect(deleteSong(context, "019a0170-0000-7000-8000-000000000001")).rejects.toBe(error);
+  removeSong.mockResolvedValueOnce([]);
+  await expect(deleteSong(context, "019a0170-0000-7000-8000-000000000001")).rejects.toMatchObject({
+    code: "SONG_NOT_FOUND",
   });
 });

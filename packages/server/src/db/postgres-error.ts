@@ -14,8 +14,11 @@ function readProperty(value: unknown, key: PropertyKey): unknown {
   }
 }
 
-/** 확인된 Drizzle direct cause의 known PostgreSQL unique violation만 판별한다. */
-export function isPostgresUniqueViolation(error: unknown, constraintName: string): boolean {
+function isPostgresConstraintViolation(
+  error: unknown,
+  code: string,
+  constraintName: string,
+): boolean {
   try {
     if (!(error instanceof DrizzleQueryError)) return false;
   } catch {
@@ -24,7 +27,17 @@ export function isPostgresUniqueViolation(error: unknown, constraintName: string
 
   const cause = readProperty(error, "cause");
   return (
-    readProperty(cause, "code") === "23505" &&
+    readProperty(cause, "code") === code &&
     readProperty(cause, "constraint_name") === constraintName
   );
+}
+
+/** 확인된 Drizzle direct cause의 known PostgreSQL unique violation만 판별한다. */
+export function isPostgresUniqueViolation(error: unknown, constraintName: string): boolean {
+  return isPostgresConstraintViolation(error, "23505", constraintName);
+}
+
+/** 알려진 FK 이름과 SQLSTATE가 모두 일치하는 경우에만 참조 충돌로 분류한다. */
+export function isPostgresForeignKeyViolation(error: unknown, constraintName: string): boolean {
+  return isPostgresConstraintViolation(error, "23503", constraintName);
 }

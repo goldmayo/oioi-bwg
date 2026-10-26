@@ -527,7 +527,14 @@ UUID 전환으로 지정한 관리자 한 명의 일회성 재등록은 [#264의
 
    ```json
    {
-     "args": ["mfa-reset", "--account-id", "019a0170-0000-7000-8000-000000000001", "--expected-version", "3", "--apply"],
+     "args": [
+       "mfa-reset",
+       "--account-id",
+       "019a0170-0000-7000-8000-000000000001",
+       "--expected-version",
+       "3",
+       "--apply"
+     ],
      "approvalReference": "P06-D/approved-change-id",
      "reason": "승인된 MFA 회수와 재등록 검증"
    }
