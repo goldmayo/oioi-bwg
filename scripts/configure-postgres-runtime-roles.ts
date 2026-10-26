@@ -7,6 +7,7 @@ const PRODUCTION_ACK = "I_UNDERSTAND_THIS_CHANGES_DATABASE_ROLES";
 const APPLICATION_TABLES = [
   "album",
   "song",
+  "service_publication",
   "cheer_guide",
   "cheer_guide_snapshot",
   "cheer_guide_publication",

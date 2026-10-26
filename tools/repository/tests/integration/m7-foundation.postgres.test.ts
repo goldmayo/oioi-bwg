@@ -416,6 +416,7 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
     const applicationObjects = [
       "album",
       "song",
+      "service_publication",
       "cheer_guide",
       "cheer_guide_snapshot",
       "cheer_guide_publication",
@@ -495,7 +496,7 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
     });
   });
 
-  test("applies tracked migrations 0000 through 0007 with exact hashes", async () => {
+  test("applies tracked migrations 0000 through 0008 with exact hashes", async () => {
     const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as {
       entries: { tag: string }[];
     };
@@ -512,6 +513,7 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
       "0005_p05a_admin_mfa",
       "0006_uuid_pk_cutover",
       "0007_p07_cheer_guide_foundation",
+      "0008_service_publications",
     ]);
     expect(rows.map(({ hash }) => hash)).toEqual(
       journal.entries.map(({ tag }) =>

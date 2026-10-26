@@ -7,7 +7,7 @@ import { cn } from "@/shared/lib/utils";
 
 interface NoticeAccordionProps {
   notice: {
-    id: number;
+    id: string;
     title: string;
     date: string;
     category: string;
