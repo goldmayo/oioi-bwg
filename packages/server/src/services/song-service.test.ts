@@ -2,8 +2,9 @@ import { adminSongListSchema } from "@oioi-bwg/contracts/song";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "../errors/app-error";
-import { SongSlugConflictError } from "../repositories/repository-error";
+import { SongSlugConflictError, CheerGuideReferenceError } from "../repositories/repository-error";
 
+const removeSong = vi.hoisted(() => vi.fn());
 const insertSong = vi.hoisted(() => vi.fn());
 const findVisibleSongs = vi.hoisted(() => vi.fn());
 const findAdminSongBySlug = vi.hoisted(() => vi.fn());
@@ -27,13 +28,14 @@ vi.mock("../repositories/song-repository", () => ({
   findSongsWithAlbum,
   findVisibleSongs,
   insertSong,
-  removeSong: vi.fn(),
+  removeSong,
   updateSong,
   updateSongWithSlugPolicy,
 }));
 
 import {
   createSong,
+  deleteSong,
   editSong,
   getAdminSongEditorBySlug,
   getSongDetailBySlug,
@@ -417,5 +419,19 @@ describe("song-service sitemap public visibility", () => {
     await expect(listVisibleSongsForSitemap()).resolves.toEqual([
       { slug: visible.slug, updatedAt: null },
     ]);
+  });
+});
+
+it("Domain §8.0 maps referenced song deletion and preserves unexpected failures", async () => {
+  removeSong.mockRejectedValueOnce(new CheerGuideReferenceError());
+  await expect(deleteSong(context, "019a0170-0000-7000-8000-000000000001")).rejects.toMatchObject({
+    code: "CONTENT_HAS_CHEER_GUIDE",
+  });
+  const error = new Error("unexpected persistence failure");
+  removeSong.mockRejectedValueOnce(error);
+  await expect(deleteSong(context, "019a0170-0000-7000-8000-000000000001")).rejects.toBe(error);
+  removeSong.mockResolvedValueOnce([]);
+  await expect(deleteSong(context, "019a0170-0000-7000-8000-000000000001")).rejects.toMatchObject({
+    code: "SONG_NOT_FOUND",
   });
 });

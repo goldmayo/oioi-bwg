@@ -12,6 +12,10 @@ import { reportServerError } from "@/server/observability/server-error-reporter"
 import { assertConsoleOrigin } from "./console-origin";
 
 const appErrorDefinitions = {
+  CONTENT_HAS_CHEER_GUIDE: {
+    message: "응원법 이력이 있는 곡과 앨범은 삭제할 수 없습니다. 숨김을 사용해 주세요.",
+    status: 409,
+  },
   ALBUM_NOT_FOUND: { message: "앨범을 찾을 수 없습니다.", status: 404 },
   ALBUM_SLUG_ALREADY_EXISTS: { message: "이미 사용 중인 앨범 slug입니다.", status: 409 },
   SONG_NOT_FOUND: { message: "곡을 찾을 수 없습니다.", status: 404 },

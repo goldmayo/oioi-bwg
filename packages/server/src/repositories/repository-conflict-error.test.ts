@@ -1,15 +1,16 @@
 import { DrizzleQueryError } from "drizzle-orm/errors";
 import { describe, expect, it, vi } from "vitest";
 
-import { insertAlbum, updateAlbum } from "./album-repository";
+import { insertAlbum, removeAlbum, updateAlbum } from "./album-repository";
 import { insertPasswordCredential, insertProfile } from "./auth-repository";
 import {
   AlbumSlugConflictError,
+  CheerGuideReferenceError,
   PasswordCredentialEmailConflictError,
   ProfileNicknameConflictError,
   SongSlugConflictError,
 } from "./repository-error";
-import { insertSong, updateSongWithSlugPolicy } from "./song-repository";
+import { insertSong, removeSong, updateSongWithSlugPolicy } from "./song-repository";
 
 function uniqueViolation(constraintName: string) {
   const cause = Object.assign(new Error("duplicate key"), {
@@ -152,3 +153,38 @@ describe("repository unique conflict translation", () => {
     await expect(insertAlbum(insertReturningExecutor(error), albumInput)).rejects.toBe(error);
   });
 });
+
+function deleteReturningExecutor(error: unknown) {
+  const returning = vi.fn().mockRejectedValue(error);
+  const where = vi.fn(() => ({ returning }));
+  return { delete: vi.fn(() => ({ where })) } as never;
+}
+
+it.each([removeSong, removeAlbum])(
+  "Domain §8.0 translates only the guide FK on deletion",
+  async (remove) => {
+    const constraint = "cheer_guide_song_id_fkey";
+    const known = new DrizzleQueryError(
+      "delete",
+      [],
+      Object.assign(new Error("referenced"), {
+        code: "23503",
+        constraint_name: constraint,
+      }),
+    );
+    await expect(remove(deleteReturningExecutor(known), songInput.albumId)).rejects.toBeInstanceOf(
+      CheerGuideReferenceError,
+    );
+    const unknown = new DrizzleQueryError(
+      "delete",
+      [],
+      Object.assign(new Error("other FK"), {
+        code: "23503",
+        constraint_name: "another_fkey",
+      }),
+    );
+    for (const error of [unknown, uniqueViolation(constraint), new Error("connection lost")]) {
+      await expect(remove(deleteReturningExecutor(error), songInput.albumId)).rejects.toBe(error);
+    }
+  },
+);
