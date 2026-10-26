@@ -3,7 +3,7 @@
 > 프로젝트: **어이어이 바위게**
 >
 > 문서 성격: Product Domain Specification / Development Contract / Test Oracle / Operations Policy  
-> 상태: **Baseline v1.0**  
+> 상태: **Baseline v1.1 — 2026-10-26 P07 데이터·조회 범위 개정**
 > 목적: 본 문서는 서비스의 도메인 용어, 정책, 권한, 상태 전이, 데이터 생명주기, 핵심 워크플로, ERD, 테스트 기준, 운영 규칙을 하나의 기준으로 고정한다.  
 > 우선순위: 구현 편의보다 **도메인 일관성, 이력 보존, 운영 가능성, 개인정보 최소화, 어뷰징 내성**을 우선한다.
 
@@ -15,8 +15,8 @@
 
 서비스의 핵심은 다음 네 가지다.
 
-1. **곡별 응원법을 FAN / FESTIVAL 모드로 분리해 제공한다.**
-2. **응원법 변경은 직접 편집이 아니라 제안 → 토론 → 검토 → Revision 승인 흐름으로 관리한다.**
+1. **곡별 응원법을 CONCERT / FESTIVAL 모드로 분리해 제공한다.**
+2. **P07은 데이터·공개 조회와 기존 저장 호환에 한정한다. 새 관리자 편집과 제안 → 토론 → 검토 → Revision 승인은 후속 계약이다.**
 3. **특정 사용자가 콘텐츠를 소유하지 않고, 서비스가 공동 콘텐츠를 관리하며 사용자는 Contributor로 기여한다.**
 4. **공연 일정과 응원법 모드를 연동해 지금 필요한 응원법을 사용자에게 우선 제시한다.**
 
@@ -29,7 +29,7 @@
 - 탈퇴 시 개인정보와 기여 이력은 어떻게 처리되는가?
 - 신고·제재·감사 로그는 어떤 생명주기를 가지는가?
 - Google/Kakao 연결은 계정 생성인가, 로그인 수단 추가인가?
-- FAN과 FESTIVAL 응원법은 언제 어떤 규칙으로 변경 가능한가?
+- CONCERT와 FESTIVAL 응원법은 언제 어떤 규칙으로 변경 가능한가?
 - 공연 일정이 있을 때 어떤 응원법을 기본 노출하는가?
 - Waveform 데이터가 없을 때 서비스는 어떻게 동작하는가?
 
@@ -119,13 +119,13 @@ Account 탈퇴
 
 ---
 
-## DP-006. FAN과 FESTIVAL은 독립된 CheerGuide다
+## DP-006. CONCERT와 FESTIVAL은 독립된 CheerGuide다
 
 하나의 Song은 최대 두 개의 Guide Mode를 가진다.
 
 ```text
 Song
-├─ CheerGuide(FAN)
+├─ CheerGuide(CONCERT)
 └─ CheerGuide(FESTIVAL)
 ```
 
@@ -168,7 +168,9 @@ credential/MFA 재등록을 다른 계정·콘텐츠의 초기화로 확대하�
 | Artist | 응원법 대상 아티스트 |
 | Song | 곡 |
 | CheerGuide | 특정 Song의 특정 Mode에 대한 응원법 aggregate |
-| GuideMode | FAN 또는 FESTIVAL |
+| GuideMode | CONCERT 또는 FESTIVAL. 공식 여부는 별도 출처 속성 |
+| CheerGuideSnapshot | P07 이관/호환 저장의 불변 내용과 기준 영상 |
+| CheerGuidePublication | P07의 대상 snapshot·공개/중단 조치·행위자 기록 |
 | Revision | CheerGuide의 변경 후보 또는 승인된 immutable snapshot |
 | Contribution | 사용자가 제안한 응원법 변경 단위 |
 | DiscussionThread | 특정 Revision의 하나의 독립 논점 |
@@ -258,7 +260,7 @@ USER 권한에 추가:
 REVIEWER 권한에 추가:
 - Revision APPROVE
 - Revision REJECT
-- 공식 FAN Guide 잠금/해제 정책 적용
+- 공식 CONCERT Guide 잠금/해제 정책 적용
 - Report 처리
 - Sanction 생성/해제
 - Account suspension
@@ -564,6 +566,26 @@ deletedAt 기록
 
 # 8. Artist / Song / CheerGuide
 
+## 8.0 P07 데이터와 공개 조회
+
+2026-10-26 사용자 지시로 이전 FAN 모드는 CONCERT로, 출처는 `OFFICIAL / FANDOM`으로 구분한다.
+사용자 표시는 **콘서트용 / 페스티벌용**, 출처 표시는 **공식 / 팬덤**이다. 팬덤은 팬들 사이에서 자연스럽게 생겨난 응원법을 뜻한다.
+[기존 계약](https://github.com/goldmayo/oioi-bwg/blob/bb3396b21ed2b5399aebb78e236764e56ee92e72/docs/migration/DOMAIN_SPECIFICATION.md#8-artist--song--cheerguide)의
+모드 용어와 초기 적용 범위를 개정한다. 구현/DB 적용 완료 선언은 아니다.
+
+- Song·mode별 Guide는 최대 하나다. 공식과 팬덤을 같은 mode의 병렬 판본으로 제공하지 않는다.
+- P07은 데이터·공개 조회/선택·수동 이관과 기존 writer의 최소 호환만 다룬다. 새 관리자 편집·초안 저장·공개/중단·복원 UI/API는 P07 이후다.
+- 기존 ADMIN/MFA 편집 경로는 유지한다. 이관된 Song의 기존 가사 저장은 명시적으로 연결한 guide 하나에만 같은 transaction으로 즉시 반영한다.
+- 이관/호환 저장의 내용 snapshot과 공개 조치는 불변이다. 버전 검사 실패는 전체 rollback하며 다른 관리자의 입력을 덮어쓰지 않는다.
+- 공개 조치가 PUBLISH인 내용만 Song/Album visibility를 적용해 제공한다. 공개 중단 뒤 과거 Song.lyrics를 다시 노출하지 않는다.
+- 공식은 원본 링크가 필수고 팬덤은 선택이다. 타이밍 기준 재생 영상과 선택적인 응원법 안내 영상은 구분한다.
+- 이력이 있는 guide 및 부모 콘텐츠의 물리 삭제는 제한하고 숨김을 사용한다. 작성/공개 주체는 소유자가 아니며 Account tombstone과 참조를 유지한다.
+
+P07 snapshot/publication은 §10의 상태를 가진 Revision과 구분한다. APPROVED로 임의 간주하지 않는다.
+§8.3의 OFFICIAL_LOCKED와 §9~13·관련 권한/토론/검토 테스트는 후속 기여 workflow의 계약으로 유지한다.
+초안/공개 분리 UX가 없는 기존 편집기의 즉시 반영을 초안 저장으로 표현하지 않는다. 일반 USER 쓰기와 REVIEWER 기능은 이번에 열지 않는다.
+출처의 세부 표시 원칙은 [서비스 철학](../PHILOSOPHY.md#2-콘텐츠-구분-가이드라인), 테이블·전환·동시성은 [설계 §5](implementation/console-guide-editor/DESIGN.md#5-cheerguide)가 소유한다.
+
 ## 8.1 Song
 
 Song은 응원법과 Waveform, 공연 컨텍스트의 기준 엔티티다.
@@ -587,7 +609,7 @@ slug 지정은 허용하지만, 한 번 지정한 non-null slug는 변경할 수
 ## 8.2 CheerGuide Mode
 
 ```text
-FAN
+CONCERT
 FESTIVAL
 ```
 
@@ -599,7 +621,7 @@ UNIQUE(songId, mode)
 
 ---
 
-## 8.3 FAN Mode
+## 8.3 CONCERT Mode
 
 대상:
 - 콘서트
@@ -613,7 +635,7 @@ UNIQUE(songId, mode)
 공식 응원법이 확인되면:
 
 ```text
-FAN Guide
+CONCERT Guide
 → OFFICIAL_LOCKED
 ```
 
@@ -971,9 +993,9 @@ ETC
 
 | PerformanceType | Default GuideMode |
 |---|---|
-| CONCERT | FAN |
-| MUSIC_SHOW | FAN |
-| AWARD_SHOW | FAN |
+| CONCERT | CONCERT |
+| MUSIC_SHOW | CONCERT |
+| AWARD_SHOW | CONCERT |
 | FESTIVAL | FESTIVAL |
 | UNIVERSITY_FESTIVAL | FESTIVAL |
 | ETC | ADMIN 선택 |
@@ -1200,7 +1222,7 @@ UI preset 예:
 - Sanction CREATE/REVOKE
 - Role 변경
 - Account 관리자 정지
-- FAN official lock 관련 조치
+- CONCERT official lock 관련 조치
 - Waveform source 관리 주요 행위
 
 ---
@@ -1376,7 +1398,7 @@ replyToCommentId는 동일 Thread 내부 Comment만 참조한다.
 신고 횟수만으로 자동 Sanction하지 않는다.
 
 ## INV-012
-FAN OFFICIAL_LOCKED 상태의 Guide는 일반 USER Contribution으로 변경할 수 없다.
+CONCERT OFFICIAL_LOCKED 상태의 Guide는 일반 USER Contribution으로 변경할 수 없다.
 
 ## INV-013
 Waveform이 없어도 CheerGuide 조회/편집 workflow는 정상 동작해야 한다.
@@ -1510,9 +1532,11 @@ Constraint:
 
 ## 23.7 cheer_guide
 
+아래 §23.7~23.12는 후속 기여·검토 모델이다. P07 스키마는 §8.0에서 연결한 설계를 따른다.
+
 - id PK
 - song_id FK
-- mode FAN | FESTIVAL
+- mode CONCERT | FESTIVAL
 - state
 - current_revision_id nullable
 - created_at
@@ -1842,7 +1866,7 @@ Contribution/Revision/Thread/Comment 유지
 - Approve already approved Revision
 - Concurrent Thread creation during approval
 - Carry-over fork duplicate creation
-- Official FAN Guide에 USER Contribution 시도
+- Official CONCERT Guide에 USER Contribution 시도
 
 ## DISCUSSION
 - Reply target belongs to different Thread
@@ -1901,7 +1925,7 @@ USER가 FESTIVAL Contribution 생성
 **Expected:** 성공
 
 ### REV-T002
-OFFICIAL_LOCKED FAN Guide에 USER 변경 제안  
+OFFICIAL_LOCKED CONCERT Guide에 USER 변경 제안
 **Expected:** 정책상 거부
 
 ### REV-T003
@@ -2021,7 +2045,7 @@ password_google_kakao_linked_user
 
 ```text
 song_a
-├─ FAN
+├─ CONCERT
 │  ├─ v1 APPROVED
 │  └─ OFFICIAL_LOCKED
 └─ FESTIVAL
@@ -2204,7 +2228,7 @@ MVP에서 명시적으로 하지 않는 것:
 
 - Role 권한 변경
 - Revision state 변경
-- FAN/FESTIVAL governance 변경
+- CONCERT/FESTIVAL governance 변경
 - Account deletion 정책 변경
 - OAuth linking 정책 변경
 - Report/Sanction 자동화 도입
@@ -2235,7 +2259,7 @@ ERD/Schema/API/Test 수정
 
 어이어이 바위게의 핵심 모델은 다음 한 문장으로 요약할 수 있다.
 
-> **서비스가 공동으로 관리하는 FAN/FESTIVAL 응원법을 사용자가 Contributor로 개선하고, Revision별 토론과 검토를 거쳐 ADMIN이 승인하며, 공연 컨텍스트에 따라 지금 필요한 응원법을 제공하는 시스템.**
+> **서비스가 공동으로 관리하는 CONCERT/FESTIVAL 응원법을 사용자가 Contributor로 개선하고, Revision별 토론과 검토를 거쳐 ADMIN이 승인하며, 공연 컨텍스트에 따라 지금 필요한 응원법을 제공하는 시스템.**
 
 핵심 데이터 흐름:
 
@@ -2244,7 +2268,7 @@ Artist
   ↓
 Song
   ↓
-CheerGuide(FAN/FESTIVAL)
+CheerGuide(CONCERT/FESTIVAL)
   ↓
 Contribution
   ↓

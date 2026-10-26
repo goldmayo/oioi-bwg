@@ -14,7 +14,10 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
+  uniqueIndex,
   uuid,
+  type PgTableExtraConfigValue,
 } from "drizzle-orm/pg-core";
 
 export const ACCOUNT_ROLES = ["USER", "REVIEWER", "ADMIN"] as const;
@@ -244,6 +247,145 @@ export const song = pgTable(
       name: "song_album_id_fkey",
     }).onDelete("cascade"),
     index("song_album_id_idx").on(table.albumId),
+  ],
+);
+
+export const cheerGuide = pgTable(
+  "cheer_guide",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    songId: uuid("song_id").notNull(),
+    mode: text().$type<"CONCERT" | "FESTIVAL">().notNull(),
+    legacyWriteTarget: boolean("legacy_write_target").default(false).notNull(),
+    currentPublicationId: uuid("current_publication_id"),
+    lockVersion: integer("lock_version").default(1).notNull(),
+    createdAt: timestamp("created_at", { precision: 3, withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { precision: 3, withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  // The explicit return type breaks the guide → publication → snapshot → guide type cycle.
+  (table): PgTableExtraConfigValue[] => [
+    foreignKey({
+      columns: [table.songId],
+      foreignColumns: [song.id],
+      name: "cheer_guide_song_id_fkey",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.id, table.currentPublicationId],
+      foreignColumns: [cheerGuidePublication.cheerGuideId, cheerGuidePublication.id],
+      name: "cheer_guide_id_current_publication_id_fkey",
+    }).onDelete("restrict"),
+    unique("cheer_guide_song_id_mode_key").on(table.songId, table.mode),
+    uniqueIndex("cheer_guide_song_id_legacy_write_target_key")
+      .on(table.songId)
+      .where(sql`${table.legacyWriteTarget}`),
+    check("cheer_guide_mode_check", sql`${table.mode} in ('CONCERT', 'FESTIVAL')`),
+    check("cheer_guide_lock_version_check", sql`${table.lockVersion} > 0`),
+  ],
+);
+
+export const cheerGuideSnapshot = pgTable(
+  "cheer_guide_snapshot",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    cheerGuideId: uuid("cheer_guide_id").notNull(),
+    versionNo: integer("version_no").notNull(),
+    lyrics: jsonb().notNull(),
+    referenceYoutubeId: text("reference_youtube_id").notNull(),
+    sourceType: text("source_type").$type<"OFFICIAL" | "FANDOM">().notNull(),
+    sourceUrl: text("source_url"),
+    guideVideoUrl: text("guide_video_url"),
+    description: text(),
+    createdByAccountId: uuid("created_by_account_id"),
+    changeSummary: text("change_summary").notNull(),
+    createdAt: timestamp("created_at", { precision: 3, withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.cheerGuideId],
+      foreignColumns: [cheerGuide.id],
+      name: "cheer_guide_snapshot_cheer_guide_id_fkey",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.createdByAccountId],
+      foreignColumns: [account.id],
+      name: "cheer_guide_snapshot_created_by_account_id_fkey",
+    }).onDelete("restrict"),
+    unique("cheer_guide_snapshot_cheer_guide_id_version_no_key").on(
+      table.cheerGuideId,
+      table.versionNo,
+    ),
+    unique("cheer_guide_snapshot_cheer_guide_id_id_key").on(table.cheerGuideId, table.id),
+    index("cheer_guide_snapshot_created_by_account_id_idx").on(table.createdByAccountId),
+    check("cheer_guide_snapshot_version_no_check", sql`${table.versionNo} > 0`),
+    check("cheer_guide_snapshot_lyrics_check", sql`jsonb_typeof(${table.lyrics}) = 'array'`),
+    check(
+      "cheer_guide_snapshot_reference_youtube_id_check",
+      sql`length(btrim(${table.referenceYoutubeId})) > 0`,
+    ),
+    check(
+      "cheer_guide_snapshot_source_type_check",
+      sql`${table.sourceType} in ('OFFICIAL', 'FANDOM')`,
+    ),
+    check(
+      "cheer_guide_snapshot_source_url_check",
+      sql`${table.sourceType} <> 'OFFICIAL' or (${table.sourceUrl} is not null and length(btrim(${table.sourceUrl})) > 0)`,
+    ),
+    check(
+      "cheer_guide_snapshot_change_summary_check",
+      sql`length(btrim(${table.changeSummary})) > 0`,
+    ),
+  ],
+);
+
+export const cheerGuidePublication = pgTable(
+  "cheer_guide_publication",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    cheerGuideId: uuid("cheer_guide_id").notNull(),
+    publicationNo: integer("publication_no").notNull(),
+    action: text().$type<"PUBLISH" | "UNPUBLISH">().notNull(),
+    snapshotId: uuid("snapshot_id").notNull(),
+    actorAccountId: uuid("actor_account_id").notNull(),
+    reason: text().notNull(),
+    createdAt: timestamp("created_at", { precision: 3, withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.cheerGuideId],
+      foreignColumns: [cheerGuide.id],
+      name: "cheer_guide_publication_cheer_guide_id_fkey",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.cheerGuideId, table.snapshotId],
+      foreignColumns: [cheerGuideSnapshot.cheerGuideId, cheerGuideSnapshot.id],
+      name: "cheer_guide_publication_cheer_guide_id_snapshot_id_fkey",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.actorAccountId],
+      foreignColumns: [account.id],
+      name: "cheer_guide_publication_actor_account_id_fkey",
+    }).onDelete("restrict"),
+    unique("cheer_guide_publication_cheer_guide_id_publication_no_key").on(
+      table.cheerGuideId,
+      table.publicationNo,
+    ),
+    unique("cheer_guide_publication_cheer_guide_id_id_key").on(table.cheerGuideId, table.id),
+    index("cheer_guide_publication_cheer_guide_id_snapshot_id_idx").on(
+      table.cheerGuideId,
+      table.snapshotId,
+    ),
+    index("cheer_guide_publication_actor_account_id_idx").on(table.actorAccountId),
+    check("cheer_guide_publication_publication_no_check", sql`${table.publicationNo} > 0`),
+    check("cheer_guide_publication_action_check", sql`${table.action} in ('PUBLISH', 'UNPUBLISH')`),
+    check("cheer_guide_publication_reason_check", sql`length(btrim(${table.reason})) > 0`),
   ],
 );
 
