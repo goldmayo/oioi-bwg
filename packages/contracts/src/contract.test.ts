@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { albumDetailSchema } from "./album";
 import { apiErrorResponseSchema } from "./error";
-import { songDetailSchema } from "./song";
+import { songDetailSchema, saveAdminSongLyricsSchema, adminSongMutationResultSchema } from "./song";
 
 const album = {
   id: "019a0170-0000-7000-8000-000000000001",
@@ -49,4 +49,23 @@ describe("public API contracts", () => {
   it("rejects malformed error payloads", () => {
     expect(apiErrorResponseSchema.safeParse({ code: "SONG_NOT_FOUND" }).success).toBe(false);
   });
+});
+
+it("keeps the guide version through save requests/responses and rejects invalid bindings", () => {
+  const guideWrite = { guideId: album.id, lockVersion: 2 };
+  const request = { lyrics: [], youtubeId: "video", guideWrite };
+  expect(saveAdminSongLyricsSchema.parse(request)).toEqual(request);
+  expect(adminSongMutationResultSchema.parse({ id: album.id, guideWrite })).toEqual({
+    id: album.id,
+    guideWrite,
+  });
+  for (const invalid of [
+    { ...guideWrite, lockVersion: 0 },
+    { ...guideWrite, lockVersion: 1.5 },
+    { ...guideWrite, guideId: "123" },
+  ]) {
+    expect(saveAdminSongLyricsSchema.safeParse({ ...request, guideWrite: invalid }).success).toBe(
+      false,
+    );
+  }
 });

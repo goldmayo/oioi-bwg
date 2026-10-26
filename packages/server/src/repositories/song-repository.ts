@@ -4,7 +4,7 @@ import { and, asc, eq, isNull, or } from "drizzle-orm";
 
 import type { DbExecutor } from "../db";
 import { isPostgresForeignKeyViolation, isPostgresUniqueViolation } from "../db/postgres-error";
-import { album, type InsertSongRow, song } from "../db/schema";
+import { album, cheerGuide, type InsertSongRow, song } from "../db/schema";
 
 import { SongSlugConflictError, CheerGuideReferenceError } from "./repository-error";
 
@@ -24,16 +24,24 @@ export function findSongBySlug(executor: DbExecutor, slug: string) {
   });
 }
 
-export function findAdminSongBySlug(executor: DbExecutor, slug: string) {
-  return executor.query.song.findFirst({
-    where: (table, { eq: equals }) => equals(table.slug, slug),
-    columns: {
-      id: true,
-      title: true,
-      youtubeId: true,
-      lyrics: true,
-    },
-  });
+export async function findAdminSongBySlug(executor: DbExecutor, slug: string) {
+  const [row] = await executor
+    .select({
+      id: song.id,
+      title: song.title,
+      youtubeId: song.youtubeId,
+      lyrics: song.lyrics,
+      guideId: cheerGuide.id,
+      guideLockVersion: cheerGuide.lockVersion,
+    })
+    .from(song)
+    .leftJoin(
+      cheerGuide,
+      and(eq(cheerGuide.songId, song.id), eq(cheerGuide.legacyWriteTarget, true)),
+    )
+    .where(eq(song.slug, slug))
+    .limit(1);
+  return row;
 }
 
 export function findSongSlugById(executor: DbExecutor, id: string) {
@@ -77,9 +85,15 @@ export function findSongsWithAlbum(executor: DbExecutor) {
       isTitle: song.isTitle,
       isVisible: song.isVisible,
       album: { name: album.name },
+      guideId: cheerGuide.id,
+      guideLockVersion: cheerGuide.lockVersion,
     })
     .from(song)
     .innerJoin(album, eq(album.id, song.albumId))
+    .leftJoin(
+      cheerGuide,
+      and(eq(cheerGuide.songId, song.id), eq(cheerGuide.legacyWriteTarget, true)),
+    )
     .orderBy(asc(album.releaseDate), asc(album.slug), asc(song.order), asc(song.slug));
 }
 

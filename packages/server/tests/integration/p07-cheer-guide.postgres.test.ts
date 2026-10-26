@@ -1,3 +1,4 @@
+import type { SaveAdminSongLyrics } from "@oioi-bwg/contracts/song";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -6,7 +7,13 @@ import { afterAll, beforeAll, expect, test, vi } from "vitest";
 import * as schema from "@oioi-bwg/server/db/schema";
 import { buildAbility } from "@oioi-bwg/server/auth/ability";
 import { deleteAlbum } from "@oioi-bwg/server/services/album-service";
-import { deleteSong } from "@oioi-bwg/server/services/song-service";
+import {
+  deleteSong,
+  editSong,
+  getAdminSongEditorBySlug,
+  saveSongLyrics,
+} from "@oioi-bwg/server/services/song-service";
+import { createEntityId } from "@oioi-bwg/server/db/entity-id";
 
 vi.mock("@oioi-bwg/server/db", () => ({ getDatabase: () => database }));
 
@@ -340,4 +347,213 @@ test("Domain §8.0 reports referenced Song/Album deletion as expected conflicts 
   expect(
     await database.select().from(schema.album).where(eq(schema.album.id, albumId)),
   ).toHaveLength(1);
+});
+
+async function writerFixture() {
+  const id = createEntityId();
+  const [song] = await database
+    .insert(schema.song)
+    .values({
+      id,
+      albumId,
+      title: "저장 검증",
+      slug: `writer-${id}`,
+      youtubeId: "timing-video",
+      lyrics,
+      hasOfficialCheer: true,
+    })
+    .returning();
+  const [guide] = await database
+    .insert(schema.cheerGuide)
+    .values({
+      songId: id,
+      mode: "CONCERT",
+      legacyWriteTarget: true,
+    })
+    .returning();
+  const [snapshot] = await database
+    .insert(schema.cheerGuideSnapshot)
+    .values({
+      ...snapshotInput(),
+      cheerGuideId: guide!.id,
+      sourceType: "OFFICIAL",
+      sourceUrl: "https://example.invalid/official",
+      guideVideoUrl: "https://youtu.be/guide",
+    })
+    .returning();
+  const [publication] = await database
+    .insert(schema.cheerGuidePublication)
+    .values({
+      ...publicationInput(),
+      cheerGuideId: guide!.id,
+      snapshotId: snapshot!.id,
+    })
+    .returning();
+  await database
+    .update(schema.cheerGuide)
+    .set({ currentPublicationId: publication!.id })
+    .where(eq(schema.cheerGuide.id, guide!.id));
+  return {
+    song: song!,
+    snapshot: snapshot!,
+    guideId: guide!.id,
+    guideWrite: { guideId: guide!.id, lockVersion: 1 },
+    context: { user: { id: accountId }, ability: buildAbility({ accountId, role: "ADMIN" }) },
+  };
+}
+async function writerState(fixture: Awaited<ReturnType<typeof writerFixture>>) {
+  return Promise.all([
+    database.select().from(schema.song).where(eq(schema.song.id, fixture.song.id)),
+    database.select().from(schema.cheerGuide).where(eq(schema.cheerGuide.id, fixture.guideId)),
+    database
+      .select()
+      .from(schema.cheerGuideSnapshot)
+      .where(eq(schema.cheerGuideSnapshot.cheerGuideId, fixture.guideId)),
+    database
+      .select()
+      .from(schema.cheerGuidePublication)
+      .where(eq(schema.cheerGuidePublication.cheerGuideId, fixture.guideId)),
+  ]);
+}
+
+test("Domain §8.0 saves exactly one concurrent writer, preserves source and returns the next version", async () => {
+  const f = await writerFixture();
+  const [otherMode] = await database
+    .insert(schema.cheerGuide)
+    .values({ songId: f.song.id, mode: "FESTIVAL" })
+    .returning();
+  const editor = await getAdminSongEditorBySlug(f.context, f.song.slug!);
+  expect(editor).toMatchObject({ lyrics, guideWrite: f.guideWrite });
+  const changed = [{ ...lyrics[0]!, startTime: 71.825 }];
+  const outcomes = await Promise.allSettled(
+    [1, 2].map(() =>
+      saveSongLyrics(f.context, f.song.id, {
+        lyrics: changed,
+        youtubeId: f.song.youtubeId!,
+        guideWrite: f.guideWrite,
+      }),
+    ),
+  );
+  expect(outcomes.filter(({ status }) => status === "fulfilled")).toEqual([
+    {
+      status: "fulfilled",
+      value: { id: f.song.id, guideWrite: { guideId: f.guideId, lockVersion: 2 } },
+    },
+  ]);
+  expect(outcomes.find(({ status }) => status === "rejected")).toMatchObject({
+    reason: { code: "CHEER_GUIDE_CONFLICT" },
+  });
+  const [[shadow], [guide], snapshots, publications] = await writerState(f);
+  expect(shadow!.lyrics).toEqual(changed);
+  expect(guide!.lockVersion).toBe(2);
+  expect(snapshots).toHaveLength(2);
+  expect(snapshots.find(({ versionNo }) => versionNo === 2)).toMatchObject({
+    lyrics: changed,
+    sourceType: "OFFICIAL",
+    sourceUrl: f.snapshot.sourceUrl,
+    guideVideoUrl: f.snapshot.guideVideoUrl,
+    createdByAccountId: accountId,
+  });
+  expect(
+    await database.select().from(schema.cheerGuide).where(eq(schema.cheerGuide.id, otherMode!.id)),
+  ).toEqual([otherMode]);
+  expect(publications).toHaveLength(2);
+  expect(publications.find(({ id }) => id === guide!.currentPublicationId)).toMatchObject({
+    publicationNo: 2,
+    action: "PUBLISH",
+    actorAccountId: accountId,
+  });
+});
+
+test("Domain §8.0 rejects old tabs, wrong guide, empty content and source/video edits without changes", async () => {
+  const f = await writerFixture();
+  const before = await writerState(f);
+  const cases: [Partial<SaveAdminSongLyrics>, string][] = [
+    [{ guideWrite: undefined }, "CHEER_GUIDE_CONFLICT"],
+    [{ guideWrite: { guideId: festivalId, lockVersion: 1 } }, "CHEER_GUIDE_CONFLICT"],
+    [{ lyrics: [] }, "CHEER_GUIDE_CONTENT_INVALID"],
+    [{ youtubeId: "another-video" }, "CHEER_GUIDE_CHANGE_RESTRICTED"],
+  ];
+  for (const [patch, code] of cases) {
+    await expect(
+      saveSongLyrics(f.context, f.song.id, {
+        lyrics,
+        youtubeId: f.song.youtubeId!,
+        guideWrite: f.guideWrite,
+        ...patch,
+      }),
+    ).rejects.toMatchObject({ code });
+    expect(await writerState(f)).toEqual(before);
+  }
+  await expect(
+    editSong(f.context, f.song.id, {
+      albumId,
+      title: "수정",
+      slug: f.song.slug,
+      youtubeId: f.song.youtubeId!,
+      hasOfficialCheer: false,
+      isTitle: false,
+      isVisible: true,
+      order: 0,
+    }),
+  ).rejects.toMatchObject({ code: "CHEER_GUIDE_CHANGE_RESTRICTED" });
+  expect(await writerState(f)).toEqual(before);
+});
+
+test("Domain §8.0 rolls back LRC history, CAS and shadow when the later slug write fails", async () => {
+  const f = await writerFixture();
+  const before = await writerState(f);
+  const input = {
+    albumId,
+    title: "수정",
+    slug: "changed-immutable-slug",
+    youtubeId: f.song.youtubeId!,
+    hasOfficialCheer: true,
+    isTitle: false,
+    isVisible: true,
+    order: 0,
+    lrcText: "[00:02.12]떼창",
+    guideWrite: f.guideWrite,
+  };
+  await expect(editSong(f.context, f.song.id, input)).rejects.toMatchObject({
+    code: "SONG_SLUG_IMMUTABLE",
+  });
+  expect(await writerState(f)).toEqual(before);
+  await editSong(f.context, f.song.id, { ...input, slug: f.song.slug });
+  const [[shadow], , snapshots] = await writerState(f);
+  expect(shadow!.lyrics).toEqual([
+    {
+      startTime: 2.12,
+      isExtra: false,
+      segments: [{ text: "떼창", isCheer: false, isEcho: false }],
+    },
+  ]);
+  expect(snapshots.find(({ versionNo }) => versionNo === 2)!.lyrics).toEqual(shadow!.lyrics);
+});
+
+test("Domain §8.0 cannot implicitly republish an unpublished guide", async () => {
+  const f = await writerFixture();
+  const [publication] = await database
+    .insert(schema.cheerGuidePublication)
+    .values({
+      ...publicationInput(),
+      cheerGuideId: f.guideId,
+      snapshotId: f.snapshot.id,
+      publicationNo: 2,
+      action: "UNPUBLISH",
+    })
+    .returning();
+  await database
+    .update(schema.cheerGuide)
+    .set({ currentPublicationId: publication!.id, lockVersion: 2 })
+    .where(eq(schema.cheerGuide.id, f.guideId));
+  const before = await writerState(f);
+  await expect(
+    saveSongLyrics(f.context, f.song.id, {
+      lyrics,
+      youtubeId: f.song.youtubeId!,
+      guideWrite: { guideId: f.guideId, lockVersion: 2 },
+    }),
+  ).rejects.toMatchObject({ code: "CHEER_GUIDE_CHANGE_RESTRICTED" });
+  expect(await writerState(f)).toEqual(before);
 });

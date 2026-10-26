@@ -54,6 +54,19 @@ describe("toErrorResponse", () => {
     expect(mockedReportServerError).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["CHEER_GUIDE_CONFLICT", 409],
+    ["CHEER_GUIDE_CHANGE_RESTRICTED", 409],
+    ["CHEER_GUIDE_CONTENT_INVALID", 400],
+  ] as const)("handles %s without exposing internal details", async (code, status) => {
+    const response = toErrorResponse(new AppError(code, { sql: "private" }));
+    expect(response.status).toBe(status);
+    const body = apiErrorResponseSchema.parse(await response.json());
+    expect(body.code).toBe(code);
+    expect(body).not.toHaveProperty("details");
+    expect(mockedReportServerError).not.toHaveBeenCalled();
+  });
+
   it("treats malformed JSON as a request validation failure", async () => {
     const request = new Request("https://example.test/api", {
       body: "{broken",
