@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { constructMetadata } from "@/shared/lib/metadata";
 
-import { PolicyPageFrame } from "./_ui/policy-page-frame";
+import { MoreDocumentFrame } from "../_ui/more-document-frame";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export const metadata = constructMetadata({
 export default async function PoliciesPage() {
   const policies = await listPublicPolicies();
   return (
-    <PolicyPageFrame>
+    <MoreDocumentFrame title="안내 및 약관" href="/more/policy">
       {policies.length === 0 ? (
         <p className="text-muted-foreground py-8 leading-relaxed">아직 등록된 안내가 없어요.</p>
       ) : (
@@ -46,6 +46,6 @@ export default async function PoliciesPage() {
           ))}
         </ul>
       )}
-    </PolicyPageFrame>
+    </MoreDocumentFrame>
   );
 }

@@ -1,7 +1,15 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-export function PolicyPageFrame({ children }: { children: ReactNode }) {
+export function MoreDocumentFrame({
+  title,
+  href,
+  children,
+}: {
+  title: string;
+  href: string;
+  children: ReactNode;
+}) {
   return (
     <div className="mx-auto w-full max-w-5xl px-6 pt-10 pb-20 md:px-10 md:pt-14 md:pb-28">
       <nav
@@ -17,16 +25,16 @@ export function PolicyPageFrame({ children }: { children: ReactNode }) {
         </Link>
         <span aria-hidden="true">/</span>
         <Link
-          href="/more/policy"
+          href={href}
           prefetch={false}
           className="hover:text-foreground focus-visible:outline-ring -mx-1 -my-3 inline-flex min-h-11 items-center rounded-sm px-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-4"
         >
-          안내 및 약관
+          {title}
         </Link>
       </nav>
       <div className="border-border mb-10 border-b pb-7 md:mb-12">
         <h1 className="text-foreground text-4xl leading-tight font-bold tracking-tight text-balance md:text-5xl">
-          안내 및 약관
+          {title}
         </h1>
       </div>
       {children}
