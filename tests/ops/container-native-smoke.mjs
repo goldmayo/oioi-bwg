@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const [image, app] = process.argv.slice(2);
 assert.ok(image && ["web", "console"].includes(app));
+const expectedNodeVersion = readFileSync(new URL("../../.nvmrc", import.meta.url), "utf8").trim();
+assert.match(expectedNodeVersion, /^22\.\d+\.\d+$/);
 // 런타임 이미지의 추적된 native 모듈을 실제 로드/실행한다. 키나 DB 입력은 전달하지 않는다.
 execFileSync(
   "docker",
@@ -13,7 +16,9 @@ execFileSync(
     "node",
     image,
     "-e",
-    `const { readdirSync } = require('node:fs');
+    `if (process.versions.node !== '${expectedNodeVersion}')
+       throw new Error('Node runtime must match .nvmrc (${expectedNodeVersion})');
+     const { readdirSync } = require('node:fs');
      const { createRequire } = require('node:module');
      const appRequire = createRequire('/app/apps/${app}/server.js');
      const next = appRequire('next/package.json');
@@ -22,7 +27,7 @@ execFileSync(
      const [major, minor, patch] = sharp.versions.sharp.split('.').map(Number);
      if (!(major > 0 || minor > 35 || (minor === 35 && patch >= 5)))
        throw new Error('Next image runtime requires sharp >= 0.35.5');
-     console.log(JSON.stringify({ app: '${app}', next: next.version, sharp: sharp.versions.sharp }));
+     console.log(JSON.stringify({ app: '${app}', node: process.versions.node, brotli: process.versions.brotli, next: next.version, sharp: sharp.versions.sharp }));
      (async () => {
        const { info } = await sharp({
          create: { width: 2, height: 2, channels: 3, background: 'white' },

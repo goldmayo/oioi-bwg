@@ -134,8 +134,8 @@ DB 시작 epoch는 다음 secret-free 조회 결과를 기록한다. 재시작 �
 
 ```bash
 docker compose -f compose.dev.yml exec -T postgres psql -U oioibawige -d postgres -Atc 'select extract(epoch from pg_postmaster_start_time())::text'
-pnpm console:mfa mfa-reset --config .local/console-mfa-operator.json --account-id 104 --expected-version 3 --reason-file .local/operator-reason.txt --apply
-pnpm console:mfa account-access --config .local/console-mfa-operator.json --account-id 104 --expected-version 4 --expected-role ADMIN --expected-status ACTIVE --role USER --status ACTIVE --reason-file .local/operator-reason.txt --apply
+pnpm console:mfa mfa-reset --config .local/console-mfa-operator.json --account-id 019a0170-0000-7000-8000-000000000001 --expected-version 3 --reason-file .local/operator-reason.txt --apply
+pnpm console:mfa account-access --config .local/console-mfa-operator.json --account-id 019a0170-0000-7000-8000-000000000001 --expected-version 4 --expected-role ADMIN --expected-status ACTIVE --role USER --status ACTIVE --reason-file .local/operator-reason.txt --apply
 ```
 
 사유는 operator 소유·0600의 `.local/operator-reason.txt`에 비어 있지 않은 200자 이하로 작성한다.
@@ -490,6 +490,12 @@ Web의 가입 POST도 현재 종료된 상태다. 공통 메일 구현의 `dev`�
 운영 경로는 개인 SSH 운영자가 검토한 요청을 sudo로 실행하며 배포·HTTP 경로에 연결하지 않는다.
 실제 설치·실물 MFA 회수/재등록·HTTPS 복구 증거는 [P06-D 결과](../../docs/migration/implementation/console-guide-editor/P06-D1-RESULT.md)를 따른다.
 
+2026-10-26 UUID 전환 이후 account-id는 UUIDv7 문자열이며 version은 정수다. 구버전 bundle과 이전
+release에 봉인한 설정을 그대로 재사용하지 않고 아래 source 대조·설치·봉인 절차를 수행한다.
+UUID 전환으로 지정한 관리자 한 명의 일회성 재등록은 [#264의 SSH 실행 기록](https://github.com/goldmayo/oioi-bwg/pull/264)을
+따른다. 이 경로는 현재 이미지·DB 인스턴스·UUID·version을 고정하고 기존 credential/MFA 서비스를 호출하며,
+공개 HTTP 등록은 계속 닫혀 있다. 일반 회수·권한 변경 CLI의 설치·보호 계약을 대체하지 않는다.
+
 1. 검토한 source에서 `pnpm build:console-operator`를 실행한다.
    `.local/console-operator/`의 bundle과 provenance를 함께 검토한다. provenance의 서버 소스는
    candidate의 Console `buildSourceSha`에 있는 서비스·스키마와 대조한다. 차이가 있으면 설치하지 않는다.
@@ -521,7 +527,14 @@ Web의 가입 POST도 현재 종료된 상태다. 공통 메일 구현의 `dev`�
 
    ```json
    {
-     "args": ["mfa-reset", "--account-id", "1", "--expected-version", "3", "--apply"],
+     "args": [
+       "mfa-reset",
+       "--account-id",
+       "019a0170-0000-7000-8000-000000000001",
+       "--expected-version",
+       "3",
+       "--apply"
+     ],
      "approvalReference": "P06-D/approved-change-id",
      "reason": "승인된 MFA 회수와 재등록 검증"
    }

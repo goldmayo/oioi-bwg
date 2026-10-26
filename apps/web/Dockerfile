@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG NODE_VERSION=22.16.0-bookworm-slim
+ARG NODE_VERSION=22.23.4-bookworm-slim
 
 FROM node:${NODE_VERSION} AS base
 
@@ -26,6 +26,7 @@ RUN test "${BUILD_APP}" = web \
 FROM base AS dependencies
 
 COPY --from=pruner /app/out/json/ ./
+COPY --from=pruner /app/.nvmrc ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM dependencies AS builder
