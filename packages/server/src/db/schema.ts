@@ -502,3 +502,49 @@ export const servicePublication = pgTable(
     index("service_publication_list_idx").on(t.kind, t.isPublished, t.publishedOn, t.id),
   ],
 );
+
+/** 안내·약관 문서의 버전. 공개된 가장 높은 버전이 현재 본문이다. */
+export const servicePolicy = pgTable(
+  "service_policy",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    slug: text().notNull(),
+    version: integer().notNull(),
+    title: text().notNull(),
+    description: text().notNull(),
+    effectiveOn: date("effective_on", { mode: "string" }).notNull(),
+    content: jsonb().$type<string[]>().notNull(),
+    changeNotice: text("change_notice"),
+    isPublished: boolean("is_published").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check(
+      "service_policy_slug_check",
+      sql`${t.slug} in ('privacy', 'terms', 'copyright', 'email', 'ga')`,
+    ),
+    check("service_policy_version_check", sql`${t.version} > 0`),
+    check("service_policy_title_check", sql`length(btrim(${t.title})) between 1 and 200`),
+    check(
+      "service_policy_description_check",
+      sql`length(btrim(${t.description})) between 1 and 500`,
+    ),
+    check(
+      "service_policy_content_check",
+      sql`case when jsonb_typeof(${t.content}) = 'array' then
+      jsonb_array_length(${t.content}) between 1 and 100
+      and not jsonb_path_exists(${t.content}, 'strict $[*] ? (@.type() != "string")')
+      else false end`,
+    ),
+    check(
+      "service_policy_change_notice_check",
+      sql`${t.changeNotice} is null or length(btrim(${t.changeNotice})) between 1 and 2000`,
+    ),
+    unique("service_policy_slug_version_key").on(t.slug, t.version),
+    index("service_policy_public_idx")
+      .on(t.slug, t.version.desc())
+      .where(sql`${t.isPublished} = true`),
+  ],
+);

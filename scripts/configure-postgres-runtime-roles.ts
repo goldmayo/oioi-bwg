@@ -8,6 +8,7 @@ const APPLICATION_TABLES = [
   "album",
   "song",
   "service_publication",
+  "service_policy",
   "cheer_guide",
   "cheer_guide_snapshot",
   "cheer_guide_publication",

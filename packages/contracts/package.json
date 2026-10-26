@@ -11,7 +11,8 @@
     "./error": "./src/error.ts",
     "./signup": "./src/signup.ts",
     "./song": "./src/song.ts",
-    "./publication": "./src/publication.ts"
+    "./publication": "./src/publication.ts",
+    "./policy": "./src/policy.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",
