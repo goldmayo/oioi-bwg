@@ -1,7 +1,8 @@
 # 현재·보류 작업
 
 상태 기준: 2026-10-27. 최초 인계 목록의 source는 `migration_main@e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f`이며
-당시 운영 재조회 결과는 아니었다. UUID 행은 같은 날 #264의 실제 운영 적용·재조회로 추가 갱신했다.
+당시 운영 재조회 결과는 아니었다. UUID 행은 2026-10-26 #264의 실제 운영 적용·재조회,
+사용자 운영 등록 완료 보고와 로컬 개발 DB의 실제 전환 결과로 추가 갱신했다.
 **P06 A~F 종료 / P07 구현·로컬 검증 종료**다. 공지·업데이트의 DB 조회 전환도 [#278](https://github.com/goldmayo/oioi-bwg/pull/278)로 병합·로컬 검증을 완료했다. 운영 DB 적용·기존 26곡 이관은 2026-10-27 완료했으며 최신 앱 배포는 별도다.
 이 문서가 현재·보류 작업의 유일한 목록이다. 상세 설계·명령·검증은 링크한 소유 문서에서 관리한다.
 상태·우선순위 결정은 사용자, 실행·근거 갱신은 해당 작업 담당자가 맡는다.
@@ -15,7 +16,7 @@ UUIDv7 전환은 2026-10-26 사용자 요청으로 착수했다. 아래 항목�
 
 | 작업                            | 상태                  | 다음 행동                                                                                             | 완료 조건                                               | 근거                                                                                                                                                                                                                                |
 | ------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| UUIDv7 PK·DB 네이밍 전환 | 운영 전환 완료·사용자 재등록 대기 | 오전 SSH 등록 도구로 새 credential·QR·실물 OTP 확인 후 Console 로그인·관리 CRUD 수용 확인 | 전체 payload/FK 보존·복원·관리자 재등록·검증된 운영 적용 | [운영 #264](https://github.com/goldmayo/oioi-bwg/pull/264), [실측·등록 명령](https://app.notion.com/p/404395eb18c28034b39debf1bd080612), [ADR 0009](adr/0009-uuid-domain-identity.md). 04:12 KST 재공개·35개 API 내용/관계/숨김 상태 보존·정상 receipt 확인. 기존 로컬 DB와 공지 초안 보존; P07 로컬 앱 실행 전 DB 전환은 [현행 안내](migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#uuidv7-전환과-legacy-dump-복원)대로 별도 수행 |
+| UUIDv7 PK·DB 네이밍 전환 | 운영·로컬 전환 완료·수용 확인 대기 | 운영 로그인·관리 CRUD 수용 확인; 사용자 요청대로 로컬 관리자 재등록·실물 OTP 로그인은 귀가 후 진행 | 전체 payload/FK 보존·복원·관리자 재등록·검증된 운영 적용 | [운영 #264](https://github.com/goldmayo/oioi-bwg/pull/264), [실측·등록 명령](https://app.notion.com/p/404395eb18c28034b39debf1bd080612), [ADR 0009](adr/0009-uuid-domain-identity.md). 운영 등록 완료는 사용자 보고와 비밀 없는 등록 결과로 확인했으며 실제 로그인·CRUD 확인은 별도다. 로컬 8앨범·26곡·계정/Profile은 전체 백업·별도 복원 리허설 후 UUID로 전환하고 공개 API 34개·두 앱 health/readiness를 확인했다. 지정 로컬 ADMIN credential만 재등록 대기(version 2)다. 재등록은 [현행 안내](migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#지정-console-관리자-credential-재등록)를 따르며 공지 초안은 보존했다 |
 | P07·공지·약관 최신 앱 배포 | 운영 DB·26곡 이관 완료 / 배포 미실행 | 배포 직전 legacy와 공개 snapshot 일치 재확인, 검증한 paired candidate의 Promotion | 정상 배포 receipt·공개 모드/출처·공지/약관 조회·기존 편집 호환 검증 | [운영 적용 결과](migration/implementation/console-guide-editor/P07-RESULT.md#2026-10-27-운영-db-적용과-기존-26곡-이관). 0007~0010 적용, 콘서트 26·공식 5·팬덤 21, 앨범 가시성 보존 |
 | Discord 팬덤 응원법 정비 | 후속 보류 | 공연 영상을 확인해 실제로 이어지는 응원을 정리 | 영상 근거와 문구·타이밍 검수 후 별도 개정 공개 | 2026-10-27 사용자 설명: 공식 응원법을 간소화한 팬덤판이며 현재 false 유지 |
 | P08 파형 작업                   | 미착수                | Queue/runner/job 계약과 실제 환경 검증 범위 확정                                                      | 전달 불확실성·멱등성·음원 비영속·offset/drift 검증      | [설계 §6](migration/implementation/console-guide-editor/DESIGN.md#6-waveform-worker), [기술 검토](migration/implementation/console-guide-editor/AUDIO-FEASIBILITY.md)                                                               |
