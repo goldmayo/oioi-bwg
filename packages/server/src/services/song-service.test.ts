@@ -9,7 +9,6 @@ const insertSong = vi.hoisted(() => vi.fn());
 const findVisibleSongs = vi.hoisted(() => vi.fn());
 const findAdminSongBySlug = vi.hoisted(() => vi.fn());
 const findSongBySlug = vi.hoisted(() => vi.fn());
-const findSongSlugById = vi.hoisted(() => vi.fn());
 const findSongsWithAlbum = vi.hoisted(() => vi.fn());
 const updateSong = vi.hoisted(() => vi.fn());
 const updateSongWithSlugPolicy = vi.hoisted(() => vi.fn());
@@ -20,11 +19,20 @@ vi.mock("../auth/request-context", () => ({
     if (!ctx.user) throw new AppError("UNAUTHENTICATED");
   },
 }));
-vi.mock("../db", () => ({ getDatabase: () => ({}) }));
+const lockSongForGuideWrite = vi.hoisted(() => vi.fn());
+const writeLegacyGuide = vi.hoisted(() => vi.fn());
+vi.mock("../db", () => ({
+  getDatabase: () => ({ transaction: (work: (tx: object) => unknown) => work({}) }),
+}));
+vi.mock("../repositories/cheer-guide-repository", () => ({ lockSongForGuideWrite }));
+vi.mock("./cheer-guide-write-service", () => ({ writeLegacyGuide }));
+beforeEach(() => {
+  lockSongForGuideWrite.mockResolvedValue({ id: "019a0170-0000-7000-8000-000000000002" });
+  writeLegacyGuide.mockResolvedValue(undefined);
+});
 vi.mock("../repositories/song-repository", () => ({
   findAdminSongBySlug,
   findSongBySlug,
-  findSongSlugById,
   findSongsWithAlbum,
   findVisibleSongs,
   insertSong,
@@ -232,7 +240,7 @@ describe("song-service slug policy", () => {
 
   it("distinguishes an immutable slug from a missing song", async () => {
     updateSongWithSlugPolicy.mockResolvedValue([]);
-    findSongSlugById
+    lockSongForGuideWrite
       .mockResolvedValueOnce({ id: "019a0170-0000-7000-8000-000000000002", slug: "original-slug" })
       .mockResolvedValueOnce(undefined);
 

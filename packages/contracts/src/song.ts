@@ -32,6 +32,12 @@ const adminSongSlugSchema = z
   .trim()
   .regex(/^[a-z0-9-]+$/);
 
+export const guideWriteVersionSchema = z.object({
+  guideId: entityIdSchema,
+  lockVersion: z.number().int().positive(),
+});
+export type GuideWriteVersion = z.infer<typeof guideWriteVersionSchema>;
+
 const adminSongFieldsSchema = z.object({
   albumId: entityIdSchema,
   title: z.string().trim().min(1),
@@ -50,17 +56,20 @@ export const createAdminSongSchema = adminSongFieldsSchema.extend({
 export const updateAdminSongSchema = adminSongFieldsSchema.extend({
   slug: adminSongSlugSchema.nullable(),
   lrcText: z.string().optional(),
+  guideWrite: guideWriteVersionSchema.optional(),
 });
 
 export const saveAdminSongLyricsSchema = z.object({
   lyrics: lyricsDataSchema,
   youtubeId: z.string().trim(),
+  guideWrite: guideWriteVersionSchema.optional(),
 });
 
 export const adminSongSummarySchema = adminSongFieldsSchema.extend({
   id: entityIdSchema,
   slug: adminSongSlugSchema.nullable(),
   updatedAt: z.string(),
+  guideWrite: guideWriteVersionSchema.optional(),
   album: z.object({ name: z.string() }),
 });
 
@@ -71,6 +80,7 @@ export const adminSongListSchema = z.object({
 
 export const adminSongMutationResultSchema = z.object({
   id: entityIdSchema,
+  guideWrite: guideWriteVersionSchema.optional(),
 });
 
 export const songDetailSchema = z.object({

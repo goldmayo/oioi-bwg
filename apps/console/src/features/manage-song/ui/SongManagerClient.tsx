@@ -59,7 +59,10 @@ export function SongManagerClient({
   const handleSubmit = useCallback(
     async (values: SongEditValues) => {
       if (editingSong) {
-        await updateMutation.mutateAsync({ id: editingSong.id, input: toAdminSongUpdate(values) });
+        await updateMutation.mutateAsync({
+          id: editingSong.id,
+          input: { ...toAdminSongUpdate(values), guideWrite: editingSong.guideWrite },
+        });
       } else await createMutation.mutateAsync({ ...values, lrcText: values.lrcText ?? "" });
       await invalidateSongs();
     },

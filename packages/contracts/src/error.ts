@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 export const appErrorCodeSchema = z.enum([
+  "CHEER_GUIDE_CONFLICT",
+  "CHEER_GUIDE_CHANGE_RESTRICTED",
+  "CHEER_GUIDE_CONTENT_INVALID",
   "CONTENT_HAS_CHEER_GUIDE",
   "ALBUM_NOT_FOUND",
   "ALBUM_SLUG_ALREADY_EXISTS",

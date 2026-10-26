@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import type { SaveAdminSongLyrics } from "@oioi-bwg/contracts/song";
+import type { AdminSongMutationResult, SaveAdminSongLyrics } from "@oioi-bwg/contracts/song";
 import type { LyricSegment } from "@oioi-bwg/contracts/song";
 import { toast } from "sonner";
 
@@ -24,7 +24,10 @@ export interface ToolbarState {
   endOffset: number;
 }
 
-export type SaveSongDataAction = (songId: string, data: SaveAdminSongLyrics) => Promise<void>;
+export type SaveSongDataAction = (
+  songId: string,
+  data: SaveAdminSongLyrics,
+) => Promise<AdminSongMutationResult>;
 
 /**
  * AdminEditor의 모든 상태와 핸들러를 담는 단일 로직 게이트웨이.
@@ -63,6 +66,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
   const [player, setPlayer] = useState<YouTubePlayerInstance | null>(null);
   const [youtubeId, setYoutubeId] = useState(song.youtubeId);
   const [isSaving, setIsSaving] = useState(false);
+  const guideWriteRef = useRef(song.guideWrite);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [lrcInput, setLrcInput] = useState("");
   const [toolbar, setToolbar] = useState<ToolbarState | null>(null);
@@ -102,7 +106,12 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
-      await saveSongData(song.id, { lyrics, youtubeId });
+      const saved = await saveSongData(song.id, {
+        lyrics,
+        youtubeId,
+        ...(guideWriteRef.current ? { guideWrite: guideWriteRef.current } : {}),
+      });
+      guideWriteRef.current = saved.guideWrite;
       toast.success("저장되었습니다.");
     } catch {
       // MutationCache의 전역 오류 UX가 실패를 표시한다.
