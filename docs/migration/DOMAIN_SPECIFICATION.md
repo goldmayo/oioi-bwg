@@ -569,7 +569,7 @@ deletedAt 기록
 ## 8.0 P07 데이터와 공개 조회
 
 2026-10-26 사용자 지시로 이전 FAN 모드는 CONCERT로, 출처는 `OFFICIAL / FANDOM`으로 구분한다.
-사용자 표시는 **콘서트용 / 페스티벌용**, 출처 표시는 **공식 / 팬덤**이다. 팬덤은 팬들 사이에서 자연스럽게 생겨난 응원법을 뜻한다.
+2026-10-27 확정 화면 시안에 따라 사용자 선택 탭은 **콘서트 / 페스티벌**, 출처 배지는 **공식 / 팬덤**으로 표시한다. 팬덤은 팬들 사이에서 자연스럽게 생겨난 응원법을 뜻한다.
 [기존 계약](https://github.com/goldmayo/oioi-bwg/blob/bb3396b21ed2b5399aebb78e236764e56ee92e72/docs/migration/DOMAIN_SPECIFICATION.md#8-artist--song--cheerguide)의
 모드 용어와 초기 적용 범위를 개정한다. 구현/DB 적용 완료 선언은 아니다.
 
