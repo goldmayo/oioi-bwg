@@ -44,6 +44,16 @@ describe("toErrorResponse", () => {
     expect(mockedReportServerError).not.toHaveBeenCalled();
   });
 
+  it("returns a safe conflict and hide guidance for referenced content", async () => {
+    const response = toErrorResponse(new AppError("CONTENT_HAS_CHEER_GUIDE"));
+    expect(response.status).toBe(409);
+    expect(apiErrorResponseSchema.parse(await response.json())).toEqual({
+      code: "CONTENT_HAS_CHEER_GUIDE",
+      message: "응원법 이력이 있는 곡과 앨범은 삭제할 수 없습니다. 숨김을 사용해 주세요.",
+    });
+    expect(mockedReportServerError).not.toHaveBeenCalled();
+  });
+
   it("treats malformed JSON as a request validation failure", async () => {
     const request = new Request("https://example.test/api", {
       body: "{broken",

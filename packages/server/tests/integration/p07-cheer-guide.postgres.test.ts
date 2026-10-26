@@ -1,9 +1,14 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { afterAll, beforeAll, expect, test } from "vitest";
+import { afterAll, beforeAll, expect, test, vi } from "vitest";
 
 import * as schema from "@oioi-bwg/server/db/schema";
+import { buildAbility } from "@oioi-bwg/server/auth/ability";
+import { deleteAlbum } from "@oioi-bwg/server/services/album-service";
+import { deleteSong } from "@oioi-bwg/server/services/song-service";
+
+vi.mock("@oioi-bwg/server/db", () => ({ getDatabase: () => database }));
 
 function isolatedUrl(value: string | undefined) {
   const url = new URL(value ?? "http://invalid");
@@ -319,4 +324,20 @@ test("Domain §8.0 inserts a separate UNPUBLISH record and rolls back a failed p
       .from(schema.cheerGuidePublication)
       .where(eq(schema.cheerGuidePublication.cheerGuideId, concertId)),
   ).resolves.toHaveLength(2);
+});
+
+test("Domain §8.0 reports referenced Song/Album deletion as expected conflicts without losing rows", async () => {
+  const context = { user: { id: accountId }, ability: buildAbility({ accountId, role: "ADMIN" }) };
+  await expect(deleteSong(context, songId)).rejects.toMatchObject({
+    code: "CONTENT_HAS_CHEER_GUIDE",
+  });
+  await expect(deleteAlbum(context, albumId)).rejects.toMatchObject({
+    code: "CONTENT_HAS_CHEER_GUIDE",
+  });
+  expect(
+    await database.select().from(schema.song).where(eq(schema.song.albumId, albumId)),
+  ).toHaveLength(2);
+  expect(
+    await database.select().from(schema.album).where(eq(schema.album.id, albumId)),
+  ).toHaveLength(1);
 });

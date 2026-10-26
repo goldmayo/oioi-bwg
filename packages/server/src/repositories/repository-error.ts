@@ -27,3 +27,10 @@ export class PasswordCredentialEmailConflictError extends Error {
     this.name = "PasswordCredentialEmailConflictError";
   }
 }
+
+export class CheerGuideReferenceError extends Error {
+  constructor() {
+    super("Content is referenced by a cheer guide");
+    this.name = "CheerGuideReferenceError";
+  }
+}

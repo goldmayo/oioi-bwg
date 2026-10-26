@@ -3,10 +3,10 @@ import "server-only";
 import { and, asc, eq, isNull, or } from "drizzle-orm";
 
 import type { DbExecutor } from "../db";
-import { isPostgresUniqueViolation } from "../db/postgres-error";
+import { isPostgresForeignKeyViolation, isPostgresUniqueViolation } from "../db/postgres-error";
 import { album, type InsertSongRow, song } from "../db/schema";
 
-import { SongSlugConflictError } from "./repository-error";
+import { SongSlugConflictError, CheerGuideReferenceError } from "./repository-error";
 
 type SongUpdateRow = Partial<Omit<InsertSongRow, "slug">>;
 
@@ -121,6 +121,13 @@ export async function updateSongWithSlugPolicy(
   }
 }
 
-export function removeSong(executor: DbExecutor, id: string) {
-  return executor.delete(song).where(eq(song.id, id)).returning({ id: song.id });
+export async function removeSong(executor: DbExecutor, id: string) {
+  try {
+    return await executor.delete(song).where(eq(song.id, id)).returning({ id: song.id });
+  } catch (error) {
+    if (isPostgresForeignKeyViolation(error, "cheer_guide_song_id_fkey")) {
+      throw new CheerGuideReferenceError();
+    }
+    throw error;
+  }
 }

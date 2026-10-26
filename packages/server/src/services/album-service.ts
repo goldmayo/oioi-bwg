@@ -19,7 +19,7 @@ import {
   removeAlbum,
   updateAlbum,
 } from "../repositories/album-repository";
-import { AlbumSlugConflictError } from "../repositories/repository-error";
+import { AlbumSlugConflictError, CheerGuideReferenceError } from "../repositories/repository-error";
 
 type AlbumPersistenceRow = Awaited<ReturnType<typeof findAllAlbums>>[number];
 type AlbumWithSongsPersistenceRow = Awaited<ReturnType<typeof findVisibleAlbumsWithSongs>>[number];
@@ -130,6 +130,11 @@ export async function editAlbum(
 
 export async function deleteAlbum(ctx: RequestContext, id: string) {
   requireAdmin(ctx);
-  const [album] = await removeAlbum(getDatabase(), id);
-  if (!album) throw new AppError("ALBUM_NOT_FOUND");
+  try {
+    const [album] = await removeAlbum(getDatabase(), id);
+    if (!album) throw new AppError("ALBUM_NOT_FOUND");
+  } catch (error) {
+    if (error instanceof CheerGuideReferenceError) throw new AppError("CONTENT_HAS_CHEER_GUIDE");
+    throw error;
+  }
 }

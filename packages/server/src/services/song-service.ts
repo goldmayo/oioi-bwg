@@ -13,7 +13,7 @@ import {
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
 import { AppError } from "../errors/app-error";
-import { SongSlugConflictError } from "../repositories/repository-error";
+import { SongSlugConflictError, CheerGuideReferenceError } from "../repositories/repository-error";
 import {
   findAdminSongBySlug,
   findSongBySlug,
@@ -227,9 +227,13 @@ export async function saveSongLyrics(ctx: RequestContext, id: string, input: Sav
   return song;
 }
 
-export function deleteSong(ctx: RequestContext, id: string) {
+export async function deleteSong(ctx: RequestContext, id: string) {
   requireAdmin(ctx);
-  return removeSong(getDatabase(), id).then(([song]) => {
+  try {
+    const [song] = await removeSong(getDatabase(), id);
     if (!song) throw new AppError("SONG_NOT_FOUND");
-  });
+  } catch (error) {
+    if (error instanceof CheerGuideReferenceError) throw new AppError("CONTENT_HAS_CHEER_GUIDE");
+    throw error;
+  }
 }
