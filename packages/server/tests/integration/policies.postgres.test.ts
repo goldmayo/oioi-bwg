@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, max } from "drizzle-orm";
 import postgres from "postgres";
 import { afterAll, expect, test } from "vitest";
 import { createEntityId } from "../../src/db/entity-id";
@@ -44,14 +44,25 @@ test("기존 다섯 안내의 본문·시행일·설명·하단 안내를 원문
 });
 test("공개 최신 버전만 선택하고 미공개 개정본과 과거 본문은 보존한다", async () => {
   const [original] = await findLatestPublishedPolicies(db, "privacy");
+  const [highest] = await db
+    .select({ version: max(p.version) })
+    .from(p)
+    .where(eq(p.slug, "privacy"));
+  const nextVersion = highest!.version! + 1;
   const created = await db
     .insert(p)
     .values([
-      { ...original!, id: createEntityId(), version: 2, content: ["공개 개정"], isPublished: true },
       {
         ...original!,
         id: createEntityId(),
-        version: 3,
+        version: nextVersion,
+        content: ["공개 개정"],
+        isPublished: true,
+      },
+      {
+        ...original!,
+        id: createEntityId(),
+        version: nextVersion + 1,
         content: ["검토 전 시안"],
         isPublished: false,
       },
@@ -59,7 +70,7 @@ test("공개 최신 버전만 선택하고 미공개 개정본과 과거 본문�
     .returning();
   ids.push(...created.map((row) => row.id));
   const [current] = await findLatestPublishedPolicies(db, "privacy");
-  expect(current).toMatchObject({ version: 2, content: ["공개 개정"] });
+  expect(current).toMatchObject({ version: nextVersion, content: ["공개 개정"] });
   expect(await findLatestPublishedPolicies(db)).toHaveLength(5);
   expect(await findLatestPublishedPolicies(db, "toString")).toEqual([]);
   const [old] = await db.select().from(p).where(eq(p.id, original!.id));
@@ -80,4 +91,11 @@ test("DB가 경로·양의 버전·본문 타입·중복 버전을 제한한다"
   await expect(
     sql`insert into service_policy (id,slug,version,title,description,effective_on,content) values (${createEntityId()},'terms',1,'검증','설명','2099-01-01','["중복"]'::jsonb)`,
   ).rejects.toMatchObject({ code: "23505", constraint_name: "service_policy_slug_version_key" });
+});
+
+test("작성한 개정안 다섯 건은 비공개 초안이며 기존 공개본을 대체하지 않는다", async () => {
+  const drafts = await db.select().from(p).where(eq(p.version, 2));
+  expect(drafts).toHaveLength(5);
+  expect(drafts.every((row) => !row.isPublished)).toBe(true);
+  expect((await findLatestPublishedPolicies(db, "terms"))[0]!.version).toBe(1);
 });

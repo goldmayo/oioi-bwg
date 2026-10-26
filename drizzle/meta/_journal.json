@@ -71,6 +71,13 @@
       "when": 1793030753116,
       "tag": "0009_service_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793031908462,
+      "tag": "0010_policy_content_drafts",
+      "breakpoints": true
     }
   ]
 }

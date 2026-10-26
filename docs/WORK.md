@@ -1,6 +1,6 @@
 # 현재·보류 작업
 
-상태 기준: 2026-10-26. 최초 인계 목록의 source는 `migration_main@e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f`이며
+상태 기준: 2026-10-27. 최초 인계 목록의 source는 `migration_main@e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f`이며
 당시 운영 재조회 결과는 아니었다. UUID 행은 같은 날 #264의 실제 운영 적용·재조회로 추가 갱신했다.
 **P06 A~F 종료 / P07 구현·로컬 검증 종료**다. 공지·업데이트의 DB 조회 전환도 [#278](https://github.com/goldmayo/oioi-bwg/pull/278)로 병합·로컬 검증을 완료했다. 운영 적용은 별도다.
 이 문서가 현재·보류 작업의 유일한 목록이다. 상세 설계·명령·검증은 링크한 소유 문서에서 관리한다.
@@ -29,6 +29,7 @@ UUIDv7 전환은 2026-10-26 사용자 요청으로 착수했다. 아래 항목�
 | CI 게시 IAM 최소 권한           | 보류                  | repo-name/permission 조건 실패를 분리 조사                                                            | 기존 광역 게시 권한의 축소와 동일 주체 실증             | [B0 최종 기록](migration/implementation/console-guide-editor/P06-B0-2-RESULT.md)                                                                                                                                                    |
 | DB role hardening               | 보류                  | app role 직접 SQL의 DELETE/version 감소 우회와 역할 분리 설계                                         | schema·권한 검토 후 별도 승인 범위의 실제 검증          | [P05-A 결과](migration/implementation/console-guide-editor/P05-A-RESULT.md), [P06 결과](migration/implementation/console-guide-editor/P06-RESULT.md)                                                                                |
 | www/apex Origin CA 수동 갱신    | 예정                  | 만료 2027-10-25 15:04 KST 전 운영 절차로 준비                                                         | 검토·적용·Full strict/TLS·복구 확인                     | [운영 안내](../ops/oci/web-cutover.md), [만료 관측](migration/implementation/console-guide-editor/P06-RESULT.md)                                                                                                                    |
+| 안내·약관 본문 개정 | DB 초안 저장·운영 정보 확인 대기 | 문의처·GA/Sentry/로그 보관·외부 연동과 제보 폼 설정을 확인하고 새 본문 검토 | 확인한 사실에 맞는 본문·시행일·개정 공개 및 이전 버전 보존 | [Domain §35](migration/DOMAIN_SPECIFICATION.md#35-서비스-안내와-약관-2026-10-27). [DB 기반 #280](https://github.com/goldmayo/oioi-bwg/pull/280). 기존 공개본과 개정안 다섯 건의 비공개 초안을 분리하며 미확인 사실을 추정해 발행하지 않음 |
 | 공지·업데이트 관리 UI/API | 미커밋 초안 보존·범위 미정 | 별도 관리 기능 채택 시 UUIDv7·현행 권한/충돌 계약에 맞춰 초안 재검토 | 채택한 관리 범위의 권한·저장/삭제 충돌·draft 보존 검증 | 공개 조회·기존 내용 DB 전환은 [#278](https://github.com/goldmayo/oioi-bwg/pull/278) 참조. `feature/service-publications`의 `.local/worktrees/recovery-f-cutover` 기존 초안은 수정·초기화하지 않음 |
 | ENV-2 로컬 DB 입력 통합         | 미구현·비차단 보류    | 프로젝트 밖 credential·mount 경계·기존 볼륨 보존 검토                                                 | host/Compose/도구의 동일 입력과 특수문자·충돌·격리 검증 | [미완료 환경 계획](migration/implementation/ENVIRONMENT-CONFIGURATION-PLAN.md#env-2--로컬-db-입력과-시작-경로-통합), [회수 결과](migration/implementation/ENVIRONMENT-CONFIGURATION-RECOVERY-RESULT.md)                             |
 | 휴면 메일 재활성화              | 보류                  | IMDS 차단을 유지하는 인증·권한·실패 계약 설계                                                         | 별도 승인된 실제 발송과 비밀 비노출 검증                | [MAIL-02 결과](migration/implementation/MONOREPO-CONFIGURATION-RESULT.md). 현재 앱 consumer 없음                                                                                                                                    |
