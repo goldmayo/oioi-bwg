@@ -360,6 +360,33 @@ describe("song-service public DTO boundary", () => {
     });
   });
 
+  it("treats invalid stored guide metadata as an internal contract failure", async () => {
+    findSongBySlug.mockResolvedValue({
+      ...row,
+      cheerGuides: [
+        {
+          id: row.id,
+          mode: "CONCERT",
+          publications: [{ id: row.id }],
+          currentPublication: {
+            action: "PUBLISH",
+            snapshot: {
+              lyrics: row.lyrics,
+              referenceYoutubeId: row.youtubeId,
+              sourceType: "OFFICIAL",
+              sourceUrl: null,
+              guideVideoUrl: null,
+              description: null,
+            },
+          },
+        },
+      ],
+    });
+    await expect(getSongDetailBySlug("test-song")).rejects.toThrow(
+      "Stored cheer guide contract violation",
+    );
+  });
+
   it("normalizes nullable lyrics and hides songs whose album is not public", async () => {
     findSongBySlug.mockResolvedValue({ ...row, lyrics: null });
     await expect(getSongDetailBySlug("test-song")).resolves.toMatchObject({ lyrics: [] });

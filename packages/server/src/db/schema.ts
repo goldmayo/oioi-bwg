@@ -393,7 +393,8 @@ export const albumRelations = relations(album, ({ many }) => ({
   songs: many(song),
 }));
 
-export const songRelations = relations(song, ({ one }) => ({
+export const songRelations = relations(song, ({ one, many }) => ({
+  cheerGuides: many(cheerGuide),
   album: one(album, {
     fields: [song.albumId],
     references: [album.id],
@@ -433,3 +434,24 @@ export type EmailVerificationChallengeRow = typeof emailVerificationChallenge.$i
 export type InsertEmailVerificationChallengeRow = typeof emailVerificationChallenge.$inferInsert;
 export type EmailVerificationRateLimitRow = typeof emailVerificationRateLimit.$inferSelect;
 export type InsertEmailVerificationRateLimitRow = typeof emailVerificationRateLimit.$inferInsert;
+
+export const cheerGuideRelations = relations(cheerGuide, ({ one, many }) => ({
+  song: one(song, { fields: [cheerGuide.songId], references: [song.id] }),
+  currentPublication: one(cheerGuidePublication, {
+    fields: [cheerGuide.id, cheerGuide.currentPublicationId],
+    references: [cheerGuidePublication.cheerGuideId, cheerGuidePublication.id],
+    relationName: "currentGuidePublication",
+  }),
+  publications: many(cheerGuidePublication, { relationName: "guidePublications" }),
+}));
+export const cheerGuidePublicationRelations = relations(cheerGuidePublication, ({ one }) => ({
+  guide: one(cheerGuide, {
+    fields: [cheerGuidePublication.cheerGuideId],
+    references: [cheerGuide.id],
+    relationName: "guidePublications",
+  }),
+  snapshot: one(cheerGuideSnapshot, {
+    fields: [cheerGuidePublication.cheerGuideId, cheerGuidePublication.snapshotId],
+    references: [cheerGuideSnapshot.cheerGuideId, cheerGuideSnapshot.id],
+  }),
+}));

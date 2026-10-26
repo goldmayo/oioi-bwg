@@ -6,6 +6,7 @@ import type { DbExecutor } from "../db";
 import { isPostgresForeignKeyViolation, isPostgresUniqueViolation } from "../db/postgres-error";
 import { album, type InsertAlbumRow } from "../db/schema";
 
+import { publicGuideSummarySelection } from "./cheer-guide-repository";
 import { AlbumSlugConflictError, CheerGuideReferenceError } from "./repository-error";
 
 export function findVisibleAlbumsWithSongs(executor: DbExecutor) {
@@ -13,6 +14,7 @@ export function findVisibleAlbumsWithSongs(executor: DbExecutor) {
     where: (table, { eq: equals }) => equals(table.isVisible, true),
     with: {
       songs: {
+        with: { cheerGuides: publicGuideSummarySelection },
         where: (table, { eq: equals }) => equals(table.isVisible, true),
         orderBy: (table, { asc }) => [asc(table.order)],
         columns: {
@@ -35,6 +37,7 @@ export function findAlbumBySlug(executor: DbExecutor, slug: string) {
       and(equals(table.slug, slug), equals(table.isVisible, true)),
     with: {
       songs: {
+        with: { cheerGuides: publicGuideSummarySelection },
         where: (table, { eq: equals }) => equals(table.isVisible, true),
         orderBy: (table, { asc }) => [asc(table.order)],
         columns: {
