@@ -1,10 +1,11 @@
 import { cache } from "react";
 import { getPublicPolicy } from "@oioi-bwg/server/services/policy-service";
+import { Circle } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { constructMetadata } from "@/shared/lib/metadata";
 
-import { MoreBackButton, MoreHeader } from "../../_ui/more-common";
+import { PolicyPageFrame } from "../_ui/policy-page-frame";
 
 export const dynamic = "force-dynamic";
 
@@ -29,36 +30,39 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ s
   const detail = await getPolicy(slug);
 
   return (
-    <div className="container mx-auto min-h-screen px-4 pt-12 pb-32 lg:pt-24 lg:pb-40">
-      <MoreBackButton href="/more/policy" label="안내 및 약관으로" />
-
-      <MoreHeader title={detail.title} className="mt-12" />
-
-      {/* 약관 상세 섹션 */}
-      <section className="border-border bg-card overflow-hidden rounded-3xl border shadow-xl">
-        <div className="border-border bg-accent/40 border-b p-6">
-          <p className="text-2xs text-muted-foreground text-2xs font-bold tracking-widest uppercase">
-            시행일: {detail.effectiveOn}
-          </p>
+    <PolicyPageFrame>
+      <article aria-labelledby="policy-title">
+        <div className="text-muted-foreground mb-6 flex flex-wrap items-center gap-3 text-sm md:text-base">
+          <span className="text-foreground dark:text-qwer-w inline-flex items-center gap-2 font-semibold">
+            <Circle aria-hidden="true" className="size-2.5 fill-current" />
+            시행일
+          </span>
+          <span aria-hidden="true" className="text-border">
+            |
+          </span>
+          <time dateTime={detail.effectiveOn} className="tabular-nums">
+            {detail.effectiveOn.replaceAll("-", ".")}
+          </time>
         </div>
-
-        <div className="flex flex-col gap-10 p-8 lg:p-12">
+        <h2
+          id="policy-title"
+          className="text-foreground mb-8 text-2xl leading-snug font-bold text-balance break-keep md:mb-10 md:text-3xl"
+        >
+          {detail.title}
+        </h2>
+        <div className="max-w-prose space-y-7 text-base leading-loose break-keep md:space-y-8 md:text-lg">
           {detail.content.map((text, idx) => (
-            <div key={idx} className="flex gap-6">
-              <span className="text-qwer-bwg/20 text-xl font-black italic">
-                {(idx + 1).toString().padStart(2, "0")}
-              </span>
-              <p className="text-muted-foreground text-base leading-relaxed font-medium">{text}</p>
-            </div>
+            <p key={idx} className="text-foreground/90 whitespace-pre-line">
+              {text}
+            </p>
           ))}
         </div>
-      </section>
-
-      {detail.changeNotice && (
-        <footer className="border-border mt-20 border-t pt-12 opacity-30">
-          <p className="text-muted-foreground text-xs font-medium">{detail.changeNotice}</p>
-        </footer>
-      )}
-    </div>
+        {detail.changeNotice && (
+          <p className="border-border text-muted-foreground mt-12 border-t pt-7 text-sm leading-relaxed md:mt-16">
+            {detail.changeNotice}
+          </p>
+        )}
+      </article>
+    </PolicyPageFrame>
   );
 }
