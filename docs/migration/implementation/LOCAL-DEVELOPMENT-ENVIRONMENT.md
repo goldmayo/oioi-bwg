@@ -109,6 +109,27 @@ schema와 dialect이며 이 명령으로 DB에 접속하거나 migration을 적�
 
 ## Local development workflow
 
+### Node.js 런타임
+
+호스트·개발 이미지·운영 이미지·CI는 `.nvmrc`의 Node.js 22.23.4를 기준으로 사용한다.
+이 파일은 Turbo 공통 입력이므로 Node 버전 변경 시 기존 검사·빌드 캐시를 재사용하지 않는다.
+2026-10-26 Node2Shell(CVE-2026-111497) 대응으로 기존 22.16.0에서 올렸다.
+[공식 보안 릴리스](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)의
+Brotli 디코더 수정은 npm 의존성 갱신만으로 적용되지 않는다.
+
+```bash
+nvm install
+nvm use
+corepack enable
+corepack prepare pnpm@10.15.1 --activate
+node --version
+```
+
+기존 Node 프로세스는 새 버전으로 다시 시작한다. 개발 컨테이너는
+`docker compose -f compose.dev.yml up -d --build --no-deps next`로 재생성하며 DB·volume은 보존한다.
+운영 두 이미지는 정상 Promotion에서 재빌드·검증·배포한다. 일반 CI와 Promotion의 컨테이너 검사는
+실제 Node 버전이 `.nvmrc`와 같은지 확인하고 Node·Brotli 버전을 출력한다.
+
 ### 환경 파일의 역할과 작성 순서
 
 각 앱의 `.env.example`은 **값이 전부 빈 템플릿**이다. 2026-10-24 사용자의 단일 파일 관리 요청에 따라
