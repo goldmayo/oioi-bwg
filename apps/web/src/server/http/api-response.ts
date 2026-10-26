@@ -8,6 +8,10 @@ import type { ServerErrorContext } from "@/server/observability/safe-server-even
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
 const appErrorDefinitions = {
+  CHEER_GUIDE_IMPORT_CONFLICT: {
+    status: 409,
+    message: "검토한 이관 정보와 현재 응원법이 다릅니다.",
+  },
   CHEER_GUIDE_CONFLICT: {
     message: "응원법이 변경되었습니다. 입력한 내용을 보관하고 최신 내용을 확인해 주세요.",
     status: 409,

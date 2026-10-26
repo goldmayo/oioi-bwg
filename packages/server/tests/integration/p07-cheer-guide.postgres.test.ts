@@ -13,6 +13,11 @@ import {
   getAdminSongEditorBySlug,
   saveSongLyrics,
 } from "@oioi-bwg/server/services/song-service";
+import {
+  importLegacyGuide,
+  legacyGuideSourceFingerprint,
+  planLegacyGuideImport,
+} from "@oioi-bwg/server/services/cheer-guide-import-service";
 import { createEntityId } from "@oioi-bwg/server/db/entity-id";
 
 vi.mock("@oioi-bwg/server/db", () => ({ getDatabase: () => database }));
@@ -556,4 +561,153 @@ test("Domain §8.0 cannot implicitly republish an unpublished guide", async () =
     }),
   ).rejects.toMatchObject({ code: "CHEER_GUIDE_CHANGE_RESTRICTED" });
   expect(await writerState(f)).toEqual(before);
+});
+
+async function importFixture() {
+  const [row] = await database
+    .insert(schema.song)
+    .values({
+      id: createEntityId(),
+      albumId,
+      title: "이관 검증",
+      slug: `import-${createEntityId()}`,
+      youtubeId: "timing-video",
+      lyrics,
+      hasOfficialCheer: null,
+    })
+    .returning();
+  return {
+    row: row!,
+    context: { user: { id: accountId }, ability: buildAbility({ accountId, role: "ADMIN" }) },
+    entry: {
+      songId: row!.id,
+      guideId: createEntityId(),
+      snapshotId: createEntityId(),
+      publicationId: createEntityId(),
+      sourceFingerprint: legacyGuideSourceFingerprint(row!),
+      referenceYoutubeId: row!.youtubeId!,
+      mode: "CONCERT" as const,
+      legacyWriteTarget: true as const,
+      sourceType: "FANDOM" as const,
+      sourceUrl: null,
+      guideVideoUrl: null,
+      description: null,
+    },
+  };
+}
+
+test("Domain §8.0 imports reviewed source once, preserves original JSON and never invents authors", async () => {
+  const f = await importFixture();
+  const plan = await planLegacyGuideImport(f.context);
+  expect(plan.entries.every(({ mode, sourceType }) => mode === null && sourceType === null)).toBe(
+    true,
+  );
+  expect(plan.entries.find(({ songId }) => songId === f.row.id)).toMatchObject({
+    sourceFingerprint: f.entry.sourceFingerprint,
+  });
+  await expect(importLegacyGuide(f.context, f.entry)).resolves.toMatchObject({ status: "ready" });
+  expect(
+    await database.select().from(schema.cheerGuide).where(eq(schema.cheerGuide.songId, f.row.id)),
+  ).toHaveLength(0);
+  await expect(importLegacyGuide(f.context, f.entry, true)).resolves.toMatchObject({
+    status: "imported",
+  });
+  await expect(importLegacyGuide(f.context, f.entry, true)).resolves.toMatchObject({
+    status: "unchanged",
+  });
+  const [snapshot] = await database
+    .select()
+    .from(schema.cheerGuideSnapshot)
+    .where(eq(schema.cheerGuideSnapshot.cheerGuideId, f.entry.guideId));
+  expect(snapshot).toMatchObject({
+    id: f.entry.snapshotId,
+    lyrics,
+    sourceType: "FANDOM",
+    createdByAccountId: null,
+  });
+  expect(await database.select().from(schema.song).where(eq(schema.song.id, f.row.id))).toEqual([
+    f.row,
+  ]);
+  const publications = await database
+    .select()
+    .from(schema.cheerGuidePublication)
+    .where(eq(schema.cheerGuidePublication.cheerGuideId, f.entry.guideId));
+  expect(publications).toHaveLength(1);
+  expect(publications[0]).toMatchObject({
+    id: f.entry.publicationId,
+    actorAccountId: accountId,
+    snapshotId: f.entry.snapshotId,
+  });
+  await saveSongLyrics(f.context, f.row.id, {
+    lyrics,
+    youtubeId: f.row.youtubeId!,
+    guideWrite: { guideId: f.entry.guideId, lockVersion: 1 },
+  });
+  // Even a content-identical later save is an advanced history, not the original import.
+  await expect(importLegacyGuide(f.context, f.entry, true)).rejects.toMatchObject({
+    code: "CHEER_GUIDE_IMPORT_CONFLICT",
+  });
+  expect(
+    await database
+      .select()
+      .from(schema.cheerGuideSnapshot)
+      .where(eq(schema.cheerGuideSnapshot.cheerGuideId, f.entry.guideId)),
+  ).toHaveLength(2);
+});
+
+test("Domain §8.0 serializes import with a pre-import legacy writer without losing either input", async () => {
+  const f = await importFixture();
+  const changed = [{ ...lyrics[0]!, startTime: 70 }];
+  const outcomes = await Promise.allSettled([
+    importLegacyGuide(f.context, f.entry, true),
+    saveSongLyrics(f.context, f.row.id, { lyrics: changed, youtubeId: f.row.youtubeId! }),
+  ]);
+  expect(outcomes.filter(({ status }) => status === "fulfilled")).toHaveLength(1);
+  const [shadow] = await database.select().from(schema.song).where(eq(schema.song.id, f.row.id));
+  const guides = await database
+    .select()
+    .from(schema.cheerGuide)
+    .where(eq(schema.cheerGuide.songId, f.row.id));
+  if (outcomes[0]!.status === "fulfilled") {
+    expect(outcomes[1]).toMatchObject({ reason: { code: "CHEER_GUIDE_CONFLICT" } });
+    expect(shadow!.lyrics).toEqual(lyrics);
+    expect(guides).toHaveLength(1);
+    const [snapshot] = await database
+      .select()
+      .from(schema.cheerGuideSnapshot)
+      .where(eq(schema.cheerGuideSnapshot.id, f.entry.snapshotId));
+    expect(snapshot!.lyrics).toEqual(lyrics);
+  } else {
+    expect(outcomes[0]).toMatchObject({ reason: { code: "CHEER_GUIDE_IMPORT_CONFLICT" } });
+    expect(shadow!.lyrics).toEqual(changed);
+    expect(guides).toHaveLength(0);
+  }
+});
+
+test("Domain §8.0 rejects changed source fingerprints and conflicting mapping IDs without partial history", async () => {
+  const f = await importFixture();
+  await database
+    .update(schema.song)
+    .set({ youtubeId: "changed" })
+    .where(eq(schema.song.id, f.row.id));
+  await expect(importLegacyGuide(f.context, f.entry, true)).rejects.toMatchObject({
+    code: "CHEER_GUIDE_IMPORT_CONFLICT",
+  });
+  expect(
+    await database.select().from(schema.cheerGuide).where(eq(schema.cheerGuide.songId, f.row.id)),
+  ).toHaveLength(0);
+  await database
+    .update(schema.song)
+    .set({ youtubeId: f.row.youtubeId })
+    .where(eq(schema.song.id, f.row.id));
+  await importLegacyGuide(f.context, f.entry, true);
+  await expect(
+    importLegacyGuide(f.context, { ...f.entry, snapshotId: createEntityId() }, true),
+  ).rejects.toMatchObject({ code: "CHEER_GUIDE_IMPORT_CONFLICT" });
+  expect(
+    await database
+      .select()
+      .from(schema.cheerGuideSnapshot)
+      .where(eq(schema.cheerGuideSnapshot.cheerGuideId, f.entry.guideId)),
+  ).toHaveLength(1);
 });
