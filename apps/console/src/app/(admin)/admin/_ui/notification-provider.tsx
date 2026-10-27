@@ -12,6 +12,7 @@ import {
   registerPushInstallation,
   unregisterPushInstallation,
 } from "@/entities/notification";
+import { waveformQueryKeys } from "@/entities/waveform";
 
 import { connectPush, disconnectPush } from "../_lib/push-client";
 
@@ -80,6 +81,7 @@ export function NotificationProvider({
           queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all(accountId) }),
           queryClient.fetchQuery(notificationQueries.detail(accountId, id)),
         ]);
+        await queryClient.invalidateQueries({ queryKey: waveformQueryKeys.all(accountId) });
         if (
           current.signal.aborted ||
           item.readAt ||
@@ -145,8 +147,8 @@ export function NotificationProvider({
     const id = stored(installationKey);
     try {
       if (id) await unbind(id);
-    } finally {
       save(installationKey);
+    } finally {
       await disconnectPush().catch(() => {});
     }
   }, [unbind]);
@@ -189,12 +191,23 @@ export function NotificationProvider({
         setPushState("denied");
         const id = stored(installationKey);
         if (id) {
-          await unbind(id).catch(() => {});
-          save(installationKey);
+          await unbind(id)
+            .then(() => save(installationKey))
+            .catch(() => {});
         }
         return;
       }
-      if (Notification.permission === "granted" && stored(preference) !== "true") await start();
+      if (stored(preference) === "true") {
+        controller.current?.abort();
+        setPushState("disabled");
+        const id = stored(installationKey);
+        if (id)
+          await unbind(id)
+            .then(() => save(installationKey))
+            .catch(() => {});
+        return;
+      }
+      if (Notification.permission === "granted") await start();
       else setPushState("disabled");
     };
     void refresh();
