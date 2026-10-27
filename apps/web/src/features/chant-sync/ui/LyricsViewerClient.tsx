@@ -316,7 +316,10 @@ function LyricLineItem({
       type="button"
       onClick={onClick}
       aria-current={isActive ? "true" : undefined}
-      className="focus-visible:outline-qwer-w block min-h-9 w-full cursor-pointer rounded-sm py-1.5 text-left transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 md:py-1 md:text-center"
+      className={cn(
+        "focus-visible:outline-qwer-w block min-h-9 w-full cursor-pointer rounded-sm py-1.5 text-left transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 md:py-1 md:text-center",
+        styles.line,
+      )}
     >
       <span
         className={cn(
