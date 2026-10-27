@@ -465,6 +465,12 @@ Firebase 프로젝트에 Web 앱과 Web Push VAPID 키를 등록하고 [공식 �
 `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_VAPID_PUBLIC_KEY`를 설정한다. 이 공개 설정은 runtime에 주입하며 이미지를 다시 만들지 않는다.
 FCM 발송 권한을 가진 service account JSON은 한 줄 JSON으로 Vault에 보관하고
 `console-runtime-secrets.env`의 `FIREBASE_SERVICE_ACCOUNT_JSON`에 그 Secret OCID를 매핑한다.
+새 Secret은 기존 Auth/MFA와 같은 `secret_compartment_ocid` 범위에 생성하고, 기존 Resource Manager Stack의
+`runtime_secret_ocids` 목록을 보존한 채 새 OCID를 추가한다. Plan에서 해당 Secret의 `read secret-bundles`
+한 줄 추가와 다른 변경 유무를 검토한 뒤 승인한 Plan을 Apply한다. 목록에 없으면 VM의 Instance Principal은
+`NotAuthorizedOrNotFound`로 읽기를 거절한다. GitHub 배포 계정에 Vault 권한이나 JSON 원문을 추가하지 않는다.
+운영 helper가 FCM 항목을 허용하는 버전인지 확인하고, 보호된 백업·현행 host upgrade 절차로
+`materialize-runtime-env.py`를 갱신한 뒤 새 설정을 검증한다. 현재 컨테이너의 Auth/MFA·DB·R2 값은 보존한다.
 Web·Runner·분석 worker에는 전달하지 않으며 Firebase Auth·Firestore·Cloud Functions는 사용하지 않는다.
 실제 수신을 검증할 로컬 Console은 자신의 `.env.local`에 같은 이름으로 설정한다.
 foreground·background·닫힌 탭·알림 클릭과 로그아웃/권한 거부를 검증한 뒤 별도 Promotion에서 활성화한다.
