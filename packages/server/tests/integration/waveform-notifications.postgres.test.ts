@@ -46,15 +46,13 @@ beforeAll(async () => {
   await db
     .insert(schema.account)
     .values(accounts.map((id) => ({ id, role: "ADMIN" as const, status: "ACTIVE" as const })));
-  await db
-    .insert(schema.album)
-    .values({
-      id: albumId,
-      name: "waveform fixture",
-      slug: `waveform-${albumId}`,
-      imgUrl: "https://example.test/album.png",
-      color: "#000000",
-    });
+  await db.insert(schema.album).values({
+    id: albumId,
+    name: "waveform fixture",
+    slug: `waveform-${albumId}`,
+    imgUrl: "https://example.test/album.png",
+    color: "#000000",
+  });
   await db.insert(schema.pushInstallation).values(
     accounts.map((accountId) => ({
       fid: `c${createEntityId().replaceAll("-", "")}`,
