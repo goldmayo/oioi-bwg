@@ -6,6 +6,8 @@ const routes = {
   "/api/admin/notifications/[id]": "admin-notification-api",
   "/api/admin/notifications/[id]/read": "admin-notification-read-api",
   "/api/admin/notifications/read-all": "admin-notifications-read-all-api",
+  "/admin/waveform-jobs/[id]": "admin-waveform-job",
+  "/api/admin/waveform-jobs/[id]": "admin-waveform-job-api",
   "/admin": "admin-home",
   "/admin/notifications": "admin-notification-list",
   "/admin-login": "admin-login",
@@ -26,6 +28,8 @@ const routes = {
 export const SENTRY_OPERATIONS = ["album-image-upload", ...Object.values(routes)] as const;
 
 const dynamicRoutes: readonly [RegExp, keyof typeof routes][] = [
+  [/^\/admin\/waveform-jobs\/[^/]+$/, "/admin/waveform-jobs/[id]"],
+  [/^\/api\/admin\/waveform-jobs\/[^/]+$/, "/api/admin/waveform-jobs/[id]"],
   [/^\/api\/admin\/push-installations\/[^/]+$/, "/api/admin/push-installations/[id]"],
   [/^\/api\/admin\/notifications\/[^/]+\/read$/, "/api/admin/notifications/[id]/read"],
   [/^\/api\/admin\/notifications\/[^/]+$/, "/api/admin/notifications/[id]"],
