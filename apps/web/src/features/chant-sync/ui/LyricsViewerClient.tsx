@@ -6,8 +6,6 @@ import type { LyricLine, PublishedCheerGuide } from "@oioi-bwg/contracts/song";
 import { cva } from "class-variance-authority";
 import gsap from "gsap";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
-import { Link2 } from "lucide-react";
-import Link from "next/link";
 import { toast } from "sonner";
 
 import type { Album } from "@/entities/album";
@@ -57,15 +55,36 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
   // 광고 감시 훅 연동
   const isAdPlaying = useAdWatcher(player, song.youtubeId);
 
+  const [isSharing, setIsSharing] = useState(false);
   const handleShare = async () => {
+    if (isSharing) return;
+    setIsSharing(true);
     try {
       const url = new URL(window.location.href);
       if (selectedGuide) url.searchParams.set("guide", selectedGuide.id);
       else url.searchParams.delete("guide");
+      if (typeof navigator.share === "function") {
+        try {
+          await navigator.share({ title: `${song.title} 응원법`, url: url.href });
+        } catch (error) {
+          if (
+            !(
+              typeof error === "object" &&
+              error !== null &&
+              "name" in error &&
+              error.name === "AbortError"
+            )
+          )
+            toast.error("공유하지 못했어요. 다시 시도해 주세요.");
+        }
+        return;
+      }
       await navigator.clipboard.writeText(url.href);
       toast("응원법 링크를 복사했어요.");
     } catch {
       toast.error("링크를 복사하지 못했어요. 다시 시도해 주세요.");
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -182,39 +201,15 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
             className="aspect-auto h-full border-0"
           />
         </div>
-        <div className="px-6 pt-5 md:px-8 md:pt-7">
-          <div className="mb-5 flex items-end justify-between gap-4 md:mb-6">
-            <div className="min-w-0">
-              <p className="mb-2 text-sm leading-none md:text-base">QWER</p>
-              <h1 className="text-[1.75rem] leading-tight font-bold tracking-tight text-balance break-keep md:text-4xl">
-                {song.title}
-              </h1>
-              {album && (
-                <Link
-                  href={`/albums/${album.imageSlug}`}
-                  className="focus-visible:outline-qwer-w mt-3 block text-base leading-relaxed break-keep whitespace-pre-line hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 md:text-base"
-                >
-                  {album.name.replace(":", ":\n")}
-                </Link>
-              )}
-            </div>
-            <button
-              onClick={handleShare}
-              className="text-foreground/80 hover:text-foreground focus-visible:outline-qwer-w inline-flex size-11 shrink-0 items-center justify-center rounded-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-              aria-label="링크 복사"
-              title="링크 복사"
-            >
-              <Link2 className="size-5" />
-            </button>
-          </div>
-          {selectedGuide && (
-            <CheerGuideInfo
-              guides={song.cheerGuides ?? []}
-              selected={selectedGuide}
-              onSelect={handleGuideChange}
-            />
-          )}
-        </div>
+        <CheerGuideInfo
+          title={song.title}
+          album={album}
+          guides={song.cheerGuides ?? []}
+          selected={selectedGuide ?? undefined}
+          onSelect={handleGuideChange}
+          onShare={handleShare}
+          isSharing={isSharing}
+        />
       </section>
 
       {/* 가사 스크롤 영역 */}
@@ -224,13 +219,13 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
         aria-label="응원법 가사"
         tabIndex={0}
         className={cn(
-          "focus-visible:outline-qwer-w min-h-48 flex-1 overflow-x-hidden overflow-y-auto px-6 focus-visible:outline-2 focus-visible:outline-offset-[-2px] md:min-h-0 md:px-10",
+          "focus-visible:outline-qwer-w min-h-48 flex-1 overflow-x-hidden overflow-y-auto px-5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] md:min-h-0 md:px-10",
           styles.lyrics,
         )}
       >
         <div className="mx-auto max-w-3xl pt-4 md:pt-[12vh]">
           {/* 가사 목록 */}
-          <div className="space-y-0.5 text-left text-xl leading-relaxed md:space-y-9 md:text-center md:text-3xl">
+          <div className="space-y-0.5 text-left text-xl leading-relaxed md:space-y-2 md:text-center md:text-3xl">
             {lyrics.map((line, index) => (
               <LyricLineItem
                 key={index}
@@ -275,8 +270,9 @@ const lyricContainerVariants = cva("transition-colors", {
     },
   },
   compoundVariants: [
-    { isActive: true, className: "text-qwer-w" },
-    { isActive: false, className: "text-foreground/65" },
+    { variant: "normal", isActive: true, className: "text-foreground" },
+    { variant: "normal", isActive: false, className: "text-muted-foreground" },
+    { variant: "extra", className: "text-qwer-e" },
   ],
 });
 
@@ -290,8 +286,8 @@ const lyricSegmentVariants = cva("transition-colors", {
       default: "",
       extraTarget: "underline underline-offset-4",
       extraUntarget: "",
-      echo: "decoration-current/35 underline underline-offset-4",
-      cheer: "decoration-current/35 underline underline-offset-4",
+      echo: "text-qwer-r decoration-current/35 underline underline-offset-4",
+      cheer: "text-qwer-bwg decoration-current/35 underline underline-offset-4",
     },
   },
 });
@@ -320,12 +316,11 @@ function LyricLineItem({
       type="button"
       onClick={onClick}
       aria-current={isActive ? "true" : undefined}
-      className="focus-visible:outline-qwer-w block min-h-9 w-full cursor-pointer rounded-sm py-0.5 text-left transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 md:py-1 md:text-center"
+      className="focus-visible:outline-qwer-w block min-h-9 w-full cursor-pointer rounded-sm py-1.5 text-left transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 md:py-1 md:text-center"
     >
       <span
         className={cn(
-          "relative inline-block border-l-4 pl-3 text-balance break-keep transition-colors duration-200 md:pr-3",
-          isActive ? "border-qwer-w" : "border-transparent",
+          "relative inline-block text-balance break-keep transition-colors duration-200",
           lyricContainerVariants({ variant: variantType, isActive }),
         )}
       >
