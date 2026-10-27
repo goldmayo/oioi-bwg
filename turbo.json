@@ -58,7 +58,7 @@
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/next.json"
       ],
-      "outputs": [".next/**", "!.next/cache/**"],
+      "outputs": [".next/**", "!.next/cache/**", "public/notification-worker.js"],
       "passThroughEnv": ["SENTRY_AUTH_TOKEN"],
       "env": [
         "NODE_ENV",
