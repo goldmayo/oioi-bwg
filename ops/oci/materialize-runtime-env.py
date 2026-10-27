@@ -11,10 +11,12 @@ from urllib.parse import quote, urlsplit
 SECRETS = {
     'web': {'DB_APP_PASSWORD', 'AUTH_SECRET', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'},
     'console': {'DB_APP_PASSWORD', 'CONSOLE_AUTH_SECRET', 'CONSOLE_MFA_ENCRYPTION_KEY',
-                'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'},
+                'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'FIREBASE_SERVICE_ACCOUNT_JSON'},
 }
 CONSOLE_PUBLIC = {'CONSOLE_ORIGIN', 'CONSOLE_MFA_ENROLLMENT_ENABLED',
-                  'R2_ENDPOINT', 'R2_BUCKET', 'ASSETS_PUBLIC_BASE_URL'}
+                  'R2_ENDPOINT', 'R2_BUCKET', 'ASSETS_PUBLIC_BASE_URL', 'CONSOLE_PUSH_ENABLED',
+                  'FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_APP_ID',
+                  'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_VAPID_PUBLIC_KEY'}
 
 
 def require(condition):
@@ -60,6 +62,13 @@ def materialize(app, public_path, map_path, output):
         require(public['CONSOLE_MFA_ENROLLMENT_ENABLED'] in {'true', 'false'})
         required = {'DB_APP_PASSWORD', 'CONSOLE_AUTH_SECRET', 'CONSOLE_MFA_ENCRYPTION_KEY',
                     'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'}
+        public.setdefault('CONSOLE_PUSH_ENABLED', 'false')
+        require(public['CONSOLE_PUSH_ENABLED'] in {'true', 'false'})
+        if public['CONSOLE_PUSH_ENABLED'] == 'true':
+            required.add('FIREBASE_SERVICE_ACCOUNT_JSON')
+            require(all(public.get(name, '').strip() for name in (
+                'FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_APP_ID',
+                'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_VAPID_PUBLIC_KEY')))
         require(public.get('R2_BUCKET', '').strip())
         for name in ('R2_ENDPOINT', 'ASSETS_PUBLIC_BASE_URL'):
             asset_url = urlsplit(public.get(name, ''))

@@ -3,6 +3,14 @@ import { z } from "zod";
 import { entityIdSchema } from "./entity-id";
 
 export const notificationTypeSchema = z.enum(["WAVEFORM_SUCCEEDED", "WAVEFORM_FAILED"]);
+export const pushConfigSchema = z.object({
+  apiKey: z.string().min(1),
+  appId: z.string().min(1),
+  projectId: z.string().regex(/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/),
+  messagingSenderId: z.string().regex(/^\d+$/),
+  vapidKey: z.string().regex(/^[A-Za-z0-9_-]{80,100}$/),
+});
+export type PushConfig = z.infer<typeof pushConfigSchema>;
 export const notificationCursorSchema = entityIdSchema;
 export const notificationListInputSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),

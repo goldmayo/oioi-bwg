@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./services/notification-delivery-service": "./src/services/notification-delivery-service.ts",
     "./services/push-installation-service": "./src/services/push-installation-service.ts",
     "./services/notification-service": "./src/services/notification-service.ts",
     "./auth/admin-mfa-crypto": "./src/auth/admin-mfa-crypto.ts",
