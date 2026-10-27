@@ -1,5 +1,7 @@
+import { entityIdSchema } from "@oioi-bwg/contracts/entity-id";
 import { AppError } from "@oioi-bwg/server/errors/app-error";
-import { headers } from "next/headers";
+import { releasePushInstallation } from "@oioi-bwg/server/services/push-installation-service";
+import { cookies, headers } from "next/headers";
 import NextAuth, { AuthError, CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
@@ -8,6 +10,7 @@ import { authenticateConsole } from "@/server/auth/authenticate-console";
 import { ConsoleMfaRateLimited, reserveConsoleMfaAttempt } from "@/server/auth/console-mfa-limiter";
 import { consoleSessionCallbacks } from "@/server/auth/console-session";
 import { assertConsoleOrigin } from "@/server/http/console-origin";
+import { PUSH_INSTALLATION_COOKIE } from "@/server/notifications/push-cookie";
 import { reportAuthError } from "@/server/observability/auth-error-reporter";
 import { getRequestObservation } from "@/server/observability/request-observation";
 
@@ -81,6 +84,22 @@ const {
       redirect({ url }) {
         const target = new URL(url, config.origin);
         return target.origin === config.origin ? target.href : config.origin;
+      },
+    },
+    events: {
+      async signOut(message) {
+        try {
+          const store = await cookies();
+          const id = entityIdSchema.safeParse(store.get(PUSH_INSTALLATION_COOKIE)?.value);
+          const accountId = entityIdSchema.safeParse(
+            "token" in message ? message.token?.sub : undefined,
+          );
+          if (id.success && accountId.success)
+            await releasePushInstallation(accountId.data, id.data);
+          store.delete(PUSH_INSTALLATION_COOKIE);
+        } catch {
+          reportAuthError(new Error("Push logout cleanup failed"), observation);
+        }
       },
     },
   };

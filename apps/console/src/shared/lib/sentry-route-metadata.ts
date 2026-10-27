@@ -1,5 +1,7 @@
 /** 앱이 소유한 경로만 고정 template/operation으로 축약한다. 원문 경로는 반환하지 않는다. */
 const routes = {
+  "/api/admin/push-installations": "admin-push-registration-api",
+  "/api/admin/push-installations/[id]": "admin-push-unregister-api",
   "/api/admin/notifications": "admin-notifications-api",
   "/api/admin/notifications/[id]": "admin-notification-api",
   "/api/admin/notifications/[id]/read": "admin-notification-read-api",
@@ -23,6 +25,7 @@ const routes = {
 export const SENTRY_OPERATIONS = ["album-image-upload", ...Object.values(routes)] as const;
 
 const dynamicRoutes: readonly [RegExp, keyof typeof routes][] = [
+  [/^\/api\/admin\/push-installations\/[^/]+$/, "/api/admin/push-installations/[id]"],
   [/^\/api\/admin\/notifications\/[^/]+\/read$/, "/api/admin/notifications/[id]/read"],
   [/^\/api\/admin\/notifications\/[^/]+$/, "/api/admin/notifications/[id]"],
   [/^\/admin\/edit\/[^/]+$/, "/admin/edit/[slug]"],
