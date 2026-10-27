@@ -80,6 +80,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   writeText.mockResolvedValue(undefined);
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
   window.history.replaceState({}, "", "/songs/preview?keep=1");
 });
 afterEach(() => cleanup());
@@ -92,7 +93,8 @@ it("모드·출처·URL을 바꾸면서 재생기와 현재 시각을 유지하�
   fireEvent.click(screen.getByRole("radio", { name: "페스티벌" }));
   await screen.findByText("페스티벌 응원");
   expect(screen.getByText("공식", { exact: true })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "공식 응원법 원본 보기" })).toHaveAttribute(
+  fireEvent.click(screen.getByRole("button", { name: "곡과 응원법 정보" }));
+  expect(screen.getByRole("link", { name: "원본 보기" })).toHaveAttribute(
     "href",
     guides[1].sourceUrl,
   );
@@ -109,7 +111,7 @@ it("모드·출처·URL을 바꾸면서 재생기와 현재 시각을 유지하�
     "aria-current",
     "true",
   );
-  fireEvent.click(screen.getByRole("button", { name: "링크 복사" }));
+  fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
   await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
   const copied = new URL(writeText.mock.calls[0][0]);
   expect(copied.searchParams.get("guide")).toBe(guides[1].id);
@@ -139,7 +141,7 @@ it("공개 항목이 0개면 예전 본문을 다시 표시하지 않는다", ()
 it("복사가 실패하면 선택을 보존하고 재시도 안내를 표시한다", async () => {
   writeText.mockRejectedValueOnce(new Error("denied"));
   view(guides, `?guide=${guides[1].id}`);
-  fireEvent.click(screen.getByRole("button", { name: "링크 복사" }));
+  fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
   await waitFor(() =>
     expect(life.error).toHaveBeenCalledWith("링크를 복사하지 못했어요. 다시 시도해 주세요."),
   );
@@ -157,4 +159,38 @@ it("이관 전 곡은 기존 가사를 유지하고 출처를 임의 표시하�
   expect(screen.getByText("기존 가사")).toBeInTheDocument();
   expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   expect(screen.queryByText("팬덤", { exact: true })).not.toBeInTheDocument();
+});
+
+it("기기 기본 공유에 현재 응원법 URL을 전달하고 링크를 자동 복사하지 않는다", async () => {
+  const share = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "share", { configurable: true, value: share });
+  view();
+  fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
+  await waitFor(() => expect(share).toHaveBeenCalledOnce());
+  expect(new URL(share.mock.calls[0][0].url).searchParams.get("guide")).toBe(guides[0].id);
+  expect(writeText).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "곡과 응원법 정보" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+});
+it.each(["AbortError", "NotAllowedError"])("기본 공유 %s 후 자동 복사하지 않는다", async (name) => {
+  Object.defineProperty(navigator, "share", {
+    configurable: true,
+    value: vi.fn().mockRejectedValue(new DOMException("실패", name)),
+  });
+  view();
+  fireEvent.click(screen.getByRole("button", { name: "공유하기" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "공유하기" })).not.toBeDisabled());
+  expect(writeText).not.toHaveBeenCalled();
+  if (name === "AbortError") expect(life.error).not.toHaveBeenCalled();
+  else expect(life.error).toHaveBeenCalledWith("공유하지 못했어요. 다시 시도해 주세요.");
+});
+it("출처는 링크가 아니며 동일한 영상·원본 URL은 펼친 정보에서 한 번만 제공한다", () => {
+  view([{ ...guides[1], sourceUrl: guides[1].guideVideoUrl }]);
+  expect(screen.queryByRole("link", { name: "응원법 영상 보기" })).not.toBeInTheDocument();
+  expect(screen.getByText("공식", { exact: true }).closest("a")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "곡과 응원법 정보" }));
+  expect(screen.getAllByRole("link", { name: "응원법 영상 보기" })).toHaveLength(1);
+  expect(screen.queryByRole("link", { name: "원본 보기" })).not.toBeInTheDocument();
 });
