@@ -30,3 +30,8 @@
     min-height: 12rem;
   }
 }
+
+.line[aria-current="true"] {
+  background-color: var(--muted);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 50%, transparent);
+}

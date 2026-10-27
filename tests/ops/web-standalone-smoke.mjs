@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 
 import { chromium } from "playwright";
 
+import { assertLyricsViewer } from "./lyrics-viewer-smoke.mjs";
+
 const baseUrl = process.argv[2];
 assert.ok(baseUrl, "Usage: node tests/ops/web-standalone-smoke.mjs <base-url>");
 
@@ -77,6 +79,7 @@ try {
   await page.waitForLoadState("networkidle");
   assert.equal(new URL(page.url()).pathname, "/more");
   assert.deepEqual(errors, [], "browser runtime errors");
+  await assertLyricsViewer(browser, baseUrl);
 } finally {
   await browser.close();
 }
