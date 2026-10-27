@@ -23,6 +23,9 @@ class RuntimeEnvTest(unittest.TestCase):
                       'r2id': 'R2_ACCESS_KEY_ID', 'r2secret': 'R2_SECRET_ACCESS_KEY'})}
             mapping = ''.join(f'{name}=ocid1.vaultsecret.test.{key}\n' for key, name in names.items())
             secrets = dict(VALUES)
+            if variant == 'push-missing': public += 'CONSOLE_PUSH_ENABLED=true\n'
+            if variant == 'push-secret-public': public += 'FIREBASE_SERVICE_ACCOUNT_JSON=must-not-be-public\n'
+            if variant == 'push-web-secret': mapping += 'FIREBASE_SERVICE_ACCOUNT_JSON=ocid1.vaultsecret.test.auth\n'
             if variant == 'foreign-public': public += 'CONSOLE_ORIGIN=http://localhost:3001\n' if app == 'web' else 'EMAIL_DELIVERY_MODE=dev\n'
             if variant == 'public-secret': public += 'AUTH_SECRET=' + VALUES['web'] + '\n'
             if variant == 'foreign-key': mapping += 'CONSOLE_AUTH_SECRET=ocid1.vaultsecret.test.auth\n' if app == 'web' else 'AUTH_SECRET=ocid1.vaultsecret.test.web\n'
@@ -123,6 +126,13 @@ print(base64.b64encode(json.loads((root/'values').read_text())[key].encode()).de
                 result, output, _, _ = self.run_case('console', variant)
                 self.assertEqual(result.returncode, 1)
                 self.assertEqual(output, 'previous-env')
+
+    def test_push_configuration_is_opt_in_and_console_only(self):
+        for app, variant in [('console', 'push-missing'), ('console', 'push-secret-public'), ('web', 'push-web-secret')]:
+            result, output, calls, _ = self.run_case(app, variant)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(output, 'previous-env')
+            self.assertEqual(calls, [])
 
 
 if __name__ == '__main__':

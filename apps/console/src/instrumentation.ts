@@ -13,10 +13,15 @@ import { getSentryRouteMetadata } from "@/shared/lib/sentry-route-metadata";
  * Next.js instrumentation hook for the Node runtime.
  */
 export async function register() {
-  if (!getSentryRuntimeConfig().enabled) return;
-
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    await import("../sentry.server.config");
+    if (getSentryRuntimeConfig().enabled) await import("../sentry.server.config");
+    if (
+      process.env.CONSOLE_PUSH_ENABLED === "true" &&
+      process.env.OIOI_EPHEMERAL_BUILD !== "true"
+    ) {
+      const { startNotificationDispatcher } = await import("./server/notifications/dispatcher");
+      startNotificationDispatcher();
+    }
   }
 }
 

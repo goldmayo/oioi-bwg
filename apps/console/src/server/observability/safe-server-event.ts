@@ -14,6 +14,7 @@ import {
 import { getSentryRouteMetadata, SENTRY_OPERATIONS } from "@/shared/lib/sentry-route-metadata";
 
 export const SERVER_ERROR_EVENTS = [
+  "notification.dispatch_failed",
   "api.unexpected_error",
   "api.output_contract_violation",
   "auth.failure",
@@ -23,6 +24,7 @@ export const SERVER_ERROR_EVENTS = [
 ] as const;
 
 export const SERVER_ERROR_SOURCES = [
+  "notification-dispatcher",
   "api-route-handler",
   "auth-js",
   "next-instrumentation",
