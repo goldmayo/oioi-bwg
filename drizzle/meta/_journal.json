@@ -85,6 +85,13 @@
       "when": 1793083048507,
       "tag": "0011_notification_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793087578112,
+      "tag": "0012_waveform_notification_producer",
+      "breakpoints": true
     }
   ]
 }

@@ -497,7 +497,7 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
     });
   });
 
-  test("applies tracked migrations 0000 through 0011 with exact hashes", async () => {
+  test("applies tracked migrations 0000 through 0012 with exact hashes", async () => {
     const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as {
       entries: { tag: string }[];
     };
@@ -518,6 +518,7 @@ describe.sequential("M7 content, authorization, and persistence PostgreSQL regre
       "0009_service_policies",
       "0010_policy_content_drafts",
       "0011_notification_foundation",
+      "0012_waveform_notification_producer",
     ]);
     expect(rows.map(({ hash }) => hash)).toEqual(
       journal.entries.map(({ tag }) =>

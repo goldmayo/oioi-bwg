@@ -1,3 +1,4 @@
+import type { WaveformData } from "@oioi-bwg/contracts/waveform";
 import { v7 } from "uuid";
 
 import { relations, sql } from "drizzle-orm";
@@ -655,5 +656,88 @@ export const servicePolicy = pgTable(
     index("service_policy_public_idx")
       .on(t.slug, t.version.desc())
       .where(sql`${t.isPublished} = true`),
+  ],
+);
+
+/** 파형 분석의 작업 상태. 생성 transport와 Runner 활성화는 별도 P08 관문이다. */
+export const waveformJob = pgTable(
+  "waveform_job",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    songId: uuid("song_id")
+      .notNull()
+      .references(() => song.id, { onDelete: "cascade" }),
+    videoId: text("video_id").notNull(),
+    status: text()
+      .$type<"QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED">()
+      .notNull()
+      .default("QUEUED"),
+    attemptId: uuid("attempt_id"),
+    errorCode: text("error_code").$type<
+      "ENQUEUE_FAILED" | "PROCESSING_FAILED" | "DLQ" | "DELIVERY_EXPIRED" | "SOURCE_CHANGED"
+    >(),
+    enqueuedAt: timestamp("enqueued_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true, mode: "string" }),
+    finishedAt: timestamp("finished_at", { withTimezone: true, mode: "string" }),
+  },
+  (t) => [
+    uniqueIndex("waveform_job_active_key")
+      .on(t.songId, t.videoId)
+      .where(sql`${t.status} in ('QUEUED','RUNNING')`),
+    index("waveform_job_song_idx").on(t.songId),
+    check("waveform_job_video_check", sql`${t.videoId} ~ '^[A-Za-z0-9_-]{11}$'`),
+    check(
+      "waveform_job_status_check",
+      sql`${t.status} in ('QUEUED','RUNNING','SUCCEEDED','FAILED')`,
+    ),
+    check(
+      "waveform_job_terminal_check",
+      sql`(${t.status} in ('SUCCEEDED','FAILED')) = (${t.finishedAt} is not null)`,
+    ),
+    check(
+      "waveform_job_attempt_check",
+      sql`${t.status} not in ('RUNNING','SUCCEEDED') or (${t.attemptId} is not null and ${t.startedAt} is not null)`,
+    ),
+    check(
+      "waveform_job_error_check",
+      sql`case when ${t.status} = 'FAILED' then ${t.errorCode} is not null and ${t.errorCode} in ('ENQUEUE_FAILED','PROCESSING_FAILED','DLQ','DELIVERY_EXPIRED','SOURCE_CHANGED') else ${t.errorCode} is null end`,
+    ),
+  ],
+);
+export const waveformJobRequester = pgTable(
+  "waveform_job_requester",
+  {
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => waveformJob.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => account.id, { onDelete: "restrict" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.jobId, t.accountId] }),
+    index("waveform_job_requester_account_idx").on(t.accountId),
+  ],
+);
+export const waveform = pgTable(
+  "waveform",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    songId: uuid("song_id")
+      .notNull()
+      .unique()
+      .references(() => song.id, { onDelete: "cascade" }),
+    videoId: text("video_id").notNull(),
+    data: jsonb().$type<WaveformData>().notNull(),
+    generatedAt: timestamp("generated_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check("waveform_video_check", sql`${t.videoId} ~ '^[A-Za-z0-9_-]{11}$'`),
+    check("waveform_data_check", sql`jsonb_typeof(${t.data}) = 'object'`),
   ],
 );

@@ -37,7 +37,8 @@
     "./storage/upload-public-asset": "./src/storage/upload-public-asset.ts",
     "./services/cheer-guide-import-service": "./src/services/cheer-guide-import-service.ts",
     "./services/publication-service": "./src/services/publication-service.ts",
-    "./services/policy-service": "./src/services/policy-service.ts"
+    "./services/policy-service": "./src/services/policy-service.ts",
+    "./services/waveform-service": "./src/services/waveform-service.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",

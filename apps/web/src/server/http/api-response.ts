@@ -8,6 +8,8 @@ import type { ServerErrorContext } from "@/server/observability/safe-server-even
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
 const appErrorDefinitions = {
+  WAVEFORM_JOB_NOT_FOUND: { message: "파형 작업을 찾을 수 없습니다.", status: 404 },
+  WAVEFORM_SOURCE_INVALID: { message: "곡의 참조 영상을 확인해 주세요.", status: 400 },
   NOTIFICATION_NOT_FOUND: { message: "알림을 찾을 수 없습니다.", status: 404 },
   CHEER_GUIDE_IMPORT_CONFLICT: {
     status: 409,

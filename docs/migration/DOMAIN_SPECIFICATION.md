@@ -1356,6 +1356,18 @@ Waveform
 
 ---
 
+## 20.4.1 파형 Job과 알림 저장 계약 (2026-10-27)
+
+공통 알림 연동의 준비 구현이다. §20.2의 source 이용 정책은 유지하며 다운로드·Queue/Runner·생성 HTTP API는 별도 P08 관문을 통과하기 전 활성화하지 않는다.
+
+- Job 상태는 QUEUED/RUNNING/SUCCEEDED/FAILED다. 동일 song/video의 활성 Job은 하나이며 반복·동시 요청은 Job을 재사용하고 각 요청자를 유일하게 등록한다.
+- Song → Job → requester 순서로 잠그고 terminal과 요청자 등록을 직렬화한다. 재전달의 이전 attempt 결과와 terminal 재반영은 무시한다.
+- 현재 Song 참조 영상과 다른 성공 결과는 JSON을 저장하지 않고 SOURCE_CHANGED 최종 실패로 기록한다. 결과·terminal·요청자별 알림·기기 발송 대기는 하나의 transaction이다.
+- 정상 JSON은 Song별 하나다. 재생성 성공으로 교체하고 실패는 직전 JSON을 보존한다. 참조 영상과 다른 과거 JSON은 현재 파형으로 사용하지 않는다. Cue는 자동 변경하지 않는다.
+- BBC mono 8-bit v1/v2 JSON과 source 참조·duration·bucket metadata를 보존한다. 배열 길이·범위·min/max·bucket/duration 일치를 검증한다. 내부 결과 상한은 1시간·180,000 bucket·4MiB이며 실제 ARM64 성능/시간축 검증을 대신하지 않는다.
+- 곡 삭제 시 Job/요청자/파형 JSON을 함께 삭제한다. Notification 이력은 별도로 보존하며 삭제된 결과 조회는 404다.
+- 요청자는 ADMIN/MFA 세션에서 등록하며 알림 수신 범위는 요청자다. Job 상태 조회는 현재 ADMIN/MFA 권한을 다시 검사한다.
+
 ## 20.5 Cue
 
 CheerCue가 SSOT다.
