@@ -1026,15 +1026,30 @@ ADMIN은 schedule별로 recommendedGuideMode를 override할 수 있다.
 
 ## 15.1 MVP Channel
 
-MVP는 **인앱 알림**을 기준으로 한다.
+2026-10-27 사용자 결정으로 Console은 **인앱 내역과 FCM foreground/background push**를 제공한다.
+기존 인앱 우선·push 후속 범위를 대체한다. 공개 Web은 비로그인 조회를 유지한다.
 
-이메일/push는 추후 delivery channel로 확장할 수 있다.
+- 알림 내역·읽음 상태의 SSOT는 PostgreSQL이다. FCM 접수·표시·토스트 닫기는 읽음이 아니다.
+- 항목 선택 또는 명시적 모두 읽음으로만 읽음 처리한다. 알림함 열기는 읽음으로 처리하지 않는다.
+- 푸시는 사용자 동작으로 허용받는다. 거부·미지원·유실 시 진입/화면 복귀/알림함 열기 때 재조회하며 주기적 browser polling은 하지 않는다.
+- 첫 producer는 WaveformJob의 SUCCEEDED/최종 FAILED다. 요청자별 한 건이며 같은 active Job을 재사용한 요청자도 포함한다.
+- 결과·terminal 상태·알림·기기별 발송 대기는 하나의 transaction으로 저장한다. 발송 장애는 작업 결과를 되돌리지 않는다.
+- 푸시 등록은 현재 ACTIVE ADMIN/MFA에 귀속한다. 계정 전환·회수 후 이전 계정의 발송을 금지하며 여러 기기는 독립 처리한다.
+- 푸시는 일반 안내와 알림 식별자만 포함한다. 대상 접근은 Console의 현재 인가로 다시 판단한다.
+- 발송 재시도·FCM TTL은 알림 생성부터 24시간이다. 알림 내역은 v1에서 자동 삭제하지 않는다. 이메일은 후속이다.
 
 ---
 
 ## 15.2 Notification Types
 
-초기 후보:
+현재 Console 구현 대상:
+
+```text
+WAVEFORM_SUCCEEDED
+WAVEFORM_FAILED
+```
+
+이후 producer가 필요한 시점에 추가할 후보:
 
 ```text
 REVISION_REVIEW_REQUESTED
@@ -1340,6 +1355,18 @@ Waveform
 원본 audio file path를 영구 데이터로 저장하지 않는다.
 
 ---
+
+## 20.4.1 파형 Job과 알림 저장 계약 (2026-10-27)
+
+공통 알림 연동의 준비 구현이다. §20.2의 source 이용 정책은 유지하며 다운로드·Queue/Runner·생성 HTTP API는 별도 P08 관문을 통과하기 전 활성화하지 않는다.
+
+- Job 상태는 QUEUED/RUNNING/SUCCEEDED/FAILED다. 동일 song/video의 활성 Job은 하나이며 반복·동시 요청은 Job을 재사용하고 각 요청자를 유일하게 등록한다.
+- Song → Job → requester 순서로 잠그고 terminal과 요청자 등록을 직렬화한다. 재전달의 이전 attempt 결과와 terminal 재반영은 무시한다.
+- 현재 Song 참조 영상과 다른 성공 결과는 JSON을 저장하지 않고 SOURCE_CHANGED 최종 실패로 기록한다. 결과·terminal·요청자별 알림·기기 발송 대기는 하나의 transaction이다.
+- 정상 JSON은 Song별 하나다. 재생성 성공으로 교체하고 실패는 직전 JSON을 보존한다. 참조 영상과 다른 과거 JSON은 현재 파형으로 사용하지 않는다. Cue는 자동 변경하지 않는다.
+- BBC mono 8-bit v1/v2 JSON과 source 참조·duration·bucket metadata를 보존한다. 배열 길이·범위·min/max·bucket/duration 일치를 검증한다. 내부 결과 상한은 1시간·180,000 bucket·4MiB이며 실제 ARM64 성능/시간축 검증을 대신하지 않는다.
+- 곡 삭제 시 Job/요청자/파형 JSON을 함께 삭제한다. Notification 이력은 별도로 보존하며 삭제된 결과 조회는 404다.
+- 요청자는 ADMIN/MFA 세션에서 등록하며 알림 수신 범위는 요청자다. Job 상태 조회는 현재 ADMIN/MFA 권한을 다시 검사한다.
 
 ## 20.5 Cue
 
@@ -1683,9 +1710,15 @@ Index:
 - resource_id
 - read_at nullable
 - created_at
+- event_key: producer의 사건 식별자
 
-Index:
-- (recipient_account_id, read_at, created_at)
+Unique: (recipient_account_id, type, event_key). 목록은 (created_at, id) 역순 cursor다.
+Index: (recipient_account_id, created_at DESC, id DESC), 미읽음 recipient partial index.
+
+푸시 persistence는 notification과 분리한다.
+- push_installation: 브라우저별 Firebase 등록 식별자·수신 계정·MFA version·binding version·활성/만료 시각. 로그아웃·계정 전환 시 해제한다.
+- notification_delivery: notification/installation/binding version별 유일한 발송 대기. 재시도 시각·attempt·lease·접수/중단 시각을 유지한다.
+- WaveformJob 요청자는 (job_id, account_id)로 유일하다. terminal 반영과 요청자 등록은 Job 행 잠금으로 직렬화한다.
 
 ---
 

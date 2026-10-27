@@ -457,6 +457,28 @@ Sentry는 기존 공용 프로젝트를 유지한다. GitHub `oci-development-im
 각 앱의 로컬 입력은 자신의 `.env.local`에 명시한다. `local`에서는 전송하지 않는다.
 새 프로젝트·DSN·GitHub 변수 생성을 이번 회수의 선행 조건으로 추가하지 않는다.
 
+### 9.2.2. Console FCM 알림 활성화
+
+`CONSOLE_PUSH_ENABLED=false`가 기본이다. 알림 schema migration·앱 runtime role 권한을 먼저 검토하고 적용한다.
+Firebase 프로젝트에 Web 앱과 Web Push VAPID 키를 등록하고 [공식 시작 절차](https://firebase.google.com/docs/cloud-messaging/web/get-started)를 따른다.
+`console-runtime-public.env`에 `FIREBASE_PROJECT_ID`, `FIREBASE_API_KEY`, `FIREBASE_APP_ID`,
+`FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_VAPID_PUBLIC_KEY`를 설정한다. 이 공개 설정은 runtime에 주입하며 이미지를 다시 만들지 않는다.
+FCM 발송 권한을 가진 service account JSON은 한 줄 JSON으로 Vault에 보관하고
+`console-runtime-secrets.env`의 `FIREBASE_SERVICE_ACCOUNT_JSON`에 그 Secret OCID를 매핑한다.
+새 Secret은 기존 Auth/MFA와 같은 `secret_compartment_ocid` 범위에 생성하고, 기존 Resource Manager Stack의
+`runtime_secret_ocids` 목록을 보존한 채 새 OCID를 추가한다. Plan에서 해당 Secret의 `read secret-bundles`
+한 줄 추가와 다른 변경 유무를 검토한 뒤 승인한 Plan을 Apply한다. 목록에 없으면 VM의 Instance Principal은
+`NotAuthorizedOrNotFound`로 읽기를 거절한다. GitHub 배포 계정에 Vault 권한이나 JSON 원문을 추가하지 않는다.
+운영 helper가 FCM 항목을 허용하는 버전인지 확인하고, 보호된 백업·현행 host upgrade 절차로
+`materialize-runtime-env.py`를 갱신한 뒤 새 설정을 검증한다. 현재 컨테이너의 Auth/MFA·DB·R2 값은 보존한다.
+Web·Runner·분석 worker에는 전달하지 않으며 Firebase Auth·Firestore·Cloud Functions는 사용하지 않는다.
+실제 수신을 검증할 로컬 Console은 자신의 `.env.local`에 같은 이름으로 설정한다.
+foreground·background·닫힌 탭·알림 클릭과 로그아웃/권한 거부를 검증한 뒤 별도 Promotion에서 활성화한다.
+iOS/iPadOS는 홈 화면 웹 앱에서 검증한다. Service Worker는 API·HTML을 캐시하지 않는다.
+발송 장애 시 알림/작업 결과를 보존하고 `notification_delivery`의 상태·오류 코드와 `notification.dispatch_failed`를 확인한다.
+발송은 60초마다 미처리/lease 만료를 복구한다. FCM 접수와 사용자의 수신·읽음은 다르며, 생성 후 24시간이 지나면 push를 중단한다.
+비활성화는 flag를 false로 바꾸고 기존 Promotion/rollback 절차를 따른다. 알림 내역은 삭제하지 않는다.
+
 Console 로그인은 TOTP이고 현재 메일 호출 consumer가 없다. 메일 설정을 Console에 복사하지 않는다.
 Web의 가입 POST도 현재 종료된 상태다. 공통 메일 구현의 `dev`는 실제 발송이 아니며, 향후 consumer를
 연결할 때 해당 앱에 `oci` mode·발신자·compartment와 Instance Principal 권한을 별도로 준비한다.

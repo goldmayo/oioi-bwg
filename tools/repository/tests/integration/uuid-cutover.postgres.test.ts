@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -25,6 +25,11 @@ import { createUuidCutoverMap } from "../../src/operators/uuid-cutover-map";
 let database: Database;
 vi.mock("@oioi-bwg/server/db", () => ({ getDatabase: () => database }));
 const run = promisify(execFile);
+const migrationCount = (
+  JSON.parse(
+    readFileSync(new URL("../../../../drizzle/meta/_journal.json", import.meta.url), "utf8"),
+  ) as { entries: unknown[] }
+).entries.length;
 const verificationUrl = new URL(process.env.M7_TEST_POSTGRES_VERIFICATION_URL ?? "http://invalid");
 const migratorUrl = new URL(process.env.M9_TEST_POSTGRES_MIGRATOR_URL ?? "http://invalid");
 const appUrl = new URL(process.env.DATABASE_URL ?? "http://invalid");
@@ -239,7 +244,7 @@ finally:
     await apply(map);
     expect(
       (await owner`select count(*)::int as count from drizzle.__drizzle_migrations`)[0]!.count,
-    ).toBe(11);
+    ).toBe(migrationCount);
   });
 
   test("preserves complete content/relations and ordinary credentials, resets only selected admin, then re-enrolls", async () => {

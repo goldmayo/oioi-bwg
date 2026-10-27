@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-26"
-revision: 21
+updated_at: "2026-10-27"
+revision: 24
 ---
 
 # 구현 순서와 PR 단위
@@ -30,7 +30,7 @@ P01 앱 이동 → P02 Turbo/config/harness → P03 실제 공통 코드 추출
 
 Console 전환 뒤의 기능 작업선
   ├─ P07 CONCERT/FESTIVAL · 공식/팬덤 · 데이터/조회
-  └─ P08 Waveform Job / OCI Queue / VM runner / SSE
+  └─ 공통 Console 알림/FCM → P08 Waveform Job / OCI Queue / VM runner
        → P09 JSON 파형·Cue timeline → P10 수동 Grid/Snap/Nudge/Loop
 ```
 
@@ -45,18 +45,18 @@ P09~P10도 기존 가사 JSON을 입력으로 사용한다. BPM/beatOffset은 So
 
 ## 2. 실제 PR 단위
 
-| ID / PR 제목                                                | 범위·DB/API/UI 변화                                                                                                                                                                  | 코드 선행 / 운영 순서                                 | 완료 조건                                                                                                                                                                             |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P01 `refactor(workspace): 기존 앱을 웹 워크스페이스로 이동` | 기존 Next 앱을 apps/web로 이동. workspace·경로·단일 앱 Docker/CI 진입점만 보정. DB/API/UI 동일.                                                                                      | 현재 기준                                             | /admin 포함 기존 URL·asset·standalone image·검증 명령 동작 보존.                                                                                                                      |
-| P02 `chore(config): 공용 설정과 검증 기반 분리`             | config/typescript·config/eslint, harness/architecture의 공통 primitive·repo 경계, workspace별 정책·독립 FSD root, Turbo/root verify/Husky.                                           | P01                                                   | workspace별 검사 정책이 분리됨. source/shared config/harness/policy/env 변경 시 필요한 검사 재실행, cache hit·전체 verify 확인.                                                       |
-| P03 `refactor(workspace): 공통 계약과 서버 코드 추출`       | 실제 contracts/server·migration 경로 추출. React/Next request/session/HTTP adapter는 앱에 유지. 외부 계약 동일.                                                                      | P02                                                   | contracts 순수성·server-only·repository/service 방향·앱 간 의존 금지, 소비 앱 type-check/build 성공.                                                                                  |
-| P04 `feat(console): 운영 화면과 API 이관`                   | Console entry·기존 Admin UI/API/업로드 Action 이관. Web 경로 임시 유지.                                                                                                              | P03                                                   | 접근 제한 환경에서 두 경로의 기존 작업 완주. 독립 build, direct import 없음.                                                                                                          |
-| P05 `feat(auth): 콘솔에 간단한 TOTP 인증 적용`              | admin_mfa migration·Auth.js+otplib·등록 UI·limiter·Origin/CSRF·CLI reset·관리 guard. Auth/Domain 회수 규칙 반영.                                                                     | P04                                                   | password-only/비ADMIN/미등록/다른 앱 cookie 거절. replay·동시성·version 회수·제한된 재등록 검증.                                                                                      |
-| P06 `feat(deploy): 두 앱 배포와 기존 관리 경로 종료`        | 두 image·기존 CD/Compose/Caddy/env/health/rollback 보정, preview Web을 www로 전환. Web 관리 route/API/Action·회원가입 페이지/가입 API 및 기존 Web Worker·staging 경로 종료.          | P04/P05. Audio/Guide 불필요.                          | ARM64 빌드 전 B0 IAM 실증·실제 Web/Console metadata 차단 후 Console 공개. 데이터/파일 보존, 최종 두 hostname·전용 cookie·인가·pool·복구 smoke, www 관리·가입 API 직접 호출 실패.      |
-| P07 `feat(guide): 두 공연 모드의 데이터와 조회 기반 추가`          | Guide/Snapshot/Publication·공식/팬덤·수동 이관·기존 writer 호환·공개 조회/선택. 새 관리자 편집은 후속.                                                             | 모델 P03, 관리 화면 P04의 공통 guard. 운영상 P06 후.  | 0/1/2개·URL/재생·출처·visibility·내용 보존. 이관/LRC/삭제·동시성·불변성·rollback 검증 후 reader 전환.                                                                                                |
-| P08 `feat(waveform): 큐 기반 일회성 파형 작업 추가`         | WaveformJob/결과 migration·active Job 재사용·202/status API·OCI Queue/DLQ·Runner Instance Principal/Unix socket·worker·내부 결과 API·EventEmitter/SSE. Domain source/lifecycle 반영. | P03/P04 및 관리 guard P05. 운영상 P06 후, P07 불필요. | 동시 생성/재전달·visibility 연장·저장 전 delete 금지·DLQ→FAILED·enqueue/DB 경계·IAM/socket/metadata 제한·SSE 재연결/알림 실패 검증. ARM64/비영속성 및 3개 anchor의 offset/drift 검증. |
-| P09 `feat(editor): 파형과 큐 타임라인 편집 제공`            | Peaks.js·YouTube adapter·overview/zoom/playhead·point drag·RHF draft/history.                                                                                                        | P04/P08, 기존 가사 JSON 사용 가능.                    | JSON만으로 표시·재생/seek 동기화·1회 Undo/취소·기존 캡처/LRC/강조 보존. 누적 drift 미해결이면 integration 완료로 처리하지 않음.                                                       |
-| P10 `feat(editor): 박자 격자와 이동 반복 도구 추가`         | Song의 BPM/beatOffset 편집 설정 JSON·Grid/Snap·Nudge/Fine Nudge·Cue/A-B Loop·focus/IME 단축키.                                                                                       | P09, P07 불필요.                                      | 120 BPM 수식·Snap ON/OFF·기존 Cue 불변·경계/Undo 검증, 같은 작업의 소요 시간·오차 확인.                                                                                               |
+| ID / PR 제목                                                | 범위·DB/API/UI 변화                                                                                                                                                               | 코드 선행 / 운영 순서                                 | 완료 조건                                                                                                                                                                             |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P01 `refactor(workspace): 기존 앱을 웹 워크스페이스로 이동` | 기존 Next 앱을 apps/web로 이동. workspace·경로·단일 앱 Docker/CI 진입점만 보정. DB/API/UI 동일.                                                                                   | 현재 기준                                             | /admin 포함 기존 URL·asset·standalone image·검증 명령 동작 보존.                                                                                                                      |
+| P02 `chore(config): 공용 설정과 검증 기반 분리`             | config/typescript·config/eslint, harness/architecture의 공통 primitive·repo 경계, workspace별 정책·독립 FSD root, Turbo/root verify/Husky.                                        | P01                                                   | workspace별 검사 정책이 분리됨. source/shared config/harness/policy/env 변경 시 필요한 검사 재실행, cache hit·전체 verify 확인.                                                       |
+| P03 `refactor(workspace): 공통 계약과 서버 코드 추출`       | 실제 contracts/server·migration 경로 추출. React/Next request/session/HTTP adapter는 앱에 유지. 외부 계약 동일.                                                                   | P02                                                   | contracts 순수성·server-only·repository/service 방향·앱 간 의존 금지, 소비 앱 type-check/build 성공.                                                                                  |
+| P04 `feat(console): 운영 화면과 API 이관`                   | Console entry·기존 Admin UI/API/업로드 Action 이관. Web 경로 임시 유지.                                                                                                           | P03                                                   | 접근 제한 환경에서 두 경로의 기존 작업 완주. 독립 build, direct import 없음.                                                                                                          |
+| P05 `feat(auth): 콘솔에 간단한 TOTP 인증 적용`              | admin_mfa migration·Auth.js+otplib·등록 UI·limiter·Origin/CSRF·CLI reset·관리 guard. Auth/Domain 회수 규칙 반영.                                                                  | P04                                                   | password-only/비ADMIN/미등록/다른 앱 cookie 거절. replay·동시성·version 회수·제한된 재등록 검증.                                                                                      |
+| P06 `feat(deploy): 두 앱 배포와 기존 관리 경로 종료`        | 두 image·기존 CD/Compose/Caddy/env/health/rollback 보정, preview Web을 www로 전환. Web 관리 route/API/Action·회원가입 페이지/가입 API 및 기존 Web Worker·staging 경로 종료.       | P04/P05. Audio/Guide 불필요.                          | ARM64 빌드 전 B0 IAM 실증·실제 Web/Console metadata 차단 후 Console 공개. 데이터/파일 보존, 최종 두 hostname·전용 cookie·인가·pool·복구 smoke, www 관리·가입 API 직접 호출 실패.      |
+| P07 `feat(guide): 두 공연 모드의 데이터와 조회 기반 추가`   | Guide/Snapshot/Publication·공식/팬덤·수동 이관·기존 writer 호환·공개 조회/선택. 새 관리자 편집은 후속.                                                                            | 모델 P03, 관리 화면 P04의 공통 guard. 운영상 P06 후.  | 0/1/2개·URL/재생·출처·visibility·내용 보존. 이관/LRC/삭제·동시성·불변성·rollback 검증 후 reader 전환.                                                                                 |
+| P08 `feat(waveform): 큐 기반 일회성 파형 작업 추가`         | WaveformJob/결과 migration·active Job 재사용·202/status API·OCI Queue/DLQ·Runner Instance Principal/Unix socket·worker·내부 결과 API·FCM·알림 내역. Domain source/lifecycle 반영. | P03/P04 및 관리 guard P05. 운영상 P06 후, P07 불필요. | 동시 생성/재전달·visibility 연장·저장 전 delete 금지·DLQ→FAILED·enqueue/DB 경계·IAM/socket/metadata 제한·FCM 재수신/알림 실패 검증. ARM64/비영속성 및 3개 anchor의 offset/drift 검증. |
+| P09 `feat(editor): 파형과 큐 타임라인 편집 제공`            | Peaks.js·YouTube adapter·overview/zoom/playhead·point drag·RHF draft/history.                                                                                                     | P04/P08, 기존 가사 JSON 사용 가능.                    | JSON만으로 표시·재생/seek 동기화·1회 Undo/취소·기존 캡처/LRC/강조 보존. 누적 drift 미해결이면 integration 완료로 처리하지 않음.                                                       |
+| P10 `feat(editor): 박자 격자와 이동 반복 도구 추가`         | Song의 BPM/beatOffset 편집 설정 JSON·Grid/Snap·Nudge/Fine Nudge·Cue/A-B Loop·focus/IME 단축키.                                                                                    | P09, P07 불필요.                                      | 120 BPM 수식·Snap ON/OFF·기존 Cue 불변·경계/Undo 검증, 같은 작업의 소요 시간·오차 확인.                                                                                               |
 
 한 행은 독립 검증 가능한 concern/checkpoint다. 앱 이동은 rename 비중 때문에 파일 수 기준을 넘을 수 있다.
 이 경우 이동→경로 보정→동작 검증 순서를 PR에 적는다. 실제 diff가 20파일/400줄 목표를 크게 넘으면
@@ -66,18 +66,159 @@ P09~P10도 기존 가사 JSON을 입력으로 사용한다. BPM/beatOffset은 So
 P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조건)의 계약/persistence → 이관/기존 writer 호환 → 조회/선택 순서로 나눈다.
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
+### 2.1. P08 착수 계획
+
+**2026-10-27 추가:** 사용자의 P08 계획 구체화 요청을 반영한다. 기준은 fetch한
+`origin/migration_main@8f371d40d1809165167a524456b990c7b0f319b9`이며, 해당 source의
+`apps/console`, `packages`, `scripts`, `infra`에는 WaveformJob·worker·Queue consumer 구현이 없다.
+P07은 [운영 적용·배포 결과](P07-RESULT.md#2026-10-27-최신-앱-promotion과-운영-수용-확인)로 종료됐고,
+새 관리자 응원법 편집은 별도 후속이다. 위 2026-10-26 기록과 초기 `source_commit`은 당시 근거로 보존한다.
+아래는 실행 전 계획이며 ARM64 분석·Queue 실증·migration·배포를 완료했다는 기록이 아니다.
+
+#### 범위와 계약 선행
+
+P08 산출물은 관리자 생성/상태 조회, 정상 파형 JSON, OCI Queue/DLQ, VM-local Runner,
+일회성 worker와 Console 알림 내역과 FCM foreground/background 수신이다. lifecycle·권한·실패 규칙은 [설계 §6](DESIGN.md#6-waveform-worker),
+도구·JSON·시간축 검증은 [기술 검토](AUDIO-FEASIBILITY.md)가 소유한다.
+P09 파형/Cue UI, P10 Grid, 이메일과 공개 Web 인증은 포함하지 않는다.
+2026-10-27 사용자 승인으로 이전 인앱 내역·push 제외 범위를 대체한다. 공통 알림을 P08 consumer보다 먼저 구현한다.
+
+현행 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)는 YouTube를 production 파형 source로
+허용하지 않는다. 첫 구현은 실제 사용할 영상의 이용 범위를 확인하고 Domain의 source·Job·결과 생명주기를
+개정하는 것부터 시작한다. 이 계획만으로 현행 계약을 대체하지 않는다. 해당 경로를 허용할 수 없으면
+YouTube 추출은 진행하지 않고 허용된 source 범위를 다시 결정한다.
+Auth(04)·API(03/05)·server/transaction(06)·Query(07)·관측(09)·runtime(11)·배포(12)의
+변경되는 계약만 같은 관심사의 구현 PR에서 갱신한다.
+
+#### 구현 PR 순서와 통과 기준
+
+| 관심사                    | 구현·영향 경계                                                                                                                    | 다음 작업 전 확인할 결과                                                                                                                                                          |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 입력 계약·ARM64 분석 검증 | Domain source 계약, 고정 버전의 yt-dlp/ffmpeg/audiowaveform 이미지. 허용된 단일 videoId와 pipe/tmpfs 경계                         | 실제 ARM64에서 짧은/긴 입력의 정상 JSON, CPU/RSS/tmpfs/출력 크기·소요 시간, 실패/timeout/강제 종료 뒤 음원·하위 프로세스 잔존 없음. 초반·중간·후반 anchor의 허용 오차와 실측 기록 |
+| Job·결과 persistence      | `packages/contracts` DTO/Zod, server schema·repository·service, Drizzle migration. UUIDv7·단수 snake_case 사용                    | local Docker PostgreSQL에서 동시 생성·terminal 이후 재생성·attempt/source 조건부 반영·정상 JSON 보존·결과와 성공 상태의 atomic commit 확인                                        |
+| 생성·조회·enqueue         | Console ADMIN/MFA Route Handler·Ky/Query와 좁은 내부 Job API, Runner Unix socket/Queue push. worker·Runner의 앱 DB 직접 접근 금지 | 동시 POST·연속 클릭·응답 유실 재요청이 같은 jobId를 반환. enqueue 확정 실패/성공/불확실 구분, null enqueuedAt 소비, 추가 enqueue 없는 수렴 확인                                   |
+| 소비·복구·운영 경계       | `infra/oci` Queue/IAM, 고정 배포 설정의 Runner/worker, 내부 결과 API. 기존 Web/Console metadata 차단 유지                         | 실제 제한된 OCI 환경에서 long poll·visibility 연장/상실·DLQ·Runner/VM 재시작·잔존 container 정리·저장 후 delete 실패를 실증. token/socket/metadata/DB 격리 확인                   |
+| 공통 알림 선행            | Notification/기기 등록/발송 대기 persistence·API → Console dispatch/FCM → 알림함·배지·SW/토스트                                   | 중복·rollback·재시도·재시작·회수·권한 거부/미지원·focus 재조회. 실제 foreground/background/닫힌 탭 push와 별도 mock 검증                                                          |
+| P08 알림 연결             | Job 요청자 등록·성공/최종 실패 transaction에 요청자별 알림 연결                                                                   | 완료 직전 요청·중복 결과·Queue 재전달·다중 기기, FCM 장애 중 결과/내역 보존                                                                                                       |
+| 통합 수용·Promotion       | 실제 ARM64 이미지 digest와 기존 두 앱 배포·관측·복구 경로 연결                                                                    | 아래 수용 검증 완료 후 별도 Promotion. DB migration과 이전 호환 앱·Runner/worker digest의 복구 조합을 검토하고 진행 중 Job 보존 확인                                              |
+
+한 관심사는 기본 한 PR로 검토하되 20파일/400줄 목표를 넘으면 독립 검증 가능한 계약·구현·전환으로
+추가 분리한다. P08 내부에 새 단계 번호나 빈 플랫폼 package를 만들지 않는다. 소비·복구 검증 전에는
+운영 Console의 생성 진입점을 활성화하지 않는다. 최초 분석 검증용 최소 renderer는 JSON·시간축 확인만
+수행하며 P09의 editor 구현으로 확대하지 않는다.
+
+#### 첫 persistence PR에서 고정할 판단
+
+- 동일 `(song_id, video_id)`에서 `QUEUED/RUNNING`만 포함하는 **partial unique index**를 우선안으로 한다.
+  충돌한 요청은 기존 active Job을 조회하며, INSERT에 성공한 요청만 enqueue를 소유한다.
+  terminal 전환 경합과 transaction rollback은 실제 PostgreSQL 동시성 테스트로 확인한다.
+  [PostgreSQL 17 partial index](https://www.postgresql.org/docs/17/indexes-partial.html)를 근거로 하며 최종 SQL은 생성 migration에서 검토한다.
+- source가 현재 Song 영상과 일치하고 현재 `attempt_id`를 소유한 실행만 결과를 반영한다.
+  Song 영상 변경·삭제와 실행/결과 반영의 경합, FK 삭제 정책과 기존 정상 파형 조회 조건을 DDL 전에 명시한다.
+  파형 재생성이나 source 변경이 기존 Cue 시각을 자동 변경하지 않도록 한다.
+- SDK retry와 enqueue 호출 소유권을 포함해 응답 유실을 추가 PutMessages로 복구하지 않는지 확인한다.
+  stale 판정은 가장 늦은 enqueue 가능 시점 + 실제 최대 retention + 시계/관측 안전 여유로 정한다.
+  전달이 확인된 Job의 retention 만료와 중단된 RUNNING 회수도 정리 대상·조건을 명시한다.
+- Job·결과의 보관/삭제 기간, 조회 응답의 부재 표현·오류 코드, 내부 API 인증/인가 범위와 응답 유실 시
+  재호출의 멱등성을 계약 테스트로 고정한다. 수치·endpoint는 구현 전 해당 DTO/배포 설정에 확정한다.
+
+#### 공통 알림의 선행 구현
+
+[설계 §6.1](DESIGN.md#61-공통-알림과-fcm)과 [Domain §15](../../DOMAIN_SPECIFICATION.md#15-notification)를 따른다.
+순서는 계약 개정 → 알림/등록/발송 대기 schema·조회/읽음 API → FCM dispatch → Console 알림함/SW → P08 producer 연결 → 통합 수용이다.
+서버 transaction은 결과·Job terminal·요청자별 유일 알림·기기별 발송 대기를 함께 저장한다.
+발송은 기존 Console 프로세스가 담당하고 60초 복구 scan·lease/backoff·24시간 TTL을 사용한다.
+FCM 실패는 결과와 Queue ack를 실패로 바꾸지 않는다. 수신자·현재 MFA/binding을 발송 직전에 재검사한다.
+권한 거부/미지원에는 내역·복귀 재조회를 제공하며 브라우저 주기적 polling은 없다.
+첫 producer는 요청한 관리자에게 보내는 WAVEFORM_SUCCEEDED/WAVEFORM_FAILED다.
+읽음은 항목 선택/모두 읽음으로만 처리하고 알림 내역은 v1에서 자동 삭제하지 않는다.
+Firebase 프로젝트/VAPID/server 권한 준비 후 실제 수신을 검증한다. 운영 DB 변경·배포는 별도 Promotion이다.
+
+#### 공통 알림 PR의 병합 순서
+
+**2026-10-27 구현 제출·병합 조정 추가:** 아래는 승인한 구현 계획의 실행 PR과 의존성이다.
+기존 실증 계획을 완료 결과로 소급 변경하지 않는다. 공통 알림 코드를 먼저 만들고,
+생성 HTTP 경로와 Runner를 열지 않는 Job/terminal 저장 준비를 앞당겨 atomic commit을 실제 PG에서 검증했다.
+source 이용 승인·ARM64 분석·OCI Queue 실증은 여전히 P08 활성화 전 조건이다.
+
+**2026-10-28 UI 후속 제출 추가:** 차콜 표면·표 너비, 대시보드/브랜드 탐색, 알림 시각 개선을 각각 #304/#305/#306으로 분리했다. 알림 전달 계약과 P08 실행 범위는 확장하지 않는다.
+
+**#295 → #296 → #297 → #298 → #299 → #300 → #301 → #302 → #303 → #304 → #305 → #306** 순서로 병합한다.
+사용자 우선순위에 따라 앨범/곡 ID 열 제거 [#294](https://github.com/goldmayo/oioi-bwg/pull/294)를 먼저 병합한다. 기술적 의존은 없는 독립 변경이다.
+아래 부모는 최초 분기점으로 고정한다. 이후 검토 커밋을 포함해 해당 부모 이후의 고유 변경만 옮긴다.
+
+| 순서 | PR / 관심사                                                                                       | 원래 부모 SHA                              | 고유 구현 커밋                         |
+| ---- | ------------------------------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------- |
+| 1    | [#295](https://github.com/goldmayo/oioi-bwg/pull/295) 계약·계획·병합표                            | `8f371d40d1809165167a524456b990c7b0f319b9` | `87a02f9`, `a14b30e` 및 이 병합표 개정 |
+| 2    | [#296](https://github.com/goldmayo/oioi-bwg/pull/296) Notification/기기/발송 대기 schema          | `8f371d40d1809165167a524456b990c7b0f319b9` | `52162b9`, `9c275b2`                   |
+| 3    | [#297](https://github.com/goldmayo/oioi-bwg/pull/297) 계정별 알림 조회·읽음 API                   | `9c275b2c87ad7851dad1e6948c24a8a6f7877fb1` | `a5813b3`                              |
+| 4    | [#298](https://github.com/goldmayo/oioi-bwg/pull/298) 브라우저 등록·MFA/계정 회수                 | `a5813b3f81733fd77b4396dae5cf31bda9533dee` | `ed4c0ac`                              |
+| 5    | [#299](https://github.com/goldmayo/oioi-bwg/pull/299) Console FCM 발송·lease/복구                 | `ed4c0acc12139eab6bccec51d8fe243726f31808` | `b69b645`                              |
+| 6    | [#300](https://github.com/goldmayo/oioi-bwg/pull/300) 지연 SDK·SW 로컬 번들·runtime 설정          | `b69b645bc1493f090f02f6734ea0fe1c5cf01d9b` | `d297fed`                              |
+| 7    | [#301](https://github.com/goldmayo/oioi-bwg/pull/301) 알림함·배지·foreground 토스트               | `d297fede670a88f08006672c2ecd3116bbcdb20a` | `c8a8efc`                              |
+| 8    | [#302](https://github.com/goldmayo/oioi-bwg/pull/302) P08 Job/결과/요청자 알림 atomic commit 준비 | `c8a8efcf72b5ec5628242a2541dbd255b606e36a` | `2157e70`, `e9138f3`                   |
+| 9    | [#303](https://github.com/goldmayo/oioi-bwg/pull/303) 결과 조회·Query 갱신·해제 실패 복구         | `e9138f3d9d06cc195ffda638db8f853a98091e41` | `4d2f272`                              |
+| 10   | [#304](https://github.com/goldmayo/oioi-bwg/pull/304) 차콜 표면·목록 너비·텍스트 위계             | `7759c784cdd8be021780f802b7c6def4342d96b1` | `2c36968`, `a55a516`                   |
+| 11   | [#305](https://github.com/goldmayo/oioi-bwg/pull/305) 대시보드·반응형 탐색·기존 브랜드 로고       | `a55a516fa34d23e225169064970f210183db3615` | `79baaab`, `6bf6e53`                   |
+| 12   | [#306](https://github.com/goldmayo/oioi-bwg/pull/306) 반응형 토스트·알림함·작업 결과 UI           | `6bf6e5329acaa2015b16f5fe6538b93919e3b20c` | `9135fc1`                              |
+
+#304의 원래 부모 `7759c784`에는 로컬 통합 화면 확인용 #294 cherry-pick이 들어 있다.
+#294와 #295~#303이 squash된 뒤 이 부모 이후의 고유 변경만 옮겨 ID 제거와 알림 기반을 중복 반영하지 않는다.
+#304/#305/#306의 고유 범위는 각각 7/5/7파일, 134/301/289줄이며 전체 base diff에는 선행 코드가 포함된다.
+
+모든 구현 PR의 대상은 `migration_main`이다. 후속 코드 PR은 선행분을 포함하며 #297 이후는 draft이므로
+선행이 병합되기 전 `migration_main` 전체 diff를 독립 PR 범위로 해석하지 않는다.
+검토할 때 `git diff <원래 부모>...<작업 브랜치>`로 고유 변경을 확인한다.
+
+선행 PR을 squash한 뒤 담당자는 다음 순서로 **한 PR씩** 갱신한다. 실제 병합을 자동 수행하는 절차가 아니다.
+
+1. `git fetch origin migration_main` 후 선행 squash가 통합됐는지 확인한다.
+2. 깨끗한 작업 트리에서 `git rebase --onto origin/migration_main <표의 원래 부모 SHA> <해당 feature 브랜치>`를 실행한다.
+   #295 이후 #296도 같은 방식으로 옮기며 동일한 Domain 개정은 통합본을 보존한다.
+3. 고유 diff·commit 보존과 충돌 해결을 검토하고 필수 검증/CI를 다시 통과시킨다.
+4. 원격 변경 유무를 확인한 뒤 해당 작업 브랜치만 `git push --force-with-lease`한다.
+   제목·본문을 최종 변경/검증에 맞춰 갱신하고 선행이 사라진 PR 하나만 ready로 전환한다.
+5. 해당 PR을 squash한 다음 표의 다음 PR로 진행한다. 선행 커밋을 수동으로 합치거나 통째로 재병합하지 않는다.
+
+**코드 병합과 활성화는 별개다.** `CONSOLE_PUSH_ENABLED=false`가 기본이다. 2026-10-27 이 표 작성 시에는
+Firebase 프로젝트가 없어 실제 FCM 수용이 미완료였다.
+**2026-10-28 수용 추가:** 프로젝트를 연결한 로컬에서 실제 FCM 접수와 Chrome foreground 토스트,
+Windows OS 알림, 개수/내역/결과 이동을 사용자와 확인했다([실행 근거 #303](https://github.com/goldmayo/oioi-bwg/pull/303)).
+닫힌 탭·OS 클릭·iOS 홈 화면 앱·기기 회수의 실제 수용은 여전히 미확인이다.
+#304~#306의 컴포넌트 프리뷰/빌드 검증은 새 실제 FCM·OS 실수용이나 운영 활성화로 계산하지 않는다.
+설정/rollback 절차는 [운영 안내 §9.2.2](https://github.com/goldmayo/oioi-bwg/blob/b69b645bc1493f090f02f6734ea0fe1c5cf01d9b/ops/oci/README.md#922-console-fcm-알림-활성화)를 따른다.
+실행한 검증·최초 실패와 복구·제약은 각 PR 본문이 소유한다. Job 생성 HTTP/내부 Runner HTTP·OCI Queue/worker·ARM64 실증은
+후속 P08 범위이며 이 표의 코드 병합만으로 P08 전체를 완료로 처리하지 않는다.
+운영 DB migration/권한 적용·배포는 별도 Promotion과 [현행 runbook](../../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md)을 따른다.
+
+#### 실증 전 확정할 값과 최종 수용
+
+worker 이미지·도구 버전/digest, 입력 길이·JSON byte·CPU/RAM/pids/tmpfs 한도·전체 timeout,
+Queue retention·visibility·연장 주기·최대 delivery count·stale 여유, 시간축 허용 오차를
+ARM64 측정과 실제 Queue 설정으로 고정한다. [OCI Queue 개요](https://docs.oracle.com/en-us/iaas/Content/queue/overview.htm)와
+[소비 계약](https://docs.oracle.com/en-us/iaas/Content/queue/consume-messages.htm)의 retention/visibility를
+혼동하지 않는다. [Queue IAM](https://docs.oracle.com/en-us/iaas/Content/queue/policy-reference.htm)에 맞춰
+Instance Principal의 고정 Queue push/pull 범위를 제한하고, [Docker tmpfs](https://docs.docker.com/engine/storage/tmpfs/)의
+swap 가능성과 memory 한도 포함 조건도 확인한다. 이 문서의 공식 문서 재확인은 2026-10-27이며 실제 OCI 실증과 구분한다.
+
+각 구현 PR은 해당 단위/계약/PG/Playwright 검증과 저장소 필수 검사를 기록한다. P08 종료는
+§3의 enqueue 응답 유실 시나리오, 실제 Queue 재전달·복구·권한 제한, 음원 비영속성,
+3개 이상 anchor의 offset/drift와 JSON만 재조회하는 검증이 모두 근거를 남겼을 때 판정한다.
+검증 전에는 배포 성공이나 mock 통과만으로 종료하지 않는다. 실행 상세는 각 PR, 단계 최종 결과는
+완료 시점의 최종 결과 소유 문서에 두고 현재 다음 행동은 WORK에서만 갱신한다.
+
 ## 3. 검증과 전환 조건
 
 - P02 전에는 기존 type-check/harness/lint/FSD/unit/format과 필요한 build를 실행한다. 이후 root `pnpm verify`가 workspace별 검사·독립 앱 Steiger·repo 경계 harness·운영 테스트·format·두 앱 build를 실행한다.
 - schema 수정 → Drizzle migration 생성 → SQL 검토 → guarded local 적용 → 검증 순서를 지킨다. MFA replay·job 상태/멱등성·동시 저장은 local Docker PostgreSQL에서 확인하고 production 적용은 별도 실행 범위로 둔다.
 - P07의 새 reader는 기존 가사/LRC writer 호환과 이관 경합·stale 탭 거절·다른 모드 불변·실패 rollback·공개 중단 후 legacy 재노출 방지를 검증하기 전 활성화하지 않는다.
-- UI는 바뀐 selector·로그인·editor/SSE 연결 흐름을 Playwright로 확인한다. root config/harness 변경이 affected 검증에서 빠지거나 다른 workspace 정책을 섞지 않는지도 확인한다.
+- UI는 바뀐 selector·로그인·editor/FCM 연결 흐름을 Playwright로 확인한다. root config/harness 변경이 affected 검증에서 빠지거나 다른 workspace 정책을 섞지 않는지도 확인한다.
 - P08은 실제 OCI Queue staging에서 long poll·재전달·visibility 연장·DLQ·runner/VM 재시작·결과 commit 후 ack 실패를 확인한다. mock만으로 완료하지 않는다.
 - P08에서 연속 클릭·응답 유실 후 재요청·동시 POST가 동일 songId/videoId의 active Job 한 개를 재사용하고 새 message를 추가하지 않는지 검증한다. DB 원자성 수단은 구현 시 선택하고 terminal 이후 재생성은 허용한다.
 - P06은 ARM64 빌드 전 동일 Stack의 Plan/Apply·두 repo push/pull·새 secret 읽기·새 Run Command exit 0을 실제 주체로 증명한다. 실패 시 해당 검사에서 중단한다. Web/Console metadata 차단은 Console secret 읽기 권한 추가 전 준비하고 실제 두 앱·재시작/복구 후까지 확인한다.
 - P08은 Runner의 Instance Principal과 Queue push/pull 범위, Console의 제한된 Unix socket 호출, worker metadata 차단을 제한된 실제 OCI 환경에서 추가 검증하고 기존 Web/Console 차단을 재검증한다. 같은 VM의 IAM을 process별 권한 분리로 간주하지 않는다.
 - Worker의 성공/실패/timeout/강제 종료 후 host/container/volume/log/Sentry에 음원·PCM이 남지 않아야 한다. 같은 videoId의 3개 이상 anchor로 일정 offset과 누적 drift를 구분하며 기준·측정값을 기록한다.
-- SSE는 단일 Console process의 DB commit → EventEmitter → stream으로 연결한다. 이벤트 누락/중복·재연결·서버 재시작·listener 오류 후에도 DB를 Query로 다시 읽으면 같은 job/결과를 보아야 한다. LISTEN/NOTIFY는 Console process/container가 둘 이상일 때 후속으로 검토한다.
+- 공통 알림은 결과와 발송 대기의 atomic commit·기기별 재시도/lease 복구·notificationId 중복 억제를 검증한다. 실제 FCM 수신과 mock을 구분하고, 권한 거부·회수·수신 누락 뒤 DB 재조회로 같은 결과를 보아야 한다.
 - 문서 작업은 내용·링크·format만 검사한다. push hook 검증은 hook 실행 결과로 별도 보고한다.
 
 P08의 필수 enqueue 응답 유실 검증은 다음 순서로 수행한다.
@@ -95,7 +236,7 @@ Runner의 내부 API 기록 후 socket 응답만 유실된 경우와, 기록도 
 미확인 QUEUED의 stale 기한은 가장 늦은 enqueue 가능 시점부터 실제 Queue 최대 message retention과 충분한 안전 여유를 포함해 보수적으로 정한다.
 기한 이전에는 enqueue 불확실성만으로 FAILED 처리하지 않고 정상 지연 전달을 허용하는지 검증한다.
 그 이후에만 기존 stale-job 점검으로 정리하며, 늦은 전달 확인/consume과 경합해 진행된 상태를 역전하지 않아야 한다.
-이 검증에 Outbox/DB queue/retry scheduler/분산 transaction/범용 reconciliation·broker abstraction을 추가하지 않는다.
+Waveform enqueue에는 Outbox/DB queue/retry scheduler/분산 transaction/범용 reconciliation·broker abstraction을 추가하지 않는다. Notification delivery의 작은 영속 발송 대기는 별도 관심사다.
 
 P06의 공개 유지·Web 인증 종료·F 전환은 [전체 결과](P06-RESULT.md)와 단계별 RESULT로 추적한다.
 사전 준비/임시 검증 창의 재개 지시는 현재 절차가 아니다. 반복 작업은 [운영 안내](../../../../ops/oci/README.md)를 따른다.
@@ -104,5 +245,5 @@ Guide writer 전환 뒤 rollback은 새 guide를 읽는 호환 앱으로 제한�
 
 각 구현 PR은 `migration_main`을 대상으로 repository template과 한글 Conventional Commit → push → PR 절차를 따른다.
 OCI Development 배포는 별도 `migration_main → migration_develop` Promotion PR로 진행하며 active 배포 runbook §21을 따른다.
-후속 보류는 새 관리자 편집·초안/공개 UI·복원, Contribution/Discussion·Revision 승인, 현황판·팬 숙지/참여 응답, 공연별 다수 variant, DB role hardening, 닫힌 탭/서비스 전체 Web Push다.
+후속 보류는 새 관리자 편집·초안/공개 UI·복원, Contribution/Discussion·Revision 승인, 현황판·팬 숙지/참여 응답, 공연별 다수 variant, DB role hardening와 공개 Web 회원 알림이다.
 자동 BPM/Alignment/GPU/ML, 자체 Queue/Notification framework는 로드맵에 넣지 않는다.

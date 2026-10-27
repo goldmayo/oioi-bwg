@@ -1,0 +1,73 @@
+import { z } from "zod";
+import { entityIdSchema } from "./entity-id";
+export const waveformStatusSchema = z.enum(["QUEUED", "RUNNING", "SUCCEEDED", "FAILED"]);
+export const waveformErrorSchema = z.enum([
+  "ENQUEUE_FAILED",
+  "PROCESSING_FAILED",
+  "DLQ",
+  "DELIVERY_EXPIRED",
+  "SOURCE_CHANGED",
+]);
+// BBC mono 8-bit JSON. 크기·시간 한도는 내부 결과 입력의 상한이며 분석 성능 보장이 아니다.
+const peaksSchema = z.object({
+  version: z.union([z.literal(1), z.literal(2)]),
+  channels: z.literal(1).optional(),
+  sample_rate: z.number().int().min(1).max(192000),
+  samples_per_pixel: z.number().int().positive(),
+  bits: z.literal(8),
+  length: z.number().int().min(1).max(180000),
+  data: z.array(z.number().int().min(-128).max(127)).max(360000),
+});
+export const waveformDataSchema = z
+  .object({
+    durationMs: z.number().int().min(1).max(3600000),
+    bucketSizeMs: z.number().positive(),
+    peaks: peaksSchema,
+    source: z.object({ type: z.literal("youtube"), id: z.string().regex(/^[A-Za-z0-9_-]{11}$/) }),
+    generationVersion: z.literal(1),
+  })
+  .superRefine((value, ctx) => {
+    const { peaks, durationMs, bucketSizeMs } = value;
+    const bucket = (peaks.samples_per_pixel * 1000) / peaks.sample_rate;
+    if (
+      (peaks.version === 2 && peaks.channels !== 1) ||
+      peaks.data.length !== peaks.length * 2 ||
+      Math.abs(bucket - bucketSizeMs) > 0.001 ||
+      durationMs > peaks.length * bucket + 1 ||
+      durationMs <= (peaks.length - 1) * bucket - 1 ||
+      JSON.stringify(value).length > 4 * 1024 * 1024
+    )
+      ctx.addIssue({ code: "custom", message: "파형 메타데이터가 일치하지 않습니다." });
+    for (let i = 0; i < peaks.data.length; i += 2)
+      if (peaks.data[i]! > peaks.data[i + 1]!) {
+        ctx.addIssue({ code: "custom", message: "파형 최솟값이 최댓값보다 큽니다." });
+        break;
+      }
+  });
+export const waveformJobSchema = z.object({
+  id: entityIdSchema,
+  songId: entityIdSchema,
+  videoId: z.string(),
+  status: waveformStatusSchema,
+  errorCode: waveformErrorSchema.nullable(),
+  createdAt: z.iso.datetime({ offset: true }),
+  finishedAt: z.iso.datetime({ offset: true }).nullable(),
+  editorHref: z.string().startsWith("/admin/edit/").nullable(),
+});
+export type WaveformData = z.infer<typeof waveformDataSchema>;
+export type WaveformJob = z.infer<typeof waveformJobSchema>;
+export const waveformTerminalSchema = z.discriminatedUnion("status", [
+  z.object({
+    jobId: entityIdSchema,
+    attemptId: entityIdSchema,
+    status: z.literal("SUCCEEDED"),
+    result: waveformDataSchema,
+  }),
+  z.object({
+    jobId: entityIdSchema,
+    attemptId: entityIdSchema.nullable(),
+    status: z.literal("FAILED"),
+    errorCode: waveformErrorSchema,
+  }),
+]);
+export type WaveformTerminal = z.infer<typeof waveformTerminalSchema>;

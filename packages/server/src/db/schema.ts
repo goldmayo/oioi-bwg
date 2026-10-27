@@ -1,3 +1,4 @@
+import type { WaveformData } from "@oioi-bwg/contracts/waveform";
 import { v7 } from "uuid";
 
 import { relations, sql } from "drizzle-orm";
@@ -140,6 +141,115 @@ export const adminMfa = pgTable(
       "admin_mfa_state_check",
       sql`(${table.enabledAt} is null and ${table.lastUsedStep} is null)
         or (${table.enabledAt} is not null and ${table.encryptedSecret} is not null and ${table.lastUsedStep} is not null)`,
+    ),
+  ],
+);
+
+export const notification = pgTable(
+  "notification",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    recipientAccountId: uuid("recipient_account_id")
+      .notNull()
+      .references(() => account.id, { onDelete: "restrict" }),
+    type: text().$type<"WAVEFORM_SUCCEEDED" | "WAVEFORM_FAILED">().notNull(),
+    resourceType: text("resource_type").$type<"WAVEFORM_JOB">().notNull(),
+    resourceId: uuid("resource_id").notNull(),
+    eventKey: text("event_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    readAt: timestamp("read_at", { withTimezone: true, mode: "string" }),
+  },
+  (table) => [
+    unique("notification_event_key").on(table.recipientAccountId, table.type, table.eventKey),
+    index("notification_recipient_cursor_idx").on(
+      table.recipientAccountId,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    index("notification_unread_idx")
+      .on(table.recipientAccountId)
+      .where(sql`${table.readAt} is null`),
+    check(
+      "notification_type_check",
+      sql`${table.type} in ('WAVEFORM_SUCCEEDED', 'WAVEFORM_FAILED')`,
+    ),
+    check("notification_resource_type_check", sql`${table.resourceType} = 'WAVEFORM_JOB'`),
+    check("notification_event_key_check", sql`length(${table.eventKey}) between 1 and 256`),
+  ],
+);
+
+export const pushInstallation = pgTable(
+  "push_installation",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    fid: text().notNull().unique("push_installation_fid_key"),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => account.id, { onDelete: "restrict" }),
+    mfaVersion: integer("mfa_version").notNull(),
+    bindingVersion: integer("binding_version").default(1).notNull(),
+    enabled: boolean().default(true).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  },
+  (table) => [
+    index("push_installation_account_idx")
+      .on(table.accountId)
+      .where(sql`${table.enabled}`),
+    check(
+      "push_installation_version_check",
+      sql`${table.mfaVersion} > 0 and ${table.bindingVersion} > 0`,
+    ),
+    check("push_installation_fid_check", sql`length(${table.fid}) between 16 and 256`),
+  ],
+);
+
+export const notificationDelivery = pgTable(
+  "notification_delivery",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .references(() => notification.id, { onDelete: "restrict" }),
+    installationId: uuid("installation_id")
+      .notNull()
+      .references(() => pushInstallation.id, { onDelete: "restrict" }),
+    bindingVersion: integer("binding_version").notNull(),
+    status: text().$type<"PENDING" | "ACCEPTED" | "DISCARDED">().default("PENDING").notNull(),
+    attemptCount: integer("attempt_count").default(0).notNull(),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+    leaseToken: uuid("lease_token"),
+    leaseUntil: timestamp("lease_until", { withTimezone: true, mode: "string" }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true, mode: "string" }),
+    lastErrorCode: text("last_error_code"),
+  },
+  (table) => [
+    unique("notification_delivery_target_key").on(
+      table.notificationId,
+      table.installationId,
+      table.bindingVersion,
+    ),
+    index("notification_delivery_due_idx")
+      .on(table.nextAttemptAt, table.leaseUntil)
+      .where(sql`${table.status} = 'PENDING'`),
+    check(
+      "notification_delivery_status_check",
+      sql`${table.status} in ('PENDING', 'ACCEPTED', 'DISCARDED')`,
+    ),
+    check(
+      "notification_delivery_attempt_check",
+      sql`${table.attemptCount} >= 0 and ${table.bindingVersion} > 0`,
+    ),
+    check(
+      "notification_delivery_lease_check",
+      sql`(${table.leaseToken} is null) = (${table.leaseUntil} is null)`,
     ),
   ],
 );
@@ -546,5 +656,88 @@ export const servicePolicy = pgTable(
     index("service_policy_public_idx")
       .on(t.slug, t.version.desc())
       .where(sql`${t.isPublished} = true`),
+  ],
+);
+
+/** 파형 분석의 작업 상태. 생성 transport와 Runner 활성화는 별도 P08 관문이다. */
+export const waveformJob = pgTable(
+  "waveform_job",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    songId: uuid("song_id")
+      .notNull()
+      .references(() => song.id, { onDelete: "cascade" }),
+    videoId: text("video_id").notNull(),
+    status: text()
+      .$type<"QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED">()
+      .notNull()
+      .default("QUEUED"),
+    attemptId: uuid("attempt_id"),
+    errorCode: text("error_code").$type<
+      "ENQUEUE_FAILED" | "PROCESSING_FAILED" | "DLQ" | "DELIVERY_EXPIRED" | "SOURCE_CHANGED"
+    >(),
+    enqueuedAt: timestamp("enqueued_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true, mode: "string" }),
+    finishedAt: timestamp("finished_at", { withTimezone: true, mode: "string" }),
+  },
+  (t) => [
+    uniqueIndex("waveform_job_active_key")
+      .on(t.songId, t.videoId)
+      .where(sql`${t.status} in ('QUEUED','RUNNING')`),
+    index("waveform_job_song_idx").on(t.songId),
+    check("waveform_job_video_check", sql`${t.videoId} ~ '^[A-Za-z0-9_-]{11}$'`),
+    check(
+      "waveform_job_status_check",
+      sql`${t.status} in ('QUEUED','RUNNING','SUCCEEDED','FAILED')`,
+    ),
+    check(
+      "waveform_job_terminal_check",
+      sql`(${t.status} in ('SUCCEEDED','FAILED')) = (${t.finishedAt} is not null)`,
+    ),
+    check(
+      "waveform_job_attempt_check",
+      sql`${t.status} not in ('RUNNING','SUCCEEDED') or (${t.attemptId} is not null and ${t.startedAt} is not null)`,
+    ),
+    check(
+      "waveform_job_error_check",
+      sql`case when ${t.status} = 'FAILED' then ${t.errorCode} is not null and ${t.errorCode} in ('ENQUEUE_FAILED','PROCESSING_FAILED','DLQ','DELIVERY_EXPIRED','SOURCE_CHANGED') else ${t.errorCode} is null end`,
+    ),
+  ],
+);
+export const waveformJobRequester = pgTable(
+  "waveform_job_requester",
+  {
+    jobId: uuid("job_id")
+      .notNull()
+      .references(() => waveformJob.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => account.id, { onDelete: "restrict" }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.jobId, t.accountId] }),
+    index("waveform_job_requester_account_idx").on(t.accountId),
+  ],
+);
+export const waveform = pgTable(
+  "waveform",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    songId: uuid("song_id")
+      .notNull()
+      .unique()
+      .references(() => song.id, { onDelete: "cascade" }),
+    videoId: text("video_id").notNull(),
+    data: jsonb().$type<WaveformData>().notNull(),
+    generatedAt: timestamp("generated_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check("waveform_video_check", sql`${t.videoId} ~ '^[A-Za-z0-9_-]{11}$'`),
+    check("waveform_data_check", sql`jsonb_typeof(${t.data}) = 'object'`),
   ],
 );

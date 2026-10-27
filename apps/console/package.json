@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1 --port 3001",
-    "build": "next build && mkdir -p .next/standalone/apps/console/.next && cp -R .next/static .next/standalone/apps/console/.next/",
+    "dev": "node scripts/build-notification-worker.mjs && next dev --hostname 127.0.0.1 --port 3001",
+    "build": "node scripts/build-notification-worker.mjs && next build && mkdir -p .next/standalone/apps/console/.next && cp -R .next/static .next/standalone/apps/console/.next/ && cp -R public .next/standalone/apps/console/",
     "start": "HOSTNAME=127.0.0.1 PORT=3001 node .next/standalone/apps/console/server.js",
     "lint": "eslint . && pnpm lint:fsd",
     "lint:fsd": "NODE_OPTIONS=\"${NODE_OPTIONS:+$NODE_OPTIONS }--import tsx\" steiger src --config steiger.config.ts",
-    "type-check": "tsc --noEmit --incremental false && tsc --noEmit -p tsconfig.config.json",
+    "type-check": "tsc --noEmit --incremental false && tsc --noEmit -p tsconfig.config.json && tsc --noEmit -p tsconfig.worker.json",
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
@@ -27,6 +27,8 @@
     "client-only": "0.0.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.1",
+    "firebase": "13.1.0",
+    "google-auth-library": "11.1.0",
     "gsap": "^3.14.2",
     "ky": "^2.1.0",
     "lucide-react": "^0.575.0",
@@ -57,6 +59,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "^1.0.0",
+    "esbuild": "0.27.3",
     "eslint": "^9",
     "jiti": "2.6.1",
     "jsdom": "^29.0.1",

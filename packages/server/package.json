@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./services/notification-delivery-service": "./src/services/notification-delivery-service.ts",
+    "./services/push-installation-service": "./src/services/push-installation-service.ts",
+    "./services/notification-service": "./src/services/notification-service.ts",
     "./auth/admin-mfa-crypto": "./src/auth/admin-mfa-crypto.ts",
     "./auth/admin-mfa-totp": "./src/auth/admin-mfa-totp.ts",
     "./auth/ability": "./src/auth/ability.ts",
@@ -34,7 +37,8 @@
     "./storage/upload-public-asset": "./src/storage/upload-public-asset.ts",
     "./services/cheer-guide-import-service": "./src/services/cheer-guide-import-service.ts",
     "./services/publication-service": "./src/services/publication-service.ts",
-    "./services/policy-service": "./src/services/policy-service.ts"
+    "./services/policy-service": "./src/services/policy-service.ts",
+    "./services/waveform-service": "./src/services/waveform-service.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",
