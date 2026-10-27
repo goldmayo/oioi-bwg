@@ -5,7 +5,7 @@ status: complete
 authority: evidence
 source_commit: 0f37fd57b52814e8d8709782637f3cd638defd28
 created_at: "2026-10-26"
-verified_at: "2026-10-26"
+verified_at: "2026-10-27"
 ---
 
 # P07 구현·로컬 검증 종료
@@ -118,3 +118,44 @@ CEREMONY만 검증한 YouTube 원본을 guide_video_url에도 연결했고 다�
 수정할 수 있으므로 배포 전 `snapshot.lyrics/reference_youtube_id/source_type`과 기존 song 값을 다시
 대조하고 차이가 있으면 덮어쓰지 않고 처리해야 한다. 이번 DB 검증만으로 최신 앱 배포나 새 UI의
 운영 수용을 완료로 판정하지 않는다. 약관 개정안은 운영 정보 확인 전까지 비공개로 유지한다.
+
+
+## 2026-10-27 최신 앱 Promotion과 운영 수용 확인
+
+사용자 배포 승인과 열린 PR 전체 병합·순서·방법 위임에 따라
+[Promotion #285](https://github.com/goldmayo/oioi-bwg/pull/285)로 최신 Web·Console을 배포했다.
+이 절이 앞선 운영 앱 배포 미실행 상태를 갱신한다. DB 재이관이나 비공개 약관 초안 발행은 하지 않았다.
+
+- [#286](https://github.com/goldmayo/oioi-bwg/pull/286)은 이전 squash 배포선과 통합선의 WORK 충돌을
+  코드·문서 변경 0개인 이력 연결로 해결했다. full CI 통과 후
+  `44f07fa33467274262776b6f17c19385057965b8`로 일반 merge했다. 이 건의 merge 방식만 일시 허용하고
+  저장소·main ruleset을 squash 전용으로 완전히 원복했다. 필수 verify·strict·PR 보호와 bypass 없음은 유지했다.
+- 기존 [문구·톤 #262](https://github.com/goldmayo/oioi-bwg/pull/262)와
+  [로컬 UUID 기록 #267](https://github.com/goldmayo/oioi-bwg/pull/267)은 최신 용어·상태와 충돌을 해결하고
+  각 최종 head CI 통과 후 squash 병합했다. commit hook 실행 환경 문제와 복구 근거는 각 PR 본문에 남겼다.
+  문서 외 blob이 통합선과 같음을 검증했고 기존 P07·DB 적용 상태를 과거로 되돌리지 않았다.
+- 최종 source `98075e7b48dd960f292d5970d387bd268f9fb8c0`의
+  [Verify 40422744897/1](https://github.com/goldmayo/oioi-bwg/actions/runs/40422744897)에서 전체 정적 검사·unit·
+  PostgreSQL·앱 빌드·컨테이너 브라우저/복구·ARM64 exact paired digest smoke·promotion 검사가 통과했다.
+- squash 결과 `9595edcaa938517492788a922f4598a5a96c1a18`과 source tree는
+  `8b1d35c7502322c91b9979c6b74d7302182fb11c`로 동일하다.
+  [Deploy 40424159280/1](https://github.com/goldmayo/oioi-bwg/actions/runs/40424159280)은 OCI Run Command로
+  검증한 후보를 그대로 배포했고 exit 0의 immutable receipt/candidate를 저장했다.
+  release ID는 `ea9f2c860071b785c19fe03200ceadccb891001ec81f1a15c7d67226f24d819d`이다.
+- 실제 Web digest는 `sha256:637c32a7fa816f9b601da78a62d22a82b1288fc870c74df3c55ca91d1f9750c1`,
+  Console digest는 `sha256:c61d3e373ff1790bfebc393a355499ffa3907fc7378052e58196d26668755565`이다.
+  두 앱 모두 위 최종 source에서 새로 빌드했다. artifact의 PR/source/tree/run/attempt·고정 repository·
+  두 digest와 실제 컨테이너 revision을 대조해 일치를 확인했다.
+- 배포 전후 PostgreSQL 컨테이너·시작 시각, 런타임 설정 hash, Caddy 설정 hash가 같다.
+  두 앱의 healthz/readyz 네 경로는 모두 200이며 Node 22.23.4·비root 실행·healthy를 확인했다.
+- 실제 공개 API 35개를 배포 전후 비교했다. 기존 payload와 200 31개·404 4개의 숨김 상태가 같고,
+  공개 25곡은 콘서트 Guide 하나씩·공식 5곡·Discord 팬덤을 확인했다. 흰수염고래는 계속 404다.
+  배포 직전 공개 snapshot과 legacy 가사·영상·공식 속성 불일치도 0이었다.
+- 실제 Chromium에서 1440×1024와 390×844 각각 행복해져라·Discord·마니또,
+  공지·안내/약관 목록·개인정보 본문·업데이트를 확인했다. 14개 화면 검사가 모두 통과했고
+  공식/팬덤·단일 콘서트·원본 링크·응원 표시 없는 곡의 조회·가로 넘침 없음·page error 0을 확인했다.
+  영상 재생 버튼의 존재를 확인했으며 실제 오디오 재생이나 관리자 로그인·쓰기 수용을 대신한 검증은 아니다.
+
+배포 증거·스크린샷은 ignored `.local/p07-deployment-20261027/`에 보존한다. 세부 실행 기록은 #285와
+각 선행 PR이 소유하며, 이 기록 PR은 기존 결과·WORK·문서 안내의 완료 상태만 갱신한다.
+후속 관리자 편집·파형·i18n과 Discord 영상 기반 정비, 약관 개정안 공개 전 운영 정보 확인은 별도 범위다.
