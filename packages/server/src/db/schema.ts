@@ -144,6 +144,115 @@ export const adminMfa = pgTable(
   ],
 );
 
+export const notification = pgTable(
+  "notification",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    recipientAccountId: uuid("recipient_account_id")
+      .notNull()
+      .references(() => account.id, { onDelete: "restrict" }),
+    type: text().$type<"WAVEFORM_SUCCEEDED" | "WAVEFORM_FAILED">().notNull(),
+    resourceType: text("resource_type").$type<"WAVEFORM_JOB">().notNull(),
+    resourceId: uuid("resource_id").notNull(),
+    eventKey: text("event_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    readAt: timestamp("read_at", { withTimezone: true, mode: "string" }),
+  },
+  (table) => [
+    unique("notification_event_key").on(table.recipientAccountId, table.type, table.eventKey),
+    index("notification_recipient_cursor_idx").on(
+      table.recipientAccountId,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
+    index("notification_unread_idx")
+      .on(table.recipientAccountId)
+      .where(sql`${table.readAt} is null`),
+    check(
+      "notification_type_check",
+      sql`${table.type} in ('WAVEFORM_SUCCEEDED', 'WAVEFORM_FAILED')`,
+    ),
+    check("notification_resource_type_check", sql`${table.resourceType} = 'WAVEFORM_JOB'`),
+    check("notification_event_key_check", sql`length(${table.eventKey}) between 1 and 256`),
+  ],
+);
+
+export const pushInstallation = pgTable(
+  "push_installation",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    fid: text().notNull().unique("push_installation_fid_key"),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => account.id, { onDelete: "restrict" }),
+    mfaVersion: integer("mfa_version").notNull(),
+    bindingVersion: integer("binding_version").default(1).notNull(),
+    enabled: boolean().default(true).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+  },
+  (table) => [
+    index("push_installation_account_idx")
+      .on(table.accountId)
+      .where(sql`${table.enabled}`),
+    check(
+      "push_installation_version_check",
+      sql`${table.mfaVersion} > 0 and ${table.bindingVersion} > 0`,
+    ),
+    check("push_installation_fid_check", sql`length(${table.fid}) between 16 and 256`),
+  ],
+);
+
+export const notificationDelivery = pgTable(
+  "notification_delivery",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .references(() => notification.id, { onDelete: "restrict" }),
+    installationId: uuid("installation_id")
+      .notNull()
+      .references(() => pushInstallation.id, { onDelete: "restrict" }),
+    bindingVersion: integer("binding_version").notNull(),
+    status: text().$type<"PENDING" | "ACCEPTED" | "DISCARDED">().default("PENDING").notNull(),
+    attemptCount: integer("attempt_count").default(0).notNull(),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+    leaseToken: uuid("lease_token"),
+    leaseUntil: timestamp("lease_until", { withTimezone: true, mode: "string" }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true, mode: "string" }),
+    lastErrorCode: text("last_error_code"),
+  },
+  (table) => [
+    unique("notification_delivery_target_key").on(
+      table.notificationId,
+      table.installationId,
+      table.bindingVersion,
+    ),
+    index("notification_delivery_due_idx")
+      .on(table.nextAttemptAt, table.leaseUntil)
+      .where(sql`${table.status} = 'PENDING'`),
+    check(
+      "notification_delivery_status_check",
+      sql`${table.status} in ('PENDING', 'ACCEPTED', 'DISCARDED')`,
+    ),
+    check(
+      "notification_delivery_attempt_check",
+      sql`${table.attemptCount} >= 0 and ${table.bindingVersion} > 0`,
+    ),
+    check(
+      "notification_delivery_lease_check",
+      sql`(${table.leaseToken} is null) = (${table.leaseUntil} is null)`,
+    ),
+  ],
+);
+
 export const emailVerificationChallenge = pgTable(
   "email_verification_challenge",
   {
