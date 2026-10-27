@@ -13,7 +13,8 @@
     "./signup": "./src/signup.ts",
     "./song": "./src/song.ts",
     "./publication": "./src/publication.ts",
-    "./policy": "./src/policy.ts"
+    "./policy": "./src/policy.ts",
+    "./waveform": "./src/waveform.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",
