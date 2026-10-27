@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-27"
-revision: 24
+updated_at: "2026-10-28"
+revision: 25
 ---
 
 # 구현 순서와 PR 단위
@@ -190,6 +190,18 @@ Windows OS 알림, 개수/내역/결과 이동을 사용자와 확인했다([실
 실행한 검증·최초 실패와 복구·제약은 각 PR 본문이 소유한다. Job 생성 HTTP/내부 Runner HTTP·OCI Queue/worker·ARM64 실증은
 후속 P08 범위이며 이 표의 코드 병합만으로 P08 전체를 완료로 처리하지 않는다.
 운영 DB migration/권한 적용·배포는 별도 Promotion과 [현행 runbook](../../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md)을 따른다.
+
+**2026-10-28 통합 실행 추가:** #294를 먼저 병합한 뒤 #295~#306을 위 순서로 각각 최신
+`migration_main`에 재배치하고 필수 검증·CI를 통과시켜 squash 병합했다.
+통합 source는 `5bed878e03edf05b00ce335059c361f7f46810cb`다.
+Vault 읽기 권한·보호된 VM 설정과 승인된 백업/복원 리허설·신규 테이블 6개 적용을 마쳤으며,
+정상 [Promotion #307](https://github.com/goldmayo/oioi-bwg/pull/307)으로 검증한 동일 ARM64 두 digest를 배포했다.
+source와 실제 squash tree·배포 receipt가 일치하고 exit 0, 기존 런타임/DB 보존과 health/readiness 200을 확인했다.
+Console의 FCM을 활성화했으며 Web에는 Firebase 개인키가 없다. 현행 설정·복구는
+[운영 안내 §9.2.2](../../../../ops/oci/README.md#922-console-fcm-알림-활성화)를 따른다.
+개별 검증·실패/복구와 최종 배포 근거는 각 PR 및 #307이 소유한다.
+운영 기기의 실제 등록·전경/백그라운드·닫힌 탭·OS 클릭·iOS/회수 수용은 미확인이다.
+생성 API·OCI Queue·Runner는 이번 통합에 포함하지 않았다. 현재 후속은 [WORK](../../../WORK.md)에 유지한다.
 
 #### 실증 전 확정할 값과 최종 수용
 
