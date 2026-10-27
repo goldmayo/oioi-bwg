@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./notification": "./src/notification.ts",
     "./entity-id": "./src/entity-id.ts",
     "./album": "./src/album.ts",
     "./authorization": "./src/authorization.ts",
