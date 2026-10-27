@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-26"
-revision: 9
+updated_at: "2026-10-27"
+revision: 11
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -55,7 +55,9 @@ flowchart LR
   J -->|파형 JSON만| R
   R -->|상태 / 결과 API| C
   R -->|결과 저장 후 delete| Q
-  C -->|EventEmitter / SSE: jobId| A
+  C -->|기기별 발송 대기| DB
+  C -->|push 발송| F[FCM]
+  F -->|foreground / background| A
 ```
 
 공유 server는 두 Next 프로세스에서 실행하는 소스 패키지다. 별도 API 서버는 만들지 않는다.
@@ -278,7 +280,7 @@ OCI Queue → VM runner long poll → Job(RUNNING)
 | OCI Queue         | 전달·재전달/retry·visibility timeout·delivery count·DLQ                            |
 | waveform-runner   | 제한된 enqueue 호출·Queue consume → job 검증 → 고정 container → 결과 반영 → delete |
 | waveform-worker   | audio → JSON만. HTTP 서버·DB 쓰기·job 관리 없음                                    |
-| SSE               | 열린 Console에 상태 변경만 알림. 데이터 조회는 Query/API                           |
+| FCM               | foreground 토스트·background OS push. 내역·읽음·결과 조회는 DB/API                  |
 | OCI Notifications | 선택적 운영 장애 알림만. job 성공 여부와 결합하지 않음                             |
 
 **동일 `(songId, videoId)`의 active Job(`QUEUED | RUNNING`)은 최대 한 개다.**
@@ -362,17 +364,32 @@ pipe가 기본이고 필요 파일/cache만 tmpfs에 둔다. swap/core dump를 �
 재생성 실패는 직전 정상 JSON을 지우지 않으며 Waveform을 갱신해도 Cue 시각은 자동 변경하지 않는다.
 JSON 형식·도구 선택·삭제 검증은 [파형 기술 검토](AUDIO-FEASIBILITY.md)를 따른다.
 
-열린 Console은 `GET /api/admin/waveform-jobs/{jobId}/events`에 native EventSource로 연결한다(endpoint는 구현 시 고정).
-`event: waveform-job-updated`, `data: {"jobId":"..."}`만 보내고 Waveform JSON 전체를 전송하지 않는다.
-브라우저는 이벤트 수신 → 관련 Query invalidate → Job/Waveform refetch한다. 연결·재연결·focus 때도 현재 DB 상태를 확인한다.
-초기 Console은 단일 container·단일 Node process로 운영한다. 상태/결과 Service가 DB commit을 끝낸 뒤 Console 서버 adapter에서
-process-local [Node EventEmitter](https://nodejs.org/api/events.html#class-eventemitter)로 jobId를 emit하고 SSE에 전달한다.
-결과 API와 SSE route가 같은 process의 EventEmitter 한 개를 공유한다. 범용 event bus나 별도 알림 저장소는 만들지 않는다.
-EventEmitter/SSE는 영속 event log가 아니며 알림 실패로 commit된 성공을 되돌리거나 결과 API/Queue 처리를 실패시키지 않는다.
-PostgreSQL LISTEN/NOTIFY는 지금 도입하지 않는다. Console process/container가 두 개 이상이 될 때 process 간 전달 수단으로 검토한다.
-SSE는 MFA/ADMIN guard·job 검증을 거치고, 만료/회수·연결 종료 시 stream/listener를 정리한다. heartbeat와 Caddy 경유 전달을 확인한다.
-FCM/Web Push는 닫힌 탭·서비스 전체 push 요구가 생길 때 후속으로 검토한다. OCI Notifications는 DLQ/Runner 장애 등 운영 알림 후보만 둔다.
-Queue abstraction·Notification framework·Worker platform은 추가하지 않는다.
+2026-10-27 구현 제출에서 source 정책을 유지한 passive Job/terminal 준비를 먼저 분리했다.
+제출한 저장·삭제·source/attempt 계약은 [#302의 Domain §20.4.1](https://github.com/goldmayo/oioi-bwg/blob/2157e70199e8c73cd6adf6f6e84d6af7b329f870/docs/migration/DOMAIN_SPECIFICATION.md#2041-파형-job과-알림-저장-계약-2026-10-27),
+실행 PR의 고유 범위와 squash 후 순서는 [ROADMAP 병합표](ROADMAP.md#공통-알림-pr의-병합-순서)를 따른다.
+이 준비 구현은 실제 생성 HTTP·Queue/Runner·ARM64 검증이나 P08 전체 완료를 뜻하지 않는다.
+
+### 6.1. 공통 알림과 FCM
+
+2026-10-27 사용자 승인으로 [이전 SSE 설계](https://github.com/goldmayo/oioi-bwg/blob/87a02f9344faa2f80a667b65250fc1294ee81680/docs/migration/implementation/console-guide-editor/DESIGN.md#6-waveform-worker)를 대체한다.
+닫힌 탭의 OS push·놓친 알림 내역을 이번 범위에 포함한다. 도메인 채널·수신자·읽음 규칙은 [Domain §15](../../DOMAIN_SPECIFICATION.md#15-notification)가 소유한다.
+
+- 공통 Notification/기기 등록/발송 대기를 PostgreSQL에 저장한다. Job terminal 반영과 요청자별 알림·발송 대기는 동일 transaction이다.
+- Console Node startup adapter가 단일 dispatch loop를 시작한다. commit 직후 깨우며 60초마다 미발송·lease 만료를 복구한다. Sentry 활성 여부와 분리하고 build·기본 local에서는 비활성화한다.
+- claim은 짧은 transaction/lease로 처리하고 네트워크 발송은 밖에서 수행한다. retry는 backoff/jitter·Retry-After를 따르며 유효 기간은 생성 후 24시간이다.
+- 등록별 접수/실패를 독립 저장한다. 접수 후 crash는 재발송될 수 있으며 notificationId로 중복 표시를 억제한다. 발송 접수는 읽음이나 수신 보장이 아니다.
+- Console 공통 layout에서 수신하고 Query를 invalidate한다. 내역·미읽음 배지·추가 페이지·개별/모두 읽음과 사용자 동작 기반 push 설정을 제공한다.
+- 등록은 Firebase Installation ID와 현재 account/MFA/binding에 연결한다. logout·전환·회수·기한 만료 후 발송하지 않는다. 큐에 이미 접수된 일반 안내의 회수는 보장하지 않는다.
+- payload는 일반 안내·notificationId만 포함한다. 항목 조회·읽음·이동은 ADMIN/MFA와 수신자 소유권·현재 대상 인가를 검증한다.
+- Firebase SDK는 지연 로드하고 SW SDK는 로컬 번들한다. 공개 설정은 runtime 주입하며 동일 candidate digest 승격을 유지한다. SW는 인증 응답을 캐시하지 않는다.
+- iOS/iPadOS는 홈 화면 웹 앱 조건과 최소 manifest/icon을 제공한다. foreground는 onMessage, background는 notification 자동 표시 경로만 사용한다.
+- 권한 거부·미지원은 내역을 유지하고 초기 진입·복귀·네트워크 복구·알림함 열기에 재조회한다. 주기적 browser polling은 하지 않는다.
+
+HTTP 계약은 `/api/admin/notifications` 목록/미읽음 개수, `/{id}` 단건, `/{id}/read` PATCH,
+`/read-all` POST와 `/api/admin/push-installations` PUT·`/{id}` DELETE다. 현재 API/Error/Query 규칙을 따른다.
+FCM 발송 credential은 Console server만 사용하며 Runner·worker·Web·클라이언트에 전달하지 않는다.
+별도 Redis/Ably/Firestore/Cloud Functions·범용 Notification framework는 추가하지 않는다.
+OCI Notifications는 DLQ/Runner 장애 등 운영 알림 후보로 유지한다.
 
 ## 7. Audio Editor
 
@@ -408,4 +425,4 @@ server DTO는 Query, 편집 draft는 RHF, 선택/zoom/loop/drag preview는 local
 상위 기준은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md),
 [Auth](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md), [Deployment](../../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md),
 [Domain](../../DOMAIN_SPECIFICATION.md)이다. 앱 분리·MFA claims/회수·공연 모드·출처/Revision 단계·YouTube 임시 분석·실제 CD 경로의
-변경은 해당 구현 PR에서 관련 active 문서와 같은 단위로 반영한다. Queue/runner/job/SSE의 lifecycle도 해당 문서에 반영하며 이 계획이 상위 문서를 자동 대체하지 않는다.
+변경은 해당 구현 PR에서 관련 active 문서와 같은 단위로 반영한다. Queue/runner/job/FCM의 lifecycle도 해당 문서에 반영하며 이 계획이 상위 문서를 자동 대체하지 않는다.

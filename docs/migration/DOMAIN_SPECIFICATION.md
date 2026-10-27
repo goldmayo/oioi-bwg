@@ -1026,15 +1026,30 @@ ADMIN은 schedule별로 recommendedGuideMode를 override할 수 있다.
 
 ## 15.1 MVP Channel
 
-MVP는 **인앱 알림**을 기준으로 한다.
+2026-10-27 사용자 결정으로 Console은 **인앱 내역과 FCM foreground/background push**를 제공한다.
+기존 인앱 우선·push 후속 범위를 대체한다. 공개 Web은 비로그인 조회를 유지한다.
 
-이메일/push는 추후 delivery channel로 확장할 수 있다.
+- 알림 내역·읽음 상태의 SSOT는 PostgreSQL이다. FCM 접수·표시·토스트 닫기는 읽음이 아니다.
+- 항목 선택 또는 명시적 모두 읽음으로만 읽음 처리한다. 알림함 열기는 읽음으로 처리하지 않는다.
+- 푸시는 사용자 동작으로 허용받는다. 거부·미지원·유실 시 진입/화면 복귀/알림함 열기 때 재조회하며 주기적 browser polling은 하지 않는다.
+- 첫 producer는 WaveformJob의 SUCCEEDED/최종 FAILED다. 요청자별 한 건이며 같은 active Job을 재사용한 요청자도 포함한다.
+- 결과·terminal 상태·알림·기기별 발송 대기는 하나의 transaction으로 저장한다. 발송 장애는 작업 결과를 되돌리지 않는다.
+- 푸시 등록은 현재 ACTIVE ADMIN/MFA에 귀속한다. 계정 전환·회수 후 이전 계정의 발송을 금지하며 여러 기기는 독립 처리한다.
+- 푸시는 일반 안내와 알림 식별자만 포함한다. 대상 접근은 Console의 현재 인가로 다시 판단한다.
+- 발송 재시도·FCM TTL은 알림 생성부터 24시간이다. 알림 내역은 v1에서 자동 삭제하지 않는다. 이메일은 후속이다.
 
 ---
 
 ## 15.2 Notification Types
 
-초기 후보:
+현재 Console 구현 대상:
+
+```text
+WAVEFORM_SUCCEEDED
+WAVEFORM_FAILED
+```
+
+이후 producer가 필요한 시점에 추가할 후보:
 
 ```text
 REVISION_REVIEW_REQUESTED
@@ -1683,9 +1698,15 @@ Index:
 - resource_id
 - read_at nullable
 - created_at
+- event_key: producer의 사건 식별자
 
-Index:
-- (recipient_account_id, read_at, created_at)
+Unique: (recipient_account_id, type, event_key). 목록은 (created_at, id) 역순 cursor다.
+Index: (recipient_account_id, created_at DESC, id DESC), 미읽음 recipient partial index.
+
+푸시 persistence는 notification과 분리한다.
+- push_installation: 브라우저별 Firebase 등록 식별자·수신 계정·MFA version·binding version·활성/만료 시각. 로그아웃·계정 전환 시 해제한다.
+- notification_delivery: notification/installation/binding version별 유일한 발송 대기. 재시도 시각·attempt·lease·접수/중단 시각을 유지한다.
+- WaveformJob 요청자는 (job_id, account_id)로 유일하다. terminal 반영과 요청자 등록은 Job 행 잠금으로 직렬화한다.
 
 ---
 
