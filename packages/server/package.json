@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./services/notification-service": "./src/services/notification-service.ts",
     "./auth/admin-mfa-crypto": "./src/auth/admin-mfa-crypto.ts",
     "./auth/admin-mfa-totp": "./src/auth/admin-mfa-totp.ts",
     "./auth/ability": "./src/auth/ability.ts",
