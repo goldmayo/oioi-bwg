@@ -10,3 +10,5 @@ docs/**
 CHANGELOG.md
 .github/ISSUE_TEMPLATE/**
 .github/PULL_REQUEST_TEMPLATE.md
+# Generated Console Service Worker SDK bundle.
+apps/console/public/notification-worker.js
