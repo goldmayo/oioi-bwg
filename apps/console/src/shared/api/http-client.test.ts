@@ -6,12 +6,15 @@ afterEach(() => {
 });
 
 describe("http client", () => {
-  it("accepts an empty 204 DELETE response", async () => {
+  it("accepts empty 204 DELETE and POST responses", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
     const { http } = await import("./http-client");
 
     await expect(http.delete("https://example.test/admin/albums/1")).resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledOnce();
+    await expect(
+      http.postVoid("https://example.test/admin/notifications/read-all"),
+    ).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

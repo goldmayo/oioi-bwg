@@ -8,6 +8,8 @@ import { signOut } from "@/features/auth";
 import { Button } from "@/shared/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/ui/sheet";
 
+import { NotificationBell } from "./notification-bell";
+
 /**
  * 사이드바 래퍼 (데스크톱: 고정 aside, 모바일: Sheet 슬라이드)
  */
@@ -43,21 +45,24 @@ export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
       {/* ── 모바일: 상단 바 + Sheet ── */}
       <div className="bg-card border-border flex h-14 items-center justify-between border-b px-4 md:hidden">
         <h2 className="text-foreground text-sm font-bold tracking-tight uppercase">Admin</h2>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Menu size={18} />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="flex w-64 flex-col p-0">
-            <SheetHeader className="border-border/50 border-b px-4 py-4">
-              <SheetTitle className="text-sm font-bold tracking-tight uppercase">
-                Admin Panel
-              </SheetTitle>
-            </SheetHeader>
-            {sidebarContent}
-          </SheetContent>
-        </Sheet>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Menu size={18} />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex w-64 flex-col p-0">
+              <SheetHeader className="border-border/50 border-b px-4 py-4">
+                <SheetTitle className="text-sm font-bold tracking-tight uppercase">
+                  Admin Panel
+                </SheetTitle>
+              </SheetHeader>
+              {sidebarContent}
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       {/* ── 데스크톱: 고정 사이드바 ── */}
@@ -68,8 +73,8 @@ export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
       >
         {/* Header */}
         <div
-          className={`border-border/50 flex h-14 shrink-0 items-center border-b px-4 ${
-            isMinimized ? "justify-center" : "justify-between"
+          className={`border-border/50 flex shrink-0 items-center border-b ${
+            isMinimized ? "h-24 flex-col justify-center gap-2 px-1" : "h-14 justify-between px-4"
           }`}
         >
           {!isMinimized && (
@@ -77,6 +82,7 @@ export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
               Admin Panel
             </h2>
           )}
+          <NotificationBell />
           <Button
             variant="ghost"
             size="icon"

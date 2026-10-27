@@ -47,6 +47,7 @@ async function requestVoid(request: ResponsePromise): Promise<void> {
 export const http = {
   get: (url: string, options?: Options) => requestJson(client.get(url, options)),
   post: (url: string, options?: Options) => requestJson(client.post(url, options)),
+  postVoid: (url: string, options?: Options) => requestVoid(client.post(url, options)),
   put: (url: string, options?: Options) => requestJson(client.put(url, options)),
   patch: (url: string, options?: Options) => requestJson(client.patch(url, options)),
   delete: (url: string, options?: Options) => requestVoid(client.delete(url, options)),
