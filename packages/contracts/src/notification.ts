@@ -3,13 +3,10 @@ import { z } from "zod";
 import { entityIdSchema } from "./entity-id";
 
 export const notificationTypeSchema = z.enum(["WAVEFORM_SUCCEEDED", "WAVEFORM_FAILED"]);
-export const notificationCursorSchema = z.object({
-  createdAt: z.iso.datetime({ offset: true }),
-  id: entityIdSchema,
-});
+export const notificationCursorSchema = entityIdSchema;
 export const notificationListInputSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
-  cursor: z.string().max(512).optional(),
+  cursor: notificationCursorSchema.optional(),
 });
 export const notificationSchema = z.object({
   id: entityIdSchema,

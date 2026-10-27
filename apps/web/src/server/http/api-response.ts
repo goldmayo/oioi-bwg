@@ -8,6 +8,7 @@ import type { ServerErrorContext } from "@/server/observability/safe-server-even
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
 const appErrorDefinitions = {
+  NOTIFICATION_NOT_FOUND: { message: "알림을 찾을 수 없습니다.", status: 404 },
   CHEER_GUIDE_IMPORT_CONFLICT: {
     status: 409,
     message: "검토한 이관 정보와 현재 응원법이 다릅니다.",
