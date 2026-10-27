@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 
 import { signOut } from "@/features/auth";
@@ -24,11 +24,20 @@ export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
   const brand = (
     <Link
       href="/admin"
-      aria-label="대시보드 홈"
-      className="text-foreground flex min-h-11 items-center gap-2 rounded-md font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4"
+      aria-label="OIOIBWG 대시보드 홈"
+      className="text-foreground flex min-h-11 min-w-11 items-center gap-2 rounded-md group-data-[collapsed=true]/sidebar:justify-center focus-visible:outline-2 focus-visible:outline-offset-4"
     >
-      <LayoutDashboard className="size-5 shrink-0" aria-hidden="true" />
-      <span className="text-sm group-data-[collapsed=true]/sidebar:hidden">OIOIBWG</span>
+      <span className="bg-qwer-rockation size-2 shrink-0 rounded-full" aria-hidden="true" />
+      <span
+        className="text-lg font-black tracking-tighter group-data-[collapsed=true]/sidebar:hidden"
+        aria-hidden="true"
+      >
+        <span className="text-qwer-q">O</span>
+        <span className="text-qwer-w">I</span>
+        <span className="text-qwer-e">O</span>
+        <span className="text-qwer-r">I</span>
+        <span>BWG</span>
+      </span>
     </Link>
   );
   const navigation = (
@@ -80,7 +89,8 @@ export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
               }}
             >
               <SheetHeader className="border-sidebar-border border-b px-6 py-5">
-                <SheetTitle>OIOIBWG</SheetTitle>
+                <SheetTitle className="sr-only">OIOIBWG</SheetTitle>
+                {brand}
                 <SheetDescription>관리자 메뉴</SheetDescription>
               </SheetHeader>
               {navigation}
