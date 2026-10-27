@@ -31,7 +31,10 @@
     "./services/email-verification-service": "./src/services/email-verification-service.ts",
     "./services/signup-service": "./src/services/signup-service.ts",
     "./services/song-service": "./src/services/song-service.ts",
-    "./storage/upload-public-asset": "./src/storage/upload-public-asset.ts"
+    "./storage/upload-public-asset": "./src/storage/upload-public-asset.ts",
+    "./services/cheer-guide-import-service": "./src/services/cheer-guide-import-service.ts",
+    "./services/publication-service": "./src/services/publication-service.ts",
+    "./services/policy-service": "./src/services/policy-service.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",

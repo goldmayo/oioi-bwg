@@ -40,7 +40,7 @@ export function AdminLyricsEditor({ song }: { song: SongEditor }) {
           message: "관리자 로그인과 권한을 확인해주세요.",
         });
       }
-      await saveLyrics({ id, input });
+      return saveLyrics({ id, input });
     },
     [canManage, recovery.requiresReauthentication, saveLyrics],
   );

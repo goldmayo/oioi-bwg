@@ -5,6 +5,7 @@ import {
   bigint,
   boolean,
   check,
+  date,
   foreignKey,
   index,
   inet,
@@ -14,7 +15,10 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
+  uniqueIndex,
   uuid,
+  type PgTableExtraConfigValue,
 } from "drizzle-orm/pg-core";
 
 export const ACCOUNT_ROLES = ["USER", "REVIEWER", "ADMIN"] as const;
@@ -247,11 +251,151 @@ export const song = pgTable(
   ],
 );
 
+export const cheerGuide = pgTable(
+  "cheer_guide",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    songId: uuid("song_id").notNull(),
+    mode: text().$type<"CONCERT" | "FESTIVAL">().notNull(),
+    legacyWriteTarget: boolean("legacy_write_target").default(false).notNull(),
+    currentPublicationId: uuid("current_publication_id"),
+    lockVersion: integer("lock_version").default(1).notNull(),
+    createdAt: timestamp("created_at", { precision: 3, withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { precision: 3, withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  // The explicit return type breaks the guide → publication → snapshot → guide type cycle.
+  (table): PgTableExtraConfigValue[] => [
+    foreignKey({
+      columns: [table.songId],
+      foreignColumns: [song.id],
+      name: "cheer_guide_song_id_fkey",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.id, table.currentPublicationId],
+      foreignColumns: [cheerGuidePublication.cheerGuideId, cheerGuidePublication.id],
+      name: "cheer_guide_id_current_publication_id_fkey",
+    }).onDelete("restrict"),
+    unique("cheer_guide_song_id_mode_key").on(table.songId, table.mode),
+    uniqueIndex("cheer_guide_song_id_legacy_write_target_key")
+      .on(table.songId)
+      .where(sql`${table.legacyWriteTarget}`),
+    check("cheer_guide_mode_check", sql`${table.mode} in ('CONCERT', 'FESTIVAL')`),
+    check("cheer_guide_lock_version_check", sql`${table.lockVersion} > 0`),
+  ],
+);
+
+export const cheerGuideSnapshot = pgTable(
+  "cheer_guide_snapshot",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    cheerGuideId: uuid("cheer_guide_id").notNull(),
+    versionNo: integer("version_no").notNull(),
+    lyrics: jsonb().notNull(),
+    referenceYoutubeId: text("reference_youtube_id").notNull(),
+    sourceType: text("source_type").$type<"OFFICIAL" | "FANDOM">().notNull(),
+    sourceUrl: text("source_url"),
+    guideVideoUrl: text("guide_video_url"),
+    description: text(),
+    createdByAccountId: uuid("created_by_account_id"),
+    changeSummary: text("change_summary").notNull(),
+    createdAt: timestamp("created_at", { precision: 3, withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.cheerGuideId],
+      foreignColumns: [cheerGuide.id],
+      name: "cheer_guide_snapshot_cheer_guide_id_fkey",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.createdByAccountId],
+      foreignColumns: [account.id],
+      name: "cheer_guide_snapshot_created_by_account_id_fkey",
+    }).onDelete("restrict"),
+    unique("cheer_guide_snapshot_cheer_guide_id_version_no_key").on(
+      table.cheerGuideId,
+      table.versionNo,
+    ),
+    unique("cheer_guide_snapshot_cheer_guide_id_id_key").on(table.cheerGuideId, table.id),
+    index("cheer_guide_snapshot_created_by_account_id_idx").on(table.createdByAccountId),
+    check("cheer_guide_snapshot_version_no_check", sql`${table.versionNo} > 0`),
+    check("cheer_guide_snapshot_lyrics_check", sql`jsonb_typeof(${table.lyrics}) = 'array'`),
+    check(
+      "cheer_guide_snapshot_reference_youtube_id_check",
+      sql`length(btrim(${table.referenceYoutubeId})) > 0`,
+    ),
+    check(
+      "cheer_guide_snapshot_source_type_check",
+      sql`${table.sourceType} in ('OFFICIAL', 'FANDOM')`,
+    ),
+    check(
+      "cheer_guide_snapshot_source_url_check",
+      sql`${table.sourceType} <> 'OFFICIAL' or (${table.sourceUrl} is not null and length(btrim(${table.sourceUrl})) > 0)`,
+    ),
+    check(
+      "cheer_guide_snapshot_change_summary_check",
+      sql`length(btrim(${table.changeSummary})) > 0`,
+    ),
+  ],
+);
+
+export const cheerGuidePublication = pgTable(
+  "cheer_guide_publication",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    cheerGuideId: uuid("cheer_guide_id").notNull(),
+    publicationNo: integer("publication_no").notNull(),
+    action: text().$type<"PUBLISH" | "UNPUBLISH">().notNull(),
+    snapshotId: uuid("snapshot_id").notNull(),
+    actorAccountId: uuid("actor_account_id").notNull(),
+    reason: text().notNull(),
+    createdAt: timestamp("created_at", { precision: 3, withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.cheerGuideId],
+      foreignColumns: [cheerGuide.id],
+      name: "cheer_guide_publication_cheer_guide_id_fkey",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.cheerGuideId, table.snapshotId],
+      foreignColumns: [cheerGuideSnapshot.cheerGuideId, cheerGuideSnapshot.id],
+      name: "cheer_guide_publication_cheer_guide_id_snapshot_id_fkey",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.actorAccountId],
+      foreignColumns: [account.id],
+      name: "cheer_guide_publication_actor_account_id_fkey",
+    }).onDelete("restrict"),
+    unique("cheer_guide_publication_cheer_guide_id_publication_no_key").on(
+      table.cheerGuideId,
+      table.publicationNo,
+    ),
+    unique("cheer_guide_publication_cheer_guide_id_id_key").on(table.cheerGuideId, table.id),
+    index("cheer_guide_publication_cheer_guide_id_snapshot_id_idx").on(
+      table.cheerGuideId,
+      table.snapshotId,
+    ),
+    index("cheer_guide_publication_actor_account_id_idx").on(table.actorAccountId),
+    check("cheer_guide_publication_publication_no_check", sql`${table.publicationNo} > 0`),
+    check("cheer_guide_publication_action_check", sql`${table.action} in ('PUBLISH', 'UNPUBLISH')`),
+    check("cheer_guide_publication_reason_check", sql`length(btrim(${table.reason})) > 0`),
+  ],
+);
+
 export const albumRelations = relations(album, ({ many }) => ({
   songs: many(song),
 }));
 
-export const songRelations = relations(song, ({ one }) => ({
+export const songRelations = relations(song, ({ one, many }) => ({
+  cheerGuides: many(cheerGuide),
   album: one(album, {
     fields: [song.albumId],
     references: [album.id],
@@ -291,3 +435,116 @@ export type EmailVerificationChallengeRow = typeof emailVerificationChallenge.$i
 export type InsertEmailVerificationChallengeRow = typeof emailVerificationChallenge.$inferInsert;
 export type EmailVerificationRateLimitRow = typeof emailVerificationRateLimit.$inferSelect;
 export type InsertEmailVerificationRateLimitRow = typeof emailVerificationRateLimit.$inferInsert;
+
+export const cheerGuideRelations = relations(cheerGuide, ({ one, many }) => ({
+  song: one(song, { fields: [cheerGuide.songId], references: [song.id] }),
+  currentPublication: one(cheerGuidePublication, {
+    fields: [cheerGuide.id, cheerGuide.currentPublicationId],
+    references: [cheerGuidePublication.cheerGuideId, cheerGuidePublication.id],
+    relationName: "currentGuidePublication",
+  }),
+  publications: many(cheerGuidePublication, { relationName: "guidePublications" }),
+}));
+export const cheerGuidePublicationRelations = relations(cheerGuidePublication, ({ one }) => ({
+  guide: one(cheerGuide, {
+    fields: [cheerGuidePublication.cheerGuideId],
+    references: [cheerGuide.id],
+    relationName: "guidePublications",
+  }),
+  snapshot: one(cheerGuideSnapshot, {
+    fields: [cheerGuidePublication.cheerGuideId, cheerGuidePublication.snapshotId],
+    references: [cheerGuideSnapshot.cheerGuideId, cheerGuideSnapshot.id],
+  }),
+}));
+
+/** 공지·업데이트 게시 내용. 현재 공개 조회 전환만 제공한다. */
+export const servicePublication = pgTable(
+  "service_publication",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    kind: text().$type<"notice" | "update">().notNull(),
+    title: text().notNull(),
+    publishedOn: date("published_on", { mode: "string" }).notNull(),
+    isPublished: boolean("is_published").notNull().default(false),
+    category: text(),
+    releaseVersion: text("release_version"),
+    content: jsonb().$type<string | string[]>().notNull(),
+    lockVersion: integer("lock_version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check("service_publication_title_check", sql`length(btrim(${t.title})) between 1 and 200`),
+    check("service_publication_lock_version_check", sql`${t.lockVersion} > 0`),
+    check(
+      "service_publication_shape_check",
+      sql`case
+      when ${t.kind} = 'notice' then
+        ${t.category} is not null and length(btrim(${t.category})) between 1 and 40
+        and ${t.releaseVersion} is null and jsonb_typeof(${t.content}) = 'string'
+        and length(btrim(${t.content} #>> '{}')) between 1 and 20000
+      when ${t.kind} = 'update' then
+        ${t.category} is null and ${t.releaseVersion} is not null
+        and length(btrim(${t.releaseVersion})) between 1 and 40
+        and case when jsonb_typeof(${t.content}) = 'array' then
+          jsonb_array_length(${t.content}) between 1 and 100
+          and not jsonb_path_exists(${t.content}, 'strict $[*] ? (@.type() != "string")')
+        else false end
+      else false end`,
+    ),
+    uniqueIndex("service_publication_release_version_key")
+      .on(t.releaseVersion)
+      .where(sql`${t.kind} = 'update'`),
+    index("service_publication_list_idx").on(t.kind, t.isPublished, t.publishedOn, t.id),
+  ],
+);
+
+/** 안내·약관 문서의 버전. 공개된 가장 높은 버전이 현재 본문이다. */
+export const servicePolicy = pgTable(
+  "service_policy",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    slug: text().notNull(),
+    version: integer().notNull(),
+    title: text().notNull(),
+    description: text().notNull(),
+    effectiveOn: date("effective_on", { mode: "string" }).notNull(),
+    content: jsonb().$type<string[]>().notNull(),
+    changeNotice: text("change_notice"),
+    isPublished: boolean("is_published").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check(
+      "service_policy_slug_check",
+      sql`${t.slug} in ('privacy', 'terms', 'copyright', 'email', 'ga')`,
+    ),
+    check("service_policy_version_check", sql`${t.version} > 0`),
+    check("service_policy_title_check", sql`length(btrim(${t.title})) between 1 and 200`),
+    check(
+      "service_policy_description_check",
+      sql`length(btrim(${t.description})) between 1 and 500`,
+    ),
+    check(
+      "service_policy_content_check",
+      sql`case when jsonb_typeof(${t.content}) = 'array' then
+      jsonb_array_length(${t.content}) between 1 and 100
+      and not jsonb_path_exists(${t.content}, 'strict $[*] ? (@.type() != "string")')
+      else false end`,
+    ),
+    check(
+      "service_policy_change_notice_check",
+      sql`${t.changeNotice} is null or length(btrim(${t.changeNotice})) between 1 and 2000`,
+    ),
+    unique("service_policy_slug_version_key").on(t.slug, t.version),
+    index("service_policy_public_idx")
+      .on(t.slug, t.version.desc())
+      .where(sql`${t.isPublished} = true`),
+  ],
+);

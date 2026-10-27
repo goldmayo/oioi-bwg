@@ -225,6 +225,7 @@ Base UI → shadcn/ui → Tailwind CSS
 수행한다. 기존 `src/shared/ui` public API를 가능한 한 유지하고, keyboard/focus/portal/overlay
 동작을 Playwright로 검증한 뒤 Radix 의존성을 제거한다.
 
+- 화면 문구·말투·출처 표시는 [서비스 철학과 문구·톤 기준](docs/PHILOSOPHY.md)을 따른다.
 - TanStack Query의 `useQuery`/`useMutation`/`queryOptions` vocabulary를 숨기는 범용 wrapper를 만들지 않는다.
 - Server state는 Query가 소유하고 mutation 성공 후 명시적으로 query invalidation한다.
 - server-seeded data와 client query는 동일 acquisition path가 아니라 동일 `queryKey`로 연결한다.

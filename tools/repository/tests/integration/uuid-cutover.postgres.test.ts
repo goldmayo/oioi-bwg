@@ -239,7 +239,7 @@ finally:
     await apply(map);
     expect(
       (await owner`select count(*)::int as count from drizzle.__drizzle_migrations`)[0]!.count,
-    ).toBe(7);
+    ).toBe(11);
   });
 
   test("preserves complete content/relations and ordinary credentials, resets only selected admin, then re-enrolls", async () => {

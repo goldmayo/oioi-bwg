@@ -1,8 +1,10 @@
 # 문서 안내
 
-P06 운영 전환을 종료했고 P07~P10은 미착수다. 현재·보류 작업의 상태와 다음 행동은
+P06 운영 전환과 [P07 구현·로컬 검증](migration/implementation/console-guide-editor/P07-RESULT.md)을 종료했다.
+P07 운영 DB 적용은 완료했으며 최신 앱 배포는 진행 중이다. P08~P10은 미착수다. 현재·보류 작업의 상태와 다음 행동은
 [WORK](WORK.md) 한 곳에서 관리한다. 설계의 제안과 실제 구현·배포 결과를 구분해 읽는다.
 
+- 서비스 표현: [서비스 철학과 문구·톤 기준](PHILOSOPHY.md)
 - 문서 생성·유지·통합·삭제: [AGENTS §9](../AGENTS.md#9-문서-및-변경-원칙)
 - 구현 기준: [헌법과 active architecture](migration/oioi-bwg-architecture-clean-v1/00-document-index.md), [Domain](migration/DOMAIN_SPECIFICATION.md)
 - 개발·운영: [로컬 개발환경](migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md), [OCI 운영](../ops/oci/README.md), [www 전환·인증서 관리](../ops/oci/web-cutover.md)
