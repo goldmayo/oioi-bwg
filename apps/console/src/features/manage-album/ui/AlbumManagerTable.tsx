@@ -25,12 +25,6 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
   const columns = useMemo(
     () =>
       column.columns([
-        column.accessor("id", {
-          header: "ID",
-          meta: { className: "w-12 text-muted-foreground text-xs" },
-          cell: ({ row: { original: album } }) => <>{album.id}</>,
-          sortFn: "basic",
-        }),
         column.accessor("name", {
           header: "이름",
           meta: { className: "font-medium" },
