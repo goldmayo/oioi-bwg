@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-27"
-revision: 10
+revision: 11
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -364,6 +364,11 @@ pipe가 기본이고 필요 파일/cache만 tmpfs에 둔다. swap/core dump를 �
 재생성 실패는 직전 정상 JSON을 지우지 않으며 Waveform을 갱신해도 Cue 시각은 자동 변경하지 않는다.
 JSON 형식·도구 선택·삭제 검증은 [파형 기술 검토](AUDIO-FEASIBILITY.md)를 따른다.
 
+2026-10-27 구현 제출에서 source 정책을 유지한 passive Job/terminal 준비를 먼저 분리했다.
+제출한 저장·삭제·source/attempt 계약은 [#302의 Domain §20.4.1](https://github.com/goldmayo/oioi-bwg/blob/2157e70199e8c73cd6adf6f6e84d6af7b329f870/docs/migration/DOMAIN_SPECIFICATION.md#2041-파형-job과-알림-저장-계약-2026-10-27),
+실행 PR의 고유 범위와 squash 후 순서는 [ROADMAP 병합표](ROADMAP.md#공통-알림-pr의-병합-순서)를 따른다.
+이 준비 구현은 실제 생성 HTTP·Queue/Runner·ARM64 검증이나 P08 전체 완료를 뜻하지 않는다.
+
 ### 6.1. 공통 알림과 FCM
 
 2026-10-27 사용자 승인으로 [이전 SSE 설계](https://github.com/goldmayo/oioi-bwg/blob/87a02f9344faa2f80a667b65250fc1294ee81680/docs/migration/implementation/console-guide-editor/DESIGN.md#6-waveform-worker)를 대체한다.
@@ -420,4 +425,4 @@ server DTO는 Query, 편집 draft는 RHF, 선택/zoom/loop/drag preview는 local
 상위 기준은 [헌법](../../oioi-bwg-architecture-clean-v1/01-architecture-constitution.md),
 [Auth](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md), [Deployment](../../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md),
 [Domain](../../DOMAIN_SPECIFICATION.md)이다. 앱 분리·MFA claims/회수·공연 모드·출처/Revision 단계·YouTube 임시 분석·실제 CD 경로의
-변경은 해당 구현 PR에서 관련 active 문서와 같은 단위로 반영한다. Queue/runner/job/SSE의 lifecycle도 해당 문서에 반영하며 이 계획이 상위 문서를 자동 대체하지 않는다.
+변경은 해당 구현 PR에서 관련 active 문서와 같은 단위로 반영한다. Queue/runner/job/FCM의 lifecycle도 해당 문서에 반영하며 이 계획이 상위 문서를 자동 대체하지 않는다.

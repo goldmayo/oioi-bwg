@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-27"
-revision: 23
+revision: 24
 ---
 
 # 구현 순서와 PR 단위
@@ -30,7 +30,7 @@ P01 앱 이동 → P02 Turbo/config/harness → P03 실제 공통 코드 추출
 
 Console 전환 뒤의 기능 작업선
   ├─ P07 CONCERT/FESTIVAL · 공식/팬덤 · 데이터/조회
-  └─ P08 Waveform Job / OCI Queue / VM runner / SSE
+  └─ 공통 Console 알림/FCM → P08 Waveform Job / OCI Queue / VM runner
        → P09 JSON 파형·Cue timeline → P10 수동 Grid/Snap/Nudge/Loop
 ```
 
@@ -133,6 +133,50 @@ FCM 실패는 결과와 Queue ack를 실패로 바꾸지 않는다. 수신자·�
 첫 producer는 요청한 관리자에게 보내는 WAVEFORM_SUCCEEDED/WAVEFORM_FAILED다.
 읽음은 항목 선택/모두 읽음으로만 처리하고 알림 내역은 v1에서 자동 삭제하지 않는다.
 Firebase 프로젝트/VAPID/server 권한 준비 후 실제 수신을 검증한다. 운영 DB 변경·배포는 별도 Promotion이다.
+
+#### 공통 알림 PR의 병합 순서
+
+**2026-10-27 구현 제출·병합 조정 추가:** 아래는 승인한 구현 계획의 실행 PR과 의존성이다.
+기존 실증 계획을 완료 결과로 소급 변경하지 않는다. 공통 알림 코드를 먼저 만들고,
+생성 HTTP 경로와 Runner를 열지 않는 Job/terminal 저장 준비를 앞당겨 atomic commit을 실제 PG에서 검증했다.
+source 이용 승인·ARM64 분석·OCI Queue 실증은 여전히 P08 활성화 전 조건이다.
+
+**#295 → #296 → #297 → #298 → #299 → #300 → #301 → #302 → #303** 순서로 병합한다.
+사용자 우선순위에 따라 앨범/곡 ID 열 제거 [#294](https://github.com/goldmayo/oioi-bwg/pull/294)를 먼저 병합한다. 기술적 의존은 없는 독립 변경이다.
+아래 부모는 최초 분기점으로 고정한다. 이후 검토 커밋을 포함해 해당 부모 이후의 고유 변경만 옮긴다.
+
+| 순서 | PR / 관심사 | 원래 부모 SHA | 고유 구현 커밋 |
+| --- | --- | --- | --- |
+| 1 | [#295](https://github.com/goldmayo/oioi-bwg/pull/295) 계약·계획·병합표 | `8f371d40d1809165167a524456b990c7b0f319b9` | `87a02f9`, `a14b30e` 및 이 병합표 개정 |
+| 2 | [#296](https://github.com/goldmayo/oioi-bwg/pull/296) Notification/기기/발송 대기 schema | `8f371d40d1809165167a524456b990c7b0f319b9` | `52162b9`, `9c275b2` |
+| 3 | [#297](https://github.com/goldmayo/oioi-bwg/pull/297) 계정별 알림 조회·읽음 API | `9c275b2c87ad7851dad1e6948c24a8a6f7877fb1` | `a5813b3` |
+| 4 | [#298](https://github.com/goldmayo/oioi-bwg/pull/298) 브라우저 등록·MFA/계정 회수 | `a5813b3f81733fd77b4396dae5cf31bda9533dee` | `ed4c0ac` |
+| 5 | [#299](https://github.com/goldmayo/oioi-bwg/pull/299) Console FCM 발송·lease/복구 | `ed4c0acc12139eab6bccec51d8fe243726f31808` | `b69b645` |
+| 6 | [#300](https://github.com/goldmayo/oioi-bwg/pull/300) 지연 SDK·SW 로컬 번들·runtime 설정 | `b69b645bc1493f090f02f6734ea0fe1c5cf01d9b` | `d297fed` |
+| 7 | [#301](https://github.com/goldmayo/oioi-bwg/pull/301) 알림함·배지·foreground 토스트 | `d297fede670a88f08006672c2ecd3116bbcdb20a` | `c8a8efc` |
+| 8 | [#302](https://github.com/goldmayo/oioi-bwg/pull/302) P08 Job/결과/요청자 알림 atomic commit 준비 | `c8a8efcf72b5ec5628242a2541dbd255b606e36a` | `2157e70`, `e9138f3` |
+| 9 | [#303](https://github.com/goldmayo/oioi-bwg/pull/303) 결과 조회·Query 갱신·해제 실패 복구 | `e9138f3d9d06cc195ffda638db8f853a98091e41` | `4d2f272` |
+
+모든 구현 PR의 대상은 `migration_main`이다. 후속 코드 PR은 선행분을 포함하며 #297 이후는 draft이므로
+선행이 병합되기 전 `migration_main` 전체 diff를 독립 PR 범위로 해석하지 않는다.
+검토할 때 `git diff <원래 부모>...<작업 브랜치>`로 고유 변경을 확인한다.
+
+선행 PR을 squash한 뒤 담당자는 다음 순서로 **한 PR씩** 갱신한다. 실제 병합을 자동 수행하는 절차가 아니다.
+
+1. `git fetch origin migration_main` 후 선행 squash가 통합됐는지 확인한다.
+2. 깨끗한 작업 트리에서 `git rebase --onto origin/migration_main <표의 원래 부모 SHA> <해당 feature 브랜치>`를 실행한다.
+   #295 이후 #296도 같은 방식으로 옮기며 동일한 Domain 개정은 통합본을 보존한다.
+3. 고유 diff·commit 보존과 충돌 해결을 검토하고 필수 검증/CI를 다시 통과시킨다.
+4. 원격 변경 유무를 확인한 뒤 해당 작업 브랜치만 `git push --force-with-lease`한다.
+   제목·본문을 최종 변경/검증에 맞춰 갱신하고 선행이 사라진 PR 하나만 ready로 전환한다.
+5. 해당 PR을 squash한 다음 표의 다음 PR로 진행한다. 선행 커밋을 수동으로 합치거나 통째로 재병합하지 않는다.
+
+**코드 병합과 활성화는 별개다.** `CONSOLE_PUSH_ENABLED=false`가 기본이며 Firebase 프로젝트가 아직 없어
+실제 FCM foreground/background/닫힌 탭·OS 클릭·iOS 홈 화면 앱·기기 회수 실증은 미완료다.
+설정/rollback 절차는 [운영 안내 §9.2.2](https://github.com/goldmayo/oioi-bwg/blob/b69b645bc1493f090f02f6734ea0fe1c5cf01d9b/ops/oci/README.md#922-console-fcm-알림-활성화)를 따른다.
+실행한 검증·최초 실패와 복구·제약은 각 PR 본문이 소유한다. Job 생성 HTTP/내부 Runner HTTP·OCI Queue/worker·ARM64 실증은
+후속 P08 범위이며 이 표의 코드 병합만으로 P08 전체를 완료로 처리하지 않는다.
+운영 DB migration/권한 적용·배포는 별도 Promotion과 [현행 runbook](../../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md)을 따른다.
 
 #### 실증 전 확정할 값과 최종 수용
 
