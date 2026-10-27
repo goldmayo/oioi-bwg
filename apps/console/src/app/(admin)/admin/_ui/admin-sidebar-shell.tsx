@@ -1,107 +1,105 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import Link from "next/link";
 
 import { signOut } from "@/features/auth";
 
 import { Button } from "@/shared/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/shared/ui/sheet";
 
 import { NotificationBell } from "./notification-bell";
 
-/**
- * 사이드바 래퍼 (데스크톱: 고정 aside, 모바일: Sheet 슬라이드)
- */
 export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
   const [isMinimized, setIsMinimized] = useState(false);
-
-  const sidebarContent = (
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const brand = (
+    <Link
+      href="/admin"
+      aria-label="대시보드 홈"
+      className="text-foreground flex min-h-11 items-center gap-2 rounded-md font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4"
+    >
+      <LayoutDashboard className="size-5 shrink-0" aria-hidden="true" />
+      <span className="text-sm group-data-[collapsed=true]/sidebar:hidden">OIOIBWG</span>
+    </Link>
+  );
+  const navigation = (
     <>
-      {/* 내비게이션 콘텐츠 */}
-      <div className="flex-1 overflow-y-auto px-2 py-4">{children}</div>
-
-      {/* 로그아웃 */}
-      <div className="border-border/50 mt-auto border-t p-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">{children}</div>
+      <div className="border-sidebar-border border-t p-3">
         <Button
           variant="ghost"
-          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive w-full justify-start gap-3 px-3 transition-colors"
-          onClick={() => {
-            if (confirm("로그아웃 하시겠습니까?")) {
-              void signOut();
-            }
-          }}
-          title="로그아웃"
+          className="text-muted-foreground hover:text-foreground hidden min-h-11 w-full justify-start gap-3 px-3 group-data-[collapsed=true]/sidebar:justify-center md:flex"
+          onClick={() => setIsMinimized(!isMinimized)}
+          aria-label={isMinimized ? "사이드바 열기" : "사이드바 접기"}
+          aria-expanded={!isMinimized}
         >
-          <LogOut size={16} />
-          <span className="text-xs font-bold">Logout</span>
+          {isMinimized ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          <span className="group-data-[collapsed=true]/sidebar:hidden">메뉴 접기</span>
+        </Button>
+        <Button
+          variant="ghost"
+          className="text-muted-foreground hover:text-destructive min-h-11 w-full justify-start gap-3 px-3 group-data-[collapsed=true]/sidebar:justify-center"
+          aria-label="로그아웃"
+          onClick={() => {
+            if (confirm("로그아웃하시겠습니까?")) void signOut();
+          }}
+        >
+          <LogOut size={18} aria-hidden="true" />
+          <span className="group-data-[collapsed=true]/sidebar:hidden">로그아웃</span>
         </Button>
       </div>
     </>
   );
-
   return (
     <>
-      {/* ── 모바일: 상단 바 + Sheet ── */}
-      <div className="bg-sidebar border-border flex h-14 shrink-0 items-center justify-between border-b px-4 md:hidden">
-        <h2 className="text-foreground text-sm font-bold tracking-tight uppercase">Admin</h2>
+      <header className="bg-sidebar border-sidebar-border flex h-16 shrink-0 items-center justify-between border-b px-4 md:hidden">
+        {brand}
         <div className="flex items-center gap-2">
           <NotificationBell />
-          <Sheet>
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Menu size={18} />
+              <Button variant="ghost" size="icon" className="size-11" aria-label="관리자 메뉴 열기">
+                <Menu size={20} />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex w-64 flex-col p-0">
-              <SheetHeader className="border-border/50 border-b px-4 py-4">
-                <SheetTitle className="text-sm font-bold tracking-tight uppercase">
-                  Admin Panel
-                </SheetTitle>
+            <SheetContent
+              side="left"
+              className="bg-sidebar flex w-64 flex-col gap-0 p-0"
+              onClick={(event) => {
+                if (event.target instanceof Element && event.target.closest("a"))
+                  setMobileOpen(false);
+              }}
+            >
+              <SheetHeader className="border-sidebar-border border-b px-6 py-5">
+                <SheetTitle>OIOIBWG</SheetTitle>
+                <SheetDescription>관리자 메뉴</SheetDescription>
               </SheetHeader>
-              {sidebarContent}
+              {navigation}
             </SheetContent>
           </Sheet>
         </div>
-      </div>
-
-      {/* ── 데스크톱: 고정 사이드바 ── */}
+      </header>
       <aside
-        className={`border-sidebar-border bg-sidebar hidden h-full shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${
-          isMinimized ? "w-16" : "w-56"
-        }`}
+        data-collapsed={isMinimized}
+        aria-label="관리자 탐색"
+        className={`group/sidebar bg-sidebar border-sidebar-border hidden h-full shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${isMinimized ? "w-20" : "w-60"}`}
       >
-        {/* Header */}
         <div
-          className={`border-border/50 flex shrink-0 items-center border-b ${
-            isMinimized ? "h-24 flex-col justify-center gap-2 px-1" : "h-14 justify-between px-4"
-          }`}
+          className={`border-sidebar-border flex shrink-0 items-center border-b px-5 ${isMinimized ? "h-28 flex-col justify-center gap-1" : "h-20 justify-between gap-2"}`}
         >
-          {!isMinimized && (
-            <h2 className="text-foreground text-sm font-bold tracking-tight uppercase">
-              Admin Panel
-            </h2>
-          )}
+          {brand}
           <NotificationBell />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-foreground h-8 w-8"
-            onClick={() => setIsMinimized(!isMinimized)}
-            title={isMinimized ? "사이드바 열기" : "사이드바 접기"}
-          >
-            {isMinimized ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-          </Button>
         </div>
-
-        {/* 콘텐츠 */}
-        {isMinimized ? (
-          <div className="flex flex-1 flex-col items-center gap-4 px-2 py-4">
-            {/* 최소화 시 아이콘만 표시하려면 여기에 */}
-          </div>
-        ) : (
-          sidebarContent
-        )}
+        {navigation}
       </aside>
     </>
   );
