@@ -34,22 +34,22 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative size-8 shrink-0"
+          className="relative size-11 shrink-0"
           aria-label={`알림, 읽지 않은 알림 ${count}개`}
         >
-          <Bell size={18} aria-hidden="true" />
+          <Bell size={20} aria-hidden="true" />
           {count ? (
             <span
               aria-hidden="true"
-              className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-4 font-semibold"
+              className="bg-primary text-primary-foreground absolute top-0 right-0 flex min-w-4 items-center justify-center rounded-full px-1 text-xs leading-4 font-semibold tabular-nums"
             >
               {count > 99 ? "99+" : count}
             </span>
           ) : null}
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
-        <SheetHeader className="p-5 pr-12">
+      <SheetContent side="right" className="bg-popover flex w-full flex-col gap-0 p-0 sm:max-w-md">
+        <SheetHeader className="border-border border-b p-6 pr-12">
           <SheetTitle>알림</SheetTitle>
           <SheetDescription>작업 결과와 놓친 알림을 확인합니다.</SheetDescription>
         </SheetHeader>

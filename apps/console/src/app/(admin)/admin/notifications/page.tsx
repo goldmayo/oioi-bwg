@@ -11,9 +11,12 @@ export default async function NotificationsPage({
   await getAdminPageContext();
   const parsed = entityIdSchema.safeParse((await searchParams).notificationId);
   return (
-    <section className="mx-auto flex h-full max-w-2xl flex-col p-4 md:p-8">
-      <h1 className="mb-4 text-2xl font-semibold">알림</h1>
-      <div className="border-border flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
+    <section className="mx-auto flex h-full min-h-96 w-full max-w-4xl flex-col p-4 sm:p-6 lg:p-8">
+      <h1 className="text-2xl font-semibold tracking-tight">알림 내역</h1>
+      <p className="text-muted-foreground mt-2 mb-6 text-sm leading-6">
+        작업 결과와 놓친 알림을 확인합니다.
+      </p>
+      <div className="bg-card border-border flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border">
         <NotificationInbox selectedId={parsed.success ? parsed.data : undefined} />
       </div>
     </section>
