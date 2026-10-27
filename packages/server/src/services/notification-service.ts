@@ -32,7 +32,9 @@ function project(row: Row): Notification {
     createdAt: new Date(row.createdAt).toISOString(),
     readAt: row.readAt ? new Date(row.readAt).toISOString() : null,
     title:
-      row.type === "WAVEFORM_SUCCEEDED" ? "파형 생성이 완료됐어요" : "파형을 생성하지 못했어요",
+      row.type === "WAVEFORM_SUCCEEDED"
+        ? "파형 생성을 완료했습니다."
+        : "파형을 생성하지 못했습니다.",
     href: `/admin/waveform-jobs/${row.resourceId}`,
   };
 }

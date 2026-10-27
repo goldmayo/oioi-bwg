@@ -87,6 +87,18 @@ const {
       },
     },
     events: {
+      async signIn() {
+        try {
+          const store = await cookies();
+          const id = entityIdSchema.safeParse(store.get(PUSH_INSTALLATION_COOKIE)?.value);
+          if (!id.success) return;
+          const previous = await auth();
+          if (previous?.user?.id) await releasePushInstallation(previous.user.id, id.data);
+          store.delete(PUSH_INSTALLATION_COOKIE);
+        } catch {
+          reportAuthError(new Error("Push account switch cleanup failed"), observation);
+        }
+      },
       async signOut(message) {
         try {
           const store = await cookies();

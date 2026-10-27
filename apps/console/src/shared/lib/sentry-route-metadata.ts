@@ -7,6 +7,7 @@ const routes = {
   "/api/admin/notifications/[id]/read": "admin-notification-read-api",
   "/api/admin/notifications/read-all": "admin-notifications-read-all-api",
   "/admin": "admin-home",
+  "/admin/notifications": "admin-notification-list",
   "/admin-login": "admin-login",
   "/admin/albums": "admin-album-list",
   "/admin/songs": "admin-song-list",
