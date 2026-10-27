@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-26"
-revision: 21
+updated_at: "2026-10-27"
+revision: 22
 ---
 
 # 구현 순서와 PR 단위
@@ -65,6 +65,86 @@ P09~P10도 기존 가사 JSON을 입력으로 사용한다. BPM/beatOffset은 So
 2026-10-26 사용자 지시로 세 종류 분류를 두 모드와 출처 속성으로 개정했다.
 P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조건)의 계약/persistence → 이관/기존 writer 호환 → 조회/선택 순서로 나눈다.
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
+
+### 2.1. P08 착수 계획
+
+**2026-10-27 추가:** 사용자의 P08 계획 구체화 요청을 반영한다. 기준은 fetch한
+`origin/migration_main@8f371d40d1809165167a524456b990c7b0f319b9`이며, 해당 source의
+`apps/console`, `packages`, `scripts`, `infra`에는 WaveformJob·worker·Queue consumer 구현이 없다.
+P07은 [운영 적용·배포 결과](P07-RESULT.md#2026-10-27-최신-앱-promotion과-운영-수용-확인)로 종료됐고,
+새 관리자 응원법 편집은 별도 후속이다. 위 2026-10-26 기록과 초기 `source_commit`은 당시 근거로 보존한다.
+아래는 실행 전 계획이며 ARM64 분석·Queue 실증·migration·배포를 완료했다는 기록이 아니다.
+
+#### 범위와 계약 선행
+
+P08 산출물은 관리자 생성/상태 조회, 정상 파형 JSON, OCI Queue/DLQ, VM-local Runner,
+일회성 worker와 열린 Console의 상태 알림이다. lifecycle·권한·실패 규칙은 [설계 §6](DESIGN.md#6-waveform-worker),
+도구·JSON·시간축 검증은 [기술 검토](AUDIO-FEASIBILITY.md)가 소유한다.
+P09 파형/Cue UI, P10 Grid, 사용자 인앱 알림·읽음함·이메일/push는 포함하지 않는다.
+
+현행 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)는 YouTube를 production 파형 source로
+허용하지 않는다. 첫 구현은 실제 사용할 영상의 이용 범위를 확인하고 Domain의 source·Job·결과 생명주기를
+개정하는 것부터 시작한다. 이 계획만으로 현행 계약을 대체하지 않는다. 해당 경로를 허용할 수 없으면
+YouTube 추출은 진행하지 않고 허용된 source 범위를 다시 결정한다.
+Auth(04)·API(03/05)·server/transaction(06)·Query(07)·관측(09)·runtime(11)·배포(12)의
+변경되는 계약만 같은 관심사의 구현 PR에서 갱신한다.
+
+#### 구현 PR 순서와 통과 기준
+
+| 관심사 | 구현·영향 경계 | 다음 작업 전 확인할 결과 |
+| --- | --- | --- |
+| 입력 계약·ARM64 분석 검증 | Domain source 계약, 고정 버전의 yt-dlp/ffmpeg/audiowaveform 이미지. 허용된 단일 videoId와 pipe/tmpfs 경계 | 실제 ARM64에서 짧은/긴 입력의 정상 JSON, CPU/RSS/tmpfs/출력 크기·소요 시간, 실패/timeout/강제 종료 뒤 음원·하위 프로세스 잔존 없음. 초반·중간·후반 anchor의 허용 오차와 실측 기록 |
+| Job·결과 persistence | `packages/contracts` DTO/Zod, server schema·repository·service, Drizzle migration. UUIDv7·단수 snake_case 사용 | local Docker PostgreSQL에서 동시 생성·terminal 이후 재생성·attempt/source 조건부 반영·정상 JSON 보존·결과와 성공 상태의 atomic commit 확인 |
+| 생성·조회·enqueue | Console ADMIN/MFA Route Handler·Ky/Query와 좁은 내부 Job API, Runner Unix socket/Queue push. worker·Runner의 앱 DB 직접 접근 금지 | 동시 POST·연속 클릭·응답 유실 재요청이 같은 jobId를 반환. enqueue 확정 실패/성공/불확실 구분, null enqueuedAt 소비, 추가 enqueue 없는 수렴 확인 |
+| 소비·복구·운영 경계 | `infra/oci` Queue/IAM, 고정 배포 설정의 Runner/worker, 내부 결과 API. 기존 Web/Console metadata 차단 유지 | 실제 제한된 OCI 환경에서 long poll·visibility 연장/상실·DLQ·Runner/VM 재시작·잔존 container 정리·저장 후 delete 실패를 실증. token/socket/metadata/DB 격리 확인 |
+| Console 상태 알림 | 단일 Node EventEmitter·SSE Route와 생성/진행/실패/재생성 UI, Query invalidate/refetch | DB commit 이후 알림, 이벤트 누락/중복·초기 연결·재연결·focus·서버 재시작 복구. MFA 만료/회수·abort 시 정리와 Caddy heartbeat 전달을 Playwright로 확인 |
+| 통합 수용·Promotion | 실제 ARM64 이미지 digest와 기존 두 앱 배포·관측·복구 경로 연결 | 아래 수용 검증 완료 후 별도 Promotion. DB migration과 이전 호환 앱·Runner/worker digest의 복구 조합을 검토하고 진행 중 Job 보존 확인 |
+
+한 관심사는 기본 한 PR로 검토하되 20파일/400줄 목표를 넘으면 독립 검증 가능한 계약·구현·전환으로
+추가 분리한다. P08 내부에 새 단계 번호나 빈 플랫폼 package를 만들지 않는다. 소비·복구 검증 전에는
+운영 Console의 생성 진입점을 활성화하지 않는다. 최초 분석 검증용 최소 renderer는 JSON·시간축 확인만
+수행하며 P09의 editor 구현으로 확대하지 않는다.
+
+#### 첫 persistence PR에서 고정할 판단
+
+- 동일 `(song_id, video_id)`에서 `QUEUED/RUNNING`만 포함하는 **partial unique index**를 우선안으로 한다.
+  충돌한 요청은 기존 active Job을 조회하며, INSERT에 성공한 요청만 enqueue를 소유한다.
+  terminal 전환 경합과 transaction rollback은 실제 PostgreSQL 동시성 테스트로 확인한다.
+  [PostgreSQL 17 partial index](https://www.postgresql.org/docs/17/indexes-partial.html)를 근거로 하며 최종 SQL은 생성 migration에서 검토한다.
+- source가 현재 Song 영상과 일치하고 현재 `attempt_id`를 소유한 실행만 결과를 반영한다.
+  Song 영상 변경·삭제와 실행/결과 반영의 경합, FK 삭제 정책과 기존 정상 파형 조회 조건을 DDL 전에 명시한다.
+  파형 재생성이나 source 변경이 기존 Cue 시각을 자동 변경하지 않도록 한다.
+- SDK retry와 enqueue 호출 소유권을 포함해 응답 유실을 추가 PutMessages로 복구하지 않는지 확인한다.
+  stale 판정은 가장 늦은 enqueue 가능 시점 + 실제 최대 retention + 시계/관측 안전 여유로 정한다.
+  전달이 확인된 Job의 retention 만료와 중단된 RUNNING 회수도 정리 대상·조건을 명시한다.
+- Job·결과의 보관/삭제 기간, 조회 응답의 부재 표현·오류 코드, 내부 API 인증/인가 범위와 응답 유실 시
+  재호출의 멱등성을 계약 테스트로 고정한다. 수치·endpoint는 구현 전 해당 DTO/배포 설정에 확정한다.
+
+#### 알림의 최소 계약
+
+상태·결과의 SSOT는 PostgreSQL이며 알림은 갱신 신호다. `waveform-job-updated`의 payload는
+`{ jobId }`이고 브라우저는 Job/Waveform query를 invalidate한 뒤 다시 읽는다. 최초 연결 시에는
+listener 등록과 현재 상태 조회 사이의 변경이 유실되지 않는 순서를 검증한다. 알림 실패는 commit된
+성공이나 Queue delete 처리를 실패로 바꾸지 않는다. 연결 수명 중 세션 만료·권한 회수도 확인한다.
+별도 Notification DB·범용 event bus·FCM/Web Push는 선행 도입하지 않는다. process/container가
+둘 이상이 되는 변경은 process-local 알림 전제를 다시 검토한다. DLQ/Runner 장애의 운영 알림은
+기존 OCI Monitoring/Notifications 절차 안에서 대상·임계값·담당을 정한다.
+
+#### 실증 전 확정할 값과 최종 수용
+
+worker 이미지·도구 버전/digest, 입력 길이·JSON byte·CPU/RAM/pids/tmpfs 한도·전체 timeout,
+Queue retention·visibility·연장 주기·최대 delivery count·stale 여유, 시간축 허용 오차를
+ARM64 측정과 실제 Queue 설정으로 고정한다. [OCI Queue 개요](https://docs.oracle.com/en-us/iaas/Content/queue/overview.htm)와
+[소비 계약](https://docs.oracle.com/en-us/iaas/Content/queue/consume-messages.htm)의 retention/visibility를
+혼동하지 않는다. [Queue IAM](https://docs.oracle.com/en-us/iaas/Content/queue/policy-reference.htm)에 맞춰
+Instance Principal의 고정 Queue push/pull 범위를 제한하고, [Docker tmpfs](https://docs.docker.com/engine/storage/tmpfs/)의
+swap 가능성과 memory 한도 포함 조건도 확인한다. 이 문서의 공식 문서 재확인은 2026-10-27이며 실제 OCI 실증과 구분한다.
+
+각 구현 PR은 해당 단위/계약/PG/Playwright 검증과 저장소 필수 검사를 기록한다. P08 종료는
+§3의 enqueue 응답 유실 시나리오, 실제 Queue 재전달·복구·권한 제한, 음원 비영속성,
+3개 이상 anchor의 offset/drift와 JSON만 재조회하는 검증이 모두 근거를 남겼을 때 판정한다.
+검증 전에는 배포 성공이나 mock 통과만으로 종료하지 않는다. 실행 상세는 각 PR, 단계 최종 결과는
+완료 시점의 최종 결과 소유 문서에 두고 현재 다음 행동은 WORK에서만 갱신한다.
 
 ## 3. 검증과 전환 조건
 
