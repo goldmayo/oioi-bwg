@@ -41,11 +41,11 @@ export default async function AdminSongsPage() {
   );
 
   return (
-    <div className="bg-background min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-6xl">
+    <div className="min-w-0 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto w-full max-w-7xl">
         <div className="mb-6">
-          <h1 className="text-foreground text-xl font-bold sm:text-2xl">곡 관리</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <h1 className="text-foreground text-2xl font-semibold tracking-tight">곡 관리</h1>
+          <p className="text-muted-foreground mt-2 text-sm leading-6">
             곡을 추가, 수정, 삭제할 수 있습니다. 곡 추가 시 LRC 파일이 필요합니다.
           </p>
         </div>

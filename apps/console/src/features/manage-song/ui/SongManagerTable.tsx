@@ -28,7 +28,7 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
       column.columns([
         column.accessor("title", {
           header: "제목",
-          meta: { className: "font-medium" },
+          meta: { className: "font-medium whitespace-normal" },
           cell: ({ row: { original: song } }) => (
             <>
               {song.slug === null ? (
@@ -36,7 +36,7 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
               ) : (
                 <Link
                   href={`/admin/edit/${song.slug}`}
-                  className="text-primary hover:underline"
+                  className="text-foreground block break-words underline-offset-4 hover:underline"
                   prefetch={false}
                 >
                   {song.title}
@@ -49,16 +49,24 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
           id: "album",
           header: "앨범",
           meta: {
-            className: "hidden sm:table-cell text-muted-foreground text-sm",
+            className: "hidden lg:table-cell text-muted-foreground text-sm w-40",
           },
-          cell: ({ row: { original: song } }) => <>{song.album.name}</>,
+          cell: ({ row: { original: song } }) => (
+            <span className="block truncate" title={song.album.name}>
+              {song.album.name}
+            </span>
+          ),
         }),
         column.accessor("slug", {
           header: "Slug",
           meta: {
-            className: "hidden lg:table-cell text-muted-foreground text-sm",
+            className: "hidden xl:table-cell text-muted-foreground text-xs w-40",
           },
-          cell: ({ row: { original: song } }) => <>{song.slug ?? "미지정"}</>,
+          cell: ({ row: { original: song } }) => (
+            <span className="block truncate" title={song.slug ?? undefined}>
+              {song.slug ?? "미지정"}
+            </span>
+          ),
         }),
         column.display({
           id: "type",
@@ -68,17 +76,17 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
             <>
               <div className="flex flex-wrap justify-center gap-1">
                 {song.isTitle && (
-                  <Badge variant="default" className="text-2xs px-1.5 py-0">
+                  <Badge variant="default" className="px-1.5 py-0.5 text-xs">
                     타이틀
                   </Badge>
                 )}
                 {song.hasOfficialCheer && (
-                  <Badge variant="secondary" className="text-2xs px-1.5 py-0">
+                  <Badge variant="secondary" className="px-1.5 py-0.5 text-xs">
                     응원법
                   </Badge>
                 )}
                 {!song.isVisible && (
-                  <Badge variant="outline" className="text-2xs text-muted-foreground px-1.5 py-0">
+                  <Badge variant="outline" className="text-muted-foreground px-1.5 py-0.5 text-xs">
                     숨김
                   </Badge>
                 )}
@@ -89,8 +97,7 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
         column.accessor("order", {
           header: "순서",
           meta: {
-            className:
-              "hidden w-16 text-center md:table-cell text-muted-foreground hidden text-center text-sm md:table-cell",
+            className: "hidden w-16 text-center md:table-cell text-muted-foreground text-sm",
           },
           cell: ({ row: { original: song } }) => <>{song.order}</>,
           sortFn: "basic",
@@ -137,8 +144,11 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
   });
   return (
     <DataTable.Root table={table} components={dataTableComponents}>
-      <div className="space-y-4">
-        <DataTable.Table caption="곡 관리 목록">
+      <div className="min-w-0 space-y-4">
+        <DataTable.Table
+          caption="곡 관리 목록"
+          className="bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_td]:whitespace-normal [&_th]:px-3"
+        >
           <DataTable.Header />
           <DataTable.Body
             emptyState={
