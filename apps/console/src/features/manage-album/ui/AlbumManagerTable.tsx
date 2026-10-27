@@ -126,7 +126,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
       <div className="min-w-0 space-y-4">
         <DataTable.Table
           caption="앨범 관리 목록"
-          className="bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_th]:px-3"
+          className="bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_td]:whitespace-normal [&_th]:px-3"
         >
           <DataTable.Header />
           <DataTable.Body
