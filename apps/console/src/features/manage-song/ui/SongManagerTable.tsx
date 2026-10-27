@@ -26,12 +26,6 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
   const columns = useMemo(
     () =>
       column.columns([
-        column.accessor("id", {
-          header: "ID",
-          meta: { className: "w-12 text-muted-foreground text-xs" },
-          cell: ({ row: { original: song } }) => <>{song.id}</>,
-          sortFn: "basic",
-        }),
         column.accessor("title", {
           header: "제목",
           meta: { className: "font-medium" },
