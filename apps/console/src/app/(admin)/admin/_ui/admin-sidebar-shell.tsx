@@ -43,7 +43,7 @@ export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       {/* ── 모바일: 상단 바 + Sheet ── */}
-      <div className="bg-card border-border flex h-14 items-center justify-between border-b px-4 md:hidden">
+      <div className="bg-sidebar border-border flex h-14 shrink-0 items-center justify-between border-b px-4 md:hidden">
         <h2 className="text-foreground text-sm font-bold tracking-tight uppercase">Admin</h2>
         <div className="flex items-center gap-2">
           <NotificationBell />
@@ -67,7 +67,7 @@ export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
 
       {/* ── 데스크톱: 고정 사이드바 ── */}
       <aside
-        className={`border-border bg-card hidden h-screen flex-col border-r shadow-sm transition-all duration-300 ease-in-out md:flex ${
+        className={`border-sidebar-border bg-sidebar hidden h-full shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${
           isMinimized ? "w-16" : "w-56"
         }`}
       >

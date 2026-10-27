@@ -27,15 +27,21 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
       column.columns([
         column.accessor("name", {
           header: "이름",
-          meta: { className: "font-medium" },
-          cell: ({ row: { original: album } }) => <>{album.name}</>,
+          meta: { className: "font-medium whitespace-normal" },
+          cell: ({ row: { original: album } }) => (
+            <span className="block break-words">{album.name}</span>
+          ),
         }),
         column.accessor("slug", {
           header: "Slug",
           meta: {
-            className: "hidden sm:table-cell text-muted-foreground text-sm",
+            className: "hidden lg:table-cell text-muted-foreground text-xs w-44",
           },
-          cell: ({ row: { original: album } }) => <>{album.slug}</>,
+          cell: ({ row: { original: album } }) => (
+            <span className="block truncate" title={album.slug}>
+              {album.slug}
+            </span>
+          ),
         }),
         column.accessor("color", {
           header: "색상",
@@ -43,7 +49,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
           cell: ({ row: { original: album } }) => (
             <>
               <div
-                className="h-6 w-6 rounded-full border"
+                className="h-5 w-5 rounded-md border"
                 style={{ backgroundColor: album.color }}
                 title={album.color}
               />
@@ -58,7 +64,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
             <>
               <Badge
                 variant={album.isVisible ? "default" : "outline"}
-                className="text-2xs px-1.5 py-0"
+                className="px-2 py-0.5 text-xs"
               >
                 {album.isVisible ? "표시" : "숨김"}
               </Badge>
@@ -69,7 +75,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
         column.accessor("releaseDate", {
           header: "발매일",
           meta: {
-            className: "hidden md:table-cell text-muted-foreground text-sm",
+            className: "hidden xl:table-cell text-muted-foreground text-sm w-32",
           },
           cell: ({ row: { original: album } }) => (
             <>{album.releaseDate ? new Date(album.releaseDate).toLocaleDateString("ko-KR") : "-"}</>
@@ -117,8 +123,11 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
   });
   return (
     <DataTable.Root table={table} components={dataTableComponents}>
-      <div className="space-y-4">
-        <DataTable.Table caption="앨범 관리 목록">
+      <div className="min-w-0 space-y-4">
+        <DataTable.Table
+          caption="앨범 관리 목록"
+          className="bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_th]:px-3"
+        >
           <DataTable.Header />
           <DataTable.Body
             emptyState={<>{hasFilter ? "검색 결과가 없습니다." : "등록된 앨범이 없습니다."}</>}

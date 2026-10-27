@@ -11,9 +11,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <NotificationProvider key={ctx.user!.id} accountId={ctx.user!.id} config={getPushConfig()}>
-      <div className="bg-background text-foreground flex h-screen flex-col overflow-hidden md:flex-row">
+      <div className="bg-background text-foreground flex h-dvh min-w-0 flex-col overflow-hidden md:flex-row">
         <AdminSidebar />
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="min-h-0 min-w-0 flex-1 overflow-auto">{children}</main>
       </div>
     </NotificationProvider>
   );
