@@ -9,6 +9,7 @@ import { getRequestContext } from "@/server/auth/request-context";
 
 import AdminAlbumsPage from "./albums/page";
 import AdminLyricsEditPage from "./edit/[slug]/page";
+import AdminPage from "./page";
 import AdminSongsPage from "./songs/page";
 
 vi.mock("@/server/auth/request-context", () => {
@@ -39,6 +40,7 @@ const login = new Error("login requested");
 const denied = new Error("access denied");
 const missing = new Error("not found");
 const pages = [
+  ["dashboard", () => AdminPage(), listAdminSongs],
   ["albums", () => AdminAlbumsPage(), listAdminAlbums],
   ["songs", () => AdminSongsPage(), listAdminSongs],
   [
