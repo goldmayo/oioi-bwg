@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 18
+revision: 19
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -453,6 +453,14 @@ socket/내부 Job 대조·전달 확인·consumer·설치는 후속이다. SDK �
 HTTP 1초·header/body 각 4KiB로 제한하고 기존 DTO의 식별자·상태·nullable 필드·시각과 응답 Job을 대조한다.
 명시적인 404/WAVEFORM_JOB_NOT_FOUND만 삭제된 Job으로 구분한다. 비활성 403·일반 404·오류 원문은 부재 근거가 아니다.
 전달 기록의 최초 시각과 RUNNING/terminal 응답은 허용하고, 응답 유실·불일치는 불확실로 반환한다. socket 연결은 다음 단위다.
+
+**2026-10-29 socket 연결:** Go enqueue server는 실제 Unix listener에서만 접수를 허용하고 TCP·Origin을 거절한다.
+strict 세 식별자·실제 body 1KiB·읽기 1초·진행 중 8개 상한을 적용한다. 진행 중 같은 Job은 추가 송신하지 않는다.
+보호된 source 목록과 내부 Job/source를 대조하고, 기존 enqueuedAt은 재사용하며 미확인 RUNNING/terminal은 송신하지 않는다.
+Put 성공과 전달 확인이 모두 끝나야 ENQUEUED다. socket 유실 뒤에도 서비스 context에서 확인을 계속하며 오류는 UNCONFIRMED다.
+진행 중 중복 방지는 영속 멱등키가 아니다. Console의 새 Job만 단일 호출·미확인 결과의 재송신 금지 계약을 유지한다.
+서비스 context 4초·쓰기 5초를 설정하되 SDK 인증 갱신을 포함한 전체 시간·운용 자원은 별도 수용한다.
+이 단위는 서버 모듈과 실제 로컬 socket 검사이며 상주 main/host lock·DAC/mount·설치·Queue 소비를 활성화하지 않는다.
 
 소켓은 `/run/oioi-waveform/runner.sock`에 두는 안으로, root가 부모·소유 그룹을 관리하고 Console 전용 그룹만 연결한다.
 Console에는 socket 디렉터리만 읽기 전용으로 연결하고 Docker socket·host root 경로·OCI credential을 주지 않는다.

@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 40
+revision: 41
 ---
 
 # 구현 순서와 PR 단위
@@ -206,6 +206,10 @@ VM 사용자 점검은 ARM64·Docker/cgroup v2·앱 health와 여유 용량만 �
 **2026-10-29 내부 client 분리:** #320 Queue 송신부는 CI 통과 후 병합했다. 다음 연결을 작은 PR로 나눠
 고정 loopback 내부 Job client의 인증·DTO·명확한 404·기록 응답 유실을 먼저 검증하고 socket 접수를 연결한다.
 이 구현은 VM 접속 없이 로컬 ARM64에서 진행하며 runtime Secret 주입·설치·실제 OCI 수용은 별도 관문이다.
+
+**2026-10-29 socket 접수 연결:** #321 내부 client는 CI 통과 후 병합했다. Unix 전용 접수·source/Job 대조·
+단일 Put와 전달 확인을 연결하고 실제 로컬 socket에서 응답 유실·한도·진행 중 중복을 검증한다.
+다음은 Queue 소비/visibility·재전달/DLQ·고정 worker 실행과 시작/정리다. VM 변경은 설치 산출물 검토 후 별도 승인한다.
 
 #### 공통 알림의 선행 구현
 
