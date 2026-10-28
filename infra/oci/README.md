@@ -152,14 +152,19 @@ provider 8.29.0의 `time_type`은 optional/computed다. 명시값을 제거해 A
 
 **같은 날 시간대 재검토:** 과거 9시간 차이를 수정한 [#101](https://github.com/goldmayo/oioi-bwg/pull/101)의
 `%NZ` → `%N%z`는 유지된다. P08 착수 기준부터 `938e52aa...`까지 이 Logging 파일의 변경은 없다.
-명시적 `time_type` 제거 후보 [#316](https://github.com/goldmayo/oioi-bwg/pull/316)은 Draft로 보류한다.
+명시적 `time_type` 제거 후보 [#316](https://github.com/goldmayo/oioi-bwg/pull/316)은 시간대 검토 중 Draft로 보류했다.
 합성 로그의 upstream Fluentd 1.16.3 비교에서 UTC/KST 모두 기존·후보는 같은 시각과 나노초를 보존했고,
 예전 literal `Z`만 KST에서 9시간 어긋났다. 이는 OCI 에이전트의 실제 버전·생성 설정·수신 시각 검증은 아니다.
 API `null`이나 Terraform 무변경만으로 실제 파싱 동등성을 확정하지 않는다. 상세 재현 근거는 #316에 둔다.
 
-이전 저장 Plan은 Apply하지 않는다. 실제 에이전트의 문자열 시간 파싱·`%z`와 수신 시각 보존을 확인해
-후보의 병합 여부를 판단한다. 이후 새 Plan에서 **2 add / 0 change / 0 destroy**와 기존 Logging 무변경을
-확인한 뒤 별도 승인으로 그 Plan을 적용한다. 합성 state의 offline 검증은 실제 OCI 재Plan·로그 수신 수용을 대신하지 않는다.
+**같은 날 후속 확인:** 사용자가 VM에서 읽은 생성 설정에도 `time_type`은 없고 `%N%z`·time key·keep flag가 유지됐다.
+사용자가 공유한 기존 OCI 로그 한 건의 epoch/event time과 Docker 원문 time도 밀리초까지 일치해 9시간 오차가 없었다.
+이 근거로 시간대 검토 보류를 해제한다. 상세 시각 계산·로컬 검증·최종 병합 근거는 #316이 소유한다.
+이 로그는 10월 27일 기록이며 현재의 실시간 수집 상태·설치 버전·변경 후 재생성을 검증한 결과는 아니다.
+
+이전 저장 Plan은 Apply하지 않는다. 수정 코드가 통합된 `migration_main`으로 새 Plan을 만들고
+**2 add / 0 change / 0 destroy**와 기존 Logging 무변경을 확인한 뒤 별도 승인으로 그 Plan을 적용한다.
+합성 state의 offline 검증은 실제 OCI 재Plan을 대신하지 않는다.
 
 ## IAM boundary
 
