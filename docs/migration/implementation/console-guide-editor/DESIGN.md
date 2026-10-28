@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 16
+revision: 17
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -439,6 +439,14 @@ Runner 구현안은 Go + [OCI 공식 SDK](https://docs.oracle.com/en-us/iaas/Con
 Rust는 분석기에 유지한다. OCI 요청 서명·인증서/토큰 갱신을 직접 구현하지 않기 위한 선택이며,
 Go/SDK 버전·binary hash·상주 CPU/RSS는 Runner 구현 PR에서 실제 ARM64 검증으로 고정한다.
 Rust 분석 성능 비교를 Go Runner 성능의 근거로 사용하지 않는다.
+
+**2026-10-29 사용자 확정·첫 SDK 구현:** Runner는 Go, 분석 worker는 Rust로 확정한다.
+`ops/waveform-runner`의 첫 단위는 고정 Osaka Queue의 PutMessages 송신부다. 도구/SDK 버전은
+해당 Dockerfile digest와 go.mod/go.sum으로 고정하고 ARM64 CI에서 실제 SDK·로컬 HTTP 서버로 검증한다.
+세 식별자만 한 번 보내며 Queue HTTP는 2초·응답 header/body 각 4KiB로 제한한다. 오류는 정제된 불확실 결과이며
+Job 실패·재전송·DB 쓰기를 하지 않는다. Put 성공은 후속 enqueuedAt 저장 확인 전 socket ENQUEUED가 아니다.
+socket/내부 Job 대조·전달 확인·consumer·설치는 후속이다. SDK 인증 bootstrap/갱신의 시간·환경과 상주 RSS,
+실제 Instance Principal/Queue·권한 격리는 이 로컬 검증으로 완료 처리하지 않는다.
 
 소켓은 `/run/oioi-waveform/runner.sock`에 두는 안으로, root가 부모·소유 그룹을 관리하고 Console 전용 그룹만 연결한다.
 Console에는 socket 디렉터리만 읽기 전용으로 연결하고 Docker socket·host root 경로·OCI credential을 주지 않는다.

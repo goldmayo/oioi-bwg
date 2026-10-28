@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 38
+revision: 39
 ---
 
 # 구현 순서와 PR 단위
@@ -197,6 +197,11 @@ Auth(04)·API(03/05)·server/transaction(06)·Query(07)·관측(09)·runtime(11)
 VM 사용자 점검은 ARM64·Docker/cgroup v2·앱 health와 여유 용량만 확인했다. 실제 Runner/Queue 권한·격리·부하 수용은 아니다.
 다음은 Go Runner의 공식 SDK push/pull·복구와 설치 산출물이며, 준비 전 수동 설치 스크립트 실행을 요구하지 않는다.
 운영 flag·socket mount·credential 공급·배포는 별도 승인과 실제 수용 뒤 진행한다.
+
+**2026-10-29 Runner 착수:** #319 생성 API를 CI 통과 후 병합했고 사용자 확정은 Go Runner/Rust worker다.
+첫 Go PR은 공식 SDK의 고정 Queue 송신·자동 재시도 금지·응답 유실/한도/취소를 ARM64에서 검증한다.
+송신부 → socket/Job 대조·enqueuedAt 확인 → Queue 소비/visibility·복구·고정 worker 실행 → 설치 산출물 순서다.
+앞의 VM 사전 점검을 실제 권한 사용·상주 자원·운영 수용으로 확대하지 않는다.
 
 #### 공통 알림의 선행 구현
 
