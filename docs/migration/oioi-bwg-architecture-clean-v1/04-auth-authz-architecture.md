@@ -1,10 +1,10 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.8"
+version: "1.9"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-23"
+updated_at: "2026-10-28"
 depends_on:
   - "01"
   - "03"
@@ -21,7 +21,7 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.8
+# oioi-bwg Authentication / Authorization Architecture v1.9
 
 ## 1. 목적
 
@@ -240,6 +240,25 @@ P06-E의 공개 가입 접수 중단은 Domain AUTH-001을 따른다. Web의 가
 사용자 범위 정정에 따라 폐기한다. 현재 Web은 §4.0처럼 로그인·Auth.js callback·세션 발급을 제공하지
 않는다. 기존 Account·credential 데이터와 공통 service는 보존하며 회원 기능은 별도 요구로 다시 설계한다.
 적용은 Console 운영 검증 이후의 별도 Promotion이며, 과거 이미지 복구 시에도 가입 차단을 유지한다.
+
+---
+
+## 4.2. P08 Runner의 내부 상태 조회·결과 반영
+
+2026-10-28 P08 실행 연결의 첫 단위로 Console의 `GET /api/internal/waveform-jobs/{id}`와
+`POST /api/internal/waveform-jobs/{id}/terminal`에 한해 별도 service bearer 인증을 사용한다.
+사용자 생성/조회·알림 요청의 ADMIN/MFA와 분리하며 세션 cookie로 이 내부 권한을 얻지 않는다.
+`CONSOLE_WAVEFORM_RUNNER_ENABLED=true`일 때만 접근을 평가하고 기본은 403 비활성이다.
+비활성을 삭제된 Job의 `404/WAVEFORM_JOB_NOT_FOUND`와 구분하며 일반 404만으로 Queue message를 삭제하지 않는다.
+`CONSOLE_WAVEFORM_RUNNER_TOKEN`은 독립적인 32-byte random 값의 64자리 소문자 hex 표현이며,
+설정 누락·형식 오류·Console Auth secret 재사용은 fail closed한다. 비교는 고정 길이 constant-time이며 Origin 요청은 거절한다.
+인증 전에 본문을 읽거나 DB를 호출하지 않고, 인증 후에도 JSON body는 실제 4MiB·읽기 10초로 제한한다.
+상태/실패 응답은 no-store이며 토큰·원문 본문을 관측 context에 전달하지 않는다.
+결과 반영은 기존 attempt/source 검사와 결과·terminal·알림 transaction을 재사용한다.
+
+토큰은 Runner/Console만 보유하고 분석기·Web·client·Queue에 전달하지 않는다. runtime secret 공급은 11 §14를 따른다.
+이번 단위는 기본 비활성 코드만 추가한다. 운영 토큰 주입·Caddy `/api/internal/*` 공개 차단·loopback 전용 호출과
+인가/격리 실증을 준비한 별도 승인·배포 전에는 활성화하지 않는다. 생성/enqueue·start·OCI 권한을 이 인증에 암묵적으로 추가하지 않는다.
 
 ---
 

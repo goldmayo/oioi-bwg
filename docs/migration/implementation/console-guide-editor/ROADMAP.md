@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-28"
-revision: 28
+revision: 29
 ---
 
 # 구현 순서와 PR 단위
@@ -68,6 +68,13 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-28 내부 API 구현 분리:** 승인한 [OCI Queue 설계 #311](https://github.com/goldmayo/oioi-bwg/pull/311)에 따라
+첫 통신 PR은 Runner 상태 조회·완료 콜백과 최소 DTO/ACK만 추가한다. 기존 저장·알림 transaction을 재사용하며
+[Auth §4.2](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md#42-p08-runner의-내부-상태-조회결과-반영)의
+기본 비활성·별도 토큰 경계를 따른다. #310 → #311의 squash 병합 결과를 먼저 반영하고 이 구현을 검증한다. WORK/ROADMAP 충돌은 양쪽 근거를 보존해 통합했다.
+생성/enqueue·enqueuedAt 기록·start·socket/Go Runner·실제 OCI·운영 활성화는 후속 검증 단위다.
+source 정책 확인 전에도 합성 입력 기반 검증은 진행하되 운영 credential·DB·IAM·배포 승인을 확대 해석하지 않는다.
+
 **2026-10-28 실행 분리 추가:** fetch한 `origin/migration_main@f8a59be59cc4e16fdc6719f7f3f6ccac448fa4c1`에서 착수했다.
 #302/#303의 Job/결과·요청자 알림 transaction, 조회/결과 화면과 #307의 0011/0012 운영 적용·공통 FCM을 재사용한다.
 운영 Chrome OS 수신도 사용자 확인을 마쳤다([후속 기록](../../../devlog/20261027-28-notifications.md)).
@@ -97,6 +104,7 @@ enqueue/consume을 맡는 같은 VM Runner와 Rust 분석기의 책임, 내부 A
 
 source 정책 확인 전에도 합성 입력용 통신/복구 계약과 로컬 구현·검증은 진행할 수 있다.
 운영 source·생성 경로 활성화는 이용 범위와 Queue 대기/재시작/재전달 뒤 입력 재공급 경로를 확인한 뒤에만 진행한다.
+
 
 
 **2026-10-27 추가:** 사용자의 P08 계획 구체화 요청을 반영한다. 기준은 fetch한

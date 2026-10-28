@@ -40,6 +40,20 @@ export async function getWaveformJob(ctx: RequestContext, id: string) {
   if (!row) throw new AppError("WAVEFORM_JOB_NOT_FOUND");
   return project(row);
 }
+/** 서비스 토큰을 검증한 Console 내부 adapter만 호출한다. */
+export async function getRunnerWaveformJob(id: string) {
+  const row = await findWaveformJob(getDatabase(), id);
+  if (!row) throw new AppError("WAVEFORM_JOB_NOT_FOUND");
+  const { job } = row;
+  return {
+    id: job.id,
+    songId: job.songId,
+    videoId: job.videoId,
+    status: job.status,
+    attemptId: job.attemptId,
+    enqueuedAt: job.enqueuedAt ? new Date(job.enqueuedAt).toISOString() : null,
+  };
+}
 /** 아직 HTTP 생성 경로를 공개하지 않는다. 승인된 source/Runner 관문을 통과한 adapter만 호출한다. */
 export async function requestWaveformJob(ctx: RequestContext, songId: string) {
   const accountId = admin(ctx);
@@ -80,14 +94,15 @@ export async function completeWaveformJob(input: WaveformTerminal) {
   return getDatabase().transaction(async (tx) => {
     const song = await lockWaveformSong(tx, found.job.songId);
     const job = await lockWaveformJob(tx, input.jobId);
-    if (
-      !song ||
-      !job ||
-      job.status === "SUCCEEDED" ||
-      job.status === "FAILED" ||
-      job.attemptId !== input.attemptId
-    )
-      return { applied: false };
+    if (!song || !job) throw new AppError("WAVEFORM_JOB_NOT_FOUND");
+    const ack = (applied: boolean) => ({
+      jobId: job.id,
+      status: job.status,
+      attemptId: job.attemptId,
+      applied,
+    });
+    if (job.status === "SUCCEEDED" || job.status === "FAILED" || job.attemptId !== input.attemptId)
+      return ack(false);
     let status = input.status;
     let errorCode = input.status === "FAILED" ? input.errorCode : null;
     if (input.status === "SUCCEEDED") {
@@ -108,6 +123,6 @@ export async function completeWaveformJob(input: WaveformTerminal) {
         jobId: job.id,
         type: status === "SUCCEEDED" ? "WAVEFORM_SUCCEEDED" : "WAVEFORM_FAILED",
       });
-    return { applied: true };
+    return { ...ack(true), status };
   });
 }

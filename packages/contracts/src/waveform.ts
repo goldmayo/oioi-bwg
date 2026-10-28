@@ -71,3 +71,18 @@ export const waveformTerminalSchema = z.discriminatedUnion("status", [
   }),
 ]);
 export type WaveformTerminal = z.infer<typeof waveformTerminalSchema>;
+/** 인증된 Runner만 소비하는 최소 상태 projection이다. */
+export const waveformRunnerJobSchema = waveformJobSchema
+  .pick({ id: true, songId: true, videoId: true, status: true })
+  .extend({
+    attemptId: entityIdSchema.nullable(),
+    enqueuedAt: z.iso.datetime({ offset: true }).nullable(),
+  });
+export const waveformTerminalAckSchema = z
+  .object({
+    jobId: entityIdSchema,
+    status: waveformStatusSchema,
+    attemptId: entityIdSchema.nullable(),
+    applied: z.boolean(),
+  })
+  .refine((value) => !value.applied || value.status === "SUCCEEDED" || value.status === "FAILED");
