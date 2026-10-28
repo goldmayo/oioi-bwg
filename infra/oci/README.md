@@ -142,6 +142,30 @@ node tests/ops/waveform-infra-plan.mjs
 기본 무변경·활성 시 Queue/policy 생성·설정·정확한 IAM statement·Secret 누락/재사용/형식 오류·삭제/재생성 보호를 확인한다.
 컨테이너와 임시 key/plan/state를 정리한다. 실제 Resource Manager Plan·IAM 허용·Queue 재전달/DLQ 실증의 대체 근거가 아니다.
 
+### Logging parser 반복 차이 (2026-10-29)
+
+사용자가 공유한 실제 Plan(`migration_main@938e52aa8abe34b8f2202b2b70cf40707b2fc4fb`)은
+Queue/policy 두 개 생성 외에 기존 Logging parser의 `time_type="string"` 추가를 포함했다.
+별도 읽기 전용 API 조회에서는 `time-type=null`이고 기존 UTC `time-format`·time key·keep flag는 유지됐다.
+provider 8.29.0의 `time_type`은 optional/computed다. 명시값을 제거해 API의 현재 값을 보존하며
+`ignore_changes`로 Logging 전체나 시간 형식의 차이를 숨기지 않는다. API가 null을 반환하는 원인은 확정하지 않았다.
+
+**같은 날 시간대 재검토:** 과거 9시간 차이를 수정한 [#101](https://github.com/goldmayo/oioi-bwg/pull/101)의
+`%NZ` → `%N%z`는 유지된다. P08 착수 기준부터 `938e52aa...`까지 이 Logging 파일의 변경은 없다.
+명시적 `time_type` 제거 후보 [#316](https://github.com/goldmayo/oioi-bwg/pull/316)은 시간대 검토 중 Draft로 보류했다.
+합성 로그의 upstream Fluentd 1.16.3 비교에서 UTC/KST 모두 기존·후보는 같은 시각과 나노초를 보존했고,
+예전 literal `Z`만 KST에서 9시간 어긋났다. 이는 OCI 에이전트의 실제 버전·생성 설정·수신 시각 검증은 아니다.
+API `null`이나 Terraform 무변경만으로 실제 파싱 동등성을 확정하지 않는다. 상세 재현 근거는 #316에 둔다.
+
+**같은 날 후속 확인:** 사용자가 VM에서 읽은 생성 설정에도 `time_type`은 없고 `%N%z`·time key·keep flag가 유지됐다.
+사용자가 공유한 기존 OCI 로그 한 건의 epoch/event time과 Docker 원문 time도 밀리초까지 일치해 9시간 오차가 없었다.
+이 근거로 시간대 검토 보류를 해제한다. 상세 시각 계산·로컬 검증·최종 병합 근거는 #316이 소유한다.
+이 로그는 10월 27일 기록이며 현재의 실시간 수집 상태·설치 버전·변경 후 재생성을 검증한 결과는 아니다.
+
+이전 저장 Plan은 Apply하지 않는다. 수정 코드가 통합된 `migration_main`으로 새 Plan을 만들고
+**2 add / 0 change / 0 destroy**와 기존 Logging 무변경을 확인한 뒤 별도 승인으로 그 Plan을 적용한다.
+합성 state의 offline 검증은 실제 OCI 재Plan을 대신하지 않는다.
+
 ## IAM boundary
 
 Compute dynamic group은 유지한다. 해당 instance는 다음 책임만 가진다.

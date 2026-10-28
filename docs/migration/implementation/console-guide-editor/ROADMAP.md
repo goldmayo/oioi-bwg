@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-28"
-revision: 32
+updated_at: "2026-10-29"
+revision: 35
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,12 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-29 시간대 검토 후속 완료:** 사용자 VM의 생성 설정은 명시적 time_type 없이 `%N%z`를 유지하며, 사용자가 제공한 기존 OCI 로그 한 건의 숫자 시각·event time·Docker time도 밀리초까지 일치했다. 9시간 오차가 없어 #316의 시간대 보류를 해제한다. 과거 로그 한 건의 확인을 현재 실시간 수집 수용으로 확대하지 않는다. 다음은 수정이 통합된 `migration_main`의 새 Plan에서 Logging 무변경·Queue/IAM 2 create를 확인하고 별도 승인으로 Apply하는 것이다. 실제 변경·계산·검증은 [#316](https://github.com/goldmayo/oioi-bwg/pull/316), 반복 절차는 [infra 안내](../../../../infra/oci/README.md#logging-parser-반복-차이-2026-10-29)에 둔다.
+
+**2026-10-29 시간대 재검토:** 사용자 요청으로 과거 #101의 9시간 차이 수정을 대조했다. `%N%z`는 그대로이며 P08 병합분은 Logging 파일을 변경하지 않았다. #316은 명시적 시간 유형 제거의 실제 OCI 에이전트 동등성을 확인하기 전 Draft로 보류한다. upstream Fluentd의 UTC/KST 합성 비교와 실제 운영 확인을 구분한다. 아래 최초 Plan 대응의 병합 순서에 이 선행 관문을 추가하며, 절차는 [infra 안내](../../../../infra/oci/README.md#logging-parser-반복-차이-2026-10-29), 단일 PR의 상세 검증은 [#316](https://github.com/goldmayo/oioi-bwg/pull/316)이 소유한다.
+
+**2026-10-29 실제 Plan 확인:** 사용자가 공유한 Job 구성소스는 `migration_main@938e52aa8abe34b8f2202b2b70cf40707b2fc4fb`다. Queue/IAM 두 개 생성과 기존 Logging의 `time_type="string"` 추가로 2 add/1 change/0 destroy였으며 Apply는 보류했다. API의 현재 parser는 `time-type=null`이고 UTC time-format은 코드와 같았다. 이 명시값만 제거하는 별도 수정과 합성 provider Plan으로 반복 차이를 검증하며, 실제 재Plan에서 Logging 무변경·2 create 확인 후 별도 Apply 승인이 필요하다. 운영 절차는 [infra 안내](../../../../infra/oci/README.md#logging-parser-반복-차이-2026-10-29)가 소유한다.
 
 **2026-10-28 후속 준비:** #313(`a1f80b24bafb0de00945d1596940081fbf8cb28d`) → #314(`b9722039130a7128941306940967965c7a29e050`)를 최신 head의 CI 통과 후 squash 병합했다. #315에서 두 선행 문서를 보존해 통합한다. 전용 Secret 생성은 사용자 보고이며 값·OCI 상태는 조회하지 않았다. Stack 변수는 Plan 전에 입력하고 실제 Plan/Apply·VM 설치·worker 게시/Promotion 수용은 별도다.
 
