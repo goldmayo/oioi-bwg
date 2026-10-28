@@ -13,7 +13,7 @@ class RunnerBodyError extends Error {
   }
 }
 
-/** 사용자 세션과 분리된 두 Runner 경로에만 적용한다. 기본 상태는 비활성이다. */
+/** 사용자 세션과 분리된 명시적 Runner 경로에만 적용한다. 기본 상태는 비활성이다. */
 export async function waveformRunnerRoute(
   request: Request,
   route: string,
@@ -47,8 +47,10 @@ export async function waveformRunnerRoute(
 }
 
 /** 인증 후에만 읽으며 Content-Length와 무관하게 실제 byte 수와 경과 시간을 제한한다. */
-export async function readWaveformRunnerBody(request: Request): Promise<unknown> {
-  const maximum = 4 * 1024 * 1024;
+export async function readWaveformRunnerBody(
+  request: Request,
+  maximum = 4 * 1024 * 1024,
+): Promise<unknown> {
   if (
     request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json"
   )

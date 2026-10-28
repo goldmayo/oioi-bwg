@@ -86,3 +86,22 @@ export const waveformTerminalAckSchema = z
     applied: z.boolean(),
   })
   .refine((value) => !value.applied || value.status === "SUCCEEDED" || value.status === "FAILED");
+
+// Queue와 socket은 세 식별자만 전달하며 실행 설정을 받지 않는다.
+export const waveformQueuePayloadSchema = z.strictObject({
+  jobId: entityIdSchema,
+  songId: entityIdSchema,
+  videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
+});
+export const waveformEnqueuedInputSchema = waveformQueuePayloadSchema.extend({
+  enqueuedAt: z.iso.datetime({ offset: true }),
+});
+export const waveformStartInputSchema = waveformQueuePayloadSchema.extend({
+  expectedAttemptId: entityIdSchema.nullable(),
+});
+export const waveformStartAckSchema = waveformRunnerJobSchema
+  .extend({ started: z.boolean() })
+  .refine((value) => !value.started || (value.status === "RUNNING" && value.attemptId !== null));
+export type WaveformQueuePayload = z.infer<typeof waveformQueuePayloadSchema>;
+export type WaveformEnqueuedInput = z.infer<typeof waveformEnqueuedInputSchema>;
+export type WaveformStartInput = z.infer<typeof waveformStartInputSchema>;
