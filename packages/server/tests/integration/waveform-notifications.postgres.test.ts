@@ -10,7 +10,7 @@ import {
   completeWaveformJob,
   getWaveformJob,
   getRunnerWaveformJob,
-  requestWaveformJob,
+  requestWaveformJob as requestApprovedWaveformJob,
   recordWaveformEnqueued,
   startWaveformJob,
 } from "../../src/services/waveform-service";
@@ -30,6 +30,8 @@ const ctx = (id = accounts[0]!, role: "ADMIN" | "USER" = "ADMIN") => ({
   ability: buildAbility({ accountId: id, role }),
 });
 const videoId = "abcdefghijk";
+const requestWaveformJob = (context: ReturnType<typeof ctx>, songId: string) =>
+  requestApprovedWaveformJob(context, songId, [videoId]);
 const result = {
   durationMs: 40,
   bucketSizeMs: 20,
@@ -289,6 +291,67 @@ test("전달 성공의 첫 확인은 중복·지연 기록에도 보존하고 te
     started: false,
   });
   expect(await events(job.id)).toHaveLength(1);
+});
+test("source 승인 목록은 현재 Song 잠금 안에서 검사하며 거절에는 Job이 생기지 않는다", async () => {
+  const track = await song();
+  for (const approved of [[], ["lmnopqrstuv"]])
+    await expect(requestApprovedWaveformJob(ctx(), track.id, approved)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  expect(
+    await db.select().from(schema.waveformJob).where(eq(schema.waveformJob.songId, track.id)),
+  ).toHaveLength(0);
+  const { job } = await requestWaveformJob(ctx(), track.id);
+  await db
+    .update(schema.song)
+    .set({ youtubeId: "lmnopqrstuv" })
+    .where(eq(schema.song.id, track.id));
+  await expect(requestWaveformJob(ctx(), track.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
+  expect(await getRunnerWaveformJob(job.id)).toMatchObject({ status: "QUEUED" });
+});
+test("확정 미전달의 동시 terminal은 한 번만 반영하고 요청자 알림을 원자적으로 만든다", async () => {
+  const track = await song();
+  const { job } = await requestWaveformJob(ctx(), track.id);
+  await requestWaveformJob(ctx(accounts[1]), track.id);
+  const input = {
+    jobId: job.id,
+    attemptId: null,
+    status: "FAILED" as const,
+    errorCode: "ENQUEUE_FAILED" as const,
+  };
+  const copies = await Promise.all(Array.from({ length: 4 }, () => completeWaveformJob(input)));
+  expect(copies.filter((r) => r.applied)).toHaveLength(1);
+  expect(await events(job.id)).toHaveLength(2);
+  const ids = (await events(job.id)).map((r) => r.id);
+  expect(
+    await db
+      .select()
+      .from(schema.notificationDelivery)
+      .where(inArray(schema.notificationDelivery.notificationId, ids)),
+  ).toHaveLength(2);
+});
+test("확정 실패의 늦은 반영은 이미 전달 확인되거나 실행된 Job을 뒤집지 않는다", async () => {
+  for (const state of ["enqueued", "running"] as const) {
+    const track = await song();
+    const { job } = await requestWaveformJob(ctx(), track.id);
+    if (state === "enqueued")
+      await recordWaveformEnqueued({
+        jobId: job.id,
+        songId: track.id,
+        videoId,
+        enqueuedAt: "2026-10-29T00:00:00Z",
+      });
+    else await start(job.id);
+    expect(
+      await completeWaveformJob({
+        jobId: job.id,
+        attemptId: null,
+        status: "FAILED",
+        errorCode: "ENQUEUE_FAILED",
+      }),
+    ).toMatchObject({ applied: false, status: state === "enqueued" ? "QUEUED" : "RUNNING" });
+    expect(await events(job.id)).toHaveLength(0);
+  }
 });
 test("동시 start와 응답 유실 후 같은 요청은 attempt 하나만 만들며 늦은 요청은 새 실행을 덮지 않는다", async () => {
   const track = await song();

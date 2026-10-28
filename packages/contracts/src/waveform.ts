@@ -111,3 +111,5 @@ export const waveformEnqueueAckSchema = z.strictObject({
   outcome: z.enum(["ENQUEUED", "UNCONFIRMED", "NOT_ENQUEUED"]),
 });
 export type WaveformEnqueueOutcome = z.infer<typeof waveformEnqueueAckSchema>["outcome"];
+export const waveformRequestSchema = z.strictObject({ songId: entityIdSchema });
+export const waveformAcceptedSchema = z.strictObject({ jobId: entityIdSchema });

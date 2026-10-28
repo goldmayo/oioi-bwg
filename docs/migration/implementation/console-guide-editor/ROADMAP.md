@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 37
+revision: 38
 ---
 
 # 구현 순서와 PR 단위
@@ -191,6 +191,12 @@ Auth(04)·API(03/05)·server/transaction(06)·Query(07)·관측(09)·runtime(11)
   전달이 확인된 Job의 retention 만료와 중단된 RUNNING 회수도 정리 대상·조건을 명시한다.
 - Job·결과의 보관/삭제 기간, 조회 응답의 부재 표현·오류 코드, 내부 API 인증/인가 범위와 응답 유실 시
   재호출의 멱등성을 계약 테스트로 고정한다. 수치·endpoint는 구현 전 해당 DTO/배포 설정에 확정한다.
+
+**2026-10-29 생성 연결 추가:** [#318](https://github.com/goldmayo/oioi-bwg/pull/318)을 CI 통과 후 squash했다.
+기본 비활성 생성 API는 기존 request/terminal·FCM을 재사용하고 source 승인 목록·새 Job만 송신·확정 미전달의 조건부 실패를 연결한다.
+VM 사용자 점검은 ARM64·Docker/cgroup v2·앱 health와 여유 용량만 확인했다. 실제 Runner/Queue 권한·격리·부하 수용은 아니다.
+다음은 Go Runner의 공식 SDK push/pull·복구와 설치 산출물이며, 준비 전 수동 설치 스크립트 실행을 요구하지 않는다.
+운영 flag·socket mount·credential 공급·배포는 별도 승인과 실제 수용 뒤 진행한다.
 
 #### 공통 알림의 선행 구현
 

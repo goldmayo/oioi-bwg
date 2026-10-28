@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 15
+revision: 16
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -460,6 +460,14 @@ client의 전체 호출 기한은 2초, 응답 header와 body는 각각 1KiB다.
 이 수치는 로컬 Unix socket 한도 검사 기준이며 실제 OCI 지연·Runner 부하/권한 수용은 별도다.
 송신부는 DB/알림/terminal을 수정하지 않는다. 생성 API는 후속에서 active 재사용·새 Job만 송신·미전달 확정의 조건부 terminal을 연결한다.
 아직 운영 mount·생성 route·runtime 활성화를 추가하지 않는다. 위 active runtime/배포 계약 개정과 VM 격리 수용 관문은 유지한다.
+
+**2026-10-29 생성 API 연결:** 위 송신부 이후 ADMIN/MFA·Origin·strict `{songId}`와 202 `{jobId}`를 연결한다.
+별도 생성 flag와 Runner flag가 모두 true여야 하며 source 허용 목록을 Song 잠금 안에서 검사한다.
+active Job은 송신하지 않는다. 새 Job의 UNCONFIRMED는 202로 보존하며 재요청도 추가 enqueue하지 않는다.
+NOT_ENQUEUED만 기존 terminal transaction에 전달하고 QUEUED·attemptId=null·enqueuedAt=null일 때만 반영한다.
+null 자체는 미전달의 근거가 아니다. 이 조건은 늦은 확정 실패가 이미 전달/실행/terminal인 Job을 뒤집지 않도록 한다.
+실패가 적용된 경우에만 503/ENQUEUE_FAILED를 반환하고 commit 후 기존 알림 dispatcher를 깨운다.
+Auth §4.2·runtime §14·배포 §21을 함께 개정하되 mount/flag/Secret 공급·운영 활성화는 후속 승인 관문에 남긴다.
 
 **Console 내부 HTTP.** Runner는 배포 설정의 고정 loopback Console 주소로만 호출하고 redirect를 따르지 않는다.
 Caddy는 `/api/internal/*` 공개 유입을 차단한다. 각 Route Handler는 별도 service bearer token을 확인하며,
