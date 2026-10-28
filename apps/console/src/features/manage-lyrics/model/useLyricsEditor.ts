@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import type { LyricLine } from "@oioi-bwg/contracts/song";
 
 /**
@@ -17,7 +18,22 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
    * 현재 편집 중인 가사 라인 배열.
    * 각 라인은 시작 시간(startTime), 세그먼트(segments), 추가 여부(isExtra)를 포함합니다.
    */
-  const [lyrics, setLyrics] = useState<LyricLine[]>(initialLyrics);
+  const { control, getValues, setValue, reset, formState } = useForm<{ lyrics: LyricLine[] }>({
+    defaultValues: { lyrics: structuredClone(initialLyrics) },
+  });
+  const lyrics = useWatch({ control, name: "lyrics" });
+  const setLyrics = useCallback(
+    (value: LyricLine[]) => setValue("lyrics", value, { shouldDirty: true }),
+    [setValue],
+  );
+  const markSaved = useCallback(
+    (saved: LyricLine[]) => {
+      const current = getValues("lyrics");
+      reset({ lyrics: saved });
+      if (JSON.stringify(current) !== JSON.stringify(saved)) setLyrics(current);
+    },
+    [getValues, reset, setLyrics],
+  );
 
   /**
    * 현재 포커스(활성화)된 가사 라인의 인덱스.
@@ -90,12 +106,12 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
   const saveToHistory = useCallback(
     (newLyrics: LyricLine[]) => {
       const newHistory = history.slice(0, historyIndex + 1);
-      newHistory.push([...newLyrics]);
+      newHistory.push(structuredClone(newLyrics));
       if (newHistory.length > 50) newHistory.shift();
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
     },
-    [history, historyIndex],
+    [history, historyIndex, setLyrics],
   );
 
   /**
@@ -112,7 +128,7 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
       setLyrics(newLyrics);
       saveToHistory(newLyrics);
     },
-    [lyrics, saveToHistory],
+    [lyrics, saveToHistory, setLyrics],
   );
 
   /**
@@ -139,7 +155,7 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
         setCurrentIndex(index + 1);
       }
     },
-    [lyrics, isRecording, saveToHistory],
+    [lyrics, isRecording, saveToHistory, setLyrics],
   );
 
   /**
@@ -176,7 +192,7 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
 
       return time; // 포커스 식별용으로 시간 반환
     },
-    [lyrics, saveToHistory],
+    [lyrics, saveToHistory, setLyrics],
   );
 
   /**
@@ -196,7 +212,7 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
         setCurrentIndex(Math.max(0, newLyrics.length - 1));
       }
     },
-    [lyrics, currentIndex, saveToHistory],
+    [lyrics, currentIndex, saveToHistory, setLyrics],
   );
 
   /**
@@ -227,7 +243,7 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
       setLyrics(newLyrics);
       saveToHistory(newLyrics);
     },
-    [lyrics, saveToHistory],
+    [lyrics, saveToHistory, setLyrics],
   );
 
   /**
@@ -254,7 +270,7 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
       setLyrics(newLyrics);
       saveToHistory(newLyrics);
     },
-    [lyrics, saveToHistory],
+    [lyrics, saveToHistory, setLyrics],
   );
 
   /**
@@ -269,7 +285,7 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
       setCurrentIndex(0);
       saveToHistory(newLyrics);
     },
-    [saveToHistory],
+    [saveToHistory, setLyrics],
   );
 
   /**
@@ -282,7 +298,7 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
       setLyrics([...prevLyrics]);
       setHistoryIndex(historyIndex - 1);
     }
-  }, [history, historyIndex]);
+  }, [history, historyIndex, setLyrics]);
 
   /**
    * 취소된 작업을 다시 적용합니다(다시 실행).
@@ -294,7 +310,7 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
       setLyrics([...nextLyrics]);
       setHistoryIndex(historyIndex + 1);
     }
-  }, [history, historyIndex]);
+  }, [history, historyIndex, setLyrics]);
 
   /**
    * 모든 가사 라인의 startTime에 동일한 오프셋(초)을 더합니다.
@@ -312,10 +328,12 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
       setLyrics(newLyrics);
       saveToHistory(newLyrics);
     },
-    [lyrics, saveToHistory],
+    [lyrics, saveToHistory, setLyrics],
   );
 
   return {
+    isDirty: formState.isDirty,
+    markSaved,
     /** 현재 편집 중인 가사 라인 배열 */
     lyrics,
     /** 현재 포커스된 가사 라인의 인덱스 */
