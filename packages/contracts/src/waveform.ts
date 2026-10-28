@@ -105,3 +105,9 @@ export const waveformStartAckSchema = waveformRunnerJobSchema
 export type WaveformQueuePayload = z.infer<typeof waveformQueuePayloadSchema>;
 export type WaveformEnqueuedInput = z.infer<typeof waveformEnqueuedInputSchema>;
 export type WaveformStartInput = z.infer<typeof waveformStartInputSchema>;
+// Runner는 Put이 실행되지 않았음이 확실한 경우에만 NOT_ENQUEUED를 반환한다.
+export const waveformEnqueueAckSchema = z.strictObject({
+  jobId: entityIdSchema,
+  outcome: z.enum(["ENQUEUED", "UNCONFIRMED", "NOT_ENQUEUED"]),
+});
+export type WaveformEnqueueOutcome = z.infer<typeof waveformEnqueueAckSchema>["outcome"];

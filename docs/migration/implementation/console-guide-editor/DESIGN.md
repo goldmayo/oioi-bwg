@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-28"
-revision: 14
+updated_at: "2026-10-29"
+revision: 15
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -449,6 +449,17 @@ Console에는 socket 디렉터리만 읽기 전용으로 연결하고 Docker soc
 소켓의 body/연결 수/호출 기한 상한과 group mapping은 구현 시 부하·권한 검사로 고정한다.
 PutMessages의 SDK/HTTP 자동 재시도를 끄고 `opc-request-id`를 멱등키로 가정하지 않는다.
 분석 중 메모리 작업 목록은 쌓지 않고 대기는 OCI Queue가 맡는다.
+
+**2026-10-29 송신부 계약 구체화:** 생성 HTTP 연결 전에 Console의 고정 socket client를 독립 검증한다.
+`POST /enqueue`의 응답은 HTTP 200과 strict `{jobId,outcome}`이며 outcome은 `ENQUEUED | UNCONFIRMED | NOT_ENQUEUED`다.
+이는 Job 상태가 아니라 전달 확인 결과다. Runner는 Put 성공과 내부 enqueuedAt 기록을 확인한 뒤에만 ENQUEUED,
+Put이 실행되지 않았음이 확실할 때만 NOT_ENQUEUED를 반환한다. Put 결과·내부 API 기록이 불명확하면 UNCONFIRMED다.
+Console의 연결 오류·응답 유실·비200·redirect·잘못된/다른 Job ACK는 모두 UNCONFIRMED이며 재전송하지 않는다.
+송신부는 동시 호출 8개를 넘으면 소켓을 열기 전에 NOT_ENQUEUED로 거절하고 자체 대기열을 만들지 않는다.
+client의 전체 호출 기한은 2초, 응답 header와 body는 각각 1KiB다. 초과 시 연결을 종료하고 UNCONFIRMED로 반환한다.
+이 수치는 로컬 Unix socket 한도 검사 기준이며 실제 OCI 지연·Runner 부하/권한 수용은 별도다.
+송신부는 DB/알림/terminal을 수정하지 않는다. 생성 API는 후속에서 active 재사용·새 Job만 송신·미전달 확정의 조건부 terminal을 연결한다.
+아직 운영 mount·생성 route·runtime 활성화를 추가하지 않는다. 위 active runtime/배포 계약 개정과 VM 격리 수용 관문은 유지한다.
 
 **Console 내부 HTTP.** Runner는 배포 설정의 고정 loopback Console 주소로만 호출하고 redirect를 따르지 않는다.
 Caddy는 `/api/internal/*` 공개 유입을 차단한다. 각 Route Handler는 별도 service bearer token을 확인하며,
