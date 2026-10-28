@@ -1324,12 +1324,14 @@ YouTube는:
 
 ## 20.3 Worker
 
-초기 운영 가정:
+2026-10-28 사용자 선택으로 초기 Python 가정을 Rust worker로 대체한다.
+로컬 ARM64 합성 입력 비교에서 확인한 중계 메모리 절감과 전체 처리 시간을 근거로 한다.
+수치·반복 조건은 [구현 PR #310](https://github.com/goldmayo/oioi-bwg/pull/310)이 소유한다.
 
 ```text
-Python Worker
+Rust Worker
 ├─ ffmpeg
-├─ waveform peak/RMS extraction
+├─ BBC audiowaveform peak extraction
 └─ concurrency = 1
 ```
 

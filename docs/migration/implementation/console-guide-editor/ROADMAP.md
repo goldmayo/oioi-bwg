@@ -71,9 +71,41 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 **2026-10-28 내부 API 구현 분리:** 승인한 [OCI Queue 설계 #311](https://github.com/goldmayo/oioi-bwg/pull/311)에 따라
 첫 통신 PR은 Runner 상태 조회·완료 콜백과 최소 DTO/ACK만 추가한다. 기존 저장·알림 transaction을 재사용하며
 [Auth §4.2](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md#42-p08-runner의-내부-상태-조회결과-반영)의
-기본 비활성·별도 토큰 경계를 따른다. #310 → #311 → 이 구현 순서로 병합하며 WORK/ROADMAP 겹침은 재배치 때 조정한다.
+기본 비활성·별도 토큰 경계를 따른다. #310 → #311의 squash 병합 결과를 먼저 반영하고 이 구현을 검증한다. WORK/ROADMAP 충돌은 양쪽 근거를 보존해 통합했다.
 생성/enqueue·enqueuedAt 기록·start·socket/Go Runner·실제 OCI·운영 활성화는 후속 검증 단위다.
 source 정책 확인 전에도 합성 입력 기반 검증은 진행하되 운영 credential·DB·IAM·배포 승인을 확대 해석하지 않는다.
+
+**2026-10-28 실행 분리 추가:** fetch한 `origin/migration_main@f8a59be59cc4e16fdc6719f7f3f6ccac448fa4c1`에서 착수했다.
+#302/#303의 Job/결과·요청자 알림 transaction, 조회/결과 화면과 #307의 0011/0012 운영 적용·공통 FCM을 재사용한다.
+운영 Chrome OS 수신도 사용자 확인을 마쳤다([후속 기록](../../../devlog/20261027-28-notifications.md)).
+아래 2026-10-27의 구현 부재 관찰과 당시 Firebase 준비 항목은 현재 미완료 목록이 아니다.
+
+**2026-10-28 언어 선택 추가:** 로컬 비교 후 사용자 선택으로 분석 worker를 Rust로 전환한다.
+근거·현재 실행 경계는 [기술 검토](AUDIO-FEASIBILITY.md#1-필요한-도구만-사용), 계약은 Domain §20.3이 소유한다.
+Rust fmt/unit/Clippy·ARM64 실행 검증을 CI 필수 gate에 연결하며 운영 source/Queue/배포 관문은 유지한다.
+
+**2026-10-28 OCI Queue 설계 추가:** 사용자 선택으로 OCI Queue와 제한 Unix socket 경계를 유지한다.
+enqueue/consume을 맡는 같은 VM Runner와 Rust 분석기의 책임, 내부 API/완료 전달, Queue 설정 후보는
+[설계 §6.2](DESIGN.md#62-oci-queue-연결과-완료-전달-계약)와 [§6.3](DESIGN.md#63-queue-설정-후보와-활성화-관문)이 소유한다.
+기준은 fetch한 `origin/migration_main@f8a59be59cc4e16fdc6719f7f3f6ccac448fa4c1`이다.
+0011/0012·공통 알림과 Job 저장 기반은 운영 반영됐고 운영 Chrome OS 수신은 사용자 확인 상태다.
+아래 2026-10-27의 구현 부재/Firebase 준비 관찰은 당시 기록으로 보존하며 재구현 지시로 사용하지 않는다.
+
+이 설계 단위는 문서만 변경한다. [Rust 분석 도구 #310](https://github.com/goldmayo/oioi-bwg/pull/310)의
+합성 입력 실측과 실제 OCI 실증을 구분하며 새 OCI 호출·리소스/IAM·DB·배포는 실행하지 않는다.
+후속 병합 순서는 다음과 같으며 각 구현 PR을 20파일/400줄 목표의 독립 검증 단위로 추가 분할할 수 있다.
+
+| 순서 | PR 관심사와 선행 조건 | 완료 근거 |
+| --- | --- | --- |
+| 1 | #310 분석 도구 → #311 OCI Queue 설계 → #312 내부 상태/완료 API | #310은 squash 병합 완료. #311은 해당 base를 반영하고 WORK/ROADMAP의 Rust 선택·통신 설계를 함께 보존 |
+| 2 | source 공급 계약·생성/내부 API·socket enqueue | 허용 근거·재공급 계약, 기존 PG 동시성/terminal 재사용, 응답 불확실성 계약. 운영 생성 진입점은 비활성 유지 |
+| 3 | Go 공식 SDK Runner·Queue 소비/복구·고정 Rust 실행 | ARM64 로컬 fault 검증과 비밀 없는 Terraform Plan. 운영 credential·OCI/IAM·host 적용은 별도 승인 |
+| 4 | 기존 알림 producer 연결·통합 수용·별도 Promotion | 실제 OCI/허용 입력/offset·drift/실기기 증거와 기존 metadata 차단. P09/P10·badge는 제외 |
+
+source 정책 확인 전에도 합성 입력용 통신/복구 계약과 로컬 구현·검증은 진행할 수 있다.
+운영 source·생성 경로 활성화는 이용 범위와 Queue 대기/재시작/재전달 뒤 입력 재공급 경로를 확인한 뒤에만 진행한다.
+
+
 
 **2026-10-27 추가:** 사용자의 P08 계획 구체화 요청을 반영한다. 기준은 fetch한
 `origin/migration_main@8f371d40d1809165167a524456b990c7b0f319b9`이며, 해당 source의
@@ -227,6 +259,17 @@ swap 가능성과 memory 한도 포함 조건도 확인한다. 이 문서의 공
 완료 시점의 최종 결과 소유 문서에 두고 현재 다음 행동은 WORK에서만 갱신한다.
 
 ## 3. 검증과 전환 조건
+
+**2026-10-28 OCI Queue 설계의 검증 분리:** 다음 항목은 아직 실행하지 않은 후속 수용 기준이다.
+mock·로컬 container의 합격을 실제 Queue/IAM/VM·실기기 합격으로 바꾸어 보고하지 않는다.
+
+| 단계 | 필수 실패 주입/검증 | 실제 OCI·운영에서 추가 확인 |
+| --- | --- | --- |
+| 요청/접수 | 같은 song/video 동시 요청·연속 클릭·응답 유실 재요청, 요청자별 유일 등록, 새 Job만 Put 호출 | 실제 SDK Put 성공 뒤 socket/내부 기록 응답 유실, null enqueuedAt 상태의 정상 consume |
+| 시작/소유권 | start 응답 유실·지연, 이전 컨테이너 정리, 이전 attempt 결과 거절, 단일 Runner 기동 | 실제 receipt/visibility 연장·상실·재전달 및 SDK 인증 갱신. 상실 시 worker 중단 |
+| 결과/삭제 | commit 전 실패·commit 응답 유실·중복 terminal·Queue delete 실패, 재생성 실패의 이전 JSON/Cue 보존 | 실제 delete 실패 뒤 terminal 메시지 재전달·정리, FCM 장애 중 결과/내역 보존 |
+| 복구/격리 | Runner/worker SIGTERM·SIGKILL·재시작, 고정 payload/이미지·출력 상한, 음원/프로세스 비잔존 | VM/Docker 재시작·잔존 컨테이너 회수, DLQ→최종 실패, 실제 retention과 stale 여유, socket/token/metadata/DB 차단 |
+| source/자원 | 합성 입력·전체 timeout·3개 anchor, Runner idle/long poll/실행 중 CPU/RSS | 허용 입력의 재공급·실제 영상 offset/drift, VM에서 Web/Console 자원 경쟁과 분석 동시 1개 |
 
 - P02 전에는 기존 type-check/harness/lint/FSD/unit/format과 필요한 build를 실행한다. 이후 root `pnpm verify`가 workspace별 검사·독립 앱 Steiger·repo 경계 harness·운영 테스트·format·두 앱 build를 실행한다.
 - schema 수정 → Drizzle migration 생성 → SQL 검토 → guarded local 적용 → 검증 순서를 지킨다. MFA replay·job 상태/멱등성·동시 저장은 local Docker PostgreSQL에서 확인하고 production 적용은 별도 실행 범위로 둔다.
