@@ -5,13 +5,13 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-27"
-revision: 11
+updated_at: "2026-10-28"
+revision: 12
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
 
-**P07 데이터 기반을 구현했으며 이관·조회 전환과 P08~P10은 미착수다.** P01~P06의 완료 결과와 미래 기능 제안을 구분한다.
+**2026-10-28 기준 P07은 운영 적용·배포 완료, P08은 Job/알림 저장 기반 운영 반영과 분석 도구 PR 제출 상태다.** P01~P07의 완료 결과와 P08~P10 실행 계획을 구분한다.
 현재·보류 상태는 [WORK](../../../WORK.md)가 소유한다. 아래 Queue/runner/job/editor와 CheerGuide 모델은 현행 구현 완료를 뜻하지 않는다.
 
 초기 제안의 코드 근거는 [CURRENT-STATE](CURRENT-STATE.md), 파형 기술 근거는
@@ -29,8 +29,10 @@ revision: 11
 
 같은 곡의 CONCERT/FESTIVAL 응원법을 조회·선택하고 출처를 공식/팬덤으로 표시한다.
 공식 여부는 공연 모드와 별개다. 기존 데이터는 운영자가 수동 분류하며 새 관리자 편집 기능은 P07 이후에 다룬다.
-Console에서 YouTube 링크를 입력하면 일회성 컨테이너가 파형 JSON을 생성하고, 편집기는 YouTube 재생과 JSON을 사용한다.
-**서버의 음원 임시 처리는 허용하며 음원 영구 저장·공개·전달은 금지한다. 브라우저에서는 분석하지 않는다.**
+Console에서 허용된 입력의 파형 생성을 요청하면 일회성 컨테이너가 JSON을 생성하고, 편집기는 참조 영상 재생과 JSON을 사용한다.
+**Domain §20.2의 입력 이용 범위를 먼저 확인하며 음원은 pipe/tmpfs에서만 처리한다. 브라우저에서는 분석하지 않는다.**
+2026-10-28 source 정정: 이 문서의 과거 YouTube/yt-dlp 제안은 production source 승인이 아니며,
+[Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)의 YouTube 추출 금지를 따른다.
 
 기존 Service/Repository/CASL/Query/Ky/Zod, Auth.js/Argon2id, 가사 JSON, LRC·시간 캡처·Undo/Redo를 재사용한다.
 세션 레지스트리·인증 grant·복구 UI·범용 Audit DB·미래 Event/variant 모델과 자동 정렬 연구는 이번 범위에서 뺀다.
@@ -263,15 +265,19 @@ i18n은 P10 이후 UI·곡별 설명만 검토한다. 설명 번역은 원문 sn
 
 ## 6. Waveform Worker
 
+2026-10-28 사용자 선택으로 OCI Queue 기반을 유지하고 Unix socket과 Runner의 역할을 구체화한다.
+Runner는 VM의 상주 큐 소비·실행 프로세스이며 enqueue와 consume을 함께 맡는다. Rust 분석기는 작업별 일회성 컨테이너다.
+아래 HTTP/socket/Queue 경로는 구현 계획이다. 기존 저장·알림 기반과 [Rust 분석 도구 PR #310](https://github.com/goldmayo/oioi-bwg/pull/310)을 재사용한다.
+
 ```text
 POST /api/admin/waveform-jobs
   → MFA/ADMIN + 입력 검증 → active Job 재사용 또는 PostgreSQL Job(QUEUED) 생성
   → 새 Job만 Unix socket → VM runner → OCI Queue enqueue
-  → 202 Accepted { jobId }
+  → 202 Accepted { jobId } (DB 접수, 전달 성공 또는 확인 중)
 
 OCI Queue → VM runner long poll → Job(RUNNING)
-  → docker run --rm → yt-dlp → ffmpeg pipe → audiowaveform → JSON
-  → JSON 검증 → 결과와 Job(SUCCEEDED) 저장 → message delete
+  → docker run --rm → 허용 WAV stdin → Rust/ffmpeg pipe/audiowaveform → JSON stdout
+  → Runner → Console 내부 결과 API → 결과/terminal/알림 transaction → message delete
 ```
 
 | 요소              | 책임                                                                               |
@@ -285,10 +291,12 @@ OCI Queue → VM runner long poll → Job(RUNNING)
 
 **동일 `(songId, videoId)`의 active Job(`QUEUED | RUNNING`)은 최대 한 개다.**
 연속 클릭·응답 유실 후 재요청·동시 POST에 기존 active Job이 있으면 `202 { jobId }`로 그 Job을 반환하고
-새 Job/message는 만들지 않는다. 새 Job 생성 경로만 enqueue 확인 뒤 202를 반환한다.
+새 Job/message는 만들지 않는다. 새 Job 생성 경로만 enqueue를 요청한다.
+2026-10-28 응답 의미 보완: 전달 성공과 응답 유실로 인한 확인 중에는 모두 DB에 접수된 jobId로 202를 반환한다.
+202는 Queue 접수 보장이 아니다. 전달 미생성이 확정된 실패만 조건부 FAILED 반영 후 503/ENQUEUE_FAILED로 응답한다.
 이는 active 작업 재사용 규칙이며 terminal(`SUCCEEDED | FAILED`) 이후의 새 요청은 재생성으로 처리한다.
 UI의 버튼 비활성화에만 의존하지 않고 DB에서 조회/생성을 원자적으로 보장한다.
-partial unique index 또는 기존 Song 행 잠금 등 구체적인 DB 수단은 P08에서 선택하고 동시 요청으로 검증한다.
+기존 Song → Job 잠금, active partial unique index와 requester 유일 제약을 재사용하며 생성 HTTP 연결 시 경합을 재검증한다.
 
 **OCI Queue 호출은 VM-local Runner 하나가 push + pull을 모두 소유한다.**
 Console은 Job을 저장한 뒤 제한된 Unix socket enqueue 호출만 한다. socket은 Console에만 연결하고
@@ -325,7 +333,8 @@ WaveformJob
 Waveform                    job lifecycle과 분리한 song/source별 정상 JSON
 ```
 
-Runner는 위 Queue push/pull 권한과 좁은 내부 job API의 service token만 사용한다. worker에는 videoId·자원 한도·outbound network만 제공한다.
+Runner는 위 Queue push/pull 권한과 좁은 내부 job API의 service token만 사용한다. 분석기에는 허용 WAV stdin과 고정 실행 한도만 제공한다.
+현재 합성 WAV 분석 컨테이너는 network none으로 실행하며 source 공급 경로가 확정되기 전 outbound를 열지 않는다.
 worker에 DATABASE_URL/AUTH_SECRET/R2/OCI credential을 주지 않고 VM metadata·DB·내부 API 접근도 막는다.
 Console의 내부 API → 기존 Service/Repository가 상태·결과를 저장하고 Runner/worker에 DB 연결을 주지 않는다.
 token은 Runner의 보호된 환경에 보관하며 Queue·command·로그에 넣지 않는다.
@@ -391,6 +400,124 @@ FCM 발송 credential은 Console server만 사용하며 Runner·worker·Web·클
 별도 Redis/Ably/Firestore/Cloud Functions·범용 Notification framework는 추가하지 않는다.
 OCI Notifications는 DLQ/Runner 장애 등 운영 알림 후보로 유지한다.
 
+### 6.2. OCI Queue 연결과 완료 전달 계약
+
+2026-10-28 설계 기준은 fetch한 `origin/migration_main@f8a59be59cc4e16fdc6719f7f3f6ccac448fa4c1`이다.
+`waveform-service`의 request/start/complete와 Console `acceptWaveformResult`는 이미 있고,
+생성 HTTP·enqueue·Runner·내부 HTTP는 아직 없다. 아래 경로/DTO는 후속 구현 PR에서 Zod 계약과 함께 추가한다.
+
+```mermaid
+sequenceDiagram
+    participant C as Console BE
+    participant R as VM Runner
+    participant Q as OCI Queue
+    participant W as Rust 분석 컨테이너
+    C->>C: Job/요청자 저장 또는 active Job 재사용
+    C->>R: 새 Job만 Unix socket POST /enqueue
+    R->>Q: PutMessages, 고정 세 식별자
+    R->>C: Put 성공 확인 시 enqueuedAt 기록
+    R-->>C: 전달 확인 또는 확인 중
+    R->>Q: GetMessages, 한 번에 1개
+    R->>C: Job 대조와 start
+    C-->>R: attemptId
+    R->>W: 고정 이미지 실행, WAV stdin
+    W-->>R: JSON stdout와 exit code
+    R->>C: 인증된 terminal API
+    C->>C: 결과/terminal/요청자 알림/발송 대기 commit
+    C-->>R: 현재 Job 상태와 applied
+    R->>Q: terminal 저장 확인 후 DeleteMessage
+```
+
+**실행·인증 선택.** Runner는 host systemd의 단일 프로세스로 두고 host lock으로 중복 기동을 막는다.
+소켓 접수와 Queue long poll은 독립 처리하지만 분석 슬롯은 하나다. 자체 broker·retry scheduler를 두지 않는다.
+Redis 대안은 새 상주 broker·영속성/복구 운영이 필요해 이번 범위에서 채택하지 않는다.
+Console 직접 publish는 별도 push 전용 인증을 도입할 때 재검토하며 기존 Web/Console IMDS 차단을 해제하지 않는다.
+소켓 선택 근거는 이 인증 경계다. Redis/직접 publish와 총메모리·지연을 실측 비교한 결과로 주장하지 않는다.
+Runner 구현안은 Go + [OCI 공식 SDK](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/sdks.htm)의
+[Queue client](https://docs.oracle.com/en-us/iaas/tools/go/latest/queue/index.html)와
+[Instance Principal provider](https://docs.oracle.com/en-us/iaas/tools/go/latest/common/auth/index.html)다.
+Rust는 분석기에 유지한다. OCI 요청 서명·인증서/토큰 갱신을 직접 구현하지 않기 위한 선택이며,
+Go/SDK 버전·binary hash·상주 CPU/RSS는 Runner 구현 PR에서 실제 ARM64 검증으로 고정한다.
+Rust 분석 성능 비교를 Go Runner 성능의 근거로 사용하지 않는다.
+
+소켓은 `/run/oioi-waveform/runner.sock`에 두는 안으로, root가 부모·소유 그룹을 관리하고 Console 전용 그룹만 연결한다.
+Console에는 socket 디렉터리만 읽기 전용으로 연결하고 Docker socket·host root 경로·OCI credential을 주지 않는다.
+이는 [runtime §14](../../oioi-bwg-architecture-clean-v1/11-content-i18n-assets-runtime-architecture.md#14-secret)의
+기존 host mount 없는 Console 검증 전제에 대한 제한 예외 제안이다. 생성/enqueue 구현 PR에서 active runtime·배포 계약을
+같이 개정하고 socket 외 host 경로 차단·Web 무변경·기존 IMDS 차단을 실증하기 전에는 mount를 적용하지 않는다.
+`POST /enqueue`는 `{jobId,songId,videoId}`만 받는다. Runner가 내부 조회로 Job과 대조한 후 고정 Queue에 넣는다.
+소켓의 body/연결 수/호출 기한 상한과 group mapping은 구현 시 부하·권한 검사로 고정한다.
+PutMessages의 SDK/HTTP 자동 재시도를 끄고 `opc-request-id`를 멱등키로 가정하지 않는다.
+분석 중 메모리 작업 목록은 쌓지 않고 대기는 OCI Queue가 맡는다.
+
+**Console 내부 HTTP.** Runner는 배포 설정의 고정 loopback Console 주소로만 호출하고 redirect를 따르지 않는다.
+Caddy는 `/api/internal/*` 공개 유입을 차단한다. 각 Route Handler는 별도 service bearer token을 확인하며,
+관리자 cookie·MFA 우회 세션을 만들지 않는다. 토큰은 기존 OCI Secret Management → 보호된 runtime 파일 공급을 따른다.
+Auth/MFA/FCM secret과 공유하지 않고 Runner/Console만 보유한다. header/body/SDK 객체의 원문을 로그·Sentry에 기록하지 않는다.
+내부 경로는 Web에 만들지 않으며 body 상한·Zod 입력/출력 검증·기존 오류 변환을 적용한다.
+
+| 계획 경로 | 입력과 책임 | 결과/재호출 규칙 |
+| --- | --- | --- |
+| `POST /api/admin/waveform-jobs` | ADMIN/MFA·Origin 검증, `{songId}`, request service 호출 | active Job은 요청자 추가 후 202, 새 Job만 socket 호출. 불확실 enqueue도 같은 jobId 반환 |
+| `GET /api/admin/waveform-jobs/{id}` | 기존 ADMIN/MFA 상태 조회 | 기존 DTO/API 재사용 |
+| `GET /api/internal/waveform-jobs/{id}` | Runner token, Job 대조·저장 확인 | id/songId/videoId/status/attemptId/enqueuedAt만 반환. DB row·credential은 노출하지 않음 |
+| `POST /api/internal/waveform-jobs/{id}/enqueued` | 세 식별자와 Runner의 Put 성공 확인 시각 | enqueuedAt을 멱등 기록. RUNNING/terminal을 QUEUED로 역전하지 않음 |
+| `POST /api/internal/waveform-jobs/{id}/start` | 세 식별자 대조, 이전 컨테이너 정리 후 start service | RUNNING과 새 attemptId 또는 현재 terminal 반환. 응답 불명확 시 분석을 시작하지 않고 먼저 상태 확인 |
+| `POST /api/internal/waveform-jobs/{id}/terminal` | 경로/body jobId 일치, 기존 WaveformTerminal | acceptWaveformResult 재사용. `{jobId,status,attemptId,applied}`로 현재 상태 확인. applied=false만으로 Queue delete 금지 |
+
+현재 start service는 attemptId를 만들고 complete service는 `{applied}`만 반환한다.
+내부 상태 projection·enqueuedAt 조건부 기록·terminal 응답 projection은 기존 service/repository를 좁게 확장할 후속이다.
+상태 변경의 source 대조와 응답 projection도 같은 transaction에서 수행하고 새 테이블/migration으로 복제하지 않는다.
+start 응답 유실 때 무조건 start를 반복하지 않는다. 단일 Runner/유효 receipt에서 내부 조회로 시작 상태를 확인하고,
+확정할 수 없으면 분석을 시작하지 않은 채 Queue 재전달에 맡긴다. 이 경계의 지연 응답/재전달 경합도 수용 검증에 포함한다.
+
+결과 API에는 Runner가 Job의 참조 source와 generationVersion을 붙여 기존 계약으로 보낸다.
+분석기 자체는 HTTP 서버·콜백 인증·DB·OCI를 알지 않으며 stdout JSON/exit 0, 실패 시 고정 코드/exit 1만 반환한다.
+source 참조의 `type=youtube`는 현재 저장 계약의 참조 영상 표시이며 음원 확보 권한이나 추출 승인이 아니다.
+결과 요청/응답이 유실되면 현재 terminal 조회 또는 같은 결과의 멱등 재전달로 저장을 확인한다.
+이전 attempt의 결과를 새 attemptId로 바꿔 제출하지 않는다. terminal 또는 삭제된 Job의 404가 확인돼야 message를 정리한다.
+FCM 발송 완료는 Queue delete의 선행 조건이 아니며 기존 commit 후 dispatcher를 깨우는 경로를 유지한다.
+
+**재전달과 컨테이너 정리.** Runner는 receipt와 최신 visibility 기한을 메모리에만 보관한다.
+작업 중 별도 heartbeat가 UpdateMessage를 수행한다. 안전 여유 안에 연장을 확인하지 못하면 소유권 상실로 취급해
+분석을 중단·제거하고 새로운 결과 제출을 시작하지 않는다. 이미 전송 중인 결과는 DB의 attempt/terminal 검사로 판단한다.
+DB commit과 Queue visibility는 원자적이지 않으며 exactly-once 실행을 주장하지 않는다.
+Runner 시작·재전달 시 고정 이름/label의 전용 분석 컨테이너를 찾아 stop/kill/wait/remove한 뒤 새 attempt를 시작한다.
+systemd 종료에서도 같은 정리를 적용하며 Docker 이벤트·목록 조회는 전용 컨테이너에 한정한다.
+이름/label에 secret·입력 URL을 넣지 않고 message가 Docker API나 임의 command를 지정할 수 없게 한다.
+Runner의 Docker 제어 권한은 host 신뢰 경계에 포함하고 임의 Docker proxy API를 Console/분석기에 공개하지 않는다.
+
+일시 분석 실패는 결과를 성공으로 제출하지 않고 컨테이너를 정리한 뒤 Queue 재전달에 맡긴다.
+DLQ는 별도 worker를 띄우지 않고 같은 Runner가 분석 슬롯이 비었을 때 점검한다.
+식별자와 현재 Job을 대조하고 활성 컨테이너 부재·현재 attempt를 확인한 뒤 기존 terminal 경로로 최종 FAILED/DLQ를 반영한다.
+이미 terminal인 Job은 덮어쓰지 않고 삭제된 Job은 404 확인 후 message만 정리한다.
+payload 변조/다른 Job 식별자 불일치로 정상 Job을 FAILED로 바꾸지 않으며, 해당 message의 DLQ 격리와 정제된 운영 오류로 다룬다.
+
+### 6.3. Queue 설정 후보와 활성화 관문
+
+아래 수치는 **설계·실증 후보**이며 실제 OCI에 적용하거나 실증한 값이 아니다.
+공식 계약은 [Queue 개요](https://docs.oracle.com/en-us/iaas/Content/queue/overview.htm),
+[consume/visibility](https://docs.oracle.com/en-us/iaas/Content/queue/consume-messages.htm),
+[DLQ](https://docs.oracle.com/en-us/iaas/Content/queue/deadletterqueues.htm)를 2026-10-28 확인했다.
+
+| 항목 | 후보/확정 조건 |
+| --- | --- |
+| 큐/소비 | 전용 Queue 한 개와 내장 DLQ. `GetMessages limit=1`, long poll 30초, 분석 동시 1개 |
+| retention/재전달 | retention 24시간, 최대 delivery 5회로 실증 시작. DLQ 이동·보관도 실제 설정/동작을 확인 |
+| visibility | 180초, 30초마다 연장, 연장 확인 안전 여유 30초. 네트워크·API 지연과 강제 종료 측정 후 고정 |
+| worker | #310의 CPU 1·RAM 256MiB/swap 0·PID 32·tmpfs 64MiB·120초·최대 1시간/4MiB를 출발점으로 같은 digest 검증 |
+| stale 판정 | 가장 늦은 enqueue 가능 시각 + 실제 Queue retention + 시계/서비스/관측 지연 여유. 근거 확정 전 자동 FAILED 비활성 |
+
+socket/RPC의 유한 기한, 이미 발송된 Put의 지연 반영 가능성, 실제 retention을 함께 확인해야 한다.
+local timeout이나 Job.createdAt에 임의의 짧은 상수를 더해 전달 종료를 단정하지 않는다.
+전달 확인된 QUEUED의 retention 종료·중단된 RUNNING도 범위를 정해 회수하며 DB retry queue는 추가하지 않는다.
+운영 Queue/IAM·token/host 설치·배포는 각각 구체적인 별도 승인 후 진행한다. Terraform Plan은 secret 없이 준비할 수 있다.
+
+실제 입력의 확보·서버 분석 허용 범위와 함께 **Queue 대기·재전달·VM 재시작 뒤에도 같은 허용 입력을
+pipe/tmpfs로 다시 공급할 방법**을 source 계약에서 확정해야 한다. host/volume/R2에 원본을 보관해 우회하지 않는다.
+이 관문 전에는 합성 WAV만 사용하고 생성 API의 운영 진입점을 열지 않는다.
+수용 검증과 PR 순서는 [ROADMAP §2.1/§3](ROADMAP.md#21-p08-착수-계획)이 소유한다.
+
 ## 7. Audio Editor
 
 ```text
@@ -417,7 +544,7 @@ server DTO는 Query, 편집 draft는 RHF, 선택/zoom/loop/drag preview는 local
 | 선택                                       | 남는 한계 / 확인 사항                                                                                             |
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
 | OCI Queue + 작은 VM runner + 일회성 worker | Queue의 전달/재시도 기능을 사용하고 동시 분석은 하나로 제한한다. 같은 host의 자원 경쟁과 전달/DB 경계를 검증한다. |
-| YouTube → 파형 JSON                        | iframe은 PCM을 제공하지 않는다. yt-dlp 성공·동일 영상의 시간축·이용 허용을 실제 입력으로 확인한다.                |
+| 허용된 입력 → 파형 JSON                    | 서버 분석 이용 범위·재공급 경로와 참조 영상의 offset/drift를 확인한다. YouTube 추출은 현행 Domain에서 금지다. |
 | 단일 프로세스 limiter와 MFA version        | 재시작 시 limiter 상태는 사라지고 세션별 회수는 없다. 복제 운영 시에만 분산 저장을 재검토한다.                    |
 | 모드별 guide + 불변 snapshot/공개 기록     | 기존 writer 연결·원자적 호환 비용이 있다. 새 관리자 편집과 일반 사용자 검토 workflow는 후속이다.                 |
 | 공유 DB·별도 앱                            | 같은 host/DB까지 격리되지는 않는다. pool 합계와 한쪽 rollback을 검증하고 DB role 세분화는 후속으로 둔다.          |

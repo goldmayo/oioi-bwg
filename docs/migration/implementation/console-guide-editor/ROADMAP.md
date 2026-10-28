@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-28"
-revision: 27
+revision: 28
 ---
 
 # 구현 순서와 PR 단위
@@ -77,20 +77,27 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 근거·현재 실행 경계는 [기술 검토](AUDIO-FEASIBILITY.md#1-필요한-도구만-사용), 계약은 Domain §20.3이 소유한다.
 Rust fmt/unit/Clippy·ARM64 실행 검증을 CI 필수 gate에 연결하며 운영 source/Queue/배포 관문은 유지한다.
 
-남은 PR은 다음 순서로 병합한다. 각 선행의 수용 근거를 확인한 뒤 다음 실행 경로를 활성화한다.
+**2026-10-28 OCI Queue 설계 추가:** 사용자 선택으로 OCI Queue와 제한 Unix socket 경계를 유지한다.
+enqueue/consume을 맡는 같은 VM Runner와 Rust 분석기의 책임, 내부 API/완료 전달, Queue 설정 후보는
+[설계 §6.2](DESIGN.md#62-oci-queue-연결과-완료-전달-계약)와 [§6.3](DESIGN.md#63-queue-설정-후보와-활성화-관문)이 소유한다.
+기준은 fetch한 `origin/migration_main@f8a59be59cc4e16fdc6719f7f3f6ccac448fa4c1`이다.
+0011/0012·공통 알림과 Job 저장 기반은 운영 반영됐고 운영 Chrome OS 수신은 사용자 확인 상태다.
+아래 2026-10-27의 구현 부재/Firebase 준비 관찰은 당시 기록으로 보존하며 재구현 지시로 사용하지 않는다.
 
-1. **분석 toolchain:** 자체 생성한 합성 WAV만 사용해 ARM64 CLI와 제한된 container 실행을 검증한다.
-   외부 추출기를 넣지 않고 `WAV stdin → ffmpeg mono 24kHz PCM pipe → BBC JSON`을 확인한다.
-   분석 fragment에는 source를 꾸며 넣지 않으며 기존 DTO 조합·검증은 향후 인증된 adapter가 소유한다.
-2. **source 확인·생성/enqueue API:** 실제 입력의 확보 경로·서버 분석/변환 허용 범위·기간과 근거를 확인한다.
-   정식 구매만으로 서버 분석 권한을 추정하지 않는다. YouTube 경로는 §20.2의 명시적 정책 개정과 권한 확인 전 금지다.
-   허용 입력 전달 경로와 기존 videoId 참조의 대응을 확정한 뒤 ADMIN/MFA 생성·내부 API·Unix socket enqueue를 연결한다.
-3. **Runner/Queue 소비·복구:** 고정 payload/이미지, 단일 worker, visibility·재전달·DLQ·재시작과
-   결과 commit 후 delete 실패를 다룬다. 불확실 enqueue는 QUEUED 유지, null enqueuedAt은 미전달 증거가 아니다.
-   stale 기한은 실제 retention과 여유로 확정한다. 운영 리소스/IAM 적용은 별도 승인 범위다.
-4. **기존 알림 연결·통합 수용·Promotion:** 기존 acceptWaveformResult/dispatcher를 사용하고 재구현하지 않는다.
-   실제 OCI·허용 source의 3개 anchor/offset/drift·실기기 결과를 mock/합성 검사와 구분한다.
-   DB 변경·credential 사용·배포는 각각 구체적인 별도 승인 후 수행한다. P09/P10과 badge는 포함하지 않는다.
+이 설계 단위는 문서만 변경한다. [Rust 분석 도구 #310](https://github.com/goldmayo/oioi-bwg/pull/310)의
+합성 입력 실측과 실제 OCI 실증을 구분하며 새 OCI 호출·리소스/IAM·DB·배포는 실행하지 않는다.
+후속 병합 순서는 다음과 같으며 각 구현 PR을 20파일/400줄 목표의 독립 검증 단위로 추가 분할할 수 있다.
+
+| 순서 | PR 관심사와 선행 조건 | 완료 근거 |
+| --- | --- | --- |
+| 1 | #310 분석 도구 → #311 OCI Queue 설계 → #312 내부 상태/완료 API | #310은 squash 병합 완료. #311은 해당 base를 반영하고 WORK/ROADMAP의 Rust 선택·통신 설계를 함께 보존 |
+| 2 | source 공급 계약·생성/내부 API·socket enqueue | 허용 근거·재공급 계약, 기존 PG 동시성/terminal 재사용, 응답 불확실성 계약. 운영 생성 진입점은 비활성 유지 |
+| 3 | Go 공식 SDK Runner·Queue 소비/복구·고정 Rust 실행 | ARM64 로컬 fault 검증과 비밀 없는 Terraform Plan. 운영 credential·OCI/IAM·host 적용은 별도 승인 |
+| 4 | 기존 알림 producer 연결·통합 수용·별도 Promotion | 실제 OCI/허용 입력/offset·drift/실기기 증거와 기존 metadata 차단. P09/P10·badge는 제외 |
+
+source 정책 확인 전에도 합성 입력용 통신/복구 계약과 로컬 구현·검증은 진행할 수 있다.
+운영 source·생성 경로 활성화는 이용 범위와 Queue 대기/재시작/재전달 뒤 입력 재공급 경로를 확인한 뒤에만 진행한다.
+
 
 **2026-10-27 추가:** 사용자의 P08 계획 구체화 요청을 반영한다. 기준은 fetch한
 `origin/migration_main@8f371d40d1809165167a524456b990c7b0f319b9`이며, 해당 source의
@@ -244,6 +251,17 @@ swap 가능성과 memory 한도 포함 조건도 확인한다. 이 문서의 공
 완료 시점의 최종 결과 소유 문서에 두고 현재 다음 행동은 WORK에서만 갱신한다.
 
 ## 3. 검증과 전환 조건
+
+**2026-10-28 OCI Queue 설계의 검증 분리:** 다음 항목은 아직 실행하지 않은 후속 수용 기준이다.
+mock·로컬 container의 합격을 실제 Queue/IAM/VM·실기기 합격으로 바꾸어 보고하지 않는다.
+
+| 단계 | 필수 실패 주입/검증 | 실제 OCI·운영에서 추가 확인 |
+| --- | --- | --- |
+| 요청/접수 | 같은 song/video 동시 요청·연속 클릭·응답 유실 재요청, 요청자별 유일 등록, 새 Job만 Put 호출 | 실제 SDK Put 성공 뒤 socket/내부 기록 응답 유실, null enqueuedAt 상태의 정상 consume |
+| 시작/소유권 | start 응답 유실·지연, 이전 컨테이너 정리, 이전 attempt 결과 거절, 단일 Runner 기동 | 실제 receipt/visibility 연장·상실·재전달 및 SDK 인증 갱신. 상실 시 worker 중단 |
+| 결과/삭제 | commit 전 실패·commit 응답 유실·중복 terminal·Queue delete 실패, 재생성 실패의 이전 JSON/Cue 보존 | 실제 delete 실패 뒤 terminal 메시지 재전달·정리, FCM 장애 중 결과/내역 보존 |
+| 복구/격리 | Runner/worker SIGTERM·SIGKILL·재시작, 고정 payload/이미지·출력 상한, 음원/프로세스 비잔존 | VM/Docker 재시작·잔존 컨테이너 회수, DLQ→최종 실패, 실제 retention과 stale 여유, socket/token/metadata/DB 차단 |
+| source/자원 | 합성 입력·전체 timeout·3개 anchor, Runner idle/long poll/실행 중 CPU/RSS | 허용 입력의 재공급·실제 영상 offset/drift, VM에서 Web/Console 자원 경쟁과 분석 동시 1개 |
 
 - P02 전에는 기존 type-check/harness/lint/FSD/unit/format과 필요한 build를 실행한다. 이후 root `pnpm verify`가 workspace별 검사·독립 앱 Steiger·repo 경계 harness·운영 테스트·format·두 앱 build를 실행한다.
 - schema 수정 → Drizzle migration 생성 → SQL 검토 → guarded local 적용 → 검증 순서를 지킨다. MFA replay·job 상태/멱등성·동시 저장은 local Docker PostgreSQL에서 확인하고 production 적용은 별도 실행 범위로 둔다.
