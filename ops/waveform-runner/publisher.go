@@ -65,7 +65,7 @@ func newPublisher(id, host string, provider common.ConfigurationProvider) (*Publ
 	client.HTTPClient = &http.Client{
 		Timeout:       publishDeadline,
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
-		Transport: boundedTransport{&http.Transport{
+		Transport: boundedTransport{base: &http.Transport{
 			DialContext:            (&net.Dialer{Timeout: publishDeadline}).DialContext,
 			TLSClientConfig:        &tls.Config{MinVersion: tls.VersionTLS12},
 			TLSHandshakeTimeout:    publishDeadline,
@@ -115,12 +115,18 @@ func (d publishDispatcher) Do(request *http.Request) (*http.Response, error) {
 }
 
 // SDK가 decode하기 전에 bytes를 제한한다. Queue HTTP에는 proxy env와 redirect를 쓰지 않는다.
-type boundedTransport struct{ base *http.Transport }
+type boundedTransport struct {
+	base           *http.Transport
+	allowNoContent bool
+}
 
 func (t boundedTransport) RoundTrip(request *http.Request) (*http.Response, error) {
 	response, err := t.base.RoundTrip(request)
 	if err != nil {
 		return nil, err
+	}
+	if t.allowNoContent && response.StatusCode == http.StatusNoContent {
+		return response, nil
 	}
 	mediaType, _, parseErr := mime.ParseMediaType(response.Header.Get("Content-Type"))
 	if parseErr != nil || mediaType != "application/json" || response.Header.Get("Content-Encoding") != "" {
