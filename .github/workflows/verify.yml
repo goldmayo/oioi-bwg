@@ -128,6 +128,10 @@ jobs:
           image=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check)
           python3 tests/ops/waveform-smoke.py "$image"
           python3 tests/ops/waveform-acquisition.py "$image"
+      - name: Verify Go Runner Queue publisher on ARM64
+        run: |
+          docker buildx build --platform linux/arm64 --provenance=false --load \
+            -t oioi-bwg:runner-check -f ops/waveform-runner/Dockerfile ops/waveform-runner
 
   postgres_integration:
     needs: changes
