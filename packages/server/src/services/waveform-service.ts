@@ -85,14 +85,19 @@ export async function recordWaveformEnqueued(input: WaveformEnqueuedInput) {
     );
   });
 }
-/** 아직 HTTP 생성 경로를 공개하지 않는다. 승인된 source/Runner 관문을 통과한 adapter만 호출한다. */
-export async function requestWaveformJob(ctx: RequestContext, songId: string) {
+/** 보호된 운영 설정의 승인 목록을 Song 잠금 안에서 검사한다. 사용자 입력으로 목록을 받지 않는다. */
+export async function requestWaveformJob(
+  ctx: RequestContext,
+  songId: string,
+  allowedVideoIds: readonly string[],
+) {
   const accountId = admin(ctx);
   return getDatabase().transaction(async (tx) => {
     const song = await lockWaveformSong(tx, songId);
     if (!song) throw new AppError("SONG_NOT_FOUND");
     if (!song.youtubeId || !/^[A-Za-z0-9_-]{11}$/.test(song.youtubeId))
       throw new AppError("WAVEFORM_SOURCE_INVALID");
+    if (!allowedVideoIds.includes(song.youtubeId)) throw new AppError("FORBIDDEN");
     const existing = await findActiveWaveformJob(tx, songId, song.youtubeId);
     const job = existing ?? (await insertWaveformJob(tx, songId, song.youtubeId));
     // Song → Job → requester 순서를 terminal 경로와 통일한다.
@@ -135,6 +140,13 @@ export async function completeWaveformJob(input: WaveformTerminal) {
       applied,
     });
     if (job.status === "SUCCEEDED" || job.status === "FAILED" || job.attemptId !== input.attemptId)
+      return ack(false);
+    // 미전달 확정은 미시작 Job에만 적용한다. null 자체를 미전달의 근거로 삼지 않는다.
+    if (
+      input.status === "FAILED" &&
+      input.errorCode === "ENQUEUE_FAILED" &&
+      (job.status !== "QUEUED" || job.attemptId !== null || job.enqueuedAt !== null)
+    )
       return ack(false);
     let status = input.status;
     let errorCode = input.status === "FAILED" ? input.errorCode : null;

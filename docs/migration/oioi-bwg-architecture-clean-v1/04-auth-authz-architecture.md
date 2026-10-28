@@ -1,10 +1,10 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.10"
+version: "1.11"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-28"
+updated_at: "2026-10-29"
 depends_on:
   - "01"
   - "03"
@@ -21,7 +21,7 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.10
+# oioi-bwg Authentication / Authorization Architecture v1.11
 
 ## 1. 목적
 
@@ -263,6 +263,15 @@ started=false는 실행 허가나 Queue 삭제 근거가 아니다. receipt 소�
 토큰은 Runner/Console만 보유하고 분석기·Web·client·Queue에 전달하지 않는다. runtime secret 공급은 11 §14를 따른다.
 이번 단위는 기본 비활성 코드만 추가한다. 운영 토큰 주입·Caddy `/api/internal/*` 공개 차단·loopback 전용 호출과
 인가/격리 실증을 준비한 별도 승인·배포 전에는 활성화하지 않는다. 공개 생성·socket enqueue·OCI 권한을 이 인증에 암묵적으로 추가하지 않는다.
+
+2026-10-29 생성 경로 개정: `POST /api/admin/waveform-jobs`는 별도
+`CONSOLE_WAVEFORM_GENERATION_ENABLED=true`와 위 Runner flag가 모두 있어야 평가한다.
+기존 ADMIN/MFA·Origin과 strict `{songId}`를 검사하고, 보호된
+`CONSOLE_WAVEFORM_ALLOWED_VIDEO_IDS`의 쉼표 구분 videoId 목록을 Song 잠금 안에서 대조한다.
+목록 누락·형식 오류는 빈 목록으로 거절한다. 목록 등록은 Domain §20.2의 실제 이용 범위 확인을 전제로 하며
+HTTP 입력으로 승인 목록을 받지 않는다. 활성 Job은 요청자만 추가하고 새 Job만 고정 socket에 전달한다.
+기본 비활성 구현은 운영 활성화 승인이 아니다. [runtime §14](11-content-i18n-assets-runtime-architecture.md#14-secret)의
+socket 예외와 [배포 §21](12-deployment-migration-runbook.md#21-cicd)의 관문을 함께 따른다.
 
 ---
 

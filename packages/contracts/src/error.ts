@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const appErrorCodeSchema = z.enum([
+  "ENQUEUE_FAILED",
   "NOTIFICATION_NOT_FOUND",
   "WAVEFORM_JOB_NOT_FOUND",
   "WAVEFORM_SOURCE_INVALID",
