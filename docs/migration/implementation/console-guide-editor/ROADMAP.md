@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-28"
-revision: 32
+updated_at: "2026-10-29"
+revision: 33
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-29 실제 Plan 확인:** 사용자가 공유한 Job 구성소스는 `migration_main@938e52aa8abe34b8f2202b2b70cf40707b2fc4fb`다. Queue/IAM 두 개 생성과 기존 Logging의 `time_type="string"` 추가로 2 add/1 change/0 destroy였으며 Apply는 보류했다. API의 현재 parser는 `time-type=null`이고 UTC time-format은 코드와 같았다. 이 명시값만 제거하는 별도 수정과 합성 provider Plan으로 반복 차이를 검증하며, 실제 재Plan에서 Logging 무변경·2 create 확인 후 별도 Apply 승인이 필요하다. 운영 절차는 [infra 안내](../../../../infra/oci/README.md#logging-parser-반복-차이-2026-10-29)가 소유한다.
 
 **2026-10-28 후속 준비:** #313(`a1f80b24bafb0de00945d1596940081fbf8cb28d`) → #314(`b9722039130a7128941306940967965c7a29e050`)를 최신 head의 CI 통과 후 squash 병합했다. #315에서 두 선행 문서를 보존해 통합한다. 전용 Secret 생성은 사용자 보고이며 값·OCI 상태는 조회하지 않았다. Stack 변수는 Plan 전에 입력하고 실제 Plan/Apply·VM 설치·worker 게시/Promotion 수용은 별도다.
 

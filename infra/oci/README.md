@@ -142,6 +142,17 @@ node tests/ops/waveform-infra-plan.mjs
 기본 무변경·활성 시 Queue/policy 생성·설정·정확한 IAM statement·Secret 누락/재사용/형식 오류·삭제/재생성 보호를 확인한다.
 컨테이너와 임시 key/plan/state를 정리한다. 실제 Resource Manager Plan·IAM 허용·Queue 재전달/DLQ 실증의 대체 근거가 아니다.
 
+### Logging parser 반복 차이 (2026-10-29)
+
+사용자가 공유한 실제 Plan(`migration_main@938e52aa8abe34b8f2202b2b70cf40707b2fc4fb`)은
+Queue/policy 두 개 생성 외에 기존 Logging parser의 `time_type="string"` 추가를 포함했다.
+별도 읽기 전용 API 조회에서는 `time-type=null`이고 기존 UTC `time-format`·time key·keep flag는 유지됐다.
+provider 8.29.0의 `time_type`은 optional/computed다. 명시값을 제거해 API의 현재 값을 보존하며
+`ignore_changes`로 Logging 전체나 시간 형식의 차이를 숨기지 않는다. API가 null을 반환하는 원인은 확정하지 않았다.
+
+이전 저장 Plan은 Apply하지 않는다. 수정 코드 병합 뒤 새 Plan에서 **2 add / 0 change / 0 destroy**와
+기존 Logging 무변경을 확인한 뒤 별도 승인으로 그 Plan을 적용한다. 합성 state의 offline 검증은 실제 OCI 재Plan·로그 수신 수용을 대신하지 않는다.
+
 ## IAM boundary
 
 Compute dynamic group은 유지한다. 해당 instance는 다음 책임만 가진다.
