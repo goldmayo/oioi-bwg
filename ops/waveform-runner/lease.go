@@ -78,7 +78,14 @@ func watchVisibility(ctx context.Context, cancel context.CancelCauseFunc, finish
 		case <-ctx.Done():
 			running = false
 		case <-finished:
-			if time.Now().Before(until) {
+			now := time.Now()
+			renewalExpired := false
+			if pending != nil {
+				deadline, _ := rpc.Deadline()
+				renewalExpired = rpc.Err() != nil || !now.Before(deadline)
+			}
+			// select가 완료를 먼저 골라도 이미 도달한 연장 기한을 우선한다.
+			if now.Before(until) && !renewalExpired {
 				cancel(errLeaseFinished)
 			} else {
 				cancel(ErrLeaseLost)
@@ -98,7 +105,7 @@ func watchVisibility(ctx context.Context, cancel context.CancelCauseFunc, finish
 					running = false
 					continue
 				}
-				rpc, stop = context.WithTimeout(ctx, publishDeadline)
+				rpc, stop = context.WithDeadline(ctx, started.Add(publishDeadline))
 				timeout = rpc.Done()
 				result := make(chan renewal, 1)
 				pending = result

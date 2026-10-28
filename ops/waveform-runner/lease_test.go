@@ -310,3 +310,40 @@ func TestLeaseCompletionDrainsRenewal(t *testing.T) {
 		}
 	})
 }
+
+func TestLeaseCompletionAtRenewalDeadline(t *testing.T) {
+	for _, offset := range []time.Duration{-time.Nanosecond, 0, time.Nanosecond} {
+		t.Run(offset.String(), func(t *testing.T) {
+			unexpected := 0
+			for range 200 {
+				synctest.Test(t, func(t *testing.T) {
+					c := &Consumer{}
+					calls := 0
+					var child context.Context
+					err := c.withLease(context.Background(), leaseDelivery(c), func(ctx context.Context) error {
+						child = ctx
+						time.Sleep(32*time.Second + offset)
+						return nil
+					}, func(ctx context.Context, _ *Delivery) (time.Time, error) {
+						calls++
+						<-ctx.Done()
+						return time.Time{}, ctx.Err()
+					})
+					want, cause := ErrLeaseLost, ErrLeaseLost
+					if offset < 0 {
+						want, cause = nil, errLeaseFinished
+					}
+					if err != want || context.Cause(child) != cause {
+						unexpected++
+					}
+					if calls != 1 || c.activity.Load() != consumerIdle {
+						t.Fatal("renewal/slot cleanup changed at completion boundary")
+					}
+				})
+			}
+			if unexpected != 0 {
+				t.Fatalf("wrong lease result at completion/renewal boundary: %d/200", unexpected)
+			}
+		})
+	}
+}
