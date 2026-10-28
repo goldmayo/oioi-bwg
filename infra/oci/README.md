@@ -150,8 +150,16 @@ Queue/policy 두 개 생성 외에 기존 Logging parser의 `time_type="string"`
 provider 8.29.0의 `time_type`은 optional/computed다. 명시값을 제거해 API의 현재 값을 보존하며
 `ignore_changes`로 Logging 전체나 시간 형식의 차이를 숨기지 않는다. API가 null을 반환하는 원인은 확정하지 않았다.
 
-이전 저장 Plan은 Apply하지 않는다. 수정 코드 병합 뒤 새 Plan에서 **2 add / 0 change / 0 destroy**와
-기존 Logging 무변경을 확인한 뒤 별도 승인으로 그 Plan을 적용한다. 합성 state의 offline 검증은 실제 OCI 재Plan·로그 수신 수용을 대신하지 않는다.
+**같은 날 시간대 재검토:** 과거 9시간 차이를 수정한 [#101](https://github.com/goldmayo/oioi-bwg/pull/101)의
+`%NZ` → `%N%z`는 유지된다. P08 착수 기준부터 `938e52aa...`까지 이 Logging 파일의 변경은 없다.
+명시적 `time_type` 제거 후보 [#316](https://github.com/goldmayo/oioi-bwg/pull/316)은 Draft로 보류한다.
+합성 로그의 upstream Fluentd 1.16.3 비교에서 UTC/KST 모두 기존·후보는 같은 시각과 나노초를 보존했고,
+예전 literal `Z`만 KST에서 9시간 어긋났다. 이는 OCI 에이전트의 실제 버전·생성 설정·수신 시각 검증은 아니다.
+API `null`이나 Terraform 무변경만으로 실제 파싱 동등성을 확정하지 않는다. 상세 재현 근거는 #316에 둔다.
+
+이전 저장 Plan은 Apply하지 않는다. 실제 에이전트의 문자열 시간 파싱·`%z`와 수신 시각 보존을 확인해
+후보의 병합 여부를 판단한다. 이후 새 Plan에서 **2 add / 0 change / 0 destroy**와 기존 Logging 무변경을
+확인한 뒤 별도 승인으로 그 Plan을 적용한다. 합성 state의 offline 검증은 실제 OCI 재Plan·로그 수신 수용을 대신하지 않는다.
 
 ## IAM boundary
 
