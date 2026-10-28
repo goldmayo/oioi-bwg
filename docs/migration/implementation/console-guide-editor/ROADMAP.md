@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-28"
-revision: 29
+revision: 30
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,11 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-28 선행 통합 후 착수:** #310 → #311 → #312 순서로 squash 병합했다.
+다음 독립 단위는 전달 확인 기록과 조건부 start 내부 API다. 최초 전달 확인 불변·null 상태 소비,
+동시/지연 start의 expectedAttemptId 비교와 이전 결과 무시를 실제 로컬 PG에서 검증한다.
+공개 생성/enqueue·socket/Go Runner·실제 Queue visibility/DLQ 수용과 운영 활성화는 여전히 후속이다.
 
 **2026-10-28 내부 API 구현 분리:** 승인한 [OCI Queue 설계 #311](https://github.com/goldmayo/oioi-bwg/pull/311)에 따라
 첫 통신 PR은 Runner 상태 조회·완료 콜백과 최소 DTO/ACK만 추가한다. 기존 저장·알림 transaction을 재사용하며
