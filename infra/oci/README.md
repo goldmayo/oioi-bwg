@@ -106,6 +106,20 @@ Queue의 `prevent_destroy`가 삭제·retention 변경에 따른 재생성을 �
 5. Runner 설치·systemd/socket·token materialization·Caddy 내부 경로 차단·기존 Web/Console IMDS 차단 회귀는
    후속 승인·배포 단위다. 현재 코드만 병합하거나 인프라만 생성해 runtime을 활성화하지 않는다.
 
+Runner Secret 생성 시 이름은 **`oioi-bwg-waveform-runner-token`**을 사용한다. 이름은 식별용이며 인증에는 내용이 쓰인다.
+본인 로컬 터미널에서 다음 명령으로 생성한 **64자리 소문자 hex 문자열 자체**를 사용한다. 이 문서의 준비 작업에서는 실제 값을 생성·출력하지 않는다.
+
+```sh
+openssl rand -hex 32
+```
+
+기존 Vault와 해당 Vault의 symmetric Key를 선택하고 **Manual secret generation → Plain-text**로 공백·개행 없이 입력한다.
+Console이 전송할 때 base64로 인코딩하므로 직접 base64로 바꾸거나 hex를 binary로 decode하지 않는다.
+생성된 Secret OCID만 Stack의 `waveform_runner_secret_ocid`에, Queue 생성 Plan을 검토할 때 `waveform_queue_enabled=true`를 넣는다.
+값은 Runner와 Console 내부 API의 전용 인증에 사용하며 Web/Auth/MFA/FCM Secret을 재사용하지 않는다.
+원문을 채팅·저장소·Stack 변수에 넣지 않는다. 아직 token materialization/Runner 설치·공개 경로 차단 수용 전이므로 runtime flag는 비활성으로 유지한다.
+근거: [OpenSSL rand](https://docs.openssl.org/3.5/man1/openssl-rand/), [OCI Secret 생성](https://docs.oracle.com/en-us/iaas/Content/secret-management/Tasks/create-secret.htm).
+
 설정은 [DESIGN §6.3](../../docs/migration/implementation/console-guide-editor/DESIGN.md#63-queue-설정-후보와-활성화-관문)의
 실증 후보인 retention 86400초·delivery 5회·visibility 180초·poll 30초다. 별도 DLQ 리소스 없이 Queue 내장 DLQ를 사용한다.
 [retention은 생성 후 변경할 수 없으므로](https://docs.oracle.com/en-us/iaas/Content/queue/queue-create.htm) Apply 전 확인한다.

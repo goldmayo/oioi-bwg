@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { waveformDataSchema, waveformTerminalAckSchema } from "./waveform";
+import { waveformDataSchema, waveformTerminalAckSchema, waveformStartAckSchema } from "./waveform";
 const valid = {
   durationMs: 40,
   bucketSizeMs: 20,
@@ -39,4 +39,24 @@ it("반영 완료 ACK는 terminal이어야 하며 이전 attempt 무시는 RUNNI
   expect(
     waveformTerminalAckSchema.safeParse({ ...ack, applied: true, status: "FAILED" }).success,
   ).toBe(true);
+});
+
+it("시작 허가는 RUNNING과 유효한 attempt를 함께 반환해야 한다", () => {
+  const snapshot = {
+    id: "019a0170-0000-7000-8000-000000000001",
+    songId: "019a0170-0000-7000-8000-000000000001",
+    videoId: "abcdefghijk",
+    status: "RUNNING",
+    attemptId: null,
+    enqueuedAt: null,
+    started: true,
+  };
+  expect(waveformStartAckSchema.safeParse(snapshot).success).toBe(false);
+  expect(waveformStartAckSchema.safeParse({ ...snapshot, attemptId: snapshot.id }).success).toBe(
+    true,
+  );
+  expect(
+    waveformStartAckSchema.safeParse({ ...snapshot, attemptId: snapshot.id, status: "FAILED" })
+      .success,
+  ).toBe(false);
 });
