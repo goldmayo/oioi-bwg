@@ -50,8 +50,9 @@ jobs:
         run: |
           terraform version
           terraform -chdir=infra/oci fmt -check -diff
-          terraform -chdir=infra/oci init -backend=false
+          terraform -chdir=infra/oci init -backend=false -lockfile=readonly
           terraform -chdir=infra/oci validate
+          node tests/ops/waveform-infra-plan.mjs
 
   quality:
     needs: changes
