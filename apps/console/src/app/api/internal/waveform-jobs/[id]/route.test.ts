@@ -2,17 +2,23 @@ import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => ({
   get: vi.fn(),
+  enqueued: vi.fn(),
+  start: vi.fn(),
   complete: vi.fn(),
   wake: vi.fn(),
   report: vi.fn(),
 }));
 vi.mock("@oioi-bwg/server/services/waveform-service", () => ({
   getRunnerWaveformJob: mock.get,
+  recordWaveformEnqueued: mock.enqueued,
+  startWaveformJob: mock.start,
   completeWaveformJob: mock.complete,
 }));
 vi.mock("@/server/notifications/dispatcher", () => ({ wakeNotificationDispatcher: mock.wake }));
 vi.mock("@/server/observability/server-error-reporter", () => ({ reportServerError: mock.report }));
+import { POST as enqueue } from "./enqueued/route";
 import { GET } from "./route";
+import { POST as start } from "./start/route";
 import { POST } from "./terminal/route";
 const id = "019a0170-0000-7000-8000-000000000001";
 const syntheticToken = "a".repeat(64);
@@ -153,3 +159,50 @@ it("저장 실패는 오류 계약으로 응답하고 알림을 깨우지 않는
   });
   expect(mock.wake).not.toHaveBeenCalled();
 });
+
+it.each([
+  {
+    post: enqueue,
+    input: { jobId: id, songId: id, videoId: "abcdefghijk", enqueuedAt: "2026-10-28T00:00:00Z" },
+    service: mock.enqueued,
+  },
+  {
+    post: start,
+    input: { jobId: id, songId: id, videoId: "abcdefghijk", expectedAttemptId: null },
+    service: mock.start,
+  },
+])(
+  "상태 변경도 인증·식별자·실행 설정·1KiB를 검사하고 현재 DTO를 반환한다: $input",
+  async ({ post, input, service }) => {
+    const req = request(JSON.stringify(input), { authorization: "" });
+    const reader = vi.spyOn(req.body!, "getReader");
+    expect((await post(req, context)).status).toBe(401);
+    expect(reader).not.toHaveBeenCalled();
+    vi.stubEnv("CONSOLE_WAVEFORM_RUNNER_ENABLED", undefined);
+    expect((await post(request(JSON.stringify(input)), context)).status).toBe(403);
+    vi.stubEnv("CONSOLE_WAVEFORM_RUNNER_ENABLED", "true");
+    for (const invalid of [
+      {},
+      { ...input, jobId: "019a0170-0000-7000-8000-000000000002" },
+      { ...input, command: "arbitrary" },
+    ])
+      expect((await post(request(JSON.stringify(invalid)), context)).status).toBe(400);
+    expect((await post(request(JSON.stringify({ text: "x".repeat(1024) })), context)).status).toBe(
+      413,
+    );
+    expect(service).not.toHaveBeenCalled();
+    const snapshot = { ...(await mock.get()), started: false };
+    service.mockResolvedValueOnce(snapshot);
+    const response = await post(request(JSON.stringify(input)), context);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ id, status: "QUEUED", attemptId: null });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(service).toHaveBeenCalledWith(input);
+    service.mockRejectedValueOnce(new AppError("WAVEFORM_SOURCE_INVALID"));
+    expect((await post(request(JSON.stringify(input)), context)).status).toBe(400);
+    service.mockRejectedValueOnce(new AppError("WAVEFORM_JOB_NOT_FOUND"));
+    expect((await post(request(JSON.stringify(input)), context)).status).toBe(404);
+    service.mockResolvedValueOnce({});
+    expect((await post(request(JSON.stringify(input)), context)).status).toBe(500);
+  },
+);

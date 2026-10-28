@@ -11,7 +11,7 @@ revision: 14
 
 # Console·다중 응원법·파형 편집기 최소 설계
 
-**2026-10-28 기준 P07은 운영 적용·배포 완료, P08은 Job/알림 저장 기반 운영 반영과 분석 도구 PR 제출 상태다.** P01~P07의 완료 결과와 P08~P10 실행 계획을 구분한다.
+**2026-10-28 기준 P07은 운영 적용·배포 완료다. P08의 Job/알림 저장 기반은 운영 반영됐고 Rust 분석기·내부 조회/완료 API는 migration_main에 통합했다. Queue/Runner는 후속 작업이다.** P01~P07의 완료 결과와 P08~P10 실행 계획을 구분한다.
 현재·보류 상태는 [WORK](../../../WORK.md)가 소유한다. 아래 Queue/runner/job/editor와 CheerGuide 모델은 현행 구현 완료를 뜻하지 않는다.
 
 초기 제안의 코드 근거는 [CURRENT-STATE](CURRENT-STATE.md), 파형 기술 근거는
@@ -403,8 +403,8 @@ OCI Notifications는 DLQ/Runner 장애 등 운영 알림 후보로 유지한다.
 ### 6.2. OCI Queue 연결과 완료 전달 계약
 
 2026-10-28 설계 기준은 fetch한 `origin/migration_main@f8a59be59cc4e16fdc6719f7f3f6ccac448fa4c1`이다.
-`waveform-service`의 request/start/complete와 Console `acceptWaveformResult`는 이미 있고,
-생성 HTTP·enqueue·Runner·내부 HTTP는 아직 없다. 아래 경로/DTO는 후속 구현 PR에서 Zod 계약과 함께 추가한다.
+해당 기준에서 `waveform-service`의 request/start/complete와 Console `acceptWaveformResult`는 이미 있었고,
+생성 HTTP·enqueue·Runner·내부 HTTP는 없었다. 후속 구현은 아래 날짜별 개정으로 구분한다.
 
 ```mermaid
 sequenceDiagram
@@ -462,11 +462,21 @@ Auth/MFA/FCM secret과 공유하지 않고 Runner/Console만 보유한다. heade
 | `GET /api/admin/waveform-jobs/{id}` | 기존 ADMIN/MFA 상태 조회 | 기존 DTO/API 재사용 |
 | `GET /api/internal/waveform-jobs/{id}` | Runner token, Job 대조·저장 확인 | id/songId/videoId/status/attemptId/enqueuedAt만 반환. DB row·credential은 노출하지 않음 |
 | `POST /api/internal/waveform-jobs/{id}/enqueued` | 세 식별자와 Runner의 Put 성공 확인 시각 | enqueuedAt을 멱등 기록. RUNNING/terminal을 QUEUED로 역전하지 않음 |
-| `POST /api/internal/waveform-jobs/{id}/start` | 세 식별자 대조, 이전 컨테이너 정리 후 start service | RUNNING과 새 attemptId 또는 현재 terminal 반환. 응답 불명확 시 분석을 시작하지 않고 먼저 상태 확인 |
+| `POST /api/internal/waveform-jobs/{id}/start` | 세 식별자·expectedAttemptId 대조, 이전 컨테이너 정리 후 start service | RUNNING과 새 attemptId 또는 현재 terminal 반환. 응답 불명확 시 분석을 시작하지 않고 먼저 상태 확인 |
 | `POST /api/internal/waveform-jobs/{id}/terminal` | 경로/body jobId 일치, 기존 WaveformTerminal | acceptWaveformResult 재사용. `{jobId,status,attemptId,applied}`로 현재 상태 확인. applied=false만으로 Queue delete 금지 |
 
-현재 start service는 attemptId를 만들고 complete service는 `{applied}`만 반환한다.
-내부 상태 projection·enqueuedAt 조건부 기록·terminal 응답 projection은 기존 service/repository를 좁게 확장할 후속이다.
+2026-10-28 후속 구현: #312의 상태/terminal ACK를 재사용하고 `/enqueued`·`/start`를 기본 비활성 상태로 추가한다.
+`/enqueued`는 Put 성공을 확인한 시각을 최초 한 번 기록한다. 늦은 호출도 RUNNING/terminal·attempt를 바꾸지 않는다.
+`/start`는 세 식별자와 required `expectedAttemptId`(최초 null, 재전달은 조회한 현재 값)를 받아 잠금 안에서 대조한다.
+동일·지연 요청은 새 attempt를 만들지 않고 현재 projection과 `started=false`를 반환한다. terminal도 재시작하지 않는다.
+현재 Song 참조가 바뀌거나 payload가 다른 Job을 가리키면 변경 없이 WAVEFORM_SOURCE_INVALID로 거절한다.
+시작 응답은 `{id,songId,videoId,status,attemptId,enqueuedAt,started}`이며 `started=true`인 RUNNING만 실행 허가다.
+응답 유실/started=false는 임의 실행·즉시 재enqueue·message 삭제 근거가 아니며 유효 receipt/이전 컨테이너 정리는 Runner에서 검증한다.
+이 CAS는 Queue visibility와 원자적이지 않다. source 불일치의 최종 회수는 후속 DLQ/복구 경로에서 검증한다.
+두 작은 입력은 1KiB·10초로 제한하며 동시 start·응답 유실 재호출·이전 attempt·source 변경을 로컬 PG로 검증한다.
+
+설계 작성 시점의 start service는 attemptId를 만들고 complete service는 `{applied}`만 반환했다.
+당시 내부 상태 projection·enqueuedAt 조건부 기록·terminal 응답 projection을 기존 service/repository의 좁은 확장으로 분리했다.
 상태 변경의 source 대조와 응답 projection도 같은 transaction에서 수행하고 새 테이블/migration으로 복제하지 않는다.
 start 응답 유실 때 무조건 start를 반복하지 않는다. 단일 Runner/유효 receipt에서 내부 조회로 시작 상태를 확인하고,
 확정할 수 없으면 분석을 시작하지 않은 채 Queue 재전달에 맡긴다. 이 경계의 지연 응답/재전달 경합도 수용 검증에 포함한다.

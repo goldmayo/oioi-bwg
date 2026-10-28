@@ -68,11 +68,26 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-28 후속 준비:** #313(`a1f80b24bafb0de00945d1596940081fbf8cb28d`) → #314(`b9722039130a7128941306940967965c7a29e050`)를 최신 head의 CI 통과 후 squash 병합했다. #315에서 두 선행 문서를 보존해 통합한다. 전용 Secret 생성은 사용자 보고이며 값·OCI 상태는 조회하지 않았다. Stack 변수는 Plan 전에 입력하고 실제 Plan/Apply·VM 설치·worker 게시/Promotion 수용은 별도다.
+
 **2026-10-28 acquisition 재설계:** #310→#311→#312는 병합됐다. #313(enqueuedAt/start) → #314(기본 비활성 Queue/IAM) → 공식 yt-dlp acquisition 순서로 통합하고 겹치는 WORK/이력은 보존한다.
 사용자 요청으로 입력 계약을 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)의 조건부 허용으로 개정한다. 구체적 권리·기간·입력 승인과 전용 egress 검증 전에는 외부 영상을 추출하지 않는다.
 [DESIGN §6.4](DESIGN.md#64-yt-dlp-acquisition-2026-10-28-개정)의 고정 CLI 이미지·Rust 제한·로컬 합성 검증을 먼저 분리한다. native Rust 추출기 자원 비교·실제 YouTube 성공은 확인하지 않았다.
 다음은 생성/socket enqueue → Go Runner/Queue 소비·복구 → 기존 알림 통합 수용 → 별도 Promotion이다. Queue를 수동 생성하지 않고 #314의 Resource Manager Plan에서 생성 여부·IAM diff를 검토한 뒤 별도 승인으로 Apply한다.
 Queue 생성만으로 Runner 설치가 끝나지 않는다. 고정 Runner·전용 egress·token/socket 배치와 VM 설치 절차의 후속 구현·별도 승인이 필요하다. 로컬 mock과 실제 OCI/VM/실기기 수용을 구분한다.
+
+**2026-10-28 배포 준비:** #313은 `a1f80b24bafb0de00945d1596940081fbf8cb28d`로 병합됐다. #314 → #315 순서로 최신 base와 검증을 반영한다. 사용자는 아직 OCI 작업 전이며 Secret/Plan/Apply·VM 설치·Promotion 완료로 간주하지 않는다.
+
+**2026-10-28 인프라 준비 분리:** 전달 확인/start [#313](https://github.com/goldmayo/oioi-bwg/pull/313) 뒤
+기본 비활성 Queue·제한 IAM·Runner Secret OCID 입력을 별도 PR로 통합한다. runtime 의존은 없으며 WORK 겹침은 최신 base에 맞춘다.
+revision 31은 #313의 30 다음 개정이다. 실제 적용 순서·허용 diff와 네트워크 없는 합성 provider Plan 검사는
+[기존 인프라 안내](../../../../infra/oci/README.md#p08-queuerunner-인증-준비-2026-10-28)가 소유한다.
+운영 Secret 생성·Resource Manager Plan/Apply·VM 설치/배포는 각각 별도 승인 전 실행하지 않는다.
+
+**2026-10-28 선행 통합 후 착수:** #310 → #311 → #312 순서로 squash 병합했다.
+다음 독립 단위는 전달 확인 기록과 조건부 start 내부 API다. 최초 전달 확인 불변·null 상태 소비,
+동시/지연 start의 expectedAttemptId 비교와 이전 결과 무시를 실제 로컬 PG에서 검증한다.
+공개 생성/enqueue·socket/Go Runner·실제 Queue visibility/DLQ 수용과 운영 활성화는 여전히 후속이다.
 
 **2026-10-28 내부 API 구현 분리:** 승인한 [OCI Queue 설계 #311](https://github.com/goldmayo/oioi-bwg/pull/311)에 따라
 첫 통신 PR은 Runner 상태 조회·완료 콜백과 최소 DTO/ACK만 추가한다. 기존 저장·알림 transaction을 재사용하며

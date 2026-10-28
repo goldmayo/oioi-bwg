@@ -1,7 +1,7 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.9"
+version: "1.10"
 status: "active"
 authority: "architecture"
 updated_at: "2026-10-28"
@@ -21,7 +21,7 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.9
+# oioi-bwg Authentication / Authorization Architecture v1.10
 
 ## 1. 목적
 
@@ -246,19 +246,23 @@ P06-E의 공개 가입 접수 중단은 Domain AUTH-001을 따른다. Web의 가
 ## 4.2. P08 Runner의 내부 상태 조회·결과 반영
 
 2026-10-28 P08 실행 연결의 첫 단위로 Console의 `GET /api/internal/waveform-jobs/{id}`와
-`POST /api/internal/waveform-jobs/{id}/terminal`에 한해 별도 service bearer 인증을 사용한다.
+`POST /api/internal/waveform-jobs/{id}/terminal`에 별도 service bearer 인증을 사용한다.
+2026-10-28 후속 개정은 같은 Job의 `/enqueued`·`/start` POST 두 개만 추가하며 아래 경계를 그대로 적용한다.
 사용자 생성/조회·알림 요청의 ADMIN/MFA와 분리하며 세션 cookie로 이 내부 권한을 얻지 않는다.
 `CONSOLE_WAVEFORM_RUNNER_ENABLED=true`일 때만 접근을 평가하고 기본은 403 비활성이다.
 비활성을 삭제된 Job의 `404/WAVEFORM_JOB_NOT_FOUND`와 구분하며 일반 404만으로 Queue message를 삭제하지 않는다.
 `CONSOLE_WAVEFORM_RUNNER_TOKEN`은 독립적인 32-byte random 값의 64자리 소문자 hex 표현이며,
 설정 누락·형식 오류·Console Auth secret 재사용은 fail closed한다. 비교는 고정 길이 constant-time이며 Origin 요청은 거절한다.
-인증 전에 본문을 읽거나 DB를 호출하지 않고, 인증 후에도 JSON body는 실제 4MiB·읽기 10초로 제한한다.
+인증 전에 본문을 읽거나 DB를 호출하지 않고, 인증 후에도 JSON body는 결과 4MiB·전달 확인/시작 1KiB, 읽기 10초로 제한한다.
 상태/실패 응답은 no-store이며 토큰·원문 본문을 관측 context에 전달하지 않는다.
 결과 반영은 기존 attempt/source 검사와 결과·terminal·알림 transaction을 재사용한다.
+전달 확인은 세 식별자를 대조하고 최초 enqueuedAt만 보존하며 상태·attempt를 바꾸지 않는다.
+시작은 세 식별자·현재 Song source와 expectedAttemptId를 잠금 안에서 검사하고 일치할 때만 새 attempt를 발급한다.
+started=false는 실행 허가나 Queue 삭제 근거가 아니다. receipt 소유권·이전 컨테이너 정리는 Runner 책임이며 이 API가 증명하지 않는다.
 
 토큰은 Runner/Console만 보유하고 분석기·Web·client·Queue에 전달하지 않는다. runtime secret 공급은 11 §14를 따른다.
 이번 단위는 기본 비활성 코드만 추가한다. 운영 토큰 주입·Caddy `/api/internal/*` 공개 차단·loopback 전용 호출과
-인가/격리 실증을 준비한 별도 승인·배포 전에는 활성화하지 않는다. 생성/enqueue·start·OCI 권한을 이 인증에 암묵적으로 추가하지 않는다.
+인가/격리 실증을 준비한 별도 승인·배포 전에는 활성화하지 않는다. 공개 생성·socket enqueue·OCI 권한을 이 인증에 암묵적으로 추가하지 않는다.
 
 ---
 
