@@ -1,12 +1,13 @@
-import { spawnSync } from "node:child_process";
 import { expect, it } from "vitest";
+import { verificationJobs, verificationPassed } from "../../scripts/verification-scope.mjs";
 
-it("파형 CLI가 입력 옵션과 URL을 실행 전에 거절한다", () => {
-  const result = spawnSync("python3", ["ops/waveform/analyze.py", "https://example.test/audio"], {
-    encoding: "utf8",
-    timeout: 5_000,
-  });
-  expect(result.status).toBe(1);
-  expect(result.stdout).toBe("");
-  expect(result.stderr).toBe("WAVEFORM_ANALYSIS_FAILED\n");
+it("Rust ARM64 검증 증거가 없으면 최종 verify를 통과시키지 않는다", () => {
+  const needs: Record<string, { result: string; outputs?: { docs_only: string } }> =
+    Object.fromEntries(verificationJobs.map((name) => [name, { result: "success" }]));
+  needs.changes = { result: "success", outputs: { docs_only: "false" } };
+  expect(verificationPassed(needs)).toBe(true);
+  delete needs.waveform;
+  expect(verificationPassed(needs)).toBe(false);
+  needs.waveform = { result: "failure" };
+  expect(verificationPassed(needs)).toBe(false);
 });

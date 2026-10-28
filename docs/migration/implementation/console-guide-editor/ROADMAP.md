@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-28"
-revision: 26
+revision: 27
 ---
 
 # 구현 순서와 PR 단위
@@ -72,6 +72,10 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 #302/#303의 Job/결과·요청자 알림 transaction, 조회/결과 화면과 #307의 0011/0012 운영 적용·공통 FCM을 재사용한다.
 운영 Chrome OS 수신도 사용자 확인을 마쳤다([후속 기록](../../../devlog/20261027-28-notifications.md)).
 아래 2026-10-27의 구현 부재 관찰과 당시 Firebase 준비 항목은 현재 미완료 목록이 아니다.
+
+**2026-10-28 언어 선택 추가:** 로컬 비교 후 사용자 선택으로 분석 worker를 Rust로 전환한다.
+근거·현재 실행 경계는 [기술 검토](AUDIO-FEASIBILITY.md#1-필요한-도구만-사용), 계약은 Domain §20.3이 소유한다.
+Rust fmt/unit/Clippy·ARM64 실행 검증을 CI 필수 gate에 연결하며 운영 source/Queue/배포 관문은 유지한다.
 
 남은 PR은 다음 순서로 병합한다. 각 선행의 수용 근거를 확인한 뒤 다음 실행 경로를 활성화한다.
 

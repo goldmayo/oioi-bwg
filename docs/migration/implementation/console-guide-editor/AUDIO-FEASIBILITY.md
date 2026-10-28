@@ -5,7 +5,7 @@ status: recorded
 observed_at: "2026-10-05"
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 updated_at: "2026-10-28"
-revision: 5
+revision: 6
 ---
 
 # 파형 JSON 생성 기술 검토
@@ -24,6 +24,13 @@ toolchain의 합성 anchor 검증은 resampling 검사이며 YouTube IFrame offs
 실행·자원 측정과 이미지 식별자는 해당 PR 본문에 기록한다. 향후 실행 관문은 [ROADMAP §2.1](ROADMAP.md#21-p08-착수-계획)이 소유한다.
 
 ## 1. 필요한 도구만 사용
+
+**2026-10-28 Rust 선택:** 동일 native CLI·ARM64·자원 한도의 Python/Go/Rust 로컬 비교 후
+사용자가 Rust를 선택했다. [Domain §20.3](../../DOMAIN_SPECIFICATION.md#203-worker)의 초기 Python 가정을 대체한다.
+현행 실행 이미지는 Rust·ffmpeg·audiowaveform을 사용하고 Python·compiler는 포함하지 않는다.
+호스트 Python 검증기가 최종 이미지 안의 ffmpeg 합성 source와 FIFO만 제어하며 음원은 밖으로 보내지 않는다.
+아래 yt-dlp/Python 이미지는 과거 acquisition 제안이며 활성 계약이 아니다.
+언어별 측정 조건·수치와 최종 Rust digest/수용 결과는 [PR #310](https://github.com/goldmayo/oioi-bwg/pull/310)이 소유한다.
 
 | 도구                                                                             | 확인된 역할                                                                          | 적용 제안                                                                                                |
 | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
