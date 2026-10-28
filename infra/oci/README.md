@@ -83,6 +83,51 @@ output `console_ocir_repository`는 새 repository 경로를 제공한다. 로�
 광범위 정책 교체는 Stack 밖 별도 승인 작업이며 이 코드가 수행하지 않는다. 같은 CI의 작은
 push/pull·host Secret 형식 검사·새 Run Command exit 0이 모두 확인돼야 B0 완료다.
 
+## P08 Queue·Runner 인증 준비 (2026-10-28)
+
+이 절은 P06-B0의 과거 허용 Plan과 별도인 P08 변경안이다. 아직 OCI에서 Plan/Apply·Secret 생성·VM 설치를 실행하지 않았다.
+`waveform.tf`는 기본 `waveform_queue_enabled=false`로 Queue/IAM을 만들지 않는다. 이 값은 인프라 생성 허용이며
+Console의 `CONSOLE_WAVEFORM_RUNNER_ENABLED`와 별개다. 인프라를 만든 뒤 false로 되돌려 runtime을 끄지 않는다.
+Queue의 `prevent_destroy`가 삭제·retention 변경에 따른 재생성을 거절한다.
+
+승인 후 Resource Manager 작업 순서:
+
+1. 기존 Vault/Key에 독립적인 Runner Secret 하나를 별도 bootstrap한다. 32-byte random 값의 64자리 소문자 hex이며
+   Auth/MFA/FCM 토큰을 재사용하지 않는다. 원문은 채팅·CLI 인자·tfvars·Terraform/state·로그에 넣지 않는다.
+2. 기존 Stack의 다른 입력을 보존하고 `waveform_runner_secret_ocid`에 해당 Secret OCID만 넣는다.
+   `waveform_queue_enabled=true`는 검토할 Plan을 준비할 때만 설정한다. null/잘못된 OCID·Web/Auth/MFA Secret 참조 재사용은 거절한다.
+3. 같은 Stack·`migration_main`·`infra/oci`의 실제 source SHA를 확인하고 **별도 승인한 Resource Manager Plan**을 실행한다.
+   허용되는 인프라 차이는 `oci_queue_queue.waveform[0]`와 `oci_identity_policy.waveform[0]` 두 개 생성뿐이다.
+   기존 VM/네트워크/DB/backup·Vault/Key/Secret·repository·기존 IAM의 change/destroy/replace가 있으면 Apply하지 않는다.
+   수동 리소스/기존 state와의 충돌도 이 실제 Plan에서 확인하며 로컬 fixture의 create 수로 대체하지 않는다.
+4. Plan 검토·Apply의 별도 승인 뒤 같은 Plan을 적용하고 Queue OCID·messages endpoint·설정 output을 확인한다.
+   Runner는 고정 endpoint를 공급받으므로 Queue 목록/관리 권한이 필요하지 않다. 기존 Compute Dynamic Group에
+   해당 Queue만 `use queue-push`/`use queue-pull`, 해당 Secret만 읽는 별도 policy를 붙인다. GitHub 배포 계정의 권한은 늘리지 않는다.
+5. Runner 설치·systemd/socket·token materialization·Caddy 내부 경로 차단·기존 Web/Console IMDS 차단 회귀는
+   후속 승인·배포 단위다. 현재 코드만 병합하거나 인프라만 생성해 runtime을 활성화하지 않는다.
+
+설정은 [DESIGN §6.3](../../docs/migration/implementation/console-guide-editor/DESIGN.md#63-queue-설정-후보와-활성화-관문)의
+실증 후보인 retention 86400초·delivery 5회·visibility 180초·poll 30초다. 별도 DLQ 리소스 없이 Queue 내장 DLQ를 사용한다.
+[retention은 생성 후 변경할 수 없으므로](https://docs.oracle.com/en-us/iaas/Content/queue/queue-create.htm) Apply 전 확인한다.
+실제 retention·마지막 enqueue 가능 시각·지연 여유가 확인되기 전 stale 자동 FAILED를 켜지 않는다.
+Oracle-managed encryption을 사용하며 기존 Vault/Key와 Secret 원문을 Terraform이 새로 소유하지 않는다.
+[IAM 계약](https://docs.oracle.com/en-us/iaas/Content/queue/policy-reference.htm)의 `target.queue.id`로 범위를 제한한다.
+IAM의 주체는 VM이며 process별 격리를 증명하지 않는다. 실제 허용 source의 이용 범위·재공급 계약도 runtime 활성화 선행 조건이다.
+
+자격 증명 없는 로컬/CI 검사(저장소 root 기준):
+
+```sh
+terraform -chdir=infra/oci init -backend=false -lockfile=readonly
+terraform -chdir=infra/oci fmt -check -diff
+terraform -chdir=infra/oci validate
+node tests/ops/waveform-infra-plan.mjs
+```
+
+마지막 명령은 저장소 root에서 실행한다. 실제 1.5.7/OCI 8.29.0 provider를 복사한 격리 fixture에서만 Plan하며,
+공식 Terraform Docker 이미지의 `--network=none`과 합성 키/OCID·합성 Queue state를 사용한다. 운영 자격 증명과 state를 읽지 않는다.
+기본 무변경·활성 시 Queue/policy 생성·설정·정확한 IAM statement·Secret 누락/재사용/형식 오류·삭제/재생성 보호를 확인한다.
+컨테이너와 임시 key/plan/state를 정리한다. 실제 Resource Manager Plan·IAM 허용·Queue 재전달/DLQ 실증의 대체 근거가 아니다.
+
 ## IAM boundary
 
 Compute dynamic group은 유지한다. 해당 instance는 다음 책임만 가진다.
@@ -91,6 +136,7 @@ Compute dynamic group은 유지한다. 해당 instance는 다음 책임만 가�
 - runtime Vault secret bundle read
 - metrics/log-content publish
 - Run Command execution
+- 별도 P08 승인/적용 시 exact waveform Queue push/pull·Runner Secret read
 
 GitHub deployment principal은 별도 `oioi_bwg_github_deploy` group에 넣고 다음 권한만 부여한다.
 

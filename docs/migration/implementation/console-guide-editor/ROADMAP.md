@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-28"
-revision: 29
+revision: 31
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,12 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-28 인프라 준비 분리:** 전달 확인/start [#313](https://github.com/goldmayo/oioi-bwg/pull/313) 뒤
+기본 비활성 Queue·제한 IAM·Runner Secret OCID 입력을 별도 PR로 통합한다. runtime 의존은 없으며 WORK 겹침은 최신 base에 맞춘다.
+revision 31은 #313의 30 다음 개정이다. 실제 적용 순서·허용 diff와 네트워크 없는 합성 provider Plan 검사는
+[기존 인프라 안내](../../../../infra/oci/README.md#p08-queuerunner-인증-준비-2026-10-28)가 소유한다.
+운영 Secret 생성·Resource Manager Plan/Apply·VM 설치/배포는 각각 별도 승인 전 실행하지 않는다.
 
 **2026-10-28 내부 API 구현 분리:** 승인한 [OCI Queue 설계 #311](https://github.com/goldmayo/oioi-bwg/pull/311)에 따라
 첫 통신 PR은 Runner 상태 조회·완료 콜백과 최소 DTO/ACK만 추가한다. 기존 저장·알림 transaction을 재사용하며
