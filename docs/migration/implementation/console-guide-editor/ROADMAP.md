@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-28"
-revision: 25
+revision: 27
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,30 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-28 실행 분리 추가:** fetch한 `origin/migration_main@f8a59be59cc4e16fdc6719f7f3f6ccac448fa4c1`에서 착수했다.
+#302/#303의 Job/결과·요청자 알림 transaction, 조회/결과 화면과 #307의 0011/0012 운영 적용·공통 FCM을 재사용한다.
+운영 Chrome OS 수신도 사용자 확인을 마쳤다([후속 기록](../../../devlog/20261027-28-notifications.md)).
+아래 2026-10-27의 구현 부재 관찰과 당시 Firebase 준비 항목은 현재 미완료 목록이 아니다.
+
+**2026-10-28 언어 선택 추가:** 로컬 비교 후 사용자 선택으로 분석 worker를 Rust로 전환한다.
+근거·현재 실행 경계는 [기술 검토](AUDIO-FEASIBILITY.md#1-필요한-도구만-사용), 계약은 Domain §20.3이 소유한다.
+Rust fmt/unit/Clippy·ARM64 실행 검증을 CI 필수 gate에 연결하며 운영 source/Queue/배포 관문은 유지한다.
+
+남은 PR은 다음 순서로 병합한다. 각 선행의 수용 근거를 확인한 뒤 다음 실행 경로를 활성화한다.
+
+1. **분석 toolchain:** 자체 생성한 합성 WAV만 사용해 ARM64 CLI와 제한된 container 실행을 검증한다.
+   외부 추출기를 넣지 않고 `WAV stdin → ffmpeg mono 24kHz PCM pipe → BBC JSON`을 확인한다.
+   분석 fragment에는 source를 꾸며 넣지 않으며 기존 DTO 조합·검증은 향후 인증된 adapter가 소유한다.
+2. **source 확인·생성/enqueue API:** 실제 입력의 확보 경로·서버 분석/변환 허용 범위·기간과 근거를 확인한다.
+   정식 구매만으로 서버 분석 권한을 추정하지 않는다. YouTube 경로는 §20.2의 명시적 정책 개정과 권한 확인 전 금지다.
+   허용 입력 전달 경로와 기존 videoId 참조의 대응을 확정한 뒤 ADMIN/MFA 생성·내부 API·Unix socket enqueue를 연결한다.
+3. **Runner/Queue 소비·복구:** 고정 payload/이미지, 단일 worker, visibility·재전달·DLQ·재시작과
+   결과 commit 후 delete 실패를 다룬다. 불확실 enqueue는 QUEUED 유지, null enqueuedAt은 미전달 증거가 아니다.
+   stale 기한은 실제 retention과 여유로 확정한다. 운영 리소스/IAM 적용은 별도 승인 범위다.
+4. **기존 알림 연결·통합 수용·Promotion:** 기존 acceptWaveformResult/dispatcher를 사용하고 재구현하지 않는다.
+   실제 OCI·허용 source의 3개 anchor/offset/drift·실기기 결과를 mock/합성 검사와 구분한다.
+   DB 변경·credential 사용·배포는 각각 구체적인 별도 승인 후 수행한다. P09/P10과 badge는 포함하지 않는다.
 
 **2026-10-27 추가:** 사용자의 P08 계획 구체화 요청을 반영한다. 기준은 fetch한
 `origin/migration_main@8f371d40d1809165167a524456b990c7b0f319b9`이며, 해당 source의

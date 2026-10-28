@@ -6,6 +6,7 @@ export const verificationJobs = [
   "infra",
   "quality",
   "unit",
+  "waveform",
   "postgres_integration",
   "app_build",
   "build",
