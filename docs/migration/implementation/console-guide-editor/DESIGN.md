@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 17
+revision: 18
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -447,6 +447,12 @@ Rust 분석 성능 비교를 Go Runner 성능의 근거로 사용하지 않는�
 Job 실패·재전송·DB 쓰기를 하지 않는다. Put 성공은 후속 enqueuedAt 저장 확인 전 socket ENQUEUED가 아니다.
 socket/내부 Job 대조·전달 확인·consumer·설치는 후속이다. SDK 인증 bootstrap/갱신의 시간·환경과 상주 RSS,
 실제 Instance Principal/Queue·권한 격리는 이 로컬 검증으로 완료 처리하지 않는다.
+
+**2026-10-29 내부 client 연결:** Go JobClient는 고정 `http://127.0.0.1:<보호된 port>`의 내부 Job 조회와
+`/enqueued` 기록만 제공한다. 독립 64자리 token을 사용하고 cookie/Origin·proxy env·redirect·retry를 쓰지 않는다.
+HTTP 1초·header/body 각 4KiB로 제한하고 기존 DTO의 식별자·상태·nullable 필드·시각과 응답 Job을 대조한다.
+명시적인 404/WAVEFORM_JOB_NOT_FOUND만 삭제된 Job으로 구분한다. 비활성 403·일반 404·오류 원문은 부재 근거가 아니다.
+전달 기록의 최초 시각과 RUNNING/terminal 응답은 허용하고, 응답 유실·불일치는 불확실로 반환한다. socket 연결은 다음 단위다.
 
 소켓은 `/run/oioi-waveform/runner.sock`에 두는 안으로, root가 부모·소유 그룹을 관리하고 Console 전용 그룹만 연결한다.
 Console에는 socket 디렉터리만 읽기 전용으로 연결하고 Docker socket·host root 경로·OCI credential을 주지 않는다.
