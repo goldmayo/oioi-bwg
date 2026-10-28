@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 41
+revision: 42
 ---
 
 # 구현 순서와 PR 단위
@@ -210,6 +210,11 @@ VM 사용자 점검은 ARM64·Docker/cgroup v2·앱 health와 여유 용량만 �
 **2026-10-29 socket 접수 연결:** #321 내부 client는 CI 통과 후 병합했다. Unix 전용 접수·source/Job 대조·
 단일 Put와 전달 확인을 연결하고 실제 로컬 socket에서 응답 유실·한도·진행 중 중복을 검증한다.
 다음은 Queue 소비/visibility·재전달/DLQ·고정 worker 실행과 시작/정리다. VM 변경은 설치 산출물 검토 후 별도 승인한다.
+
+**2026-10-29 Queue 수신부 분리:** #322는 CI 통과 후 병합했다. 공식 SDK의 한 건 수신·visibility 연장·receipt 삭제와
+응답/입력 한도·재시도 금지·취소를 로컬 ARM64에서 검증한다. 아직 consumer 실행 loop나 worker를 활성화하지 않는다.
+다음은 heartbeat/소유권 상실 중단 → Job/start·terminal 확인과 재전달/DLQ → 고정 worker·시작/정리·설치 산출물이다.
+실제 OCI receipt/시간·권한·자원 검증과 VM 변경은 별도 수용 관문으로 유지한다.
 
 #### 공통 알림의 선행 구현
 

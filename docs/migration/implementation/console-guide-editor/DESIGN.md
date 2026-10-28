@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 19
+revision: 20
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -461,6 +461,14 @@ Put 성공과 전달 확인이 모두 끝나야 ENQUEUED다. socket 유실 뒤�
 진행 중 중복 방지는 영속 멱등키가 아니다. Console의 새 Job만 단일 호출·미확인 결과의 재송신 금지 계약을 유지한다.
 서비스 context 4초·쓰기 5초를 설정하되 SDK 인증 갱신을 포함한 전체 시간·운용 자원은 별도 수용한다.
 이 단위는 서버 모듈과 실제 로컬 socket 검사이며 상주 main/host lock·DAC/mount·설치·Queue 소비를 활성화하지 않는다.
+
+**2026-10-29 Queue 수신 연결부:** 기존 Instance Principal client에서 한 건 수신·180초 연장·receipt 삭제를 분리한다.
+동시 poll은 한 개이며 long poll 30초/HTTP 35초, 연장·삭제 HTTP 2초를 설정한다. SDK 인증 갱신의 전체 기한은 별도 수용한다.
+정상 빈 배열만 빈 poll이다. 세 식별자 외 payload·실제 content 1KiB 초과·불완전 receipt/metadata는 실행용 Delivery로 내보내지 않는다.
+JSON 응답 header/body 각 4KiB·redirect/proxy/자동 재시도 금지를 유지하고 삭제의 body 없는 204만 별도 허용한다.
+receipt는 같은 consumer의 메모리에서만 사용한다. 오류/응답 유실은 불확실이며 재송신·terminal 변경·message 삭제를 자동 수행하지 않는다.
+이 단위는 SDK 연결부와 ARM64 로컬 HTTP 검증이다. heartbeat/안전 기한·소유권 상실 중단·terminal 확인 뒤 삭제와
+재전달/DLQ·고정 worker·상주 시작/정리·설치·실제 OCI 수용을 후속 소비 흐름에서 연결한다.
 
 소켓은 `/run/oioi-waveform/runner.sock`에 두는 안으로, root가 부모·소유 그룹을 관리하고 Console 전용 그룹만 연결한다.
 Console에는 socket 디렉터리만 읽기 전용으로 연결하고 Docker socket·host root 경로·OCI credential을 주지 않는다.

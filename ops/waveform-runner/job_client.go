@@ -47,7 +47,7 @@ func NewJobClient(port int, token string) (*JobClient, error) {
 		http: &http.Client{
 			Timeout:       jobDeadline,
 			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
-			Transport: boundedTransport{&http.Transport{
+			Transport: boundedTransport{base: &http.Transport{
 				DialContext:            (&net.Dialer{Timeout: jobDeadline}).DialContext,
 				MaxResponseHeaderBytes: maxPublishResponse,
 				DisableCompression:     true, DisableKeepAlives: true,
