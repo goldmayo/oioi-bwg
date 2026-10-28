@@ -85,7 +85,7 @@ push/pull·host Secret 형식 검사·새 Run Command exit 0이 모두 확인돼
 
 ## P08 Queue·Runner 인증 준비 (2026-10-28)
 
-이 절은 P06-B0의 과거 허용 Plan과 별도인 P08 변경안이다. 아직 OCI에서 Plan/Apply·Secret 생성·VM 설치를 실행하지 않았다.
+이 절은 P06-B0의 과거 허용 Plan과 별도인 P08 절차다. 초안 작성 때는 OCI 작업을 실행하지 않았으며 현재 적용 상태는 [WORK](../../docs/WORK.md)가 소유한다.
 `waveform.tf`는 기본 `waveform_queue_enabled=false`로 Queue/IAM을 만들지 않는다. 이 값은 인프라 생성 허용이며
 Console의 `CONSOLE_WAVEFORM_RUNNER_ENABLED`와 별개다. 인프라를 만든 뒤 false로 되돌려 runtime을 끄지 않는다.
 Queue의 `prevent_destroy`가 삭제·retention 변경에 따른 재생성을 거절한다.
@@ -94,8 +94,8 @@ Queue의 `prevent_destroy`가 삭제·retention 변경에 따른 재생성을 �
 
 1. 기존 Vault/Key에 독립적인 Runner Secret 하나를 별도 bootstrap한다. 32-byte random 값의 64자리 소문자 hex이며
    Auth/MFA/FCM 토큰을 재사용하지 않는다. 원문은 채팅·CLI 인자·tfvars·Terraform/state·로그에 넣지 않는다.
-2. 기존 Stack의 다른 입력을 보존하고 `waveform_runner_secret_ocid`에 해당 Secret OCID만 넣는다.
-   `waveform_queue_enabled=true`는 검토할 Plan을 준비할 때만 설정한다. null/잘못된 OCID·Web/Auth/MFA Secret 참조 재사용은 거절한다.
+2. #314가 포함된 `migration_main`·`infra/oci`로 Stack 구성을 업데이트한다. **Plan 전에** Edit → Configure variables에서 기존 입력을 보존하고 `waveform_runner_secret_ocid`에 해당 Secret OCID만 넣는다.
+   `waveform_queue_enabled=true`로 Plan을 준비한다. Run apply 선택지가 있으면 해제하고 저장한다. null/잘못된 OCID·Web/Auth/MFA Secret 참조 재사용은 거절한다.
 3. 같은 Stack·`migration_main`·`infra/oci`의 실제 source SHA를 확인하고 **별도 승인한 Resource Manager Plan**을 실행한다.
    허용되는 인프라 차이는 `oci_queue_queue.waveform[0]`와 `oci_identity_policy.waveform[0]` 두 개 생성뿐이다.
    기존 VM/네트워크/DB/backup·Vault/Key/Secret·repository·기존 IAM의 change/destroy/replace가 있으면 Apply하지 않는다.
@@ -115,10 +115,10 @@ openssl rand -hex 32
 
 기존 Vault와 해당 Vault의 symmetric Key를 선택하고 **Manual secret generation → Plain-text**로 공백·개행 없이 입력한다.
 Console이 전송할 때 base64로 인코딩하므로 직접 base64로 바꾸거나 hex를 binary로 decode하지 않는다.
-생성된 Secret OCID만 Stack의 `waveform_runner_secret_ocid`에, Queue 생성 Plan을 검토할 때 `waveform_queue_enabled=true`를 넣는다.
+생성된 Secret OCID만 Stack의 `waveform_runner_secret_ocid`에, Queue 생성 Plan 전에 `waveform_queue_enabled=true`를 넣는다. Plan/Apply 뒤에 나오는 Queue output과 이 입력 변수를 구분한다.
 값은 Runner와 Console 내부 API의 전용 인증에 사용하며 Web/Auth/MFA/FCM Secret을 재사용하지 않는다.
 원문을 채팅·저장소·Stack 변수에 넣지 않는다. 아직 token materialization/Runner 설치·공개 경로 차단 수용 전이므로 runtime flag는 비활성으로 유지한다.
-근거: [OpenSSL rand](https://docs.openssl.org/3.5/man1/openssl-rand/), [OCI Secret 생성](https://docs.oracle.com/en-us/iaas/Content/secret-management/Tasks/create-secret.htm).
+근거: [OpenSSL rand](https://docs.openssl.org/3.5/man1/openssl-rand/), [OCI Secret 생성](https://docs.oracle.com/en-us/iaas/Content/secret-management/Tasks/create-secret.htm), [Stack 변수 편집](https://docs.oracle.com/en-us/iaas/Content/ResourceManager/Tasks/update-stack-vars.htm).
 
 설정은 [DESIGN §6.3](../../docs/migration/implementation/console-guide-editor/DESIGN.md#63-queue-설정-후보와-활성화-관문)의
 실증 후보인 retention 86400초·delivery 5회·visibility 180초·poll 30초다. 별도 DLQ 리소스 없이 Queue 내장 DLQ를 사용한다.

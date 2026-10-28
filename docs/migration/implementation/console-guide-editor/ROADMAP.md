@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-28"
-revision: 31
+revision: 32
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,14 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-28 후속 준비:** #313(`a1f80b24bafb0de00945d1596940081fbf8cb28d`) → #314(`b9722039130a7128941306940967965c7a29e050`)를 최신 head의 CI 통과 후 squash 병합했다. #315에서 두 선행 문서를 보존해 통합한다. 전용 Secret 생성은 사용자 보고이며 값·OCI 상태는 조회하지 않았다. Stack 변수는 Plan 전에 입력하고 실제 Plan/Apply·VM 설치·worker 게시/Promotion 수용은 별도다.
+
+**2026-10-28 acquisition 재설계:** #310→#311→#312는 병합됐다. #313(enqueuedAt/start) → #314(기본 비활성 Queue/IAM) → 공식 yt-dlp acquisition 순서로 통합하고 겹치는 WORK/이력은 보존한다.
+사용자 요청으로 입력 계약을 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)의 조건부 허용으로 개정한다. 구체적 권리·기간·입력 승인과 전용 egress 검증 전에는 외부 영상을 추출하지 않는다.
+[DESIGN §6.4](DESIGN.md#64-yt-dlp-acquisition-2026-10-28-개정)의 고정 CLI 이미지·Rust 제한·로컬 합성 검증을 먼저 분리한다. native Rust 추출기 자원 비교·실제 YouTube 성공은 확인하지 않았다.
+다음은 생성/socket enqueue → Go Runner/Queue 소비·복구 → 기존 알림 통합 수용 → 별도 Promotion이다. Queue를 수동 생성하지 않고 #314의 Resource Manager Plan에서 생성 여부·IAM diff를 검토한 뒤 별도 승인으로 Apply한다.
+Queue 생성만으로 Runner 설치가 끝나지 않는다. 고정 Runner·전용 egress·token/socket 배치와 VM 설치 절차의 후속 구현·별도 승인이 필요하다. 로컬 mock과 실제 OCI/VM/실기기 수용을 구분한다.
 
 **2026-10-28 배포 준비:** #313은 `a1f80b24bafb0de00945d1596940081fbf8cb28d`로 병합됐다. #314 → #315 순서로 최신 base와 검증을 반영한다. 사용자는 아직 OCI 작업 전이며 Secret/Plan/Apply·VM 설치·Promotion 완료로 간주하지 않는다.
 

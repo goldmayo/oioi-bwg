@@ -3,6 +3,7 @@ use std::{
     fs,
     io::{self, Read, Write},
     os::fd::{AsFd, AsRawFd},
+    os::unix::process::CommandExt,
     process::{Child, Command, Stdio},
     sync::atomic::{AtomicBool, Ordering},
     time::{Duration, Instant},
@@ -12,6 +13,7 @@ const RATE: u64 = 24_000;
 const BUCKET: u64 = 480;
 const MAX_PCM: u64 = RATE * 2 * 3600;
 const MAX_JSON: usize = 4 * 1024 * 1024;
+const MAX_INPUT: u64 = 128 * 1024 * 1024;
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
 extern "C" fn interrupt(_: libc::c_int) {
@@ -135,6 +137,9 @@ fn prepare() -> io::Result<()> {
                 return Err(io::Error::last_os_error());
             }
         }
+        if libc::prctl(libc::PR_SET_CHILD_SUBREAPER, 1) != 0 {
+            return Err(io::Error::last_os_error());
+        }
     }
     Ok(())
 }
@@ -149,9 +154,12 @@ struct Children(Vec<Child>);
 impl Drop for Children {
     fn drop(&mut self) {
         for child in &mut self.0 {
-            let _ = child.kill();
+            // SAFETY: spawn마다 별도 process group을 만들며 Deno 등 후손도 함께 종료한다.
+            unsafe { libc::kill(-(child.id() as i32), libc::SIGKILL) };
             let _ = child.wait();
         }
+        // SAFETY: 이 프로세스가 소유한 종료된 후손만 회수한다.
+        while unsafe { libc::waitpid(-1, std::ptr::null_mut(), libc::WNOHANG) } > 0 {}
     }
 }
 
@@ -209,43 +217,134 @@ fn project(count: u64, encoded: &[u8]) -> io::Result<Vec<u8>> {
     Ok(result)
 }
 
-fn analyze(guard: &Guard) -> io::Result<Vec<u8>> {
+fn relay(
+    guard: &Guard,
+    input: &mut (impl Read + AsRawFd),
+    output: &mut (impl Write + AsRawFd),
+    limit: u64,
+) -> io::Result<u64> {
+    nonblocking(input)?;
+    nonblocking(output)?;
+    let mut buffer = [0u8; 65536];
+    let mut count = 0;
+    loop {
+        let size = guard.fill(input, &mut buffer)?;
+        if size == 0 {
+            return Ok(count);
+        }
+        count += size as u64;
+        if count > limit {
+            return failed();
+        }
+        guard.write(output, &buffer[..size])?;
+    }
+}
+
+fn approved(id: &str, list: &str) -> bool {
+    id.len() == 11
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+        && list.split(',').any(|entry| entry == id)
+}
+
+fn analyze(guard: &Guard, video_id: Option<&str>) -> io::Result<Vec<u8>> {
     let directory = format!("/tmp/waveform-{}", std::process::id());
     fs::create_dir(&directory)?;
     let temporary = Temporary(directory);
     let output = format!("{}/peaks.json", temporary.0);
     let mut children = Children(Vec::new());
+    let mut decoder = Command::new("ffmpeg");
+    if let Some(id) = video_id {
+        children.0.push(
+            Command::new("/opt/yt-dlp/yt-dlp_linux_aarch64")
+                .env_clear()
+                .env("PATH", "/usr/local/bin:/usr/bin:/bin")
+                .env("HOME", &temporary.0)
+                .env("TMPDIR", &temporary.0)
+                .env("DENO_DIR", &temporary.0)
+                .args([
+                    "--ignore-config",
+                    "--no-plugin-dirs",
+                    "--no-remote-components",
+                    "--no-playlist",
+                    "--quiet",
+                    "--no-warnings",
+                    "--no-progress",
+                    "--no-cache-dir",
+                    "--no-part",
+                    "--no-wait-for-video",
+                    "--socket-timeout",
+                    "10",
+                    "--retries",
+                    "0",
+                    "--fragment-retries",
+                    "0",
+                    "--js-runtimes",
+                    "deno:/usr/local/bin/deno",
+                    "--use-extractors",
+                    "youtube",
+                    "--match-filters",
+                    "!is_live & !was_live & duration <= 3600",
+                    "-f",
+                    "bestaudio[protocol=https]",
+                    "--downloader",
+                    "native",
+                    "-o",
+                    "-",
+                    "--",
+                ])
+                .arg(format!("https://www.youtube.com/watch?v={id}"))
+                .stdin(Stdio::null())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .process_group(0)
+                .spawn()?,
+        );
+        let source = children.0[0]
+            .stdout
+            .take()
+            .ok_or_else(|| io::Error::other("pipe"))?;
+        children.0.push(
+            Command::new(std::env::current_exe()?)
+                .arg("--limit-input")
+                .stdin(source)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .process_group(0)
+                .spawn()?,
+        );
+        decoder.stdin(
+            children.0[1]
+                .stdout
+                .take()
+                .ok_or_else(|| io::Error::other("pipe"))?,
+        );
+    }
+    decoder.args([
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-xerror",
+        "-nostdin",
+        "-threads",
+        "1",
+        "-protocol_whitelist",
+        "pipe",
+    ]);
+    if video_id.is_none() {
+        decoder.args(["-f", "wav"]);
+    }
+    let decoder_index = children.0.len();
     children.0.push(
-        Command::new("ffmpeg")
+        decoder
             .args([
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-xerror",
-                "-nostdin",
-                "-threads",
-                "1",
-                "-protocol_whitelist",
-                "pipe",
-                "-f",
-                "wav",
-                "-i",
-                "pipe:0",
-                "-map",
-                "0:a:0",
-                "-vn",
-                "-ac",
-                "1",
-                "-ar",
-                "24000",
-                "-threads",
-                "1",
-                "-f",
-                "s16le",
-                "pipe:1",
+                "-i", "pipe:0", "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "24000", "-threads",
+                "1", "-f", "s16le", "pipe:1",
             ])
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
+            .process_group(0)
             .spawn()?,
     );
     children.0.push(
@@ -271,31 +370,18 @@ fn analyze(guard: &Guard) -> io::Result<Vec<u8>> {
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
+            .process_group(0)
             .spawn()?,
     );
-    let mut reader = children.0[0]
+    let mut reader = children.0[decoder_index]
         .stdout
         .take()
         .ok_or_else(|| io::Error::other("pipe"))?;
-    let mut writer = children.0[1]
+    let mut writer = children.0[decoder_index + 1]
         .stdin
         .take()
         .ok_or_else(|| io::Error::other("pipe"))?;
-    nonblocking(&reader)?;
-    nonblocking(&writer)?;
-    let mut buffer = [0u8; 65536];
-    let mut count = 0;
-    loop {
-        let size = guard.fill(&mut reader, &mut buffer)?;
-        if size == 0 {
-            break;
-        }
-        count += size as u64;
-        if count > MAX_PCM {
-            return failed();
-        }
-        guard.write(&mut writer, &buffer[..size])?;
-    }
+    let count = relay(guard, &mut reader, &mut writer, MAX_PCM)?;
     drop(writer);
     for child in &mut children.0 {
         guard.wait(child)?;
@@ -309,12 +395,28 @@ fn analyze(guard: &Guard) -> io::Result<Vec<u8>> {
 }
 
 fn run() -> io::Result<()> {
-    if std::env::args_os().len() != 1 {
-        return failed();
-    }
     let guard = Guard(Instant::now() + Duration::from_secs(120));
     prepare()?;
-    let result = analyze(&guard)?;
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let video_id = match args.as_slice() {
+        [] => None,
+        [mode] if mode == "--limit-input" => {
+            let mut input = fs::File::from(io::stdin().as_fd().try_clone_to_owned()?);
+            let mut output = fs::File::from(io::stdout().as_fd().try_clone_to_owned()?);
+            return relay(&guard, &mut input, &mut output, MAX_INPUT).map(|_| ());
+        }
+        [mode, id]
+            if mode == "--youtube"
+                && approved(
+                    id,
+                    &std::env::var("WAVEFORM_YOUTUBE_APPROVED_VIDEO_IDS").unwrap_or_default(),
+                ) =>
+        {
+            Some(id.as_str())
+        }
+        _ => return failed(),
+    };
+    let result = analyze(&guard, video_id)?;
     let mut output = fs::File::from(io::stdout().as_fd().try_clone_to_owned()?);
     nonblocking(&output)?;
     guard.write(&mut output, &result)?;
@@ -359,9 +461,28 @@ mod tests {
     }
     #[test]
     fn deadline_interrupts_child_wait_and_drop_reaps() {
-        let mut children = Children(vec![Command::new("sleep").arg("5").spawn().unwrap()]);
+        let mut children = Children(vec![Command::new("sleep")
+            .arg("5")
+            .process_group(0)
+            .spawn()
+            .unwrap()]);
         assert!(Guard(Instant::now() + Duration::from_millis(20))
             .wait(&mut children.0[0])
             .is_err());
+    }
+    #[test]
+    fn source_requires_exact_approved_video_id() {
+        assert!(approved("local000001", "other000001,local000001"));
+        for id in [
+            "",
+            "local00000",
+            "local000001;",
+            "https://youtu.be/local000001",
+            "--version",
+        ] {
+            assert!(!approved(id, id));
+        }
+        assert!(!approved("local000001", ""));
+        assert!(!approved("local000001", " local000001"));
     }
 }

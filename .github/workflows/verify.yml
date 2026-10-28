@@ -127,6 +127,7 @@ jobs:
             -t oioi-bwg:waveform-check -f ops/waveform/Dockerfile ops/waveform
           image=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check)
           python3 tests/ops/waveform-smoke.py "$image"
+          python3 tests/ops/waveform-acquisition.py "$image"
 
   postgres_integration:
     needs: changes
