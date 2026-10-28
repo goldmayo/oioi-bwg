@@ -68,6 +68,15 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-28 실행 분리 추가:** fetch한 `origin/migration_main@f8a59be59cc4e16fdc6719f7f3f6ccac448fa4c1`에서 착수했다.
+#302/#303의 Job/결과·요청자 알림 transaction, 조회/결과 화면과 #307의 0011/0012 운영 적용·공통 FCM을 재사용한다.
+운영 Chrome OS 수신도 사용자 확인을 마쳤다([후속 기록](../../../devlog/20261027-28-notifications.md)).
+아래 2026-10-27의 구현 부재 관찰과 당시 Firebase 준비 항목은 현재 미완료 목록이 아니다.
+
+**2026-10-28 언어 선택 추가:** 로컬 비교 후 사용자 선택으로 분석 worker를 Rust로 전환한다.
+근거·현재 실행 경계는 [기술 검토](AUDIO-FEASIBILITY.md#1-필요한-도구만-사용), 계약은 Domain §20.3이 소유한다.
+Rust fmt/unit/Clippy·ARM64 실행 검증을 CI 필수 gate에 연결하며 운영 source/Queue/배포 관문은 유지한다.
+
 **2026-10-28 OCI Queue 설계 추가:** 사용자 선택으로 OCI Queue와 제한 Unix socket 경계를 유지한다.
 enqueue/consume을 맡는 같은 VM Runner와 Rust 분석기의 책임, 내부 API/완료 전달, Queue 설정 후보는
 [설계 §6.2](DESIGN.md#62-oci-queue-연결과-완료-전달-계약)와 [§6.3](DESIGN.md#63-queue-설정-후보와-활성화-관문)이 소유한다.
@@ -75,19 +84,20 @@ enqueue/consume을 맡는 같은 VM Runner와 Rust 분석기의 책임, 내부 A
 0011/0012·공통 알림과 Job 저장 기반은 운영 반영됐고 운영 Chrome OS 수신은 사용자 확인 상태다.
 아래 2026-10-27의 구현 부재/Firebase 준비 관찰은 당시 기록으로 보존하며 재구현 지시로 사용하지 않는다.
 
-이번 설계 PR은 문서만 변경한다. [Rust 분석 도구 #310](https://github.com/goldmayo/oioi-bwg/pull/310)의
+이 설계 단위는 문서만 변경한다. [Rust 분석 도구 #310](https://github.com/goldmayo/oioi-bwg/pull/310)의
 합성 입력 실측과 실제 OCI 실증을 구분하며 새 OCI 호출·리소스/IAM·DB·배포는 실행하지 않는다.
 후속 병합 순서는 다음과 같으며 각 구현 PR을 20파일/400줄 목표의 독립 검증 단위로 추가 분할할 수 있다.
 
 | 순서 | PR 관심사와 선행 조건 | 완료 근거 |
 | --- | --- | --- |
-| 1 | #310 분석 도구 → 이 OCI Queue 설계 문서 PR 순서로 검증·병합 | Rust ARM64 실제 이미지 검증은 #310, 통신/복구 설계는 §6.2/6.3. 이 설계 PR은 #310 뒤 최신 base에 재배치하고 WORK/ROADMAP 겹침을 조정 |
+| 1 | #310 분석 도구 → #311 OCI Queue 설계 → #312 내부 상태/완료 API | #310은 squash 병합 완료. #311은 해당 base를 반영하고 WORK/ROADMAP의 Rust 선택·통신 설계를 함께 보존 |
 | 2 | source 공급 계약·생성/내부 API·socket enqueue | 허용 근거·재공급 계약, 기존 PG 동시성/terminal 재사용, 응답 불확실성 계약. 운영 생성 진입점은 비활성 유지 |
 | 3 | Go 공식 SDK Runner·Queue 소비/복구·고정 Rust 실행 | ARM64 로컬 fault 검증과 비밀 없는 Terraform Plan. 운영 credential·OCI/IAM·host 적용은 별도 승인 |
 | 4 | 기존 알림 producer 연결·통합 수용·별도 Promotion | 실제 OCI/허용 입력/offset·drift/실기기 증거와 기존 metadata 차단. P09/P10·badge는 제외 |
 
 source 정책 확인 전에도 합성 입력용 통신/복구 계약과 로컬 구현·검증은 진행할 수 있다.
 운영 source·생성 경로 활성화는 이용 범위와 Queue 대기/재시작/재전달 뒤 입력 재공급 경로를 확인한 뒤에만 진행한다.
+
 
 **2026-10-27 추가:** 사용자의 P08 계획 구체화 요청을 반영한다. 기준은 fetch한
 `origin/migration_main@8f371d40d1809165167a524456b990c7b0f319b9`이며, 해당 source의

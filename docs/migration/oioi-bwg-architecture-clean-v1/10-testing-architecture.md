@@ -1,10 +1,10 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.20"
+version: "1.21"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-25"
+updated_at: "2026-10-28"
 depends_on:
   - "01"
   - "02"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.20
+# oioi-bwg Testing Architecture v1.21
 
 ## 1. 목적
 
@@ -44,6 +44,11 @@ Playwright
 ```
 
 MSW는 client API contract normalization 테스트의 확정된 use case다. 05 §27의 정상 payload / 깨진 payload / error payload normalization을 MSW fixture로 검증한다. 그 외 HTTP mocking은 가치가 명확할 때만 사용한다.
+
+2026-10-28 Domain §20.3의 Rust worker 선택에 따라 독립 waveform CLI는 Cargo fmt/test/Clippy와
+release build로 검증한다. root pnpm 제품 task가 검사하지 않는 Rust source는 필수 `waveform ARM64`
+CI job이 소유한다. 최종 실행 이미지로 합성 입력·실제 timeout·SIGTERM/SIGKILL·음원/프로세스 정리를
+검증하고 기존 verify gate에 포함한다. 로컬 합성 검증을 실제 OCI/source 수용으로 대신하지 않는다.
 
 ---
 

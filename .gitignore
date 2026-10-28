@@ -65,3 +65,4 @@ next-env.d.ts
 /docs/.pdca-status.json
 # Generated Console Service Worker SDK bundle.
 /apps/console/public/notification-worker.js
+/ops/waveform/target/
