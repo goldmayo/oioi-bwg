@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 36
+revision: 37
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-29 생성/enqueue 분리:** 사용자 조회로 실제 policy가 해당 Queue의 push/pull과 전용 Secret 읽기 3문장임을 확인했다. VM 권한 사용 실증은 별도다. 첫 구현 PR은 고정 Unix socket 송신부와 strict ACK·전달 불확실성·호출/응답 상한의 로컬 검증으로 분리한다. 다음 PR은 기존 Job 서비스를 재사용하는 기본 비활성 생성 API와 active 재사용·조건부 실패 반영이다. 이후 Runner/Queue 소비·복구 → 통합 수용 → 별도 Promotion 순서를 유지한다. 상세 송신 계약은 [DESIGN §6.2](DESIGN.md#62-oci-queue-연결과-완료-전달-계약)가 소유하며 mount·생성 route·운영 활성화는 이번에 적용하지 않는다.
 
 **2026-10-29 Queue/IAM 생성 결과 확인:** #316은 `88e0f70d3508db7bccc3f00c1d70caf49bf27cac`로 병합됐고, 사용자 Cloud Shell 조회로 후속 Plan의 소스가 이 커밋임을 확인했다. 사용자가 공유한 Apply 로그는 Queue·전용 IAM 생성과 `2 added / 0 changed / 0 destroyed`를 보여준다. Queue output의 retention 86400초·delivery 5회·visibility 180초·poll 30초도 코드와 일치한다. 실제 IAM 문구·VM에서의 권한 사용·Queue 재전달/DLQ·Runner 설치/실행·배포 수용은 후속이다. Apply 로그만으로 저장 Plan 연결 metadata를 확정하지 않으며, 상세 실행 근거와 이 제한은 [#316](https://github.com/goldmayo/oioi-bwg/pull/316)에 둔다. 다음 구현 순서는 생성/socket enqueue → Runner/Queue 소비·복구 → 기존 알림 통합 수용 → 별도 Promotion이다.
 
