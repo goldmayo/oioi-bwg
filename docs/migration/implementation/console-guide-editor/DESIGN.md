@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-28"
-revision: 12
+revision: 14
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -31,8 +31,8 @@ revision: 12
 공식 여부는 공연 모드와 별개다. 기존 데이터는 운영자가 수동 분류하며 새 관리자 편집 기능은 P07 이후에 다룬다.
 Console에서 허용된 입력의 파형 생성을 요청하면 일회성 컨테이너가 JSON을 생성하고, 편집기는 참조 영상 재생과 JSON을 사용한다.
 **Domain §20.2의 입력 이용 범위를 먼저 확인하며 음원은 pipe/tmpfs에서만 처리한다. 브라우저에서는 분석하지 않는다.**
-2026-10-28 source 정정: 이 문서의 과거 YouTube/yt-dlp 제안은 production source 승인이 아니며,
-[Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)의 YouTube 추출 금지를 따른다.
+2026-10-28 초기 source 정정에서는 과거 YouTube/yt-dlp 제안을 production source 승인과 구분하고 추출 금지를 따랐다.
+같은 날 후속 재설계 요청으로 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)를 조건부 허용으로 개정했다. 구체적 입력 승인은 [§6.4](#64-yt-dlp-acquisition-2026-10-28-개정)를 따른다.
 
 기존 Service/Repository/CASL/Query/Ky/Zod, Auth.js/Argon2id, 가사 JSON, LRC·시간 캡처·Undo/Redo를 재사용한다.
 세션 레지스트리·인증 grant·복구 UI·범용 Audit DB·미래 Event/variant 모델과 자동 정렬 연구는 이번 범위에서 뺀다.
@@ -276,7 +276,7 @@ POST /api/admin/waveform-jobs
   → 202 Accepted { jobId } (DB 접수, 전달 성공 또는 확인 중)
 
 OCI Queue → VM runner long poll → Job(RUNNING)
-  → docker run --rm → 허용 WAV stdin → Rust/ffmpeg pipe/audiowaveform → JSON stdout
+  → docker run --rm → 승인 videoId → Rust/yt-dlp/ffmpeg pipe/audiowaveform → JSON stdout
   → Runner → Console 내부 결과 API → 결과/terminal/알림 transaction → message delete
 ```
 
@@ -333,8 +333,8 @@ WaveformJob
 Waveform                    job lifecycle과 분리한 song/source별 정상 JSON
 ```
 
-Runner는 위 Queue push/pull 권한과 좁은 내부 job API의 service token만 사용한다. 분석기에는 허용 WAV stdin과 고정 실행 한도만 제공한다.
-현재 합성 WAV 분석 컨테이너는 network none으로 실행하며 source 공급 경로가 확정되기 전 outbound를 열지 않는다.
+Runner는 위 Queue push/pull 권한과 좁은 내부 job API의 service token만 사용한다. 분석기에는 고정된 videoId 인자·승인 목록과 실행 한도만 제공한다.
+로컬 합성 검증은 network none이다. 승인 입력·전용 outbound 격리를 확인하기 전에는 운영 fetch를 활성화하지 않는다.
 worker에 DATABASE_URL/AUTH_SECRET/R2/OCI credential을 주지 않고 VM metadata·DB·내부 API 접근도 막는다.
 Console의 내부 API → 기존 Service/Repository가 상태·결과를 저장하고 Runner/worker에 DB 연결을 주지 않는다.
 token은 Runner의 보호된 환경에 보관하며 Queue·command·로그에 넣지 않는다.
@@ -518,6 +518,21 @@ pipe/tmpfs로 다시 공급할 방법**을 source 계약에서 확정해야 한�
 이 관문 전에는 합성 WAV만 사용하고 생성 API의 운영 진입점을 열지 않는다.
 수용 검증과 PR 순서는 [ROADMAP §2.1/§3](ROADMAP.md#21-p08-착수-계획)이 소유한다.
 
+### 6.4. yt-dlp acquisition (2026-10-28 개정)
+
+사용자의 링크 기반 생성 요청으로 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)를 조건부 허용으로 개정한다.
+Rust는 추출기를 재구현하지 않고 공식 yt-dlp CLI와 포함된 EJS·Deno를 worker 이미지에서 실행한다.
+선택 이유는 기능·유지보수 범위이며 native Rust 추출기 대비 자원 우위가 아니다. #310 비교는 분석 중계의 비교다.
+
+- `--youtube <videoId>`는 정확한 11자 ID와 보호된 `WAVEFORM_YOUTUBE_APPROVED_VIDEO_IDS`의 일치를 요구한다. 기본 빈 목록이며 Queue가 목록을 정하지 않는다. Runner도 실제 입력 이용 근거·기간과 DB Job/source를 실행 전에 검사한다.
+- canonical URL·HTTPS 직접 audio format·native downloader·1시간 이하의 비실시간 영상만 허용한다. config/plugin/remote component/cache/playlist를 끄고 cookie·임의 URL/명령/인자를 받지 않는다. Deno/EJS도 이미지에 고정하며 실행 시 다운로드하지 않는다.
+- yt-dlp의 stdout → Rust 64KiB relay(압축 입력 128MiB 상한) → ffmpeg(네트워크 protocol 금지) → 기존 PCM/JSON 검사다. 모든 자식의 종료 성공 후에만 JSON을 반환한다. 전체 120초와 #310의 한도를 유지하고 process group을 종료·회수한다.
+- 승인 videoId는 재전달 때마다 다시 fetch한다. 원본을 저장해 재공급하지 않는다. downloader 환경은 고정 PATH와 작업별 tmpfs HOME/TMPDIR/DENO_DIR만 전달하며 credential·proxy 설정을 상속하지 않는다.
+- 실제 fetch 전에 worker 전용 egress에서 IMDS·private/내부 대역 접근을 막고 Web/Console 차단을 회귀 검증한다. 이 PR의 image/로컬 검증만으로 운영 outbound를 열지 않는다.
+
+실제 CLI의 로컬 HTTP streaming·시작 비용과 Rust의 합성 compressed 입력 검증을 실제 YouTube/EJS·OCI 검증과 구분한다.
+고정 버전·digest·측정 근거는 구현 PR이 소유하며 실제 허용 영상의 자원·offset/drift 수용은 후속 관문이다.
+
 ## 7. Audio Editor
 
 ```text
@@ -544,7 +559,7 @@ server DTO는 Query, 편집 draft는 RHF, 선택/zoom/loop/drag preview는 local
 | 선택                                       | 남는 한계 / 확인 사항                                                                                             |
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
 | OCI Queue + 작은 VM runner + 일회성 worker | Queue의 전달/재시도 기능을 사용하고 동시 분석은 하나로 제한한다. 같은 host의 자원 경쟁과 전달/DB 경계를 검증한다. |
-| 허용된 입력 → 파형 JSON                    | 서버 분석 이용 범위·재공급 경로와 참조 영상의 offset/drift를 확인한다. YouTube 추출은 현행 Domain에서 금지다. |
+| 허용된 입력 → 파형 JSON                    | Domain §20.2의 입력 승인·재공급 범위와 참조 영상의 offset/drift를 확인한다. 미확인 YouTube 입력은 fetch하지 않는다. |
 | 단일 프로세스 limiter와 MFA version        | 재시작 시 limiter 상태는 사라지고 세션별 회수는 없다. 복제 운영 시에만 분산 저장을 재검토한다.                    |
 | 모드별 guide + 불변 snapshot/공개 기록     | 기존 writer 연결·원자적 호환 비용이 있다. 새 관리자 편집과 일반 사용자 검토 workflow는 후속이다.                 |
 | 공유 DB·별도 앱                            | 같은 host/DB까지 격리되지는 않는다. pool 합계와 한쪽 rollback을 검증하고 DB role 세분화는 후속으로 둔다.          |

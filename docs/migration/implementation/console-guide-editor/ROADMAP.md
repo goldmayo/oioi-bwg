@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-28"
-revision: 29
+revision: 32
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,12 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-28 acquisition 재설계:** #310→#311→#312는 병합됐다. #313(enqueuedAt/start) → #314(기본 비활성 Queue/IAM) → 공식 yt-dlp acquisition 순서로 통합하고 겹치는 WORK/이력은 보존한다.
+사용자 요청으로 입력 계약을 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)의 조건부 허용으로 개정한다. 구체적 권리·기간·입력 승인과 전용 egress 검증 전에는 외부 영상을 추출하지 않는다.
+[DESIGN §6.4](DESIGN.md#64-yt-dlp-acquisition-2026-10-28-개정)의 고정 CLI 이미지·Rust 제한·로컬 합성 검증을 먼저 분리한다. native Rust 추출기 자원 비교·실제 YouTube 성공은 확인하지 않았다.
+다음은 생성/socket enqueue → Go Runner/Queue 소비·복구 → 기존 알림 통합 수용 → 별도 Promotion이다. Queue를 수동 생성하지 않고 #314의 Resource Manager Plan에서 생성 여부·IAM diff를 검토한 뒤 별도 승인으로 Apply한다.
+Queue 생성만으로 Runner 설치가 끝나지 않는다. 고정 Runner·전용 egress·token/socket 배치와 VM 설치 절차의 후속 구현·별도 승인이 필요하다. 로컬 mock과 실제 OCI/VM/실기기 수용을 구분한다.
 
 **2026-10-28 내부 API 구현 분리:** 승인한 [OCI Queue 설계 #311](https://github.com/goldmayo/oioi-bwg/pull/311)에 따라
 첫 통신 PR은 Runner 상태 조회·완료 콜백과 최소 DTO/ACK만 추가한다. 기존 저장·알림 transaction을 재사용하며
