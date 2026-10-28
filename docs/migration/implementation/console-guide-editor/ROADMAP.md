@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 35
+revision: 36
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-29 Queue/IAM 생성 결과 확인:** #316은 `88e0f70d3508db7bccc3f00c1d70caf49bf27cac`로 병합됐고, 사용자 Cloud Shell 조회로 후속 Plan의 소스가 이 커밋임을 확인했다. 사용자가 공유한 Apply 로그는 Queue·전용 IAM 생성과 `2 added / 0 changed / 0 destroyed`를 보여준다. Queue output의 retention 86400초·delivery 5회·visibility 180초·poll 30초도 코드와 일치한다. 실제 IAM 문구·VM에서의 권한 사용·Queue 재전달/DLQ·Runner 설치/실행·배포 수용은 후속이다. Apply 로그만으로 저장 Plan 연결 metadata를 확정하지 않으며, 상세 실행 근거와 이 제한은 [#316](https://github.com/goldmayo/oioi-bwg/pull/316)에 둔다. 다음 구현 순서는 생성/socket enqueue → Runner/Queue 소비·복구 → 기존 알림 통합 수용 → 별도 Promotion이다.
 
 **2026-10-29 시간대 검토 후속 완료:** 사용자 VM의 생성 설정은 명시적 time_type 없이 `%N%z`를 유지하며, 사용자가 제공한 기존 OCI 로그 한 건의 숫자 시각·event time·Docker time도 밀리초까지 일치했다. 9시간 오차가 없어 #316의 시간대 보류를 해제한다. 과거 로그 한 건의 확인을 현재 실시간 수집 수용으로 확대하지 않는다. 다음은 수정이 통합된 `migration_main`의 새 Plan에서 Logging 무변경·Queue/IAM 2 create를 확인하고 별도 승인으로 Apply하는 것이다. 실제 변경·계산·검증은 [#316](https://github.com/goldmayo/oioi-bwg/pull/316), 반복 절차는 [infra 안내](../../../../infra/oci/README.md#logging-parser-반복-차이-2026-10-29)에 둔다.
 
