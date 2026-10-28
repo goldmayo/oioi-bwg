@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-28"
-revision: 25
+revision: 29
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,13 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-28 내부 API 구현 분리:** 승인한 [OCI Queue 설계 #311](https://github.com/goldmayo/oioi-bwg/pull/311)에 따라
+첫 통신 PR은 Runner 상태 조회·완료 콜백과 최소 DTO/ACK만 추가한다. 기존 저장·알림 transaction을 재사용하며
+[Auth §4.2](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md#42-p08-runner의-내부-상태-조회결과-반영)의
+기본 비활성·별도 토큰 경계를 따른다. #310 → #311 → 이 구현 순서로 병합하며 WORK/ROADMAP 겹침은 재배치 때 조정한다.
+생성/enqueue·enqueuedAt 기록·start·socket/Go Runner·실제 OCI·운영 활성화는 후속 검증 단위다.
+source 정책 확인 전에도 합성 입력 기반 검증은 진행하되 운영 credential·DB·IAM·배포 승인을 확대 해석하지 않는다.
 
 **2026-10-27 추가:** 사용자의 P08 계획 구체화 요청을 반영한다. 기준은 fetch한
 `origin/migration_main@8f371d40d1809165167a524456b990c7b0f319b9`이며, 해당 source의

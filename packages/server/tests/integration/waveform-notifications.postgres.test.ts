@@ -9,6 +9,7 @@ import * as notifications from "../../src/services/notification-service";
 import {
   completeWaveformJob,
   getWaveformJob,
+  getRunnerWaveformJob,
   requestWaveformJob,
   startWaveformJob,
 } from "../../src/services/waveform-service";
@@ -112,9 +113,23 @@ test("동시·중복 요청은 활성 Job 하나를 공유하며 요청자별 �
   expect(requests.filter((r) => r.created)).toHaveLength(1);
   const attemptId = await startWaveformJob(id);
   expect(attemptId).toBeTruthy();
+  expect(await getRunnerWaveformJob(id)).toEqual({
+    id,
+    songId: track.id,
+    videoId,
+    status: "RUNNING",
+    attemptId,
+    enqueuedAt: null,
+  });
   const input = { jobId: id, attemptId: attemptId!, status: "SUCCEEDED" as const, result };
   const completions = await Promise.all([completeWaveformJob(input), completeWaveformJob(input)]);
   expect(completions.filter((r) => r.applied)).toHaveLength(1);
+  expect(completions).toEqual(
+    expect.arrayContaining([
+      { jobId: id, status: "SUCCEEDED", attemptId, applied: true },
+      { jobId: id, status: "SUCCEEDED", attemptId, applied: false },
+    ]),
+  );
   const notices = await events(id);
   expect(notices).toHaveLength(2);
   expect(new Set(notices.map((r) => r.recipientAccountId))).toEqual(new Set(accounts));
@@ -146,7 +161,7 @@ test("이전 attempt·terminal 재전달은 무시하고 재생성 실패는 직
   const current = await startWaveformJob(job.id);
   expect(
     await completeWaveformJob({ jobId: job.id, attemptId: old!, status: "SUCCEEDED", result }),
-  ).toEqual({ applied: false });
+  ).toEqual({ jobId: job.id, status: "RUNNING", attemptId: current, applied: false });
   expect(await events(job.id)).toHaveLength(0);
   await completeWaveformJob({ jobId: job.id, attemptId: current!, status: "SUCCEEDED", result });
   const next = await requestWaveformJob(ctx(), track.id);
@@ -161,7 +176,7 @@ test("이전 attempt·terminal 재전달은 무시하고 재생성 실패는 직
       status: "SUCCEEDED",
       result,
     }),
-  ).toEqual({ applied: false });
+  ).toEqual({ jobId: next.job.id, status: "FAILED", attemptId, applied: false });
 });
 test("참조 영상이 바뀐 성공 결과는 저장하지 않고 최종 실패로 알린다", async () => {
   const track = await song();
