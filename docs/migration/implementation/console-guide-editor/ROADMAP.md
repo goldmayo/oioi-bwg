@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 39
+revision: 40
 ---
 
 # 구현 순서와 PR 단위
@@ -202,6 +202,10 @@ VM 사용자 점검은 ARM64·Docker/cgroup v2·앱 health와 여유 용량만 �
 첫 Go PR은 공식 SDK의 고정 Queue 송신·자동 재시도 금지·응답 유실/한도/취소를 ARM64에서 검증한다.
 송신부 → socket/Job 대조·enqueuedAt 확인 → Queue 소비/visibility·복구·고정 worker 실행 → 설치 산출물 순서다.
 앞의 VM 사전 점검을 실제 권한 사용·상주 자원·운영 수용으로 확대하지 않는다.
+
+**2026-10-29 내부 client 분리:** #320 Queue 송신부는 CI 통과 후 병합했다. 다음 연결을 작은 PR로 나눠
+고정 loopback 내부 Job client의 인증·DTO·명확한 404·기록 응답 유실을 먼저 검증하고 socket 접수를 연결한다.
+이 구현은 VM 접속 없이 로컬 ARM64에서 진행하며 runtime Secret 주입·설치·실제 OCI 수용은 별도 관문이다.
 
 #### 공통 알림의 선행 구현
 
