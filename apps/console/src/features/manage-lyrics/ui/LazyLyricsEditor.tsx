@@ -11,9 +11,16 @@ const LyricsEditorClient = lazy(() => import("./LyricsEditorClient"));
 interface LazyLyricsEditorProps {
   song: SongEditor;
   saveSongData: SaveSongDataAction;
+  accountId: string;
+  disabled?: boolean;
 }
 
-export function LazyLyricsEditor({ song, saveSongData }: LazyLyricsEditorProps) {
+export function LazyLyricsEditor({
+  song,
+  saveSongData,
+  accountId,
+  disabled,
+}: LazyLyricsEditorProps) {
   return (
     <Suspense
       fallback={
@@ -22,7 +29,12 @@ export function LazyLyricsEditor({ song, saveSongData }: LazyLyricsEditorProps) 
         </div>
       }
     >
-      <LyricsEditorClient song={song} saveSongData={saveSongData} />
+      <LyricsEditorClient
+        song={song}
+        saveSongData={saveSongData}
+        accountId={accountId}
+        disabled={disabled}
+      />
     </Suspense>
   );
 }
