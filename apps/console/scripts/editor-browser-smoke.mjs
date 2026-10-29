@@ -74,10 +74,24 @@ const data = {
 let responseMode = "ready",
   saveStatus = 200;
 let lastSaved = null;
+const actualLyrics = JSON.parse(
+  await readFile(join(root, "tests/fixtures/song-01a17439-lyrics.json"), "utf8"),
+);
+const actualSong = {
+  ...song,
+  id: "01a17439-dddf-76af-9716-2c0fcf925b82",
+  title: "첨부 Song.lyrics 검증",
+  lyrics: actualLyrics,
+};
+const corpus = process.env.LYRICS_CORPUS_PATH
+  ? JSON.parse(await readFile(process.env.LYRICS_CORPUS_PATH, "utf8"))
+  : [];
+const recordRegressions = process.argv.includes("--record-regressions");
+const regressions = [];
 const fixtureSource = `import React from 'react';import {createRoot} from 'react-dom/client';import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import Editor from '${app}/src/features/manage-lyrics/ui/LyricsEditorClient.tsx';
 import {AdminWorkspace} from '${app}/src/app/(admin)/admin/_ui/admin-sidebar.tsx';
-import {Toaster} from '${app}/src/shared/ui/sonner.tsx';
+import {Toaster} from '${app}/src/shared/ui/sonner.tsx';import {toast} from 'sonner';window.__dismissToasts=toast.dismiss;
 window.YT={PlayerState:{PLAYING:1},Player:class{
  constructor(el,options){this.time=4;this.state=2;this.options=options;this.videoId=options.videoId;window.__iframe=this;el.innerHTML='<div style="height:100%;display:grid;place-items:center;background:#202c35;color:#dce9f1;font-size:13px">YouTube IFrame 검증 대역</div>';queueMicrotask(()=>options.events.onReady({target:this}));}
  getCurrentTime(){return this.time}getDuration(){return 180}getPlayerState(){return this.state}getVideoData(){return {video_id:this.videoId,author:'',title:''}}
@@ -85,9 +99,9 @@ window.YT={PlayerState:{PLAYING:1},Player:class{
  seekTo(time){setTimeout(()=>this.time=time,150)}destroy(){clearInterval(this.timer)}
 }};
 const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
-const song=${JSON.stringify(song)};
+const song=new URLSearchParams(location.search).has("actual")?await fetch("/actual-song"+location.search).then(r=>r.json()):${JSON.stringify(song)};
 createRoot(document.getElementById('root')).render(<QueryClientProvider client={client}><AdminWorkspace><Editor song={song} accountId="test-admin" saveSongData={async(id,input)=>{const response=await fetch('/save',{method:'POST',body:JSON.stringify(input)});if(!response.ok)throw Error('save rejected');return {id};}}/></AdminWorkspace><Toaster/></QueryClientProvider>);`;
-await build({
+const bundling = {
   stdin: { contents: fixtureSource, loader: "tsx", resolveDir: app },
   bundle: true,
   outfile: join(out, "editor.js"),
@@ -100,7 +114,7 @@ await build({
     {
       name: "browser-fixtures",
       setup(b) {
-        b.onResolve({ filter: /^next\/(link|navigation|dynamic)$/ }, (a) => ({
+        b.onResolve({ filter: /^next\/(link|navigation|dynamic|image)$/ }, (a) => ({
           path: a.path,
           namespace: "fixture",
         }));
@@ -115,23 +129,43 @@ await build({
         b.onResolve({ filter: /^client-only$/ }, () => ({ path: "client", namespace: "fixture" }));
         b.onLoad({ filter: /.*/, namespace: "fixture" }, ({ path }) => ({
           contents:
-            path === "next/link"
-              ? `import React from 'react';export default ({prefetch,children,...props})=>React.createElement('a',props,children);`
-              : path === "next/navigation"
-                ? `export const usePathname=()=>'/admin/edit/test';export const useRouter=()=>({push(){}});`
-                : path === "next/dynamic"
-                  ? `import React,{lazy,Suspense} from 'react';export default (load,options)=>{const Component=lazy(load);return props=>React.createElement(Suspense,{fallback:options.loading?React.createElement(options.loading):null},React.createElement(Component,props));};`
-                  : path === "auth"
-                    ? `export const signOut=async()=>{};`
-                    : path === "notifications"
-                      ? `export const useNotificationContext=()=>({accountId:'test-admin'});`
-                      : "export {};",
+            path === "next/image"
+              ? `import React from "react";export default ({fill,priority,unoptimized,...props})=>React.createElement("img",props);`
+              : path === "next/link"
+                ? `import React from 'react';export default ({prefetch,children,...props})=>React.createElement('a',props,children);`
+                : path === "next/navigation"
+                  ? `export const usePathname=()=>'/admin/edit/test';export const useRouter=()=>({push(){}});`
+                  : path === "next/dynamic"
+                    ? `import React,{lazy,Suspense} from 'react';export default (load,options)=>{const Component=lazy(load);return props=>React.createElement(Suspense,{fallback:options.loading?React.createElement(options.loading):null},React.createElement(Component,props));};`
+                    : path === "auth"
+                      ? `export const signOut=async()=>{};`
+                      : path === "notifications"
+                        ? `export const useNotificationContext=()=>({accountId:'test-admin'});`
+                        : "export {};",
           loader: "js",
           resolveDir: app,
         }));
       },
     },
   ],
+};
+await build(bundling);
+const webApp = join(root, "apps/web");
+await build({
+  ...bundling,
+  stdin: {
+    contents: `
+import React from 'react';import {createRoot} from 'react-dom/client';import {NuqsTestingAdapter} from 'nuqs/adapters/testing';
+import {LyricsViewerClient} from '${webApp}/src/features/chant-sync/ui/LyricsViewerClient.tsx';
+${fixtureSource.slice(fixtureSource.indexOf("window.YT="), fixtureSource.indexOf("const client=")).replace("this.time+=.1", "void 0")}
+const song=await fetch('/actual-song'+location.search).then(r=>r.json());
+createRoot(document.getElementById('root')).render(<NuqsTestingAdapter><LyricsViewerClient song={song}/></NuqsTestingAdapter>);
+`,
+    loader: "tsx",
+    resolveDir: webApp,
+  },
+  outfile: join(out, "viewer.js"),
+  tsconfig: join(webApp, "tsconfig.json"),
 });
 const postcss = require("postcss"),
   tailwind = require("@tailwindcss/postcss");
@@ -140,11 +174,36 @@ const css = await postcss([tailwind({ base: app, optimize: false })]).process(
   { from: join(app, "src/app/globals.css") },
 );
 await writeFile(join(out, "editor.css"), css.css);
+const webCss = await postcss([tailwind({ base: webApp, optimize: false })]).process(
+  await readFile(join(webApp, "src/app/globals.css"), "utf8"),
+  { from: join(webApp, "src/app/globals.css") },
+);
+await writeFile(
+  join(out, "viewer.css"),
+  webCss.css + (await readFile(join(out, "viewer.css"), "utf8").catch(() => "")),
+);
 const html =
   '<!doctype html><html lang="ko" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/editor.css"></head><body><div id="root"></div><script type="module" src="/editor.js"></script></body></html>';
 const server = createServer(async (req, res) => {
   const path = new URL(req.url, "http://localhost").pathname;
   try {
+    if (path === "/actual-song") {
+      res.setHeader("Content-Type", "application/json");
+      const params = new URL(req.url, "http://localhost").searchParams;
+      const source = params.has("index") ? corpus[Number(params.get("index"))] : actualSong;
+      res.end(
+        JSON.stringify({
+          ...source,
+          lyrics: params.has("saved") ? lastSaved.lyrics : source.lyrics,
+        }),
+      );
+      return;
+    }
+    if (path === "/viewer") {
+      res.setHeader("Content-Type", "text/html");
+      res.end(html.replaceAll("editor.css", "viewer.css").replaceAll("editor.js", "viewer.js"));
+      return;
+    }
     if (path === "/save") {
       const chunks = [];
       for await (const chunk of req) chunks.push(chunk);
@@ -171,7 +230,7 @@ const server = createServer(async (req, res) => {
       res.end(JSON.stringify({ items: [], nextCursor: null, unreadCount: 0 }));
       return;
     }
-    if (path === "/editor.js" || path === "/editor.css") {
+    if (["/editor.js", "/editor.css", "/viewer.js", "/viewer.css"].includes(path)) {
       res.setHeader("Content-Type", extname(path) === ".js" ? "text/javascript" : "text/css");
       res.end(await readFile(join(out, path)));
       return;
@@ -370,11 +429,186 @@ async function verifyNotes(page, width) {
   });
 }
 
+async function verifyActualLyrics(page, width) {
+  responseMode = "empty";
+  saveStatus = 200;
+  await page.goto(origin + "/?actual", { waitUntil: "networkidle" });
+  const select = async (id) => {
+    await page
+      .locator(`[data-note-id="${id}"]`)
+      .locator("xpath=..")
+      .getByRole("button", { name: /번 노트 선택/ })
+      .click();
+  };
+  const check = (value, message) => {
+    if (!value) regressions.push(`${width}: ${message}`);
+  };
+  const color = (locator) => locator.evaluate((el) => getComputedStyle(el).color);
+  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 68);
+  await page.getByRole("button", { name: /^저장/ }).click();
+  await page.getByText("저장됨", { exact: true }).waitFor();
+  assert.deepEqual(lastSaved.lyrics, actualLyrics, "unchanged real lyrics must round-trip exactly");
+  const echoColor = await color(page.locator('[data-note-id="line:0"] input'));
+  await select("line:5");
+  const mixed = page.locator('[data-note-id="line:5"]');
+  assert.equal(
+    await mixed.locator('[data-seg="1"]').textContent(),
+    actualLyrics[5].segments[1].text,
+  );
+  await page.evaluate(() => window.__dismissToasts());
+  await page.waitForTimeout(200);
+  await capture(page, `actual-editor-mixed-${width}.png`);
+  if (width === 390) {
+    await page.getByRole("button", { name: "선택 노트 속성", exact: true }).click();
+    await page.screenshot({ path: join(out, "actual-mobile-properties.png"), fullPage: true });
+    await page.getByRole("button", { name: "노트 트랙으로 돌아가기", exact: true }).click();
+  }
+  const extraColor = await color(page.locator('[data-note-id="extra:1:0"] [data-seg="0"]'));
+  // The preview must place each of the four real '어이!' cues .8 s apart.
+  await page.getByText("실시간 응원 미리보기", { exact: true }).click();
+  const preview = page
+    .locator("details")
+    .filter({ has: page.getByText("실시간 응원 미리보기", { exact: true }) });
+  const positions = await preview.locator("span").evaluateAll((nodes) =>
+    nodes
+      .filter((n) => n.childElementCount === 0 && n.textContent.trim() === "어이!")
+      .slice(0, 4)
+      .map((n) => n.getBoundingClientRect().x),
+  );
+  check(
+    positions.length === 4 && positions.every((v, i) => Math.abs(v - positions[0] - i * 120) < 1),
+    "preview ignores .8/1.6/2.4 offsets",
+  );
+  await page.getByText("실시간 응원 미리보기", { exact: true }).click();
+  if (width === 1280) {
+    await page.locator("[data-lyric-details] summary").click();
+    await page.getByRole("button", { name: "6행 텍스트 수정", exact: true }).click();
+    await page
+      .getByRole("textbox", { name: "2번째 조각 내용", exact: true })
+      .fill(actualLyrics[5].segments[1].text + "!");
+    await page.getByRole("dialog").getByRole("button", { name: "저장", exact: true }).click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith("/save") && r.request().method() === "POST"),
+      page.getByRole("button", { name: /^저장/ }).click(),
+    ]);
+    const expected = structuredClone(actualLyrics);
+    expected[5].segments[1].text += "!";
+    assert.deepEqual(
+      lastSaved.lyrics,
+      expected,
+      "raw text edit preserves every other segment and property",
+    );
+    await page.getByRole("button", { name: "실행 취소", exact: true }).click();
+    await page.getByRole("button", { name: "3번 노트 강조 편집", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "에코", exact: true }).click();
+    await page.locator('[data-char-idx="5"]').click();
+    await page.getByRole("button", { name: "완료", exact: true }).click();
+    await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith("/save") && r.request().method() === "POST"),
+      page.getByRole("button", { name: /^저장/ }).click(),
+    ]);
+    const pieces = lastSaved.lyrics[1].segments.filter((s) => s.startTimeOffset === 0.8);
+    assert.equal(pieces.length, 3);
+    assert.equal(pieces.map((s) => s.text).join(""), actualLyrics[1].segments[1].text);
+    assert.equal("startTimeOffset" in lastSaved.lyrics[1].segments[0], false);
+    await page.goto(origin + "/viewer?saved", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "영상 재생", exact: true }).click();
+    await page.evaluate(() => {
+      window.__iframe.time = 4.81;
+    });
+    await page.waitForTimeout(100);
+    const piecesInViewer = page
+      .getByRole("region", { name: "응원법 가사" })
+      .getByRole("button")
+      .nth(1)
+      .locator("[data-lyric-segment]");
+    for (const index of [1, 2, 3])
+      assert.equal(
+        await piecesInViewer.nth(index).evaluate((el) => getComputedStyle(el).textDecorationLine),
+        "underline",
+      );
+    const rects = await piecesInViewer.evaluateAll((nodes) =>
+      nodes.slice(1, 4).map((el) => ({
+        left: el.getBoundingClientRect().left,
+        right: el.getBoundingClientRect().right,
+      })),
+    );
+    assert.ok(
+      rects.slice(1).every((box, i) => Math.abs(box.left - rects[i].right) < 1),
+      "pieces of one cue render as one word",
+    );
+    await capture(page, "actual-viewer-split-call-1280.png");
+    checks.push({
+      actualMixedTextSavePreservesMetadata: true,
+      actualPaintPiecesKeepOffset: true,
+      sameCuePiecesRenderTogether: true,
+    });
+    await page.goto(origin + "/?actual", { waitUntil: "networkidle" });
+    await select("extra:1:1");
+    await page.getByRole("spinbutton", { name: "노트 시작 시각", exact: true }).fill("6.5");
+    await select("line:4");
+    await page.getByRole("spinbutton", { name: "노트 시작 시각", exact: true }).fill("20");
+    await page.getByRole("button", { name: /^저장/ }).click();
+    await page.getByText("저장됨", { exact: true }).waitFor();
+  }
+  await page.goto(origin + "/viewer" + (width === 1280 ? "?saved" : ""), {
+    waitUntil: "networkidle",
+  });
+  await page.getByRole("button", { name: "영상 재생", exact: true }).click();
+  const lines = page.getByRole("region", { name: "응원법 가사" }).getByRole("button");
+  assert.equal(await lines.count(), 41);
+  const publicEcho = await color(lines.nth(0).locator("[data-lyric-segment]"));
+  const publicExtra = await color(lines.nth(1).locator("[data-lyric-segment]").first());
+  check(echoColor === publicEcho, `editor echo ${echoColor} differs from viewer ${publicEcho}`);
+  check(
+    extraColor === publicExtra,
+    `editor extra ${extraColor} differs from viewer ${publicExtra}`,
+  );
+  await page.evaluate(() => {
+    window.__iframe.time = 19.8;
+  });
+  await page.waitForTimeout(100);
+  assert.equal(
+    await lines.nth(5).locator("[data-lyric-segment]").nth(1).textContent(),
+    actualLyrics[5].segments[1].text,
+  );
+  await capture(page, `actual-viewer-mixed-${width}.png`);
+  if (width === 1280) {
+    await page.evaluate(() => {
+      window.__iframe.time = 6.51;
+    });
+    await page.waitForTimeout(100);
+    check(
+      (await lines
+        .nth(1)
+        .locator(":scope>span>span")
+        .nth(1)
+        .evaluate((el) => getComputedStyle(el).textDecorationLine)) === "underline",
+      "moved extra cue at6.5 does not activate in viewer",
+    );
+    await page.evaluate(() => {
+      window.__iframe.time = 20.1;
+    });
+    await page.waitForTimeout(100);
+    check(
+      (await lines.nth(4).getAttribute("aria-current")) === "true",
+      "moved lyric row at20 loses to array order in viewer",
+    );
+  }
+}
+
 try {
   for (const width of [1600, 1280, 390]) {
     responseMode = "ready";
     saveStatus = 200;
     const page = await browser.newPage({ viewport: { width, height: 1000 } });
+    await page.route(/^https:\/\/(?:img\.youtube\.com|i\.ytimg\.com)\//, (route) =>
+      route.fulfill({
+        contentType: "image/gif",
+        body: Buffer.from("R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==", "base64"),
+      }),
+    );
     page.setDefaultTimeout(10000);
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
@@ -382,7 +616,8 @@ try {
       const expectedFailure =
         /^Failed to load resource:.*(?:409|500)/.test(message.text()) &&
         /\/(save|api\/admin\/songs\/)/.test(message.location().url);
-      if (message.type() === "error" && !expectedFailure) errors.push(message.text());
+      if (message.type() === "error" && !expectedFailure)
+        errors.push(message.text() + " " + message.location().url);
     });
     await page.goto(origin, { waitUntil: "networkidle" });
     await page.locator('[aria-label="확대 파형과 Cue"] canvas').first().waitFor();
@@ -533,24 +768,136 @@ try {
       });
     }
     await verifyNotes(page, width);
+    await verifyActualLyrics(page, width);
     assert.equal(errors.length, 0, errors.join("\n"));
     checks.push({ width, overflow: false, errors });
     await page.close();
   }
+  const corpusResults = [];
+  const corpusErrors = [];
+  const corpusPage = await browser.newPage({
+    viewport: { width: 1280, height: 1000 },
+    reducedMotion: "reduce",
+  });
+  corpusPage.on("pageerror", (error) => corpusErrors.push(error.message));
+  corpusPage.on("console", (message) => {
+    if (message.type() === "error") corpusErrors.push(message.text());
+  });
+  await corpusPage.route(/^https:\/\/(?:img\.youtube\.com|i\.ytimg\.com)\//, (route) =>
+    route.fulfill({
+      contentType: "image/gif",
+      body: Buffer.from("R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==", "base64"),
+    }),
+  );
+  for (const [index, source] of corpus.entries()) {
+    responseMode = "empty";
+    saveStatus = 200;
+    await corpusPage.goto(origin + "/?actual&index=" + index, { waitUntil: "networkidle" });
+    const expectedNotes = source.lyrics.reduce(
+      (n, line) => n + (line.isExtra ? line.segments.length : 1),
+      0,
+    );
+    assert.equal(
+      await corpusPage.locator("[data-note-table] tbody tr").count(),
+      expectedNotes,
+      source.title,
+    );
+    const editorColors = await corpusPage
+      .locator("[data-note-table] [data-line][data-seg]")
+      .evaluateAll((nodes) =>
+        nodes.map((n) => ({
+          line: Number(n.dataset.line),
+          segment: Number(n.dataset.seg),
+          color: getComputedStyle(n).color,
+        })),
+      );
+    await Promise.all([
+      corpusPage.waitForResponse(
+        (r) => r.url().endsWith("/save") && r.request().method() === "POST",
+      ),
+      corpusPage.getByRole("button", { name: /^저장/ }).click(),
+    ]);
+    assert.deepEqual(lastSaved.lyrics, source.lyrics, source.title + " unchanged save");
+    await corpusPage.goto(origin + "/viewer?index=" + index + "&saved", {
+      waitUntil: "networkidle",
+    });
+    const lines = corpusPage.getByRole("region", { name: "응원법 가사" }).getByRole("button");
+    assert.equal(await lines.count(), source.lyrics.length, source.title);
+    const viewer = await lines.evaluateAll((nodes) =>
+      nodes.map((line) =>
+        [...line.querySelectorAll("[data-lyric-segment]")].map((segment) => ({
+          text: segment.textContent,
+          color: getComputedStyle(segment).color,
+        })),
+      ),
+    );
+    for (const [i, line] of source.lyrics.entries()) {
+      assert.deepEqual(
+        viewer[i].map((s) => s.text),
+        line.segments.map((s) => s.text),
+        source.title + " text structure",
+      );
+    }
+    for (const appearance of editorColors) {
+      const line = source.lyrics[appearance.line],
+        segment = line.segments[appearance.segment];
+      if (line.isExtra || segment.isEcho || segment.isCheer)
+        assert.equal(
+          appearance.color,
+          viewer[appearance.line][appearance.segment].color,
+          source.title + " semantic color",
+        );
+    }
+    corpusResults.push({
+      title: source.title,
+      lines: source.lyrics.length,
+      notes: expectedNotes,
+      unchangedSave: true,
+      textAndColors: true,
+    });
+  }
+  assert.deepEqual(corpusErrors, [], "local corpus browser errors");
+  await corpusPage.close();
+  await writeFile(
+    join(out, "local-corpus-report.json"),
+    JSON.stringify(
+      { songs: corpusResults.length, results: corpusResults, errors: corpusErrors },
+      null,
+      2,
+    ),
+  );
   await writeFile(
     join(out, "browser-report.json"),
     JSON.stringify(
       {
         passed: true,
         fixture:
-          "synthetic BBC JSON; YouTube IFrame API and HTTP boundaries stubbed; real React and Peaks.js canvas",
+          "mechanical tests use synthetic BBC; conformance tests use supplied and local corpus lyrics; real React/Peaks/viewer with YouTube, poster and HTTP boundaries stubbed",
         checks,
       },
       null,
       2,
     ),
   );
-  console.log(JSON.stringify({ passed: true, out, checks }));
+  await writeFile(
+    join(out, "actual-song-report.json"),
+    JSON.stringify(
+      {
+        passed: regressions.length === 0,
+        corpusSongs: corpusResults.length,
+        songId: actualSong.id,
+        lines: actualLyrics.length,
+        segments: actualLyrics.reduce((n, l) => n + l.segments.length, 0),
+        regressions,
+        checks,
+      },
+      null,
+      2,
+    ),
+  );
+  console.log(JSON.stringify({ passed: !regressions.length, out, regressions, checks }));
+  if (regressions.length && !recordRegressions)
+    throw Error("Actual lyrics regressions: " + regressions.join("; "));
 } finally {
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

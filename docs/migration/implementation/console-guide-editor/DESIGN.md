@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 30
+revision: 31
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -714,6 +714,8 @@ server DTO는 Query, 편집 draft는 RHF, 선택/zoom/loop/drag preview는 local
 텍스트 수정·문자 강조 분할은 기존 조각의 강조와 offset을 보존하고, 사용자 화면의 활성 Cue는
 배열 위치가 아니라 전체 행·추임새 조각의 실제 시각으로 선택한다. 특정 곡 ID나 문구를 제품 동작의
 분기 조건으로 사용하지 않는다. 실행·검증 상세는 해당 수정 PR이 소유한다.
+문자 강조 분할은 원래 조각 경계를 유지하며, 동일 Cue의 인접 추임새 조각은 사용자 화면에서
+하나의 호출로 이어 표시하고 함께 활성화한다.
 
 ## 8. 주요 Trade-off
 

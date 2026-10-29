@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { RawTextEditor } from "./RawTextEditor";
@@ -10,7 +10,7 @@ afterEach(() => {
 });
 it.each([false, true])(
   "텍스트 수정은 조각 경계·강조·상대 시각을 보존한다 (추임새 %s)",
-  (isExtra) => {
+  async (isExtra) => {
     const line = {
       startTime: 19.75,
       isExtra,
@@ -27,8 +27,10 @@ it.each([false, true])(
       target: { value: "고친 응원" },
     });
     fireEvent.click(screen.getByRole("button", { name: "저장" }));
-    expect(updateLine).toHaveBeenCalledExactlyOnceWith(5, {
-      segments: [line.segments[0], { ...line.segments[1], text: "고친 응원" }],
-    });
+    await waitFor(() =>
+      expect(updateLine).toHaveBeenCalledExactlyOnceWith(5, {
+        segments: [line.segments[0], { ...line.segments[1], text: "고친 응원" }],
+      }),
+    );
   },
 );
