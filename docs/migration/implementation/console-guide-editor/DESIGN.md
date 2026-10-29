@@ -575,6 +575,19 @@ FixedWorker는 보호된 실행 어댑터 계약이며 실제 Docker 구현·정
 Rust 출력의 세 필드를 검사하고 Runner가 source/generationVersion을 붙인다. stdout은 4MiB, 제어 출력은 4KiB로 제한하고 stderr는 보관하지 않는다. BBC 내용의 정본 검증은 Console이 유지한다.
 production 네트워크 이름은 oioi-waveform-egress로 고정하며 자동 생성하지 않는다. 실제 IMDS/내부망 차단·허용 egress 실증 전에는 설치·활성화하지 않는다. 로컬 합성 검사는 network=none이며 외부 영상 요청을 하지 않는다.
 
+**2026-10-29 worker egress 구현:** 전용 Docker bridge `oioi-wf0`의 input/forward만
+`oioi_waveform_guard` inet table(priority -20)에서 제한한다. host 접근·IPv6·private/reserved IPv4를
+먼저 차단하고 공개 TCP 80/443 및 고정 DNS `1.1.1.1`/`1.0.0.1`의 TCP/UDP 53만 허용한다.
+Docker 실행 옵션에도 같은 DNS를 고정한다. Queue payload로 네트워크·주소·포트를 받지 않는다.
+`waveform-egress-guard.py apply`는 자기 table만 하나의 nft transaction으로 교체하며,
+`check`는 규칙 전체·counter 형식·bridge 이름/label·ICC 비활성 설정을 확인한다.
+[Docker 방화벽 안내](https://docs.docker.com/engine/network/firewall-nftables)의 별도 table 방식과
+[nftables 계약](https://netfilter.org/projects/nftables/manpage.html)을 따른다. Docker 소유 table·daemon backend와
+기존 Web/Console `oioi_metadata_guard`는 변경하지 않는다.
+network=none 테스트 컨테이너의 별도 namespace에서 합성 목적지 양성 대조와 차단·drift를 검사한다.
+이는 실제 OCI DNS/인터넷/VM 방화벽 검증을 대신하지 않는다. 설치·재부팅 지속성·시작 전 fail-closed 확인은
+후속 설치 단위에서 연결하며, VM 변경·운영 활성화는 그 이후 별도 승인 관문이다.
+
 **재전달과 컨테이너 정리.** Runner는 receipt와 최신 visibility 기한을 메모리에만 보관한다.
 작업 중 별도 heartbeat가 UpdateMessage를 수행한다. 안전 여유 안에 연장을 확인하지 못하면 소유권 상실로 취급해
 분석을 중단·제거하고 새로운 결과 제출을 시작하지 않는다. 이미 전송 중인 결과는 DB의 attempt/terminal 검사로 판단한다.

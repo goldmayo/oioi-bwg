@@ -161,6 +161,21 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Verify worker egress in an isolated kernel namespace
+        run: |
+          docker build --tag oioi-bwg:network-check - <<'DOCKERFILE'
+          FROM oioi-bwg:runner-check
+          RUN apt-get update && apt-get install -y --no-install-recommends nftables iproute2 && rm -rf /var/lib/apt/lists/*
+          DOCKERFILE
+          docker run --rm --network none --cap-add NET_ADMIN --cap-add SYS_ADMIN \
+            --security-opt apparmor=unconfined \
+            --sysctl net.ipv4.ip_forward=1 --sysctl net.ipv6.conf.all.forwarding=1 \
+            -e P08_ISOLATED_NETWORK_TEST=1 \
+            -v "$PWD/ops/oci/waveform-egress-guard.py:/repo/ops/oci/waveform-egress-guard.py:ro" \
+            -v "$PWD/ops/oci/metadata-guard.py:/repo/ops/oci/metadata-guard.py:ro" \
+            -v "$PWD/tests/ops/waveform-egress-kernel.py:/repo/tests/ops/waveform-egress-kernel.py:ro" \
+            -w /repo oioi-bwg:network-check python3 -I tests/ops/waveform-egress-kernel.py
+
   postgres_integration:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'

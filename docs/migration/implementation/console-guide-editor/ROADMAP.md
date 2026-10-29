@@ -68,6 +68,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-29 전용 egress 준비:** #337 상주 수명 병합 뒤 worker bridge의 host/private/metadata/IPv6 접근 차단과 고정 DNS를 구현한다. 로컬 격리 커널의 허용·차단·기존 metadata table 보존을 검증하며 실제 OCI/VM 수용과 구분한다. 다음은 설치/systemd·Vault 공급·Console mount 연결이다. VM 설정 변경·운영 배포는 아직 수행하지 않았다.
+
 **2026-10-29 상주 수명 연결:** #336 host 잠금 뒤 고정 설정/token 로더·Instance Principal 시작·socket 접수·일반/DLQ 교대 소비·취소/종료 정리를 연결한다. CI ARM64 binary의 checksum/검증 tree를 보존한다. 다음은 systemd/설치·Vault 공급·Console mount/metadata probe 호환성·egress 격리 연결이며, 실제 VM 설치/활성화·OCI 수용·Promotion은 별도 승인 후 진행한다.
 
 
