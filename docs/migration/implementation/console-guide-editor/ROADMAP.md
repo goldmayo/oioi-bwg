@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 47
+revision: 48
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-29 host socket 연결 준비:** #332의 Docker 실행 뒤 Runner 중복 기동 방지용 host lock·Unix socket의 소유권/권한·stale socket 회수를 구현한다. #333 DLQ 소비와 합친 뒤 상주 실행/종료·설치로 연결한다. 실제 VM 디렉터리/전용 그룹 생성·Console mount·서비스 활성화는 별도 승인 관문이며 이 코드 PR은 VM을 변경하지 않는다.
 
 **2026-10-29 Docker 실행 연결:** #331 소비 흐름 뒤 고정 이미지 ID·이름/label·명령·자원 한도의 Docker 어댑터를 연결한다. 합성 stdin은 패키지 내부 검사에서만 사용하고 production Run은 승인 videoId의 yt-dlp 경로만 실행한다. 실제 로컬 Docker 분석·취소·정리·자원 옵션과 다른 label의 컨테이너 보호를 CI ARM64에 포함한다. 운영 egress 네트워크 생성·격리 확인과 설치/활성화는 이번 코드 작업에 포함하지 않는다. VM 변경·운영 배포는 이후 별도 승인이 필요하다.
 

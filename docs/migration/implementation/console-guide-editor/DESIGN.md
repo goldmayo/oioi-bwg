@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 24
+revision: 25
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -497,6 +497,13 @@ Console에는 socket 디렉터리만 읽기 전용으로 연결하고 Docker soc
 소켓의 body/연결 수/호출 기한 상한과 group mapping은 구현 시 부하·권한 검사로 고정한다.
 PutMessages의 SDK/HTTP 자동 재시도를 끄고 `opc-request-id`를 멱등키로 가정하지 않는다.
 분석 중 메모리 작업 목록은 쌓지 않고 대기는 OCI Queue가 맡는다.
+
+**2026-10-29 host socket 구현:** `OpenHostSocket`은 보호된 0750 디렉터리·전용 그룹을 확인하고
+0600 단일 inode의 `runner.lock`에 nonblocking flock을 잡은 뒤 0660 socket을 연다.
+lock 파일을 unlink하지 않으며, symlink/hardlink/FIFO·쓰기 가능한 부모·잘못된 소유 그룹을 거절한다.
+이전 socket은 같은 소유권/권한의 stale socket임을 확인한 경우만 제거하고 살아 있는 listener는 보존한다.
+호출자는 worker/HTTP 종료 정리 후 HostSocket을 닫아 잠금을 해제한다. 프로세스 시작 경로·systemd/설치 연결은 후속이다.
+이 검증은 로컬 Linux/ARM64 Docker 파일시스템이며 운영 Console 그룹의 실제 연결 허용/타 사용자 거절 수용은 별도다.
 
 **2026-10-29 송신부 계약 구체화:** 생성 HTTP 연결 전에 Console의 고정 socket client를 독립 검증한다.
 `POST /enqueue`의 응답은 HTTP 200과 strict `{jobId,outcome}`이며 outcome은 `ENQUEUED | UNCONFIRMED | NOT_ENQUEUED`다.
