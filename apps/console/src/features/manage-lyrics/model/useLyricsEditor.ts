@@ -111,7 +111,7 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
     },
-    [history, historyIndex],
+    [history, historyIndex, setLyrics],
   );
 
   /**
