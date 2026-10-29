@@ -168,24 +168,29 @@ const socketMount = {
 function consoleFixture(mounts: unknown = [socketMount], labels: unknown = consoleLabels) {
   return { MOUNTS: JSON.stringify(mounts), LABELS: JSON.stringify(labels) };
 }
-test("Console socket mount에도 기존 IMDS 양성 대조·차단 counter 검사를 적용한다", async () => {
-  const { root } = await fixture();
-  const env = consoleFixture();
-  const result = execute(root, ["probe-console", "console"], env);
-  expect(result.status, result.stderr).toBe(0);
-  expect(execute(root, ["probe", "console"], env).status).toBe(1);
-  for (const failure of [
-    { NO_COUNTER: "1" },
-    { HOST_STATUS: "503" },
-    { HTTP_STATUS: "401" },
-    { NETWORK_MODE: "host" },
-  ]) {
-    expect(execute(root, ["probe-console", "console"], { ...env, ...failure }).status).toBe(1);
-  }
-});
+test.each(["ro", ""])(
+  "Console socket Mode=%j에도 IMDS 양성 대조·차단 counter 검사를 적용한다",
+  async (mode) => {
+    const { root } = await fixture();
+    const env = consoleFixture([{ ...socketMount, Mode: mode }]);
+    const result = execute(root, ["probe-console", "console"], env);
+    expect(result.status, result.stderr).toBe(0);
+    expect(execute(root, ["probe", "console"], env).status).toBe(1);
+    for (const failure of [
+      { NO_COUNTER: "1" },
+      { HOST_STATUS: "503" },
+      { HTTP_STATUS: "401" },
+      { NETWORK_MODE: "host" },
+    ]) {
+      expect(execute(root, ["probe-console", "console"], { ...env, ...failure }).status).toBe(1);
+    }
+  },
+);
 test.each([
   ["write", [{ ...socketMount, RW: true }], consoleLabels],
   ["mode", [{ ...socketMount, Mode: "rw" }], consoleLabels],
+  ["empty-mode-write", [{ ...socketMount, Mode: "", RW: true }], consoleLabels],
+  ["null-mode", [{ ...socketMount, Mode: null }], consoleLabels],
   ["shared", [{ ...socketMount, Propagation: "rshared" }], consoleLabels],
   ["volume", [{ ...socketMount, Type: "volume" }], consoleLabels],
   ["source", [{ ...socketMount, Source: "/var/run/docker.sock" }], consoleLabels],
