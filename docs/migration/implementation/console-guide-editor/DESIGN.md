@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 20
+revision: 23
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -440,6 +440,10 @@ Rust는 분석기에 유지한다. OCI 요청 서명·인증서/토큰 갱신을
 Go/SDK 버전·binary hash·상주 CPU/RSS는 Runner 구현 PR에서 실제 ARM64 검증으로 고정한다.
 Rust 분석 성능 비교를 Go Runner 성능의 근거로 사용하지 않는다.
 
+**2026-10-29 언어 재검토:** [Python 공식 SDK](https://docs.oracle.com/en-us/iaas/tools/python/latest/api/queue/client/oci.queue.QueueClient.html)도
+Queue/Instance Principal을 지원한다. 언어 추가 비용을 검토한 뒤 사용자는 Go Runner 유지를 선택했다.
+기존 통신 검증과 동시성·취소 모델을 이어가는 선택이며 Python 대비 성능 우위나 성능상 필수성을 입증한 결과는 없다.
+
 **2026-10-29 사용자 확정·첫 SDK 구현:** Runner는 Go, 분석 worker는 Rust로 확정한다.
 `ops/waveform-runner`의 첫 단위는 고정 Osaka Queue의 PutMessages 송신부다. 도구/SDK 버전은
 해당 Dockerfile digest와 go.mod/go.sum으로 고정하고 ARM64 CI에서 실제 SDK·로컬 HTTP 서버로 검증한다.
@@ -453,6 +457,11 @@ socket/내부 Job 대조·전달 확인·consumer·설치는 후속이다. SDK �
 HTTP 1초·header/body 각 4KiB로 제한하고 기존 DTO의 식별자·상태·nullable 필드·시각과 응답 Job을 대조한다.
 명시적인 404/WAVEFORM_JOB_NOT_FOUND만 삭제된 Job으로 구분한다. 비활성 403·일반 404·오류 원문은 부재 근거가 아니다.
 전달 기록의 최초 시각과 RUNNING/terminal 응답은 허용하고, 응답 유실·불일치는 불확실로 반환한다. socket 연결은 다음 단위다.
+
+**2026-10-29 시작 client 연결:** 기존 `/start`에 required nullable expectedAttemptId를 한 번 전달한다.
+응답의 Job/source·필수 nullable 필드와 started boolean을 검사하고, started=true는 RUNNING·새 non-null attempt일 때만 인정한다.
+started=false와 응답 유실은 실행 승인이 아니며 자동 재시도·message 삭제·실패 반영을 하지 않는다.
+같은 loopback/token·1초/4KiB 제한을 재사용한다. 실제 receipt/worker 정리 확인과 시작·결과의 소비 흐름 연결은 후속이다.
 
 **2026-10-29 socket 연결:** Go enqueue server는 실제 Unix listener에서만 접수를 허용하고 TCP·Origin을 거절한다.
 strict 세 식별자·실제 body 1KiB·읽기 1초·진행 중 8개 상한을 적용한다. 진행 중 같은 Job은 추가 송신하지 않는다.
@@ -469,6 +478,15 @@ JSON 응답 header/body 각 4KiB·redirect/proxy/자동 재시도 금지를 유�
 receipt는 같은 consumer의 메모리에서만 사용한다. 오류/응답 유실은 불확실이며 재송신·terminal 변경·message 삭제를 자동 수행하지 않는다.
 이 단위는 SDK 연결부와 ARM64 로컬 HTTP 검증이다. heartbeat/안전 기한·소유권 상실 중단·terminal 확인 뒤 삭제와
 재전달/DLQ·고정 worker·상주 시작/정리·설치·실제 OCI 수용을 후속 소비 흐름에서 연결한다.
+
+**2026-10-29 visibility 실행 범위:** 동일 Consumer의 poll/작업 슬롯을 공유하고 수신 Delivery는 한 번만 실행 범위에 진입한다.
+30초 heartbeat는 최대 한 건만 진행한다. 안전 기한은 응답 visibility·message expiry·요청 시작+180초 중 이른 시각에서 30초를 뺀다.
+서버 시각을 로컬 monotonic 기한에 고정하며 만료 뒤 늦은 연장 응답으로 실행을 되살리지 않는다.
+연장 오류 또는 2초 안에 확인하지 못한 요청은 보수적으로 소유권 불확실로 중단한다. 일시 장애에도 조기 중단/재전달될 수 있다.
+실행 함수가 취소를 받아 고정 worker 정리를 마치고 반환할 때까지 슬롯을 유지한다. SDK 호출도 취소 후 최대 3초 정리를 기다린다.
+SDK 호출의 종료를 확인하지 못하면 Consumer를 격리하고 새 poll/실행을 막는다. 늦은 응답으로 자동 해제하지 않는다.
+ErrRunnerStalled는 Job 실패가 아니라 상주 시작 코드가 서비스 중단·재시작으로 처리할 오류다. 이 범위는 DB/terminal·delete를 호출하지 않는다.
+로컬 가상 시계·SDK/메모리 HTTP 검증이며 실제 컨테이너 stop/kill/wait/remove·Job 복구·DLQ·서비스 기동과 OCI 수용은 후속이다.
 
 소켓은 `/run/oioi-waveform/runner.sock`에 두는 안으로, root가 부모·소유 그룹을 관리하고 Console 전용 그룹만 연결한다.
 Console에는 socket 디렉터리만 읽기 전용으로 연결하고 Docker socket·host root 경로·OCI credential을 주지 않는다.
@@ -536,6 +554,12 @@ source 참조의 `type=youtube`는 현재 저장 계약의 참조 영상 표시�
 결과 요청/응답이 유실되면 현재 terminal 조회 또는 같은 결과의 멱등 재전달로 저장을 확인한다.
 이전 attempt의 결과를 새 attemptId로 바꿔 제출하지 않는다. terminal 또는 삭제된 Job의 404가 확인돼야 message를 정리한다.
 FCM 발송 완료는 Queue delete의 선행 조건이 아니며 기존 commit 후 dispatcher를 깨우는 경로를 유지한다.
+
+**2026-10-29 소비 흐름 구현:** 한 번 poll한 Delivery를 기존 lease 안에서 처리한다. 고정 worker의 잔존 정리를 확인한 뒤 Job/source·보호된 승인 목록을 검사하고 started=true인 새 attempt만 실행한다.
+이미 terminal이거나 명시적 Job 부재이면 정리 후 message를 삭제한다. 일시 실행 오류와 시작 응답 유실은 재전달에 맡긴다.
+worker는 취소를 포함해 정리가 끝난 뒤 반환해야 한다. 정리 불확실은 ErrRunnerStalled로 Consumer를 격리하고 새 poll/작업을 막는다.
+성공 결과는 발급받은 attempt 그대로 제출하며 DB terminal 확인 뒤 삭제한다. 완료 응답 불확실/이전 attempt 거절은 한 번 조회해 확인하고, delete 오류로 terminal을 재작성하지 않는다.
+FixedWorker는 보호된 실행 어댑터 계약이며 실제 Docker 구현·정리 한도·VM 수용은 후속이다. 기본 소비 흐름에는 자체 재시도 루프·메모리 대기열·자동 stale 판정을 추가하지 않는다.
 
 **재전달과 컨테이너 정리.** Runner는 receipt와 최신 visibility 기한을 메모리에만 보관한다.
 작업 중 별도 heartbeat가 UpdateMessage를 수행한다. 안전 여유 안에 연장을 확인하지 못하면 소유권 상실로 취급해

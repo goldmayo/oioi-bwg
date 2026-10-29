@@ -212,6 +212,12 @@ func TestPollLongWaitAndSingleReader(t *testing.T) {
 	if _, err := c.Poll(context.Background()); err != ErrConsume || count.Load() != 1 {
 		t.Fatal("parallel poll admitted")
 	}
+	if err := c.RunWithLease(context.Background(), leaseDelivery(c), func(context.Context) error {
+		t.Error("execution overlapped long poll")
+		return nil
+	}); err != ErrConsume {
+		t.Fatal("lease admitted during poll")
+	}
 	// publisher의 2초 HTTP 기한과 분리됐는지 실제 지연으로 확인한다.
 	if err := <-done; err != nil {
 		t.Fatal("long poll used publish deadline")
