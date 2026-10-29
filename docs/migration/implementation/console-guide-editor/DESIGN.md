@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 26
+revision: 27
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -560,6 +560,13 @@ FCM 발송 완료는 Queue delete의 선행 조건이 아니며 기존 commit �
 worker는 취소를 포함해 정리가 끝난 뒤 반환해야 한다. 정리 불확실은 ErrRunnerStalled로 Consumer를 격리하고 새 poll/작업을 막는다.
 성공 결과는 발급받은 attempt 그대로 제출하며 DB terminal 확인 뒤 삭제한다. 완료 응답 불확실/이전 attempt 거절은 한 번 조회해 확인하고, delete 오류로 terminal을 재작성하지 않는다.
 FixedWorker는 보호된 실행 어댑터 계약이며 실제 Docker 구현·정리 한도·VM 수용은 후속이다. 기본 소비 흐름에는 자체 재시도 루프·메모리 대기열·자동 stale 판정을 추가하지 않는다.
+
+**2026-10-29 Docker 어댑터:** 보호된 local image ID와 승인 목록으로 고정 컨테이너를 create/start한다. Docker socket/CLI 주소는 고정하고 host 환경을 상속하지 않는다. worker에는 해당 videoId 승인 값만 공급한다.
+기존 CPU 1·RAM 256MiB/swap 0·PID 32·tmpfs 64MiB·실행 120초 한도를 사용하며 read-only/non-root/cap-drop/no-new-privileges/log-none/core-zero와 자동 제거를 강제한다.
+제어/정리 기한은 10초, CLI pipe 종료 대기는 2초이며 실제 VM 지연은 후속 수용에서 확인한다. create 응답 유실은 늦은 생성 가능성 때문에 ErrRunnerStalled로 처리한다.
+정리는 고정 이름의 ID와 label을 대조한 뒤 stop(2초)/강제 제거/부재 확인 순서다. 취소 뒤에도 독립된 유한 context로 정리를 마치며 불확실하면 Consumer 격리를 유지한다.
+Rust 출력의 세 필드를 검사하고 Runner가 source/generationVersion을 붙인다. stdout은 4MiB, 제어 출력은 4KiB로 제한하고 stderr는 보관하지 않는다. BBC 내용의 정본 검증은 Console이 유지한다.
+production 네트워크 이름은 oioi-waveform-egress로 고정하며 자동 생성하지 않는다. 실제 IMDS/내부망 차단·허용 egress 실증 전에는 설치·활성화하지 않는다. 로컬 합성 검사는 network=none이며 외부 영상 요청을 하지 않는다.
 
 **재전달과 컨테이너 정리.** Runner는 receipt와 최신 visibility 기한을 메모리에만 보관한다.
 작업 중 별도 heartbeat가 UpdateMessage를 수행한다. 안전 여유 안에 연장을 확인하지 못하면 소유권 상실로 취급해
