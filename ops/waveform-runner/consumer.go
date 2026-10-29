@@ -28,13 +28,21 @@ type Delivery struct {
 	deliveryCount             int
 	visibleAfter, expireAfter time.Time
 	readStarted               time.Time
+	claimed                   atomic.Bool
 }
 
 type Consumer struct {
-	client  queue.QueueClient
-	queueID string
-	polling atomic.Bool
+	client   queue.QueueClient
+	queueID  string
+	activity atomic.Int32
 }
+
+const (
+	consumerIdle int32 = iota
+	consumerPolling
+	consumerWorking
+	consumerQuarantined
+)
 
 // 기존 Instance Principal client를 공유하고 long poll의 HTTP 기한만 분리한다.
 func NewConsumer(p *Publisher) (*Consumer, error) {
@@ -59,10 +67,10 @@ func NewConsumer(p *Publisher) (*Consumer, error) {
 
 // Poll은 한 건만 수신한다. nil/nil만 정상 빈 poll이며 오류 뒤 자동 재시도하지 않는다.
 func (c *Consumer) Poll(ctx context.Context) (*Delivery, error) {
-	if !c.polling.CompareAndSwap(false, true) {
-		return nil, ErrConsume
+	if !c.activity.CompareAndSwap(consumerIdle, consumerPolling) {
+		return nil, c.activityError()
 	}
-	defer c.polling.Store(false)
+	defer c.activity.Store(consumerIdle)
 	started := time.Now()
 	ctx, client, cancel := c.cancellableClient(ctx, pollDeadline)
 	defer cancel()
@@ -87,7 +95,9 @@ func (c *Consumer) Poll(ctx context.Context) (*Delivery, error) {
 	if m.Content == nil || len(*m.Content) > 1024 || json.Unmarshal([]byte(*m.Content), &fields) != nil || len(fields) != 3 || fields["jobId"] == nil || fields["songId"] == nil || fields["videoId"] == nil || json.Unmarshal([]byte(*m.Content), &value) != nil || !uuid7.MatchString(value.JobID) || !uuid7.MatchString(value.SongID) || !videoID.MatchString(value.VideoID) {
 		return nil, ErrPayload
 	}
-	return &Delivery{value, c, *m.Id, *m.Receipt, *m.DeliveryCount, m.VisibleAfter.Time, m.ExpireAfter.Time, started}, nil
+	return &Delivery{Payload: value, owner: c, id: *m.Id, receipt: *m.Receipt,
+		deliveryCount: *m.DeliveryCount, visibleAfter: m.VisibleAfter.Time,
+		expireAfter: m.ExpireAfter.Time, readStarted: started}, nil
 }
 
 // Renew는 응답을 확인한 경우에만 새 visibility를 반환한다. heartbeat/중단 정책은 소비 흐름이 소유한다.
