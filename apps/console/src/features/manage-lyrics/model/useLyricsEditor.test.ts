@@ -117,3 +117,28 @@ it("노트 추가와 조각 이동은 각각 한 번의 Undo/Redo로 복원한�
     2, 0,
   ]);
 });
+
+it("응원과 에코를 각각 바꾸고 Undo/Redo해도 다른 속성을 유지한다", () => {
+  const { result } = renderHook(() =>
+    useLyricsEditor([
+      { startTime: 2, isExtra: false, segments: [{ text: "에코", isCheer: true, isEcho: true }] },
+    ]),
+  );
+  act(() => {
+    result.current.editNote({
+      type: "segment",
+      id: "line:0",
+      segmentIndex: 0,
+      value: { isEcho: false },
+    });
+  });
+  expect(result.current.lyrics[0].segments[0]).toMatchObject({ isCheer: true, isEcho: false });
+  act(() => {
+    result.current.undo();
+  });
+  expect(result.current.lyrics[0].segments[0]).toMatchObject({ isCheer: true, isEcho: true });
+  act(() => {
+    result.current.redo();
+  });
+  expect(result.current.lyrics[0].segments[0]).toMatchObject({ isCheer: true, isEcho: false });
+});

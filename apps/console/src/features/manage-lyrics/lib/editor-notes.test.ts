@@ -97,3 +97,49 @@ describe("응원 노트와 기존 가사 JSON 연결", () => {
     expect(applyNoteEdit(fixture, { type: "move", id: "line:0", time: 2 })).toBeNull();
   });
 });
+
+it("혼합 조각의 응원·에코를 각각 표시하고 한 속성 변경이 다른 속성·offset을 보존한다", () => {
+  const source: LyricLine[] = [
+    {
+      startTime: 3,
+      isExtra: false,
+      segments: [
+        { text: "일반", isCheer: false, isEcho: false },
+        { text: "응원", isCheer: true, isEcho: false },
+        { text: "에코", isCheer: true, isEcho: true, startTimeOffset: 0.5 },
+      ],
+    },
+  ];
+  expect(
+    getEditorNotes(source)[0].segments.map(({ isCheer, isEcho }) => [isCheer, isEcho]),
+  ).toEqual([
+    [false, false],
+    [true, false],
+    [true, true],
+  ]);
+  const changed = applyNoteEdit(source, {
+    type: "segment",
+    id: "line:0",
+    segmentIndex: 2,
+    value: { isEcho: false },
+  })!;
+  expect(changed.lyrics[0].segments[2]).toEqual({ ...source[0].segments[2], isEcho: false });
+  expect(changed.lyrics[0].segments.slice(0, 2)).toEqual(source[0].segments.slice(0, 2));
+  expect(source[0].segments[2].isEcho).toBe(true);
+  const extra = applyNoteEdit(fixture, {
+    type: "segment",
+    id: "extra:1:1",
+    segmentIndex: 1,
+    value: { isEcho: true },
+  })!;
+  expect(extra.lyrics[1].isExtra).toBe(true);
+  expect(extra.lyrics[1].segments[1]).toEqual({ ...fixture[1].segments[1], isEcho: true });
+  expect(
+    applyNoteEdit(fixture, {
+      type: "segment",
+      id: "extra:1:1",
+      segmentIndex: 0,
+      value: { isEcho: true },
+    }),
+  ).toBeNull();
+});

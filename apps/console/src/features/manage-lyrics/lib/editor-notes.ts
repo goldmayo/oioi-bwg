@@ -1,4 +1,4 @@
-import type { LyricLine } from "@oioi-bwg/contracts/song";
+import type { LyricLine, LyricSegment } from "@oioi-bwg/contracts/song";
 
 export type NoteLane = "lyrics" | "cheer" | "echo" | "extra";
 export interface EditorNote {
@@ -8,11 +8,18 @@ export interface EditorNote {
   lane: NoteLane;
   text: string;
   time: number;
+  segments: (LyricSegment & { segmentIndex: number })[];
 }
 export type NoteEdit =
   | { type: "add"; lane: NoteLane; time: number; text: string }
   | { type: "move"; id: string; time: number }
   | { type: "text"; id: string; text: string }
+  | {
+      type: "segment";
+      id: string;
+      segmentIndex: number;
+      value: Partial<Pick<LyricSegment, "text" | "isCheer" | "isEcho">>;
+    }
   | { type: "duplicate"; id: string; time: number }
   | { type: "delete"; id: string };
 const round = (time: number) => Math.round(time * 100) / 100;
@@ -28,6 +35,7 @@ export function getEditorNotes(lyrics: LyricLine[]): EditorNote[] {
         lineIndex,
         segmentIndex,
         lane: "extra" as const,
+        segments: [{ ...segment, segmentIndex }],
         text: segment.text,
         time: round(line.startTime + (segment.startTimeOffset ?? 0)),
       }));
@@ -44,6 +52,7 @@ export function getEditorNotes(lyrics: LyricLine[]): EditorNote[] {
         lineIndex,
         segmentIndex: null,
         lane,
+        segments: line.segments.map((segment, segmentIndex) => ({ ...segment, segmentIndex })),
         text: line.segments.map((segment) => segment.text).join(""),
         time: line.startTime,
       },
@@ -95,7 +104,22 @@ export function applyNoteEdit(
     const selected = getEditorNotes(next).find((value) => value.lineIndex === lineIndex);
     return { lyrics: next, lineIndex, noteId: selected?.id ?? null };
   }
-  if (edit.type === "text") {
+  if (edit.type === "segment") {
+    const segment = line.segments[edit.segmentIndex];
+    if (!segment || (segmentIndex !== null && segmentIndex !== edit.segmentIndex)) return null;
+    if (
+      Object.entries(edit.value).every(
+        ([key, value]) => segment[key as keyof LyricSegment] === value,
+      )
+    )
+      return null;
+    next[note.lineIndex] = {
+      ...line,
+      segments: line.segments.map((value, index) =>
+        index === edit.segmentIndex ? { ...value, ...edit.value } : value,
+      ),
+    };
+  } else if (edit.type === "text") {
     if (segmentIndex === null && line.segments.length !== 1) return null;
     const index = segmentIndex ?? 0;
     if (line.segments[index].text === edit.text) return null;
