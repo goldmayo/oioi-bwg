@@ -89,12 +89,16 @@ func (c *Consumer) poll(ctx context.Context, deadLetter bool) (*Delivery, error)
 	}
 	defer c.activity.Store(consumerIdle)
 	started := time.Now()
-	ctx, client, cancel := c.cancellableClient(ctx, pollDeadline)
+	wait, deadline := 30, pollDeadline
+	if deadLetter {
+		wait, deadline = 0, publishDeadline
+	}
+	ctx, client, cancel := c.cancellableClient(ctx, deadline)
 	defer cancel()
 	policy := common.NoRetryPolicy()
 	response, err := client.GetMessages(ctx, queue.GetMessagesRequest{
 		QueueId: common.String(c.destination(deadLetter)), Limit: common.Int(1),
-		TimeoutInSeconds: common.Int(30), VisibilityInSeconds: common.Int(visibilitySeconds),
+		TimeoutInSeconds: common.Int(wait), VisibilityInSeconds: common.Int(visibilitySeconds),
 		RequestMetadata: common.RequestMetadata{RetryPolicy: &policy},
 	})
 	if err != nil || response.RawResponse == nil || response.RawResponse.StatusCode != 200 || response.Messages == nil || len(response.Messages) > 1 {

@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 29
+revision: 30
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -575,6 +575,19 @@ FixedWorker는 보호된 실행 어댑터 계약이며 실제 Docker 구현·정
 Rust 출력의 세 필드를 검사하고 Runner가 source/generationVersion을 붙인다. stdout은 4MiB, 제어 출력은 4KiB로 제한하고 stderr는 보관하지 않는다. BBC 내용의 정본 검증은 Console이 유지한다.
 production 네트워크 이름은 oioi-waveform-egress로 고정하며 자동 생성하지 않는다. 실제 IMDS/내부망 차단·허용 egress 실증 전에는 설치·활성화하지 않는다. 로컬 합성 검사는 network=none이며 외부 영상 요청을 하지 않는다.
 
+**2026-10-29 worker egress 구현:** 전용 Docker bridge `oioi-wf0`의 input/forward만
+`oioi_waveform_guard` inet table(priority -20)에서 제한한다. host 접근·IPv6·private/reserved IPv4를
+먼저 차단하고 공개 TCP 80/443 및 고정 DNS `1.1.1.1`/`1.0.0.1`의 TCP/UDP 53만 허용한다.
+Docker 실행 옵션에도 같은 DNS를 고정한다. Queue payload로 네트워크·주소·포트를 받지 않는다.
+`waveform-egress-guard.py apply`는 자기 table만 하나의 nft transaction으로 교체하며,
+`check`는 규칙 전체·counter 형식·bridge 이름/label·ICC 비활성 설정을 확인한다.
+[Docker 방화벽 안내](https://docs.docker.com/engine/network/firewall-nftables)의 별도 table 방식과
+[nftables 계약](https://netfilter.org/projects/nftables/manpage.html)을 따른다. Docker 소유 table·daemon backend와
+기존 Web/Console `oioi_metadata_guard`는 변경하지 않는다.
+network=none 테스트 컨테이너의 별도 namespace에서 합성 목적지 양성 대조와 차단·drift를 검사한다.
+이는 실제 OCI DNS/인터넷/VM 방화벽 검증을 대신하지 않는다. 설치·재부팅 지속성·시작 전 fail-closed 확인은
+후속 설치 단위에서 연결하며, VM 변경·운영 활성화는 그 이후 별도 승인 관문이다.
+
 **재전달과 컨테이너 정리.** Runner는 receipt와 최신 visibility 기한을 메모리에만 보관한다.
 작업 중 별도 heartbeat가 UpdateMessage를 수행한다. 안전 여유 안에 연장을 확인하지 못하면 소유권 상실로 취급해
 분석을 중단·제거하고 새로운 결과 제출을 시작하지 않는다. 이미 전송 중인 결과는 DB의 attempt/terminal 검사로 판단한다.
@@ -598,6 +611,26 @@ DLQ poll/renew/delete는 같은 DLQ 주소를 사용하며, 일반 분석 경로
 새 attempt와 음원 접근은 없으므로 allowlist 철회 뒤에도 회수할 수 있다. 응답 유실·이전 attempt 거절은 한 번 재조회하고,
 정리가 불확실하면 Consumer를 격리한다. 삭제 실패로 DB 결과를 되돌리거나 terminal을 다시 제출하지 않는다.
 SDK와 로컬 HTTP fixture 검증이며 실제 OCI DLQ 이동·주소·IAM 허용 여부와 상주 반복 실행은 활성화 전 별도 검증한다.
+
+**2026-10-29 상주 실행 연결:** 고정 진입점은 root 소유 0400/0600 설정만 제한된 크기로 읽는다.
+`/etc/oioibawige/waveform-runner.json`의 queueId/endpoint/consolePort/socketGroup/image/approvedVideoIds와
+`/run/oioi-waveform-private/token`을 사용하고 임의 환경변수·명령 인자는 설정 경로를 바꾸지 못한다.
+host 잠금 → 잔존 컨테이너 정리 → token/Instance Principal 초기화 → socket 접수·순차 소비 순서다.
+일반 큐의 30초 long poll과 DLQ의 즉시 poll을 번갈아 실행해 DLQ 오류가 일반 큐를 굶기지 않게 한다.
+오류 뒤 2초 대기에는 취소가 전파되며, 연속 실패는 최초 한 번 정제된 고정 오류 코드만 기록한다. 정리 불확실은 서비스 종료로 이어진다. 종료 시 소비 취소 → HTTP drain(10초) → worker 정리 → host 잠금 해제를 수행한다.
+고정 `cleanup` 모드는 종료 후 정리용이며 token/OCI 인증 없이 동일 host 잠금 아래 전용 컨테이너만 정리한다.
+ARM64 static binary와 검증 commit/tree·checksum을 CI artifact로 남긴다. 해당 workflow의 필수 verify 성공 여부를 함께 확인해야 하며 artifact 업로드만으로 운영 배포가 승인되지는 않는다.
+systemd·Vault 공급·Console socket mount·egress/metadata 격리는 설치 연결의 후속이다. 기존 metadata probe의 mount 금지 검사와 Console 전용 socket mount의 일치도 그 단계에서 검증한다.
+
+**2026-10-29 token 공급 준비:** host의 고정 `/usr/local/bin/oci`로 Instance Principal을 사용해
+보호된 `/etc/oioibawige/waveform-runner-secret.json`의 `secretId` 하나만 CURRENT stage에서 조회한다.
+CLI 환경은 고정 PATH·전용 HOME·locale만 전달하며 앱 credential과 사용자 OCI 설정을 상속하지 않는다.
+조회는 60초 이내로 제한하고 Base64를 해제한 64자리 소문자 hex만 `/run/oioi-waveform-private/token`에
+0600으로 원자 교체한다. 디렉터리는 root 0700, 설정·기존 token은 root 0400/0600·단일 hardlink를 요구한다.
+상위 경로 symlink/비보호 소유권·쓰기 권한, FIFO를 거절한다. 실패 시 직전 token을 보존하지만 호출은 실패하므로
+후속 systemd 시작 연결은 이전 token으로 우회하지 않아야 한다. stdout/stderr에는 정제된 사건 코드만 남긴다.
+CLI 실행기·라이브러리를 포함한 host 설치 경로는 root 신뢰 경계이며, 실제 설치·Vault 조회는 별도 승인 후 수행한다.
+합성 CLI와 실제 root 파일 권한 검증을 실제 Vault/IAM 수용으로 확대하지 않는다. 앱 env 공급·서비스 설치는 후속이다.
 
 ### 6.3. Queue 설정 후보와 활성화 관문
 
@@ -673,6 +706,14 @@ server DTO는 Query, 편집 draft는 RHF, 선택/zoom/loop/drag preview는 local
 다른 조각의 절대 시각은 유지하며 drag 완료 한 번을 기존 RHF/history의 변경 한 번으로 기록한다.
 빈 노트는 작성 중 초안으로 허용하고 내용·시각 계약을 만족하기 전에 저장 요청을 보내지 않는다.
 저장 계약을 바꾸거나 표시 폭을 종료 시각으로 만들지 않는다. BPM/grid/Snap/Loop는 기존 P10 범위다.
+
+**2026-10-29 실제 가사 대조에 따른 정정:** 위 구현의 합성 fixture 검증 후 사용자 제공 가사와 로컬 26곡을
+비교해 강조 의미색과 상대 시각 회귀를 확인했다. 편집기 본문은 사용자 화면의 우선순위인
+추임새(청록) → 에코(연두) → 응원(바위게색) → 일반을 따른다. 조각별 플래그를 합치거나 새 제약으로
+정규화하지 않는다. 실시간 미리보기도 추임새의 행 시작+상대 offset에 각 조각을 배치한다.
+텍스트 수정·문자 강조 분할은 기존 조각의 강조와 offset을 보존하고, 사용자 화면의 활성 Cue는
+배열 위치가 아니라 전체 행·추임새 조각의 실제 시각으로 선택한다. 특정 곡 ID나 문구를 제품 동작의
+분기 조건으로 사용하지 않는다. 실행·검증 상세는 해당 수정 PR이 소유한다.
 
 ## 8. 주요 Trade-off
 

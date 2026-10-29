@@ -19,6 +19,9 @@
 4. 기존 preview·인증서 발급 설정을 보존한 Console Caddy 조각을 validate 후 원자적으로 적용하고 reload한다.
    [기본 조각](console.Caddyfile)의 전역403은 이 승인된 적용에서만 제거한다.
    Cloudflare 연결 peer만 upstream으로 허용하고 직접 origin 요청은403으로 거절한다.
+   P08 Runner 활성화 전에는 공개 proxy의 `/api/internal`·`/api/internal/*` 404 차단을 유지한다.
+   차단은 `console_upstream` snippet 안에 있어 공개 전역403을 제거해도 남는다. Runner는 VM loopback으로만
+   내부 API에 접근한다. 기존 운영 Caddy 파일의 해당 조각 변경·validate/reload와 외부 차단 검증은 별도 승인 범위다.
    Host·X-Forwarded-Host·Proto를 고정하고, 전달 client IP는 신뢰한 CF-Connecting-IP로 덮어쓴다.
    외부 X-Real-IP·Forwarded·CF-Connecting-IP와 과거 검증용 헤더를 upstream에 그대로 전달하지 않는다.
    no-store·Cloudflare cache bypass·로그인 GET Managed Challenge를 유지한다.

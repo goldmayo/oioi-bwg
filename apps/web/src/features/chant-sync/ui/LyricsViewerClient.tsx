@@ -16,6 +16,7 @@ import { useAdWatcher } from "@/shared/model/useAdWatcher";
 import type { YouTubePlayerInstance } from "@/shared/model/youtube";
 import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
 
+import { getLyricsPosition } from "../lib/lyrics-position";
 import { usePublishedGuide } from "../model/use-published-guide";
 
 import { CheerGuideInfo } from "./CheerGuideInfo";
@@ -100,13 +101,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
    * 라인 레벨 + isExtra 라인은 세그먼트 레벨까지 추적
    */
   const updatePosition = (lines: LyricLine[], time: number) => {
-    const line = lines.findLastIndex((item) => item.startTime <= time);
-    const current = lines[line];
-    const segment = current?.isExtra
-      ? current.segments.findLastIndex(
-          (item) => current.startTime + (item.startTimeOffset ?? 0) <= time,
-        )
-      : -1;
+    const { line, segment } = getLyricsPosition(lines, time);
     setCursor((previous) =>
       previous.lyrics === lines && previous.line === line && previous.segment === segment
         ? previous
@@ -331,7 +326,10 @@ function LyricLineItem({
           let colorState: "default" | "extraTarget" | "extraUntarget" | "echo" | "cheer" =
             "default";
           if (line.isExtra) {
-            colorState = isActive && sIdx === activeSeg ? "extraTarget" : "extraUntarget";
+            const sameCue =
+              activeSeg >= 0 &&
+              (seg.startTimeOffset ?? 0) === (line.segments[activeSeg]?.startTimeOffset ?? 0);
+            colorState = isActive && sameCue ? "extraTarget" : "extraUntarget";
           } else {
             if (seg.isEcho) colorState = "echo";
             else if (seg.isCheer) colorState = "cheer";

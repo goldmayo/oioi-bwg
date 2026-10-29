@@ -4,5 +4,7 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 COPY *.go ./
+COPY cmd ./cmd
 RUN --network=none test -z "$(gofmt -l .)" \
-    && go vet ./... && go test -race -count=1 -timeout=30s -v ./...
+    && go vet ./... && go test -race -count=1 -timeout=60s -v ./...
+RUN --network=none CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /usr/local/bin/oioi-waveform-runner ./cmd/waveform-runner
