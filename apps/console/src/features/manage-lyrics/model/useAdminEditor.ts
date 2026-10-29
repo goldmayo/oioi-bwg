@@ -301,11 +301,11 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     },
     [currentIndex, lyrics, updateLine],
   );
-
   return {
     songId: song.id,
     title: song.title,
     isDirty: lyricsEditor.isDirty || videoForm.formState.isDirty,
+    isVideoDirty: videoForm.formState.isDirty,
     currentTimeRef,
     // 가사 편집 (useLyricsEditor 위임)
     lyrics,
