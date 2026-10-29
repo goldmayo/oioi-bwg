@@ -123,7 +123,7 @@ jobs:
     if: needs.changes.outputs.docs_only != 'true'
     name: waveform ARM64
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -181,6 +181,26 @@ jobs:
             -v "$PWD/ops/oci/metadata-guard.py:/repo/ops/oci/metadata-guard.py:ro" \
             -v "$PWD/tests/ops/waveform-egress-kernel.py:/repo/tests/ops/waveform-egress-kernel.py:ro" \
             -w /repo oioi-bwg:network-check python3 -I tests/ops/waveform-egress-kernel.py
+
+      - name: Export the verified worker image without rebuilding
+        run: |
+          set -euo pipefail
+          output="${{ runner.temp }}/waveform-worker-arm64"
+          mkdir -p "$output"
+          image=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check)
+          test "$(docker image inspect --format '{{.Architecture}}' "$image")" = arm64
+          docker image save "$image" | gzip -n > "$output/worker-image.tar.gz"
+          printf '%s\n' "$image" > "$output/image-id.txt"
+          git rev-parse HEAD > "$output/verified-commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$output/verified-tree.txt"
+          (cd "$output" && sha256sum worker-image.tar.gz image-id.txt verified-commit.txt verified-tree.txt > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waveform-worker-arm64
+          path: ${{ runner.temp }}/waveform-worker-arm64
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
 
   postgres_integration:
     needs: changes

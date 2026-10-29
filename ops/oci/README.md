@@ -615,3 +615,17 @@ Console의 동일 token/내부 API 준비·socket mount·공개 Caddy 차단과 
 PartOf로 연동한다. Type=exec의 active는 OCI 인증·소비 readiness 보장이 아니므로 실제 API/Queue 수용을 따로 확인한다.
 실제 재부팅·종료/재전달·DNS/내부망 차단·Console DAC·허용 입력은 VM 수용 관문이다. 로컬 systemd parser와
 mock 제어 명령 검증을 실제 서비스 기동으로 간주하지 않는다. 일반 app installer는 이 unit을 설치하지 않는다.
+
+### 11.2. 검증한 Worker 이미지 전달
+
+Worker는 성공한 Verify run의 `waveform-worker-arm64` artifact로 전달한다. CI가 합성 음원·획득 실패 경계·
+Docker lifecycle·격리 커널 테스트를 마친 **동일 local image ID**를 save/gzip하며 재빌드하거나 OCI에 게시하지 않는다.
+Runner binary artifact와 같은 run의 `verified-commit.txt`·`verified-tree.txt`를 대조한다. 전체 Verify 성공과
+병합 tree 일치를 확인한 뒤 ZIP 다운로드 digest 및 내부 SHA256SUMS를 검증한다. manifest에는 secret이 없다.
+
+별도 승인된 VM 설치에서는 보호 staging의 `worker-image.tar.gz`를 `docker load --input`으로 적재하고,
+`image-id.txt`의 sha256 ID·arm64·고정 entrypoint/user를 `docker image inspect`로 대조한다. 이 ID만
+Runner config의 image에 넣는다. tag를 다시 resolve하지 않으며 VM에서 도구를 재설치/재빌드하지 않는다.
+load는 서비스 시작·실제 입력 분석·운영 활성화 승인을 포함하지 않는다. 공급받은 이미지를 실제 VM의
+cgroup/DAC/egress 제약에서 검증한 뒤에만 허용 입력 수용을 진행한다. artifact 보존은 90일이므로 승인된
+원본 ZIP·checksum·검증 run/tree 근거를 보호된 운영 보관소에도 보존한다.
