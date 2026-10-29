@@ -132,6 +132,17 @@ jobs:
         run: |
           docker buildx build --platform linux/arm64 --provenance=false --load \
             -t oioi-bwg:runner-check -f ops/waveform-runner/Dockerfile ops/waveform-runner
+      - name: Verify Docker worker lifecycle with synthetic input
+        run: |
+          test_dir=$(mktemp -d)
+          compiler=$(docker create --network none -e CGO_ENABLED=0 oioi-bwg:runner-check \
+            sh -c 'go test -c -tags=integration -o /tmp/worker-integration')
+          trap 'docker rm -f "$compiler" >/dev/null; rm -rf "$test_dir"' EXIT
+          docker start -a "$compiler"
+          docker cp "$compiler:/tmp/worker-integration" "$test_dir/check"
+          chmod +x "$test_dir/check"
+          P08_DOCKER_IMAGE=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check) \
+            "$test_dir/check" -test.v -test.run '^TestDockerWorkerLifecycle$' -test.timeout=60s
 
   postgres_integration:
     needs: changes
