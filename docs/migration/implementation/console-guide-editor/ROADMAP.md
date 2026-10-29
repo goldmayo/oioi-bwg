@@ -68,6 +68,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-30 Console 연결 운영 배포 완료:** 사용자 VM의 보호 설정·배포 helper/overlay·Caddy 준비 성공을 확인한 뒤 [Promotion #347](https://github.com/goldmayo/oioi-bwg/pull/347)을 병합했다. 이력 충돌은 파일 tree를 유지한 #348로 해소하고 보호 설정을 원복했다. Verify #715와 ARM64 exact-image smoke 성공 후보를 Run Command로 적용했으며 [배포 run](https://github.com/goldmayo/oioi-bwg/actions/runs/40922070392)의 receipt exitCode=0, candidate 일치와 Web/Console 최종 HTTP 200·공개 내부 API 404를 확인했다. P09 병합 UI도 포함된다. Runner는 아직 시작하지 않았고 생성은 비활성이다. 배포 후 실제 VM socket/mount·metadata 수용, OCI 통신·복구와 허용 입력 수용은 남아 있다. digest·checksum·실행 기록은 #347 본문이 소유한다.
+
 **2026-10-30 첫 VM 설치 확인:** 사용자 실행 출력에서 checksum·Runner/unit/tmpfiles 설치·Worker 적재·GID 986·inactive/disabled를 확인했다. 다음 Console 연결 준비를 지시받았으며 기존 app source/Caddy import 경로를 읽기 조회했다. 실제 결과와 준비 범위는 [host 안내 §11.4](../../../../ops/oci/README.md#114-첫-vm-설치-확인과-console-연결-준비--2026-10-30)를 따른다. 아직 OCI 송수신·분석·새 배포 수용은 아니다.
 
 **2026-10-30 설치 승인 관문:** #341·#343·#344를 전체 CI 성공 후 병합했고 #711 Runner/Worker ZIP digest·내부 checksum·병합 tree를 대조했다. 로컬 적재에서 CI config ID와 containerd manifest ID 차이를 발견해 archive의 해시 연결을 확인하고 운영 안내를 정정했다. 첫 VM 설치 제안·고정 source/identity는 [host 안내 §11.3](../../../../ops/oci/README.md#113-첫-vm-적용-승인-관문--2026-10-30)이 소유한다. 실제 VM 변경·Vault 조회·새 배포는 아직 수행하지 않았다.
