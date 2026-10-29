@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 26
+revision: 27
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -598,6 +598,16 @@ DLQ poll/renew/delete는 같은 DLQ 주소를 사용하며, 일반 분석 경로
 새 attempt와 음원 접근은 없으므로 allowlist 철회 뒤에도 회수할 수 있다. 응답 유실·이전 attempt 거절은 한 번 재조회하고,
 정리가 불확실하면 Consumer를 격리한다. 삭제 실패로 DB 결과를 되돌리거나 terminal을 다시 제출하지 않는다.
 SDK와 로컬 HTTP fixture 검증이며 실제 OCI DLQ 이동·주소·IAM 허용 여부와 상주 반복 실행은 활성화 전 별도 검증한다.
+
+**2026-10-29 상주 실행 연결:** 고정 진입점은 root 소유 0400/0600 설정만 제한된 크기로 읽는다.
+`/etc/oioibawige/waveform-runner.json`의 queueId/endpoint/consolePort/socketGroup/image/approvedVideoIds와
+`/run/oioi-waveform-private/token`을 사용하고 임의 환경변수·명령 인자는 설정 경로를 바꾸지 못한다.
+host 잠금 → 잔존 컨테이너 정리 → token/Instance Principal 초기화 → socket 접수·순차 소비 순서다.
+일반 큐의 30초 long poll과 DLQ의 즉시 poll을 번갈아 실행해 DLQ 오류가 일반 큐를 굶기지 않게 한다.
+오류 뒤 2초 대기에는 취소가 전파되며, 연속 실패는 최초 한 번 정제된 고정 오류 코드만 기록한다. 정리 불확실은 서비스 종료로 이어진다. 종료 시 소비 취소 → HTTP drain(10초) → worker 정리 → host 잠금 해제를 수행한다.
+고정 `cleanup` 모드는 종료 후 정리용이며 token/OCI 인증 없이 동일 host 잠금 아래 전용 컨테이너만 정리한다.
+ARM64 static binary와 검증 commit/tree·checksum을 CI artifact로 남긴다. 해당 workflow의 필수 verify 성공 여부를 함께 확인해야 하며 artifact 업로드만으로 운영 배포가 승인되지는 않는다.
+systemd·Vault 공급·Console socket mount·egress/metadata 격리는 설치 연결의 후속이다. 기존 metadata probe의 mount 금지 검사와 Console 전용 socket mount의 일치도 그 단계에서 검증한다.
 
 ### 6.3. Queue 설정 후보와 활성화 관문
 

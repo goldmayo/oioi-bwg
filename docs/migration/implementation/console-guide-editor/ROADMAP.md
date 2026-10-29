@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 49
+revision: 50
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,9 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-29 상주 수명 연결:** #336 host 잠금 뒤 고정 설정/token 로더·Instance Principal 시작·socket 접수·일반/DLQ 교대 소비·취소/종료 정리를 연결한다. CI ARM64 binary의 checksum/검증 tree를 보존한다. 다음은 systemd/설치·Vault 공급·Console mount/metadata probe 호환성·egress 격리 연결이며, 실제 VM 설치/활성화·OCI 수용·Promotion은 별도 승인 후 진행한다.
+
 
 **2026-10-29 host socket 연결 준비:** #332의 Docker 실행 뒤 Runner 중복 기동 방지용 host lock·Unix socket의 소유권/권한·stale socket 회수를 구현한다. #333 DLQ 소비와 합친 뒤 상주 실행/종료·설치로 연결한다. 실제 VM 디렉터리/전용 그룹 생성·Console mount·서비스 활성화는 별도 승인 관문이며 이 코드 PR은 VM을 변경하지 않는다.
 

@@ -144,6 +144,23 @@ jobs:
           P08_DOCKER_IMAGE=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check) \
             "$test_dir/check" -test.v -test.run '^TestDockerWorkerLifecycle$' -test.timeout=60s
 
+      - name: Export verified ARM64 Runner binary
+        run: |
+          output="${{ runner.temp }}/waveform-runner-arm64"
+          mkdir -p "$output"
+          container=$(docker create --network none --entrypoint /bin/true oioi-bwg:runner-check)
+          trap 'docker rm -f "$container" >/dev/null' EXIT
+          docker cp "$container:/usr/local/bin/oioi-waveform-runner" "$output/runner"
+          git rev-parse HEAD > "$output/verified-commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$output/verified-tree.txt"
+          (cd "$output" && sha256sum runner > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waveform-runner-arm64
+          path: ${{ runner.temp }}/waveform-runner-arm64
+          if-no-files-found: error
+          retention-days: 90
+
   postgres_integration:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
