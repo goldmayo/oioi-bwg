@@ -8,6 +8,7 @@ import * as schema from "../../src/db/schema";
 import * as notifications from "../../src/services/notification-service";
 import {
   completeWaveformJob,
+  getSongWaveform,
   getWaveformJob,
   getRunnerWaveformJob,
   requestWaveformJob as requestApprovedWaveformJob,
@@ -415,4 +416,23 @@ test("변조된 식별자와 변경된 source는 시작하지 않으며 삭제�
     code: "WAVEFORM_JOB_NOT_FOUND",
   });
   await expect(startWaveformJob(input)).rejects.toMatchObject({ code: "WAVEFORM_JOB_NOT_FOUND" });
+});
+
+test("현재 영상의 파형 JSON만 읽고 영상 변경·파형 부재·삭제를 구분한다", async () => {
+  const track = await song();
+  expect(await getSongWaveform(ctx(), track.id)).toBeNull();
+  const { job } = await requestWaveformJob(ctx(), track.id);
+  const attemptId = await start(job.id);
+  await completeWaveformJob({ jobId: job.id, attemptId, status: "SUCCEEDED", result });
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(result);
+  await db
+    .update(schema.song)
+    .set({ youtubeId: "lmnopqrstuv" })
+    .where(eq(schema.song.id, track.id));
+  expect(await getSongWaveform(ctx(), track.id)).toBeNull();
+  await expect(getSongWaveform(ctx(accounts[0], "USER"), track.id)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+  });
+  await db.delete(schema.song).where(eq(schema.song.id, track.id));
+  await expect(getSongWaveform(ctx(), track.id)).rejects.toMatchObject({ code: "SONG_NOT_FOUND" });
 });
