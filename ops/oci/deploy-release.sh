@@ -26,9 +26,25 @@ for file in "${protected[@]}"; do
 done
 # This root-owned file is host configuration, never candidate input.
 set -a
+CONSOLE_WAVEFORM_SOCKET_GID=""
 # shellcheck disable=SC1090
 source "${config_root}/deploy.conf"
 set +a
+if [[ -n "${CONSOLE_WAVEFORM_SOCKET_GID}" ]]; then
+  overlay="$(dirname "${compose_file}")/compose.waveform.yml"
+  [[ -f "${overlay}" && ! -L "${overlay}" && -z "$(find "${overlay}" -maxdepth 0 \( -perm /022 -o ! -links 1 \) -print -quit)" ]] || fail insecure_waveform_overlay
+  if [[ "${M9_DEPLOY_TEST_MODE:-0}" != 1 ]]; then
+    [[ -z "$(find "${overlay}" -maxdepth 0 ! -user root -print -quit)" ]] || fail invalid_waveform_overlay_owner
+    python3 -I -B - "${helper_root}/paired-release.py" "${CONSOLE_WAVEFORM_SOCKET_GID}" <<'PYTHON'
+import runpy,sys
+try:
+    runpy.run_path(sys.argv[1])['check_waveform_socket'](sys.argv[2])
+except Exception:
+    print('waveform_socket_not_prepared', file=sys.stderr)
+    sys.exit(1)
+PYTHON
+  fi
+fi
 mkdir -p -- "${state_dir}"
 exec 9>"${state_dir}/deployment.lock"
 flock -n 9 || fail deployment_already_running

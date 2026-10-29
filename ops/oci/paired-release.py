@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Locked paired apply/rollback. Compose reconciles each service independently."""
 import base64
+import grp
 import hashlib
 import importlib.util
 import json
 import os
 from pathlib import Path
 import re
+import pwd
+import stat
 import shutil
 import subprocess
 import sys
@@ -72,9 +75,24 @@ def validate(candidate, digests, config):
     require(candidate['images']['web']['repository'] != candidate['images']['console']['repository'])
 
 
+def check_waveform_socket(gid, path=Path('/run/oioi-waveform')):
+    require(re.fullmatch(r'[1-9][0-9]{0,9}', gid) and int(gid) < 4294967295)
+    group = grp.getgrnam('oioi-waveform-console')
+    require(group.gr_gid == int(gid) and not group.gr_mem)
+    require(not any(user.pw_gid == int(gid) for user in pwd.getpwall()))
+    for parent in path.parents:
+        info = parent.lstat()
+        require(stat.S_ISDIR(info.st_mode) and info.st_uid == 0 and not info.st_mode & 0o022)
+    info = path.lstat()
+    require(stat.S_ISDIR(info.st_mode) and info.st_uid == 0 and info.st_gid == int(gid)
+            and stat.S_IMODE(info.st_mode) == 0o750)
+
+
 def compose_env(candidate, config, runtime, env_root=None):
     environment = dict(os.environ)
     environment.update(config)
+    # 이전 snapshot에 없는 opt-in은 ambient 설정을 상속하지 않는다.
+    environment['CONSOLE_WAVEFORM_SOCKET_GID'] = config.get('CONSOLE_WAVEFORM_SOCKET_GID', '')
     for app in APPS:
         image = candidate['images'][app]
         environment[app.upper() + '_IMAGE'] = image['repository'] + '@' + image['digest']
@@ -83,7 +101,10 @@ def compose_env(candidate, config, runtime, env_root=None):
 
 
 def compose(file, environment, *args):
-    return run(['docker', 'compose', '-p', 'oioi-bwg-development', '-f', str(file), *args], environment)
+    files = ['-f', str(file)]
+    if environment.get('CONSOLE_WAVEFORM_SOCKET_GID'):
+        files += ['-f', str(file.with_name('compose.waveform.yml'))]
+    return run(['docker', 'compose', '-p', 'oioi-bwg-development', *files, *args], environment)
 
 
 def smoke(config, apps=APPS):
@@ -124,6 +145,9 @@ def deploy(digests, encoded):
     config_root = Path(os.environ.get('OIOI_CONFIG_ROOT', '/etc/oioibawige'))
     file = Path(os.environ.get('OIOI_COMPOSE_FILE', str(runtime / 'compose.oci-development.yml')))
     config = {key: os.environ[key] for key in CONFIG_KEYS}
+    config['CONSOLE_WAVEFORM_SOCKET_GID'] = os.environ.get('CONSOLE_WAVEFORM_SOCKET_GID', '')
+    gid = config['CONSOLE_WAVEFORM_SOCKET_GID']
+    require(not gid or (re.fullmatch(r'[1-9][0-9]{0,9}', gid) and int(gid) < 4294967295))
     require(config['APP_BIND_ADDRESS'] == '127.0.0.1')
     require(all(re.fullmatch(r'[0-9]{1,5}', config[key]) and 0 < int(config[key]) <= 65535 for key in ('APP_PORT', 'CONSOLE_PORT')))
     require(config['APP_PORT'] != config['CONSOLE_PORT'])
@@ -177,6 +201,8 @@ def deploy(digests, encoded):
         console = materializer.read_env(snapshot / 'console.env')
         require(web['AUTH_SECRET'] not in {console['CONSOLE_AUTH_SECRET'], console['CONSOLE_MFA_ENCRYPTION_KEY']})
         require(web['DATABASE_URL'] == console['DATABASE_URL'])
+        require(bool(gid) == (console.get('CONSOLE_WAVEFORM_RUNNER_ENABLED') == 'true'))
+        require(web['AUTH_SECRET'] != console.get('CONSOLE_WAVEFORM_RUNNER_TOKEN'))
         for app in APPS:
             image = candidate['images'][app]
             reference = image['repository'] + '@' + image['digest']
@@ -187,6 +213,8 @@ def deploy(digests, encoded):
         (snapshot / 'candidate.json').write_text(json.dumps(candidate))
         (snapshot / 'config.json').write_text(json.dumps(config))
         shutil.copyfile(file, snapshot / 'compose.yml')
+        if gid:
+            shutil.copyfile(file.with_name('compose.waveform.yml'), snapshot / 'compose.waveform.yml')
         atomic(pending, identity(candidate).encode())
         try:
             for app in APPS:
@@ -216,6 +244,8 @@ def deploy(digests, encoded):
                     for app in APPS:
                         atomic(runtime / (app + '.env'), (old / (app + '.env')).read_bytes())
                     atomic(file, (old / 'compose.yml').read_bytes())
+                    if old_config.get('CONSOLE_WAVEFORM_SOCKET_GID'):
+                        atomic(file.with_name('compose.waveform.yml'), (old / 'compose.waveform.yml').read_bytes())
                     compose(file, old_environment, 'up', '-d', '--wait', 'web', 'console')
                     smoke(old_config)
                     require(containers(file, old_environment, old_candidate) == json.loads((old / 'containers.json').read_text()))

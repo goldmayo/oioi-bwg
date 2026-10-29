@@ -68,6 +68,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-30 Console 배포 연결:** 설치/systemd [#341](https://github.com/goldmayo/oioi-bwg/pull/341)은 Verify #706 성공 후 병합했다. Console 전용 Vault token·기본 비활성 flag·고정 읽기 전용 socket overlay를 기존 pair 배포에 연결하고, 활성/비활성 전환 실패 시 이전 env·GID·overlay를 복구한다. 실제 VM의 설치·시작·Secret 조회·Promotion은 아직 수행하지 않았다. 반복 설정·수용 순서는 [host 안내 §11](../../../../ops/oci/README.md#11-p08-runner-설치와-시작-분리)을 따른다. 사용자 지시로 페스티벌 별도 편집은 P08 완료 뒤 독립 작업으로 진행한다.
+
 **2026-10-29 host 설치 연결:** #340 token 공급 뒤 검증 binary/checksum·root staging의 설치기와 systemd 시작 준비를 구현한다. 설치와 실제 시작을 분리하고 Console env/mount 연결 전에는 활성화하지 않는다. 반복 절차는 [host 안내 §11](../../../../ops/oci/README.md#11-p08-runner-설치와-시작-분리)가 소유한다. root 파일 권한/잠금·합성 제어 명령·systemd parser 검증과 실제 VM 기동/복구를 구분한다.
 
 **2026-10-29 VM 후속 관찰 및 token 공급:** 사용자가 VM에서 `/usr/local/bin/oci` 3.92.1, nftables 1.0.9, 기존 metadata guard active/check 성공, AppArmor·seccomp·cgroupns를 확인했다. CLI 파일/상위 경로는 root 소유이고 shebang은 `/opt/oci-cli/bin/python3`다. 이는 Vault 조회·Runner 설치·worker 격리 실증을 뜻하지 않는다. 다음 구현은 고정 Secret의 root 전용 runtime token 공급이며, 합성 Secret/실제 root 파일 권한으로 검증한다. 설치/systemd·Console 공급/연결과 실제 VM 적용은 여전히 후속이다.

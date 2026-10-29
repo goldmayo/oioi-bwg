@@ -30,8 +30,9 @@ with tempfile.TemporaryDirectory(dir='/root', prefix='waveform-install-') as tem
     root = Path(temporary)
     m.SOURCE, m.DESTINATION = root / 'source', root / 'installed'
     m.UNIT, m.LOCK, m.HOST_LOCK = root / 'units/runner.service', root / 'install.lock', root / 'runtime/runner.lock'
+    m.TMPFILES = root / 'tmpfiles/oioi-waveform.conf'
     m.SOURCE.mkdir(); (m.SOURCE / 'waveform').mkdir()
-    for name in ('prepare-waveform-runner.py', 'materialize-waveform-token.py', 'waveform-egress-guard.py', 'waveform/oioi-waveform-runner.service'):
+    for name in ('prepare-waveform-runner.py', 'materialize-waveform-token.py', 'waveform-egress-guard.py', 'waveform/oioi-waveform-runner.service', 'waveform/oioi-waveform.conf'):
         shutil.copyfile(REPO / 'ops/oci' / name, m.SOURCE / name)
     binary = root / 'runner'; binary.write_bytes(b'\x7fELF\x02\x01' + b'\0' * 12 + b'\xb7\0' + b'fixture')
     checksum = hashlib.sha256(binary.read_bytes()).hexdigest()
@@ -58,6 +59,14 @@ with tempfile.TemporaryDirectory(dir='/root', prefix='waveform-install-') as tem
     install(True); install(True)
     assert (m.DESTINATION / 'runner').read_bytes() == binary.read_bytes()
     assert stat.S_IMODE((m.DESTINATION / 'runner').stat().st_mode) == 0o755
+    boot = root / 'boot'; boot.mkdir()
+    fixture = root / 'boot.conf'
+    fixture.write_text(m.TMPFILES.read_text().replace('/run/', str(boot)+'/').replace('oioi-waveform-console', '54321'))
+    for _ in range(2):
+        subprocess.run(['systemd-tmpfiles', '--create', str(fixture)], check=True, capture_output=True)
+        assert (boot/'oioi-waveform').stat().st_gid == 54321
+        assert stat.S_IMODE((boot/'oioi-waveform').stat().st_mode) == 0o750
+        assert stat.S_IMODE((boot/'oioi-waveform-private').stat().st_mode) == 0o700
     original = {path: path.read_bytes() for path in m.DESTINATION.iterdir()}
     m.grp.getgrnam = lambda name: SimpleNamespace(gr_gid=54321, gr_mem=['fixture-user'])
     install(False)
@@ -122,3 +131,28 @@ with tempfile.TemporaryDirectory(dir='/root', prefix='waveform-install-') as tem
     p.CONFIG.write_text(json.dumps({'socketGroup': 0})); prepare(False); assert not actions
     p.subprocess.run = real_run
 print(json.dumps({'event': 'waveform_install_root_fixture_passed', 'cases': cases}))
+
+# Compose의 host path 자동 생성 동작에 의존하지 않고 배포 전에 DAC를 확인한다.
+q = module('paired-release')
+q.grp.getgrnam = lambda name: SimpleNamespace(gr_gid=54321, gr_mem=[])
+q.pwd.getpwall = lambda: []
+with tempfile.TemporaryDirectory(dir='/root') as temporary:
+    path = Path(temporary) / 'socket'
+    for failure in ('missing', 'owner', 'group', 'mode', 'symlink', 'member', 'primary', 'gid'):
+        if path.exists() or path.is_symlink():
+            if path.is_symlink(): path.unlink()
+            else: path.rmdir()
+        if failure != 'missing':
+            path.mkdir(mode=0o750); os.chown(path, 0, 54321)
+        if failure == 'owner': os.chown(path, 1001, 54321)
+        if failure == 'group': os.chown(path, 0, 12345)
+        if failure == 'mode': path.chmod(0o777)
+        if failure == 'symlink': path.rmdir(); path.symlink_to(Path(temporary))
+        q.grp.getgrnam = lambda name: SimpleNamespace(gr_gid=54321, gr_mem=['user'] if failure == 'member' else [])
+        q.pwd.getpwall = lambda: [SimpleNamespace(pw_gid=54321)] if failure == 'primary' else []
+        try:
+            q.check_waveform_socket('0' if failure == 'gid' else '54321', path)
+            raise AssertionError('unsafe socket directory accepted: ' + failure)
+        except (ValueError, FileNotFoundError): pass
+    q.check_waveform_socket('54321', path)
+print('waveform_socket_deploy_preflight_passed: 9 cases')
