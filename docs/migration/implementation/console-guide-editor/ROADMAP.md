@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 43
+revision: 44
 ---
 
 # 구현 순서와 PR 단위
@@ -216,6 +216,11 @@ VM 사용자 점검은 ARM64·Docker/cgroup v2·앱 health와 여유 용량만 �
 다음은 heartbeat/소유권 상실 중단 → Job/start·terminal 확인과 재전달/DLQ → 고정 worker·시작/정리·설치 산출물이다.
 실제 OCI receipt/시간·권한·자원 검증과 VM 변경은 별도 수용 관문으로 유지한다.
 
+**2026-10-29 visibility 범위 연결:** #323은 CI 통과 후 병합했다. heartbeat와 안전 기한·취소/정리 대기·
+미종료 SDK의 Consumer 격리를 연결하고 로컬 ARM64에서 검증한다. Go/Python 대안 검토 뒤 Go 유지 결정을 DESIGN에 구분해 남겼다.
+다음은 Job/start·terminal 확인 및 재전달/DLQ → 실제 고정 worker 중단/제거 → 상주 기동·설치 산출물 → 실제 OCI/VM 통합 수용이다.
+실행 범위 취소 신호를 실제 container 정리 완료로 계산하지 않으며 운영 변경·배포는 별도 승인 관문을 유지한다.
+
 #### 공통 알림의 선행 구현
 
 [설계 §6.1](DESIGN.md#61-공통-알림과-fcm)과 [Domain §15](../../DOMAIN_SPECIFICATION.md#15-notification)를 따른다.
@@ -331,7 +336,9 @@ swap 가능성과 memory 한도 포함 조건도 확인한다. 이 문서의 공
 
 브라우저 fixture의 합성 BBC JSON·IFrame API 대역 검증과 실제 YouTube/worker 수용을 구분한다.
 후자의 3개 이상 anchor, 일정 offset/누적 drift, 실제 seek 지연과 재생 상태 확인이 남아 있으면
-P09 integration 완료로 처리하지 않는다. 실행·검증·실패 복구의 상세 근거는 각 PR 본문에 둔다.
+P09 integration 완료로 처리하지 않는다. 실행·검증·실패 복구의 상세 근거는 [초안 #325](https://github.com/goldmayo/oioi-bwg/pull/325) →
+[조회 #326](https://github.com/goldmayo/oioi-bwg/pull/326) → [Peaks #327](https://github.com/goldmayo/oioi-bwg/pull/327) →
+[시안 연결 #328](https://github.com/goldmayo/oioi-bwg/pull/328)의 본문에 둔다.
 
 ## 3. 검증과 전환 조건
 
