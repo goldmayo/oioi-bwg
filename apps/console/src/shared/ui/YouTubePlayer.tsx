@@ -44,6 +44,7 @@ export function YouTubePlayer({
   useEffect(() => {
     if (!videoId) return;
 
+    let disposed = false;
     let isPlaying = false;
     let pausedTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -72,7 +73,7 @@ export function YouTubePlayer({
     }
 
     function initPlayer() {
-      if (!containerRef.current) return;
+      if (disposed || !containerRef.current) return;
 
       // 전역 YT 객체 타입 안전성 확보
       const YT = window.YT;
@@ -87,6 +88,7 @@ export function YouTubePlayer({
         },
         events: {
           onReady: (event: YouTubeEvent) => {
+            if (disposed) return;
             setIsReady(true);
             onTimeUpdateRef.current(event.target.getCurrentTime());
             pausedTimer = setInterval(() => {
@@ -97,6 +99,7 @@ export function YouTubePlayer({
             if (onPlayerReady) onPlayerReady(event.target);
           },
           onStateChange: (event: YouTubeEvent) => {
+            if (disposed) return;
             if (onStateChangeRef.current) onStateChangeRef.current(event.data);
 
             // 재생 중(1)일 때만 루프 시작, 멈추면(2) 루프 취소
@@ -115,6 +118,7 @@ export function YouTubePlayer({
     }
 
     return () => {
+      disposed = true;
       isPlaying = false;
       if (pausedTimer) clearInterval(pausedTimer);
       cancelAnimationFrame(requestRef.current);
