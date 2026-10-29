@@ -217,3 +217,27 @@ describe("useAdminEditor 훅 테스트", () => {
     });
   });
 });
+
+it("빈 노트 초안은 보존하며 계약을 만족하기 전에는 저장 요청을 보내지 않는다", async () => {
+  saveSongData.mockClear();
+  const { result } = renderHook(() =>
+    useAdminEditor(
+      {
+        id: "019a0170-0000-7000-8000-000000000001",
+        title: "검증",
+        youtubeId: "abcdefghijk",
+        lyrics: [],
+      },
+      saveSongData,
+    ),
+  );
+  act(() => {
+    result.current.editNote({ type: "add", lane: "extra", time: 3, text: "" });
+  });
+  await act(async () => {
+    await result.current.handleSave();
+  });
+  expect(saveSongData).not.toHaveBeenCalled();
+  expect(result.current.lyrics[0].segments[0].text).toBe("");
+  expect(result.current.isDirty).toBe(true);
+});

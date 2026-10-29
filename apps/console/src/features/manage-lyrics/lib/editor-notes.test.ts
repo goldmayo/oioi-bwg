@@ -86,10 +86,13 @@ describe("응원 노트와 기존 가사 JSON 연결", () => {
     const one = [{ ...fixture[1], segments: [fixture[1].segments[0]] }];
     expect(applyNoteEdit(one, { type: "delete", id: "extra:0:0" })!.lyrics).toEqual([]);
   });
-  it("비정상 시간·빈 새 노트·오래된 선택·같은 위치 이동을 적용하지 않는다", () => {
+  it("비정상 시간·오래된 선택·같은 위치 이동을 적용하지 않는다", () => {
     for (const time of [-1, Infinity, NaN])
       expect(applyNoteEdit(fixture, { type: "add", lane: "cheer", time, text: "응원" })).toBeNull();
-    expect(applyNoteEdit(fixture, { type: "add", lane: "cheer", time: 1, text: " " })).toBeNull();
+    const draft = applyNoteEdit(fixture, { type: "add", lane: "cheer", time: 1, text: "" })!;
+    expect(lyricsDataSchema.safeParse(draft.lyrics).success).toBe(false);
+    const filled = applyNoteEdit(draft.lyrics, { type: "text", id: draft.noteId!, text: "응원" })!;
+    expect(lyricsDataSchema.safeParse(filled.lyrics).success).toBe(true);
     expect(applyNoteEdit(fixture, { type: "move", id: "line:99", time: 1 })).toBeNull();
     expect(applyNoteEdit(fixture, { type: "move", id: "line:0", time: 2 })).toBeNull();
   });

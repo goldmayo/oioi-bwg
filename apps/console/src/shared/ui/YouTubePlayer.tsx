@@ -45,6 +45,7 @@ export function YouTubePlayer({
     if (!videoId) return;
 
     let isPlaying = false;
+    let pausedTimer: ReturnType<typeof setInterval> | undefined;
 
     // 재생 시간 폴링 루프
     function updateTime() {
@@ -87,6 +88,11 @@ export function YouTubePlayer({
         events: {
           onReady: (event: YouTubeEvent) => {
             setIsReady(true);
+            onTimeUpdateRef.current(event.target.getCurrentTime());
+            pausedTimer = setInterval(() => {
+              if (!isPlaying && playerRef.current)
+                onTimeUpdateRef.current(playerRef.current.getCurrentTime());
+            }, 100);
             // 플레이어 준비 완료 시 부모 컴포넌트에게 인스턴스 전달 (광고 감시용)
             if (onPlayerReady) onPlayerReady(event.target);
           },
@@ -110,6 +116,7 @@ export function YouTubePlayer({
 
     return () => {
       isPlaying = false;
+      if (pausedTimer) clearInterval(pausedTimer);
       cancelAnimationFrame(requestRef.current);
       if (playerRef.current && typeof playerRef.current.destroy === "function") {
         playerRef.current.destroy();

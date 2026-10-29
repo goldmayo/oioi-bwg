@@ -63,7 +63,6 @@ export function applyNoteEdit(
   if ("time" in edit && (!Number.isFinite(edit.time) || edit.time < 0)) return null;
   if (edit.type === "add") {
     const text = edit.text.trim();
-    if (!text) return null;
     const line: LyricLine = {
       startTime: round(edit.time),
       isExtra: edit.lane === "extra",
