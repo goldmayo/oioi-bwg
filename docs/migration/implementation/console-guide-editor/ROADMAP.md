@@ -68,6 +68,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-29 Console 통신 경계 추가:** socket mount 점검과 함께 공개 Caddy proxy의 내부 API 차단을 준비한다. 저장소의 Caddy 2.6.2 호환 조각을 격리 컨테이너에서 실제 실행해 GET/POST·인코딩/중복 슬래시·관리 경로 보존을 검증한다. 운영 Caddy reload·Console mount 설치·생성 flag 개방은 실행하지 않았으며 각각 실제 VM 수용이 필요하다.
+
 **2026-10-29 Console mount 점검 준비:** 기존 Web용 metadata probe는 무 mount 조건을 유지한다. 별도 Console probe에서 고정 project/service와 읽기 전용 전용 socket 디렉터리 한 개만 허용하며 동일한 host 양성 대조·차단 counter 증가를 요구한다. 합성 HTTP/CLI 검증을 실제 VM 차단 수용으로 간주하지 않는다. 설정 설치·mount 배치·운영 파일 교체는 후속 승인 범위다.
 
 **2026-10-29 전용 egress 준비:** #337 상주 수명 병합 뒤 worker bridge의 host/private/metadata/IPv6 접근 차단과 고정 DNS를 구현한다. 로컬 격리 커널의 허용·차단·기존 metadata table 보존을 검증하며 실제 OCI/VM 수용과 구분한다. 다음은 설치/systemd·Vault 공급·Console mount 연결이다. VM 설정 변경·운영 배포는 아직 수행하지 않았다.
