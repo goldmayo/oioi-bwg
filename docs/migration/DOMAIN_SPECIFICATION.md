@@ -3,7 +3,7 @@
 > 프로젝트: **어이어이 바위게**
 >
 > 문서 성격: Product Domain Specification / Development Contract / Test Oracle / Operations Policy  
-> 상태: **Baseline v1.3 — 2026-10-27 안내·약관 공개 조회 개정**
+> 상태: **Baseline v1.4 — 2026-10-28 조건부 YouTube 파형 입력 개정**
 > 목적: 본 문서는 서비스의 도메인 용어, 정책, 권한, 상태 전이, 데이터 생명주기, 핵심 워크플로, ERD, 테스트 기준, 운영 규칙을 하나의 기준으로 고정한다.  
 > 우선순위: 구현 편의보다 **도메인 일관성, 이력 보존, 운영 가능성, 개인정보 최소화, 어뷰징 내성**을 우선한다.
 
@@ -1314,9 +1314,17 @@ Production 기준:
 - Waveform 없이 응원법 기능 제공
 - Cue timestamp 기반 편집은 유지
 
-YouTube는:
-- iframe 재생/참조용
-- production waveform source로 사용하지 않는 현재 정책
+### YouTube 입력 (2026-10-28 개정)
+
+사용자의 링크 기반 파형 생성 재설계 요청으로 이전의 일괄 금지를 조건부 허용으로 개정한다.
+iframe 재생/참조는 유지하며, 아래 조건을 충족한 단일 videoId만 서버 분석 source로 사용할 수 있다.
+
+- 운영자가 실제 입력의 확보 경로·이용조건/권리 근거·서버 fetch/변환 허용 범위·기간을 확인하고 보호된 배포 설정의 허용 목록에 등록한다. 사용자 링크 제출만으로 승인하지 않는다.
+- 허용 목록은 기본 빈 값이다. Queue/HTTP 입력으로 권한·cookie·임의 URL·실행 옵션을 전달하지 않는다. 미확인 입력은 fetch 전에 거절한다.
+- 공식 yt-dlp CLI를 Rust가 제한된 일회성 컨테이너에서 실행한다. 음원·PCM은 pipe/tmpfs만 사용하고 JSON만 영속화한다. 재전달 시에도 같은 승인 범위에서 입력을 다시 공급한다.
+- 실제 허용 입력의 ARM64 자원·추출 성공·초반/중간/후반 시간축, 외부 통신 격리와 운영 변경 승인을 확인한 뒤 활성화한다. 확인 전에는 외부 영상 추출을 실행하지 않는다.
+
+추출기 선택의 근거는 지원 기능과 유지보수 범위다. §20.3의 Rust 중계 비교는 yt-dlp 대비 native Rust 추출기의 자원 우위 근거가 아니다.
 
 > 정식 구매 파일의 서버 분석 가능 범위는 출시 전 이용조건/권리 범위를 최종 검토해야 한다.
 
@@ -1324,12 +1332,15 @@ YouTube는:
 
 ## 20.3 Worker
 
-초기 운영 가정:
+2026-10-28 사용자 선택으로 초기 Python 가정을 Rust worker로 대체한다.
+로컬 ARM64 합성 입력 비교에서 확인한 중계 메모리 절감과 전체 처리 시간을 근거로 한다.
+수치·반복 조건은 [구현 PR #310](https://github.com/goldmayo/oioi-bwg/pull/310)이 소유한다.
 
 ```text
-Python Worker
+Rust Worker
+├─ 승인 입력만 공식 yt-dlp CLI / EJS / Deno (§20.2)
 ├─ ffmpeg
-├─ waveform peak/RMS extraction
+├─ BBC audiowaveform peak extraction
 └─ concurrency = 1
 ```
 

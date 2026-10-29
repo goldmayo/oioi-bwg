@@ -71,3 +71,45 @@ export const waveformTerminalSchema = z.discriminatedUnion("status", [
   }),
 ]);
 export type WaveformTerminal = z.infer<typeof waveformTerminalSchema>;
+/** 인증된 Runner만 소비하는 최소 상태 projection이다. */
+export const waveformRunnerJobSchema = waveformJobSchema
+  .pick({ id: true, songId: true, videoId: true, status: true })
+  .extend({
+    attemptId: entityIdSchema.nullable(),
+    enqueuedAt: z.iso.datetime({ offset: true }).nullable(),
+  });
+export const waveformTerminalAckSchema = z
+  .object({
+    jobId: entityIdSchema,
+    status: waveformStatusSchema,
+    attemptId: entityIdSchema.nullable(),
+    applied: z.boolean(),
+  })
+  .refine((value) => !value.applied || value.status === "SUCCEEDED" || value.status === "FAILED");
+
+// Queue와 socket은 세 식별자만 전달하며 실행 설정을 받지 않는다.
+export const waveformQueuePayloadSchema = z.strictObject({
+  jobId: entityIdSchema,
+  songId: entityIdSchema,
+  videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
+});
+export const waveformEnqueuedInputSchema = waveformQueuePayloadSchema.extend({
+  enqueuedAt: z.iso.datetime({ offset: true }),
+});
+export const waveformStartInputSchema = waveformQueuePayloadSchema.extend({
+  expectedAttemptId: entityIdSchema.nullable(),
+});
+export const waveformStartAckSchema = waveformRunnerJobSchema
+  .extend({ started: z.boolean() })
+  .refine((value) => !value.started || (value.status === "RUNNING" && value.attemptId !== null));
+export type WaveformQueuePayload = z.infer<typeof waveformQueuePayloadSchema>;
+export type WaveformEnqueuedInput = z.infer<typeof waveformEnqueuedInputSchema>;
+export type WaveformStartInput = z.infer<typeof waveformStartInputSchema>;
+// Runner는 Put이 실행되지 않았음이 확실한 경우에만 NOT_ENQUEUED를 반환한다.
+export const waveformEnqueueAckSchema = z.strictObject({
+  jobId: entityIdSchema,
+  outcome: z.enum(["ENQUEUED", "UNCONFIRMED", "NOT_ENQUEUED"]),
+});
+export type WaveformEnqueueOutcome = z.infer<typeof waveformEnqueueAckSchema>["outcome"];
+export const waveformRequestSchema = z.strictObject({ songId: entityIdSchema });
+export const waveformAcceptedSchema = z.strictObject({ jobId: entityIdSchema });

@@ -12,6 +12,7 @@ import { reportServerError } from "@/server/observability/server-error-reporter"
 import { assertConsoleOrigin } from "./console-origin";
 
 const appErrorDefinitions = {
+  ENQUEUE_FAILED: { message: "파형 작업을 전달하지 못했습니다. 다시 요청해 주세요.", status: 503 },
   WAVEFORM_JOB_NOT_FOUND: { message: "파형 작업을 찾을 수 없습니다.", status: 404 },
   WAVEFORM_SOURCE_INVALID: { message: "곡의 참조 영상을 확인해 주세요.", status: 400 },
   NOTIFICATION_NOT_FOUND: { message: "알림을 찾을 수 없습니다.", status: 404 },

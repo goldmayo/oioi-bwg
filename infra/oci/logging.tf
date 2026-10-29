@@ -56,7 +56,7 @@ resource "oci_logging_unified_agent_configuration" "application" {
       parser {
         parser_type    = "JSON"
         field_time_key = "time"
-        time_type      = "string"
+        # OCI returns time_type=null; let this optional/computed field retain the API value.
         # Docker json-file timestamps end in Z; parse it as a UTC offset, not a literal.
         time_format      = "%Y-%m-%dT%H:%M:%S.%N%z"
         is_keep_time_key = true

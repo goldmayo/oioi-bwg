@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-27"
-revision: 24
+updated_at: "2026-10-29"
+revision: 50
 ---
 
 # 구현 순서와 PR 단위
@@ -68,6 +68,113 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-30 첫 VM 설치 확인:** 사용자 실행 출력에서 checksum·Runner/unit/tmpfiles 설치·Worker 적재·GID 986·inactive/disabled를 확인했다. 다음 Console 연결 준비를 지시받았으며 기존 app source/Caddy import 경로를 읽기 조회했다. 실제 결과와 준비 범위는 [host 안내 §11.4](../../../../ops/oci/README.md#114-첫-vm-설치-확인과-console-연결-준비--2026-10-30)를 따른다. 아직 OCI 송수신·분석·새 배포 수용은 아니다.
+
+**2026-10-30 설치 승인 관문:** #341·#343·#344를 전체 CI 성공 후 병합했고 #711 Runner/Worker ZIP digest·내부 checksum·병합 tree를 대조했다. 로컬 적재에서 CI config ID와 containerd manifest ID 차이를 발견해 archive의 해시 연결을 확인하고 운영 안내를 정정했다. 첫 VM 설치 제안·고정 source/identity는 [host 안내 §11.3](../../../../ops/oci/README.md#113-첫-vm-적용-승인-관문--2026-10-30)이 소유한다. 실제 VM 변경·Vault 조회·새 배포는 아직 수행하지 않았다.
+
+**2026-10-30 VM 사전 점검 추가:** 사용자가 root 보호 Python 3.12 링크, `/opt/oci-cli` 내부 일반 파일/디렉터리에 비-root 소유·group/other 쓰기 항목 없음, Compose 5.5.0과 systemd 255를 확인했다. Secret 조회나 신규 서비스 실행·운영 변경은 아니다. 최초 find는 symlink의 777 표시 권한에서 멈췄으므로 수정한 조건의 무출력 결과를 근거로 사용한다.
+
+**2026-10-30 Worker 전달 산출물:** CI에서 실제 검증한 ARM64 Worker를 local image ID로 고정해 archive/checksum/source tree와 함께 내보낸다. Console 배포 연결 #343과 독립 검증 가능한 전달 관심사이며 병합 순서는 #343 → 이 산출물 → 승인된 VM 설치·수용이다. VM 재빌드·OCI 게시·Secret 조회는 수행하지 않는다. 반복 전달 절차는 [host 안내 §11.2](../../../../ops/oci/README.md#112-검증한-worker-이미지-전달)가 소유한다.
+
+**2026-10-30 Console 배포 연결:** 설치/systemd [#341](https://github.com/goldmayo/oioi-bwg/pull/341)은 Verify #706 성공 후 병합했다. Console 전용 Vault token·기본 비활성 flag·고정 읽기 전용 socket overlay를 기존 pair 배포에 연결하고, 활성/비활성 전환 실패 시 이전 env·GID·overlay를 복구한다. 실제 VM의 설치·시작·Secret 조회·Promotion은 아직 수행하지 않았다. 반복 설정·수용 순서는 [host 안내 §11](../../../../ops/oci/README.md#11-p08-runner-설치와-시작-분리)을 따른다. 사용자 지시로 페스티벌 별도 편집은 P08 완료 뒤 독립 작업으로 진행한다.
+
+**2026-10-29 host 설치 연결:** #340 token 공급 뒤 검증 binary/checksum·root staging의 설치기와 systemd 시작 준비를 구현한다. 설치와 실제 시작을 분리하고 Console env/mount 연결 전에는 활성화하지 않는다. 반복 절차는 [host 안내 §11](../../../../ops/oci/README.md#11-p08-runner-설치와-시작-분리)가 소유한다. root 파일 권한/잠금·합성 제어 명령·systemd parser 검증과 실제 VM 기동/복구를 구분한다.
+
+**2026-10-29 VM 후속 관찰 및 token 공급:** 사용자가 VM에서 `/usr/local/bin/oci` 3.92.1, nftables 1.0.9, 기존 metadata guard active/check 성공, AppArmor·seccomp·cgroupns를 확인했다. CLI 파일/상위 경로는 root 소유이고 shebang은 `/opt/oci-cli/bin/python3`다. 이는 Vault 조회·Runner 설치·worker 격리 실증을 뜻하지 않는다. 다음 구현은 고정 Secret의 root 전용 runtime token 공급이며, 합성 Secret/실제 root 파일 권한으로 검증한다. 설치/systemd·Console 공급/연결과 실제 VM 적용은 여전히 후속이다.
+
+**2026-10-29 Console 통신 경계 추가:** socket mount 점검과 함께 공개 Caddy proxy의 내부 API 차단을 준비한다. 저장소의 Caddy 2.6.2 호환 조각을 격리 컨테이너에서 실제 실행해 GET/POST·인코딩/중복 슬래시·관리 경로 보존을 검증한다. 운영 Caddy reload·Console mount 설치·생성 flag 개방은 실행하지 않았으며 각각 실제 VM 수용이 필요하다.
+
+**2026-10-29 Console mount 점검 준비:** 기존 Web용 metadata probe는 무 mount 조건을 유지한다. 별도 Console probe에서 고정 project/service와 읽기 전용 전용 socket 디렉터리 한 개만 허용하며 동일한 host 양성 대조·차단 counter 증가를 요구한다. 합성 HTTP/CLI 검증을 실제 VM 차단 수용으로 간주하지 않는다. 설정 설치·mount 배치·운영 파일 교체는 후속 승인 범위다.
+
+**2026-10-29 전용 egress 준비:** #337 상주 수명 병합 뒤 worker bridge의 host/private/metadata/IPv6 접근 차단과 고정 DNS를 구현한다. 로컬 격리 커널의 허용·차단·기존 metadata table 보존을 검증하며 실제 OCI/VM 수용과 구분한다. 다음은 설치/systemd·Vault 공급·Console mount 연결이다. VM 설정 변경·운영 배포는 아직 수행하지 않았다.
+
+**2026-10-29 상주 수명 연결:** #336 host 잠금 뒤 고정 설정/token 로더·Instance Principal 시작·socket 접수·일반/DLQ 교대 소비·취소/종료 정리를 연결한다. CI ARM64 binary의 checksum/검증 tree를 보존한다. 다음은 systemd/설치·Vault 공급·Console mount/metadata probe 호환성·egress 격리 연결이며, 실제 VM 설치/활성화·OCI 수용·Promotion은 별도 승인 후 진행한다.
+
+
+**2026-10-29 host socket 연결 준비:** #332의 Docker 실행 뒤 Runner 중복 기동 방지용 host lock·Unix socket의 소유권/권한·stale socket 회수를 구현한다. #333 DLQ 소비와 합친 뒤 상주 실행/종료·설치로 연결한다. 실제 VM 디렉터리/전용 그룹 생성·Console mount·서비스 활성화는 별도 승인 관문이며 이 코드 PR은 VM을 변경하지 않는다.
+
+**2026-10-29 DLQ 복구 구현:** 일반 소비와 같은 슬롯에서 DLQ 한 건을 받아 잔존 컨테이너 부재·Job/source·현재 attempt를 확인한 뒤 기존 terminal API로 회수한다. 로컬 SDK/HTTP 경계 검증을 실제 OCI DLQ 수용으로 간주하지 않는다. 다음은 상주 Runner의 시작/종료·단일 프로세스 잠금·설치 연결이며, VM 변경과 운영 활성화는 별도 승인 관문이다.
+
+**2026-10-29 Docker 실행 연결:** #331 소비 흐름 뒤 고정 이미지 ID·이름/label·명령·자원 한도의 Docker 어댑터를 연결한다. 합성 stdin은 패키지 내부 검사에서만 사용하고 production Run은 승인 videoId의 yt-dlp 경로만 실행한다. 실제 로컬 Docker 분석·취소·정리·자원 옵션과 다른 label의 컨테이너 보호를 CI ARM64에 포함한다. 운영 egress 네트워크 생성·격리 확인과 설치/활성화는 이번 코드 작업에 포함하지 않는다. VM 변경·운영 배포는 이후 별도 승인이 필요하다.
+
+**2026-10-29 소비 흐름 연결:** #330 결과 호출 뒤 수신·잔존 worker 정리·Job/source 대조·시작·실행·terminal 확인·Queue 삭제를 한 실행 범위로 연결한다. 일시 분석 실패는 재전달에 맡기고 정리 불확실은 Consumer 격리로 처리한다. HTTP/SDK fixture와 가짜 worker의 검증이며 실제 Docker 실행·DLQ·재시작 복구·상주 서비스는 후속이다. 다음 PR은 고정 Docker 실행/정리 어댑터다. 로컬 구현에는 VM 변경·운영 배포가 필요 없고, 실제 설치·socket/격리 설정·활성화는 별도 승인 후 수행한다.
+
+**2026-10-29 결과 호출 연결:** #329 뒤 기존 terminal API의 Go client를 연결한다. 전송 본문 전체 4MiB와 ACK의 Job/attempt/상태를 검사하며 응답 유실은 자동 재시도하지 않는다. 이후 소비 흐름과 고정 worker 실행·정리를 동작 단위로 연결한다. 이 호출부 구현에는 VM 변경·운영 배포가 필요 없으며, 실제 설치·격리 설정과 활성화는 별도 승인 관문이다.
+
+**2026-10-29 Runner 시작 호출 분리:** [#324](https://github.com/goldmayo/oioi-bwg/pull/324)의 visibility 감시와 완료/연장 제한 시간 경합 보완을 통합했다.
+다음 독립 단위는 기존 `/start`에 대한 Go client와 새 attempt ACK·응답 유실 경계다. terminal/result client → receipt/Job 대조·재전달/DLQ → 고정 worker 실행·정리와 설치 산출물 순서로 연결한다.
+시작 ACK 검증만으로 실제 worker 실행·OCI 수용·운영 활성화가 완료되지 않는다. 상세 호출 계약은 DESIGN §6.2, 단일 PR 검증은 PR 본문에 둔다.
+
+**2026-10-29 생성/enqueue 분리:** 사용자 조회로 실제 policy가 해당 Queue의 push/pull과 전용 Secret 읽기 3문장임을 확인했다. VM 권한 사용 실증은 별도다. 첫 구현 PR은 고정 Unix socket 송신부와 strict ACK·전달 불확실성·호출/응답 상한의 로컬 검증으로 분리한다. 다음 PR은 기존 Job 서비스를 재사용하는 기본 비활성 생성 API와 active 재사용·조건부 실패 반영이다. 이후 Runner/Queue 소비·복구 → 통합 수용 → 별도 Promotion 순서를 유지한다. 상세 송신 계약은 [DESIGN §6.2](DESIGN.md#62-oci-queue-연결과-완료-전달-계약)가 소유하며 mount·생성 route·운영 활성화는 이번에 적용하지 않는다.
+
+**2026-10-29 Queue/IAM 생성 결과 확인:** #316은 `88e0f70d3508db7bccc3f00c1d70caf49bf27cac`로 병합됐고, 사용자 Cloud Shell 조회로 후속 Plan의 소스가 이 커밋임을 확인했다. 사용자가 공유한 Apply 로그는 Queue·전용 IAM 생성과 `2 added / 0 changed / 0 destroyed`를 보여준다. Queue output의 retention 86400초·delivery 5회·visibility 180초·poll 30초도 코드와 일치한다. 실제 IAM 문구·VM에서의 권한 사용·Queue 재전달/DLQ·Runner 설치/실행·배포 수용은 후속이다. Apply 로그만으로 저장 Plan 연결 metadata를 확정하지 않으며, 상세 실행 근거와 이 제한은 [#316](https://github.com/goldmayo/oioi-bwg/pull/316)에 둔다. 다음 구현 순서는 생성/socket enqueue → Runner/Queue 소비·복구 → 기존 알림 통합 수용 → 별도 Promotion이다.
+
+**2026-10-29 시간대 검토 후속 완료:** 사용자 VM의 생성 설정은 명시적 time_type 없이 `%N%z`를 유지하며, 사용자가 제공한 기존 OCI 로그 한 건의 숫자 시각·event time·Docker time도 밀리초까지 일치했다. 9시간 오차가 없어 #316의 시간대 보류를 해제한다. 과거 로그 한 건의 확인을 현재 실시간 수집 수용으로 확대하지 않는다. 다음은 수정이 통합된 `migration_main`의 새 Plan에서 Logging 무변경·Queue/IAM 2 create를 확인하고 별도 승인으로 Apply하는 것이다. 실제 변경·계산·검증은 [#316](https://github.com/goldmayo/oioi-bwg/pull/316), 반복 절차는 [infra 안내](../../../../infra/oci/README.md#logging-parser-반복-차이-2026-10-29)에 둔다.
+
+**2026-10-29 시간대 재검토:** 사용자 요청으로 과거 #101의 9시간 차이 수정을 대조했다. `%N%z`는 그대로이며 P08 병합분은 Logging 파일을 변경하지 않았다. #316은 명시적 시간 유형 제거의 실제 OCI 에이전트 동등성을 확인하기 전 Draft로 보류한다. upstream Fluentd의 UTC/KST 합성 비교와 실제 운영 확인을 구분한다. 아래 최초 Plan 대응의 병합 순서에 이 선행 관문을 추가하며, 절차는 [infra 안내](../../../../infra/oci/README.md#logging-parser-반복-차이-2026-10-29), 단일 PR의 상세 검증은 [#316](https://github.com/goldmayo/oioi-bwg/pull/316)이 소유한다.
+
+**2026-10-29 실제 Plan 확인:** 사용자가 공유한 Job 구성소스는 `migration_main@938e52aa8abe34b8f2202b2b70cf40707b2fc4fb`다. Queue/IAM 두 개 생성과 기존 Logging의 `time_type="string"` 추가로 2 add/1 change/0 destroy였으며 Apply는 보류했다. API의 현재 parser는 `time-type=null`이고 UTC time-format은 코드와 같았다. 이 명시값만 제거하는 별도 수정과 합성 provider Plan으로 반복 차이를 검증하며, 실제 재Plan에서 Logging 무변경·2 create 확인 후 별도 Apply 승인이 필요하다. 운영 절차는 [infra 안내](../../../../infra/oci/README.md#logging-parser-반복-차이-2026-10-29)가 소유한다.
+
+**2026-10-28 후속 준비:** #313(`a1f80b24bafb0de00945d1596940081fbf8cb28d`) → #314(`b9722039130a7128941306940967965c7a29e050`)를 최신 head의 CI 통과 후 squash 병합했다. #315에서 두 선행 문서를 보존해 통합한다. 전용 Secret 생성은 사용자 보고이며 값·OCI 상태는 조회하지 않았다. Stack 변수는 Plan 전에 입력하고 실제 Plan/Apply·VM 설치·worker 게시/Promotion 수용은 별도다.
+
+**2026-10-28 acquisition 재설계:** #310→#311→#312는 병합됐다. #313(enqueuedAt/start) → #314(기본 비활성 Queue/IAM) → 공식 yt-dlp acquisition 순서로 통합하고 겹치는 WORK/이력은 보존한다.
+사용자 요청으로 입력 계약을 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)의 조건부 허용으로 개정한다. 구체적 권리·기간·입력 승인과 전용 egress 검증 전에는 외부 영상을 추출하지 않는다.
+[DESIGN §6.4](DESIGN.md#64-yt-dlp-acquisition-2026-10-28-개정)의 고정 CLI 이미지·Rust 제한·로컬 합성 검증을 먼저 분리한다. native Rust 추출기 자원 비교·실제 YouTube 성공은 확인하지 않았다.
+다음은 생성/socket enqueue → Go Runner/Queue 소비·복구 → 기존 알림 통합 수용 → 별도 Promotion이다. Queue를 수동 생성하지 않고 #314의 Resource Manager Plan에서 생성 여부·IAM diff를 검토한 뒤 별도 승인으로 Apply한다.
+Queue 생성만으로 Runner 설치가 끝나지 않는다. 고정 Runner·전용 egress·token/socket 배치와 VM 설치 절차의 후속 구현·별도 승인이 필요하다. 로컬 mock과 실제 OCI/VM/실기기 수용을 구분한다.
+
+**2026-10-28 배포 준비:** #313은 `a1f80b24bafb0de00945d1596940081fbf8cb28d`로 병합됐다. #314 → #315 순서로 최신 base와 검증을 반영한다. 사용자는 아직 OCI 작업 전이며 Secret/Plan/Apply·VM 설치·Promotion 완료로 간주하지 않는다.
+
+**2026-10-28 인프라 준비 분리:** 전달 확인/start [#313](https://github.com/goldmayo/oioi-bwg/pull/313) 뒤
+기본 비활성 Queue·제한 IAM·Runner Secret OCID 입력을 별도 PR로 통합한다. runtime 의존은 없으며 WORK 겹침은 최신 base에 맞춘다.
+revision 31은 #313의 30 다음 개정이다. 실제 적용 순서·허용 diff와 네트워크 없는 합성 provider Plan 검사는
+[기존 인프라 안내](../../../../infra/oci/README.md#p08-queuerunner-인증-준비-2026-10-28)가 소유한다.
+운영 Secret 생성·Resource Manager Plan/Apply·VM 설치/배포는 각각 별도 승인 전 실행하지 않는다.
+
+**2026-10-28 선행 통합 후 착수:** #310 → #311 → #312 순서로 squash 병합했다.
+다음 독립 단위는 전달 확인 기록과 조건부 start 내부 API다. 최초 전달 확인 불변·null 상태 소비,
+동시/지연 start의 expectedAttemptId 비교와 이전 결과 무시를 실제 로컬 PG에서 검증한다.
+공개 생성/enqueue·socket/Go Runner·실제 Queue visibility/DLQ 수용과 운영 활성화는 여전히 후속이다.
+
+**2026-10-28 내부 API 구현 분리:** 승인한 [OCI Queue 설계 #311](https://github.com/goldmayo/oioi-bwg/pull/311)에 따라
+첫 통신 PR은 Runner 상태 조회·완료 콜백과 최소 DTO/ACK만 추가한다. 기존 저장·알림 transaction을 재사용하며
+[Auth §4.2](../../oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md#42-p08-runner의-내부-상태-조회결과-반영)의
+기본 비활성·별도 토큰 경계를 따른다. #310 → #311의 squash 병합 결과를 먼저 반영하고 이 구현을 검증한다. WORK/ROADMAP 충돌은 양쪽 근거를 보존해 통합했다.
+생성/enqueue·enqueuedAt 기록·start·socket/Go Runner·실제 OCI·운영 활성화는 후속 검증 단위다.
+source 정책 확인 전에도 합성 입력 기반 검증은 진행하되 운영 credential·DB·IAM·배포 승인을 확대 해석하지 않는다.
+
+**2026-10-28 실행 분리 추가:** fetch한 `origin/migration_main@f8a59be59cc4e16fdc6719f7f3f6ccac448fa4c1`에서 착수했다.
+#302/#303의 Job/결과·요청자 알림 transaction, 조회/결과 화면과 #307의 0011/0012 운영 적용·공통 FCM을 재사용한다.
+운영 Chrome OS 수신도 사용자 확인을 마쳤다([후속 기록](../../../devlog/20261027-28-notifications.md)).
+아래 2026-10-27의 구현 부재 관찰과 당시 Firebase 준비 항목은 현재 미완료 목록이 아니다.
+
+**2026-10-28 언어 선택 추가:** 로컬 비교 후 사용자 선택으로 분석 worker를 Rust로 전환한다.
+근거·현재 실행 경계는 [기술 검토](AUDIO-FEASIBILITY.md#1-필요한-도구만-사용), 계약은 Domain §20.3이 소유한다.
+Rust fmt/unit/Clippy·ARM64 실행 검증을 CI 필수 gate에 연결하며 운영 source/Queue/배포 관문은 유지한다.
+
+**2026-10-28 OCI Queue 설계 추가:** 사용자 선택으로 OCI Queue와 제한 Unix socket 경계를 유지한다.
+enqueue/consume을 맡는 같은 VM Runner와 Rust 분석기의 책임, 내부 API/완료 전달, Queue 설정 후보는
+[설계 §6.2](DESIGN.md#62-oci-queue-연결과-완료-전달-계약)와 [§6.3](DESIGN.md#63-queue-설정-후보와-활성화-관문)이 소유한다.
+기준은 fetch한 `origin/migration_main@f8a59be59cc4e16fdc6719f7f3f6ccac448fa4c1`이다.
+0011/0012·공통 알림과 Job 저장 기반은 운영 반영됐고 운영 Chrome OS 수신은 사용자 확인 상태다.
+아래 2026-10-27의 구현 부재/Firebase 준비 관찰은 당시 기록으로 보존하며 재구현 지시로 사용하지 않는다.
+
+이 설계 단위는 문서만 변경한다. [Rust 분석 도구 #310](https://github.com/goldmayo/oioi-bwg/pull/310)의
+합성 입력 실측과 실제 OCI 실증을 구분하며 새 OCI 호출·리소스/IAM·DB·배포는 실행하지 않는다.
+후속 병합 순서는 다음과 같으며 각 구현 PR을 20파일/400줄 목표의 독립 검증 단위로 추가 분할할 수 있다.
+
+| 순서 | PR 관심사와 선행 조건 | 완료 근거 |
+| --- | --- | --- |
+| 1 | #310 분석 도구 → #311 OCI Queue 설계 → #312 내부 상태/완료 API | #310은 squash 병합 완료. #311은 해당 base를 반영하고 WORK/ROADMAP의 Rust 선택·통신 설계를 함께 보존 |
+| 2 | source 공급 계약·생성/내부 API·socket enqueue | 허용 근거·재공급 계약, 기존 PG 동시성/terminal 재사용, 응답 불확실성 계약. 운영 생성 진입점은 비활성 유지 |
+| 3 | Go 공식 SDK Runner·Queue 소비/복구·고정 Rust 실행 | ARM64 로컬 fault 검증과 비밀 없는 Terraform Plan. 운영 credential·OCI/IAM·host 적용은 별도 승인 |
+| 4 | 기존 알림 producer 연결·통합 수용·별도 Promotion | 실제 OCI/허용 입력/offset·drift/실기기 증거와 기존 metadata 차단. P09/P10·badge는 제외 |
+
+source 정책 확인 전에도 합성 입력용 통신/복구 계약과 로컬 구현·검증은 진행할 수 있다.
+운영 source·생성 경로 활성화는 이용 범위와 Queue 대기/재시작/재전달 뒤 입력 재공급 경로를 확인한 뒤에만 진행한다.
+
+
+
 **2026-10-27 추가:** 사용자의 P08 계획 구체화 요청을 반영한다. 기준은 fetch한
 `origin/migration_main@8f371d40d1809165167a524456b990c7b0f319b9`이며, 해당 source의
 `apps/console`, `packages`, `scripts`, `infra`에는 WaveformJob·worker·Queue consumer 구현이 없다.
@@ -121,6 +228,35 @@ Auth(04)·API(03/05)·server/transaction(06)·Query(07)·관측(09)·runtime(11)
   전달이 확인된 Job의 retention 만료와 중단된 RUNNING 회수도 정리 대상·조건을 명시한다.
 - Job·결과의 보관/삭제 기간, 조회 응답의 부재 표현·오류 코드, 내부 API 인증/인가 범위와 응답 유실 시
   재호출의 멱등성을 계약 테스트로 고정한다. 수치·endpoint는 구현 전 해당 DTO/배포 설정에 확정한다.
+
+**2026-10-29 생성 연결 추가:** [#318](https://github.com/goldmayo/oioi-bwg/pull/318)을 CI 통과 후 squash했다.
+기본 비활성 생성 API는 기존 request/terminal·FCM을 재사용하고 source 승인 목록·새 Job만 송신·확정 미전달의 조건부 실패를 연결한다.
+VM 사용자 점검은 ARM64·Docker/cgroup v2·앱 health와 여유 용량만 확인했다. 실제 Runner/Queue 권한·격리·부하 수용은 아니다.
+다음은 Go Runner의 공식 SDK push/pull·복구와 설치 산출물이며, 준비 전 수동 설치 스크립트 실행을 요구하지 않는다.
+운영 flag·socket mount·credential 공급·배포는 별도 승인과 실제 수용 뒤 진행한다.
+
+**2026-10-29 Runner 착수:** #319 생성 API를 CI 통과 후 병합했고 사용자 확정은 Go Runner/Rust worker다.
+첫 Go PR은 공식 SDK의 고정 Queue 송신·자동 재시도 금지·응답 유실/한도/취소를 ARM64에서 검증한다.
+송신부 → socket/Job 대조·enqueuedAt 확인 → Queue 소비/visibility·복구·고정 worker 실행 → 설치 산출물 순서다.
+앞의 VM 사전 점검을 실제 권한 사용·상주 자원·운영 수용으로 확대하지 않는다.
+
+**2026-10-29 내부 client 분리:** #320 Queue 송신부는 CI 통과 후 병합했다. 다음 연결을 작은 PR로 나눠
+고정 loopback 내부 Job client의 인증·DTO·명확한 404·기록 응답 유실을 먼저 검증하고 socket 접수를 연결한다.
+이 구현은 VM 접속 없이 로컬 ARM64에서 진행하며 runtime Secret 주입·설치·실제 OCI 수용은 별도 관문이다.
+
+**2026-10-29 socket 접수 연결:** #321 내부 client는 CI 통과 후 병합했다. Unix 전용 접수·source/Job 대조·
+단일 Put와 전달 확인을 연결하고 실제 로컬 socket에서 응답 유실·한도·진행 중 중복을 검증한다.
+다음은 Queue 소비/visibility·재전달/DLQ·고정 worker 실행과 시작/정리다. VM 변경은 설치 산출물 검토 후 별도 승인한다.
+
+**2026-10-29 Queue 수신부 분리:** #322는 CI 통과 후 병합했다. 공식 SDK의 한 건 수신·visibility 연장·receipt 삭제와
+응답/입력 한도·재시도 금지·취소를 로컬 ARM64에서 검증한다. 아직 consumer 실행 loop나 worker를 활성화하지 않는다.
+다음은 heartbeat/소유권 상실 중단 → Job/start·terminal 확인과 재전달/DLQ → 고정 worker·시작/정리·설치 산출물이다.
+실제 OCI receipt/시간·권한·자원 검증과 VM 변경은 별도 수용 관문으로 유지한다.
+
+**2026-10-29 visibility 범위 연결:** #323은 CI 통과 후 병합했다. heartbeat와 안전 기한·취소/정리 대기·
+미종료 SDK의 Consumer 격리를 연결하고 로컬 ARM64에서 검증한다. Go/Python 대안 검토 뒤 Go 유지 결정을 DESIGN에 구분해 남겼다.
+다음은 Job/start·terminal 확인 및 재전달/DLQ → 실제 고정 worker 중단/제거 → 상주 기동·설치 산출물 → 실제 OCI/VM 통합 수용이다.
+실행 범위 취소 신호를 실제 container 정리 완료로 계산하지 않으며 운영 변경·배포는 별도 승인 관문을 유지한다.
 
 #### 공통 알림의 선행 구현
 
@@ -191,6 +327,18 @@ Windows OS 알림, 개수/내역/결과 이동을 사용자와 확인했다([실
 후속 P08 범위이며 이 표의 코드 병합만으로 P08 전체를 완료로 처리하지 않는다.
 운영 DB migration/권한 적용·배포는 별도 Promotion과 [현행 runbook](../../oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md)을 따른다.
 
+**2026-10-28 통합 실행 추가:** #294를 먼저 병합한 뒤 #295~#306을 위 순서로 각각 최신
+`migration_main`에 재배치하고 필수 검증·CI를 통과시켜 squash 병합했다.
+통합 source는 `5bed878e03edf05b00ce335059c361f7f46810cb`다.
+Vault 읽기 권한·보호된 VM 설정과 승인된 백업/복원 리허설·신규 테이블 6개 적용을 마쳤으며,
+정상 [Promotion #307](https://github.com/goldmayo/oioi-bwg/pull/307)으로 검증한 동일 ARM64 두 digest를 배포했다.
+source와 실제 squash tree·배포 receipt가 일치하고 exit 0, 기존 런타임/DB 보존과 health/readiness 200을 확인했다.
+Console의 FCM을 활성화했으며 Web에는 Firebase 개인키가 없다. 현행 설정·복구는
+[운영 안내 §9.2.2](../../../../ops/oci/README.md#922-console-fcm-알림-활성화)를 따른다.
+개별 검증·실패/복구와 최종 배포 근거는 각 PR 및 #307이 소유한다.
+운영 기기의 실제 등록·전경/백그라운드·닫힌 탭·OS 클릭·iOS/회수 수용은 미확인이다.
+생성 API·OCI Queue·Runner는 이번 통합에 포함하지 않았다. 현재 후속은 [WORK](../../../WORK.md)에 유지한다.
+
 #### 실증 전 확정할 값과 최종 수용
 
 worker 이미지·도구 버전/digest, 입력 길이·JSON byte·CPU/RAM/pids/tmpfs 한도·전체 timeout,
@@ -207,7 +355,40 @@ swap 가능성과 memory 한도 포함 조건도 확인한다. 이 문서의 공
 검증 전에는 배포 성공이나 mock 통과만으로 종료하지 않는다. 실행 상세는 각 PR, 단계 최종 결과는
 완료 시점의 최종 결과 소유 문서에 두고 현재 다음 행동은 WORK에서만 갱신한다.
 
+### 2.2. P09 시안 구현과 P08 병행 실행 (2026-10-29)
+
+사용자가 현재 편집기 캡처와 Impeccable 시안을 확인한 뒤 시안 구현을 지시했다.
+기존 P08→P09의 통합 수용 순서는 유지하되, 저장된 BBC waveform JSON과 기존 가사 JSON만으로
+검증할 수 있는 UI는 P08 Runner 작업과 별도 worktree에서 병행한다. 원래 계획의 완료 조건을
+소급 변경하거나 합성 fixture의 성공을 실제 영상 싱크 검증으로 대신하지 않는다.
+
+구현 PR은 RHF draft·저장 중 편집 보존, 현재 곡/영상의 파형 조회, Peaks.js·YouTube adapter,
+시안 UI·기존 기능 연결 순서로 나눈다. 파형 조회는 계정별 Query key와 ADMIN/MFA 경계를 사용하며
+곡의 현재 youtubeId와 같은 JSON만 노출한다. 영상 변경 시 이전 파형을 숨기고, 저장 성공 뒤 해당
+곡의 파형 Query를 무효화한다. 새 DB schema나 분석·Queue·Runner 변경은 포함하지 않는다.
+
+시안은 기존 Console의 색·타이포·관리자 메뉴를 확장한다. 데스크톱은 영상과 가사 표 아래에
+전체/확대 파형을, 모바일은 작은 영상→파형→가사 표를 둔다. Cue 이동은 preview만 갱신하다 놓을 때
+초안을 한 번 변경하며 Esc/Undo, LRC·강조·추임새·시간 캡처를 보존한다. P10 기능은 포함하지 않는다.
+
+브라우저 fixture의 합성 BBC JSON·IFrame API 대역 검증과 실제 YouTube/worker 수용을 구분한다.
+후자의 3개 이상 anchor, 일정 offset/누적 drift, 실제 seek 지연과 재생 상태 확인이 남아 있으면
+P09 integration 완료로 처리하지 않는다. 실행·검증·실패 복구의 상세 근거는 [초안 #325](https://github.com/goldmayo/oioi-bwg/pull/325) →
+[조회 #326](https://github.com/goldmayo/oioi-bwg/pull/326) → [Peaks #327](https://github.com/goldmayo/oioi-bwg/pull/327) →
+[시안 연결 #328](https://github.com/goldmayo/oioi-bwg/pull/328)의 본문에 둔다.
+
 ## 3. 검증과 전환 조건
+
+**2026-10-28 OCI Queue 설계의 검증 분리:** 다음 항목은 아직 실행하지 않은 후속 수용 기준이다.
+mock·로컬 container의 합격을 실제 Queue/IAM/VM·실기기 합격으로 바꾸어 보고하지 않는다.
+
+| 단계 | 필수 실패 주입/검증 | 실제 OCI·운영에서 추가 확인 |
+| --- | --- | --- |
+| 요청/접수 | 같은 song/video 동시 요청·연속 클릭·응답 유실 재요청, 요청자별 유일 등록, 새 Job만 Put 호출 | 실제 SDK Put 성공 뒤 socket/내부 기록 응답 유실, null enqueuedAt 상태의 정상 consume |
+| 시작/소유권 | start 응답 유실·지연, 이전 컨테이너 정리, 이전 attempt 결과 거절, 단일 Runner 기동 | 실제 receipt/visibility 연장·상실·재전달 및 SDK 인증 갱신. 상실 시 worker 중단 |
+| 결과/삭제 | commit 전 실패·commit 응답 유실·중복 terminal·Queue delete 실패, 재생성 실패의 이전 JSON/Cue 보존 | 실제 delete 실패 뒤 terminal 메시지 재전달·정리, FCM 장애 중 결과/내역 보존 |
+| 복구/격리 | Runner/worker SIGTERM·SIGKILL·재시작, 고정 payload/이미지·출력 상한, 음원/프로세스 비잔존 | VM/Docker 재시작·잔존 컨테이너 회수, DLQ→최종 실패, 실제 retention과 stale 여유, socket/token/metadata/DB 차단 |
+| source/자원 | 합성 입력·전체 timeout·3개 anchor, Runner idle/long poll/실행 중 CPU/RSS | 허용 입력의 재공급·실제 영상 offset/drift, VM에서 Web/Console 자원 경쟁과 분석 동시 1개 |
 
 - P02 전에는 기존 type-check/harness/lint/FSD/unit/format과 필요한 build를 실행한다. 이후 root `pnpm verify`가 workspace별 검사·독립 앱 Steiger·repo 경계 harness·운영 테스트·format·두 앱 build를 실행한다.
 - schema 수정 → Drizzle migration 생성 → SQL 검토 → guarded local 적용 → 검증 순서를 지킨다. MFA replay·job 상태/멱등성·동시 저장은 local Docker PostgreSQL에서 확인하고 production 적용은 별도 실행 범위로 둔다.

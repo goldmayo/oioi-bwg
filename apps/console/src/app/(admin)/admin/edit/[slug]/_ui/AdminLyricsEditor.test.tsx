@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { albumQueryKeys } from "@/entities/album";
 import { songQueryKeys } from "@/entities/song";
+import { waveformQueryKeys } from "@/entities/waveform";
 
 import { ApiError } from "@/shared/api/http-errors";
 
@@ -90,9 +91,12 @@ function renderEditor() {
     nextCursor: null,
   });
 
+  queryClient.setQueryData(waveformQueryKeys.song("admin", song.id), null);
+  queryClient.setQueryData(waveformQueryKeys.song("other", song.id), null);
+
   render(
     <QueryClientProvider client={queryClient}>
-      <AdminLyricsEditor song={song} />
+      <AdminLyricsEditor song={song} accountId="admin" />
     </QueryClientProvider>,
   );
 }
@@ -108,7 +112,7 @@ afterEach(() => {
 });
 
 describe("AdminLyricsEditor cache orchestration", () => {
-  it("stales only the Song admin list after save and preserves the local draft", async () => {
+  it("stales the Song list and current account waveform after save while preserving the local draft", async () => {
     http.patch.mockResolvedValue({ id: song.id });
     renderEditor();
 
@@ -127,6 +131,12 @@ describe("AdminLyricsEditor cache orchestration", () => {
     expect(queryClient.getQueryState(albumQueryKeys.adminList())?.isInvalidated).toBe(false);
     expect(queryClient.getQueryState(["auth", "ability"])?.isInvalidated).toBe(false);
     expect((draft as HTMLInputElement).value).toBe("changed-id");
+    expect(queryClient.getQueryState(waveformQueryKeys.song("admin", song.id))?.isInvalidated).toBe(
+      true,
+    );
+    expect(queryClient.getQueryState(waveformQueryKeys.song("other", song.id))?.isInvalidated).toBe(
+      false,
+    );
     expect(auth.query).not.toHaveBeenCalled();
   });
 

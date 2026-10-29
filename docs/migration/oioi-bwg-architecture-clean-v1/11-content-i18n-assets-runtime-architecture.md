@@ -1,10 +1,10 @@
 ---
 title: "Content / i18n / Assets / Runtime Architecture"
 document_id: "11"
-version: "1.13"
+version: "1.14"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-25"
+updated_at: "2026-10-29"
 depends_on:
   - "01"
   - "05"
@@ -19,7 +19,7 @@ tags:
   - "runtime"
 ---
 
-# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.13
+# oioi-bwg Content / i18n / Assets / Runtime Architecture v1.14
 
 ## 1. 목적
 
@@ -324,6 +324,14 @@ Web/Console은 host network·privileged·추가 capability·host mount를 사용
 검증한다. host의 pull/Secret 읽기는 유지한다. 직접 IMDSv2 인증 header를 포함한 요청의 body를
 버리고 네트워크 차단·host 양성 대조·차단 규칙 counter를 함께 확인한다. 실제 두 앱과 container/
 Docker/VM 재시작·복구 후 검증 전에는 공개 gate를 통과한 것으로 기록하지 않는다. 운영 절차는 12가 소유한다.
+
+2026-10-29 P08 개정: Console의 고정 `/run/oioi-waveform/runner.sock`에 한해 host mount 예외를 둔다.
+root 소유 부모와 전용 그룹의 socket 디렉터리만 읽기 전용으로 연결한다. 연결 권한은 socket DAC로 제한하며
+Docker socket·다른 host 경로·host network·추가 capability는 허용하지 않는다. Web의 mount 없는 경계는 유지한다.
+이 예외는 mount 적용 완료를 뜻하지 않는다. 적용 전 [배포 §21](12-deployment-migration-runbook.md#21-cicd)의
+별도 승인과 실제 DAC/IMDS·재시작 검증이 필요하다.
+생성·Runner flag와 source 허용 목록은 보호된 배포 설정이며 기본 비활성·빈 목록이다.
+Runner token은 기존 독립 Secret 공급을 따르고 worker에 token/앱·OCI credential을 전달하지 않는다.
 
 ---
 

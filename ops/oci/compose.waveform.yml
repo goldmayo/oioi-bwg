@@ -1,0 +1,13 @@
+# 배포 설정으로 명시적으로 활성화할 때만 Console에 합성한다.
+services:
+  console:
+    group_add:
+      - "${CONSOLE_WAVEFORM_SOCKET_GID:?Runner socket group is required}"
+    volumes:
+      - type: bind
+        source: /run/oioi-waveform
+        target: /run/oioi-waveform
+        read_only: true
+        bind:
+          propagation: rprivate
+          create_host_path: false

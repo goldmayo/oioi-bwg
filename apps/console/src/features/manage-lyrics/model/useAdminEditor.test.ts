@@ -124,6 +124,38 @@ describe("useAdminEditor 훅 테스트", () => {
   });
 
   describe("handleSave (Inverse / Error 처리)", () => {
+    it("저장 중의 새 입력을 보존하고 다음 저장 성공 후 변경 표시를 지운다", async () => {
+      let finish!: (value: { id: string }) => void;
+      saveSongData.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      const { result } = renderHook(() => useAdminEditor(mockSong, saveSongData));
+      act(() => result.current.applyRowOffset(0.1));
+      let saving!: Promise<void>;
+      act(() => {
+        saving = result.current.handleSave();
+      });
+      act(() => {
+        result.current.applyRowOffset(0.2);
+        result.current.handleYoutubeIdChange({ target: { value: "abcdefghijk" } } as never);
+      });
+      await act(async () => {
+        finish({ id: mockSong.id });
+        await saving;
+      });
+      expect(result.current.lyrics[0].startTime).toBe(10.3);
+      expect(result.current.youtubeId).toBe("abcdefghijk");
+      expect(result.current.isDirty).toBe(true);
+      saveSongData.mockResolvedValueOnce({ id: mockSong.id });
+      await act(() => result.current.handleSave());
+      expect(result.current.isDirty).toBe(false);
+      act(() => result.current.undo());
+      expect(result.current.lyrics[0].startTime).toBe(10.1);
+      expect(result.current.isDirty).toBe(true);
+    });
     it("연속 저장은 응답 버전을 쓰고 충돌 뒤에는 입력과 원래 버전을 유지한다", async () => {
       const guideWrite = { guideId: mockSong.id, lockVersion: 1 };
       const { result, rerender } = renderHook(

@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.24"
+version: "1.25"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-25"
+updated_at: "2026-10-29"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.24
+# oioi-bwg Deployment / Migration Runbook v1.25
 
 ## 1. 목적
 
@@ -572,6 +572,13 @@ B2-2 materializer를 사용한 B2-3 host의 pair state/apply/rollback·최초 �
 `deploy-release.sh`에 전달한다. health/readiness/smoke 및 직전 정상 digest/env rollback, exit 0/20/21은 유지한다.
 Slack은 candidate 게시·검증 결과와 실제 배포/rollback 결과를 구별한다.
 GitHub에는 Run Command credential만 주고 SSH/runtime Vault/DB 권한은 주지 않는다.
+
+2026-10-29 P08 socket 예외의 적용 관문: 기본 비활성 생성 API 병합만으로 Compose mount나 flag를 켜지 않는다.
+검증한 Runner binary/worker digest·전용 socket 그룹·root 소유 설치 산출물을 먼저 준비하고,
+구체적인 VM 변경 범위의 별도 승인 후 기존 Run Command/Promotion 경로에 연결한다.
+실제 VM에서 Console만 socket에 연결하고 Web/worker는 연결할 수 없는지, 다른 host 경로와 Docker socket이
+노출되지 않는지, 기존 Web/Console IMDS 차단과 host 양성 대조가 재시작/복구 후에도 유지되는지 확인한다.
+Queue 실제 권한·소비/복구와 Domain §20.2의 허용 입력 수용 전에는 생성 flag와 목록을 공급하지 않는다.
 
 Branch protection/ruleset은 수동 설정이며 코드로 완료 처리하지 않는다.
 

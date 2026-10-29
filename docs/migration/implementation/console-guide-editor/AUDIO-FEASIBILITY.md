@@ -4,8 +4,8 @@ kind: migration-evidence
 status: recorded
 observed_at: "2026-10-05"
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
-updated_at: "2026-10-05"
-revision: 4
+updated_at: "2026-10-28"
+revision: 7
 ---
 
 # 파형 JSON 생성 기술 검토
@@ -13,7 +13,31 @@ revision: 4
 [최소 설계](DESIGN.md)의 기술 근거다. 공식 문서 기준의 가능성과 아래 구현 제안을 구분한다.
 실제 다운로드·container 실행·benchmark는 하지 않았다. 최초판의 로컬 분석/장기 R&D 제안은 대체한다.
 
+**2026-10-28 착수 보완:** 위 문장은 2026-10-05의 관찰이며 아래 YouTube acquisition은 당시 제안이다.
+Domain §20.2의 금지를 변경하지 않는다. 첫 실행은 자체 합성 WAV만 분석하는
+[ARM64 toolchain](../../../../ops/waveform/Dockerfile)이며 URL·yt-dlp·외부 음원 다운로드는 포함하지 않는다.
+WAV stdin을 ffmpeg로 mono 24kHz s16le로 변환하고 PCM byte 수로 실제 duration을 계산한다.
+BBC의 [raw stdin 옵션](https://github.com/bbc/audiowaveform/blob/1.10.2/README.md)을 사용해 480 sample/20ms·8-bit JSON을 생성한다.
+음원/PCM은 pipe, JSON 임시는 tmpfs다. 분석 fragment에는 production source를 붙이지 않는다.
+toolchain의 합성 anchor 검증은 resampling 검사이며 YouTube IFrame offset/drift 수용을 대신하지 않는다.
+운영 입력은 확보 경로·이용조건/권리 근거·서버 분석/변환·기간을 확인하고 참조 영상과 시간축을 실측해야 한다.
+실행·자원 측정과 이미지 식별자는 해당 PR 본문에 기록한다. 향후 실행 관문은 [ROADMAP §2.1](ROADMAP.md#21-p08-착수-계획)이 소유한다.
+
 ## 1. 필요한 도구만 사용
+
+**2026-10-28 acquisition 재설계:** 사용자의 링크 기반 생성 요청으로 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)를 조건부 허용으로 개정했다.
+위 착수 보완과 아래 Python 미포함 표기는 #310 합성 분석 이미지의 기록이다. 새 이미지는 Rust 감독자와 공식 **yt-dlp 2026.10.26 ARM64 unpacked bundle**(내장 Python/EJS), **Deno 2.9.8**을 포함한다.
+[공식 EJS 안내](https://github.com/yt-dlp/yt-dlp/wiki/EJS)에 따른 runtime을 build 때 SHA256으로 고정하며 실행 시 설치·업데이트하지 않는다.
+Rust wrapper/자체 추출기는 추가하지 않는다. 선택 근거는 기능·유지보수 범위이며 native Rust YouTube 추출기와 같은 입력으로 자원을 비교한 결과가 아니다.
+로컬 검증은 CLI 시작 비용·generic extractor의 합성 HTTP streaming과 Rust의 합성 FLAC 분석이다. 실제 YouTube/EJS·TLS·권한/시간축·최대 자원 수용은 미검증이다.
+한도·기본 거절·실행/정리는 [DESIGN §6.4](DESIGN.md#64-yt-dlp-acquisition-2026-10-28-개정)가 소유하며, 정확한 측정 조건·수치·digest는 구현 PR 본문에 남긴다.
+
+**2026-10-28 Rust 선택:** 동일 native CLI·ARM64·자원 한도의 Python/Go/Rust 로컬 비교 후
+사용자가 Rust를 선택했다. [Domain §20.3](../../DOMAIN_SPECIFICATION.md#203-worker)의 초기 Python 가정을 대체한다.
+#310 당시 실행 이미지는 Rust·ffmpeg·audiowaveform을 사용하고 Python·compiler는 포함하지 않았다.
+호스트 Python 검증기가 최종 이미지 안의 ffmpeg 합성 source와 FIFO만 제어하며 음원은 밖으로 보내지 않는다.
+아래 yt-dlp/Python 이미지는 당시 acquisition 제안이다. 후속 개정은 위 acquisition 재설계를 따른다.
+언어별 측정 조건·수치와 최종 Rust digest/수용 결과는 [PR #310](https://github.com/goldmayo/oioi-bwg/pull/310)이 소유한다.
 
 | 도구                                                                             | 확인된 역할                                                                          | 적용 제안                                                                                                |
 | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
@@ -32,18 +56,18 @@ audiowaveform의 build dependency는 build stage에서만 사용한다. OCI ARM6
 ```text
 canonical YouTube videoId
   → yt-dlp audio stdout
-  → ffmpeg decode / mono / 24kHz PCM WAV pipe
-  → audiowaveform min/max JSON stdout
+  → ffmpeg decode / mono / 24kHz raw s16le PCM pipe
+  → audiowaveform min/max JSON (tmpfs) → Rust JSON stdout
   → VM runner가 JSON 수집/검증 → Console 내부 결과 API → PostgreSQL jsonb
 ```
 
-audiowaveform의 공식 ffmpeg pipe 예제처럼 WAV stdin을 쓰고 input/output format을 명시한다.
-pinned 도구 조합의 streaming을 검증하고, 필요할 때만 **컨테이너 tmpfs의 임시 WAV**를 fallback으로 사용한다.
+2026-10-28 구현은 compressed stdout을 ffmpeg로 decode한 뒤 **raw s16le PCM**을 Rust가 중계해 audiowaveform에 전달한다.
+초기 WAV/tmpfs fallback 제안은 사용하지 않으며 전체 음원 파일을 만들지 않는다. JSON 임시 파일만 작업별 tmpfs에 둔다.
 JSON 반환 전에 모든 pipeline exit code·형식·길이를 확인한다. 일부 출력이나 yt-dlp 메타데이터를 성공한 peak로 저장하지 않는다.
 
 | 경계      | 유지 조건                                                                                                                                                                |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 입력      | Console에서 URL을 videoId로 정규화하고 canonical YouTube URL만 worker에 전달. playlist/live·임의 URL·shell 옵션은 허용하지 않는다.                                       |
+| 입력      | 기존 song/videoId만 Runner가 DB와 대조한다. worker가 승인된 ID에서 canonical URL을 조립하며 playlist/live·임의 URL·shell 옵션을 거절한다.                                       |
 | 파일      | read-only root + tmpfs `/tmp`. TMPDIR/cache 위치도 tmpfs로 고정하며 yt-dlp disk cache를 끈다. audio host volume/bind mount/R2/DB 저장은 없다.                            |
 | 자원/종료 | Runner concurrency 1, 길이·출력 byte·CPU/RAM/pids 제한, cap-drop·no-new-privileges, timeout/종료 시 하위 프로세스와 named container 제거. restart 없음, `--rm` 사용.     |
 | 비영속성  | [Docker tmpfs](https://docs.docker.com/engine/storage/tmpfs/)도 swap될 수 있다. swap/core dump를 차단·확인한다. 삭제 함수 성공만으로 보관 금지를 검증했다고 하지 않는다. |

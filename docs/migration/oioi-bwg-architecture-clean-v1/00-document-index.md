@@ -1,10 +1,10 @@
 ---
 title: "Architecture Document Index"
 document_id: "00"
-version: "1.56"
+version: "1.59"
 status: "active"
 authority: "index"
-updated_at: "2026-10-26"
+updated_at: "2026-10-29"
 tags:
   - "architecture"
   - "documentation"
@@ -51,19 +51,19 @@ migration / implementation plan
 
 | ID | 문서 | 버전 | 상태 | 책임 |
 |---|---|---:|---|---|
-| 00 | Document Index | 1.56 | active | 문서 상태 / 버전 / 책임 SSOT |
+| 00 | Document Index | 1.58 | active | 문서 상태 / 버전 / 책임 SSOT |
 | 01 | Architecture Constitution | 2.21 | active | 전체 시스템 헌법 |
 | 02 | Frontend Architecture | 1.12 | active | FSD, UI/model/lib, Query 사용 원칙 |
 | 03 | API / Error Architecture | 1.6 | active | HTTP / AppError / ApiError / error mapping |
-| 04 | Auth / Authz Architecture | 1.8 | active | Auth.js, RequestContext, CASL, Console MFA 회수 |
+| 04 | Auth / Authz Architecture | 1.11 | active | Auth.js, RequestContext, CASL, Console MFA 회수, P08 생성·내부 결과 인증 |
 | 05 | Contract / Validation Architecture | 1.7 | active | Zod contract / DTO / boundary validation |
 | 06 | Server / Data Access Architecture | 1.2 | active | Service, Repository, Drizzle, transaction |
 | 07 | Rendering / Query / Cache Architecture | 1.2 | active | RSC / Query / hydration / cache / retry 전략 |
 | 08 | Form / Client State Architecture | 1.0 | active | form / URL / local client state ownership |
 | 09 | Error UX / Observability Architecture | 1.5 | active | query/mutation error UX / logging / Sentry |
-| 10 | Testing Architecture | 1.20 | active | unit / integration / component / E2E strategy |
-| 11 | Content / i18n / Assets / Runtime Architecture | 1.13 | active | locale / content / assets / env / runtime |
-| 12 | Deployment / Migration Runbook | 1.24 | active | migration phases / test infra / Docker / OCI / rollback |
+| 10 | Testing Architecture | 1.21 | active | unit / integration / component / E2E strategy |
+| 11 | Content / i18n / Assets / Runtime Architecture | 1.14 | active | locale / content / assets / env / runtime |
+| 12 | Deployment / Migration Runbook | 1.25 | active | migration phases / test infra / Docker / OCI / rollback |
 
 ---
 

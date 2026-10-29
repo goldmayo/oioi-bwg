@@ -41,6 +41,17 @@ export function isConsoleMfaEnrollmentEnabled(env: ConsoleEnvironment = process.
   return env.CONSOLE_MFA_ENROLLMENT_ENABLED === "true";
 }
 
+/** 이용 범위 확인 후 운영자가 주입한다. 누락·목록 오타는 전체 거절한다. */
+export function getWaveformGenerationConfig(env: ConsoleEnvironment = process.env) {
+  const ids = (env.CONSOLE_WAVEFORM_ALLOWED_VIDEO_IDS ?? "").split(",");
+  return {
+    enabled:
+      env.CONSOLE_WAVEFORM_GENERATION_ENABLED === "true" &&
+      env.CONSOLE_WAVEFORM_RUNNER_ENABLED === "true",
+    allowedVideoIds: ids.every((id) => /^[A-Za-z0-9_-]{11}$/.test(id)) ? ids : [],
+  };
+}
+
 export function getConsoleCookies(origin: string) {
   const secure = new URL(origin).protocol === "https:";
   return {
