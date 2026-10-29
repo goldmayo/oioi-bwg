@@ -20,7 +20,11 @@ const song = {
     {
       startTime: 0.4,
       isExtra: false,
-      segments: [{ text: "함께 부르는 첫 번째 가사", isCheer: false, isEcho: false }],
+      segments: [
+        { text: "함께 부르는 ", isCheer: false, isEcho: false },
+        { text: "첫 번째 ", isCheer: true, isEcho: false },
+        { text: "가사", isCheer: true, isEcho: true, startTimeOffset: 0.25 },
+      ],
     },
     {
       startTime: 4,
@@ -69,9 +73,10 @@ const data = {
 };
 let responseMode = "ready",
   saveStatus = 200;
+let lastSaved = null;
 const fixtureSource = `import React from 'react';import {createRoot} from 'react-dom/client';import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import Editor from '${app}/src/features/manage-lyrics/ui/LyricsEditorClient.tsx';
-import Sidebar from '${app}/src/app/(admin)/admin/_ui/admin-sidebar.tsx';
+import {AdminWorkspace} from '${app}/src/app/(admin)/admin/_ui/admin-sidebar.tsx';
 import {Toaster} from '${app}/src/shared/ui/sonner.tsx';
 window.YT={PlayerState:{PLAYING:1},Player:class{
  constructor(el,options){this.time=4;this.state=2;this.options=options;this.videoId=options.videoId;window.__iframe=this;el.innerHTML='<div style="height:100%;display:grid;place-items:center;background:#202c35;color:#dce9f1;font-size:13px">YouTube IFrame 검증 대역</div>';queueMicrotask(()=>options.events.onReady({target:this}));}
@@ -81,7 +86,7 @@ window.YT={PlayerState:{PLAYING:1},Player:class{
 }};
 const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
 const song=${JSON.stringify(song)};
-createRoot(document.getElementById('root')).render(<QueryClientProvider client={client}><div className="bg-background text-foreground flex h-dvh min-w-0 flex-col overflow-hidden md:flex-row"><Sidebar/><main className="min-h-0 min-w-0 flex-1 overflow-auto"><Editor song={song} accountId="test-admin" saveSongData={async(id,input)=>{const response=await fetch('/save',{method:'POST',body:JSON.stringify(input)});if(!response.ok)throw Error('save rejected');return {id};}}/></main></div><Toaster/></QueryClientProvider>);`;
+createRoot(document.getElementById('root')).render(<QueryClientProvider client={client}><AdminWorkspace><Editor song={song} accountId="test-admin" saveSongData={async(id,input)=>{const response=await fetch('/save',{method:'POST',body:JSON.stringify(input)});if(!response.ok)throw Error('save rejected');return {id};}}/></AdminWorkspace><Toaster/></QueryClientProvider>);`;
 await build({
   stdin: { contents: fixtureSource, loader: "tsx", resolveDir: app },
   bundle: true,
@@ -141,6 +146,9 @@ const server = createServer(async (req, res) => {
   const path = new URL(req.url, "http://localhost").pathname;
   try {
     if (path === "/save") {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      lastSaved = JSON.parse(Buffer.concat(chunks).toString());
       res.writeHead(saveStatus, { "Content-Type": "application/json" });
       res.end("{}");
       return;
@@ -186,6 +194,182 @@ const capture = async (page, name) => {
   });
   await page.screenshot({ path: join(out, name), fullPage: true });
 };
+
+async function verifyNotes(page, width) {
+  responseMode = "ready";
+  saveStatus = 200;
+  await page.goto(origin, { waitUntil: "networkidle" });
+  await page.locator('[aria-label="확대 파형과 Cue"] canvas').first().waitFor();
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator("[data-note-track]").count(), 2);
+  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 7);
+  const wave = page.locator('[aria-label="확대 파형과 Cue"]');
+  const track = page.locator('[data-note-track="extra"]');
+  const [waveBox, trackBox] = await Promise.all([wave.boundingBox(), track.boundingBox()]);
+  assert.ok(Math.abs(waveBox.x - trackBox.x) < 1 && Math.abs(waveBox.width - trackBox.width) < 1);
+  const note = page.locator('[data-editor-note="extra:1:1"]');
+  if (!(await note.count())) {
+    await page.getByRole("button", { name: "다음 노트 구간", exact: true }).click();
+  }
+  await note.click();
+  await capture(page, `notes-${width}.png`);
+  if (width === 390) {
+    await page.getByRole("button", { name: "선택 노트 속성", exact: true }).click();
+    await page.screenshot({ path: join(out, "notes-mobile-properties.png"), fullPage: true });
+    await page.getByRole("button", { name: "노트 트랙으로 돌아가기", exact: true }).click();
+  }
+  if (width !== 1600) return;
+  const range = await wave.evaluate((el) => ({
+    start: Number(el.dataset.start),
+    end: Number(el.dataset.end),
+  }));
+  // 실제 접근성 이름은 사용자 문구 '추가 응원'을 사용한다.
+  const draw = page.getByRole("button", { name: "추가 응원 트랙에 노트 추가", exact: true });
+  const drawBox = await draw.boundingBox();
+  await draw.click({
+    position: { x: ((9 - range.start) / (range.end - range.start)) * drawBox.width, y: 45 },
+  });
+  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 8);
+  await page.getByRole("button", { name: /^저장/ }).click();
+  await page.getByText("가사와 노트의 내용·시각을 확인해 주세요.", { exact: true }).waitFor();
+  await page.getByRole("textbox", { name: "선택 노트 내용", exact: true }).fill("수동 입력");
+  await page.getByRole("button", { name: "노트 0.5초 뒤에 복제", exact: true }).click();
+  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 9);
+  await page.getByRole("button", { name: "선택 노트 삭제", exact: true }).click();
+  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 8);
+  await page.getByRole("button", { name: "실행 취소", exact: true }).click();
+  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 9);
+  await page.getByRole("button", { name: "실행 취소", exact: true }).click();
+  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 8);
+  await note.click();
+  await note.scrollIntoViewIfNeeded();
+  const box = await note.boundingBox();
+  const before = Number(await note.getAttribute("data-note-time"));
+  await page.mouse.move(box.x + 10, box.y + 12);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 70, box.y + 12, { steps: 6 });
+  assert.equal(
+    Number(await page.locator('[data-editor-note="extra:1:0"]').getAttribute("data-note-time")),
+    4,
+  );
+  const preview = Number(await note.getAttribute("data-note-time"));
+  assert.ok(preview > before);
+  await page.mouse.up();
+  await page.getByRole("button", { name: "실행 취소", exact: true }).click();
+  assert.equal(Number(await note.getAttribute("data-note-time")), before);
+  await note.scrollIntoViewIfNeeded();
+  const original = await note.boundingBox();
+  await page.mouse.move(original.x + 10, original.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(original.x + 65, original.y + 10, { steps: 4 });
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  assert.equal(Number(await note.getAttribute("data-note-time")), before);
+  await page.getByRole("button", { name: "노트 10ms 늦추기", exact: true }).click();
+  assert.equal(
+    Number(await note.getAttribute("data-note-time")),
+    Math.round((before + 0.01) * 100) / 100,
+  );
+  const cheer = page.getByRole("checkbox", { name: "2번째 조각 응원 강조", exact: true });
+  const echo = page.getByRole("checkbox", { name: "2번째 조각 에코 강조", exact: true });
+  assert.equal(await cheer.isChecked(), true);
+  assert.equal(await echo.isChecked(), false);
+  await echo.check();
+  assert.equal(await cheer.isChecked(), true);
+  await page.getByRole("button", { name: "실행 취소", exact: true }).click();
+  assert.equal(await cheer.isChecked(), true);
+  assert.equal(await echo.isChecked(), false);
+  await page.getByRole("button", { name: "다시 실행", exact: true }).click();
+  assert.equal(await cheer.isChecked(), true);
+  assert.equal(await echo.isChecked(), true);
+  const count = await page.locator("[data-note-table] tbody tr").count();
+  await echo.press("e");
+  assert.equal(await page.locator("[data-note-table] tbody tr").count(), count);
+  await capture(page, "notes-flags-extra.png");
+  await page.getByRole("button", { name: /^저장/ }).click();
+  await page.getByText("저장됨", { exact: true }).waitFor();
+  assert.equal(lastSaved.lyrics[1].segments[1].isCheer, true);
+  assert.equal(lastSaved.lyrics[1].segments[1].isEcho, true);
+  await page.getByRole("button", { name: "1번 노트 선택", exact: true }).click();
+  assert.equal(
+    await page.getByRole("checkbox", { name: "2번째 조각 응원 강조", exact: true }).isChecked(),
+    true,
+  );
+  assert.equal(
+    await page.getByRole("checkbox", { name: "3번째 조각 에코 강조", exact: true }).isChecked(),
+    true,
+  );
+  await page
+    .getByRole("textbox", { name: "선택 노트 3번째 조각 내용", exact: true })
+    .fill("에코 유지");
+  await capture(page, "notes-flags-mixed.png");
+  const extra = page.getByRole("checkbox", { name: "추가 응원 행", exact: true });
+  await extra.check();
+  await extra.uncheck();
+  await page.getByRole("button", { name: /^저장/ }).click();
+  await page.getByText("저장됨", { exact: true }).waitFor();
+  assert.equal(lastSaved.lyrics[0].isExtra, false);
+  assert.deepEqual(lastSaved.lyrics[0].segments, [
+    song.lyrics[0].segments[0],
+    song.lyrics[0].segments[1],
+    { ...song.lyrics[0].segments[2], text: "에코 유지" },
+  ]);
+  assert.ok(
+    lastSaved.lyrics.every((line) =>
+      line.segments.every((segment) => !("segmentIndex" in segment)),
+    ),
+  );
+  assert.ok(
+    lastSaved.lyrics.some((line) => line.segments.some((segment) => segment.text === "수동 입력")),
+  );
+  for (const mode of ["empty", "error"]) {
+    responseMode = mode;
+    await page.reload({ waitUntil: "networkidle" });
+    await page
+      .getByText("가사 표와 시간 캡처로 계속 편집할 수 있습니다.", { exact: true })
+      .waitFor();
+    assert.equal(await page.locator("canvas").count(), 0);
+    await page.evaluate(() => {
+      window.__iframe.time = 12.5;
+    });
+    await page.waitForTimeout(150);
+    await page
+      .getByRole("button", { name: "추가 응원 노트를 현재 위치에 추가", exact: true })
+      .click();
+    assert.equal(
+      await page.getByRole("spinbutton", { name: "노트 시작 시각", exact: true }).inputValue(),
+      "12.5",
+    );
+    await page.getByRole("textbox", { name: "선택 노트 내용", exact: true }).fill("파형 없는 입력");
+    const visible = await page
+      .locator("[data-piano-roll]")
+      .evaluate((el) => ({ start: Number(el.dataset.noteStart), end: Number(el.dataset.noteEnd) }));
+    assert.ok(visible.start <= 12.5 && visible.end > 12.5);
+    assert.equal(Math.round((visible.end - visible.start) * 100) / 100, 8);
+    assert.equal(await page.evaluate(() => window.__iframe.getCurrentTime()), 12.5);
+    assert.ok(await page.getByRole("button", { name: /노트 파형 없는 입력/ }).count());
+    await capture(page, `notes-${mode}.png`);
+    assert.equal(await page.locator("[data-note-table] tbody tr").count(), 8);
+  }
+  checks.push({
+    noteTracksAligned: true,
+    emptyDraftBlockedOnSave: true,
+    noteDrawAndText: true,
+    duplicateDeleteUndo: true,
+    noteDragSingleUndo: true,
+    noteEscapeCancel: true,
+    fineNudge10ms: true,
+    savesLegacyJson: true,
+    noWaveformNoteInput: true,
+    pausedClockCapture: true,
+    selectedNoteRevealedWithoutSeeking: true,
+    segmentEmphasisVisibleAndEditable: true,
+    independentCheerEchoUndoRedo: true,
+    mixedSegmentsAndOffsetsRoundTrip: true,
+    extraFlagRoundTrip: true,
+  });
+}
+
 try {
   for (const width of [1600, 1280, 390]) {
     responseMode = "ready";
@@ -202,6 +386,8 @@ try {
     });
     await page.goto(origin, { waitUntil: "networkidle" });
     await page.locator('[aria-label="확대 파형과 Cue"] canvas').first().waitFor();
+    await page.getByRole("button", { name: "선택", exact: true }).click();
+    await page.locator("[data-lyric-details] summary").click();
     await page.getByRole("button", { name: "2행 선택", exact: true }).click();
     await page.waitForTimeout(200);
     assert.ok(
@@ -346,6 +532,7 @@ try {
         emptyAndErrorKeepEditor: true,
       });
     }
+    await verifyNotes(page, width);
     assert.equal(errors.length, 0, errors.join("\n"));
     checks.push({ width, overflow: false, errors });
     await page.close();

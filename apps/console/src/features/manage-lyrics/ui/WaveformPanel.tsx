@@ -1,19 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import type { WaveformData } from "@oioi-bwg/contracts/waveform";
-import { useQuery } from "@tanstack/react-query";
-import { AudioLines, LocateFixed, Maximize2, Minus, Plus, ScanLine } from "lucide-react";
+import type { UseQueryResult } from "@tanstack/react-query";
+import { LocateFixed, Maximize2, Minus, MousePointer2, Pencil, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
-
-import { waveformQueries } from "@/entities/waveform";
 
 import { Button } from "@/shared/ui/button";
 
-import { formatTime } from "../lib/lrc-parser";
-
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 import type { CuePreview } from "./PeaksWaveform";
+import { PianoRoll, type PianoRollInteraction } from "./PianoRoll";
+
+const compactQuery = "(max-width: 639px)";
+const subscribeCompact = (listener: () => void) => {
+  const query = window.matchMedia(compactQuery);
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+};
+const getCompact = () => window.matchMedia(compactQuery).matches;
+const getServerCompact = () => false;
 
 const PeaksWaveform = dynamic(() => import("./PeaksWaveform"), {
   ssr: false,
@@ -23,49 +29,111 @@ function WaveformSkeleton() {
   return (
     <div
       role="status"
-      className="bg-muted/30 h-64 animate-pulse p-6 text-sm motion-reduce:animate-none"
+      className="bg-muted/30 h-28 animate-pulse p-6 text-sm motion-reduce:animate-none"
     >
       파형을 준비하고 있습니다.
     </div>
   );
 }
 export function WaveformPanel({
-  accountId,
+  query,
+  selectionRevision,
+  duration,
   disabled = false,
-}: {
-  accountId: string;
+  selected,
+  onSelect,
+  onEdit,
+  onPreview,
+  onCuePreview,
+}: PianoRollInteraction & {
+  query: UseQueryResult<WaveformData | null>;
+  selectionRevision: number;
+  duration: number;
   disabled?: boolean;
+  onCuePreview: (preview: CuePreview | null) => void;
 }) {
   const editor = useLyricsEditorContext();
-  const query = useQuery(waveformQueries.song(accountId, editor.songId));
-  const [seconds, setSeconds] = useState<number | "auto">(16);
-  const [zoom, setZoom] = useState({ start: 0, end: 16, minimum: 0 });
+  const [mode, setMode] = useState<"select" | "draw">("draw");
+  const compact = useSyncExternalStore(subscribeCompact, getCompact, getServerCompact);
+  const [choice, setChoice] = useState<number | "auto" | null>(null);
+  const seconds = choice ?? (compact ? 4 : 8);
+  const [zoom, setZoom] = useState({ start: 0, end: 8, minimum: 0 });
   const [follow, setFollow] = useState(true);
-  const [preview, setPreview] = useState<CuePreview | null>(null);
+  const [navigation, setNavigation] = useState<{ time: number; revision: number } | null>(null);
   const [failedData, setFailedData] = useState<WaveformData | null>(null);
   const data = query.data?.source.id === editor.youtubeId ? query.data : null;
   const failed = query.isError || Boolean(data && failedData === data);
-  const line = editor.lyrics[editor.currentIndex];
-  const shownTime = preview?.index === editor.currentIndex ? preview.time : line?.startTime;
   const canRender = Boolean(data && editor.player && !failed);
+  const range =
+    !canRender && choice === null
+      ? { ...zoom, end: Math.min(duration, zoom.start + (seconds === "auto" ? duration : seconds)) }
+      : zoom;
+  const setSeconds = (value: number | "auto") => {
+    setChoice(value);
+    if (!canRender)
+      setZoom((previous) => {
+        const span = value === "auto" ? duration : value;
+        const start = value === "auto" ? 0 : Math.min(previous.start, Math.max(0, duration - span));
+        return { ...previous, start, end: Math.min(duration, start + span) };
+      });
+  };
+  const navigate = useCallback(
+    (time: number) => {
+      setFollow(false);
+      setNavigation((previous) => ({ time, revision: (previous?.revision ?? 0) + 1 }));
+      if (!canRender)
+        setZoom((previous) => ({
+          ...previous,
+          start: time,
+          end: Math.min(duration, time + range.end - range.start),
+        }));
+    },
+    [canRender, duration, range.end, range.start],
+  );
+  const selectedTime = selected?.time;
+  const selectionKey = `${selectionRevision}:${selected?.id}:${selectedTime}`;
+  const [lastSelection, setLastSelection] = useState(selectionKey);
+  if (lastSelection !== selectionKey) {
+    setLastSelection(selectionKey);
+    if (selectedTime !== undefined && (selectedTime < range.start || selectedTime >= range.end)) {
+      const span = Math.min(duration, range.end - range.start);
+      navigate(Math.max(0, Math.min(duration - span, selectedTime - span / 4)));
+    }
+  }
   const retry = () => {
     setFailedData(null);
     void query.refetch();
   };
   return (
     <section
-      className="border-border bg-card overflow-hidden rounded-xl border"
+      className="border-border min-w-0 overflow-hidden border-y"
       aria-labelledby="waveform-heading"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <div>
-          <h2 id="waveform-heading" className="flex items-center gap-2 text-sm font-semibold">
-            <AudioLines size={16} />
-            파형 · Cue 타임라인
-          </h2>
-          <p className="text-muted-foreground mt-1 text-xs leading-5">
-            포인트를 끌어 가사 시작 시각을 조정합니다.
-          </p>
+        <h2 id="waveform-heading" className="sr-only">
+          파형과 노트 타임라인
+        </h2>
+        <div className="flex items-center gap-1">
+          <Button
+            variant={mode === "select" ? "secondary" : "ghost"}
+            size="sm"
+            aria-pressed={mode === "select"}
+            disabled={disabled}
+            onClick={() => setMode("select")}
+          >
+            <MousePointer2 size={14} />
+            선택
+          </Button>
+          <Button
+            variant={mode === "draw" ? "secondary" : "ghost"}
+            size="sm"
+            aria-pressed={mode === "draw"}
+            disabled={disabled}
+            onClick={() => setMode("draw")}
+          >
+            <Pencil size={14} />
+            그리기
+          </Button>
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -84,11 +152,7 @@ export function WaveformPanel({
             size="icon"
             aria-label="파형 축소"
             disabled={!canRender}
-            onClick={() =>
-              setSeconds((value) =>
-                Math.min(data!.durationMs / 1000, (value === "auto" ? 16 : value) * 2),
-              )
-            }
+            onClick={() => setSeconds(Math.min(duration, (range.end - range.start) * 2))}
           >
             <Minus size={15} />
           </Button>
@@ -100,11 +164,7 @@ export function WaveformPanel({
             size="icon"
             aria-label="파형 확대"
             disabled={!canRender || zoom.end - zoom.start <= zoom.minimum + 0.05}
-            onClick={() =>
-              setSeconds((value) =>
-                Math.max(4, (value === "auto" ? data!.durationMs / 1000 : value) / 2),
-              )
-            }
+            onClick={() => setSeconds(Math.max(0.5, (range.end - range.start) / 2))}
           >
             <Plus size={15} />
           </Button>
@@ -122,7 +182,7 @@ export function WaveformPanel({
       {query.isPending ? (
         <WaveformSkeleton />
       ) : failed ? (
-        <div className="border-border bg-background/50 flex h-64 flex-col items-center justify-center gap-3 border-y p-5 text-center">
+        <div className="border-border bg-background/50 flex h-28 flex-col items-center justify-center gap-3 border-y p-5 text-center">
           <p role="alert" className="text-sm">
             파형을 불러오지 못했습니다.
           </p>
@@ -139,13 +199,15 @@ export function WaveformPanel({
           player={editor.player}
           lyrics={editor.lyrics}
           selected={editor.currentIndex}
+          showCuePoints={mode === "select"}
           seconds={seconds}
           follow={follow}
+          navigation={navigation}
           blocked={disabled || editor.isAdPlaying}
           onTimeUpdate={editor.handleTimeUpdate}
           onSelect={editor.setCurrentIndex}
           onCommit={(index, time) => editor.updateLine(index, { startTime: time })}
-          onPreview={setPreview}
+          onPreview={onCuePreview}
           onError={() => setFailedData(data)}
           onZoomChange={(start, end, minimum) =>
             setZoom((previous) =>
@@ -158,7 +220,7 @@ export function WaveformPanel({
           }
         />
       ) : (
-        <div className="border-border bg-background/50 flex h-52 flex-col items-center justify-center gap-3 border-y p-5 text-center">
+        <div className="border-border bg-background/50 flex h-28 flex-col items-center justify-center gap-3 border-y p-5 text-center">
           <p className="text-sm">
             {data
               ? "참고 영상이 준비되면 파형을 표시합니다."
@@ -176,65 +238,17 @@ export function WaveformPanel({
           )}
         </div>
       )}
-      {line && (
-        <div className="bg-muted/30 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3 text-xs">
-            <span className="border-qwer-e/40 text-qwer-e rounded border px-1.5 py-1 tabular-nums">
-              {String(editor.currentIndex + 1).padStart(2, "0")}
-            </span>
-            <strong className="max-w-24 truncate font-medium sm:max-w-64">
-              {line.segments.map((s) => s.text).join("") || "빈 가사"}
-            </strong>
-            <span className="text-muted-foreground">시작</span>
-            <output
-              className="border-border bg-background rounded border px-2 py-1.5 font-mono tabular-nums"
-              aria-label="선택한 Cue 시작 시각"
-            >
-              {formatTime(shownTime ?? 0)}
-            </output>
-            {preview && (
-              <output className="text-qwer-e font-mono">
-                {preview.time >= preview.original ? "+" : ""}
-                {(preview.time - preview.original).toFixed(2)}s
-              </output>
-            )}
-          </div>
-          <div className="flex gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label="선택 행 0.1초 앞당기기"
-              onClick={() => editor.applyRowOffset(-0.1)}
-              className="h-8 text-xs"
-            >
-              −0.1s
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label="선택 행 0.1초 늦추기"
-              onClick={() => editor.applyRowOffset(0.1)}
-              className="h-8 text-xs"
-            >
-              +0.1s
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!editor.player || editor.isAdPlaying}
-              onClick={() => editor.captureTime(editor.currentIndex)}
-              className="h-8 text-xs"
-            >
-              <ScanLine size={13} />
-              시간 캡처<kbd className="text-muted-foreground ml-1">Q</kbd>
-            </Button>
-          </div>
-        </div>
-      )}
-      <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-xs">
-        <span>드래그 후 놓으면 한 번에 적용됩니다.</span>
-        <span>Esc 이동 취소 · Ctrl Z 실행 취소</span>
-      </div>
+      <PianoRoll
+        range={range}
+        duration={duration}
+        blocked={disabled || editor.isAdPlaying}
+        onNavigate={navigate}
+        mode={mode}
+        selected={selected}
+        onSelect={onSelect}
+        onEdit={onEdit}
+        onPreview={onPreview}
+      />
     </section>
   );
 }

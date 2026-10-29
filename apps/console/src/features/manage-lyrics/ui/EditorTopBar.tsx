@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, FileInput, Redo2, Undo2, Youtube } from "lucide-react";
+import { Check, FileInput, Redo2, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -11,22 +11,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/shared/ui/dialog";
-import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
 
+import { EditorTransport } from "./EditorTransport";
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 
 export function EditorTopBar() {
   const editor = useLyricsEditorContext();
   return (
-    <header className="shrink-0 px-4 pt-4 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4">
+    <header className="border-border shrink-0 border-b px-4 py-3 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs">
-            곡 관리
-            <ChevronRight size={12} />
-            가사 편집
-          </p>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-xl font-semibold tracking-tight">{editor.title}</h1>
             <span
@@ -39,6 +34,7 @@ export function EditorTopBar() {
             </span>
           </div>
         </div>
+        <EditorTransport />
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -87,44 +83,6 @@ export function EditorTopBar() {
             <Check size={15} />
             {editor.isSaving ? "저장 중..." : "저장"}
             <kbd className="ml-1 hidden text-xs opacity-70 sm:inline">Ctrl S</kbd>
-          </Button>
-        </div>
-      </div>
-      <div className="border-border mb-4 flex flex-wrap items-center justify-between gap-3 border-y py-2.5 text-xs">
-        <div className="flex min-w-0 items-center gap-2">
-          <Youtube size={16} className="text-muted-foreground" />
-          <label htmlFor="editor-youtube-id" className="text-muted-foreground shrink-0">
-            참고 영상
-          </label>
-          <Input
-            id="editor-youtube-id"
-            value={editor.youtubeId}
-            onChange={editor.handleYoutubeIdChange}
-            placeholder="YouTube URL 또는 ID"
-            className="h-8 w-28 text-xs sm:w-52"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">
-            전체<span className="hidden sm:inline"> 오프셋</span>
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="전체 가사 0.1초 앞당기기"
-            onClick={() => editor.applyGlobalOffset(-0.1)}
-            className="h-7 px-2 text-xs"
-          >
-            −0.1s
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="전체 가사 0.1초 늦추기"
-            onClick={() => editor.applyGlobalOffset(0.1)}
-            className="h-7 px-2 text-xs"
-          >
-            +0.1s
           </Button>
         </div>
       </div>

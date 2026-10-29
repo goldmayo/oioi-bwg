@@ -8,6 +8,7 @@ import type { PeaksInstance, Point } from "peaks.js";
 import type { YouTubePlayerInstance } from "@/shared/model/youtube";
 
 import { createCuePointMarker } from "../lib/cue-point-marker";
+import { createPeaksDisplayData } from "../lib/peaks-display-data";
 import { createYouTubePeaksPlayer } from "../lib/youtube-peaks-player";
 
 export interface CuePreview {
@@ -20,8 +21,10 @@ interface Props {
   player: YouTubePlayerInstance;
   lyrics: LyricLine[];
   selected: number;
+  showCuePoints: boolean;
   seconds: number | "auto";
   follow: boolean;
+  navigation: { time: number; revision: number } | null;
   blocked: boolean;
   onTimeUpdate: (time: number) => void;
   onSelect: (index: number) => void;
@@ -55,6 +58,7 @@ export default function PeaksWaveform(props: Props) {
   useEffect(() => {
     let disposed = false;
     let instance: PeaksInstance | undefined;
+    const display = createPeaksDisplayData(props.data);
     const adapter = createYouTubePeaksPlayer(
       props.player,
       props.data.source.id,
@@ -82,7 +86,7 @@ export default function PeaksWaveform(props: Props) {
               playheadTextColor: "#eff4f8",
               playheadBackgroundColor: "#3c4652",
             },
-            waveformData: { json: { ...props.data.peaks, channels: 1 } },
+            waveformData: { json: display.json },
             player: adapter,
             waveformColor: "#718695",
             playheadColor: "#f0f3f7",
@@ -111,7 +115,7 @@ export default function PeaksWaveform(props: Props) {
               latest.current.onZoomChange(
                 startTime,
                 endTime,
-                (width * props.data.bucketSizeMs) / 1000,
+                (width * display.minimumBucketMs) / 1000,
               );
             });
             peaks.on("points.click", ({ point, preventViewEvent }) => {
@@ -183,6 +187,10 @@ export default function PeaksWaveform(props: Props) {
   }, [props.data, props.player]);
   useEffect(() => {
     if (!engine) return;
+    if (!props.showCuePoints) {
+      for (const point of [...engine.points.getPoints()]) engine.points.removeById(point.id!);
+      return;
+    }
     const ids = new Set(
       props.lyrics.flatMap((line, index) =>
         line.startTime <= props.data.durationMs / 1000 ? [String(index)] : [],
@@ -208,17 +216,36 @@ export default function PeaksWaveform(props: Props) {
         point.update({ time, labelText, editable, color });
       } else engine.points.add(options);
     });
-  }, [engine, props.lyrics, props.selected, props.blocked, props.data.durationMs]);
+  }, [
+    engine,
+    props.lyrics,
+    props.selected,
+    props.blocked,
+    props.data.durationMs,
+    props.showCuePoints,
+  ]);
   useEffect(() => {
     const view = engine?.views.getView("zoomview");
-    const minimum = ((zoomview.current?.clientWidth ?? 0) * props.data.bucketSizeMs) / 1000;
+    const factor = props.data.peaks.samples_per_pixel % 4 === 0 ? 4 : 1;
+    const minimum =
+      ((zoomview.current?.clientWidth ?? 0) * props.data.bucketSizeMs) / factor / 1000;
     view?.setZoom({
       seconds: props.seconds === "auto" ? "auto" : Math.max(minimum, props.seconds),
     });
     view?.enableAutoScroll(props.follow);
     engine?.views.getView("overview")?.enableSeek(!props.blocked);
     view?.enableSeek(!props.blocked);
-  }, [engine, props.seconds, props.follow, props.blocked, props.data.bucketSizeMs]);
+  }, [
+    engine,
+    props.seconds,
+    props.follow,
+    props.blocked,
+    props.data.bucketSizeMs,
+    props.data.peaks.samples_per_pixel,
+  ]);
+  useEffect(() => {
+    if (props.navigation) engine?.views.getView("zoomview")?.setStartTime(props.navigation.time);
+  }, [engine, props.navigation]);
   useEffect(() => {
     if (!engine || !overview.current || !zoomview.current) return;
     const observer = new ResizeObserver(() => {
@@ -249,15 +276,22 @@ export default function PeaksWaveform(props: Props) {
   }, []);
   return (
     <div className="bg-background/50 border-border overflow-hidden border-y">
-      <div className="border-border flex items-center gap-3 border-b px-4 py-3">
-        <span className="text-muted-foreground text-xs">전체</span>
+      <div className="border-border flex items-center border-b py-2">
+        <span className="text-muted-foreground w-16 shrink-0 text-center text-xs sm:w-20">
+          전체
+        </span>
         <div ref={overview} aria-label="전체 파형" className="h-9 min-w-0 flex-1" />
       </div>
-      <div
-        ref={zoomview}
-        aria-label="확대 파형과 Cue"
-        className="h-48 w-full touch-pan-y sm:h-52"
-      />
+      <div className="flex">
+        <span className="text-muted-foreground flex w-16 shrink-0 items-center justify-center text-xs sm:w-20">
+          파형
+        </span>
+        <div
+          ref={zoomview}
+          aria-label="확대 파형과 Cue"
+          className="h-32 min-w-0 flex-1 touch-pan-y sm:h-36"
+        />
+      </div>
     </div>
   );
 }

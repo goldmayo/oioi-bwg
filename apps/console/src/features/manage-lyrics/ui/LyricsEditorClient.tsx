@@ -1,19 +1,25 @@
 "use client";
 
-import { useEffect } from "react";
-import { Youtube } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
+import { waveformQueries } from "@/entities/waveform";
 
+import { Button } from "@/shared/ui/button";
+
+import { type EditorNote, getEditorNotes, type NoteEdit } from "../lib/editor-notes";
 import type { SongEditor } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
+import { EditorReferenceVideo } from "./EditorReferenceVideo";
 import { EditorTopBar } from "./EditorTopBar";
-import { EditorTransport } from "./EditorTransport";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { LyricsEditorProvider, useLyricsEditorContext } from "./LyricsEditorContext";
 import { LyricsTable } from "./LyricsTable";
 import { LyricsTimelinePreview } from "./LyricsTimelinePreview";
+import { NoteInspector } from "./NoteInspector";
+import { NoteTable } from "./NoteTable";
+import type { CuePreview } from "./PeaksWaveform";
 import { WaveformPanel } from "./WaveformPanel";
 
 interface LyricsEditorClientProps {
@@ -30,6 +36,45 @@ function LyricsEditorWorkspace({
   disabled?: boolean;
 }) {
   const editor = useLyricsEditorContext();
+  const query = useQuery(waveformQueries.song(accountId, editor.songId));
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ id: string; time: number } | null>(null);
+  const [cuePreview, setCuePreview] = useState<CuePreview | null>(null);
+  const [focusVersion, setFocusVersion] = useState(0);
+  const [selectionRevision, setSelectionRevision] = useState(0);
+  const notes = getEditorNotes(editor.lyrics);
+  const selected =
+    notes.find((note) => note.id === selectedId && note.lineIndex === editor.currentIndex) ??
+    notes.find((note) => note.lineIndex === editor.currentIndex);
+  const waveform = query.data?.source.id === editor.youtubeId ? query.data : null;
+  const duration = waveform
+    ? waveform.durationMs / 1000
+    : Math.max(
+        editor.player?.getDuration() || 0,
+        ...notes.map((note) => (Number.isFinite(note.time) ? note.time + 8 : 0)),
+        30,
+      );
+  const select = (note: EditorNote) => {
+    setSelectedId(note.id);
+    setSelectionRevision((value) => value + 1);
+    editor.setCurrentIndex(note.lineIndex);
+  };
+  const edit = (command: NoteEdit) => {
+    if (disabled || editor.isAdPlaying) return;
+    const id = editor.editNote(command);
+    if (id !== undefined) {
+      setSelectedId(id);
+      setSelectionRevision((value) => value + 1);
+    }
+    if (command.type === "add") setFocusVersion((value) => value + 1);
+  };
+  const shownTime =
+    selected &&
+    (preview?.id === selected.id
+      ? preview.time
+      : cuePreview?.index === selected.lineIndex
+        ? selected.time + cuePreview.time - cuePreview.original
+        : selected.time);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (
@@ -47,7 +92,9 @@ function LyricsEditorWorkspace({
       const target = event.target;
       if (
         target instanceof Element &&
-        target.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]')
+        target.closest(
+          'input,textarea,select,[contenteditable="true"],[role="textbox"],[role="checkbox"],[role="combobox"],[role="slider"]',
+        )
       )
         return;
       if (event.ctrlKey || event.metaKey) {
@@ -80,54 +127,87 @@ function LyricsEditorWorkspace({
     <div data-lyrics-editor className="bg-background flex h-full min-h-0 flex-col">
       <FloatingToolbar />
       <EditorTopBar />
-      <div data-editor-scroll className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.65fr)]">
-          <section
-            className="border-border bg-card grid min-w-0 grid-cols-[1.05fr_1fr] items-center overflow-hidden rounded-xl border lg:block"
-            aria-labelledby="reference-video-heading"
-          >
-            <div className="border-border col-start-2 row-start-1 flex items-center justify-between px-3 py-2 lg:border-b lg:px-4 lg:py-3">
-              <h2 id="reference-video-heading" className="text-sm font-medium">
-                참고 영상
-              </h2>
-              <Youtube size={16} className="text-muted-foreground" />
-            </div>
-            <div className="col-start-1 row-span-2 row-start-1">
-              <YouTubePlayer
-                key={editor.youtubeId}
-                videoId={editor.youtubeId}
-                onTimeUpdate={editor.handleTimeUpdate}
-                onPlayerReady={editor.setPlayer}
-                onStateChange={editor.setPlayerState}
-              />
-            </div>
-            <p className="text-muted-foreground col-start-2 row-start-2 px-3 pb-3 text-xs leading-5 lg:px-4 lg:py-3">
-              {editor.isAdPlaying
-                ? "광고 재생 중에는 시간 캡처와 파형 탐색을 멈춥니다."
-                : "영상 재생 위치와 타임라인을 함께 확인합니다."}
-            </p>
-          </section>
-          <div className="order-3 min-w-0 lg:order-none">
-            <LyricsTable />
+      <div data-editor-scroll className="min-h-0 flex-1 overflow-y-auto">
+        <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-w-0 p-4 sm:px-6">
+            <WaveformPanel
+              selectionRevision={selectionRevision}
+              query={query}
+              duration={duration}
+              disabled={disabled}
+              selected={selected}
+              onSelect={select}
+              onEdit={edit}
+              onPreview={setPreview}
+              onCuePreview={setCuePreview}
+            />
+            <NoteTable
+              selected={selected}
+              onSelect={select}
+              onEdit={edit}
+              blocked={disabled || editor.isAdPlaying}
+            />
+            <details className="border-border mt-4 border-t pt-3" data-lyric-details>
+              <summary className="text-muted-foreground cursor-pointer text-xs">
+                가사 강조 · 추임새 세부 편집
+              </summary>
+              <div className="pt-3">
+                <LyricsTable />
+              </div>
+            </details>
+            <details className="border-border mt-4 border-t pt-3">
+              <summary className="text-muted-foreground cursor-pointer text-xs">
+                실시간 응원 미리보기
+              </summary>
+              <div className="mt-3 h-20">
+                <LyricsTimelinePreview
+                  lyrics={editor.lyrics}
+                  subscribeToTime={editor.subscribeToTime}
+                />
+              </div>
+            </details>
           </div>
-          <div className="order-2 min-w-0 lg:order-none lg:col-span-2">
-            <WaveformPanel accountId={accountId} disabled={disabled} />
-          </div>
-          <section
-            className="border-border order-4 min-w-0 border-t pt-3 lg:col-span-2"
-            aria-label="실시간 미리보기"
+          <aside
+            aria-label="영상과 노트 속성"
+            className="border-border min-w-0 border-t p-4 lg:border-t-0 lg:border-l"
           >
-            <h2 className="text-muted-foreground mb-2 text-xs">실시간 미리보기</h2>
-            <div className="h-20">
-              <LyricsTimelinePreview
-                lyrics={editor.lyrics}
-                subscribeToTime={editor.subscribeToTime}
-              />
-            </div>
-          </section>
+            <EditorReferenceVideo />
+            <NoteInspector
+              note={selected}
+              shownTime={shownTime}
+              duration={duration}
+              blocked={disabled || editor.isAdPlaying}
+              focusVersion={focusVersion}
+              onEdit={edit}
+            />
+          </aside>
         </div>
       </div>
-      <EditorTransport />
+      <footer className="border-border text-muted-foreground flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-xs sm:px-6">
+        <span>그리기: 클릭으로 추가 · 선택: 좌우로 이동</span>
+        <div className="hidden items-center gap-2 md:flex">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs"
+            disabled={disabled || editor.isAdPlaying}
+            onClick={() => editor.addExtraLine(editor.currentIndex)}
+          >
+            <kbd>E</kbd>추임새 추가
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs"
+            aria-pressed={editor.isRecording}
+            disabled={disabled || editor.isAdPlaying}
+            onClick={() => editor.setIsRecording(!editor.isRecording)}
+          >
+            <kbd>R</kbd>연속 캡처 {editor.isRecording ? "켜짐" : "꺼짐"}
+          </Button>
+        </div>
+        <span>Q 캡처 · W 재생 · Esc 이동 취소</span>
+      </footer>
     </div>
   );
 }
