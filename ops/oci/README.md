@@ -651,8 +651,29 @@ Runner binary artifact와 같은 run의 `verified-commit.txt`·`verified-tree.tx
 병합 tree 일치를 확인한 뒤 ZIP 다운로드 digest 및 내부 SHA256SUMS를 검증한다. manifest에는 secret이 없다.
 
 별도 승인된 VM 설치에서는 보호 staging의 `worker-image.tar.gz`를 `docker load --input`으로 적재하고,
-`image-id.txt`의 sha256 ID·arm64·고정 entrypoint/user를 `docker image inspect`로 대조한다. 이 ID만
+CI의 `image-id.txt`를 모든 Docker store의 적재 후 ID라고 가정하지 않는다. 2026-10-30 실제 #711 archive를
+containerd store에 적재했을 때 CI의 config digest와 다른 OCI manifest digest가 `.Id`로 반환됐다.
+검증한 archive의 `index.json` → manifest blob SHA-256 → `config.digest` → config blob SHA-256이
+CI ID로 이어지는지 대조한다. VM의 적재 ID는 이 검증된 config/manifest ID 중 하나여야 하며 다른 ID는 거절한다.
+`docker image inspect`로 arm64·고정 entrypoint/user도 확인하고 **해당 VM에서 검증된 local ID**만
 Runner config의 image에 넣는다. tag를 다시 resolve하지 않으며 VM에서 도구를 재설치/재빌드하지 않는다.
 load는 서비스 시작·실제 입력 분석·운영 활성화 승인을 포함하지 않는다. 공급받은 이미지를 실제 VM의
 cgroup/DAC/egress 제약에서 검증한 뒤에만 허용 입력 수용을 진행한다. artifact 보존은 90일이므로 승인된
 원본 ZIP·checksum·검증 run/tree 근거를 보호된 운영 보관소에도 보존한다.
+
+### 11.3. 첫 VM 적용 승인 관문 — 2026-10-30
+
+코드/검증 기준은 #341 → #343 → #344 병합이며 [Verify #711](https://github.com/goldmayo/oioi-bwg/actions/runs/40902045185) 전체가 성공했다.
+검증 merge commit `b1d9a1a9e10ca8354e5a9e6acfe68034a7a24764`와 통합 commit
+`b146bce1de9c139f88c5b7ae57377506a8ffdaf7`의 tree는 `f1edd886fe666d2495cf25b12aef9641fd87cf79`로 같다.
+Runner artifact `12909908056`·Worker artifact `12910835851`의 ZIP digest와 내부 checksum을 대조했다.
+이번 Worker의 config digest는 `sha256:bed4bf48fe325872606541d0ec5233e14dfc5b32ede53482234c11b107a37247`,
+연결된 OCI manifest digest는 `sha256:60276ecfe9f487ffb50c18cee030e680833c394113b2cd5e3e3e553f29d82039`다.
+로컬 containerd store에서 후자 ID·arm64·65532:65532·고정 entrypoint를 실제 확인했다. VM 적재 확인은 아직이다.
+
+첫 승인 제안 범위는 검증 묶음을 root 보호 staging으로 옮기고 checksum 대조 후 Runner 파일·전용 그룹·
+unit/tmpfiles 설정을 설치해 daemon-reload하며 Worker 이미지를 load하는 것이다. 설치기는 기존 unit이
+active/enable이면 거절한다. 기존 설치 파일이 있으면 덮어쓰기 전에 보호 backup과 복구 범위를 추가 확인한다.
+이 단계에는 Vault 조회·runtime token/config 작성·서비스 start/enable·방화벽/Queue 변경·앱 배포가 포함되지 않는다.
+다음 단계의 Console host asset·Caddy·runtime 설정·Promotion과 Runner 시작은 실제 적용 범위를 다시 확정한다.
+원래 사용자 지시의 운영 변경 별도 승인 조건을 유지하며, 위 제안은 아직 실행 승인이나 완료 기록이 아니다.
