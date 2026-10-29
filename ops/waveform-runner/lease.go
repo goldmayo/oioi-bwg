@@ -50,7 +50,7 @@ func (c *Consumer) withLease(ctx context.Context, d *Delivery, work func(context
 	defer func() {
 		close(finished)
 		stalled := <-watched
-		if stalled {
+		if stalled || errors.Is(err, ErrRunnerStalled) {
 			state, err = consumerQuarantined, ErrRunnerStalled
 		} else if cause := context.Cause(child); cause != errLeaseFinished {
 			err = cause
