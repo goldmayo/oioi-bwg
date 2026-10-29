@@ -97,7 +97,7 @@ func TestDockerWorkerLifecycle(t *testing.T) {
 		LogConfig      struct{ Type string }
 		Tmpfs          map[string]string
 	}
-	if json.Unmarshal(config, &host) != nil || !host.ReadonlyRootfs || host.NetworkMode != "none" || strings.Join(host.Dns, ",") != "1.1.1.1,1.0.0.1" || host.Memory != 256*1024*1024 || host.MemorySwap != host.Memory || host.NanoCpus != 1e9 || host.PidsLimit != 32 || len(host.Binds) != 0 || host.LogConfig.Type != "none" || !strings.Contains(host.Tmpfs["/tmp"], "size=67108864") {
+	if json.Unmarshal(config, &host) != nil || !host.ReadonlyRootfs || host.NetworkMode != "none" || strings.Join(host.Dns, ",") != "1.1.1.1,1.0.0.1" || host.Memory != 1024*1024*1024 || host.MemorySwap != host.Memory || host.NanoCpus != 1e9 || host.PidsLimit != 32 || len(host.Binds) != 0 || host.LogConfig.Type != "none" || !strings.Contains(host.Tmpfs["/tmp"], "size=67108864") {
 		t.Fatal("worker isolation/resource flags missing")
 	}
 	config = call("inspect", "--format", "{{json .Config}}", workerName)
