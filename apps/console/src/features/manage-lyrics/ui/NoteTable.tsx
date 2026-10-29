@@ -10,6 +10,7 @@ import { Input } from "@/shared/ui/input";
 import { getEditorNotes } from "../lib/editor-notes";
 import { formatTime } from "../lib/lrc-parser";
 
+import { lyricEmphasisClass } from "./lyric-emphasis";
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 import { MobilePaintEditor } from "./MobilePaintEditor";
 import { NoteBadges, NoteText } from "./NoteText";
@@ -83,7 +84,7 @@ export function NoteTable({
                   data-note-id={note.id}
                   onMouseUp={(event) => editor.handleMouseUpText(event, note.lineIndex)}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                     {selected?.id === note.id &&
                     (note.segmentIndex !== null ||
                       editor.lyrics[note.lineIndex].segments.length === 1) ? (
@@ -94,9 +95,7 @@ export function NoteTable({
                         placeholder="내용을 입력합니다."
                         className={cn(
                           "h-8 min-w-0 flex-1 border-transparent bg-transparent text-sm dark:bg-transparent",
-                          note.segments[0]?.isEcho
-                            ? "text-qwer-w underline underline-offset-4"
-                            : note.segments[0]?.isCheer && "text-qwer-r font-semibold",
+                          lyricEmphasisClass(note.segments[0], note.segmentIndex !== null),
                         )}
                         onFocus={() => onSelect(note)}
                         onChange={(event) =>
@@ -108,20 +107,22 @@ export function NoteTable({
                         <NoteText note={note} />
                       </button>
                     )}
-                    <NoteBadges note={note} />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7 shrink-0"
-                      aria-label={`${index + 1}번 노트 강조 편집`}
-                      disabled={blocked}
-                      onClick={() => {
-                        onSelect(note);
-                        setPaintLine(note.lineIndex);
-                      }}
-                    >
-                      <Paintbrush size={13} />
-                    </Button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <NoteBadges note={note} />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 shrink-0"
+                        aria-label={`${index + 1}번 노트 강조 편집`}
+                        disabled={blocked}
+                        onClick={() => {
+                          onSelect(note);
+                          setPaintLine(note.lineIndex);
+                        }}
+                      >
+                        <Paintbrush size={13} />
+                      </Button>
+                    </div>
                   </div>
                 </td>
               </tr>

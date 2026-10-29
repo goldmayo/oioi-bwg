@@ -241,3 +241,35 @@ it("빈 노트 초안은 보존하며 계약을 만족하기 전에는 저장 �
   expect(result.current.lyrics[0].segments[0].text).toBe("");
   expect(result.current.isDirty).toBe(true);
 });
+
+it("여러 조각에 걸친 선택을 한 조각의 문자 offset으로 잘못 적용하지 않는다", () => {
+  const first = document.createElement("span"),
+    second = document.createElement("span");
+  for (const [index, element] of [first, second].entries()) {
+    element.setAttribute("data-line", "0");
+    element.setAttribute("data-seg", String(index));
+    element.textContent = "선택한 내용";
+  }
+  const range = vi.fn();
+  const spy = vi.spyOn(window, "getSelection").mockReturnValue({
+    isCollapsed: false,
+    anchorNode: first.firstChild,
+    focusNode: second.firstChild,
+    anchorOffset: 2,
+    focusOffset: 5,
+    getRangeAt: range,
+  } as unknown as Selection);
+  try {
+    const { result } = renderHook(() =>
+      useAdminEditor(
+        { id: "019a0170-0000-7000-8000-000000000001", title: "곡", youtubeId: "video", lyrics: [] },
+        saveSongData,
+      ),
+    );
+    act(() => result.current.handleMouseUpText({} as never, 0));
+    expect(result.current.toolbar).toBeNull();
+    expect(range).not.toHaveBeenCalled();
+  } finally {
+    spy.mockRestore();
+  }
+});

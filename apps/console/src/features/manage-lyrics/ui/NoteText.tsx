@@ -1,7 +1,10 @@
 import { cn } from "@/shared/lib/utils";
 
 import type { EditorNote } from "../lib/editor-notes";
-export function NoteText({ note }: { note: EditorNote }) {
+
+import { lyricEmphasisClass } from "./lyric-emphasis";
+
+export function NoteText({ note, className }: { note: EditorNote; className?: string }) {
   return (
     <>
       {note.segments.map((segment) => (
@@ -12,12 +15,10 @@ export function NoteText({ note }: { note: EditorNote }) {
           data-is-cheer={segment.isCheer}
           data-is-echo={segment.isEcho}
           className={cn(
-            segment.isCheer && "font-semibold",
-            segment.isEcho
-              ? "text-qwer-w decoration-qwer-w underline underline-offset-4"
-              : segment.isCheer
-                ? "text-qwer-r"
-                : "text-foreground",
+            "whitespace-pre-wrap",
+            (segment.isCheer || note.segmentIndex !== null) && "font-semibold",
+            lyricEmphasisClass(segment, note.segmentIndex !== null),
+            className,
           )}
         >
           {segment.text || "빈 내용"}
@@ -41,10 +42,12 @@ export function NoteBadges({ note }: { note: EditorNote }) {
         <span className="text-qwer-e border-qwer-e/30 rounded border px-1 py-0.5">추가</span>
       )}
       {cheer && (
-        <span className="text-qwer-r border-qwer-r/30 rounded border px-1 py-0.5">응원</span>
+        <span className="text-qwer-bwg border-qwer-bwg/30 rounded border px-1 py-0.5 brightness-125">
+          응원
+        </span>
       )}
       {echo && (
-        <span className="text-qwer-w border-qwer-w/30 rounded border px-1 py-0.5">에코</span>
+        <span className="text-qwer-r border-qwer-r/30 rounded border px-1 py-0.5">에코</span>
       )}
       {!cheer && !echo && <span className="text-muted-foreground">일반</span>}
     </span>

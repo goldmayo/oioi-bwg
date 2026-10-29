@@ -12,6 +12,7 @@ import { Input } from "@/shared/ui/input";
 import { formatTime, parseTime } from "../lib/lrc-parser";
 
 import { ExtraSegmentEditor } from "./ExtraSegmentEditor";
+import { lyricEmphasisClass } from "./lyric-emphasis";
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 import { MobilePaintEditor } from "./MobilePaintEditor";
 import { RawTextEditor } from "./RawTextEditor";
@@ -79,9 +80,8 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
                 data-seg={i}
                 className={cn(
                   "shrink-0 whitespace-pre",
-                  line.isExtra && "text-qwer-e",
-                  segment.isCheer && "text-qwer-r font-semibold",
-                  segment.isEcho && "text-qwer-w underline underline-offset-4",
+                  lyricEmphasisClass(segment, line.isExtra),
+                  segment.isCheer && "font-semibold",
                 )}
               >
                 {segment.text}

@@ -19,8 +19,8 @@ const lanes: { id: "lyrics" | "extra"; label: string }[] = [
 ];
 const colors: Record<NoteLane, string> = {
   lyrics: "bg-muted text-foreground border-muted-foreground/60",
-  cheer: "bg-qwer-r/10 text-qwer-r border-qwer-r/60",
-  echo: "bg-qwer-w/10 text-qwer-w border-qwer-w/60",
+  cheer: "bg-qwer-bwg/10 border-qwer-bwg/60",
+  echo: "bg-qwer-r/10 border-qwer-r/60",
   extra: "bg-qwer-e/10 text-foreground border-qwer-e/60",
 };
 export interface PianoRollInteraction {
@@ -164,6 +164,14 @@ export function PianoRoll({
           </Button>
         </div>
       </div>
+      <p
+        className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-1 text-xs"
+        aria-label="사용자 화면의 강조 색상"
+      >
+        <span className="text-qwer-e">추임새</span>
+        <span className="text-qwer-r">에코</span>
+        <span className="text-qwer-bwg brightness-125">응원</span>
+      </p>
       <p className="text-muted-foreground px-4 py-2 text-xs">
         Esc 이동 취소 · Delete 선택 노트 삭제 · 노트 왼쪽이 시작 시각입니다.
       </p>
@@ -282,7 +290,19 @@ function Lane({
                 maxWidth: `${((range.end - time) / span) * 100}%`,
               }}
             >
-              <NoteText note={note} />
+              <span className="flex min-w-0 items-center gap-1">
+                <span className="min-w-0 flex-1 truncate">
+                  <NoteText note={note} className="whitespace-pre" />
+                </span>
+                {note.segmentIndex === null &&
+                  note.segments.length > 1 &&
+                  note.segments.some((segment) => segment.isEcho) && (
+                    <span
+                      aria-label="에코 포함"
+                      className="bg-qwer-r size-1.5 shrink-0 rounded-full"
+                    />
+                  )}
+              </span>
             </button>
           );
         })}

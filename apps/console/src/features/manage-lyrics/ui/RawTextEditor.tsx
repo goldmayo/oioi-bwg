@@ -25,25 +25,23 @@ interface RawTextEditorProps {
 
 export function RawTextEditor({ line, lineIndex, isOpen, onClose }: RawTextEditorProps) {
   const { updateLine } = useLyricsEditorContext();
-  const [text, setText] = useState("");
+  const [texts, setTexts] = useState<string[]>([]);
 
-  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
   const [prevLine, setPrevLine] = useState(line);
 
   if (isOpen !== prevIsOpen || line !== prevLine) {
     setPrevIsOpen(isOpen);
     setPrevLine(line);
     if (isOpen) {
-      const rawText = (line.segments || []).map((s) => s.text).join("");
-      setText(rawText);
+      setTexts(line.segments.map((segment) => segment.text));
     }
   }
 
   const handleSave = () => {
-    const rawText = (line.segments || []).map((s) => s.text).join("");
-    if (text !== rawText) {
+    if (line.segments.some((segment, index) => segment.text !== texts[index])) {
       updateLine(lineIndex, {
-        segments: [{ text, isCheer: false, isEcho: false }],
+        segments: line.segments.map((segment, index) => ({ ...segment, text: texts[index] })),
       });
     }
     onClose();
@@ -62,18 +60,27 @@ export function RawTextEditor({ line, lineIndex, isOpen, onClose }: RawTextEdito
         <DialogHeader>
           <DialogTitle>가사 텍스트 수정</DialogTitle>
           <DialogDescription>
-            텍스트를 수정하면 해당 줄의 기존 응원법/에코 속성이 초기화됩니다.
+            조각별 내용을 수정합니다. 응원·에코 속성과 시작 시각은 유지합니다.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="가사를 입력하세요"
-            autoFocus
-            className="text-lg"
-          />
+        <div className="max-h-[60vh] space-y-4 overflow-auto py-4">
+          {texts.map((text, index) => (
+            <label key={index} className="flex flex-col gap-2 text-sm">
+              {texts.length === 1 ? "내용" : `${index + 1}번째 조각 내용`}
+              <Input
+                aria-label={`${index + 1}번째 조각 내용`}
+                value={text}
+                onChange={(event) =>
+                  setTexts((values) =>
+                    values.map((value, i) => (i === index ? event.target.value : value)),
+                  )
+                }
+                onKeyDown={handleKeyDown}
+                autoFocus={index === 0}
+                className="text-lg"
+              />
+            </label>
+          ))}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>

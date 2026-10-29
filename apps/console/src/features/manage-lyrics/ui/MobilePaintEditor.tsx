@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 
+import { lyricEmphasisClass } from "./lyric-emphasis";
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 
 type PaintMode = "normal" | "cheer" | "echo";
@@ -24,6 +25,7 @@ interface CharItem {
   isCheer: boolean;
   isEcho: boolean;
   startTimeOffset?: number;
+  startsSegment: boolean;
 }
 
 interface MobilePaintEditorProps {
@@ -59,8 +61,8 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
             mode,
             isCheer: seg.isCheer,
             isEcho: seg.isEcho,
-            // 첫 번째 글자에만 기존의 startTimeOffset을 유지
-            startTimeOffset: i === 0 ? seg.startTimeOffset : undefined,
+            startsSegment: i === 0,
+            startTimeOffset: seg.startTimeOffset,
           });
         }
       }
@@ -84,7 +86,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
         lastMode !== item.mode ||
         currentSeg.isCheer !== item.isCheer ||
         currentSeg.isEcho !== item.isEcho ||
-        item.startTimeOffset !== undefined
+        item.startsSegment
       ) {
         if (currentSeg) newSegments.push(currentSeg);
         currentSeg = {
@@ -113,7 +115,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
         next[index] = {
           ...next[index],
           mode: currentMode,
-          isCheer: currentMode === "cheer",
+          isCheer: currentMode === "cheer" || currentMode === "echo",
           isEcho: currentMode === "echo",
         };
       }
@@ -171,7 +173,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
               onClick={() => setCurrentMode("cheer")}
               className={cn(
                 "flex-1",
-                currentMode === "cheer" && "bg-qwer-r hover:bg-qwer-r/90 text-black",
+                currentMode === "cheer" && "bg-qwer-bwg hover:bg-qwer-bwg/90 text-black",
               )}
             >
               응원법
@@ -181,7 +183,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
               onClick={() => setCurrentMode("echo")}
               className={cn(
                 "flex-1",
-                currentMode === "echo" && "bg-qwer-w hover:bg-qwer-w/90 text-black",
+                currentMode === "echo" && "bg-qwer-r hover:bg-qwer-r/90 text-black",
               )}
             >
               에코
@@ -206,9 +208,9 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
                 className={cn(
                   "flex h-12 min-w-8 cursor-pointer items-center justify-center rounded-md text-2xl font-bold transition-colors select-none",
                   item.char === " " ? "w-4 bg-transparent" : "bg-muted shadow-sm",
-                  item.mode === "cheer" && "bg-qwer-r/10 text-qwer-r ring-qwer-r ring-2",
-                  item.mode === "echo" &&
-                    "text-qwer-w ring-qwer-w decoration-qwer-w underline decoration-2 underline-offset-8 ring-2",
+                  lyricEmphasisClass(item, line.isExtra),
+                  item.mode === "cheer" && "ring-qwer-bwg ring-2",
+                  item.mode === "echo" && "ring-qwer-r ring-2",
                 )}
               >
                 {item.char}

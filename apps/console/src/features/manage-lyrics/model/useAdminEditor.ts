@@ -203,6 +203,19 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     const lineIdxStr = element.getAttribute("data-line");
     const segIdxStr = element.getAttribute("data-seg");
 
+    const focusNode = selection.focusNode;
+    const focusElement =
+      focusNode?.nodeType === Node.TEXT_NODE
+        ? focusNode.parentElement
+        : (focusNode as Element | null);
+    if (
+      focusElement?.getAttribute("data-line") !== lineIdxStr ||
+      focusElement?.getAttribute("data-seg") !== segIdxStr
+    ) {
+      setToolbar(null);
+      return;
+    }
+
     if (lineIdxStr && segIdxStr && parseInt(lineIdxStr) === lineIndex) {
       const rect = selection.getRangeAt(0).getBoundingClientRect();
       const start = Math.min(selection.anchorOffset, selection.focusOffset);

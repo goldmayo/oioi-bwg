@@ -89,7 +89,7 @@ export function NoteInspector({
                   />
                 </label>
                 <div className="mt-2 flex flex-wrap gap-4 text-xs">
-                  <label className="text-qwer-r flex items-center gap-2">
+                  <label className="text-qwer-bwg flex items-center gap-2 brightness-125">
                     <Checkbox
                       aria-label={`${segment.segmentIndex + 1}번째 조각 응원 강조`}
                       checked={segment.isCheer}
@@ -105,7 +105,7 @@ export function NoteInspector({
                     />
                     응원
                   </label>
-                  <label className="text-qwer-w flex items-center gap-2">
+                  <label className="text-qwer-r flex items-center gap-2">
                     <Checkbox
                       aria-label={`${segment.segmentIndex + 1}번째 조각 에코 강조`}
                       checked={segment.isEcho}
