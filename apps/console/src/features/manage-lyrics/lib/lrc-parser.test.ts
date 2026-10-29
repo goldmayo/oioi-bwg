@@ -79,3 +79,9 @@ describe("LRC Parser Utils", () => {
     });
   });
 });
+
+it("캡처·Cue 이동 시 소수 오차 없이 10ms와 분 경계를 표시한다", () => {
+  expect(formatTime(4.1)).toBe("00:04.10");
+  expect(formatTime(1.01)).toBe("00:01.01");
+  expect(formatTime(59.999)).toBe("01:00.00");
+});

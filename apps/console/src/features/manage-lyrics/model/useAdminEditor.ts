@@ -64,10 +64,12 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
   } = lyricsEditor;
 
   // ─── 어드민 전용 상태 ───────────────────────────────────────────────────────
+  const [playerState, setPlayerState] = useState(-1);
   const [player, setPlayer] = useState<YouTubePlayerInstance | null>(null);
   const videoForm = useForm({ defaultValues: { youtubeId: song.youtubeId } });
   const youtubeId = useWatch({ control: videoForm.control, name: "youtubeId" });
   const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
   const guideWriteRef = useRef(song.guideWrite);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [lrcInput, setLrcInput] = useState("");
@@ -76,8 +78,24 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
   /** 마지막으로 추가된 추임새 행의 시간. 포커스 이동에 사용. */
   const lastAddedTimeRef = useRef<number | null>(null);
 
+  const handleAddExtraLine = useCallback(
+    (index?: number) => {
+      const time = addExtraLine(index);
+      lastAddedTimeRef.current = time;
+      return time;
+    },
+    [addExtraLine],
+  );
+
   /** 광고 감시 훅 (광고 재생 중에는 시간 업데이트 차단) */
   const isAdPlaying = useAdWatcher(player, youtubeId);
+
+  const handleCaptureTime = useCallback(
+    (index: number) => {
+      if (player && !isAdPlaying) captureTime(index);
+    },
+    [player, isAdPlaying, captureTime],
+  );
 
   // ─── 어드민 전용 핸들러 ───────────────────────────────────────────────────
 
@@ -100,15 +118,23 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
       const match = val.match(
         /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/,
       );
-      videoForm.setValue("youtubeId", match?.[1] ?? val, { shouldDirty: true });
+      const next = match?.[1] ?? val;
+      if (next !== videoForm.getValues("youtubeId")) {
+        setPlayer(null);
+        setPlayerState(-1);
+        onTimeUpdate(0);
+      }
+      videoForm.setValue("youtubeId", next, { shouldDirty: true });
     },
-    [videoForm],
+    [videoForm, onTimeUpdate],
   );
 
   /**
    * 현재 가사와 YouTube ID를 DB에 저장합니다.
    */
   const handleSave = useCallback(async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setIsSaving(true);
     try {
       const saved = await saveSongData(song.id, {
@@ -126,6 +152,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     } catch {
       // MutationCache의 전역 오류 UX가 실패를 표시한다.
     } finally {
+      savingRef.current = false;
       setIsSaving(false);
     }
   }, [song.id, lyrics, youtubeId, saveSongData, lyricsEditor, videoForm]);
@@ -232,6 +259,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
    */
   const captureSegmentOffset = useCallback(
     (lineIndex: number, segmentIndex: number) => {
+      if (!player || isAdPlaying) return;
       const line = lyrics[lineIndex];
       if (!line) return;
       const offset = parseFloat((currentTimeRef.current - line.startTime).toFixed(2));
@@ -242,7 +270,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
       };
       updateLine(lineIndex, { segments: newSegments });
     },
-    [lyrics, currentTimeRef, updateLine],
+    [lyrics, currentTimeRef, updateLine, player, isAdPlaying],
   );
 
   /**
@@ -287,8 +315,8 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     setIsRecording,
     subscribeToTime,
     updateLine,
-    captureTime,
-    addExtraLine,
+    captureTime: handleCaptureTime,
+    addExtraLine: handleAddExtraLine,
     addSegmentToExtra,
     removeSegmentFromExtra,
     deleteLine,
@@ -301,6 +329,8 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     // 어드민 전용 상태
     youtubeId,
     player,
+    playerState,
+    setPlayerState,
     isSaving,
     isImportOpen,
     lrcInput,

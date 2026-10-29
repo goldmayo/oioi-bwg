@@ -1,233 +1,145 @@
 "use client";
 
 import { useEffect } from "react";
+import { Youtube } from "lucide-react";
 
-import { useMediaQuery } from "@/shared/model/useMediaQuery";
-import { Button } from "@/shared/ui/button";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/shared/ui/resizable";
 import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
 
 import type { SongEditor } from "../model/types";
-import { SaveSongDataAction } from "../model/useAdminEditor";
+import type { SaveSongDataAction } from "../model/useAdminEditor";
 
 import { EditorTopBar } from "./EditorTopBar";
+import { EditorTransport } from "./EditorTransport";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { LyricsEditorProvider, useLyricsEditorContext } from "./LyricsEditorContext";
 import { LyricsTable } from "./LyricsTable";
 import { LyricsTimelinePreview } from "./LyricsTimelinePreview";
+import { WaveformPanel } from "./WaveformPanel";
 
 interface LyricsEditorClientProps {
   song: SongEditor;
   saveSongData: SaveSongDataAction;
+  accountId: string;
+  disabled?: boolean;
 }
-
-/**
- * 가사 편집기의 실제 UI 조립도.
- * LyricsEditorProvider 내부에서 렌더링되므로 useLyricsEditorContext() 사용 가능.
- *
- * 레이아웃 구조:
- * ┌────────────────────────────────────────┐
- * │ EditorTopBar (상단 컨트롤)             │
- * ├──────────────────┬─────────────────────┤
- * │ YouTubePlayer    │ LyricsTable         │
- * │ (좌 패널)        │ (우 패널)           │
- * ├──────────────────┴─────────────────────┤
- * │ LyricsTimelinePreview (하단 미리보기)  │
- * └────────────────────────────────────────┘
- */
-function LyricsEditorWorkspace() {
-  const {
-    youtubeId,
-    isRecording,
-    setIsRecording,
-    lyrics,
-    subscribeToTime,
-    handleTimeUpdate,
-    setPlayer,
-    captureTime,
-    currentIndex,
-    player,
-    addExtraLine,
-    lastAddedTimeRef,
-  } = useLyricsEditorContext();
-
-  const isSmallDevice = useMediaQuery("only screen and (max-width : 768px)");
-
-  // QWER 단축키 시스템
+function LyricsEditorWorkspace({
+  accountId,
+  disabled = false,
+}: {
+  accountId: string;
+  disabled?: boolean;
+}) {
+  const editor = useLyricsEditorContext();
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 입력창(Input, Textarea 등)을 포커스 중일 때는 단축키 무시
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      const key = e.key.toLowerCase();
-      if (!["q", "w", "e", "r"].includes(key)) return;
-
-      e.preventDefault(); // 영상 재생/일시정지, 텍스트 입력 등의 기본 동작 방지
-
-      switch (key) {
-        case "q":
-          // Q: 현재 행 캡처 (Sync)
-          captureTime(currentIndex);
-          break;
-        case "w":
-          // W: 재생 / 일시정지 토글
-          if (player) {
-            const state = player.getPlayerState();
-            // 1: playing
-            if (state === 1) {
-              player.pauseVideo();
-            } else {
-              player.playVideo();
-            }
-          }
-          break;
-        case "e":
-          // E: Extra(추임새) 행 추가
-          const addedTime = addExtraLine(currentIndex);
-          lastAddedTimeRef.current = addedTime;
-          break;
-        case "r":
-          // R: Recording(녹화) 모드 토글
-          setIsRecording(!isRecording);
-          break;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        disabled ||
+        event.isComposing ||
+        event.defaultPrevented ||
+        document.querySelector('[role="dialog"][data-state="open"], dialog[open]')
+      )
+        return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        void editor.handleSave();
+        return;
       }
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]')
+      )
+        return;
+      if (event.ctrlKey || event.metaKey) {
+        if (event.key.toLowerCase() === "z") {
+          event.preventDefault();
+          if (event.shiftKey) editor.redo();
+          else editor.undo();
+        }
+        return;
+      }
+      if (event.altKey || event.shiftKey || editor.isAdPlaying) return;
+      const key = event.key.toLowerCase();
+      if (!["q", "w", "e", "r"].includes(key)) return;
+      event.preventDefault();
+      if (key === "q" && editor.player && editor.lyrics.length)
+        editor.captureTime(editor.currentIndex);
+      if (key === "w" && editor.player) {
+        if (editor.player.getPlayerState() === 1) editor.player.pauseVideo();
+        else editor.player.playVideo();
+      }
+      if (key === "e") {
+        editor.addExtraLine(editor.currentIndex);
+      }
+      if (key === "r") editor.setIsRecording(!editor.isRecording);
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    isRecording,
-    captureTime,
-    currentIndex,
-    player,
-    addExtraLine,
-    lastAddedTimeRef,
-    setIsRecording,
-  ]);
-
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [disabled, editor]);
   return (
-    <div className="bg-background flex h-full flex-col gap-4 overflow-y-auto p-4">
-      {/* 드래그 선택 말풍선 툴바 (전역 fixed 포지션) */}
+    <div data-lyrics-editor className="bg-background flex h-full min-h-0 flex-col">
       <FloatingToolbar />
-
-      {/* 상단 컨트롤 바 */}
       <EditorTopBar />
-
-      {/* 메인 패널: YouTubePlayer + LyricsTable */}
-      {!isSmallDevice ? (
-        <div className="flex h-[50vh] min-h-100 shrink-0">
-          <ResizablePanelGroup orientation="horizontal" className="flex gap-4">
-            {/* 좌 패널: YouTubePlayer + 녹화 모드 버튼 */}
-            <ResizablePanel defaultSize={50} minSize={20}>
-              <div className="flex h-full flex-col gap-2">
-                <div className="bg-muted/30 border-border text-muted-foreground flex items-center justify-between rounded-t-lg border-b px-3 py-2 text-xs">
-                  <div className="flex gap-3">
-                    <span className="font-bold">
-                      <kbd className="bg-background text-primary rounded border px-1">Q</kbd> 캡처
-                    </span>
-                    <span className="font-bold">
-                      <kbd className="bg-background rounded border px-1">W</kbd> 재생/일시정지
-                    </span>
-                    <span className="font-bold">
-                      <kbd className="bg-background rounded border px-1">E</kbd> 추임새 행 추가
-                    </span>
-                    <span className="font-bold">
-                      <kbd className="bg-background rounded border px-1">R</kbd> 녹화(자동이동) 토글
-                    </span>
-                  </div>
-                  <Button
-                    onClick={() => setIsRecording(!isRecording)}
-                    variant={isRecording ? "destructive" : "secondary"}
-                    size="sm"
-                    className="h-7 text-xs font-bold"
-                  >
-                    {isRecording ? "[R] 녹화 중 (자동이동 ON)" : "[R] 녹화 모드 켜기"}
-                  </Button>
-                </div>
-                <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
-                  <YouTubePlayer
-                    key={youtubeId}
-                    videoId={youtubeId}
-                    onTimeUpdate={handleTimeUpdate}
-                    onPlayerReady={setPlayer}
-                  />
-                </div>
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle withHandle className="w-2 border-none bg-transparent" />
-
-            {/* 우 패널: 가사 편집 테이블 */}
-            <ResizablePanel defaultSize={50} minSize={30}>
-              <LyricsTable />
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
-      ) : (
-        <>
-          {/* 모바일용 패널: YouTubePlayer + LyricsTable */}
-          <div className="flex flex-col gap-2">
-            <div className="bg-muted/30 border-border text-muted-foreground flex items-center justify-between rounded-t-lg border-b px-3 py-2 text-xs">
-              <div className="flex gap-3">
-                <span className="font-bold">
-                  <kbd className="bg-background text-primary rounded border px-1">Q</kbd> 캡처
-                </span>
-                <span className="font-bold">
-                  <kbd className="bg-background rounded border px-1">W</kbd> 재생/일시정지
-                </span>
-                <span className="font-bold">
-                  <kbd className="bg-background rounded border px-1">E</kbd> 추임새 행 추가
-                </span>
-                <span className="font-bold">
-                  <kbd className="bg-background rounded border px-1">R</kbd> 녹화(자동이동) 토글
-                </span>
-              </div>
-              <Button
-                onClick={() => setIsRecording(!isRecording)}
-                variant={isRecording ? "destructive" : "secondary"}
-                size="sm"
-                className="h-7 text-xs font-bold"
-              >
-                {isRecording ? "[R] 녹화 중 (자동이동 ON)" : "[R] 녹화 모드 켜기"}
-              </Button>
+      <div data-editor-scroll className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.65fr)]">
+          <section
+            className="border-border bg-card grid min-w-0 grid-cols-[1.05fr_1fr] items-center overflow-hidden rounded-xl border lg:block"
+            aria-labelledby="reference-video-heading"
+          >
+            <div className="border-border col-start-2 row-start-1 flex items-center justify-between px-3 py-2 lg:border-b lg:px-4 lg:py-3">
+              <h2 id="reference-video-heading" className="text-sm font-medium">
+                참고 영상
+              </h2>
+              <Youtube size={16} className="text-muted-foreground" />
             </div>
-            <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border bg-black shadow-inner">
+            <div className="col-start-1 row-span-2 row-start-1">
               <YouTubePlayer
-                key={youtubeId}
-                videoId={youtubeId}
-                onTimeUpdate={handleTimeUpdate}
-                onPlayerReady={setPlayer}
+                key={editor.youtubeId}
+                videoId={editor.youtubeId}
+                onTimeUpdate={editor.handleTimeUpdate}
+                onPlayerReady={editor.setPlayer}
+                onStateChange={editor.setPlayerState}
               />
             </div>
-          </div>
-          <div className="h-2/5 min-h-100">
+            <p className="text-muted-foreground col-start-2 row-start-2 px-3 pb-3 text-xs leading-5 lg:px-4 lg:py-3">
+              {editor.isAdPlaying
+                ? "광고 재생 중에는 시간 캡처와 파형 탐색을 멈춥니다."
+                : "영상 재생 위치와 타임라인을 함께 확인합니다."}
+            </p>
+          </section>
+          <div className="order-3 min-w-0 lg:order-none">
             <LyricsTable />
           </div>
-        </>
-      )}
-
-      {/* 하단: 실시간 타임라인 미리보기 */}
-      <div className="border-border bg-card flex min-h-50 flex-1 flex-col rounded-lg border p-4 shadow-sm">
-        <h2 className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-widest uppercase">
-          실시간 프리뷰 레일
-        </h2>
-        <div className="relative min-h-0 flex-1">
-          <LyricsTimelinePreview lyrics={lyrics} subscribeToTime={subscribeToTime} />
+          <div className="order-2 min-w-0 lg:order-none lg:col-span-2">
+            <WaveformPanel accountId={accountId} disabled={disabled} />
+          </div>
+          <section
+            className="border-border order-4 min-w-0 border-t pt-3 lg:col-span-2"
+            aria-label="실시간 미리보기"
+          >
+            <h2 className="text-muted-foreground mb-2 text-xs">실시간 미리보기</h2>
+            <div className="h-20">
+              <LyricsTimelinePreview
+                lyrics={editor.lyrics}
+                subscribeToTime={editor.subscribeToTime}
+              />
+            </div>
+          </section>
         </div>
       </div>
+      <EditorTransport />
     </div>
   );
 }
-
-/**
- * 어드민 에디터 최상위 컴포넌트.
- *
- * LyricsEditorProvider로 감싸 하위 컴포넌트들이 Context를 통해
- * 모든 상태와 핸들러에 prop drilling 없이 접근할 수 있게 합니다.
- */
-export default function LyricsEditorClient({ song, saveSongData }: LyricsEditorClientProps) {
+export default function LyricsEditorClient({
+  song,
+  saveSongData,
+  accountId,
+  disabled,
+}: LyricsEditorClientProps) {
   return (
     <LyricsEditorProvider song={song} saveSongData={saveSongData}>
-      <LyricsEditorWorkspace />
+      <LyricsEditorWorkspace accountId={accountId} disabled={disabled} />
     </LyricsEditorProvider>
   );
 }

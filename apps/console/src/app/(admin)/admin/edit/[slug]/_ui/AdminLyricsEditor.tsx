@@ -14,11 +14,12 @@ import { LazyLyricsEditor, type SongEditor } from "@/features/manage-lyrics";
 
 import { songQueryKeys } from "@/entities/song";
 import { songMutations } from "@/entities/song/api";
+import { waveformQueryKeys } from "@/entities/waveform";
 
 import { ApiError } from "@/shared/api/http-errors";
 
 /** Ability와 Song mutation을 lazy lyric editor에 연결하는 route-private 조합 경계다. */
-export function AdminLyricsEditor({ song }: { song: SongEditor }) {
+export function AdminLyricsEditor({ song, accountId }: { song: SongEditor; accountId: string }) {
   const queryClient = useQueryClient();
   const { data } = useSuspenseQuery(authAbilityQueries.current());
   const ability = useMemo(() => createClientAbility(data.rules), [data.rules]);
@@ -28,6 +29,7 @@ export function AdminLyricsEditor({ song }: { song: SongEditor }) {
     ...songMutations.saveLyrics(),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() });
+      void queryClient.invalidateQueries({ queryKey: waveformQueryKeys.song(accountId, song.id) });
     },
     onError: recovery.handleMutationError,
   });
@@ -52,7 +54,13 @@ export function AdminLyricsEditor({ song }: { song: SongEditor }) {
         <p role="alert">관리 권한이 없습니다. 작성 중인 내용은 이 화면에 유지됩니다.</p>
       )}
       <fieldset disabled={!canManage} className="h-full min-w-0 border-0 p-0">
-        <LazyLyricsEditor key={song.id} song={song} saveSongData={saveSongData} />
+        <LazyLyricsEditor
+          key={song.id}
+          song={song}
+          saveSongData={saveSongData}
+          accountId={accountId}
+          disabled={!canManage}
+        />
       </fieldset>
     </>
   );
