@@ -588,3 +588,30 @@ attempt에 사유·변경 인자를 기록하고 파일과 디렉터리를 fsync
 READ ONLY로 대조해 실제 결과를 판단한다. 요청 내용을 바꾸어 자동 재시도하거나 version을 되돌리지 않는다.
 MFA reset은 암호문을 폐기하므로 새 등록이 필요하다. 이전 JWT 401·실제 OTP 재등록·새 로그인·등록 재차단·
 관리 CRUD 검증을 마친 뒤 공개 접근을 복원한다. 설치/호출 자체가 D 완료를 뜻하지 않는다.
+
+## 11. P08 Runner 설치와 시작 분리
+
+실제 VM 적용은 별도 승인 후 수행한다. `install-waveform-runner.py`는 root 보호 staging에서만 실행한다.
+성공한 Verify의 `waveform-runner-arm64` artifact에서 `verified-commit.txt`·`verified-tree.txt`·SHA256SUMS를
+대조한 binary와 같은 승인 source의 `ops/oci` 파일을 준비한다. 전체 staging 상위 경로도 root 소유·쓰기 금지여야 한다.
+installer는 ARM64 ELF·checksum을 확인하고 `/usr/local/lib/oioi-waveform-runner/`에 runner/준비/토큰/egress 도구,
+`/etc/systemd/system/oioi-waveform-runner.service`에 unit을 설치하며 `oioi-waveform-console` 그룹을 생성한다.
+예: `sudo python3 -I -B /root/p08-stage/ops/oci/install-waveform-runner.py --install /root/p08-stage/runner <검증한-SHA256>`.
+이 명령은 파일별 원자 교체와 daemon-reload까지만 한다. 서비스 enable/start, Secret 조회, 네트워크 생성은 하지 않는다.
+기존 서비스는 inactive/failed 및 disabled 상태여야 하고, Runner host 잠금이 있으면 실패한다. 기존 파일은
+자동 backup하지 않으므로 upgrade 전 보호된 복구 사본을 준비한다. 중간 설치 실패 후에는 같은 검증 source로
+재실행을 완료하고 unit/파일 검사를 마치기 전 시작하지 않는다. 기존 비보호 경로는 자동 수정하지 않는다.
+
+시작 전 `/etc/oioibawige/waveform-runner.json`(root 0600)에 `queueId`, `endpoint`, `consolePort`,
+`socketGroup`(위 전용 그룹 GID), `image`(검증한 local sha256 image ID), `approvedVideoIds: []`를 준비한다.
+같은 디렉터리의 `waveform-runner-secret.json`(root 0600)은 `{"secretId":"<기존 Vault Secret OCID>"}`만 받는다.
+CLI 및 `/opt/oci-cli` 실행기/라이브러리도 root 보호 경로여야 한다. 값 자체를 명령행·문서·로그에 넣지 않는다.
+Console의 동일 token/내부 API 준비·socket mount·공개 Caddy 차단과 worker image 검증을 먼저 완료한다.
+현재 이 installer는 Console env/Compose를 바꾸지 않는다. 그 연결 전에는 서비스를 시작하지 않는다.
+
+별도 승인한 시작에서 unit은 root runtime 디렉터리 → 기존 metadata 확인 → 전용 egress apply → 고정 bridge
+생성(부재 확인 때만)/정합 검사 → 잔존 worker 정리 → Vault token 공급 → Runner 순서로 실행한다.
+실패 단계 뒤 명령은 실행되지 않는다. 중지는 Go의 drain/정리와 ExecStopPost cleanup을 거치며 Docker 재시작은
+PartOf로 연동한다. Type=exec의 active는 OCI 인증·소비 readiness 보장이 아니므로 실제 API/Queue 수용을 따로 확인한다.
+실제 재부팅·종료/재전달·DNS/내부망 차단·Console DAC·허용 입력은 VM 수용 관문이다. 로컬 systemd parser와
+mock 제어 명령 검증을 실제 서비스 기동으로 간주하지 않는다. 일반 app installer는 이 unit을 설치하지 않는다.

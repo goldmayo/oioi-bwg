@@ -1,0 +1,33 @@
+[Unit]
+Description=Waveform Queue Runner
+Requires=docker.service oioi-metadata-guard.service
+After=docker.service oioi-metadata-guard.service network-online.target
+Wants=network-online.target
+PartOf=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=exec
+User=root
+Group=root
+UMask=0077
+Environment=PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStartPre=/usr/bin/python3 -I -B /usr/local/lib/oioi-waveform-runner/prepare-waveform-runner.py
+ExecStartPre=/usr/local/lib/oioi-waveform-runner/runner cleanup
+ExecStartPre=/usr/bin/python3 -I -B /usr/local/lib/oioi-waveform-runner/materialize-waveform-token.py
+ExecStart=/usr/local/lib/oioi-waveform-runner/runner
+ExecStopPost=/usr/local/lib/oioi-waveform-runner/runner cleanup
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=90
+TimeoutStopSec=40
+KillMode=control-group
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target
