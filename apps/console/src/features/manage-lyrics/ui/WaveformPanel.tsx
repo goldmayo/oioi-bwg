@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useCallback, useState, useSyncExternalStore } from "react";
 import type { WaveformData } from "@oioi-bwg/contracts/waveform";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { ListChecks, LocateFixed, Maximize2, Minus, Plus } from "lucide-react";
@@ -44,6 +44,7 @@ export function WaveformPanel({
   selectedIds,
   onMove,
   loop,
+  loopSettings,
   onLoopRange,
   onSelect,
   onEdit,
@@ -51,6 +52,7 @@ export function WaveformPanel({
   onCuePreview,
 }: PianoRollInteraction & {
   query: UseQueryResult<WaveformData | null>;
+  loopSettings?: ReactNode;
   selectionRevision: number;
   duration: number;
   disabled?: boolean;
@@ -110,11 +112,12 @@ export function WaveformPanel({
   };
   return (
     <section
-      className="border-border min-w-0 overflow-hidden border-y"
+      className="group/waveform relative mx-4 mt-5 flex min-w-0 shrink-0 flex-col"
       aria-labelledby="waveform-heading"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
-        <h2 id="waveform-heading" className="text-sm font-medium">
+      {loopSettings}
+      <div className="bg-background/95 border-border absolute top-2 right-2 z-20 flex items-center gap-1 rounded border opacity-100 transition-opacity group-hover/waveform:opacity-100 focus-within:opacity-100 sm:opacity-0">
+        <h2 id="waveform-heading" className="sr-only">
           파형 · 노트
         </h2>
         <div className="flex items-center gap-1">
@@ -131,14 +134,15 @@ export function WaveformPanel({
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            title="재생 위치 따라가기"
+            aria-label="재생 위치 따라가기"
             aria-pressed={follow}
             disabled={!canRender}
             onClick={() => setFollow(!follow)}
-            className="hidden text-xs sm:inline-flex"
+            className={follow ? "text-cyan-300" : ""}
           >
             <LocateFixed size={14} />
-            재생 위치 따라가기
           </Button>
           <Button
             variant="ghost"
@@ -148,7 +152,7 @@ export function WaveformPanel({
           >
             <Minus size={15} />
           </Button>
-          <span className="text-muted-foreground min-w-10 text-center text-xs tabular-nums">
+          <span className="text-muted-foreground hidden min-w-10 text-center text-xs tabular-nums sm:block">
             {seconds === "auto" ? "전체" : `${Math.round((zoom.end - zoom.start) * 10) / 10}초`}
           </span>
           <Button
@@ -173,7 +177,7 @@ export function WaveformPanel({
       {query.isPending ? (
         <WaveformSkeleton />
       ) : failed ? (
-        <div className="border-border bg-background/50 flex h-28 flex-col items-center justify-center gap-3 border-y p-5 text-center">
+        <div className="border-border bg-background/50 order-3 flex h-36 flex-col items-center justify-center gap-3 border-y p-5 text-center">
           <p role="alert" className="text-sm">
             파형을 불러오지 못했습니다.
           </p>
@@ -213,7 +217,7 @@ export function WaveformPanel({
           }
         />
       ) : (
-        <div className="border-border bg-background/50 flex h-28 flex-col items-center justify-center gap-3 border-y p-5 text-center">
+        <div className="border-border bg-background/50 order-3 flex h-36 flex-col items-center justify-center gap-3 border-y p-5 text-center">
           <p className="text-sm">
             {data
               ? "참고 영상이 준비되면 파형을 표시합니다."

@@ -3,7 +3,7 @@
   "fixture": "mechanical tests use synthetic BBC; conformance tests use supplied and local corpus lyrics; real React/Peaks/viewer with YouTube, poster and HTTP boundaries stubbed",
   "checks": [
     {
-      "width": 1600,
+      "width": 1586,
       "legacyRowEditingPreserved": true,
       "duplicateEditorsAbsent": true,
       "actualTextMetadataPreserved": true

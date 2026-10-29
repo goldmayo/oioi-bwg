@@ -77,21 +77,21 @@ export default function PeaksWaveform(props: Props) {
               container: overview.current,
               enablePoints: false,
               showAxisLabels: false,
-              highlightColor: "#c3d3e0",
-              highlightOpacity: 0.12,
-              highlightStrokeColor: "#afc0d0",
+              highlightColor: "#38bdf8",
+              highlightOpacity: 0.14,
+              highlightStrokeColor: "#38bdf8",
             },
             zoomview: {
               container: zoomview.current,
               autoScroll: true,
               showAxisLabels: false,
               showPlayheadTime: true,
-              playheadTextColor: "#eff4f8",
-              playheadBackgroundColor: "#3c4652",
+              playheadTextColor: "#062b34",
+              playheadBackgroundColor: "#06c8e9",
             },
             waveformData: { json: display.json },
             player: adapter,
-            waveformColor: "#718695",
+            waveformColor: "#65717e",
             playheadColor: "#22d3ee",
             axisLabelColor: "#b3bfcb",
             axisGridlineColor: "#343d48",
@@ -278,18 +278,25 @@ export default function PeaksWaveform(props: Props) {
     };
   }, []);
   return (
-    <div className="bg-background/50 border-border overflow-hidden border-y">
-      <div className="border-border flex items-center border-b py-1">
-        <span className="text-muted-foreground w-16 shrink-0 text-center text-xs sm:w-20">
-          전체
-        </span>
-        <div ref={overview} aria-label="전체 파형" className="h-9 min-w-0 flex-1" />
+    <div className="contents">
+      <div className="border-border bg-card/20 order-1 mb-4 overflow-hidden rounded-sm border px-1 py-1.5">
+        <div ref={overview} aria-label="전체 파형" className="h-10 min-w-0" />
       </div>
-      <div className="flex">
-        <span className="text-muted-foreground flex w-16 shrink-0 items-center justify-center text-xs sm:w-20">
-          파형
-        </span>
+      <div className="border-border order-3 flex border-y">
+        <div aria-hidden="true" className="w-16 shrink-0 sm:w-20" />
         <div className="relative min-w-0 flex-1 overflow-hidden">
+          {props.range && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{
+                backgroundImage:
+                  "linear-gradient(to right, rgb(255 255 255 / .045) 1px, transparent 1px)",
+                backgroundSize: `${100 / (props.range.end - props.range.start)}% 100%`,
+                backgroundPosition: `${(-(props.range.start % 1) / (props.range.end - props.range.start)) * 100}% 0`,
+              }}
+            />
+          )}
           <div ref={zoomview} aria-label="확대 파형과 Cue" className="h-32 touch-pan-y sm:h-36" />
           {props.loop &&
             props.range &&

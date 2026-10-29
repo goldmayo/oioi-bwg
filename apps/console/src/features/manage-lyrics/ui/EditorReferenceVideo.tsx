@@ -1,5 +1,7 @@
 "use client";
 
+import { Settings2 } from "lucide-react";
+
 import { Input } from "@/shared/ui/input";
 import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
 
@@ -9,15 +11,33 @@ export function EditorReferenceVideo() {
   return (
     <section
       aria-labelledby="reference-video-heading"
-      className="grid grid-cols-[1.05fr_1fr] items-center gap-x-3 lg:block lg:pb-5"
+      className="flex h-full min-h-0 flex-col gap-3"
     >
-      <h2
-        id="reference-video-heading"
-        className="col-start-2 row-start-1 text-sm font-semibold lg:mb-3"
-      >
-        참고 영상
-      </h2>
-      <div className="col-start-1 row-span-2 row-start-1">
+      <div className="flex h-10 shrink-0 items-center justify-between">
+        <h2 id="reference-video-heading" className="text-sm font-medium">
+          참고 영상
+        </h2>
+        <details className="relative">
+          <summary
+            role="button"
+            aria-label="영상 설정"
+            title="영상 설정"
+            className="hover:bg-accent flex size-8 cursor-pointer list-none items-center justify-center rounded-md [&::-webkit-details-marker]:hidden"
+          >
+            <Settings2 size={15} />
+          </summary>
+          <label className="bg-popover border-border absolute top-10 right-0 z-30 flex w-72 max-w-[85vw] flex-col gap-2 rounded border p-3 text-xs shadow-lg">
+            <span>영상 주소</span>
+            <Input
+              value={editor.youtubeId}
+              onChange={editor.handleYoutubeIdChange}
+              placeholder="YouTube URL 또는 ID"
+              className="h-8 min-w-0 text-xs"
+            />
+          </label>
+        </details>
+      </div>
+      <div data-editor-video className="flex min-h-0 flex-1 items-start [&>div]:max-h-full">
         <YouTubePlayer
           key={editor.youtubeId}
           videoId={editor.youtubeId}
@@ -26,17 +46,8 @@ export function EditorReferenceVideo() {
           onStateChange={editor.setPlayerState}
         />
       </div>
-      <label className="text-muted-foreground col-start-2 row-start-2 flex min-w-0 flex-col gap-1 text-xs lg:mt-3 lg:flex-row lg:items-center lg:gap-2">
-        <span className="shrink-0">영상 주소</span>
-        <Input
-          value={editor.youtubeId}
-          onChange={editor.handleYoutubeIdChange}
-          placeholder="YouTube URL 또는 ID"
-          className="h-8 min-w-0 text-xs"
-        />
-      </label>
       {editor.isAdPlaying && (
-        <p role="status" className="text-muted-foreground col-span-2 mt-2 text-xs leading-5">
+        <p role="status" className="text-muted-foreground text-xs">
           광고 재생 중에는 시간 캡처와 노트 이동을 멈춥니다.
         </p>
       )}

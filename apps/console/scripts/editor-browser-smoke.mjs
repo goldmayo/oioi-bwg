@@ -253,14 +253,25 @@ const capture = async (page, name) => {
     for (const element of document.querySelectorAll("main,[data-editor-scroll]"))
       element.scrollTop = 0;
   });
-  await page.waitForTimeout(150);
+  await page.waitForTimeout(350);
   await page.screenshot({ path: join(out, name), fullPage: true });
 };
 const row = (page, index) => page.locator(`[data-lyric-row="${index}"]`);
 const rowTime = (page, index) =>
   page.getByRole("textbox", { name: `${index + 1}행 시작 시각`, exact: true });
-const selectRow = (page, index) =>
-  page.getByRole("button", { name: `${index + 1}행 선택`, exact: true }).click();
+const selectRow = (page, index) => row(page, index).locator("[data-row-text]").click();
+const expandRow = async (page, index) => {
+  const button = page.getByRole("button", { name: `${index + 1}행 상세 편집`, exact: true });
+  if ((await button.getAttribute("aria-expanded")) !== "true") await button.click();
+};
+const tools = async (page) => {
+  const button = page.getByRole("button", { name: "편집 도구", exact: true });
+  if (
+    !(await button.locator("..").getAttribute("open")) &&
+    (await button.locator("..").getAttribute("open")) !== ""
+  )
+    await button.click();
+};
 const save = async (page) => {
   await Promise.all([
     page.waitForResponse((r) => r.url().endsWith("/save") && r.request().method() === "POST"),
@@ -283,9 +294,18 @@ async function verifyRows(page, width) {
   assert.equal(await page.locator("[data-lyric-row]").count(), song.lyrics.length);
   assert.equal(await page.locator("[data-note-inspector],[data-note-table]").count(), 0);
   assert.equal(await page.locator("[data-note-track]").count(), 2, "notes are always visible");
+  await page.getByRole("checkbox", { name: "2행 노트 선택", exact: true }).check();
+  assert.ok(await page.getByText("추임새 4개 선택", { exact: true }).isVisible());
+  assert.equal(
+    await page.getByRole("spinbutton", { name: "2행 2번째 조각 오프셋", exact: true }).count(),
+    0,
+    "selecting notes does not expand row details",
+  );
+  await page.getByRole("checkbox", { name: "2행 노트 선택", exact: true }).uncheck();
   await save(page);
   assert.deepEqual(lastSaved.lyrics, song.lyrics);
   await selectRow(page, 1);
+  await expandRow(page, 1);
   const offset = page.getByRole("spinbutton", { name: "2행 2번째 조각 오프셋", exact: true });
   await clock(page, 5.1);
   await offset
@@ -299,20 +319,21 @@ async function verifyRows(page, width) {
     [0, 1.1, 1.6, 2.4],
   );
   await undo(page);
+  await tools(page);
   await page.getByRole("button", { name: "행 시간 캡처", exact: true }).click();
-  assert.equal(await rowTime(page, 1).inputValue(), "00:05.10");
+  assert.equal(await rowTime(page, 1).inputValue(), "00:05.100");
   await save(page);
   assert.deepEqual(lastSaved.lyrics[1].segments, song.lyrics[1].segments);
   await undo(page);
   await rowTime(page, 1).fill("");
   await rowTime(page, 1).press("Enter");
-  assert.equal(await rowTime(page, 1).inputValue(), "00:04.00");
+  assert.equal(await rowTime(page, 1).inputValue(), "00:04.000");
   await rowTime(page, 1).fill("5.25");
   await rowTime(page, 1).press("Control+s");
   await page.getByText("저장됨", { exact: true }).waitFor();
   assert.equal(lastSaved.lyrics[1].startTime, 5.25);
   await undo(page);
-  await page.getByText("전체 가사 시각 조정", { exact: true }).click();
+  await tools(page);
   await page.getByRole("button", { name: "전체 가사 0.1초 늦추기", exact: true }).click();
   await save(page);
   assert.deepEqual(
@@ -321,10 +342,13 @@ async function verifyRows(page, width) {
   );
   await undo(page);
   if (width === 1280) {
+    await tools(page);
     await page.getByRole("button", { name: /^연속 캡처/ }).click();
     await clock(page, 6);
+    await tools(page);
     await page.getByRole("button", { name: "행 시간 캡처", exact: true }).click();
     assert.equal(await row(page, 2).getAttribute("aria-current"), "true");
+    await tools(page);
     await page.getByRole("button", { name: /^연속 캡처/ }).click();
     await undo(page);
     await selectRow(page, 0);
@@ -339,10 +363,12 @@ async function verifyRows(page, width) {
       { ...song.lyrics[0].segments[2], text: "에코 유지" },
     ]);
     await undo(page);
+    await expandRow(page, 0);
     await row(page, 0).getByRole("button", { name: "응원·에코 표시", exact: true }).click();
     await page.getByRole("button", { name: "완료", exact: true }).click();
     await save(page);
     assert.deepEqual(lastSaved.lyrics, song.lyrics, "paint preserves both flags and offsets");
+    await tools(page);
     await page.getByRole("button", { name: "LRC 가져오기", exact: true }).click();
     await page.keyboard.press("e");
     assert.equal(await page.locator("[data-lyric-row]").count(), 4);
@@ -364,8 +390,8 @@ async function verifyRows(page, width) {
     await clock(page, 4.1);
     await page.getByRole("button", { name: "다음 행으로 이동", exact: true }).click();
     await page.waitForTimeout(300);
-    assert.equal(await page.getByLabel("현재 재생 시각", { exact: true }).innerText(), "00:08.00");
-    await rowTime(page, 1).fill("00:04.10");
+    assert.equal(await page.getByLabel("현재 재생 시각", { exact: true }).innerText(), "00:08.000");
+    await rowTime(page, 1).fill("00:04.100");
     await rowTime(page, 1).press("Enter");
     saveStatus = 409;
     await page
@@ -373,9 +399,33 @@ async function verifyRows(page, width) {
       .getByRole("button", { name: /^저장/ })
       .click();
     await page.waitForTimeout(200);
-    assert.equal(await rowTime(page, 1).inputValue(), "00:04.10");
+    assert.equal(await rowTime(page, 1).inputValue(), "00:04.100");
     assert.ok(await page.getByText("저장하지 않은 변경", { exact: true }).isVisible());
     saveStatus = 200;
+  }
+  if (width >= 1024) {
+    const layout = await page.evaluate(() => {
+      const dock = document.querySelector("[data-editor-dock]").getBoundingClientRect(),
+        video = document.querySelector("[data-editor-video] > div").getBoundingClientRect(),
+        ruler = document.querySelector("[data-note-ruler]").getBoundingClientRect(),
+        wave = document.querySelector('[aria-label="확대 파형과 Cue"]').getBoundingClientRect();
+      return {
+        height: innerHeight,
+        dockBottom: dock.bottom,
+        videoBottom: video.bottom,
+        videoHeight: video.height,
+        rulerBottom: ruler.bottom,
+        waveTop: wave.top,
+      };
+    });
+    assert.ok(
+      layout.videoBottom <= layout.height && layout.dockBottom <= layout.height,
+      "video and lyric dock fit viewport",
+    );
+    assert.ok(
+      layout.videoHeight > 100 && layout.rulerBottom <= layout.waveTop,
+      "ruler precedes detailed waveform",
+    );
   }
   await capture(page, `row-editor-${width}.png`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
@@ -400,7 +450,7 @@ async function verifyAssistant(page) {
   await page.mouse.move(box.x + 65, box.y + 12, { steps: 5 });
   assert.equal(
     await rowTime(page, 1).inputValue(),
-    "00:04.00",
+    "00:04.000",
     "preview leaves persisted row alone",
   );
   await page.mouse.up();
@@ -427,6 +477,7 @@ async function verifyAssistant(page) {
   await undo(page);
   await clock(page, 6);
   await page.getByRole("button", { name: "구간 반복", exact: true }).click();
+  await page.getByTitle("반복 구간 설정", { exact: true }).click();
   await page.getByLabel("반복 시작 초", { exact: true }).fill("4");
   await page.getByLabel("반복 끝 초", { exact: true }).fill("5");
   await page.getByRole("button", { name: "재생", exact: true }).click();
@@ -606,6 +657,7 @@ async function verifyActual(page, width) {
   await undo(page);
   if (width === 1280) {
     await selectRow(page, 1);
+    await expandRow(page, 1);
     await row(page, 1).getByRole("button", { name: "응원·에코 표시", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "에코", exact: true }).click();
     await page.locator('[data-char-idx="5"]').click();
@@ -629,8 +681,9 @@ async function verifyActual(page, width) {
       );
     await page.goto(origin + "/?actual", { waitUntil: "networkidle" });
     await selectRow(page, 1);
+    await expandRow(page, 1);
     await page.getByRole("spinbutton", { name: "2행 2번째 조각 오프셋", exact: true }).fill("2.5");
-    await rowTime(page, 4).fill("00:20.00");
+    await rowTime(page, 4).fill("00:20.000");
     await rowTime(page, 4).press("Enter");
     await save(page);
     await page.goto(origin + "/viewer?saved", { waitUntil: "networkidle" });
@@ -656,9 +709,81 @@ async function verifyActual(page, width) {
   });
 }
 
+if (process.argv.includes("--capture-layout")) {
+  try {
+    for (const viewport of [
+      { width: 1586, height: 992 },
+      { width: 1280, height: 1000 },
+      { width: 390, height: 844 },
+    ]) {
+      const page = await browser.newPage({ viewport });
+      await page.goto(origin + "/?actual", { waitUntil: "networkidle" });
+      const utility = page.getByRole("button", { name: "편집 도구", exact: true });
+      await utility.focus();
+      await page.keyboard.press("Space");
+      assert.equal(
+        await utility.locator("..").evaluate((el) => el.open),
+        true,
+        "Space opens utility menu",
+      );
+      assert.equal(
+        await page.evaluate(() => window.__iframe.state),
+        2,
+        "menu Space does not play video",
+      );
+      await page.keyboard.press("Escape");
+      assert.equal(
+        await utility.locator("..").evaluate((el) => el.open),
+        false,
+        "Escape closes utility menu",
+      );
+      await selectRow(page, 1);
+      if (viewport.width === 390)
+        await page.getByRole("button", { name: "파형 축소", exact: true }).click();
+      await page.waitForTimeout(200);
+      for (const [index, time] of [4, 4.8, 5.6, 6.4].entries())
+        await page
+          .locator(`[data-editor-note][data-note-time="${time}"]`)
+          .click({ modifiers: index ? ["Shift"] : [] });
+      await page.getByRole("button", { name: "구간 반복", exact: true }).click();
+      await page.getByTitle("반복 구간 설정", { exact: true }).click();
+      await page.getByLabel("반복 시작 초", { exact: true }).fill("3");
+      await page.getByTitle("반복 구간 설정", { exact: true }).click();
+      await clock(page, 6.4);
+      await page.mouse.move(0, 0);
+      await capture(page, `matched-layout-${viewport.width}.png`);
+      const rects = await page.evaluate(() =>
+        Object.fromEntries(
+          [
+            "[data-lyrics-editor] > header",
+            "[data-note-ruler]",
+            "[data-note-lanes]",
+            "[data-editor-dock]",
+            "[data-editor-video]",
+          ].map((selector) => {
+            const r = document.querySelector(selector).getBoundingClientRect();
+            return [
+              selector,
+              { x: r.x, y: r.y, width: r.width, height: r.height, bottom: r.bottom },
+            ];
+          }),
+        ),
+      );
+      console.log(JSON.stringify({ viewport, rects }));
+      await page.close();
+    }
+  } finally {
+    await browser.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+  process.exit(0);
+}
+
 try {
-  for (const width of [1600, 1280, 390]) {
-    const page = await browser.newPage({ viewport: { width, height: 1000 } });
+  for (const width of [1586, 1280, 390]) {
+    const page = await browser.newPage({
+      viewport: { width, height: width === 1586 ? 992 : 1000 },
+    });
     page.setDefaultTimeout(10000);
     await page.route(/^https:\/\/(?:img\.youtube\.com|i\.ytimg\.com)\//, (route) =>
       route.fulfill({

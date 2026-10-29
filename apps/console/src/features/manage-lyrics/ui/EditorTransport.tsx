@@ -30,9 +30,9 @@ export function EditorTransport({ blocked }: { blocked: boolean }) {
     <div
       role="toolbar"
       aria-label="재생과 시간 캡처"
-      className="flex flex-wrap items-center justify-center gap-3"
+      className="flex items-center justify-center gap-4"
     >
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
@@ -40,10 +40,11 @@ export function EditorTransport({ blocked }: { blocked: boolean }) {
           disabled={!editor.player || blocked}
           onClick={() => seekCue(-1)}
         >
-          <SkipBack size={15} />
+          <SkipBack className="size-5" />
         </Button>
         <Button
           size="icon"
+          className="size-12 rounded-full bg-neutral-50 text-neutral-950 hover:bg-white sm:size-13 [&_svg]:size-5"
           aria-label={playing ? "일시정지" : "재생"}
           disabled={!editor.player || blocked}
           onClick={() => {
@@ -51,7 +52,7 @@ export function EditorTransport({ blocked }: { blocked: boolean }) {
             else editor.player?.playVideo();
           }}
         >
-          {playing ? <Pause size={15} /> : <Play size={15} />}
+          {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
         </Button>
         <Button
           variant="ghost"
@@ -60,14 +61,14 @@ export function EditorTransport({ blocked }: { blocked: boolean }) {
           disabled={!editor.player || blocked}
           onClick={() => seekCue(1)}
         >
-          <SkipForward size={15} />
+          <SkipForward className="size-5" />
         </Button>
-        <div className="ml-2 flex flex-col gap-0.5 font-mono tabular-nums sm:flex-row sm:items-baseline sm:gap-3">
-          <output className="text-sm" aria-label="현재 재생 시각">
-            {formatTime(time)}
+        <div className="ml-3 flex items-baseline gap-2 font-mono whitespace-nowrap tabular-nums">
+          <output className="text-base sm:text-lg" aria-label="현재 재생 시각">
+            {formatTime(time, 3)}
           </output>
-          <span className="text-muted-foreground text-xs">
-            / {formatTime(editor.player?.getDuration() || 0)}
+          <span className="text-muted-foreground text-xs sm:text-sm">
+            / {formatTime(editor.player?.getDuration() || 0, 3)}
           </span>
         </div>
       </div>

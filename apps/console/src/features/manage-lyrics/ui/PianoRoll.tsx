@@ -100,15 +100,19 @@ export function PianoRoll({
     <section
       id="editor-note-tracks"
       aria-label="가사와 추임새 노트 트랙"
+      className="contents"
       data-piano-roll
       data-note-start={range.start}
       data-note-end={range.end}
     >
-      <div className="border-border bg-background/60 grid grid-cols-[64px_minmax(0,1fr)] border-y sm:grid-cols-[80px_minmax(0,1fr)]">
-        <div className="text-muted-foreground flex items-center justify-center text-xs">초</div>
+      <div
+        data-note-ruler
+        className="order-2 grid grid-cols-[64px_minmax(0,1fr)] sm:grid-cols-[80px_minmax(0,1fr)]"
+      >
+        <div aria-hidden="true" />
         <div
           ref={ruler}
-          className="relative h-7 touch-none overflow-hidden font-mono text-xs tabular-nums"
+          className="relative h-12 touch-none overflow-hidden font-mono text-xs tabular-nums"
           title="드래그로 반복 구간 지정"
           onPointerDown={(e) => {
             if (blocked || e.button !== 0) return;
@@ -138,16 +142,34 @@ export function PianoRoll({
             loopStart.current = null;
           }}
         >
+          {Array.from(
+            { length: Math.min(500, Math.ceil((span / step) * 5) + 1) },
+            (_, i) => Math.ceil(range.start / (step / 5)) * (step / 5) + (i * step) / 5,
+          )
+            .filter((time) => time < range.end)
+            .map((time) => (
+              <span
+                key={time}
+                aria-hidden="true"
+                className="border-border absolute bottom-0 h-2 border-l"
+                style={{ left: `${((time - range.start) / span) * 100}%` }}
+              />
+            ))}
           {ticks.map((time) => (
             <span
               key={time}
-              className="text-muted-foreground absolute top-1 whitespace-nowrap"
+              className="text-foreground/90 absolute top-2 whitespace-nowrap"
               style={{ left: `${((time - range.start) / span) * 100}%` }}
             >
               {formatTime(time).slice(0, 5)}
             </span>
           ))}
         </div>
+      </div>
+      <div
+        data-note-lanes
+        className="border-border bg-card/10 order-4 grid grid-cols-[64px_minmax(0,1fr)] border-b sm:grid-cols-[80px_minmax(0,1fr)]"
+      >
         {lanes.map((lane) => (
           <Lane
             key={lane.id}
@@ -174,8 +196,7 @@ export function PianoRoll({
           />
         ))}
       </div>
-      <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 px-4 py-1 text-xs">
-        <span>빈 추임새 트랙을 클릭해 노트 추가 · 노트 폭은 문구 길이입니다.</span>
+      <div className="bg-background/95 border-border absolute top-16 right-2 z-20 flex items-center gap-2 rounded border px-1 text-xs opacity-0 transition-opacity group-hover/waveform:opacity-100 focus-within:opacity-100">
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -269,7 +290,7 @@ function Lane({
           size="icon"
           aria-label={`${lane.label} 노트를 현재 위치에 추가`}
           disabled={blocked}
-          className="h-6 w-6"
+          className="h-6 w-6 opacity-0 group-hover/waveform:opacity-100 focus-visible:opacity-100"
           onClick={() => onAdd(editor.currentTimeRef.current)}
         >
           <Plus size={12} />
@@ -279,8 +300,8 @@ function Lane({
         data-note-track={lane.id}
         role="group"
         aria-label={`${lane.label} 노트 트랙`}
-        className="border-border relative overflow-hidden border-t"
-        style={{ height: Math.max(1, ends.length) * 56 + 8 }}
+        className="border-border relative overflow-x-hidden overflow-y-auto border-t [scrollbar-width:thin]"
+        style={{ height: lane.id === "extra" ? 88 : 64 }}
       >
         <button
           type="button"
@@ -314,10 +335,10 @@ function Lane({
               type="button"
               data-editor-note={note.id}
               data-note-time={time}
-              aria-label={`${lane.label} 노트 ${note.text || "빈 내용"} ${formatTime(time)}`}
+              aria-label={`${lane.label} 노트 ${note.text || "빈 내용"} ${formatTime(time, 3)}`}
               aria-pressed={selectedIds.includes(note.id)}
               disabled={blocked}
-              title={`${note.text || "빈 내용"} · ${formatTime(time)}`}
+              title={`${note.text || "빈 내용"} · ${formatTime(time, 3)}`}
               onClick={(event) => {
                 if (event.detail === 0)
                   onSelect(note, event.shiftKey || event.ctrlKey || event.metaKey);
@@ -333,22 +354,22 @@ function Lane({
               onPointerCancel={drag.cancel}
               onLostPointerCapture={drag.cancel}
               className={cn(
-                "absolute z-10 h-8 w-max max-w-80 cursor-ew-resize touch-pan-y rounded-md border px-3 text-left text-xs font-medium whitespace-nowrap select-none focus-visible:ring-2 focus-visible:ring-cyan-300",
+                "absolute z-10 h-9 w-max max-w-80 cursor-ew-resize touch-pan-y rounded-md border px-4 text-left text-sm font-medium whitespace-nowrap select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200",
                 colors[note.lane],
-                selectedIds.includes(note.id) && "ring-2 ring-cyan-300 ring-inset",
+                selectedIds.includes(note.id) && "border-cyan-300 bg-cyan-950/40",
               )}
               style={{
                 left: `${((time - range.start) / span) * 100}%`,
-                top: 26 + (rows.get(note.id) ?? 0) * 56,
+                top: (lane.id === "extra" ? 36 : 12) + (rows.get(note.id) ?? 0) * 88,
               }}
             >
               {lane.id === "extra" && (
                 <span
                   aria-hidden="true"
-                  className="text-muted-foreground pointer-events-none absolute -top-5 left-0 flex items-center gap-1 text-[10px] font-normal"
+                  className="text-foreground/80 absolute -top-6 left-0 flex items-center gap-1 text-[11px] font-normal"
                 >
-                  <span className="size-1.5 rounded-full bg-cyan-300" />
-                  {formatTime(time)}
+                  <span className="size-2 rounded-full bg-cyan-300" />
+                  {formatTime(time, 3)}
                 </span>
               )}
               <span className="flex min-w-0 items-center gap-1">
