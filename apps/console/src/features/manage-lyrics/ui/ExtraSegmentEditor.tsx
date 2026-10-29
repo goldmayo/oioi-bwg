@@ -30,7 +30,7 @@ export function ExtraSegmentEditor({ line, lineIndex }: ExtraSegmentEditorProps)
     useLyricsEditorContext();
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-wrap items-center gap-2">
       {line.segments.map((seg, sIdx) => (
         <div
           key={sIdx}
@@ -38,15 +38,17 @@ export function ExtraSegmentEditor({ line, lineIndex }: ExtraSegmentEditorProps)
         >
           {/* 세그먼트 텍스트 입력 */}
           <Input
+            aria-label={`${lineIndex + 1}행 ${sIdx + 1}번째 조각 텍스트`}
             value={seg.text}
             onChange={(e) => updateSegment(lineIndex, sIdx, { text: e.target.value })}
             placeholder="텍스트"
-            className="border-qwer-e/20 text-qwer-e placeholder:text-qwer-e/30 h-7 w-24 text-xs font-bold"
+            className="border-qwer-e/20 text-qwer-e placeholder:text-qwer-e h-7 w-20 text-xs font-bold"
           />
 
           {/* startTimeOffset 입력 */}
-          <span className="text-qwer-e/40 text-[10px]">+</span>
+          <span className="text-qwer-e/80 text-xs">+</span>
           <Input
+            aria-label={`${lineIndex + 1}행 ${sIdx + 1}번째 조각 오프셋`}
             type="number"
             step="0.01"
             value={seg.startTimeOffset ?? 0}
@@ -55,9 +57,9 @@ export function ExtraSegmentEditor({ line, lineIndex }: ExtraSegmentEditorProps)
                 startTimeOffset: parseFloat(e.target.value),
               })
             }
-            className="border-qwer-e/20 text-qwer-e h-7 w-16 font-mono text-[10px]"
+            className="border-qwer-e/20 text-qwer-e h-7 w-20 font-mono text-xs"
           />
-          <span className="text-qwer-e/40 text-[10px]">s</span>
+          <span className="text-qwer-e/80 text-xs">s</span>
 
           {/* 현재 재생 시간으로 offset 캡처 */}
           <Button

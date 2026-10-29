@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 46
+revision: 47
 ---
 
 # 구현 순서와 PR 단위
@@ -325,6 +325,28 @@ swap 가능성과 memory 한도 포함 조건도 확인한다. 이 문서의 공
 3개 이상 anchor의 offset/drift와 JSON만 재조회하는 검증이 모두 근거를 남겼을 때 판정한다.
 검증 전에는 배포 성공이나 mock 통과만으로 종료하지 않는다. 실행 상세는 각 PR, 단계 최종 결과는
 완료 시점의 최종 결과 소유 문서에 두고 현재 다음 행동은 WORK에서만 갱신한다.
+
+### 2.2. P09 시안 구현과 P08 병행 실행 (2026-10-29)
+
+사용자가 현재 편집기 캡처와 Impeccable 시안을 확인한 뒤 시안 구현을 지시했다.
+기존 P08→P09의 통합 수용 순서는 유지하되, 저장된 BBC waveform JSON과 기존 가사 JSON만으로
+검증할 수 있는 UI는 P08 Runner 작업과 별도 worktree에서 병행한다. 원래 계획의 완료 조건을
+소급 변경하거나 합성 fixture의 성공을 실제 영상 싱크 검증으로 대신하지 않는다.
+
+구현 PR은 RHF draft·저장 중 편집 보존, 현재 곡/영상의 파형 조회, Peaks.js·YouTube adapter,
+시안 UI·기존 기능 연결 순서로 나눈다. 파형 조회는 계정별 Query key와 ADMIN/MFA 경계를 사용하며
+곡의 현재 youtubeId와 같은 JSON만 노출한다. 영상 변경 시 이전 파형을 숨기고, 저장 성공 뒤 해당
+곡의 파형 Query를 무효화한다. 새 DB schema나 분석·Queue·Runner 변경은 포함하지 않는다.
+
+시안은 기존 Console의 색·타이포·관리자 메뉴를 확장한다. 데스크톱은 영상과 가사 표 아래에
+전체/확대 파형을, 모바일은 작은 영상→파형→가사 표를 둔다. Cue 이동은 preview만 갱신하다 놓을 때
+초안을 한 번 변경하며 Esc/Undo, LRC·강조·추임새·시간 캡처를 보존한다. P10 기능은 포함하지 않는다.
+
+브라우저 fixture의 합성 BBC JSON·IFrame API 대역 검증과 실제 YouTube/worker 수용을 구분한다.
+후자의 3개 이상 anchor, 일정 offset/누적 drift, 실제 seek 지연과 재생 상태 확인이 남아 있으면
+P09 integration 완료로 처리하지 않는다. 실행·검증·실패 복구의 상세 근거는 [초안 #325](https://github.com/goldmayo/oioi-bwg/pull/325) →
+[조회 #326](https://github.com/goldmayo/oioi-bwg/pull/326) → [Peaks #327](https://github.com/goldmayo/oioi-bwg/pull/327) →
+[시안 연결 #328](https://github.com/goldmayo/oioi-bwg/pull/328)의 본문에 둔다.
 
 ## 3. 검증과 전환 조건
 

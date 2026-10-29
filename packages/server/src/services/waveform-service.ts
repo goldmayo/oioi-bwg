@@ -12,6 +12,7 @@ import { createEntityId } from "../db/entity-id";
 import { AppError } from "../errors/app-error";
 import {
   findActiveWaveformJob,
+  findSongWaveform,
   findWaveformJob,
   findWaveformRequesters,
   insertWaveformJob,
@@ -45,6 +46,13 @@ export async function getWaveformJob(ctx: RequestContext, id: string) {
   const row = await findWaveformJob(getDatabase(), id);
   if (!row) throw new AppError("WAVEFORM_JOB_NOT_FOUND");
   return project(row);
+}
+/** JSON 조회는 생성 권한/Queue와 독립이며 기존 가사와 Cue를 변경하지 않는다. */
+export async function getSongWaveform(ctx: RequestContext, id: string) {
+  admin(ctx);
+  const row = await findSongWaveform(getDatabase(), id);
+  if (!row) throw new AppError("SONG_NOT_FOUND");
+  return row.data && row.data.source.id === row.videoId ? row.data : null;
 }
 /** 서비스 토큰을 검증한 Console 내부 adapter만 호출한다. */
 export async function getRunnerWaveformJob(id: string) {
