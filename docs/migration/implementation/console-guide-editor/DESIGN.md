@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 20
+revision: 21
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -440,6 +440,10 @@ Rust는 분석기에 유지한다. OCI 요청 서명·인증서/토큰 갱신을
 Go/SDK 버전·binary hash·상주 CPU/RSS는 Runner 구현 PR에서 실제 ARM64 검증으로 고정한다.
 Rust 분석 성능 비교를 Go Runner 성능의 근거로 사용하지 않는다.
 
+**2026-10-29 언어 재검토:** [Python 공식 SDK](https://docs.oracle.com/en-us/iaas/tools/python/latest/api/queue/client/oci.queue.QueueClient.html)도
+Queue/Instance Principal을 지원한다. 언어 추가 비용을 검토한 뒤 사용자는 Go Runner 유지를 선택했다.
+기존 통신 검증과 동시성·취소 모델을 이어가는 선택이며 Python 대비 성능 우위나 성능상 필수성을 입증한 결과는 없다.
+
 **2026-10-29 사용자 확정·첫 SDK 구현:** Runner는 Go, 분석 worker는 Rust로 확정한다.
 `ops/waveform-runner`의 첫 단위는 고정 Osaka Queue의 PutMessages 송신부다. 도구/SDK 버전은
 해당 Dockerfile digest와 go.mod/go.sum으로 고정하고 ARM64 CI에서 실제 SDK·로컬 HTTP 서버로 검증한다.
@@ -469,6 +473,15 @@ JSON 응답 header/body 각 4KiB·redirect/proxy/자동 재시도 금지를 유�
 receipt는 같은 consumer의 메모리에서만 사용한다. 오류/응답 유실은 불확실이며 재송신·terminal 변경·message 삭제를 자동 수행하지 않는다.
 이 단위는 SDK 연결부와 ARM64 로컬 HTTP 검증이다. heartbeat/안전 기한·소유권 상실 중단·terminal 확인 뒤 삭제와
 재전달/DLQ·고정 worker·상주 시작/정리·설치·실제 OCI 수용을 후속 소비 흐름에서 연결한다.
+
+**2026-10-29 visibility 실행 범위:** 동일 Consumer의 poll/작업 슬롯을 공유하고 수신 Delivery는 한 번만 실행 범위에 진입한다.
+30초 heartbeat는 최대 한 건만 진행한다. 안전 기한은 응답 visibility·message expiry·요청 시작+180초 중 이른 시각에서 30초를 뺀다.
+서버 시각을 로컬 monotonic 기한에 고정하며 만료 뒤 늦은 연장 응답으로 실행을 되살리지 않는다.
+연장 오류 또는 2초 안에 확인하지 못한 요청은 보수적으로 소유권 불확실로 중단한다. 일시 장애에도 조기 중단/재전달될 수 있다.
+실행 함수가 취소를 받아 고정 worker 정리를 마치고 반환할 때까지 슬롯을 유지한다. SDK 호출도 취소 후 최대 3초 정리를 기다린다.
+SDK 호출의 종료를 확인하지 못하면 Consumer를 격리하고 새 poll/실행을 막는다. 늦은 응답으로 자동 해제하지 않는다.
+ErrRunnerStalled는 Job 실패가 아니라 상주 시작 코드가 서비스 중단·재시작으로 처리할 오류다. 이 범위는 DB/terminal·delete를 호출하지 않는다.
+로컬 가상 시계·SDK/메모리 HTTP 검증이며 실제 컨테이너 stop/kill/wait/remove·Job 복구·DLQ·서비스 기동과 OCI 수용은 후속이다.
 
 소켓은 `/run/oioi-waveform/runner.sock`에 두는 안으로, root가 부모·소유 그룹을 관리하고 Console 전용 그룹만 연결한다.
 Console에는 socket 디렉터리만 읽기 전용으로 연결하고 Docker socket·host root 경로·OCI credential을 주지 않는다.

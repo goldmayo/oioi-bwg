@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 42
+revision: 43
 ---
 
 # 구현 순서와 PR 단위
@@ -215,6 +215,11 @@ VM 사용자 점검은 ARM64·Docker/cgroup v2·앱 health와 여유 용량만 �
 응답/입력 한도·재시도 금지·취소를 로컬 ARM64에서 검증한다. 아직 consumer 실행 loop나 worker를 활성화하지 않는다.
 다음은 heartbeat/소유권 상실 중단 → Job/start·terminal 확인과 재전달/DLQ → 고정 worker·시작/정리·설치 산출물이다.
 실제 OCI receipt/시간·권한·자원 검증과 VM 변경은 별도 수용 관문으로 유지한다.
+
+**2026-10-29 visibility 범위 연결:** #323은 CI 통과 후 병합했다. heartbeat와 안전 기한·취소/정리 대기·
+미종료 SDK의 Consumer 격리를 연결하고 로컬 ARM64에서 검증한다. Go/Python 대안 검토 뒤 Go 유지 결정을 DESIGN에 구분해 남겼다.
+다음은 Job/start·terminal 확인 및 재전달/DLQ → 실제 고정 worker 중단/제거 → 상주 기동·설치 산출물 → 실제 OCI/VM 통합 수용이다.
+실행 범위 취소 신호를 실제 container 정리 완료로 계산하지 않으며 운영 변경·배포는 별도 승인 관문을 유지한다.
 
 #### 공통 알림의 선행 구현
 
