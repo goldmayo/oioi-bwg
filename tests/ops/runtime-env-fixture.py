@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MFA = base64.b64encode(bytes(32)).decode()
 VALUES = dict(db='fixture-p@ss', web='fixture-web-auth-secret',
               auth='fixture-console-auth-secret-32-characters', mfa=MFA,
-              r2id='fixture-r2-id', r2secret='fixture-r2-secret')
+              r2id='fixture-r2-id', r2secret='fixture-r2-secret', runner='a'*64)
 
 
 class RuntimeEnvTest(unittest.TestCase):
@@ -23,6 +23,20 @@ class RuntimeEnvTest(unittest.TestCase):
                       'r2id': 'R2_ACCESS_KEY_ID', 'r2secret': 'R2_SECRET_ACCESS_KEY'})}
             mapping = ''.join(f'{name}=ocid1.vaultsecret.test.{key}\n' for key, name in names.items())
             secrets = dict(VALUES)
+            if variant.startswith('waveform-'):
+                if variant == 'waveform-public-secret':
+                    public += 'CONSOLE_WAVEFORM_RUNNER_TOKEN=invalid-public-token\n'
+                elif variant == 'waveform-web-token':
+                    mapping += 'CONSOLE_WAVEFORM_RUNNER_TOKEN=ocid1.vaultsecret.test.runner\n'
+                else:
+                    public += 'CONSOLE_WAVEFORM_RUNNER_ENABLED=' + ('false' if variant == 'waveform-disabled-token' else 'true') + '\n'
+                    if variant != 'waveform-missing-token':
+                        mapping += 'CONSOLE_WAVEFORM_RUNNER_TOKEN=ocid1.vaultsecret.test.runner\n'
+                    if variant in {'waveform-generate', 'waveform-empty-ids', 'waveform-bad-ids'}:
+                        public += 'CONSOLE_WAVEFORM_GENERATION_ENABLED=true\n'
+                        public += 'CONSOLE_WAVEFORM_ALLOWED_VIDEO_IDS=' + ('' if variant == 'waveform-empty-ids' else 'invalid' if variant == 'waveform-bad-ids' else 'abcdefghijk') + '\n'
+                    if variant == 'waveform-bad-token': secrets['runner'] = 'A'*64
+                    if variant == 'waveform-auth-reuse': secrets['auth'] = secrets['runner']
             if variant == 'push-missing': public += 'CONSOLE_PUSH_ENABLED=true\n'
             if variant == 'push-secret-public': public += 'FIREBASE_SERVICE_ACCOUNT_JSON=must-not-be-public\n'
             if variant == 'push-web-secret': mapping += 'FIREBASE_SERVICE_ACCOUNT_JSON=ocid1.vaultsecret.test.auth\n'
@@ -126,6 +140,23 @@ print(base64.b64encode(json.loads((root/'values').read_text())[key].encode()).de
                 result, output, _, _ = self.run_case('console', variant)
                 self.assertEqual(result.returncode, 1)
                 self.assertEqual(output, 'previous-env')
+
+    def test_waveform_configuration(self):
+        for variant in ('waveform-ready', 'waveform-generate'):
+            result, output, calls, mode = self.run_case('console', variant)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(mode, 0o600)
+            self.assertIn('CONSOLE_WAVEFORM_RUNNER_TOKEN=' + VALUES['runner'], output)
+            self.assertEqual(len(calls), 6)
+        for variant in ('missing-token', 'public-secret', 'disabled-token', 'bad-token', 'auth-reuse', 'empty-ids', 'bad-ids'):
+            result, output, calls, _ = self.run_case('console', 'waveform-' + variant)
+            self.assertEqual(result.returncode, 1, variant)
+            self.assertEqual(output, 'previous-env')
+            if variant not in ('bad-token', 'auth-reuse'): self.assertEqual(calls, [])
+        result, output, calls, _ = self.run_case('web', 'waveform-web-token')
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(output, 'previous-env')
+        self.assertEqual(calls, [])
 
     def test_push_configuration_is_opt_in_and_console_only(self):
         for app, variant in [('console', 'push-missing'), ('console', 'push-secret-public'), ('web', 'push-web-secret')]:

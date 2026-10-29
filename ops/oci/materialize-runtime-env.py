@@ -11,12 +11,15 @@ from urllib.parse import quote, urlsplit
 SECRETS = {
     'web': {'DB_APP_PASSWORD', 'AUTH_SECRET', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'},
     'console': {'DB_APP_PASSWORD', 'CONSOLE_AUTH_SECRET', 'CONSOLE_MFA_ENCRYPTION_KEY',
-                'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'FIREBASE_SERVICE_ACCOUNT_JSON'},
+                'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'FIREBASE_SERVICE_ACCOUNT_JSON',
+                'CONSOLE_WAVEFORM_RUNNER_TOKEN'},
 }
 CONSOLE_PUBLIC = {'CONSOLE_ORIGIN', 'CONSOLE_MFA_ENROLLMENT_ENABLED',
                   'R2_ENDPOINT', 'R2_BUCKET', 'ASSETS_PUBLIC_BASE_URL', 'CONSOLE_PUSH_ENABLED',
                   'FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_APP_ID',
-                  'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_VAPID_PUBLIC_KEY'}
+                  'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_VAPID_PUBLIC_KEY',
+                  'CONSOLE_WAVEFORM_RUNNER_ENABLED', 'CONSOLE_WAVEFORM_GENERATION_ENABLED',
+                  'CONSOLE_WAVEFORM_ALLOWED_VIDEO_IDS'}
 
 
 def require(condition):
@@ -69,6 +72,18 @@ def materialize(app, public_path, map_path, output):
             require(all(public.get(name, '').strip() for name in (
                 'FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_APP_ID',
                 'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_VAPID_PUBLIC_KEY')))
+        for flag in ('CONSOLE_WAVEFORM_RUNNER_ENABLED', 'CONSOLE_WAVEFORM_GENERATION_ENABLED'):
+            if flag in public:
+                require(public[flag] in {'true', 'false'})
+        runner = public.get('CONSOLE_WAVEFORM_RUNNER_ENABLED') == 'true'
+        generation = public.get('CONSOLE_WAVEFORM_GENERATION_ENABLED') == 'true'
+        ids = public.get('CONSOLE_WAVEFORM_ALLOWED_VIDEO_IDS', '')
+        require(not ids or all(re.fullmatch(r'[A-Za-z0-9_-]{11}', value) for value in ids.split(',')))
+        require(not generation or (runner and ids))
+        if runner:
+            required.add('CONSOLE_WAVEFORM_RUNNER_TOKEN')
+        else:
+            require('CONSOLE_WAVEFORM_RUNNER_TOKEN' not in mapping)
         require(public.get('R2_BUCKET', '').strip())
         for name in ('R2_ENDPOINT', 'ASSETS_PUBLIC_BASE_URL'):
             asset_url = urlsplit(public.get(name, ''))
@@ -96,6 +111,9 @@ def materialize(app, public_path, map_path, output):
         decoded = base64.b64decode(key, validate=True)
         require(len(decoded) == 32 and base64.b64encode(decoded).decode() == key
                 and key != values['CONSOLE_AUTH_SECRET'] and len(values['CONSOLE_AUTH_SECRET'].encode('utf-16-le')) >= 64)
+        token = values.get('CONSOLE_WAVEFORM_RUNNER_TOKEN')
+        if token is not None:
+            require(re.fullmatch(r'[0-9a-f]{64}', token) and token != values['CONSOLE_AUTH_SECRET'])
     password = values.pop('DB_APP_PASSWORD')
     values['DATABASE_URL'] = f'postgresql://{user}:{quote(password, safe="")}@{host}:{port}/{name}'
     required_keys = os.environ.get('REQUIRED_RUNTIME_KEYS', '').split()

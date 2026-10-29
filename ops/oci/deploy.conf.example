@@ -17,3 +17,6 @@ REQUIRED_RUNTIME_KEYS="DATABASE_URL AUTH_SECRET"
 OCI_REGION=ap-osaka-1
 OCI_METRIC_COMPARTMENT_OCID=ocid1.compartment.oc1..<compute-compartment>
 OCI_COMPUTE_INSTANCE_OCID=ocid1.instance.oc1.ap-osaka-1.<unique-id>
+
+# Runner 설치 후 전용 그룹의 실제 숫자 GID. 비워 두면 mount를 추가하지 않는다.
+CONSOLE_WAVEFORM_SOCKET_GID=""

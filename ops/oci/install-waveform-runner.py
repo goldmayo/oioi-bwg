@@ -16,6 +16,7 @@ import tempfile
 SOURCE = Path(__file__).resolve().parent
 DESTINATION = Path('/usr/local/lib/oioi-waveform-runner')
 UNIT = Path('/etc/systemd/system/oioi-waveform-runner.service')
+TMPFILES = Path('/etc/tmpfiles.d/oioi-waveform.conf')
 LOCK = Path('/run/oioi-waveform-install.lock')
 HOST_LOCK = Path('/run/oioi-waveform/runner.lock')
 GROUP = 'oioi-waveform-console'
@@ -61,6 +62,9 @@ def install(binary, checksum):
     source = SOURCE / 'waveform/oioi-waveform-runner.service'
     regular(source)
     assets[UNIT] = (source.read_bytes(), 0o644)
+    source = SOURCE / 'waveform/oioi-waveform.conf'
+    regular(source)
+    assets[TMPFILES] = (source.read_bytes(), 0o644)
     for path in (*assets, LOCK, HOST_LOCK):
         directory(path.parent)
         if path.exists() or path.is_symlink():
