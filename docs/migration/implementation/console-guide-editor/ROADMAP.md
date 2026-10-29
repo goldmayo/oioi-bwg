@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 46
+revision: 48
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,9 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-29 DLQ 복구 구현:** 일반 소비와 같은 슬롯에서 DLQ 한 건을 받아 잔존 컨테이너 부재·Job/source·현재 attempt를 확인한 뒤 기존 terminal API로 회수한다. 로컬 SDK/HTTP 경계 검증을 실제 OCI DLQ 수용으로 간주하지 않는다. 다음은 상주 Runner의 시작/종료·단일 프로세스 잠금·설치 연결이며, VM 변경과 운영 활성화는 별도 승인 관문이다.
+
 
 **2026-10-29 소비 흐름 연결:** #330 결과 호출 뒤 수신·잔존 worker 정리·Job/source 대조·시작·실행·terminal 확인·Queue 삭제를 한 실행 범위로 연결한다. 일시 분석 실패는 재전달에 맡기고 정리 불확실은 Consumer 격리로 처리한다. HTTP/SDK fixture와 가짜 worker의 검증이며 실제 Docker 실행·DLQ·재시작 복구·상주 서비스는 후속이다. 다음 PR은 고정 Docker 실행/정리 어댑터다. 로컬 구현에는 VM 변경·운영 배포가 필요 없고, 실제 설치·socket/격리 설정·활성화는 별도 승인 후 수행한다.
 

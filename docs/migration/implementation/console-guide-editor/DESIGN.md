@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 23
+revision: 25
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -575,6 +575,15 @@ DLQ는 별도 worker를 띄우지 않고 같은 Runner가 분석 슬롯이 비�
 식별자와 현재 Job을 대조하고 활성 컨테이너 부재·현재 attempt를 확인한 뒤 기존 terminal 경로로 최종 FAILED/DLQ를 반영한다.
 이미 terminal인 Job은 덮어쓰지 않고 삭제된 Job은 404 확인 후 message만 정리한다.
 payload 변조/다른 Job 식별자 불일치로 정상 Job을 FAILED로 바꾸지 않으며, 해당 message의 DLQ 격리와 정제된 운영 오류로 다룬다.
+
+**2026-10-29 DLQ 소비 연결:** 일반 Queue와 내장 DLQ는 동일 Consumer의 슬롯·lease를 공유한다.
+DLQ 주소는 [Oracle 발표 자료 p52](https://speakerdeck.com/oracle4engineer/oci-cloud-native-2023?slide=52)의
+`<Queue OCID>-dlq` 규칙으로 보호된 Queue 설정에서만 파생한다. payload나 delivery count가 소비 경로를 선택하지 않는다.
+DLQ poll/renew/delete는 같은 DLQ 주소를 사용하며, 일반 분석 경로는 DLQ receipt를 거절한다.
+컨테이너 정리 → Job/source 조회 → 현재 nullable attempt로 FAILED/DLQ 제출 → terminal/404 확인 → 삭제 순서다.
+새 attempt와 음원 접근은 없으므로 allowlist 철회 뒤에도 회수할 수 있다. 응답 유실·이전 attempt 거절은 한 번 재조회하고,
+정리가 불확실하면 Consumer를 격리한다. 삭제 실패로 DB 결과를 되돌리거나 terminal을 다시 제출하지 않는다.
+SDK와 로컬 HTTP fixture 검증이며 실제 OCI DLQ 이동·주소·IAM 허용 여부와 상주 반복 실행은 활성화 전 별도 검증한다.
 
 ### 6.3. Queue 설정 후보와 활성화 관문
 

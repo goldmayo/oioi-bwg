@@ -29,6 +29,7 @@ type Delivery struct {
 	visibleAfter, expireAfter time.Time
 	readStarted               time.Time
 	claimed                   atomic.Bool
+	deadLetter                bool
 }
 
 type Consumer struct {
@@ -67,6 +68,22 @@ func NewConsumer(p *Publisher) (*Consumer, error) {
 
 // Poll은 한 건만 수신한다. nil/nil만 정상 빈 poll이며 오류 뒤 자동 재시도하지 않는다.
 func (c *Consumer) Poll(ctx context.Context) (*Delivery, error) {
+	return c.poll(ctx, false)
+}
+
+// PollDLQ는 같은 실행 슬롯에서 내장 DLQ 한 건만 받는다. 일반 메시지의 delivery count로 DLQ를 추정하지 않는다.
+func (c *Consumer) PollDLQ(ctx context.Context) (*Delivery, error) {
+	return c.poll(ctx, true)
+}
+
+func (c *Consumer) destination(deadLetter bool) string {
+	if deadLetter {
+		return c.queueID + "-dlq"
+	}
+	return c.queueID
+}
+
+func (c *Consumer) poll(ctx context.Context, deadLetter bool) (*Delivery, error) {
 	if !c.activity.CompareAndSwap(consumerIdle, consumerPolling) {
 		return nil, c.activityError()
 	}
@@ -76,7 +93,7 @@ func (c *Consumer) Poll(ctx context.Context) (*Delivery, error) {
 	defer cancel()
 	policy := common.NoRetryPolicy()
 	response, err := client.GetMessages(ctx, queue.GetMessagesRequest{
-		QueueId: common.String(c.queueID), Limit: common.Int(1),
+		QueueId: common.String(c.destination(deadLetter)), Limit: common.Int(1),
 		TimeoutInSeconds: common.Int(30), VisibilityInSeconds: common.Int(visibilitySeconds),
 		RequestMetadata: common.RequestMetadata{RetryPolicy: &policy},
 	})
@@ -97,7 +114,7 @@ func (c *Consumer) Poll(ctx context.Context) (*Delivery, error) {
 	}
 	return &Delivery{Payload: value, owner: c, id: *m.Id, receipt: *m.Receipt,
 		deliveryCount: *m.DeliveryCount, visibleAfter: m.VisibleAfter.Time,
-		expireAfter: m.ExpireAfter.Time, readStarted: started}, nil
+		expireAfter: m.ExpireAfter.Time, readStarted: started, deadLetter: deadLetter}, nil
 }
 
 // Renew는 응답을 확인한 경우에만 새 visibility를 반환한다. heartbeat/중단 정책은 소비 흐름이 소유한다.
@@ -109,7 +126,7 @@ func (c *Consumer) Renew(ctx context.Context, d *Delivery) (time.Time, error) {
 	defer cancel()
 	policy := common.NoRetryPolicy()
 	response, err := client.UpdateMessage(ctx, queue.UpdateMessageRequest{
-		QueueId: common.String(c.queueID), MessageReceipt: common.String(d.receipt),
+		QueueId: common.String(c.destination(d.deadLetter)), MessageReceipt: common.String(d.receipt),
 		UpdateMessageDetails: queue.UpdateMessageDetails{VisibilityInSeconds: common.Int(visibilitySeconds)},
 		RequestMetadata:      common.RequestMetadata{RetryPolicy: &policy},
 	})
@@ -128,7 +145,7 @@ func (c *Consumer) Delete(ctx context.Context, d *Delivery) error {
 	defer cancel()
 	policy := common.NoRetryPolicy()
 	response, err := client.DeleteMessage(ctx, queue.DeleteMessageRequest{
-		QueueId: common.String(c.queueID), MessageReceipt: common.String(d.receipt),
+		QueueId: common.String(c.destination(d.deadLetter)), MessageReceipt: common.String(d.receipt),
 		RequestMetadata: common.RequestMetadata{RetryPolicy: &policy},
 	})
 	if err != nil || response.RawResponse == nil || response.RawResponse.StatusCode != 204 {
