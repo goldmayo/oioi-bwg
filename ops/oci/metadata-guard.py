@@ -69,7 +69,7 @@ def probe(container, console=False):
         mount = mounts[0]
         require(mount['Type'] == 'bind' and mount['Source'] == '/run/oioi-waveform'
                 and mount['Destination'] == '/run/oioi-waveform' and mount['RW'] is False
-                and mount['Propagation'] == 'rprivate' and mount['Mode'] == 'ro')
+                and mount['Propagation'] == 'rprivate' and mount['Mode'] in ('', 'ro'))
     else:
         require(not mounts)
     require(config['mode'] == 'bridge' or config['mode'] in config['networks'])

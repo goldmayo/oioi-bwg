@@ -229,8 +229,9 @@ B0-1 승인 작업이다. 기존 SSH에서 nft/iptables backend·forward/flowtab
 Docker unit/drop-in·live-restore와 Web container를 선택 조회한다. env/inspect 전체는 출력하지 않는다.
 기존 `probe`는 mount·추가 capability·privileged가 없는 bridge container만 허용한다.
 P08의 별도 `probe-console`은 Compose project=`oioi-bwg-development`, service=`console`인
-container의 `/run/oioi-waveform` → 같은 경로 bind 한 개만 허용한다. `ro`·RW=false·rprivate를
-모두 확인하고 다른 mount·Web label·다른 project는 거절한다. 양성 대조·차단 counter 기준은 동일하다.
+container의 `/run/oioi-waveform` → 같은 경로 bind 한 개만 허용한다. RW=false·rprivate를
+확인하며 `Mode`는 `ro` 또는 빈 문자열만 허용한다. Docker의 구조화된 bind mount는 실제 읽기 전용이어도
+`Mode`가 빈 문자열로 보고된다(2026-10-30 VM 관찰 및 로컬 실제 쓰기 거절 확인). 다른 mount·Web label·다른 project는 거절한다. 양성 대조·차단 counter 기준은 동일하다.
 이 경로는 socket 설치 후의 수용 점검용이며 mount나 서비스 설정을 생성하지 않는다. 호스트에서
 실행할 명령은 `sudo python3 -I /usr/local/lib/oioi-metadata-guard/metadata-guard.py probe-console <console-container>`다.
 실제 설치 파일 교체와 점검은 P08 VM 작업 범위를 승인받은 뒤 수행한다.
