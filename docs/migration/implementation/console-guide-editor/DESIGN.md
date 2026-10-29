@@ -575,7 +575,7 @@ FixedWorker는 보호된 실행 어댑터 계약이며 실제 Docker 구현·정
 Rust 출력의 세 필드를 검사하고 Runner가 source/generationVersion을 붙인다. stdout은 4MiB, 제어 출력은 4KiB로 제한하고 stderr는 보관하지 않는다. BBC 내용의 정본 검증은 Console이 유지한다.
 production 네트워크 이름은 oioi-waveform-egress로 고정하며 자동 생성하지 않는다. 실제 IMDS/내부망 차단·허용 egress 실증 전에는 설치·활성화하지 않는다. 로컬 합성 검사는 network=none이며 외부 영상 요청을 하지 않는다.
 
-**2026-10-30 실제 입력 메모리 한도 개정:** 사용자 지정 `pbELDkeLdho` 한 건을 기존 ARM64 worker image로 로컬 분석했다. 256MiB는 exit 0/정상 JSON과 별개로 Docker OOMKilled가 남았다. 512MiB는 OOM 없이 관측 peak 501,796,864 bytes였고, 768MiB 재검증은 peak 406,196,224 bytes·OOM 0으로 같은 JSON hash를 생성했다. 실행 간 변동과 512MiB에서 부족한 여유를 반영해 현재 고정 RAM 한도는 **768MiB, swap 0**으로 올린다. CPU 1·동시성 1·PID 32·tmpfs 64MiB·120초·stdout 4MiB와 credential/volume 비공급 경계는 유지한다. 이 개정은 위 2026-10-29의 초기 256MiB를 대체하며 실제 운영 VM 자원 수용은 별도다.
+**2026-10-30 실제 입력 메모리 한도 개정:** 사용자 지정 `pbELDkeLdho` 한 건을 기존 ARM64 worker image로 로컬 분석했다. 256MiB는 exit 0/정상 JSON과 별개로 Docker OOMKilled가 남았다. 512MiB는 OOM 없이 관측 peak 501,796,864 bytes였고, 768MiB 재검증은 peak 406,196,224 bytes·OOM 0으로 같은 JSON hash를 생성했다. 768MiB는 중간 검증값이다. 이후 사용자 지시로 2 OCPU/12GiB VM의 예산과 더 긴 입력을 고려해 현재 고정 RAM 상한을 **1GiB, swap 0**으로 확정한다. 이 값은 예약량이 아닌 작업 중 hard limit이며 메모리 최적화 완료를 의미하지 않는다. 1GiB 재검증에서도 8.31초·관측 peak 404,447,232 bytes·OOM 0과 동일 JSON hash를 확인했다. CPU 1·동시성 1·PID 32·tmpfs 64MiB·120초·stdout 4MiB와 credential/volume 비공급 경계는 유지한다. 이 개정은 위 2026-10-29의 초기 256MiB를 대체하며 실제 운영 VM 자원 수용은 별도다.
 
 **2026-10-29 worker egress 구현:** 전용 Docker bridge `oioi-wf0`의 input/forward만
 `oioi_waveform_guard` inet table(priority -20)에서 제한한다. host 접근·IPv6·private/reserved IPv4를

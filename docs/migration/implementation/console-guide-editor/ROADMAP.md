@@ -68,7 +68,7 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
-**2026-10-30 지정 입력의 로컬 분석 확인:** 사용자가 제공한 `pbELDkeLdho`는 운영 곡 고민중독과 참조가 일치했다. 비상업적 2차창작·음원 비저장/비스트리밍 목적의 한 건 분석을 재심사 후 실행했고, 같은 ARM64 image에서 실제 yt-dlp → ffmpeg → BBC JSON을 얻었다. 256MiB OOM 기록과 512MiB의 관측 peak를 근거로 [DESIGN §6.2](DESIGN.md#62-oci-queue-연결과-완료-전달-계약)의 현재 한도를 768MiB로 개정한다. 로컬 결과의 기존 Zod 계약 통과와 컨테이너 제거를 확인했으며, 이는 운영 Queue → worker → PostgreSQL 저장·재조회 수용이 아니다. 후속은 검증 Runner 교체·지정 입력 설정과 Promotion 후 실제 Job 한 건의 성공/JSON 적재 확인이다.
+**2026-10-30 지정 입력의 로컬 분석 확인:** 사용자가 제공한 `pbELDkeLdho`는 운영 곡 고민중독과 참조가 일치했다. 비상업적 2차창작·음원 비저장/비스트리밍 목적의 한 건 분석을 재심사 후 실행했고, 같은 ARM64 image에서 실제 yt-dlp → ffmpeg → BBC JSON을 얻었다. 256MiB OOM 기록과 512MiB의 관측 peak를 근거로 [DESIGN §6.2](DESIGN.md#62-oci-queue-연결과-완료-전달-계약)의 현재 한도를 사용자 지정 1GiB/swap 0으로 개정한다. 로컬 결과의 기존 Zod 계약 통과와 컨테이너 제거를 확인했으며, 이는 운영 Queue → worker → PostgreSQL 저장·재조회 수용이 아니다. 후속은 검증 Runner 교체·지정 입력 설정과 Promotion 후 실제 Job 한 건의 성공/JSON 적재 확인이다.
 
 **2026-10-30 실제 OCI canary와 생성 진입점:** #350의 읽기 전용 mount probe 수정과 #351의 단계 진단을 반영했다. 실제 VM socket·metadata/egress guard와 일반 Queue 수신 → 없는 Job 확인 → 삭제를 검증했고, Queue/DLQ 모두 잔여 0을 확인했다. 잘못 제공한 12자 검증 영상 ID를 11자로 정정한 과정·실패·실측은 [#351](https://github.com/goldmayo/oioi-bwg/pull/351)이 소유한다. 현재 Runner는 중지·생성은 비활성이다.
 

@@ -12,8 +12,8 @@ image = sys.argv[1]
 assert re.fullmatch(r"sha256:[a-f0-9]{64}", image), "use an immutable loaded image ID"
 name = f"p08-waveform-{uuid.uuid4()}"
 flags = ["--rm", "--name", name, "--read-only", "--network", "none",
-         "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=67108864", "--memory", "768m",
-         "--memory-swap", "768m", "--cpus", "1", "--pids-limit", "32", "--ulimit", "core=0:0",
+         "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=67108864", "--memory", "1g",
+         "--memory-swap", "1g", "--cpus", "1", "--pids-limit", "32", "--ulimit", "core=0:0",
          "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--log-driver", "none"]
 worker = "/usr/local/bin/oioi-waveform"
 
@@ -107,7 +107,7 @@ try:
     state = json.loads(docker("inspect", name).stdout)[0]
     host = state["HostConfig"]
     assert host["ReadonlyRootfs"] and host["NetworkMode"] == "none" and state["Mounts"] == []
-    assert host["Memory"] == host["MemorySwap"] == 768 * 1024 * 1024 and host["NanoCpus"] == 1_000_000_000
+    assert host["Memory"] == host["MemorySwap"] == 1024 * 1024 * 1024 and host["NanoCpus"] == 1_000_000_000
     assert host["PidsLimit"] == 32 and host["LogConfig"]["Type"] == "none"
     assert state["Config"]["User"] == "65532:65532"
     shell('test "$(uname -m)" = aarch64 && ! command -v python3 && '
