@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 21
+revision: 22
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -457,6 +457,11 @@ socket/내부 Job 대조·전달 확인·consumer·설치는 후속이다. SDK �
 HTTP 1초·header/body 각 4KiB로 제한하고 기존 DTO의 식별자·상태·nullable 필드·시각과 응답 Job을 대조한다.
 명시적인 404/WAVEFORM_JOB_NOT_FOUND만 삭제된 Job으로 구분한다. 비활성 403·일반 404·오류 원문은 부재 근거가 아니다.
 전달 기록의 최초 시각과 RUNNING/terminal 응답은 허용하고, 응답 유실·불일치는 불확실로 반환한다. socket 연결은 다음 단위다.
+
+**2026-10-29 시작 client 연결:** 기존 `/start`에 required nullable expectedAttemptId를 한 번 전달한다.
+응답의 Job/source·필수 nullable 필드와 started boolean을 검사하고, started=true는 RUNNING·새 non-null attempt일 때만 인정한다.
+started=false와 응답 유실은 실행 승인이 아니며 자동 재시도·message 삭제·실패 반영을 하지 않는다.
+같은 loopback/token·1초/4KiB 제한을 재사용한다. 실제 receipt/worker 정리 확인과 시작·결과의 소비 흐름 연결은 후속이다.
 
 **2026-10-29 socket 연결:** Go enqueue server는 실제 Unix listener에서만 접수를 허용하고 TCP·Origin을 거절한다.
 strict 세 식별자·실제 body 1KiB·읽기 1초·진행 중 8개 상한을 적용한다. 진행 중 같은 Job은 추가 송신하지 않는다.

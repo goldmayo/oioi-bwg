@@ -83,9 +83,24 @@ func (c *JobClient) RecordEnqueued(ctx context.Context, value Payload, at time.T
 }
 
 func (c *JobClient) request(ctx context.Context, method, id, suffix string, body []byte) (Job, error) {
+	data, err := c.exchange(ctx, method, id, suffix, body)
+	if err != nil {
+		return Job{}, err
+	}
+	var job Job
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	var fields map[string]json.RawMessage
+	if decoder.Decode(&job) != nil || json.Unmarshal(data, &fields) != nil || !validJob(job, id, fields) {
+		return Job{}, ErrJobAPI
+	}
+	return job, nil
+}
+
+func (c *JobClient) exchange(ctx context.Context, method, id, suffix string, body []byte) ([]byte, error) {
 	request, err := http.NewRequestWithContext(ctx, method, c.origin+jobPath+id+suffix, bytes.NewReader(body))
 	if err != nil {
-		return Job{}, ErrJobAPI
+		return nil, ErrJobAPI
 	}
 	request.Header.Set("Authorization", "Bearer "+c.token)
 	request.Header.Set("Accept", "application/json")
@@ -94,12 +109,12 @@ func (c *JobClient) request(ctx context.Context, method, id, suffix string, body
 	}
 	response, err := c.http.Do(request)
 	if err != nil {
-		return Job{}, ErrJobAPI
+		return nil, ErrJobAPI
 	}
 	defer response.Body.Close()
 	data, err := io.ReadAll(response.Body)
 	if err != nil {
-		return Job{}, ErrJobAPI
+		return nil, ErrJobAPI
 	}
 	if response.StatusCode != http.StatusOK {
 		var fault struct {
@@ -107,29 +122,34 @@ func (c *JobClient) request(ctx context.Context, method, id, suffix string, body
 			Message string `json:"message"`
 		}
 		if response.StatusCode == http.StatusNotFound && json.Unmarshal(data, &fault) == nil && fault.Code == "WAVEFORM_JOB_NOT_FOUND" && fault.Message != "" {
-			return Job{}, ErrJobNotFound
+			return nil, ErrJobNotFound
 		}
-		return Job{}, ErrJobAPI
+		return nil, ErrJobAPI
 	}
-	var job Job
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	var fields map[string]json.RawMessage
-	if decoder.Decode(&job) != nil || json.Unmarshal(data, &fields) != nil || fields["attemptId"] == nil || fields["enqueuedAt"] == nil || job.ID != id || !uuid7.MatchString(job.SongID) || !videoID.MatchString(job.VideoID) {
-		return Job{}, ErrJobAPI
+	return data, nil
+}
+
+func validJob(job Job, id string, fields map[string]json.RawMessage) bool {
+	for _, key := range []string{"id", "songId", "videoId", "status", "attemptId", "enqueuedAt"} {
+		if fields[key] == nil {
+			return false
+		}
+	}
+	if job.ID != id || !uuid7.MatchString(job.SongID) || !videoID.MatchString(job.VideoID) {
+		return false
 	}
 	switch job.Status {
 	case "QUEUED", "RUNNING", "SUCCEEDED", "FAILED":
 	default:
-		return Job{}, ErrJobAPI
+		return false
 	}
 	if job.AttemptID != nil && !uuid7.MatchString(*job.AttemptID) {
-		return Job{}, ErrJobAPI
+		return false
 	}
 	if job.EnqueuedAt != nil {
 		if _, err := time.Parse(time.RFC3339Nano, *job.EnqueuedAt); err != nil {
-			return Job{}, ErrJobAPI
+			return false
 		}
 	}
-	return job, nil
+	return true
 }
