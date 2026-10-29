@@ -642,3 +642,17 @@ Console 자동 재시작/mount 복구 순서를 실제 VM에서 확인해야 한
 이전 snapshot에 GID가 없으면 mount 없는 상태로 복구한다. ambient GID는 이전 배포에 상속하지 않는다.
 자동 rollback은 app 컨테이너/config에 한정되며 systemd·Vault CURRENT 버전·방화벽 변경을 되돌리지 않는다.
 새 release 활성화 실패 시 runtime 원본 설정과 current snapshot의 차이를 확인한 뒤 재시도한다.
+
+### 11.2. 검증한 Worker 이미지 전달
+
+Worker는 성공한 Verify run의 `waveform-worker-arm64` artifact로 전달한다. CI가 합성 음원·획득 실패 경계·
+Docker lifecycle·격리 커널 테스트를 마친 **동일 local image ID**를 save/gzip하며 재빌드하거나 OCI에 게시하지 않는다.
+Runner binary artifact와 같은 run의 `verified-commit.txt`·`verified-tree.txt`를 대조한다. 전체 Verify 성공과
+병합 tree 일치를 확인한 뒤 ZIP 다운로드 digest 및 내부 SHA256SUMS를 검증한다. manifest에는 secret이 없다.
+
+별도 승인된 VM 설치에서는 보호 staging의 `worker-image.tar.gz`를 `docker load --input`으로 적재하고,
+`image-id.txt`의 sha256 ID·arm64·고정 entrypoint/user를 `docker image inspect`로 대조한다. 이 ID만
+Runner config의 image에 넣는다. tag를 다시 resolve하지 않으며 VM에서 도구를 재설치/재빌드하지 않는다.
+load는 서비스 시작·실제 입력 분석·운영 활성화 승인을 포함하지 않는다. 공급받은 이미지를 실제 VM의
+cgroup/DAC/egress 제약에서 검증한 뒤에만 허용 입력 수용을 진행한다. artifact 보존은 90일이므로 승인된
+원본 ZIP·checksum·검증 run/tree 근거를 보호된 운영 보관소에도 보존한다.
