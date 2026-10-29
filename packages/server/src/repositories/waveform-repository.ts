@@ -62,3 +62,13 @@ export async function storeWaveform(
       set: { videoId: values.videoId, data: values.data, generatedAt: sql`now()` },
     });
 }
+
+/** 현재 참조 영상과 같은 파형만 읽으며 결과가 없어도 곡 존재 여부를 구분한다. */
+export async function findSongWaveform(db: DbExecutor, id: string) {
+  const [row] = await db
+    .select({ videoId: song.youtubeId, data: waveform.data })
+    .from(song)
+    .leftJoin(waveform, and(eq(waveform.songId, song.id), eq(waveform.videoId, song.youtubeId)))
+    .where(eq(song.id, id));
+  return row;
+}

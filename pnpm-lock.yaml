@@ -147,6 +147,9 @@ importers:
       gsap:
         specifier: ^3.14.2
         version: 3.14.2
+      konva:
+        specifier: 9.3.22
+        version: 9.3.22
       ky:
         specifier: ^2.1.0
         version: 2.1.0
@@ -165,6 +168,9 @@ importers:
       nuqs:
         specifier: ^2.8.8
         version: 2.8.9(next@16.4.1(@opentelemetry/api@1.9.0)(@types/node@20.19.37)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react@19.2.5)
+      peaks.js:
+        specifier: 4.0.0
+        version: 4.0.0(konva@9.3.22)(waveform-data@4.5.2)
       qrcode:
         specifier: 1.5.4
         version: 1.5.4
@@ -241,6 +247,12 @@ importers:
       jsdom:
         specifier: ^29.0.1
         version: 29.0.1(@noble/hashes@2.4.0)
+      playwright:
+        specifier: 1.62.1
+        version: 1.62.1
+      postcss:
+        specifier: 8.5.6
+        version: 8.5.6
       shadcn:
         specifier: ^3.8.5
         version: 3.8.5(@types/node@20.19.37)(typescript@5.9.3)
@@ -5897,6 +5909,9 @@ packages:
     resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
     engines: {node: '>=6'}
 
+  konva@9.3.22:
+    resolution: {integrity: sha512-yQI5d1bmELlD/fowuyfOp9ff+oamg26WOCkyqUyc+nczD/lhRa3EvD2MZOoc4c1293TAubW9n34fSQLgSeEgSw==}
+
   ky@2.1.0:
     resolution: {integrity: sha512-nIKwelw+7qVqKOlX4Eht6GXfEXlDHcdIjyLWV3s119kYt5s+70ayTnYS+0fRNmtgGRRAfqdeWQbh8YizqkS0ng==}
     engines: {node: '>=22'}
@@ -6257,11 +6272,6 @@ packages:
   mute-stream@2.0.0:
     resolution: {integrity: sha512-WWdIxpyjEn+FhQJQQv9aQAYlHoNVdzIzUySNV1gHUPDSdZJ3yZn7pAAbQcV7B56Mvu881q9FZV+0Vx2xC44VWA==}
     engines: {node: ^18.17.0 || >=20.5.0}
-
-  nanoid@3.3.11:
-    resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
-    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
 
   nanoid@3.3.18:
     resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
@@ -7072,6 +7082,13 @@ packages:
     peerDependencies:
       effector: ^23
 
+  peaks.js@4.0.0:
+    resolution: {integrity: sha512-nd4iFkczr0/7OwCtKKt0k7DwDLqJtfYWim7TIR3WzhF3hvepQn9laIZ16P8IHlDK2JFlBhn8X+IAOtUBMlPLxg==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      konva: '>= 8.3.14 < 10'
+      waveform-data: '>= 4.5.2 < 5'
+
   pg-cloudflare@1.3.0:
     resolution: {integrity: sha512-6lswVVSztmHiRtD6I8hw4qP/nDm1EJbKMRhf3HCYaqud7frGysPv7FYJ5noZQdhQtN2xJnimfMtvQq21pdbzyQ==}
 
@@ -7163,8 +7180,8 @@ packages:
     resolution: {integrity: sha512-g50586zr4bZmwFiTlflMu8E0bDTb5I5gertgwAKmsdUlTQIhZtunzUlD1WSzwcVWPoAVpsrA6vlfCD7oXvRwgg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  postcss@8.5.8:
-    resolution: {integrity: sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg==}
+  postcss@8.5.6:
+    resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
 
   postgres-array@2.0.0:
@@ -8155,6 +8172,9 @@ packages:
     resolution: {integrity: sha512-jfiuDABaxSkC71T6oZ3vCS99roYkSHm/+As+G0Dz8taAHQb+SJBvLEm5RlsgG71XdfAj3rv7eudUBTgwcQUPlQ==}
     engines: {node: ^22.13||^24||>=26}
     hasBin: true
+
+  waveform-data@4.5.2:
+    resolution: {integrity: sha512-1wDQ2LmaCM76xXXkOamWui1dp7uS2UHVeNccuHDS/qnoOrczrXR6g7Q9m/UjlibHfukxBrceoRIVTKKY1tDLdA==}
 
   web-streams-polyfill@3.3.3:
     resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
@@ -11472,7 +11492,7 @@ snapshots:
       '@alloc/quick-lru': 5.2.0
       '@tailwindcss/node': 4.2.1
       '@tailwindcss/oxide': 4.2.1
-      postcss: 8.5.8
+      postcss: 8.5.6
       tailwindcss: 4.2.1
 
   '@tanstack/query-core@5.102.8': {}
@@ -13948,6 +13968,8 @@ snapshots:
 
   kleur@4.1.5: {}
 
+  konva@9.3.22: {}
+
   ky@2.1.0: {}
 
   language-subtag-registry@0.3.23: {}
@@ -14271,8 +14293,6 @@ snapshots:
     optional: true
 
   mute-stream@2.0.0: {}
-
-  nanoid@3.3.11: {}
 
   nanoid@3.3.18: {}
 
@@ -15933,6 +15953,12 @@ snapshots:
     dependencies:
       effector: 23.4.4
 
+  peaks.js@4.0.0(konva@9.3.22)(waveform-data@4.5.2):
+    dependencies:
+      eventemitter3: 5.0.4
+      konva: 9.3.22
+      waveform-data: 4.5.2
+
   pg-cloudflare@1.3.0:
     optional: true
 
@@ -16011,9 +16037,9 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postcss@8.5.8:
+  postcss@8.5.6:
     dependencies:
-      nanoid: 3.3.11
+      nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -16505,7 +16531,7 @@ snapshots:
       node-fetch: 3.3.2
       open: 11.0.0
       ora: 8.2.0
-      postcss: 8.5.8
+      postcss: 8.5.6
       postcss-selector-parser: 7.1.1
       prompts: 2.4.2
       recast: 0.23.11
@@ -17225,6 +17251,8 @@ snapshots:
       graceful-fs: 4.2.11
 
   watskeburt@6.0.0: {}
+
+  waveform-data@4.5.2: {}
 
   web-streams-polyfill@3.3.3: {}
 

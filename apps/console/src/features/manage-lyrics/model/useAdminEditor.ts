@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import type { AdminSongMutationResult, SaveAdminSongLyrics } from "@oioi-bwg/contracts/song";
 import type { LyricSegment } from "@oioi-bwg/contracts/song";
 import { toast } from "sonner";
@@ -64,7 +65,8 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
 
   // ─── 어드민 전용 상태 ───────────────────────────────────────────────────────
   const [player, setPlayer] = useState<YouTubePlayerInstance | null>(null);
-  const [youtubeId, setYoutubeId] = useState(song.youtubeId);
+  const videoForm = useForm({ defaultValues: { youtubeId: song.youtubeId } });
+  const youtubeId = useWatch({ control: videoForm.control, name: "youtubeId" });
   const [isSaving, setIsSaving] = useState(false);
   const guideWriteRef = useRef(song.guideWrite);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -92,13 +94,16 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
   /**
    * YouTube URL 또는 ID 입력값에서 11자리 영상 ID를 추출하여 저장합니다.
    */
-  const handleYoutubeIdChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    const match = val.match(
-      /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/,
-    );
-    setYoutubeId(match?.[1] ?? val);
-  }, []);
+  const handleYoutubeIdChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      const match = val.match(
+        /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/,
+      );
+      videoForm.setValue("youtubeId", match?.[1] ?? val, { shouldDirty: true });
+    },
+    [videoForm],
+  );
 
   /**
    * 현재 가사와 YouTube ID를 DB에 저장합니다.
@@ -112,13 +117,18 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
         ...(guideWriteRef.current ? { guideWrite: guideWriteRef.current } : {}),
       });
       guideWriteRef.current = saved.guideWrite;
+      lyricsEditor.markSaved(lyrics);
+      const currentVideo = videoForm.getValues("youtubeId");
+      videoForm.reset({ youtubeId });
+      if (currentVideo !== youtubeId)
+        videoForm.setValue("youtubeId", currentVideo, { shouldDirty: true });
       toast.success("저장되었습니다.");
     } catch {
       // MutationCache의 전역 오류 UX가 실패를 표시한다.
     } finally {
       setIsSaving(false);
     }
-  }, [song.id, lyrics, youtubeId, saveSongData]);
+  }, [song.id, lyrics, youtubeId, saveSongData, lyricsEditor, videoForm]);
 
   /**
    * LRC 형식 텍스트를 파싱하여 가사를 교체합니다.
@@ -265,6 +275,10 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
   );
 
   return {
+    songId: song.id,
+    title: song.title,
+    isDirty: lyricsEditor.isDirty || videoForm.formState.isDirty,
+    currentTimeRef,
     // 가사 편집 (useLyricsEditor 위임)
     lyrics,
     currentIndex,
