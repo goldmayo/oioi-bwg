@@ -1,9 +1,10 @@
 import type { LyricLine } from "@oioi-bwg/contracts/song";
 
 export function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  const ms = Math.floor((seconds % 1) * 100);
+  const hundredths = Math.round(Math.max(0, seconds) * 100);
+  const m = Math.floor(hundredths / 6000);
+  const s = Math.floor(hundredths / 100) % 60;
+  const ms = hundredths % 100;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${ms.toString().padStart(2, "0")}`;
 }
 

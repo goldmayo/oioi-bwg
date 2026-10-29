@@ -123,6 +123,13 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
    */
   const updateLine = useCallback(
     (index: number, partialLine: Partial<LyricLine>) => {
+      if (
+        !lyrics[index] ||
+        Object.entries(partialLine).every(
+          ([key, value]) => lyrics[index][key as keyof LyricLine] === value,
+        )
+      )
+        return;
       const newLyrics = [...lyrics];
       newLyrics[index] = { ...newLyrics[index], ...partialLine };
       setLyrics(newLyrics);
