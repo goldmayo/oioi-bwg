@@ -92,3 +92,28 @@ describe("useLyricsEditor", () => {
     expect(result.current.lyrics[1].startTime).toBe(10.1); // afterIndex가 있으면 index.startTime + 0.1
   });
 });
+
+it("노트 추가와 조각 이동은 각각 한 번의 Undo/Redo로 복원한다", () => {
+  const { result } = renderHook(() => useLyricsEditor([]));
+  act(() => {
+    result.current.editNote({ type: "add", lane: "extra", time: 5, text: "어이!" });
+  });
+  act(() => {
+    result.current.editNote({ type: "duplicate", id: "extra:0:0", time: 6 });
+  });
+  act(() => {
+    result.current.editNote({ type: "move", id: "extra:0:1", time: 3 });
+  });
+  expect(result.current.lyrics[0].startTime).toBe(3);
+  act(() => {
+    result.current.undo();
+  });
+  expect(result.current.lyrics[0].startTime).toBe(5);
+  expect(result.current.lyrics[0].segments[1].startTimeOffset).toBe(1);
+  act(() => {
+    result.current.redo();
+  });
+  expect(result.current.lyrics[0].segments.map(({ startTimeOffset }) => startTimeOffset)).toEqual([
+    2, 0,
+  ]);
+});
