@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useEffectEvent, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { waveformQueries } from "@/entities/waveform";
@@ -8,6 +8,7 @@ import { waveformQueries } from "@/entities/waveform";
 import { Button } from "@/shared/ui/button";
 
 import { type EditorNote, getEditorNotes, type NoteEdit } from "../lib/editor-notes";
+import type { SelectionEdit } from "../lib/note-selection";
 import type { SongEditor } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
@@ -17,10 +18,7 @@ import { FloatingToolbar } from "./FloatingToolbar";
 import { LyricsEditorProvider, useLyricsEditorContext } from "./LyricsEditorContext";
 import { LyricsTable } from "./LyricsTable";
 import { LyricsTimelinePreview } from "./LyricsTimelinePreview";
-import { MobilePaintEditor } from "./MobilePaintEditor";
-import { NoteInspector } from "./NoteInspector";
-import { NoteTable } from "./NoteTable";
-import type { CuePreview } from "./PeaksWaveform";
+import { NoteSelectionBar } from "./NoteSelectionBar";
 import { WaveformPanel } from "./WaveformPanel";
 
 interface LyricsEditorClientProps {
@@ -38,16 +36,15 @@ function LyricsEditorWorkspace({
 }) {
   const editor = useLyricsEditorContext();
   const query = useQuery(waveformQueries.song(accountId, editor.songId));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{ id: string; time: number } | null>(null);
-  const [cuePreview, setCuePreview] = useState<CuePreview | null>(null);
-  const [focusVersion, setFocusVersion] = useState(0);
+  const [selection, setSelection] = useState({ ids: [] as string[], signature: "", row: -1 });
+  const [loop, setLoop] = useState({ start: 0, end: 8, enabled: false, video: editor.youtubeId });
   const [selectionRevision, setSelectionRevision] = useState(0);
-  const [paintLine, setPaintLine] = useState<number | null>(null);
-  const notes = useMemo(() => getEditorNotes(editor.lyrics), [editor.lyrics]);
-  const selected =
-    notes.find((note) => note.id === selectedId && note.lineIndex === editor.currentIndex) ??
-    notes.find((note) => note.lineIndex === editor.currentIndex);
+  const signature = JSON.stringify(editor.lyrics);
+  const notes = getEditorNotes(editor.lyrics);
+  const selectedIds =
+    selection.signature === signature && selection.row === editor.currentIndex ? selection.ids : [];
+  const selectedNotes = notes.filter((n) => selectedIds.includes(n.id));
+  const selected = selectedNotes.at(-1) ?? notes.find((n) => n.lineIndex === editor.currentIndex);
   const waveform = query.data?.source.id === editor.youtubeId ? query.data : null;
   const duration = waveform
     ? waveform.durationMs / 1000
@@ -56,44 +53,66 @@ function LyricsEditorWorkspace({
         ...notes.map((note) => (Number.isFinite(note.time) ? note.time + 8 : 0)),
         30,
       );
-  const select = useCallback(
-    (note: EditorNote) => {
-      setSelectedId(note.id);
-      setSelectionRevision((value) => value + 1);
-      editor.setCurrentIndex(note.lineIndex);
-    },
-    [editor],
-  );
-  const edit = useCallback(
-    (command: NoteEdit) => {
-      if (disabled || editor.isAdPlaying) return;
-      const id = editor.editNote(command);
-      if (id !== undefined) {
-        setSelectedId(id);
-        setSelectionRevision((value) => value + 1);
-      }
-      if (command.type === "add") setFocusVersion((value) => value + 1);
-    },
-    [disabled, editor],
-  );
-  const shownTime =
-    selected &&
-    (preview?.id === selected.id
-      ? preview.time
-      : cuePreview?.index === selected.lineIndex
-        ? selected.time + cuePreview.time - cuePreview.original
-        : selected.time);
-  const captureSelected = useCallback(() => {
-    if (disabled || editor.isAdPlaying || !editor.player || !selected) return;
-    const ordered = [...notes].sort((a, b) => a.time - b.time);
-    const next = ordered[ordered.findIndex((note) => note.id === selected.id) + 1];
-    edit({ type: "move", id: selected.id, time: editor.currentTimeRef.current });
-    if (editor.isRecording && next) select(next);
-  }, [disabled, editor, selected, notes, edit, select]);
-  const openPaint = (note: EditorNote) => {
-    select(note);
-    setPaintLine(note.lineIndex);
+  const blocked = disabled || editor.isAdPlaying;
+  const looping = loop.enabled && loop.video === editor.youtubeId;
+  const select = (note: EditorNote, additive = false) => {
+    setSelection({
+      ids: additive
+        ? selectedIds.includes(note.id)
+          ? selectedIds.filter((id) => id !== note.id)
+          : [...selectedIds, note.id]
+        : selectedIds.includes(note.id)
+          ? selectedIds
+          : [note.id],
+      signature,
+      row: note.lineIndex,
+    });
+    setSelectionRevision((value) => value + 1);
+    editor.setCurrentIndex(note.lineIndex);
   };
+  const edit = (command: NoteEdit) => {
+    if (blocked) return;
+    const result = editor.editNote(command);
+    if (result) {
+      setSelection({
+        ids: result.noteId ? [result.noteId] : [],
+        signature: JSON.stringify(result.lyrics),
+        row: result.lineIndex,
+      });
+      setSelectionRevision((value) => value + 1);
+    }
+  };
+  const editSelection = (command: SelectionEdit) => {
+    if (blocked) return;
+    const result = editor.editSelection(command);
+    if (result) {
+      setSelection({
+        ids: result.noteIds,
+        signature: JSON.stringify(result.lyrics),
+        row: result.lineIndex,
+      });
+      setSelectionRevision((value) => value + 1);
+    }
+  };
+  const addNote = () =>
+    edit({ type: "add", lane: "extra", time: editor.currentTimeRef.current, text: "" });
+  const toggleLoop = () =>
+    setLoop((previous) => ({ ...previous, enabled: !looping, video: editor.youtubeId }));
+  const { subscribeToTime, player, youtubeId } = editor;
+  useEffect(() => {
+    if (!looping || blocked || !player) return;
+    let seeking = false;
+    return subscribeToTime((time) => {
+      if (seeking) {
+        if (time < loop.end) seeking = false;
+        return;
+      }
+      if (player.getPlayerState() === 1 && time >= loop.end) {
+        seeking = true;
+        player.seekTo(loop.start, true);
+      }
+    });
+  }, [loop, looping, blocked, player, subscribeToTime, youtubeId]);
   const saveLatest = useEffectEvent(() => void editor.handleSave());
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -127,61 +146,140 @@ function LyricsEditorWorkspace({
         }
         return;
       }
-      if (event.altKey || event.shiftKey || editor.isAdPlaying) return;
+      if (event.altKey || blocked) return;
       const key = event.key.toLowerCase();
-      if (!["q", "w", "e", "r"].includes(key)) return;
-      event.preventDefault();
-      if (key === "q") captureSelected();
-      if (key === "w" && editor.player) {
-        if (editor.player.getPlayerState() === 1) editor.player.pauseVideo();
-        else editor.player.playVideo();
+      if (key === "escape") {
+        setSelection({ ids: [], signature, row: editor.currentIndex });
+        return;
       }
-      if (key === "e") {
-        editor.addExtraLine(editor.currentIndex);
+      if (event.repeat && (key === "n" || key === "l" || key === " ")) return;
+      if (key === "n") {
+        event.preventDefault();
+        addNote();
       }
-      if (key === "r") editor.setIsRecording(!editor.isRecording);
+      if (key === "l" && player) {
+        event.preventDefault();
+        toggleLoop();
+      }
+      if (key === " " && player && !(target instanceof Element && target.closest("button,a"))) {
+        event.preventDefault();
+        if (player.getPlayerState() === 1) player.pauseVideo();
+        else player.playVideo();
+      }
+      if (selectedIds.length && (key === "arrowleft" || key === "arrowright")) {
+        event.preventDefault();
+        editSelection({
+          type: "move",
+          ids: selectedIds,
+          delta: (key === "arrowleft" ? -1 : 1) * (event.shiftKey ? 0.1 : 0.01),
+          duration,
+        });
+      }
+      if (key === "delete" && selectedIds.length) {
+        event.preventDefault();
+        editSelection({ type: "delete", ids: selectedIds });
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [disabled, editor, captureSelected]);
+  });
   return (
     <div data-lyrics-editor className="bg-background flex h-full min-h-0 flex-col">
       <FloatingToolbar />
-      <EditorTopBar
-        selected={selected}
-        onSelect={select}
-        onCapture={captureSelected}
-        blocked={disabled || editor.isAdPlaying}
-      />
+      <EditorTopBar blocked={blocked} onAdd={addNote} looping={looping} onLoop={toggleLoop} />
       <div data-editor-scroll className="min-h-0 flex-1 overflow-y-auto">
-        <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_320px]">
+        <WaveformPanel
+          selectionRevision={selectionRevision}
+          query={query}
+          duration={duration}
+          disabled={disabled}
+          selected={selected}
+          selectedIds={selectedIds}
+          loop={looping ? loop : undefined}
+          onLoopRange={(range) => setLoop({ ...range, enabled: true, video: editor.youtubeId })}
+          onSelect={select}
+          onEdit={edit}
+          onMove={(id, time) => {
+            const note = notes.find((n) => n.id === id);
+            if (note)
+              editSelection({
+                type: "move",
+                ids: selectedIds.includes(id) ? selectedIds : [id],
+                delta: time - note.time,
+                duration,
+              });
+          }}
+          onPreview={() => {}}
+          onCuePreview={() => {}}
+        />
+        <NoteSelectionBar
+          key={selectedIds.join(",")}
+          notes={selectedNotes}
+          blocked={blocked}
+          duration={duration}
+          time={() => editor.currentTimeRef.current}
+          onEdit={editSelection}
+        />
+        {looping && (
+          <div
+            aria-label="반복 구간 설정"
+            className="border-border flex flex-wrap items-center gap-3 border-b px-6 py-2 text-xs"
+          >
+            <span>반복 구간</span>
+            <label>
+              A{" "}
+              <input
+                aria-label="반복 시작 초"
+                type="number"
+                min="0"
+                max={loop.end - 0.1}
+                step="0.01"
+                className="bg-muted w-24 rounded px-2 py-1"
+                value={loop.start}
+                onChange={(e) => {
+                  const start = e.currentTarget.valueAsNumber;
+                  if (Number.isFinite(start) && start >= 0 && start < loop.end)
+                    setLoop({ ...loop, start });
+                }}
+              />
+            </label>
+            <label>
+              B{" "}
+              <input
+                aria-label="반복 끝 초"
+                type="number"
+                min={loop.start + 0.1}
+                max={duration}
+                step="0.01"
+                className="bg-muted w-24 rounded px-2 py-1"
+                value={loop.end}
+                onChange={(e) => {
+                  const end = e.currentTarget.valueAsNumber;
+                  if (Number.isFinite(end) && end > loop.start && end <= duration)
+                    setLoop({ ...loop, end });
+                }}
+              />
+            </label>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={selectedNotes.length < 2}
+              onClick={() =>
+                setLoop({
+                  start: Math.min(...selectedNotes.map((n) => n.time)),
+                  end: Math.min(duration, Math.max(...selectedNotes.map((n) => n.time)) + 0.5),
+                  enabled: true,
+                  video: editor.youtubeId,
+                })
+              }
+            >
+              선택 노트 구간 사용
+            </Button>
+          </div>
+        )}
+        <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)]">
           <div className="min-w-0 p-4 sm:px-6">
-            <WaveformPanel
-              selectionRevision={selectionRevision}
-              query={query}
-              duration={duration}
-              disabled={disabled}
-              selected={selected}
-              onSelect={select}
-              onEdit={edit}
-              onPreview={setPreview}
-              onCuePreview={setCuePreview}
-            />
-            <NoteTable
-              selected={selected}
-              onSelect={select}
-              onEdit={edit}
-              onPaint={openPaint}
-              blocked={disabled || editor.isAdPlaying}
-            />
-            <details className="border-border mt-4 border-t pt-3" data-lyric-details>
-              <summary className="text-muted-foreground cursor-pointer text-xs">
-                가사 강조 · 추임새 세부 편집
-              </summary>
-              <div className="pt-3">
-                <LyricsTable />
-              </div>
-            </details>
+            <LyricsTable />
             <details className="border-border mt-4 border-t pt-3">
               <summary className="text-muted-foreground cursor-pointer text-xs">
                 실시간 응원 미리보기
@@ -195,42 +293,24 @@ function LyricsEditorWorkspace({
             </details>
           </div>
           <aside
-            aria-label="영상과 노트 속성"
+            aria-label="참고 영상"
             className="border-border min-w-0 border-t p-4 lg:border-t-0 lg:border-l"
           >
             <EditorReferenceVideo />
-            <NoteInspector
-              note={selected}
-              shownTime={shownTime}
-              duration={duration}
-              blocked={disabled || editor.isAdPlaying}
-              focusVersion={focusVersion}
-              onEdit={edit}
-              onCapture={captureSelected}
-              onPaint={() => selected && openPaint(selected)}
-            />
           </aside>
         </div>
       </div>
-      {paintLine !== null && editor.lyrics[paintLine] && (
-        <MobilePaintEditor
-          line={editor.lyrics[paintLine]}
-          lineIndex={paintLine}
-          isOpen
-          onClose={() => setPaintLine(null)}
-        />
-      )}
       <footer className="border-border text-muted-foreground flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-xs sm:px-6">
-        <span>그리기: 클릭으로 추가 · 선택: 좌우로 이동</span>
-        <div className="hidden items-center gap-2 md:flex">
+        <span>Space 재생 · N 노트 추가 · Shift/⌘/Ctrl 클릭으로 다중 선택</span>
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
             className="h-6 text-xs"
             disabled={disabled || editor.isAdPlaying}
-            onClick={() => editor.addExtraLine(editor.currentIndex)}
+            onClick={() => editor.captureTime(editor.currentIndex)}
           >
-            <kbd>E</kbd>추임새 추가
+            행 시간 캡처
           </Button>
           <Button
             variant="ghost"
@@ -240,10 +320,10 @@ function LyricsEditorWorkspace({
             disabled={disabled || editor.isAdPlaying}
             onClick={() => editor.setIsRecording(!editor.isRecording)}
           >
-            <kbd>R</kbd>연속 캡처 {editor.isRecording ? "켜짐" : "꺼짐"}
+            연속 캡처 {editor.isRecording ? "켜짐" : "꺼짐"}
           </Button>
         </div>
-        <span>Q 캡처 · W 재생 · Esc 이동 취소</span>
+        <span>← → 10ms 이동 · Shift 100ms · L 반복</span>
       </footer>
     </div>
   );

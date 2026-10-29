@@ -15,17 +15,21 @@ import { NoteText } from "./NoteText";
 
 const lanes: { id: "lyrics" | "extra"; label: string }[] = [
   { id: "lyrics", label: "가사" },
-  { id: "extra", label: "추가 응원" },
+  { id: "extra", label: "추임새" },
 ];
 const colors: Record<NoteLane, string> = {
   lyrics: "bg-muted text-foreground border-muted-foreground/60",
   cheer: "bg-qwer-bwg/10 border-qwer-bwg/60",
   echo: "bg-qwer-r/10 border-qwer-r/60",
-  extra: "bg-qwer-e/10 text-foreground border-qwer-e/60",
+  extra: "bg-cyan-950/20 text-foreground border-cyan-400/70",
 };
 export interface PianoRollInteraction {
   selected?: EditorNote;
-  onSelect: (note: EditorNote) => void;
+  selectedIds?: string[];
+  loop?: { start: number; end: number };
+  onLoopRange?: (range: { start: number; end: number }) => void;
+  onSelect: (note: EditorNote, additive?: boolean) => void;
+  onMove?: (id: string, time: number) => void;
   onEdit: (edit: NoteEdit) => void;
   onPreview: (preview: { id: string; time: number } | null) => void;
 }
@@ -42,7 +46,9 @@ export function PianoRoll({
   blocked,
   mode,
   onNavigate,
-  selected,
+  selectedIds = [],
+  onMove,
+  onLoopRange,
   onSelect,
   onEdit,
   onPreview,
@@ -56,11 +62,23 @@ export function PianoRoll({
     span,
     duration,
     onSelect,
-    onCommit: (id, time) => onEdit({ type: "move", id, time }),
+    onCommit: (id, time) => (onMove ? onMove(id, time) : onEdit({ type: "move", id, time })),
+    selectedNotes: notes.filter((n) => selectedIds.includes(n.id)),
     onPreview,
   });
   const ruler = useRef<HTMLDivElement>(null);
+  const loopStart = useRef<number | null>(null);
   const [rulerWidth, setRulerWidth] = useState(800);
+  useEffect(() => {
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && loopStart.current !== null) {
+        loopStart.current = null;
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", cancel, true);
+    return () => window.removeEventListener("keydown", cancel, true);
+  }, []);
   useEffect(() => {
     if (!ruler.current) return;
     const observer = new ResizeObserver(([entry]) => setRulerWidth(entry.contentRect.width));
@@ -81,7 +99,7 @@ export function PianoRoll({
   return (
     <section
       id="editor-note-tracks"
-      aria-label="가사와 응원 노트 트랙"
+      aria-label="가사와 추임새 노트 트랙"
       data-piano-roll
       data-note-start={range.start}
       data-note-end={range.end}
@@ -90,8 +108,35 @@ export function PianoRoll({
         <div className="text-muted-foreground flex items-center justify-center text-xs">초</div>
         <div
           ref={ruler}
-          className="relative h-7 overflow-hidden font-mono text-xs tabular-nums"
-          aria-hidden="true"
+          className="relative h-7 touch-none overflow-hidden font-mono text-xs tabular-nums"
+          title="드래그로 반복 구간 지정"
+          onPointerDown={(e) => {
+            if (blocked || e.button !== 0) return;
+            const box = e.currentTarget.getBoundingClientRect();
+            loopStart.current = range.start + ((e.clientX - box.x) / box.width) * span;
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }}
+          onPointerUp={(e) => {
+            if (loopStart.current === null) return;
+            const box = e.currentTarget.getBoundingClientRect();
+            const end = Math.max(
+              range.start,
+              Math.min(range.end, range.start + ((e.clientX - box.x) / box.width) * span),
+            );
+            const start = loopStart.current;
+            loopStart.current = null;
+            if (!blocked && Math.abs(end - start) >= 0.1)
+              onLoopRange?.({
+                start: Math.round(Math.min(start, end) * 100) / 100,
+                end: Math.round(Math.max(start, end) * 100) / 100,
+              });
+          }}
+          onPointerCancel={() => {
+            loopStart.current = null;
+          }}
+          onLostPointerCapture={() => {
+            loopStart.current = null;
+          }}
         >
           {ticks.map((time) => (
             <span
@@ -110,36 +155,27 @@ export function PianoRoll({
             notes={notes.filter((note) =>
               lane.id === "extra" ? note.lane === "extra" : note.lane !== "extra",
             )}
-            selectedId={selected?.id}
+            selectedIds={selectedIds}
+            trackWidth={rulerWidth}
             range={range}
             ticks={ticks}
             blocked={blocked}
             preview={drag.preview}
+            previewDelta={
+              drag.preview
+                ? drag.preview.time -
+                  (notes.find((n) => n.id === drag.preview?.id)?.time ?? drag.preview.time)
+                : 0
+            }
             onSelect={onSelect}
-            onDelete={(id) => onEdit({ type: "delete", id })}
             onAdd={(time) => add(lane.id, time)}
             draw={mode === "draw"}
             drag={drag}
           />
         ))}
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs">
-        <Button
-          variant="outline"
-          size="sm"
-          className="lg:hidden"
-          disabled={!selected}
-          onClick={() =>
-            document.getElementById("note-inspector-heading")?.scrollIntoView({ block: "start" })
-          }
-        >
-          선택 노트 속성
-        </Button>
-        <span className="text-muted-foreground">
-          {mode === "draw"
-            ? "빈 트랙을 클릭해 추가하고 표나 오른쪽에서 내용을 입력합니다."
-            : "노트를 선택해 내용과 시각을 편집합니다."}
-        </span>
+      <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 px-4 py-1 text-xs">
+        <span>빈 추임새 트랙을 클릭해 노트 추가 · 노트 폭은 문구 길이입니다.</span>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -164,43 +200,34 @@ export function PianoRoll({
           </Button>
         </div>
       </div>
-      <p
-        className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-1 text-xs"
-        aria-label="사용자 화면의 강조 색상"
-      >
-        <span className="text-qwer-e">추임새</span>
-        <span className="text-qwer-r">에코</span>
-        <span className="text-qwer-bwg brightness-125">응원</span>
-      </p>
-      <p className="text-muted-foreground px-4 py-2 text-xs">
-        Esc 이동 취소 · Delete 선택 노트 삭제 · 노트 왼쪽이 시작 시각입니다.
-      </p>
     </section>
   );
 }
 function Lane({
   lane,
   notes,
-  selectedId,
+  selectedIds,
+  trackWidth,
   range,
   ticks,
   blocked,
   preview,
+  previewDelta,
   onSelect,
-  onDelete,
   onAdd,
   draw,
   drag,
 }: {
   lane: (typeof lanes)[number];
   notes: EditorNote[];
-  selectedId?: string;
+  selectedIds: string[];
+  trackWidth: number;
   range: Props["range"];
   ticks: number[];
   blocked: boolean;
   preview: { id: string; time: number } | null;
-  onSelect: (note: EditorNote) => void;
-  onDelete: (id: string) => void;
+  previewDelta: number;
+  onSelect: (note: EditorNote, additive?: boolean) => void;
   onAdd: (time: number) => void;
   draw: boolean;
   drag: ReturnType<typeof useNoteDrag>;
@@ -208,6 +235,31 @@ function Lane({
   const editor = useLyricsEditorContext();
   const span = range.end - range.start;
   const ordered = [...notes].sort((a, b) => a.time - b.time);
+  const ends: number[] = [];
+  const rows = new Map<string, number>();
+
+  const timeOf = (note: EditorNote) =>
+    note.time +
+    (preview && (note.id === preview.id || selectedIds.includes(note.id)) ? previewDelta : 0);
+  for (const note of ordered) {
+    const time = timeOf(note);
+    if (time < range.start || time >= range.end) continue;
+    const left = ((time - range.start) / span) * trackWidth;
+    const width = Math.min(
+      320,
+      Math.max(
+        76,
+        [...(note.text || "문구 입력")].reduce(
+          (sum, c) => sum + (c.charCodeAt(0) > 255 ? 13 : 8),
+          24,
+        ),
+      ),
+    );
+    let row = ends.findIndex((end) => end + 8 <= left);
+    if (row < 0) row = ends.length;
+    ends[row] = left + width;
+    rows.set(note.id, row);
+  }
   return (
     <>
       <div className="border-border flex flex-col items-center justify-center gap-1 border-t text-xs">
@@ -227,7 +279,8 @@ function Lane({
         data-note-track={lane.id}
         role="group"
         aria-label={`${lane.label} 노트 트랙`}
-        className="border-border relative h-16 overflow-hidden border-t"
+        className="border-border relative overflow-hidden border-t"
+        style={{ height: Math.max(1, ends.length) * 56 + 8 }}
       >
         <button
           type="button"
@@ -252,10 +305,9 @@ function Lane({
           />
         ))}
         <Playhead range={range} subscribe={editor.subscribeToTime} />
-        {ordered.map((note, index) => {
-          const time = preview?.id === note.id ? preview.time : note.time;
+        {ordered.map((note) => {
+          const time = timeOf(note);
           if (!Number.isFinite(time) || time < range.start || time >= range.end) return null;
-          const later = ordered[index + 1]?.time ?? range.end;
           return (
             <button
               key={note.id}
@@ -263,36 +315,49 @@ function Lane({
               data-editor-note={note.id}
               data-note-time={time}
               aria-label={`${lane.label} 노트 ${note.text || "빈 내용"} ${formatTime(time)}`}
-              aria-pressed={selectedId === note.id}
+              aria-pressed={selectedIds.includes(note.id)}
               disabled={blocked}
               title={`${note.text || "빈 내용"} · ${formatTime(time)}`}
-              onClick={() => onSelect(note)}
-              onPointerDown={(event) => drag.onPointerDown(event, note)}
+              onClick={(event) => {
+                if (event.detail === 0)
+                  onSelect(note, event.shiftKey || event.ctrlKey || event.metaKey);
+              }}
+              onPointerDown={(event) => {
+                if (event.shiftKey || event.ctrlKey || event.metaKey) {
+                  event.preventDefault();
+                  onSelect(note, true);
+                } else drag.onPointerDown(event, note);
+              }}
               onPointerMove={drag.onPointerMove}
               onPointerUp={drag.onPointerUp}
               onPointerCancel={drag.cancel}
               onLostPointerCapture={drag.cancel}
-              onKeyDown={(event) => {
-                if (event.key === "Delete" && !blocked) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onDelete(note.id);
-                }
-              }}
               className={cn(
-                "absolute top-2 z-10 h-8 cursor-ew-resize touch-pan-y overflow-hidden rounded border px-2 text-left text-xs font-medium text-ellipsis whitespace-nowrap select-none focus-visible:ring-2 focus-visible:ring-white",
+                "absolute z-10 h-8 w-max max-w-80 cursor-ew-resize touch-pan-y rounded-md border px-3 text-left text-xs font-medium whitespace-nowrap select-none focus-visible:ring-2 focus-visible:ring-cyan-300",
                 colors[note.lane],
-                selectedId === note.id && "ring-2 ring-white ring-inset",
+                selectedIds.includes(note.id) && "ring-2 ring-cyan-300 ring-inset",
               )}
               style={{
                 left: `${((time - range.start) / span) * 100}%`,
-                width: `clamp(24px, calc(${((later - time) / span) * 100}% - 4px), 96px)`,
-                maxWidth: `${((range.end - time) / span) * 100}%`,
+                top: 26 + (rows.get(note.id) ?? 0) * 56,
               }}
             >
+              {lane.id === "extra" && (
+                <span
+                  aria-hidden="true"
+                  className="text-muted-foreground pointer-events-none absolute -top-5 left-0 flex items-center gap-1 text-[10px] font-normal"
+                >
+                  <span className="size-1.5 rounded-full bg-cyan-300" />
+                  {formatTime(time)}
+                </span>
+              )}
               <span className="flex min-w-0 items-center gap-1">
                 <span className="min-w-0 flex-1 truncate">
-                  <NoteText note={note} className="whitespace-pre" />
+                  {note.text ? (
+                    <NoteText note={note} className="whitespace-pre" />
+                  ) : (
+                    <span className="text-muted-foreground">문구 입력</span>
+                  )}
                 </span>
                 {note.segmentIndex === null &&
                   note.segments.length > 1 &&
@@ -333,7 +398,7 @@ function Playhead({
     <div
       ref={ref}
       aria-hidden="true"
-      className="bg-foreground pointer-events-none absolute inset-y-0 z-20 w-px"
+      className="pointer-events-none absolute inset-y-0 z-20 w-px bg-cyan-300"
     />
   );
 }

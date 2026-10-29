@@ -142,3 +142,42 @@ it("응원과 에코를 각각 바꾸고 Undo/Redo해도 다른 속성을 유지
   });
   expect(result.current.lyrics[0].segments[0]).toMatchObject({ isCheer: true, isEcho: false });
 });
+
+it("다중 노트 묶기와 이동은 각각 한 번의 Undo로 모든 청크를 복원한다", () => {
+  const original = [4, 4.8, 5.6, 6.4].map((startTime) => ({
+    startTime,
+    isExtra: true,
+    segments: [{ text: "어이!", isCheer: true, isEcho: true, startTimeOffset: 0 }],
+  }));
+  const { result } = renderHook(() => useLyricsEditor(original));
+  act(() => {
+    result.current.editSelection({
+      type: "group",
+      ids: ["extra:0:0", "extra:1:0", "extra:2:0", "extra:3:0"],
+    });
+  });
+  expect(result.current.lyrics).toHaveLength(1);
+  act(() => {
+    result.current.editSelection({
+      type: "move",
+      ids: ["extra:0:0", "extra:0:1", "extra:0:2", "extra:0:3"],
+      delta: 1,
+      duration: 20,
+    });
+  });
+  expect(result.current.lyrics[0].startTime).toBe(5);
+  act(() => {
+    result.current.undo();
+  });
+  expect(result.current.lyrics[0].startTime).toBe(4);
+  act(() => {
+    result.current.undo();
+  });
+  expect(result.current.lyrics).toEqual(original);
+  act(() => {
+    result.current.redo();
+  });
+  expect(result.current.lyrics[0].segments.map((s) => s.startTimeOffset)).toEqual([
+    0, 0.8, 1.6, 2.4,
+  ]);
+});

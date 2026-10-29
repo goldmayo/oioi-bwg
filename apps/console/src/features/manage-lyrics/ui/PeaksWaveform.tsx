@@ -22,6 +22,8 @@ interface Props {
   lyrics: LyricLine[];
   selected: number;
   showCuePoints: boolean;
+  loop?: { start: number; end: number };
+  range?: { start: number; end: number };
   seconds: number | "auto";
   follow: boolean;
   navigation: { time: number; revision: number } | null;
@@ -82,6 +84,7 @@ export default function PeaksWaveform(props: Props) {
             zoomview: {
               container: zoomview.current,
               autoScroll: true,
+              showAxisLabels: false,
               showPlayheadTime: true,
               playheadTextColor: "#eff4f8",
               playheadBackgroundColor: "#3c4652",
@@ -89,7 +92,7 @@ export default function PeaksWaveform(props: Props) {
             waveformData: { json: display.json },
             player: adapter,
             waveformColor: "#718695",
-            playheadColor: "#f0f3f7",
+            playheadColor: "#22d3ee",
             axisLabelColor: "#b3bfcb",
             axisGridlineColor: "#343d48",
             fontSize: 11,
@@ -276,7 +279,7 @@ export default function PeaksWaveform(props: Props) {
   }, []);
   return (
     <div className="bg-background/50 border-border overflow-hidden border-y">
-      <div className="border-border flex items-center border-b py-2">
+      <div className="border-border flex items-center border-b py-1">
         <span className="text-muted-foreground w-16 shrink-0 text-center text-xs sm:w-20">
           전체
         </span>
@@ -286,11 +289,25 @@ export default function PeaksWaveform(props: Props) {
         <span className="text-muted-foreground flex w-16 shrink-0 items-center justify-center text-xs sm:w-20">
           파형
         </span>
-        <div
-          ref={zoomview}
-          aria-label="확대 파형과 Cue"
-          className="h-32 min-w-0 flex-1 touch-pan-y sm:h-36"
-        />
+        <div className="relative min-w-0 flex-1 overflow-hidden">
+          <div ref={zoomview} aria-label="확대 파형과 Cue" className="h-32 touch-pan-y sm:h-36" />
+          {props.loop &&
+            props.range &&
+            props.loop.end > props.range.start &&
+            props.loop.start < props.range.end && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 border-x border-dashed border-cyan-400/70 bg-cyan-400/10"
+                style={{
+                  left: `${Math.max(0, ((props.loop.start - props.range.start) / (props.range.end - props.range.start)) * 100)}%`,
+                  right: `${Math.max(0, ((props.range.end - props.loop.end) / (props.range.end - props.range.start)) * 100)}%`,
+                }}
+              >
+                <span className="bg-cyan-900 px-1 text-[10px] text-cyan-100">A</span>
+                <span className="float-right bg-cyan-900 px-1 text-[10px] text-cyan-100">B</span>
+              </div>
+            )}
+        </div>
       </div>
     </div>
   );

@@ -1,35 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pause, Play, ScanLine, SkipBack, SkipForward } from "lucide-react";
+import { Pause, Play, SkipBack, SkipForward } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 
-import { type EditorNote, getEditorNotes } from "../lib/editor-notes";
 import { formatTime } from "../lib/lrc-parser";
 
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 
-export interface EditorTransportProps {
-  selected?: EditorNote;
-  onSelect: (note: EditorNote) => void;
-  onCapture: () => void;
-  blocked: boolean;
-}
-
-export function EditorTransport({ selected, onSelect, onCapture, blocked }: EditorTransportProps) {
+export function EditorTransport({ blocked }: { blocked: boolean }) {
   const editor = useLyricsEditorContext();
   const [time, setTime] = useState(0);
   const { subscribeToTime } = editor;
   useEffect(() => subscribeToTime(setTime), [subscribeToTime]);
   const playing = editor.playerState === 1;
   const seekCue = (direction: -1 | 1) => {
-    const choices = getEditorNotes(editor.lyrics)
+    const choices = editor.lyrics
+      .map((line, index) => ({ time: line.startTime, index }))
       .filter((note) => (direction < 0 ? note.time < time - 0.01 : note.time > time + 0.01))
       .sort((a, b) => direction * (a.time - b.time));
     const next = choices[0];
     if (next) {
-      onSelect(next);
+      editor.setCurrentIndex(next.index);
       editor.player?.seekTo(next.time, true);
     }
   };
@@ -43,7 +36,7 @@ export function EditorTransport({ selected, onSelect, onCapture, blocked }: Edit
         <Button
           variant="ghost"
           size="icon"
-          aria-label="이전 노트로 이동"
+          aria-label="이전 행으로 이동"
           disabled={!editor.player || blocked}
           onClick={() => seekCue(-1)}
         >
@@ -63,7 +56,7 @@ export function EditorTransport({ selected, onSelect, onCapture, blocked }: Edit
         <Button
           variant="ghost"
           size="icon"
-          aria-label="다음 노트로 이동"
+          aria-label="다음 행으로 이동"
           disabled={!editor.player || blocked}
           onClick={() => seekCue(1)}
         >
@@ -77,18 +70,6 @@ export function EditorTransport({ selected, onSelect, onCapture, blocked }: Edit
             / {formatTime(editor.player?.getDuration() || 0)}
           </span>
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!editor.player || blocked || !selected}
-          onClick={onCapture}
-          className="text-xs"
-        >
-          <ScanLine size={14} />
-          <kbd>Q</kbd>선택 노트 캡처
-        </Button>
       </div>
     </div>
   );

@@ -244,6 +244,7 @@ const server = createServer(async (req, res) => {
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 const origin = "http://127.0.0.1:" + server.address().port;
 const browser = await chromium.launch({ headless: true });
+
 const checks = [];
 const capture = async (page, name) => {
   await page.evaluate(() => {
@@ -252,671 +253,435 @@ const capture = async (page, name) => {
     for (const element of document.querySelectorAll("main,[data-editor-scroll]"))
       element.scrollTop = 0;
   });
+  await page.waitForTimeout(150);
   await page.screenshot({ path: join(out, name), fullPage: true });
 };
+const row = (page, index) => page.locator(`[data-lyric-row="${index}"]`);
+const rowTime = (page, index) =>
+  page.getByRole("textbox", { name: `${index + 1}행 시작 시각`, exact: true });
+const selectRow = (page, index) =>
+  page.getByRole("button", { name: `${index + 1}행 선택`, exact: true }).click();
+const save = async (page) => {
+  await Promise.all([
+    page.waitForResponse((r) => r.url().endsWith("/save") && r.request().method() === "POST"),
+    page.locator("[data-lyrics-editor] > header").getByRole("button", { name: /^저장/ }).click(),
+  ]);
+  await page.getByText("저장됨", { exact: true }).waitFor();
+};
+const undo = (page) => page.getByRole("button", { name: "실행 취소", exact: true }).click();
+const clock = async (page, time) => {
+  await page.evaluate((time) => {
+    window.__iframe.time = time;
+  }, time);
+  await page.waitForTimeout(200);
+};
 
-async function verifyInspector(page) {
-  for (const actual of [false, true]) {
-    const source = actual ? actualSong : song;
-    responseMode = "ready";
-    await page.goto(origin + (actual ? "/?actual" : "/"), { waitUntil: "networkidle" });
-    const selectedTime = page.getByRole("textbox", { name: "노트 시작 시각", exact: true });
-    const select = async (id) =>
-      page
-        .locator(`[data-note-id="${id}"]`)
-        .locator("xpath=..")
-        .getByRole("button", { name: /번 노트 선택/ })
-        .click();
-    const undo = async () => page.getByRole("button", { name: "실행 취소", exact: true }).click();
-    const save = async () => {
-      await page.getByRole("button", { name: /^저장/ }).click();
-      await page.getByText("저장됨", { exact: true }).waitFor();
-    };
-    await select("extra:1:1");
-    assert.equal(await selectedTime.inputValue(), "00:04.80");
-    assert.match(await page.locator("[data-note-scope]").innerText(), /2행.*2\/4번째 조각/);
-    await page.evaluate(() => {
-      window.__iframe.time = 5.1;
-    });
-    await page.waitForTimeout(200);
-    for (const capture of [
-      () => page.keyboard.press("q"),
-      () => page.getByRole("button", { name: /^현재 재생 위치에 맞추기/ }).click(),
-      () => page.getByRole("button", { name: /^Q\s*선택 노트 캡처/ }).click(),
-    ]) {
-      await capture();
-      assert.equal(await selectedTime.inputValue(), "00:05.10");
-      await save();
-      assert.deepEqual(
-        lastSaved.lyrics.filter((_, i) => i !== 1),
-        source.lyrics.filter((_, i) => i !== 1),
-      );
-      const group = lastSaved.lyrics[1];
-      assert.deepEqual(
-        group.segments.map((s) => group.startTime + (s.startTimeOffset ?? 0)),
-        [4, 5.1, 5.6, 6.4],
-      );
-      assert.deepEqual(
-        group.segments.map((segment) => ({ ...segment, startTimeOffset: undefined })),
-        source.lyrics[1].segments.map((segment) => ({ ...segment, startTimeOffset: undefined })),
-      );
-      await undo();
-      assert.equal(await selectedTime.inputValue(), "00:04.80");
-    }
-    await selectedTime.fill("");
-    assert.equal(await selectedTime.inputValue(), "");
-    await selectedTime.fill("00:05.10");
-    await selectedTime.press("Enter");
-    assert.equal(await selectedTime.inputValue(), "00:05.10");
-    await undo();
-    assert.equal(await selectedTime.inputValue(), "00:04.80");
-    await selectedTime.fill("99:99");
-    await selectedTime.press("Enter");
-    assert.equal(await selectedTime.inputValue(), "00:04.80");
-    assert.equal(await selectedTime.getAttribute("aria-invalid"), "true");
-    await selectedTime.fill("6.5");
-    await selectedTime.press("Enter");
-    assert.equal(await selectedTime.inputValue(), "00:06.50");
-    await undo();
-    await selectedTime.fill("12");
-    await selectedTime.press("Escape");
-    await selectedTime.blur();
-    assert.equal(await selectedTime.inputValue(), "00:04.80");
-    await selectedTime.fill("5.25");
-    await selectedTime.press("Control+s");
-    await page.getByText("저장됨", { exact: true }).waitFor();
-    assert.equal(
-      lastSaved.lyrics[1].startTime + lastSaved.lyrics[1].segments[1].startTimeOffset,
-      5.25,
-    );
-    await undo();
-    await page.locator("[data-note-row-controls] summary").click();
-    await page.getByRole("button", { name: "선택 행 0.1초 늦추기", exact: true }).click();
-    await save();
-    assert.equal(lastSaved.lyrics[1].startTime, 4.1);
-    assert.deepEqual(lastSaved.lyrics[1].segments, source.lyrics[1].segments);
-    await undo();
-    await page.getByRole("button", { name: "전체 가사 0.1초 늦추기", exact: true }).click();
-    await save();
-    assert.deepEqual(
-      lastSaved.lyrics.map((line) => line.startTime),
-      source.lyrics.map((line) => Math.round((line.startTime + 0.1) * 100) / 100),
-    );
-    assert.deepEqual(
-      lastSaved.lyrics.map((line) => line.segments),
-      source.lyrics.map((line) => line.segments),
-    );
-    await undo();
-    await page.evaluate(() => {
-      window.__iframe.time = 4;
-    });
-    await page.waitForTimeout(200);
-    await page.getByRole("button", { name: "다음 노트로 이동", exact: true }).click();
-    await page.waitForTimeout(300);
-    assert.equal(await page.getByLabel("현재 재생 시각", { exact: true }).innerText(), "00:04.80");
-    assert.match(await page.locator("[data-note-scope]").innerText(), /2\/4번째 조각/);
-    await page.getByRole("button", { name: /R 연속 캡처/ }).click();
-    await page.evaluate(() => {
-      window.__iframe.time = 5.1;
-    });
-    await page.waitForTimeout(200);
-    await page.keyboard.press("q");
-    assert.match(await page.locator("[data-note-scope]").innerText(), /3\/4번째 조각/);
-    await page.getByRole("button", { name: /R 연속 캡처/ }).click();
-    await page.getByRole("button", { name: "글자별 강조 편집", exact: true }).click();
-    assert.equal(await page.getByRole("dialog").count(), 1);
-    await page.getByRole("button", { name: "취소", exact: true }).click();
-    if (actual) {
-      await select("extra:1:1");
-      await page.locator("[data-note-row-controls] summary").click();
-      await capture(page, "inspector-selected-extra-1280.png");
-      await page.locator("[data-note-row-controls] summary").click();
-      await page.locator("[data-note-row-controls]").scrollIntoViewIfNeeded();
-      await page.screenshot({ path: join(out, "inspector-row-controls-1280.png"), fullPage: true });
-    }
-  }
-  checks.push({
-    selectedCaptureKeepsSiblingTimes: true,
-    capturePathsAgree: true,
-    timeCommitSingleUndo: true,
-    timeShortcutSaveCommitsDraft: true,
-    rowAndGlobalScopesSeparated: true,
-    noteNavigationIncludesExtraPieces: true,
-    continuousCaptureAdvancesNote: true,
-    inspectorPaintEntry: true,
-  });
-}
-
-async function verifyNotes(page, width) {
+async function verifyRows(page, width) {
   responseMode = "ready";
   saveStatus = 200;
   await page.goto(origin, { waitUntil: "networkidle" });
-  await page.locator('[aria-label="확대 파형과 Cue"] canvas').first().waitFor();
-  await page.waitForTimeout(150);
-  assert.equal(await page.locator("[data-note-track]").count(), 2);
-  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 7);
-  const wave = page.locator('[aria-label="확대 파형과 Cue"]');
-  const track = page.locator('[data-note-track="extra"]');
-  const [waveBox, trackBox] = await Promise.all([wave.boundingBox(), track.boundingBox()]);
-  assert.ok(Math.abs(waveBox.x - trackBox.x) < 1 && Math.abs(waveBox.width - trackBox.width) < 1);
-  const note = page.locator('[data-editor-note="extra:1:1"]');
-  if (!(await note.count())) {
-    await page.getByRole("button", { name: "다음 노트 구간", exact: true }).click();
-  }
-  await note.click();
-  await capture(page, `notes-${width}.png`);
-  if (width === 390) {
-    await page.getByRole("button", { name: "선택 노트 속성", exact: true }).click();
-    await page.screenshot({ path: join(out, "notes-mobile-properties.png"), fullPage: true });
-    await page.getByRole("button", { name: "노트 트랙으로 돌아가기", exact: true }).click();
-  }
-  if (width !== 1600) return;
-  const range = await wave.evaluate((el) => ({
-    start: Number(el.dataset.start),
-    end: Number(el.dataset.end),
-  }));
-  // 실제 접근성 이름은 사용자 문구 '추가 응원'을 사용한다.
-  const draw = page.getByRole("button", { name: "추가 응원 트랙에 노트 추가", exact: true });
-  const drawBox = await draw.boundingBox();
-  await draw.click({
-    position: { x: ((9 - range.start) / (range.end - range.start)) * drawBox.width, y: 45 },
-  });
-  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 8);
-  await page.getByRole("button", { name: /^저장/ }).click();
-  await page.getByText("가사와 노트의 내용·시각을 확인해 주세요.", { exact: true }).waitFor();
-  await page.getByRole("textbox", { name: "선택 노트 내용", exact: true }).fill("수동 입력");
-  await page.getByRole("button", { name: "노트 0.5초 뒤에 복제", exact: true }).click();
-  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 9);
-  await page.getByRole("button", { name: "선택 노트 삭제", exact: true }).click();
-  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 8);
-  await page.getByRole("button", { name: "실행 취소", exact: true }).click();
-  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 9);
-  await page.getByRole("button", { name: "실행 취소", exact: true }).click();
-  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 8);
-  await note.click();
-  await note.scrollIntoViewIfNeeded();
-  const box = await note.boundingBox();
-  const before = Number(await note.getAttribute("data-note-time"));
-  await page.mouse.move(box.x + 10, box.y + 12);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 70, box.y + 12, { steps: 6 });
-  assert.equal(
-    Number(await page.locator('[data-editor-note="extra:1:0"]').getAttribute("data-note-time")),
-    4,
+  assert.equal(await page.locator("[data-lyric-row]").count(), song.lyrics.length);
+  assert.equal(await page.locator("[data-note-inspector],[data-note-table]").count(), 0);
+  assert.equal(await page.locator("[data-note-track]").count(), 2, "notes are always visible");
+  await save(page);
+  assert.deepEqual(lastSaved.lyrics, song.lyrics);
+  await selectRow(page, 1);
+  const offset = page.getByRole("spinbutton", { name: "2행 2번째 조각 오프셋", exact: true });
+  await clock(page, 5.1);
+  await offset
+    .locator("xpath=..")
+    .getByTitle("현재 재생 시간으로 오프셋 캡처", { exact: true })
+    .click();
+  await save(page);
+  assert.equal(lastSaved.lyrics[1].startTime, 4);
+  assert.deepEqual(
+    lastSaved.lyrics[1].segments.map((s) => s.startTimeOffset ?? 0),
+    [0, 1.1, 1.6, 2.4],
   );
-  const preview = Number(await note.getAttribute("data-note-time"));
-  assert.ok(preview > before);
-  await page.mouse.up();
-  await page.getByRole("button", { name: "실행 취소", exact: true }).click();
-  assert.equal(Number(await note.getAttribute("data-note-time")), before);
-  await note.scrollIntoViewIfNeeded();
-  const original = await note.boundingBox();
-  await page.mouse.move(original.x + 10, original.y + 10);
+  await undo(page);
+  await page.getByRole("button", { name: "행 시간 캡처", exact: true }).click();
+  assert.equal(await rowTime(page, 1).inputValue(), "00:05.10");
+  await save(page);
+  assert.deepEqual(lastSaved.lyrics[1].segments, song.lyrics[1].segments);
+  await undo(page);
+  await rowTime(page, 1).fill("");
+  await rowTime(page, 1).press("Enter");
+  assert.equal(await rowTime(page, 1).inputValue(), "00:04.00");
+  await rowTime(page, 1).fill("5.25");
+  await rowTime(page, 1).press("Control+s");
+  await page.getByText("저장됨", { exact: true }).waitFor();
+  assert.equal(lastSaved.lyrics[1].startTime, 5.25);
+  await undo(page);
+  await page.getByText("전체 가사 시각 조정", { exact: true }).click();
+  await page.getByRole("button", { name: "전체 가사 0.1초 늦추기", exact: true }).click();
+  await save(page);
+  assert.deepEqual(
+    lastSaved.lyrics.map((l) => l.startTime),
+    [0.5, 4.1, 8.1, 13.1],
+  );
+  await undo(page);
+  if (width === 1280) {
+    await page.getByRole("button", { name: /^연속 캡처/ }).click();
+    await clock(page, 6);
+    await page.getByRole("button", { name: "행 시간 캡처", exact: true }).click();
+    assert.equal(await row(page, 2).getAttribute("aria-current"), "true");
+    await page.getByRole("button", { name: /^연속 캡처/ }).click();
+    await undo(page);
+    await selectRow(page, 0);
+    await page.getByRole("button", { name: "1행 텍스트 수정", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("textbox", { name: "3번째 조각 내용", exact: true }).fill("에코 유지");
+    await dialog.getByRole("button", { name: "저장", exact: true }).click();
+    await save(page);
+    assert.deepEqual(lastSaved.lyrics[0].segments, [
+      song.lyrics[0].segments[0],
+      song.lyrics[0].segments[1],
+      { ...song.lyrics[0].segments[2], text: "에코 유지" },
+    ]);
+    await undo(page);
+    await row(page, 0).getByRole("button", { name: "응원·에코 표시", exact: true }).click();
+    await page.getByRole("button", { name: "완료", exact: true }).click();
+    await save(page);
+    assert.deepEqual(lastSaved.lyrics, song.lyrics, "paint preserves both flags and offsets");
+    await page.getByRole("button", { name: "LRC 가져오기", exact: true }).click();
+    await page.keyboard.press("e");
+    assert.equal(await page.locator("[data-lyric-row]").count(), 4);
+    await page.getByRole("textbox", { name: "LRC 가사", exact: true }).fill("[00:02.00]검증 가사");
+    await page.getByRole("button", { name: "가져오기", exact: true }).click();
+    assert.equal(await page.locator("[data-lyric-row]").count(), 1);
+    await undo(page);
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "e", isComposing: true, bubbles: true }),
+      ),
+    );
+    assert.equal(await page.locator("[data-lyric-row]").count(), 4);
+    await page.getByRole("button", { name: "재생", exact: true }).click();
+    await page.waitForTimeout(250);
+    await page.locator("h1").click();
+    await page.keyboard.press("Space");
+    assert.equal(await page.evaluate(() => window.__iframe.state), 2);
+    await clock(page, 4.1);
+    await page.getByRole("button", { name: "다음 행으로 이동", exact: true }).click();
+    await page.waitForTimeout(300);
+    assert.equal(await page.getByLabel("현재 재생 시각", { exact: true }).innerText(), "00:08.00");
+    await rowTime(page, 1).fill("00:04.10");
+    await rowTime(page, 1).press("Enter");
+    saveStatus = 409;
+    await page
+      .locator("[data-lyrics-editor] > header")
+      .getByRole("button", { name: /^저장/ })
+      .click();
+    await page.waitForTimeout(200);
+    assert.equal(await rowTime(page, 1).inputValue(), "00:04.10");
+    assert.ok(await page.getByText("저장하지 않은 변경", { exact: true }).isVisible());
+    saveStatus = 200;
+  }
+  await capture(page, `row-editor-${width}.png`);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+  assert.equal(overflow, false);
+}
+
+async function verifyAssistant(page) {
+  responseMode = "ready";
+  await page.goto(origin, { waitUntil: "networkidle" });
+  await selectRow(page, 1);
+
+  await page.locator('[data-note-track="extra"]').waitFor();
+  await page.waitForTimeout(200);
+  const note = page.locator('[data-editor-note="extra:1:1"]');
+  if (!(await note.count()))
+    await page.getByRole("button", { name: "다음 노트 구간", exact: true }).click();
+  await note.click();
+  const before = Number(await note.getAttribute("data-note-time"));
+  const box = await note.boundingBox();
+  await page.mouse.move(box.x + 8, box.y + 12);
   await page.mouse.down();
-  await page.mouse.move(original.x + 65, original.y + 10, { steps: 4 });
+  await page.mouse.move(box.x + 65, box.y + 12, { steps: 5 });
+  assert.equal(
+    await rowTime(page, 1).inputValue(),
+    "00:04.00",
+    "preview leaves persisted row alone",
+  );
+  await page.mouse.up();
+  assert.ok(Number(await note.getAttribute("data-note-time")) > before);
+  await undo(page);
+  assert.equal(Number(await note.getAttribute("data-note-time")), before);
+  const original = await note.boundingBox();
+  await page.mouse.move(original.x + 8, original.y + 12);
+  await page.mouse.down();
+  await page.mouse.move(original.x + 60, original.y + 12, { steps: 4 });
   await page.keyboard.press("Escape");
   await page.mouse.up();
   assert.equal(Number(await note.getAttribute("data-note-time")), before);
-  await page.getByRole("button", { name: "노트 10ms 늦추기", exact: true }).click();
-  assert.equal(
-    Number(await note.getAttribute("data-note-time")),
-    Math.round((before + 0.01) * 100) / 100,
+  assert.equal(await row(page, 1).getAttribute("aria-current"), "true");
+  await page.locator('[data-editor-note="extra:1:0"]').click();
+  await note.click({ modifiers: ["Shift"] });
+  await page.getByLabel("선택 노트 문구", { exact: true }).fill("같이!");
+  await page.getByRole("button", { name: "문구 일괄 적용", exact: true }).click();
+  await save(page);
+  assert.deepEqual(
+    lastSaved.lyrics[1].segments.slice(0, 2).map((s) => s.text),
+    ["같이!", "같이!"],
   );
-  const cheer = page.getByRole("checkbox", { name: "2번째 조각 응원 강조", exact: true });
-  const echo = page.getByRole("checkbox", { name: "2번째 조각 에코 강조", exact: true });
-  assert.equal(await cheer.isChecked(), true);
-  assert.equal(await echo.isChecked(), false);
-  await echo.check();
-  assert.equal(await cheer.isChecked(), true);
-  await page.getByRole("button", { name: "실행 취소", exact: true }).click();
-  assert.equal(await cheer.isChecked(), true);
-  assert.equal(await echo.isChecked(), false);
-  await page.getByRole("button", { name: "다시 실행", exact: true }).click();
-  assert.equal(await cheer.isChecked(), true);
-  assert.equal(await echo.isChecked(), true);
-  const count = await page.locator("[data-note-table] tbody tr").count();
-  await echo.press("e");
-  assert.equal(await page.locator("[data-note-table] tbody tr").count(), count);
-  await capture(page, "notes-flags-extra.png");
-  await page.getByRole("button", { name: /^저장/ }).click();
-  await page.getByText("저장됨", { exact: true }).waitFor();
-  assert.equal(lastSaved.lyrics[1].segments[1].isCheer, true);
-  assert.equal(lastSaved.lyrics[1].segments[1].isEcho, true);
-  await page.getByRole("button", { name: "1번 노트 선택", exact: true }).click();
-  assert.equal(
-    await page.getByRole("checkbox", { name: "2번째 조각 응원 강조", exact: true }).isChecked(),
-    true,
-  );
-  assert.equal(
-    await page.getByRole("checkbox", { name: "3번째 조각 에코 강조", exact: true }).isChecked(),
-    true,
-  );
-  await page
-    .getByRole("textbox", { name: "선택 노트 3번째 조각 내용", exact: true })
-    .fill("에코 유지");
-  await capture(page, "notes-flags-mixed.png");
-  const extra = page.getByRole("checkbox", { name: "추가 응원 행", exact: true });
-  await page.locator("[data-note-row-controls] summary").click();
-  await extra.check();
-  await extra.uncheck();
-  await page.getByRole("button", { name: /^저장/ }).click();
-  await page.getByText("저장됨", { exact: true }).waitFor();
-  assert.equal(lastSaved.lyrics[0].isExtra, false);
-  assert.deepEqual(lastSaved.lyrics[0].segments, [
-    song.lyrics[0].segments[0],
-    song.lyrics[0].segments[1],
-    { ...song.lyrics[0].segments[2], text: "에코 유지" },
-  ]);
+  await undo(page);
+  await clock(page, 6);
+  await page.getByRole("button", { name: "구간 반복", exact: true }).click();
+  await page.getByLabel("반복 시작 초", { exact: true }).fill("4");
+  await page.getByLabel("반복 끝 초", { exact: true }).fill("5");
+  await page.getByRole("button", { name: "재생", exact: true }).click();
+  await page.waitForTimeout(500);
   assert.ok(
-    lastSaved.lyrics.every((line) =>
-      line.segments.every((segment) => !("segmentIndex" in segment)),
-    ),
+    await page.evaluate(() => window.__iframe.time < 5),
+    "loop uses YouTube clock and seek",
   );
-  assert.ok(
-    lastSaved.lyrics.some((line) => line.segments.some((segment) => segment.text === "수동 입력")),
-  );
+  await page.getByRole("button", { name: "일시정지", exact: true }).click();
+  await page.getByRole("button", { name: "구간 반복", exact: true }).click();
   for (const mode of ["empty", "error"]) {
     responseMode = mode;
     await page.reload({ waitUntil: "networkidle" });
     await page
       .getByText("가사 표와 시간 캡처로 계속 편집할 수 있습니다.", { exact: true })
       .waitFor();
-    assert.equal(await page.locator("canvas").count(), 0);
-    await page.evaluate(() => {
-      window.__iframe.time = 12.5;
-    });
-    await page.waitForTimeout(150);
-    await page
-      .getByRole("button", { name: "추가 응원 노트를 현재 위치에 추가", exact: true })
-      .click();
+
+    await clock(page, 12.5);
+    await page.getByRole("button", { name: "추임새 노트를 현재 위치에 추가", exact: true }).click();
     assert.equal(
-      await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).inputValue(),
-      "00:12.50",
+      await page.getByRole("dialog").count(),
+      0,
+      "adding a note does not interrupt playback with a dialog",
     );
-    await page.getByRole("textbox", { name: "선택 노트 내용", exact: true }).fill("파형 없는 입력");
-    const visible = await page
-      .locator("[data-piano-roll]")
-      .evaluate((el) => ({ start: Number(el.dataset.noteStart), end: Number(el.dataset.noteEnd) }));
-    assert.ok(visible.start <= 12.5 && visible.end > 12.5);
-    assert.equal(Math.round((visible.end - visible.start) * 100) / 100, 8);
-    assert.equal(await page.evaluate(() => window.__iframe.getCurrentTime()), 12.5);
-    assert.ok(await page.getByRole("button", { name: /노트 파형 없는 입력/ }).count());
-    await capture(page, `notes-${mode}.png`);
-    assert.equal(await page.locator("[data-note-table] tbody tr").count(), 8);
+    await page.getByLabel("선택 노트 문구", { exact: true }).fill("보조 입력");
+    await page.getByRole("button", { name: "문구 적용", exact: true }).click();
+    await save(page);
+    assert.ok(
+      lastSaved.lyrics.some(
+        (line) => line.startTime === 12.5 && line.segments[0].text === "보조 입력",
+      ),
+    );
+    assert.equal(await page.locator("[data-note-inspector],[data-note-table]").count(), 0);
   }
   checks.push({
-    noteTracksAligned: true,
-    emptyDraftBlockedOnSave: true,
-    noteDrawAndText: true,
-    duplicateDeleteUndo: true,
-    noteDragSingleUndo: true,
-    noteEscapeCancel: true,
-    fineNudge10ms: true,
-    savesLegacyJson: true,
-    noWaveformNoteInput: true,
-    pausedClockCapture: true,
-    selectedNoteRevealedWithoutSeeking: true,
-    segmentEmphasisVisibleAndEditable: true,
-    independentCheerEchoUndoRedo: true,
-    mixedSegmentsAndOffsetsRoundTrip: true,
-    extraFlagRoundTrip: true,
+    rowCaptureAndSegmentOffsetSeparated: true,
+    inlineTimeAndShortcutSave: true,
+    paintAndTextPreserveFlags: true,
+    continuousCaptureUsesRows: true,
+    notesSingleUndoAndEscape: true,
+    noWaveformNoteEntryWithoutDialog: true,
   });
 }
 
-async function verifyActualLyrics(page, width) {
-  responseMode = "empty";
+async function verifyFinalWorkflow(page) {
+  responseMode = "ready";
   saveStatus = 200;
-  await page.goto(origin + "/?actual", { waitUntil: "networkidle" });
-  const select = async (id) => {
+  await page.goto(origin, { waitUntil: "networkidle" });
+  await page.locator("h1").click();
+  for (const time of [20, 20.8, 21.6, 22.4]) {
+    await clock(page, time);
+    await page.keyboard.press("n");
+  }
+  assert.equal(await page.getByRole("dialog").count(), 0);
+  assert.equal(await page.locator("[data-lyric-row]").count(), 8);
+  for (const [index, time] of [20, 20.8, 21.6, 22.4].entries()) {
     await page
-      .locator(`[data-note-id="${id}"]`)
-      .locator("xpath=..")
-      .getByRole("button", { name: /번 노트 선택/ })
-      .click();
-  };
-  const check = (value, message) => {
-    if (!value) regressions.push(`${width}: ${message}`);
-  };
-  const color = (locator) => locator.evaluate((el) => getComputedStyle(el).color);
-  assert.equal(await page.locator("[data-note-table] tbody tr").count(), 68);
-  await page.getByRole("button", { name: /^저장/ }).click();
-  await page.getByText("저장됨", { exact: true }).waitFor();
-  assert.deepEqual(lastSaved.lyrics, actualLyrics, "unchanged real lyrics must round-trip exactly");
-  const echoColor = await color(page.locator('[data-note-id="line:0"] input'));
-  await select("line:5");
-  const mixed = page.locator('[data-note-id="line:5"]');
+      .locator(`[data-editor-note][data-note-time="${time}"]`)
+      .click({ modifiers: index ? ["Shift"] : [] });
+  }
+  await page.getByRole("button", { name: "한 줄로 묶기", exact: true }).click();
+  assert.equal(await page.locator("[data-lyric-row]").count(), 5);
+  await page.getByLabel("선택 노트 문구", { exact: true }).fill("어이!");
+  await page.getByRole("button", { name: "문구 일괄 적용", exact: true }).click();
+  await save(page);
+  assert.deepEqual(lastSaved.lyrics[4], {
+    startTime: 20,
+    isExtra: true,
+    segments: [0, 0.8, 1.6, 2.4].map((startTimeOffset) => ({
+      text: "어이!",
+      isCheer: true,
+      isEcho: false,
+      startTimeOffset,
+    })),
+  });
+  assert.equal(await page.locator("[data-save-state]").getAttribute("data-save-state"), "saved");
+  await page.locator("h1").click();
+  await page.keyboard.press("ArrowRight");
+  await save(page);
+  assert.equal(lastSaved.lyrics[4].startTime, 20.01);
+  assert.deepEqual(
+    lastSaved.lyrics[4].segments.map((s) => s.startTimeOffset),
+    [0, 0.8, 1.6, 2.4],
+  );
+  await undo(page); // nudge
+  await undo(page); // batch text
+  await undo(page); // group
+  assert.equal(await page.locator("[data-lyric-row]").count(), 8);
+  await page.getByRole("button", { name: "다시 실행", exact: true }).click();
+  await page.getByRole("button", { name: "다시 실행", exact: true }).click();
+  await page.locator('[data-editor-note][data-note-time="22.4"]').click();
+  await clock(page, 23.2);
+  await page.getByRole("button", { name: "이 줄에 노트 추가", exact: true }).click();
+  assert.equal(await page.locator("[data-lyric-row]").count(), 5);
+  await page.getByLabel("선택 노트 문구", { exact: true }).fill("마지막 응원!");
+  await page.getByRole("button", { name: "문구 적용", exact: true }).click();
+  await save(page);
+  assert.deepEqual(
+    lastSaved.lyrics[4].segments.map((s) => s.startTimeOffset),
+    [0, 0.8, 1.6, 2.4, 3.2],
+  );
+  const long = await page.locator('[data-editor-note][data-note-time="23.2"]').boundingBox();
+  const short = await page.locator('[data-editor-note][data-note-time="22.4"]').boundingBox();
+  assert.ok(long.width > short.width, "note width follows text");
+  const snapshot = structuredClone(lastSaved.lyrics);
+  await page.locator("h1").click();
+  await page.keyboard.type("qwer");
+  await save(page);
+  assert.deepEqual(lastSaved.lyrics, snapshot, "old shortcuts do not alter lyrics");
+  await capture(page, "final-group-workflow-1280.png");
+  checks.push({
+    markerEntryWithoutDialog: true,
+    groupFourIntoOneLine: true,
+    groupUndoRedo: true,
+    batchTextAndNudge: true,
+    appendKeepsGroup: true,
+    contentWidth: true,
+    oldShortcutsRemoved: true,
+  });
+}
+
+async function verifyActual(page, width) {
+  responseMode = "ready";
+  await page.goto(origin + "/?actual", { waitUntil: "networkidle" });
+  await save(page);
+  assert.deepEqual(lastSaved.lyrics, actualLyrics);
+  await selectRow(page, 1);
+  if (width === 390) await page.getByRole("button", { name: "파형 축소", exact: true }).click();
+  await page.waitForTimeout(150);
+  for (const [index, time] of [4, 4.8, 5.6, 6.4].entries()) {
+    await page
+      .locator(`[data-editor-note][data-note-time="${time}"]`)
+      .click({ modifiers: index ? ["Shift"] : [] });
+  }
+  await capture(page, `final-editor-${width}.png`);
+  const preview = await page
+    .locator("[data-preview-time]")
+    .evaluateAll((nodes) =>
+      nodes.map((n) => ({ time: Number(n.dataset.previewTime), left: parseFloat(n.style.left) })),
+    );
+  for (const time of [4, 4.8, 5.6, 6.4])
+    assert.ok(
+      preview.some(
+        (item) => Math.abs(item.time - time) < 0.001 && Math.abs(item.left - time * 150) < 0.01,
+      ),
+    );
+  await selectRow(page, 5);
   assert.equal(
-    await mixed.locator('[data-seg="1"]').textContent(),
+    await row(page, 5).locator('[data-seg="1"]').textContent(),
     actualLyrics[5].segments[1].text,
   );
-  await page.evaluate(() => window.__dismissToasts());
-  await page.waitForTimeout(200);
-  await capture(page, `actual-editor-mixed-${width}.png`);
-  if (width === 390) {
-    await page.getByRole("button", { name: "선택 노트 속성", exact: true }).click();
-    const back = await page
-      .getByRole("button", { name: "노트 트랙으로 돌아가기", exact: true })
-      .boundingBox();
-    const header = await page.locator("[data-lyrics-editor] > header").boundingBox();
-    assert.ok(
-      back.y >= header.y + header.height && back.y + back.height <= 1000,
-      "mobile return remains visible after jumping to properties",
-    );
-    await page.screenshot({ path: join(out, "actual-mobile-properties.png"), fullPage: true });
-    await page.getByRole("button", { name: "노트 트랙으로 돌아가기", exact: true }).click();
-  }
-  const extraColor = await color(page.locator('[data-note-id="extra:1:0"] [data-seg="0"]'));
-  // The preview must place each of the four real '어이!' cues .8 s apart.
-  await page.getByText("실시간 응원 미리보기", { exact: true }).click();
-  const preview = page
-    .locator("details")
-    .filter({ has: page.getByText("실시간 응원 미리보기", { exact: true }) });
-  const positions = await preview.locator("span").evaluateAll((nodes) =>
-    nodes
-      .filter((n) => n.childElementCount === 0 && n.textContent.trim() === "어이!")
-      .slice(0, 4)
-      .map((n) => n.getBoundingClientRect().x),
+  assert.ok(
+    await row(page, 5)
+      .locator('[data-seg="1"]')
+      .evaluate((el) => {
+        const parent = el.parentElement.getBoundingClientRect();
+        return [...el.getClientRects()].every(
+          (r) =>
+            r.left >= parent.left - 1 &&
+            r.right <= parent.right + 1 &&
+            r.bottom <= parent.bottom + 1,
+        );
+      }),
+    "mixed echo stays visible within lyric text column",
   );
-  check(
-    positions.length === 4 && positions.every((v, i) => Math.abs(v - positions[0] - i * 120) < 1),
-    "preview ignores .8/1.6/2.4 offsets",
-  );
-  await page.getByText("실시간 응원 미리보기", { exact: true }).click();
+  await capture(page, `actual-row-editor-${width}.png`);
+  await page.getByRole("button", { name: "6행 텍스트 수정", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("textbox", { name: "2번째 조각 내용", exact: true })
+    .fill(actualLyrics[5].segments[1].text + "!");
+  await page.getByRole("dialog").getByRole("button", { name: "저장", exact: true }).click();
+  await save(page);
+  const expected = structuredClone(actualLyrics);
+  expected[5].segments[1].text += "!";
+  assert.deepEqual(lastSaved.lyrics, expected);
+  await undo(page);
   if (width === 1280) {
-    await page.locator("[data-lyric-details] summary").click();
-    await page.getByRole("button", { name: "6행 텍스트 수정", exact: true }).click();
-    await page
-      .getByRole("textbox", { name: "2번째 조각 내용", exact: true })
-      .fill(actualLyrics[5].segments[1].text + "!");
-    await page.getByRole("dialog").getByRole("button", { name: "저장", exact: true }).click();
-    await page.getByRole("dialog").waitFor({ state: "hidden" });
-    await Promise.all([
-      page.waitForResponse((r) => r.url().endsWith("/save") && r.request().method() === "POST"),
-      page.getByRole("button", { name: /^저장/ }).click(),
-    ]);
-    const expected = structuredClone(actualLyrics);
-    expected[5].segments[1].text += "!";
-    assert.deepEqual(
-      lastSaved.lyrics,
-      expected,
-      "raw text edit preserves every other segment and property",
-    );
-    await page.getByRole("button", { name: "실행 취소", exact: true }).click();
-    await page.getByRole("button", { name: "3번 노트 강조 편집", exact: true }).click();
+    await selectRow(page, 1);
+    await row(page, 1).getByRole("button", { name: "응원·에코 표시", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "에코", exact: true }).click();
     await page.locator('[data-char-idx="5"]').click();
     await page.getByRole("button", { name: "완료", exact: true }).click();
-    await Promise.all([
-      page.waitForResponse((r) => r.url().endsWith("/save") && r.request().method() === "POST"),
-      page.getByRole("button", { name: /^저장/ }).click(),
-    ]);
+    await save(page);
     const pieces = lastSaved.lyrics[1].segments.filter((s) => s.startTimeOffset === 0.8);
     assert.equal(pieces.length, 3);
     assert.equal(pieces.map((s) => s.text).join(""), actualLyrics[1].segments[1].text);
-    assert.equal("startTimeOffset" in lastSaved.lyrics[1].segments[0], false);
     await page.goto(origin + "/viewer?saved", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "영상 재생", exact: true }).click();
-    await page.evaluate(() => {
-      window.__iframe.time = 4.81;
-    });
-    await page.waitForTimeout(100);
-    const piecesInViewer = page
+    await clock(page, 4.81);
+    const segments = page
       .getByRole("region", { name: "응원법 가사" })
       .getByRole("button")
       .nth(1)
       .locator("[data-lyric-segment]");
     for (const index of [1, 2, 3])
       assert.equal(
-        await piecesInViewer.nth(index).evaluate((el) => getComputedStyle(el).textDecorationLine),
+        await segments.nth(index).evaluate((el) => getComputedStyle(el).textDecorationLine),
         "underline",
       );
-    const rects = await piecesInViewer.evaluateAll((nodes) =>
-      nodes.slice(1, 4).map((el) => ({
-        left: el.getBoundingClientRect().left,
-        right: el.getBoundingClientRect().right,
-      })),
-    );
-    assert.ok(
-      rects.slice(1).every((box, i) => Math.abs(box.left - rects[i].right) < 1),
-      "pieces of one cue render as one word",
-    );
-    await capture(page, "actual-viewer-split-call-1280.png");
-    checks.push({
-      actualMixedTextSavePreservesMetadata: true,
-      actualPaintPiecesKeepOffset: true,
-      sameCuePiecesRenderTogether: true,
-    });
     await page.goto(origin + "/?actual", { waitUntil: "networkidle" });
-    await select("extra:1:1");
-    await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).fill("6.5");
-    await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).press("Enter");
-    await select("line:4");
-    await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).fill("20");
-    await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).press("Enter");
-    await page.getByRole("button", { name: /^저장/ }).click();
-    await page.getByText("저장됨", { exact: true }).waitFor();
-  }
-  await page.goto(origin + "/viewer" + (width === 1280 ? "?saved" : ""), {
-    waitUntil: "networkidle",
-  });
-  await page.getByRole("button", { name: "영상 재생", exact: true }).click();
-  const lines = page.getByRole("region", { name: "응원법 가사" }).getByRole("button");
-  assert.equal(await lines.count(), 41);
-  const publicEcho = await color(lines.nth(0).locator("[data-lyric-segment]"));
-  const publicExtra = await color(lines.nth(1).locator("[data-lyric-segment]").first());
-  check(echoColor === publicEcho, `editor echo ${echoColor} differs from viewer ${publicEcho}`);
-  check(
-    extraColor === publicExtra,
-    `editor extra ${extraColor} differs from viewer ${publicExtra}`,
-  );
-  await page.evaluate(() => {
-    window.__iframe.time = 19.8;
-  });
-  await page.waitForTimeout(100);
-  assert.equal(
-    await lines.nth(5).locator("[data-lyric-segment]").nth(1).textContent(),
-    actualLyrics[5].segments[1].text,
-  );
-  await capture(page, `actual-viewer-mixed-${width}.png`);
-  if (width === 1280) {
-    await page.evaluate(() => {
-      window.__iframe.time = 6.51;
-    });
-    await page.waitForTimeout(100);
-    check(
-      (await lines
+    await selectRow(page, 1);
+    await page.getByRole("spinbutton", { name: "2행 2번째 조각 오프셋", exact: true }).fill("2.5");
+    await rowTime(page, 4).fill("00:20.00");
+    await rowTime(page, 4).press("Enter");
+    await save(page);
+    await page.goto(origin + "/viewer?saved", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "영상 재생", exact: true }).click();
+    await clock(page, 6.51);
+    const lines = page.getByRole("region", { name: "응원법 가사" }).getByRole("button");
+    assert.equal(
+      await lines
         .nth(1)
-        .locator(":scope>span>span")
+        .locator("[data-lyric-segment]")
         .nth(1)
-        .evaluate((el) => getComputedStyle(el).textDecorationLine)) === "underline",
-      "moved extra cue at6.5 does not activate in viewer",
+        .evaluate((el) => getComputedStyle(el).textDecorationLine),
+      "underline",
     );
-    await page.evaluate(() => {
-      window.__iframe.time = 20.1;
-    });
-    await page.waitForTimeout(100);
-    check(
-      (await lines.nth(4).getAttribute("aria-current")) === "true",
-      "moved lyric row at20 loses to array order in viewer",
-    );
+    await clock(page, 20.1);
+    assert.equal(await lines.nth(4).getAttribute("aria-current"), "true");
   }
+  checks.push({
+    width,
+    legacyRowEditingPreserved: true,
+    duplicateEditorsAbsent: true,
+    actualTextMetadataPreserved: true,
+  });
 }
 
 try {
   for (const width of [1600, 1280, 390]) {
-    responseMode = "ready";
-    saveStatus = 200;
     const page = await browser.newPage({ viewport: { width, height: 1000 } });
+    page.setDefaultTimeout(10000);
     await page.route(/^https:\/\/(?:img\.youtube\.com|i\.ytimg\.com)\//, (route) =>
       route.fulfill({
         contentType: "image/gif",
         body: Buffer.from("R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==", "base64"),
       }),
     );
-    page.setDefaultTimeout(10000);
     const errors = [];
-    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("pageerror", (error) => errors.push(error.message));
     page.on("console", (message) => {
-      const expectedFailure =
-        /^Failed to load resource:.*(?:409|500)/.test(message.text()) &&
-        /\/(save|api\/admin\/songs\/)/.test(message.location().url);
-      if (message.type() === "error" && !expectedFailure)
-        errors.push(message.text() + " " + message.location().url);
+      if (
+        message.type() === "error" &&
+        !/^Failed to load resource:.*(?:409|500)/.test(message.text())
+      )
+        errors.push(message.text());
     });
-    await page.goto(origin, { waitUntil: "networkidle" });
-    await page.locator('[aria-label="확대 파형과 Cue"] canvas').first().waitFor();
-    await page.getByRole("button", { name: "선택", exact: true }).click();
-    await page.locator("[data-lyric-details] summary").click();
-    await page.getByRole("button", { name: "2행 선택", exact: true }).click();
-    await page.waitForTimeout(200);
-    assert.ok(
-      (await page.locator("canvas").count()) >= 2,
-      JSON.stringify({ errors, text: await page.locator("body").innerText() }),
-    );
-    assert.equal(
-      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
-      false,
-    );
-    await capture(page, `editor-${width}.png`);
-    if (width === 390) {
-      await page.getByRole("button", { name: "2행 선택", exact: true }).scrollIntoViewIfNeeded();
-      await page.getByRole("textbox", { name: "2행 1번째 조각 텍스트", exact: true }).fill("");
-      await page.screenshot({ path: join(out, "editor-mobile-table.png"), fullPage: true });
+    await verifyRows(page, width);
+    if (width === 1280) {
+      await verifyAssistant(page);
+      await verifyFinalWorkflow(page);
     }
-    if (width === 1600) {
-      const canvas = page.locator('[aria-label="확대 파형과 Cue"]');
-      const box = await canvas.boundingBox();
-      const range = await canvas.evaluate((el) => ({
-        start: Number(el.dataset.start),
-        end: Number(el.dataset.end),
-      }));
-      const x = box.x + ((4 - range.start) / (range.end - range.start)) * box.width + 15,
-        y = box.y + box.height - 40;
-      const before = await page
-        .getByRole("textbox", { name: "2행 시작 시각", exact: true })
-        .inputValue();
-      await page.mouse.move(x, y);
-      await page.mouse.down();
-      await page.mouse.move(x + 65, y, { steps: 8 });
-      await page.waitForTimeout(100);
-      assert.equal(
-        await page.getByRole("textbox", { name: "2행 시작 시각", exact: true }).inputValue(),
-        before,
-      );
-      await capture(page, "editor-drag.png");
-      await page.mouse.up();
-      await page.waitForTimeout(100);
-      assert.notEqual(
-        await page.getByRole("textbox", { name: "2행 시작 시각", exact: true }).inputValue(),
-        before,
-      );
-      await page.getByRole("button", { name: "실행 취소", exact: true }).click();
-      assert.equal(
-        await page.getByRole("textbox", { name: "2행 시작 시각", exact: true }).inputValue(),
-        before,
-      );
-      await page.mouse.move(x, y);
-      await page.mouse.down();
-      await page.mouse.move(x + 55, y, { steps: 5 });
-      await page.keyboard.press("Escape");
-      await page.mouse.up();
-      assert.equal(
-        await page.getByRole("textbox", { name: "2행 시작 시각", exact: true }).inputValue(),
-        before,
-      );
-      const input = page.getByRole("textbox", { name: "참고 영상", exact: true });
-      await input.focus();
-      await page.keyboard.type("qwer");
-      assert.equal(await page.locator("[data-lyric-row]").count(), 4);
-      await input.fill(song.youtubeId);
-      await input.blur();
-      await page.getByRole("button", { name: "LRC 가져오기", exact: true }).click();
-      await page.keyboard.press("e");
-      assert.equal(await page.locator("[data-lyric-row]").count(), 4);
-      await page.keyboard.press("Escape");
-      await page.getByRole("button", { name: "재생", exact: true }).click();
-      await page.waitForTimeout(250);
-      await page.keyboard.press("w");
-      assert.equal(await page.evaluate(() => window.__iframe.getPlayerState()), 2);
-      await page.getByRole("button", { name: "다음 노트로 이동", exact: true }).click();
-      await page.waitForTimeout(300);
-      assert.equal(
-        await page.getByLabel("현재 재생 시각", { exact: true }).innerText(),
-        "00:04.80",
-      );
-      await page.evaluate(() => {
-        window.__iframe.time = 9.25;
-      });
-      await page.waitForTimeout(150);
-      await page.keyboard.press("q");
-      assert.equal(
-        await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).inputValue(),
-        "00:09.25",
-      );
-      await page.getByRole("button", { name: "실행 취소", exact: true }).click();
-      await page.keyboard.press("e");
-      assert.equal(await page.locator("[data-lyric-row]").count(), 5);
-      await page.getByRole("button", { name: "실행 취소", exact: true }).click();
-      await page.evaluate(() =>
-        window.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "e", isComposing: true, bubbles: true }),
-        ),
-      );
-      assert.equal(await page.locator("[data-lyric-row]").count(), 4);
-      await page.keyboard.press("r");
-      assert.equal(
-        await page.getByRole("button", { name: /R 연속 캡처/ }).getAttribute("aria-pressed"),
-        "true",
-      );
-      await page.keyboard.press("r");
-      await page.getByRole("button", { name: "LRC 가져오기", exact: true }).click();
-      await page
-        .getByRole("textbox", { name: "LRC 가사", exact: true })
-        .fill("[00:02.00]검증 가사");
-      await page.getByRole("button", { name: "가져오기", exact: true }).click();
-      assert.equal(await page.locator("[data-lyric-row]").count(), 1);
-      await page.getByRole("button", { name: "실행 취소", exact: true }).click();
-      assert.equal(await page.locator("[data-lyric-row]").count(), 4);
-      await page.getByRole("button", { name: "2행 선택", exact: true }).click();
-      await page.locator("[data-note-row-controls] summary").click();
-      await page.getByRole("button", { name: "선택 행 0.1초 늦추기", exact: true }).click();
-      const draft = await page
-        .getByRole("textbox", { name: "2행 시작 시각", exact: true })
-        .inputValue();
-      saveStatus = 409;
-      await page.getByRole("button", { name: /^저장/ }).click();
-      await page.waitForTimeout(200);
-      assert.equal(
-        await page.getByRole("textbox", { name: "2행 시작 시각", exact: true }).inputValue(),
-        draft,
-      );
-      assert.ok(await page.getByText("저장하지 않은 변경", { exact: true }).isVisible());
-      for (const mode of ["empty", "error"]) {
-        responseMode = mode;
-        await page.reload({ waitUntil: "networkidle" });
-        await page
-          .getByText("가사 표와 시간 캡처로 계속 편집할 수 있습니다.", { exact: true })
-          .waitFor();
-        assert.equal(await page.locator("canvas").count(), 0);
-        assert.equal(await page.locator("[data-lyric-row]").count(), 4);
-        await capture(page, `editor-${mode}.png`);
-      }
-      checks.push({
-        dragCommitsOnce: true,
-        escapeCancels: true,
-        actualClockPlaybackSeekCapture: true,
-        extraRowRecordingAndLrcUndo: true,
-        imeBlocksShortcuts: true,
-        inputAndDialogBlockShortcuts: true,
-        failedSaveKeepsDraft: true,
-        emptyAndErrorKeepEditor: true,
-      });
-    }
-    await verifyNotes(page, width);
-    await verifyActualLyrics(page, width);
-    if (width === 1280) await verifyInspector(page);
-    assert.equal(errors.length, 0, errors.join("\n"));
-    checks.push({ width, overflow: false, errors });
+    await verifyActual(page, width);
+    assert.deepEqual(errors, []);
     await page.close();
   }
   const corpusResults = [];
@@ -939,17 +704,10 @@ try {
     responseMode = "empty";
     saveStatus = 200;
     await corpusPage.goto(origin + "/?actual&index=" + index, { waitUntil: "networkidle" });
-    const expectedNotes = source.lyrics.reduce(
-      (n, line) => n + (line.isExtra ? line.segments.length : 1),
-      0,
-    );
-    assert.equal(
-      await corpusPage.locator("[data-note-table] tbody tr").count(),
-      expectedNotes,
-      source.title,
-    );
+    const expectedRows = source.lyrics.length;
+    assert.equal(await corpusPage.locator("[data-lyric-row]").count(), expectedRows, source.title);
     const editorColors = await corpusPage
-      .locator("[data-note-table] [data-line][data-seg]")
+      .locator("[data-lyric-row] [data-line][data-seg]")
       .evaluateAll((nodes) =>
         nodes.map((n) => ({
           line: Number(n.dataset.line),
@@ -997,7 +755,7 @@ try {
     corpusResults.push({
       title: source.title,
       lines: source.lyrics.length,
-      notes: expectedNotes,
+      rows: expectedRows,
       unchangedSave: true,
       textAndColors: true,
     });

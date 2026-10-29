@@ -3,7 +3,7 @@
 import { useCallback, useState, useSyncExternalStore } from "react";
 import type { WaveformData } from "@oioi-bwg/contracts/waveform";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { LocateFixed, Maximize2, Minus, MousePointer2, Pencil, Plus } from "lucide-react";
+import { ListChecks, LocateFixed, Maximize2, Minus, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
 
 import { Button } from "@/shared/ui/button";
@@ -41,6 +41,10 @@ export function WaveformPanel({
   duration,
   disabled = false,
   selected,
+  selectedIds,
+  onMove,
+  loop,
+  onLoopRange,
   onSelect,
   onEdit,
   onPreview,
@@ -53,7 +57,7 @@ export function WaveformPanel({
   onCuePreview: (preview: CuePreview | null) => void;
 }) {
   const editor = useLyricsEditorContext();
-  const [mode, setMode] = useState<"select" | "draw">("draw");
+  const [multiple, setMultiple] = useState(false);
   const compact = useSyncExternalStore(subscribeCompact, getCompact, getServerCompact);
   const [choice, setChoice] = useState<number | "auto" | null>(null);
   const seconds = choice ?? (compact ? 4 : 8);
@@ -109,33 +113,22 @@ export function WaveformPanel({
       className="border-border min-w-0 overflow-hidden border-y"
       aria-labelledby="waveform-heading"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <h2 id="waveform-heading" className="sr-only">
-          파형과 노트 타임라인
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
+        <h2 id="waveform-heading" className="text-sm font-medium">
+          파형 · 노트
         </h2>
         <div className="flex items-center gap-1">
           <Button
-            variant={mode === "select" ? "secondary" : "ghost"}
-            size="sm"
-            aria-pressed={mode === "select"}
-            disabled={disabled}
-            onClick={() => setMode("select")}
+            variant="ghost"
+            size="icon"
+            aria-label="여러 노트 선택"
+            title="여러 노트 선택"
+            aria-pressed={multiple}
+            onClick={() => setMultiple(!multiple)}
+            className={multiple ? "text-cyan-300" : ""}
           >
-            <MousePointer2 size={14} />
-            선택
+            <ListChecks size={16} />
           </Button>
-          <Button
-            variant={mode === "draw" ? "secondary" : "ghost"}
-            size="sm"
-            aria-pressed={mode === "draw"}
-            disabled={disabled}
-            onClick={() => setMode("draw")}
-          >
-            <Pencil size={14} />
-            그리기
-          </Button>
-        </div>
-        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
@@ -151,7 +144,6 @@ export function WaveformPanel({
             variant="ghost"
             size="icon"
             aria-label="파형 축소"
-            disabled={!canRender}
             onClick={() => setSeconds(Math.min(duration, (range.end - range.start) * 2))}
           >
             <Minus size={15} />
@@ -163,7 +155,7 @@ export function WaveformPanel({
             variant="ghost"
             size="icon"
             aria-label="파형 확대"
-            disabled={!canRender || zoom.end - zoom.start <= zoom.minimum + 0.05}
+            disabled={range.end - range.start <= Math.max(0.5, zoom.minimum) + 0.05}
             onClick={() => setSeconds(Math.max(0.5, (range.end - range.start) / 2))}
           >
             <Plus size={15} />
@@ -172,7 +164,6 @@ export function WaveformPanel({
             variant="ghost"
             size="icon"
             aria-label="전체 파형 보기"
-            disabled={!canRender}
             onClick={() => setSeconds("auto")}
           >
             <Maximize2 size={14} />
@@ -199,7 +190,9 @@ export function WaveformPanel({
           player={editor.player}
           lyrics={editor.lyrics}
           selected={editor.currentIndex}
-          showCuePoints={mode === "select"}
+          showCuePoints={false}
+          loop={loop}
+          range={range}
           seconds={seconds}
           follow={follow}
           navigation={navigation}
@@ -243,9 +236,13 @@ export function WaveformPanel({
         duration={duration}
         blocked={disabled || editor.isAdPlaying}
         onNavigate={navigate}
-        mode={mode}
+        mode="draw"
         selected={selected}
-        onSelect={onSelect}
+        selectedIds={selectedIds}
+        loop={loop}
+        onLoopRange={onLoopRange}
+        onSelect={(note, additive) => onSelect(note, additive || multiple)}
+        onMove={onMove}
         onEdit={onEdit}
         onPreview={onPreview}
       />

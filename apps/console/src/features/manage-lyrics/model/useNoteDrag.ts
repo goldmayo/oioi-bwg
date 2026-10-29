@@ -10,6 +10,7 @@ export function useNoteDrag({
   blocked,
   span,
   duration,
+  selectedNotes = [],
   onSelect,
   onCommit,
   onPreview,
@@ -18,6 +19,7 @@ export function useNoteDrag({
   blocked: boolean;
   span: number;
   duration: number;
+  selectedNotes?: EditorNote[];
   onSelect: (note: EditorNote) => void;
   onCommit: (id: string, time: number) => void;
   onPreview: (preview: { id: string; time: number } | null) => void;
@@ -34,6 +36,8 @@ export function useNoteDrag({
     element: HTMLButtonElement;
     pointer: number;
     moved: boolean;
+    min: number;
+    max: number;
   } | null>(null);
   useEffect(() => {
     latest.current = { lyrics, blocked, onCommit, onPreview };
@@ -81,6 +85,21 @@ export function useNoteDrag({
       element: event.currentTarget,
       pointer: event.pointerId,
       moved: false,
+      min:
+        note.time -
+        Math.min(
+          ...(selectedNotes.some((n) => n.id === note.id) ? selectedNotes : [note]).map(
+            (n) => n.time,
+          ),
+        ),
+      max:
+        note.time +
+        duration -
+        Math.max(
+          ...(selectedNotes.some((n) => n.id === note.id) ? selectedNotes : [note]).map(
+            (n) => n.time,
+          ),
+        ),
     };
   };
   const onPointerMove = (event: PointerEvent<HTMLButtonElement>) => {
@@ -95,8 +114,11 @@ export function useNoteDrag({
     active.time =
       Math.round(
         Math.max(
-          0,
-          Math.min(duration, active.original + ((event.clientX - active.x) / active.width) * span),
+          active.min,
+          Math.min(
+            active.max,
+            active.original + ((event.clientX - active.x) / active.width) * span,
+          ),
         ) * 100,
       ) / 100;
     setPreview({ id: active.id, time: active.time });

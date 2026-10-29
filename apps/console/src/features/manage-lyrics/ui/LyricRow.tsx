@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
 
-import { formatTime, parseTime } from "../lib/lrc-parser";
+import { formatTime } from "../lib/lrc-parser";
 
 import { ExtraSegmentEditor } from "./ExtraSegmentEditor";
 import { lyricEmphasisClass } from "./lyric-emphasis";
@@ -29,7 +29,13 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
   const [paintOpen, setPaintOpen] = useState(false);
   const [textOpen, setTextOpen] = useState(false);
   const commit = () => {
-    const parsed = parseTime(time);
+    const text = time.trim();
+    const parts = /^(\d+):([0-5]?\d(?:\.\d{1,3})?)$/.exec(text);
+    const parsed = parts
+      ? Number(parts[1]) * 60 + Number(parts[2])
+      : /^\d+(?:\.\d+)?$/.test(text)
+        ? Number(text)
+        : NaN;
     if (Number.isFinite(parsed) && parsed >= 0) editor.updateLine(index, { startTime: parsed });
     else setTime(formatTime(line.startTime));
   };
@@ -70,7 +76,7 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
             className="h-8 px-2 text-center font-mono text-xs tabular-nums"
           />
           <div
-            className="flex min-w-0 items-center gap-2 overflow-hidden text-sm"
+            className="min-w-0 py-2 text-sm break-words"
             onMouseUp={(e) => editor.handleMouseUpText(e, index)}
           >
             {line.segments.map((segment, i) => (
@@ -79,7 +85,7 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
                 data-line={index}
                 data-seg={i}
                 className={cn(
-                  "shrink-0 whitespace-pre",
+                  "whitespace-pre-wrap",
                   lyricEmphasisClass(segment, line.isExtra),
                   segment.isCheer && "font-semibold",
                 )}
@@ -137,7 +143,7 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
                 onClick={() => setPaintOpen(true)}
               >
                 <Paintbrush size={13} />
-                속성 칠하기
+                응원·에코 표시
               </Button>
               <Button
                 variant="ghost"
