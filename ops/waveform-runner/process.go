@@ -33,7 +33,7 @@ func (c *Consumer) ConsumeOne(ctx context.Context, jobs *JobClient, worker Fixed
 // Process는 수신한 한 건을 lease 안에서 처리한다. 일시 오류는 재전달에 맡긴다.
 // approved는 보호된 운영 설정이며 Queue가 변경할 수 없다.
 func (c *Consumer) Process(ctx context.Context, d *Delivery, jobs *JobClient, worker FixedWorker, approved []string) error {
-	if jobs == nil || worker == nil {
+	if jobs == nil || worker == nil || d == nil || d.deadLetter {
 		return ErrConfiguration
 	}
 	return c.RunWithLease(ctx, d, func(ctx context.Context) error {
@@ -77,31 +77,36 @@ func (c *Consumer) Process(ctx context.Context, d *Delivery, jobs *JobClient, wo
 			return ErrWorkUnconfirmed
 		}
 		ack, err := jobs.Complete(ctx, Terminal{JobID: d.JobID, AttemptID: start.AttemptID, Status: "SUCCEEDED", Result: result})
-		if err == nil && terminalStatus(ack.Status) {
-			return c.Delete(ctx, d)
-		}
-		if err == ErrJobNotFound {
-			return c.Delete(ctx, d)
-		}
-		if err != nil && err != ErrJobAPI {
-			return err
-		}
-		// 응답 유실·이전 attempt 거절 뒤에도 같은 Job의 정본만 재확인한다.
-		current, lookupErr := jobs.Get(ctx, d.JobID)
-		if lookupErr == ErrJobNotFound {
-			return c.Delete(ctx, d)
-		}
-		if lookupErr != nil {
-			return lookupErr
-		}
-		if current.SongID != d.SongID || current.VideoID != d.VideoID {
-			return ErrPayload
-		}
-		if terminalStatus(current.Status) {
-			return c.Delete(ctx, d)
-		}
-		return ErrWorkUnconfirmed
+		return c.confirmTerminal(ctx, d, jobs, ack, err)
 	})
 }
 
 func terminalStatus(status string) bool { return status == "SUCCEEDED" || status == "FAILED" }
+
+// confirmTerminal은 DB terminal/명확한 삭제가 확인된 뒤에만 receipt를 삭제한다.
+func (c *Consumer) confirmTerminal(ctx context.Context, d *Delivery, jobs *JobClient, ack TerminalAck, err error) error {
+	if err == nil && terminalStatus(ack.Status) {
+		return c.Delete(ctx, d)
+	}
+	if err == ErrJobNotFound {
+		return c.Delete(ctx, d)
+	}
+	if err != nil && err != ErrJobAPI {
+		return err
+	}
+	// 응답 유실·이전 attempt 거절 뒤에도 같은 Job의 정본만 재확인한다.
+	current, lookupErr := jobs.Get(ctx, d.JobID)
+	if lookupErr == ErrJobNotFound {
+		return c.Delete(ctx, d)
+	}
+	if lookupErr != nil {
+		return lookupErr
+	}
+	if current.SongID != d.SongID || current.VideoID != d.VideoID {
+		return ErrPayload
+	}
+	if terminalStatus(current.Status) {
+		return c.Delete(ctx, d)
+	}
+	return ErrWorkUnconfirmed
+}
