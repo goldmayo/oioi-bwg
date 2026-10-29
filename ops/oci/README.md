@@ -227,7 +227,13 @@ Environment에는 기존 development branch를 유지하면서 `refs/pull/*/merg
 실제 VM 적용은 [B0 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의
 B0-1 승인 작업이다. 기존 SSH에서 nft/iptables backend·forward/flowtable·firewall reload 규칙,
 Docker unit/drop-in·live-restore와 Web container를 선택 조회한다. env/inspect 전체는 출력하지 않는다.
-probe는 mount·추가 capability·privileged가 없는 bridge container만 허용한다.
+기존 `probe`는 mount·추가 capability·privileged가 없는 bridge container만 허용한다.
+P08의 별도 `probe-console`은 Compose project=`oioi-bwg-development`, service=`console`인
+container의 `/run/oioi-waveform` → 같은 경로 bind 한 개만 허용한다. `ro`·RW=false·rprivate를
+모두 확인하고 다른 mount·Web label·다른 project는 거절한다. 양성 대조·차단 counter 기준은 동일하다.
+이 경로는 socket 설치 후의 수용 점검용이며 mount나 서비스 설정을 생성하지 않는다. 호스트에서
+실행할 명령은 `sudo python3 -I /usr/local/lib/oioi-metadata-guard/metadata-guard.py probe-console <console-container>`다.
+실제 설치 파일 교체와 점검은 P08 VM 작업 범위를 승인받은 뒤 수행한다.
 이 조건과 맞지 않거나 forwarded IMDS가 필요한 다른 workload가 있으면 적용 전에 변경안을 재검토한다.
 
 승인할 변경은 `/usr/local/lib/oioi-metadata-guard/`의 `metadata-guard.py`·`metadata-probe.mjs`,

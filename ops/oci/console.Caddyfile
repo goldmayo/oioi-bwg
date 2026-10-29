@@ -1,6 +1,9 @@
 # 수동 검토용 조각. 기존 preview block은 보존한다. 자동 설치/reload하지 않는다.
 # Caddy 2.6.2 호환. import 시 host와 검증한 단일 client IP를 전달한다.
 (console_upstream) {
+	# Runner는 VM loopback으로만 접근한다. 공개 proxy로 내부 API를 전달하지 않는다.
+	@runner_internal path /api/internal /api/internal/*
+	respond @runner_internal 404
 	header Cache-Control "no-store"
 	header CDN-Cache-Control "no-store"
 	header Cloudflare-CDN-Cache-Control "no-store"

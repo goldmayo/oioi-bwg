@@ -109,6 +109,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:unit:run
       - run: pnpm test:ops
+      - name: Verify Console Runner API ingress with isolated Caddy
+        run: python3 -I tests/ops/console-runner-ingress.py
       - name: Verify root-protected host paths and paired upgrade
         run: sudo env GITHUB_ACTIONS=true python3 -I tests/ops/host-install-root-fixture.py
 
