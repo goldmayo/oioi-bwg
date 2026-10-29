@@ -19,7 +19,15 @@ import { waveformQueryKeys } from "@/entities/waveform";
 import { ApiError } from "@/shared/api/http-errors";
 
 /** Ability와 Song mutation을 lazy lyric editor에 연결하는 route-private 조합 경계다. */
-export function AdminLyricsEditor({ song, accountId }: { song: SongEditor; accountId: string }) {
+export function AdminLyricsEditor({
+  song,
+  accountId,
+  generationVideoId,
+}: {
+  song: SongEditor;
+  accountId: string;
+  generationVideoId?: string;
+}) {
   const queryClient = useQueryClient();
   const { data } = useSuspenseQuery(authAbilityQueries.current());
   const ability = useMemo(() => createClientAbility(data.rules), [data.rules]);
@@ -60,6 +68,11 @@ export function AdminLyricsEditor({ song, accountId }: { song: SongEditor; accou
           saveSongData={saveSongData}
           accountId={accountId}
           disabled={!canManage}
+          waveformGeneration={
+            generationVideoId
+              ? { videoId: generationVideoId, onError: recovery.handleMutationError }
+              : undefined
+          }
         />
       </fieldset>
     </>

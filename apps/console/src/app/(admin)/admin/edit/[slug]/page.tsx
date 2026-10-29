@@ -9,6 +9,7 @@ import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-
 import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
+import { getWaveformGenerationConfig } from "@/shared/config/console-runtime";
 
 import { AdminLyricsEditor } from "./_ui/AdminLyricsEditor";
 
@@ -34,6 +35,11 @@ export default async function AdminLyricsEditPage({ params }: AdminEditPageProps
   }
 
   const queryClient = getQueryClient();
+  const generation = getWaveformGenerationConfig();
+  const generationVideoId =
+    generation.enabled && generation.allowedVideoIds.includes(song.youtubeId)
+      ? song.youtubeId
+      : undefined;
   queryClient.setQueryData(
     authAbilityQueryKeys.ability(),
     serializedAbilityResponseSchema.parse({ rules: context.ability.rules }),
@@ -42,7 +48,11 @@ export default async function AdminLyricsEditPage({ params }: AdminEditPageProps
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="h-screen overflow-hidden">
-        <AdminLyricsEditor song={song} accountId={context.user!.id} />
+        <AdminLyricsEditor
+          song={song}
+          accountId={context.user!.id}
+          generationVideoId={generationVideoId}
+        />
       </div>
     </HydrationBoundary>
   );
