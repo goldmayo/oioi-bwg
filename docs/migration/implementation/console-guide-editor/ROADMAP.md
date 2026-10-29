@@ -68,7 +68,11 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-30 VM 사전 점검 추가:** 사용자가 root 보호 Python 3.12 링크, `/opt/oci-cli` 내부 일반 파일/디렉터리에 비-root 소유·group/other 쓰기 항목 없음, Compose 5.5.0과 systemd 255를 확인했다. Secret 조회나 신규 서비스 실행·운영 변경은 아니다. 최초 find는 symlink의 777 표시 권한에서 멈췄으므로 수정한 조건의 무출력 결과를 근거로 사용한다.
+
 **2026-10-30 Worker 전달 산출물:** CI에서 실제 검증한 ARM64 Worker를 local image ID로 고정해 archive/checksum/source tree와 함께 내보낸다. Console 배포 연결 #343과 독립 검증 가능한 전달 관심사이며 병합 순서는 #343 → 이 산출물 → 승인된 VM 설치·수용이다. VM 재빌드·OCI 게시·Secret 조회는 수행하지 않는다. 반복 전달 절차는 [host 안내 §11.2](../../../../ops/oci/README.md#112-검증한-worker-이미지-전달)가 소유한다.
+
+**2026-10-30 Console 배포 연결:** 설치/systemd [#341](https://github.com/goldmayo/oioi-bwg/pull/341)은 Verify #706 성공 후 병합했다. Console 전용 Vault token·기본 비활성 flag·고정 읽기 전용 socket overlay를 기존 pair 배포에 연결하고, 활성/비활성 전환 실패 시 이전 env·GID·overlay를 복구한다. 실제 VM의 설치·시작·Secret 조회·Promotion은 아직 수행하지 않았다. 반복 설정·수용 순서는 [host 안내 §11](../../../../ops/oci/README.md#11-p08-runner-설치와-시작-분리)을 따른다. 사용자 지시로 페스티벌 별도 편집은 P08 완료 뒤 독립 작업으로 진행한다.
 
 **2026-10-29 host 설치 연결:** #340 token 공급 뒤 검증 binary/checksum·root staging의 설치기와 systemd 시작 준비를 구현한다. 설치와 실제 시작을 분리하고 Console env/mount 연결 전에는 활성화하지 않는다. 반복 절차는 [host 안내 §11](../../../../ops/oci/README.md#11-p08-runner-설치와-시작-분리)가 소유한다. root 파일 권한/잠금·합성 제어 명령·systemd parser 검증과 실제 VM 기동/복구를 구분한다.
 

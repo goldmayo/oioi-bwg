@@ -505,6 +505,8 @@ jobs:
           node tests/ops/container-readiness-smoke.mjs http://127.0.0.1:3001
           node tests/ops/console-standalone-smoke.mjs http://127.0.0.1:3001
 
+      - name: Verify Console waveform socket DAC and read-only mount
+        run: bash tests/ops/waveform-console-socket-smoke.sh
       - name: Verify paired Compose container preservation and recovery
         run: bash tests/ops/paired-compose-smoke.sh
 

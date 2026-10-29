@@ -595,7 +595,7 @@ MFA reset은 암호문을 폐기하므로 새 등록이 필요하다. 이전 JWT
 성공한 Verify의 `waveform-runner-arm64` artifact에서 `verified-commit.txt`·`verified-tree.txt`·SHA256SUMS를
 대조한 binary와 같은 승인 source의 `ops/oci` 파일을 준비한다. 전체 staging 상위 경로도 root 소유·쓰기 금지여야 한다.
 installer는 ARM64 ELF·checksum을 확인하고 `/usr/local/lib/oioi-waveform-runner/`에 runner/준비/토큰/egress 도구,
-`/etc/systemd/system/oioi-waveform-runner.service`에 unit을 설치하며 `oioi-waveform-console` 그룹을 생성한다.
+`/etc/systemd/system/oioi-waveform-runner.service`에 unit과 `/etc/tmpfiles.d/oioi-waveform.conf`를 설치하며 `oioi-waveform-console` 그룹을 생성한다.
 예: `sudo python3 -I -B /root/p08-stage/ops/oci/install-waveform-runner.py --install /root/p08-stage/runner <검증한-SHA256>`.
 이 명령은 파일별 원자 교체와 daemon-reload까지만 한다. 서비스 enable/start, Secret 조회, 네트워크 생성은 하지 않는다.
 기존 서비스는 inactive/failed 및 disabled 상태여야 하고, Runner host 잠금이 있으면 실패한다. 기존 파일은
@@ -615,6 +615,33 @@ Console의 동일 token/내부 API 준비·socket mount·공개 Caddy 차단과 
 PartOf로 연동한다. Type=exec의 active는 OCI 인증·소비 readiness 보장이 아니므로 실제 API/Queue 수용을 따로 확인한다.
 실제 재부팅·종료/재전달·DNS/내부망 차단·Console DAC·허용 입력은 VM 수용 관문이다. 로컬 systemd parser와
 mock 제어 명령 검증을 실제 서비스 기동으로 간주하지 않는다. 일반 app installer는 이 unit을 설치하지 않는다.
+
+### 11.1. Console 연결과 배포 복구
+
+2026-10-30 추가. 일반 host installer는 `compose.waveform.yml`을 배치하지만 기본 배포는 이를 사용하지 않는다.
+승인 후 `deploy.conf`의 `CONSOLE_WAVEFORM_SOCKET_GID`에 `oioi-waveform-console`의 실제 숫자 GID를 설정하고,
+Console public env에서 `CONSOLE_WAVEFORM_RUNNER_ENABLED=true`를 설정한다. Console secret mapping에는
+`CONSOLE_WAVEFORM_RUNNER_TOKEN`으로 Runner와 **동일한 기존 Vault secret OCID**를 연결한다. 값은 직접 기록하지 않는다.
+Runner flag가 꺼져 있으면 token mapping도 제거한다. 두 Auth secret과 Runner token은 달라야 한다.
+`CONSOLE_WAVEFORM_GENERATION_ENABLED=false`, 빈 `CONSOLE_WAVEFORM_ALLOWED_VIDEO_IDS`, Runner의
+`approvedVideoIds: []`는 실제 입력 이용 승인 전까지 유지한다. 생성 허용 시 양쪽 승인 목록을 대조한다.
+
+첫 연결 전 승인된 `systemd-tmpfiles --create /etc/tmpfiles.d/oioi-waveform.conf`로 root 소유
+`/run/oioi-waveform`을 전용 GID·0750으로 준비한다. installer 자체는 이 명령을 실행하지 않는다. 배포 preflight는 디렉터리 부재,
+잘못된 소유권·그룹·mode·symlink·전용 그룹의 host 사용자 연결을 거절한다. Compose의 경로 자동 생성 방지에만
+의존하지 않는다. 실제 mount는 Console에만 읽기 전용/rprivate로 추가하며 Web 구성은 보존한다.
+이 준비는 VM 변경이므로 source·artifact·설정·복구 범위를 검토한 별도 승인 단계에서 수행한다.
+
+초기 순서는 설치 산출물 및 worker image 검증 → host asset/전용 runtime 디렉터리 준비 → Caddy 내부 API 차단과
+Console token/mount를 포함한 승인된 Promotion → metadata `probe-console`/DAC 확인 → 생성은 닫은 상태에서
+Runner 시작·OCI Queue 수용 → 허용 입력 승인과 생성 활성화다. 검토 전 위 설정을 운영에 복사하지 않는다.
+Runner 시작 시 디렉터리를 다시 검증한다. 부팅 초기 tmpfiles가 디렉터리를 복원하도록 구성하며, 호스트 재부팅 후에는 실제 생성 시점과
+Console 자동 재시작/mount 복구 순서를 실제 VM에서 확인해야 한다. 코드 검증으로 이 수용을 대체하지 않는다.
+
+배포 snapshot에는 활성 GID와 overlay를 보존한다. 실패 rollback은 이전 Console env·GID·overlay를 복원하고,
+이전 snapshot에 GID가 없으면 mount 없는 상태로 복구한다. ambient GID는 이전 배포에 상속하지 않는다.
+자동 rollback은 app 컨테이너/config에 한정되며 systemd·Vault CURRENT 버전·방화벽 변경을 되돌리지 않는다.
+새 release 활성화 실패 시 runtime 원본 설정과 current snapshot의 차이를 확인한 뒤 재시도한다.
 
 ### 11.2. 검증한 Worker 이미지 전달
 
