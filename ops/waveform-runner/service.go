@@ -81,7 +81,7 @@ func serve(ctx context.Context, cancel context.CancelFunc, listener net.Listener
 		}
 		if err != nil && ctx.Err() == nil {
 			if !reported {
-				log.Print("WAVEFORM_CONSUME_UNCONFIRMED")
+				log.Print("WAVEFORM_CONSUME_UNCONFIRMED stage=" + consumeFailureStage(err))
 				reported = true
 			}
 			timer := time.NewTimer(consumerBackoff)
