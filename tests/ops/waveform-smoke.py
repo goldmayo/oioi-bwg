@@ -107,7 +107,7 @@ try:
     state = json.loads(docker("inspect", name).stdout)[0]
     host = state["HostConfig"]
     assert host["ReadonlyRootfs"] and host["NetworkMode"] == "none" and state["Mounts"] == []
-    assert host["Memory"] == host["MemorySwap"] == 268435456 and host["NanoCpus"] == 1_000_000_000
+    assert host["Memory"] == host["MemorySwap"] == 768 * 1024 * 1024 and host["NanoCpus"] == 1_000_000_000
     assert host["PidsLimit"] == 32 and host["LogConfig"]["Type"] == "none"
     assert state["Config"]["User"] == "65532:65532"
     shell('test "$(uname -m)" = aarch64 && ! command -v python3 && '
