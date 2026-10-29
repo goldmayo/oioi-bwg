@@ -247,12 +247,145 @@ const browser = await chromium.launch({ headless: true });
 const checks = [];
 const capture = async (page, name) => {
   await page.evaluate(() => {
+    window.__dismissToasts?.();
     window.scrollTo(0, 0);
     for (const element of document.querySelectorAll("main,[data-editor-scroll]"))
       element.scrollTop = 0;
   });
   await page.screenshot({ path: join(out, name), fullPage: true });
 };
+
+async function verifyInspector(page) {
+  for (const actual of [false, true]) {
+    const source = actual ? actualSong : song;
+    responseMode = "ready";
+    await page.goto(origin + (actual ? "/?actual" : "/"), { waitUntil: "networkidle" });
+    const selectedTime = page.getByRole("textbox", { name: "노트 시작 시각", exact: true });
+    const select = async (id) =>
+      page
+        .locator(`[data-note-id="${id}"]`)
+        .locator("xpath=..")
+        .getByRole("button", { name: /번 노트 선택/ })
+        .click();
+    const undo = async () => page.getByRole("button", { name: "실행 취소", exact: true }).click();
+    const save = async () => {
+      await page.getByRole("button", { name: /^저장/ }).click();
+      await page.getByText("저장됨", { exact: true }).waitFor();
+    };
+    await select("extra:1:1");
+    assert.equal(await selectedTime.inputValue(), "00:04.80");
+    assert.match(await page.locator("[data-note-scope]").innerText(), /2행.*2\/4번째 조각/);
+    await page.evaluate(() => {
+      window.__iframe.time = 5.1;
+    });
+    await page.waitForTimeout(200);
+    for (const capture of [
+      () => page.keyboard.press("q"),
+      () => page.getByRole("button", { name: /^현재 재생 위치에 맞추기/ }).click(),
+      () => page.getByRole("button", { name: /^Q\s*선택 노트 캡처/ }).click(),
+    ]) {
+      await capture();
+      assert.equal(await selectedTime.inputValue(), "00:05.10");
+      await save();
+      assert.deepEqual(
+        lastSaved.lyrics.filter((_, i) => i !== 1),
+        source.lyrics.filter((_, i) => i !== 1),
+      );
+      const group = lastSaved.lyrics[1];
+      assert.deepEqual(
+        group.segments.map((s) => group.startTime + (s.startTimeOffset ?? 0)),
+        [4, 5.1, 5.6, 6.4],
+      );
+      assert.deepEqual(
+        group.segments.map((segment) => ({ ...segment, startTimeOffset: undefined })),
+        source.lyrics[1].segments.map((segment) => ({ ...segment, startTimeOffset: undefined })),
+      );
+      await undo();
+      assert.equal(await selectedTime.inputValue(), "00:04.80");
+    }
+    await selectedTime.fill("");
+    assert.equal(await selectedTime.inputValue(), "");
+    await selectedTime.fill("00:05.10");
+    await selectedTime.press("Enter");
+    assert.equal(await selectedTime.inputValue(), "00:05.10");
+    await undo();
+    assert.equal(await selectedTime.inputValue(), "00:04.80");
+    await selectedTime.fill("99:99");
+    await selectedTime.press("Enter");
+    assert.equal(await selectedTime.inputValue(), "00:04.80");
+    assert.equal(await selectedTime.getAttribute("aria-invalid"), "true");
+    await selectedTime.fill("6.5");
+    await selectedTime.press("Enter");
+    assert.equal(await selectedTime.inputValue(), "00:06.50");
+    await undo();
+    await selectedTime.fill("12");
+    await selectedTime.press("Escape");
+    await selectedTime.blur();
+    assert.equal(await selectedTime.inputValue(), "00:04.80");
+    await selectedTime.fill("5.25");
+    await selectedTime.press("Control+s");
+    await page.getByText("저장됨", { exact: true }).waitFor();
+    assert.equal(
+      lastSaved.lyrics[1].startTime + lastSaved.lyrics[1].segments[1].startTimeOffset,
+      5.25,
+    );
+    await undo();
+    await page.locator("[data-note-row-controls] summary").click();
+    await page.getByRole("button", { name: "선택 행 0.1초 늦추기", exact: true }).click();
+    await save();
+    assert.equal(lastSaved.lyrics[1].startTime, 4.1);
+    assert.deepEqual(lastSaved.lyrics[1].segments, source.lyrics[1].segments);
+    await undo();
+    await page.getByRole("button", { name: "전체 가사 0.1초 늦추기", exact: true }).click();
+    await save();
+    assert.deepEqual(
+      lastSaved.lyrics.map((line) => line.startTime),
+      source.lyrics.map((line) => Math.round((line.startTime + 0.1) * 100) / 100),
+    );
+    assert.deepEqual(
+      lastSaved.lyrics.map((line) => line.segments),
+      source.lyrics.map((line) => line.segments),
+    );
+    await undo();
+    await page.evaluate(() => {
+      window.__iframe.time = 4;
+    });
+    await page.waitForTimeout(200);
+    await page.getByRole("button", { name: "다음 노트로 이동", exact: true }).click();
+    await page.waitForTimeout(300);
+    assert.equal(await page.getByLabel("현재 재생 시각", { exact: true }).innerText(), "00:04.80");
+    assert.match(await page.locator("[data-note-scope]").innerText(), /2\/4번째 조각/);
+    await page.getByRole("button", { name: /R 연속 캡처/ }).click();
+    await page.evaluate(() => {
+      window.__iframe.time = 5.1;
+    });
+    await page.waitForTimeout(200);
+    await page.keyboard.press("q");
+    assert.match(await page.locator("[data-note-scope]").innerText(), /3\/4번째 조각/);
+    await page.getByRole("button", { name: /R 연속 캡처/ }).click();
+    await page.getByRole("button", { name: "글자별 강조 편집", exact: true }).click();
+    assert.equal(await page.getByRole("dialog").count(), 1);
+    await page.getByRole("button", { name: "취소", exact: true }).click();
+    if (actual) {
+      await select("extra:1:1");
+      await page.locator("[data-note-row-controls] summary").click();
+      await capture(page, "inspector-selected-extra-1280.png");
+      await page.locator("[data-note-row-controls] summary").click();
+      await page.locator("[data-note-row-controls]").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: join(out, "inspector-row-controls-1280.png"), fullPage: true });
+    }
+  }
+  checks.push({
+    selectedCaptureKeepsSiblingTimes: true,
+    capturePathsAgree: true,
+    timeCommitSingleUndo: true,
+    timeShortcutSaveCommitsDraft: true,
+    rowAndGlobalScopesSeparated: true,
+    noteNavigationIncludesExtraPieces: true,
+    continuousCaptureAdvancesNote: true,
+    inspectorPaintEntry: true,
+  });
+}
 
 async function verifyNotes(page, width) {
   responseMode = "ready";
@@ -363,6 +496,7 @@ async function verifyNotes(page, width) {
     .fill("에코 유지");
   await capture(page, "notes-flags-mixed.png");
   const extra = page.getByRole("checkbox", { name: "추가 응원 행", exact: true });
+  await page.locator("[data-note-row-controls] summary").click();
   await extra.check();
   await extra.uncheck();
   await page.getByRole("button", { name: /^저장/ }).click();
@@ -396,8 +530,8 @@ async function verifyNotes(page, width) {
       .getByRole("button", { name: "추가 응원 노트를 현재 위치에 추가", exact: true })
       .click();
     assert.equal(
-      await page.getByRole("spinbutton", { name: "노트 시작 시각", exact: true }).inputValue(),
-      "12.5",
+      await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).inputValue(),
+      "00:12.50",
     );
     await page.getByRole("textbox", { name: "선택 노트 내용", exact: true }).fill("파형 없는 입력");
     const visible = await page
@@ -460,6 +594,14 @@ async function verifyActualLyrics(page, width) {
   await capture(page, `actual-editor-mixed-${width}.png`);
   if (width === 390) {
     await page.getByRole("button", { name: "선택 노트 속성", exact: true }).click();
+    const back = await page
+      .getByRole("button", { name: "노트 트랙으로 돌아가기", exact: true })
+      .boundingBox();
+    const header = await page.locator("[data-lyrics-editor] > header").boundingBox();
+    assert.ok(
+      back.y >= header.y + header.height && back.y + back.height <= 1000,
+      "mobile return remains visible after jumping to properties",
+    );
     await page.screenshot({ path: join(out, "actual-mobile-properties.png"), fullPage: true });
     await page.getByRole("button", { name: "노트 트랙으로 돌아가기", exact: true }).click();
   }
@@ -546,9 +688,11 @@ async function verifyActualLyrics(page, width) {
     });
     await page.goto(origin + "/?actual", { waitUntil: "networkidle" });
     await select("extra:1:1");
-    await page.getByRole("spinbutton", { name: "노트 시작 시각", exact: true }).fill("6.5");
+    await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).fill("6.5");
+    await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).press("Enter");
     await select("line:4");
-    await page.getByRole("spinbutton", { name: "노트 시작 시각", exact: true }).fill("20");
+    await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).fill("20");
+    await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).press("Enter");
     await page.getByRole("button", { name: /^저장/ }).click();
     await page.getByText("저장됨", { exact: true }).waitFor();
   }
@@ -694,11 +838,11 @@ try {
       await page.waitForTimeout(250);
       await page.keyboard.press("w");
       assert.equal(await page.evaluate(() => window.__iframe.getPlayerState()), 2);
-      await page.getByRole("button", { name: "다음 Cue로 이동", exact: true }).click();
+      await page.getByRole("button", { name: "다음 노트로 이동", exact: true }).click();
       await page.waitForTimeout(300);
       assert.equal(
         await page.getByLabel("현재 재생 시각", { exact: true }).innerText(),
-        "00:08.00",
+        "00:04.80",
       );
       await page.evaluate(() => {
         window.__iframe.time = 9.25;
@@ -706,7 +850,7 @@ try {
       await page.waitForTimeout(150);
       await page.keyboard.press("q");
       assert.equal(
-        await page.getByRole("textbox", { name: "3행 시작 시각", exact: true }).inputValue(),
+        await page.getByRole("textbox", { name: "노트 시작 시각", exact: true }).inputValue(),
         "00:09.25",
       );
       await page.getByRole("button", { name: "실행 취소", exact: true }).click();
@@ -734,6 +878,7 @@ try {
       await page.getByRole("button", { name: "실행 취소", exact: true }).click();
       assert.equal(await page.locator("[data-lyric-row]").count(), 4);
       await page.getByRole("button", { name: "2행 선택", exact: true }).click();
+      await page.locator("[data-note-row-controls] summary").click();
       await page.getByRole("button", { name: "선택 행 0.1초 늦추기", exact: true }).click();
       const draft = await page
         .getByRole("textbox", { name: "2행 시작 시각", exact: true })
@@ -769,6 +914,7 @@ try {
     }
     await verifyNotes(page, width);
     await verifyActualLyrics(page, width);
+    if (width === 1280) await verifyInspector(page);
     assert.equal(errors.length, 0, errors.join("\n"));
     checks.push({ width, overflow: false, errors });
     await page.close();

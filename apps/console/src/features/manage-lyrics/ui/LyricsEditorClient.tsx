@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { waveformQueries } from "@/entities/waveform";
@@ -17,6 +17,7 @@ import { FloatingToolbar } from "./FloatingToolbar";
 import { LyricsEditorProvider, useLyricsEditorContext } from "./LyricsEditorContext";
 import { LyricsTable } from "./LyricsTable";
 import { LyricsTimelinePreview } from "./LyricsTimelinePreview";
+import { MobilePaintEditor } from "./MobilePaintEditor";
 import { NoteInspector } from "./NoteInspector";
 import { NoteTable } from "./NoteTable";
 import type { CuePreview } from "./PeaksWaveform";
@@ -42,7 +43,8 @@ function LyricsEditorWorkspace({
   const [cuePreview, setCuePreview] = useState<CuePreview | null>(null);
   const [focusVersion, setFocusVersion] = useState(0);
   const [selectionRevision, setSelectionRevision] = useState(0);
-  const notes = getEditorNotes(editor.lyrics);
+  const [paintLine, setPaintLine] = useState<number | null>(null);
+  const notes = useMemo(() => getEditorNotes(editor.lyrics), [editor.lyrics]);
   const selected =
     notes.find((note) => note.id === selectedId && note.lineIndex === editor.currentIndex) ??
     notes.find((note) => note.lineIndex === editor.currentIndex);
@@ -54,20 +56,26 @@ function LyricsEditorWorkspace({
         ...notes.map((note) => (Number.isFinite(note.time) ? note.time + 8 : 0)),
         30,
       );
-  const select = (note: EditorNote) => {
-    setSelectedId(note.id);
-    setSelectionRevision((value) => value + 1);
-    editor.setCurrentIndex(note.lineIndex);
-  };
-  const edit = (command: NoteEdit) => {
-    if (disabled || editor.isAdPlaying) return;
-    const id = editor.editNote(command);
-    if (id !== undefined) {
-      setSelectedId(id);
+  const select = useCallback(
+    (note: EditorNote) => {
+      setSelectedId(note.id);
       setSelectionRevision((value) => value + 1);
-    }
-    if (command.type === "add") setFocusVersion((value) => value + 1);
-  };
+      editor.setCurrentIndex(note.lineIndex);
+    },
+    [editor],
+  );
+  const edit = useCallback(
+    (command: NoteEdit) => {
+      if (disabled || editor.isAdPlaying) return;
+      const id = editor.editNote(command);
+      if (id !== undefined) {
+        setSelectedId(id);
+        setSelectionRevision((value) => value + 1);
+      }
+      if (command.type === "add") setFocusVersion((value) => value + 1);
+    },
+    [disabled, editor],
+  );
   const shownTime =
     selected &&
     (preview?.id === selected.id
@@ -75,6 +83,18 @@ function LyricsEditorWorkspace({
       : cuePreview?.index === selected.lineIndex
         ? selected.time + cuePreview.time - cuePreview.original
         : selected.time);
+  const captureSelected = useCallback(() => {
+    if (disabled || editor.isAdPlaying || !editor.player || !selected) return;
+    const ordered = [...notes].sort((a, b) => a.time - b.time);
+    const next = ordered[ordered.findIndex((note) => note.id === selected.id) + 1];
+    edit({ type: "move", id: selected.id, time: editor.currentTimeRef.current });
+    if (editor.isRecording && next) select(next);
+  }, [disabled, editor, selected, notes, edit, select]);
+  const openPaint = (note: EditorNote) => {
+    select(note);
+    setPaintLine(note.lineIndex);
+  };
+  const saveLatest = useEffectEvent(() => void editor.handleSave());
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (
@@ -86,7 +106,9 @@ function LyricsEditorWorkspace({
         return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        void editor.handleSave();
+        // 시간 입력의 blur 변경을 반영한 다음 렌더의 초안을 저장한다.
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        window.setTimeout(() => saveLatest(), 0);
         return;
       }
       const target = event.target;
@@ -109,8 +131,7 @@ function LyricsEditorWorkspace({
       const key = event.key.toLowerCase();
       if (!["q", "w", "e", "r"].includes(key)) return;
       event.preventDefault();
-      if (key === "q" && editor.player && editor.lyrics.length)
-        editor.captureTime(editor.currentIndex);
+      if (key === "q") captureSelected();
       if (key === "w" && editor.player) {
         if (editor.player.getPlayerState() === 1) editor.player.pauseVideo();
         else editor.player.playVideo();
@@ -122,11 +143,16 @@ function LyricsEditorWorkspace({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [disabled, editor]);
+  }, [disabled, editor, captureSelected]);
   return (
     <div data-lyrics-editor className="bg-background flex h-full min-h-0 flex-col">
       <FloatingToolbar />
-      <EditorTopBar />
+      <EditorTopBar
+        selected={selected}
+        onSelect={select}
+        onCapture={captureSelected}
+        blocked={disabled || editor.isAdPlaying}
+      />
       <div data-editor-scroll className="min-h-0 flex-1 overflow-y-auto">
         <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0 p-4 sm:px-6">
@@ -145,6 +171,7 @@ function LyricsEditorWorkspace({
               selected={selected}
               onSelect={select}
               onEdit={edit}
+              onPaint={openPaint}
               blocked={disabled || editor.isAdPlaying}
             />
             <details className="border-border mt-4 border-t pt-3" data-lyric-details>
@@ -179,10 +206,20 @@ function LyricsEditorWorkspace({
               blocked={disabled || editor.isAdPlaying}
               focusVersion={focusVersion}
               onEdit={edit}
+              onCapture={captureSelected}
+              onPaint={() => selected && openPaint(selected)}
             />
           </aside>
         </div>
       </div>
+      {paintLine !== null && editor.lyrics[paintLine] && (
+        <MobilePaintEditor
+          line={editor.lyrics[paintLine]}
+          lineIndex={paintLine}
+          isOpen
+          onClose={() => setPaintLine(null)}
+        />
+      )}
       <footer className="border-border text-muted-foreground flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-4 py-2 text-xs sm:px-6">
         <span>그리기: 클릭으로 추가 · 선택: 좌우로 이동</span>
         <div className="hidden items-center gap-2 md:flex">

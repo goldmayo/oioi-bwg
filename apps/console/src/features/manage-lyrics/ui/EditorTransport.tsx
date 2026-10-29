@@ -5,24 +5,31 @@ import { Pause, Play, ScanLine, SkipBack, SkipForward } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 
+import { type EditorNote, getEditorNotes } from "../lib/editor-notes";
 import { formatTime } from "../lib/lrc-parser";
 
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 
-export function EditorTransport() {
+export interface EditorTransportProps {
+  selected?: EditorNote;
+  onSelect: (note: EditorNote) => void;
+  onCapture: () => void;
+  blocked: boolean;
+}
+
+export function EditorTransport({ selected, onSelect, onCapture, blocked }: EditorTransportProps) {
   const editor = useLyricsEditorContext();
   const [time, setTime] = useState(0);
   const { subscribeToTime } = editor;
   useEffect(() => subscribeToTime(setTime), [subscribeToTime]);
   const playing = editor.playerState === 1;
   const seekCue = (direction: -1 | 1) => {
-    const choices = editor.lyrics
-      .map((line, index) => ({ time: line.startTime, index }))
-      .filter((line) => (direction < 0 ? line.time < time - 0.01 : line.time > time + 0.01))
+    const choices = getEditorNotes(editor.lyrics)
+      .filter((note) => (direction < 0 ? note.time < time - 0.01 : note.time > time + 0.01))
       .sort((a, b) => direction * (a.time - b.time));
     const next = choices[0];
     if (next) {
-      editor.setCurrentIndex(next.index);
+      onSelect(next);
       editor.player?.seekTo(next.time, true);
     }
   };
@@ -36,8 +43,8 @@ export function EditorTransport() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="이전 Cue로 이동"
-          disabled={!editor.player || editor.isAdPlaying}
+          aria-label="이전 노트로 이동"
+          disabled={!editor.player || blocked}
           onClick={() => seekCue(-1)}
         >
           <SkipBack size={15} />
@@ -45,7 +52,7 @@ export function EditorTransport() {
         <Button
           size="icon"
           aria-label={playing ? "일시정지" : "재생"}
-          disabled={!editor.player || editor.isAdPlaying}
+          disabled={!editor.player || blocked}
           onClick={() => {
             if (playing) editor.player?.pauseVideo();
             else editor.player?.playVideo();
@@ -56,8 +63,8 @@ export function EditorTransport() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="다음 Cue로 이동"
-          disabled={!editor.player || editor.isAdPlaying}
+          aria-label="다음 노트로 이동"
+          disabled={!editor.player || blocked}
           onClick={() => seekCue(1)}
         >
           <SkipForward size={15} />
@@ -75,12 +82,12 @@ export function EditorTransport() {
         <Button
           variant="outline"
           size="sm"
-          disabled={!editor.player || editor.isAdPlaying || !editor.lyrics.length}
-          onClick={() => editor.captureTime(editor.currentIndex)}
+          disabled={!editor.player || blocked || !selected}
+          onClick={onCapture}
           className="text-xs"
         >
           <ScanLine size={14} />
-          <kbd>Q</kbd>시간 캡처
+          <kbd>Q</kbd>선택 노트 캡처
         </Button>
       </div>
     </div>

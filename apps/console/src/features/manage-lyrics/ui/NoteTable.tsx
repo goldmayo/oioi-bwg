@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Paintbrush, Plus } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
@@ -12,7 +11,6 @@ import { formatTime } from "../lib/lrc-parser";
 
 import { lyricEmphasisClass } from "./lyric-emphasis";
 import { useLyricsEditorContext } from "./LyricsEditorContext";
-import { MobilePaintEditor } from "./MobilePaintEditor";
 import { NoteBadges, NoteText } from "./NoteText";
 import type { PianoRollInteraction } from "./PianoRoll";
 export function NoteTable({
@@ -20,9 +18,12 @@ export function NoteTable({
   onSelect,
   onEdit,
   blocked,
-}: Pick<PianoRollInteraction, "selected" | "onSelect" | "onEdit"> & { blocked: boolean }) {
+  onPaint,
+}: Pick<PianoRollInteraction, "selected" | "onSelect" | "onEdit"> & {
+  blocked: boolean;
+  onPaint: PianoRollInteraction["onSelect"];
+}) {
   const editor = useLyricsEditorContext();
-  const [paintLine, setPaintLine] = useState<number | null>(null);
   const notes = getEditorNotes(editor.lyrics).sort((a, b) => a.time - b.time);
   return (
     <section aria-labelledby="note-table-heading" className="border-border mt-4 border-t">
@@ -115,10 +116,7 @@ export function NoteTable({
                         className="size-7 shrink-0"
                         aria-label={`${index + 1}번 노트 강조 편집`}
                         disabled={blocked}
-                        onClick={() => {
-                          onSelect(note);
-                          setPaintLine(note.lineIndex);
-                        }}
+                        onClick={() => onPaint(note)}
                       >
                         <Paintbrush size={13} />
                       </Button>
@@ -135,14 +133,6 @@ export function NoteTable({
           </p>
         )}
       </div>
-      {editor.lyrics[paintLine ?? 0] && (
-        <MobilePaintEditor
-          line={editor.lyrics[paintLine ?? 0]}
-          lineIndex={paintLine ?? 0}
-          isOpen={paintLine !== null}
-          onClose={() => setPaintLine(null)}
-        />
-      )}
     </section>
   );
 }

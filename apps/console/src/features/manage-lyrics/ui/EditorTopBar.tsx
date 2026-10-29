@@ -13,10 +13,10 @@ import {
 } from "@/shared/ui/dialog";
 import { Textarea } from "@/shared/ui/textarea";
 
-import { EditorTransport } from "./EditorTransport";
+import { EditorTransport, type EditorTransportProps } from "./EditorTransport";
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 
-export function EditorTopBar() {
+export function EditorTopBar(props: EditorTransportProps) {
   const editor = useLyricsEditorContext();
   return (
     <header className="border-border shrink-0 border-b px-4 py-3 sm:px-6">
@@ -34,7 +34,7 @@ export function EditorTopBar() {
             </span>
           </div>
         </div>
-        <EditorTransport />
+        <EditorTransport {...props} />
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -85,6 +85,29 @@ export function EditorTopBar() {
             <kbd className="ml-1 hidden text-xs opacity-70 sm:inline">Ctrl S</kbd>
           </Button>
         </div>
+      </div>
+      <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-2 text-xs">
+        <span>전체 가사 시각</span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7"
+          aria-label="전체 가사 0.1초 앞당기기"
+          disabled={props.blocked || !editor.lyrics.length}
+          onClick={() => editor.applyGlobalOffset(-0.1)}
+        >
+          −0.1s
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7"
+          aria-label="전체 가사 0.1초 늦추기"
+          disabled={props.blocked || !editor.lyrics.length}
+          onClick={() => editor.applyGlobalOffset(0.1)}
+        >
+          +0.1s
+        </Button>
       </div>
     </header>
   );
