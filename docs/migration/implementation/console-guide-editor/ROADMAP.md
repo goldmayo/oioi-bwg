@@ -68,6 +68,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-29 Console mount 점검 준비:** 기존 Web용 metadata probe는 무 mount 조건을 유지한다. 별도 Console probe에서 고정 project/service와 읽기 전용 전용 socket 디렉터리 한 개만 허용하며 동일한 host 양성 대조·차단 counter 증가를 요구한다. 합성 HTTP/CLI 검증을 실제 VM 차단 수용으로 간주하지 않는다. 설정 설치·mount 배치·운영 파일 교체는 후속 승인 범위다.
+
 **2026-10-29 상주 수명 연결:** #336 host 잠금 뒤 고정 설정/token 로더·Instance Principal 시작·socket 접수·일반/DLQ 교대 소비·취소/종료 정리를 연결한다. CI ARM64 binary의 checksum/검증 tree를 보존한다. 다음은 systemd/설치·Vault 공급·Console mount/metadata probe 호환성·egress 격리 연결이며, 실제 VM 설치/활성화·OCI 수용·Promotion은 별도 승인 후 진행한다.
 
 

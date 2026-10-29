@@ -65,7 +65,7 @@ print(os.environ.get('HOST_STATUS','200'),end='')
     docker: `#!/usr/bin/env python3
 import json,os,subprocess,sys
 if sys.argv[2]=='inspect':
- print(json.dumps({'mode':os.environ.get('NETWORK_MODE','bridge'),'privileged':False,'caps':None,'mounts':[],'networks':{'bridge':{}}}))
+ print(json.dumps({'mode':os.environ.get('NETWORK_MODE','bridge'),'privileged':False,'caps':None,'mounts':json.loads(os.environ.get('MOUNTS','[]')),'networks':{'bridge':{}},'labels':json.loads(os.environ.get('LABELS','{}'))}))
 elif sys.argv[2]=='network': print('bridge')
 else:
  bootstrap="""import client from 'node:http'; import {EventEmitter} from 'node:events';
@@ -151,4 +151,54 @@ test("rejects unexpected commands and container selectors", async () => {
   const { root } = await fixture();
   expect(execute(root, ["remove"]).status).toBe(1);
   expect(execute(root, ["probe", "--privileged"]).status).toBe(1);
+});
+
+const consoleLabels = {
+  "com.docker.compose.project": "oioi-bwg-development",
+  "com.docker.compose.service": "console",
+};
+const socketMount = {
+  Type: "bind",
+  Source: "/run/oioi-waveform",
+  Destination: "/run/oioi-waveform",
+  Mode: "ro",
+  RW: false,
+  Propagation: "rprivate",
+};
+function consoleFixture(mounts: unknown = [socketMount], labels: unknown = consoleLabels) {
+  return { MOUNTS: JSON.stringify(mounts), LABELS: JSON.stringify(labels) };
+}
+test("Console socket mount에도 기존 IMDS 양성 대조·차단 counter 검사를 적용한다", async () => {
+  const { root } = await fixture();
+  const env = consoleFixture();
+  const result = execute(root, ["probe-console", "console"], env);
+  expect(result.status, result.stderr).toBe(0);
+  expect(execute(root, ["probe", "console"], env).status).toBe(1);
+  for (const failure of [
+    { NO_COUNTER: "1" },
+    { HOST_STATUS: "503" },
+    { HTTP_STATUS: "401" },
+    { NETWORK_MODE: "host" },
+  ]) {
+    expect(execute(root, ["probe-console", "console"], { ...env, ...failure }).status).toBe(1);
+  }
+});
+test.each([
+  ["write", [{ ...socketMount, RW: true }], consoleLabels],
+  ["mode", [{ ...socketMount, Mode: "rw" }], consoleLabels],
+  ["shared", [{ ...socketMount, Propagation: "rshared" }], consoleLabels],
+  ["volume", [{ ...socketMount, Type: "volume" }], consoleLabels],
+  ["source", [{ ...socketMount, Source: "/var/run/docker.sock" }], consoleLabels],
+  ["target", [{ ...socketMount, Destination: "/tmp/socket" }], consoleLabels],
+  ["extra", [socketMount, socketMount], consoleLabels],
+  ["absent", [], consoleLabels],
+  ["null", null, consoleLabels],
+  ["web", [socketMount], { ...consoleLabels, "com.docker.compose.service": "web" }],
+  ["project", [socketMount], { ...consoleLabels, "com.docker.compose.project": "other" }],
+  ["label", [socketMount], null],
+])("Console 전용 점검은 %s 불일치를 거절한다", async (_, mounts, labels) => {
+  const { root } = await fixture();
+  const result = execute(root, ["probe-console", "console"], consoleFixture(mounts, labels));
+  expect(result.status).toBe(1);
+  expect(result.stderr).toBe('{"event":"metadata_guard_failed"}\n');
 });
