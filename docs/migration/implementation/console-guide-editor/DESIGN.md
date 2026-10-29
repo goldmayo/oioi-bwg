@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-29"
-revision: 21
+revision: 23
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -458,6 +458,11 @@ HTTP 1초·header/body 각 4KiB로 제한하고 기존 DTO의 식별자·상태�
 명시적인 404/WAVEFORM_JOB_NOT_FOUND만 삭제된 Job으로 구분한다. 비활성 403·일반 404·오류 원문은 부재 근거가 아니다.
 전달 기록의 최초 시각과 RUNNING/terminal 응답은 허용하고, 응답 유실·불일치는 불확실로 반환한다. socket 연결은 다음 단위다.
 
+**2026-10-29 시작 client 연결:** 기존 `/start`에 required nullable expectedAttemptId를 한 번 전달한다.
+응답의 Job/source·필수 nullable 필드와 started boolean을 검사하고, started=true는 RUNNING·새 non-null attempt일 때만 인정한다.
+started=false와 응답 유실은 실행 승인이 아니며 자동 재시도·message 삭제·실패 반영을 하지 않는다.
+같은 loopback/token·1초/4KiB 제한을 재사용한다. 실제 receipt/worker 정리 확인과 시작·결과의 소비 흐름 연결은 후속이다.
+
 **2026-10-29 socket 연결:** Go enqueue server는 실제 Unix listener에서만 접수를 허용하고 TCP·Origin을 거절한다.
 strict 세 식별자·실제 body 1KiB·읽기 1초·진행 중 8개 상한을 적용한다. 진행 중 같은 Job은 추가 송신하지 않는다.
 보호된 source 목록과 내부 Job/source를 대조하고, 기존 enqueuedAt은 재사용하며 미확인 RUNNING/terminal은 송신하지 않는다.
@@ -549,6 +554,12 @@ source 참조의 `type=youtube`는 현재 저장 계약의 참조 영상 표시�
 결과 요청/응답이 유실되면 현재 terminal 조회 또는 같은 결과의 멱등 재전달로 저장을 확인한다.
 이전 attempt의 결과를 새 attemptId로 바꿔 제출하지 않는다. terminal 또는 삭제된 Job의 404가 확인돼야 message를 정리한다.
 FCM 발송 완료는 Queue delete의 선행 조건이 아니며 기존 commit 후 dispatcher를 깨우는 경로를 유지한다.
+
+**2026-10-29 소비 흐름 구현:** 한 번 poll한 Delivery를 기존 lease 안에서 처리한다. 고정 worker의 잔존 정리를 확인한 뒤 Job/source·보호된 승인 목록을 검사하고 started=true인 새 attempt만 실행한다.
+이미 terminal이거나 명시적 Job 부재이면 정리 후 message를 삭제한다. 일시 실행 오류와 시작 응답 유실은 재전달에 맡긴다.
+worker는 취소를 포함해 정리가 끝난 뒤 반환해야 한다. 정리 불확실은 ErrRunnerStalled로 Consumer를 격리하고 새 poll/작업을 막는다.
+성공 결과는 발급받은 attempt 그대로 제출하며 DB terminal 확인 뒤 삭제한다. 완료 응답 불확실/이전 attempt 거절은 한 번 조회해 확인하고, delete 오류로 terminal을 재작성하지 않는다.
+FixedWorker는 보호된 실행 어댑터 계약이며 실제 Docker 구현·정리 한도·VM 수용은 후속이다. 기본 소비 흐름에는 자체 재시도 루프·메모리 대기열·자동 stale 판정을 추가하지 않는다.
 
 **재전달과 컨테이너 정리.** Runner는 receipt와 최신 visibility 기한을 메모리에만 보관한다.
 작업 중 별도 heartbeat가 UpdateMessage를 수행한다. 안전 여유 안에 연장을 확인하지 못하면 소유권 상실로 취급해
