@@ -68,6 +68,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-30 첫 VM 설치 확인:** 사용자 실행 출력에서 checksum·Runner/unit/tmpfiles 설치·Worker 적재·GID 986·inactive/disabled를 확인했다. 다음 Console 연결 준비를 지시받았으며 기존 app source/Caddy import 경로를 읽기 조회했다. 실제 결과와 준비 범위는 [host 안내 §11.4](../../../../ops/oci/README.md#114-첫-vm-설치-확인과-console-연결-준비--2026-10-30)를 따른다. 아직 OCI 송수신·분석·새 배포 수용은 아니다.
+
 **2026-10-30 설치 승인 관문:** #341·#343·#344를 전체 CI 성공 후 병합했고 #711 Runner/Worker ZIP digest·내부 checksum·병합 tree를 대조했다. 로컬 적재에서 CI config ID와 containerd manifest ID 차이를 발견해 archive의 해시 연결을 확인하고 운영 안내를 정정했다. 첫 VM 설치 제안·고정 source/identity는 [host 안내 §11.3](../../../../ops/oci/README.md#113-첫-vm-적용-승인-관문--2026-10-30)이 소유한다. 실제 VM 변경·Vault 조회·새 배포는 아직 수행하지 않았다.
 
 **2026-10-30 VM 사전 점검 추가:** 사용자가 root 보호 Python 3.12 링크, `/opt/oci-cli` 내부 일반 파일/디렉터리에 비-root 소유·group/other 쓰기 항목 없음, Compose 5.5.0과 systemd 255를 확인했다. Secret 조회나 신규 서비스 실행·운영 변경은 아니다. 최초 find는 symlink의 777 표시 권한에서 멈췄으므로 수정한 조건의 무출력 결과를 근거로 사용한다.

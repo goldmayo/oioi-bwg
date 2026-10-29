@@ -677,3 +677,24 @@ active/enable이면 거절한다. 기존 설치 파일이 있으면 덮어쓰기
 이 단계에는 Vault 조회·runtime token/config 작성·서비스 start/enable·방화벽/Queue 변경·앱 배포가 포함되지 않는다.
 다음 단계의 Console host asset·Caddy·runtime 설정·Promotion과 Runner 시작은 실제 적용 범위를 다시 확정한다.
 원래 사용자 지시의 운영 변경 별도 승인 조건을 유지하며, 위 제안은 아직 실행 승인이나 완료 기록이 아니다.
+
+### 11.4. 첫 VM 설치 확인과 Console 연결 준비 — 2026-10-30
+
+§11.3의 첫 설치 범위를 사용자가 승인하고 VM에서 실행한 출력을 제공했다. 묶음 내부 checksum 전부 성공,
+`waveform_runner_assets_installed`의 started=false, Worker manifest ID
+`sha256:60276ecfe9f487ffb50c18cee030e680833c394113b2cd5e3e3e553f29d82039` 적재·검증,
+전용 그룹 `oioi-waveform-console` GID **986**, 서비스 inactive/disabled를 확인했다.
+Runner 파일 root:root 0755, unit/tmpfiles root:root 0644다. 이것은 OCI 통신·분석 성공이나 앱 배포 완료가 아니다.
+
+후속 읽기 조회의 현재 app source는 `5bed878e03edf05b00ce335059c361f7f46810cb`다.
+기본 Compose는 저장소와 동일하다. Console 소켓 overlay와 배포 helper 3개, Console용 metadata probe를
+검증 source로 연결해야 한다. Caddy main은 `/etc/caddy/p06-c/active.caddy`와 기존 Web 조각을 import한다.
+기존 공개 상태를 보존하며 active 조각의 `console_upstream` 내부에 Runner API 차단만 추가하고 validate/reload한다.
+저장소의 기본 closed403 조각 전체를 운영 active 파일에 덮어쓰지 않는다.
+
+사용자가 후속 Console 연결 준비를 지시했다. 먼저 확인된 GID·image와 기존 Queue/Secret OCID로 root 0600
+Runner 설정을 준비하며 `approvedVideoIds: []`를 유지한다. config 작성은 Vault 값 조회가 아니다.
+다음 host source 설정에는 Console Runner 연결을 지정하되 generation=false·빈 허용 목록을 유지한다.
+현재 app runtime env와 과거 pair snapshot은 직접 편집하지 않고 별도 Promotion이 새 runtime env를 공급한다.
+Caddy/host 준비 결과와 검증 candidate를 대조한 뒤 배포·서비스 시작 범위를 확정한다. 아직 후속 설정 적용,
+Caddy reload, Vault 조회, 새 Promotion, Runner 시작을 수행했다는 증거는 없다.
