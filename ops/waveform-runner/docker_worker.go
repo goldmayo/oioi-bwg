@@ -111,7 +111,7 @@ func (w *DockerWorker) run(ctx context.Context, p Payload, stdin io.Reader) (res
 	}()
 	args := []string{"create", "--pull=never", "--rm", "--interactive", "--name", workerName, "--label", workerLabel + "=1",
 		"--network", w.network, "--dns", "1.1.1.1", "--dns", "1.0.0.1", "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=67108864",
-		"--memory", "256m", "--memory-swap", "256m", "--cpus", "1", "--pids-limit", "32", "--cap-drop", "ALL",
+		"--memory", "768m", "--memory-swap", "768m", "--cpus", "1", "--pids-limit", "32", "--cap-drop", "ALL",
 		"--security-opt", "no-new-privileges", "--log-driver", "none", "--ulimit", "core=0:0", "--user", "65532:65532",
 		"--env", "WAVEFORM_YOUTUBE_APPROVED_VIDEO_IDS=" + p.VideoID, "--entrypoint", "/usr/local/bin/oioi-waveform", w.image}
 	if stdin == nil {

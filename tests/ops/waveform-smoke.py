@@ -12,8 +12,8 @@ image = sys.argv[1]
 assert re.fullmatch(r"sha256:[a-f0-9]{64}", image), "use an immutable loaded image ID"
 name = f"p08-waveform-{uuid.uuid4()}"
 flags = ["--rm", "--name", name, "--read-only", "--network", "none",
-         "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=67108864", "--memory", "256m",
-         "--memory-swap", "256m", "--cpus", "1", "--pids-limit", "32", "--ulimit", "core=0:0",
+         "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=67108864", "--memory", "768m",
+         "--memory-swap", "768m", "--cpus", "1", "--pids-limit", "32", "--ulimit", "core=0:0",
          "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--log-driver", "none"]
 worker = "/usr/local/bin/oioi-waveform"
 
