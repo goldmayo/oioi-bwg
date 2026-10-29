@@ -113,6 +113,8 @@ jobs:
         run: python3 -I tests/ops/console-runner-ingress.py
       - name: Verify Runner token materialization with synthetic Vault
         run: sudo env GITHUB_ACTIONS=true python3 -I -B tests/ops/waveform-token-root-fixture.py
+      - name: Verify Runner installation and service preparation
+        run: sudo env GITHUB_ACTIONS=true python3 -I -B tests/ops/waveform-install-root-fixture.py
       - name: Verify root-protected host paths and paired upgrade
         run: sudo env GITHUB_ACTIONS=true python3 -I tests/ops/host-install-root-fixture.py
 

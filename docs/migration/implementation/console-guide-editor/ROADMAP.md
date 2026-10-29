@@ -68,6 +68,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-29 host 설치 연결:** #340 token 공급 뒤 검증 binary/checksum·root staging의 설치기와 systemd 시작 준비를 구현한다. 설치와 실제 시작을 분리하고 Console env/mount 연결 전에는 활성화하지 않는다. 반복 절차는 [host 안내 §11](../../../../ops/oci/README.md#11-p08-runner-설치와-시작-분리)가 소유한다. root 파일 권한/잠금·합성 제어 명령·systemd parser 검증과 실제 VM 기동/복구를 구분한다.
+
 **2026-10-29 VM 후속 관찰 및 token 공급:** 사용자가 VM에서 `/usr/local/bin/oci` 3.92.1, nftables 1.0.9, 기존 metadata guard active/check 성공, AppArmor·seccomp·cgroupns를 확인했다. CLI 파일/상위 경로는 root 소유이고 shebang은 `/opt/oci-cli/bin/python3`다. 이는 Vault 조회·Runner 설치·worker 격리 실증을 뜻하지 않는다. 다음 구현은 고정 Secret의 root 전용 runtime token 공급이며, 합성 Secret/실제 root 파일 권한으로 검증한다. 설치/systemd·Console 공급/연결과 실제 VM 적용은 여전히 후속이다.
 
 **2026-10-29 Console 통신 경계 추가:** socket mount 점검과 함께 공개 Caddy proxy의 내부 API 차단을 준비한다. 저장소의 Caddy 2.6.2 호환 조각을 격리 컨테이너에서 실제 실행해 GET/POST·인코딩/중복 슬래시·관리 경로 보존을 검증한다. 운영 Caddy reload·Console mount 설치·생성 flag 개방은 실행하지 않았으며 각각 실제 VM 수용이 필요하다.
