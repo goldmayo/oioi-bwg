@@ -68,6 +68,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 
 ### 2.1. P08 착수 계획
 
+**2026-10-29 VM 후속 관찰 및 token 공급:** 사용자가 VM에서 `/usr/local/bin/oci` 3.92.1, nftables 1.0.9, 기존 metadata guard active/check 성공, AppArmor·seccomp·cgroupns를 확인했다. CLI 파일/상위 경로는 root 소유이고 shebang은 `/opt/oci-cli/bin/python3`다. 이는 Vault 조회·Runner 설치·worker 격리 실증을 뜻하지 않는다. 다음 구현은 고정 Secret의 root 전용 runtime token 공급이며, 합성 Secret/실제 root 파일 권한으로 검증한다. 설치/systemd·Console 공급/연결과 실제 VM 적용은 여전히 후속이다.
+
 **2026-10-29 Console 통신 경계 추가:** socket mount 점검과 함께 공개 Caddy proxy의 내부 API 차단을 준비한다. 저장소의 Caddy 2.6.2 호환 조각을 격리 컨테이너에서 실제 실행해 GET/POST·인코딩/중복 슬래시·관리 경로 보존을 검증한다. 운영 Caddy reload·Console mount 설치·생성 flag 개방은 실행하지 않았으며 각각 실제 VM 수용이 필요하다.
 
 **2026-10-29 Console mount 점검 준비:** 기존 Web용 metadata probe는 무 mount 조건을 유지한다. 별도 Console probe에서 고정 project/service와 읽기 전용 전용 socket 디렉터리 한 개만 허용하며 동일한 host 양성 대조·차단 counter 증가를 요구한다. 합성 HTTP/CLI 검증을 실제 VM 차단 수용으로 간주하지 않는다. 설정 설치·mount 배치·운영 파일 교체는 후속 승인 범위다.

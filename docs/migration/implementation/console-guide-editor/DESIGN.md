@@ -622,6 +622,16 @@ host 잠금 → 잔존 컨테이너 정리 → token/Instance Principal 초기�
 ARM64 static binary와 검증 commit/tree·checksum을 CI artifact로 남긴다. 해당 workflow의 필수 verify 성공 여부를 함께 확인해야 하며 artifact 업로드만으로 운영 배포가 승인되지는 않는다.
 systemd·Vault 공급·Console socket mount·egress/metadata 격리는 설치 연결의 후속이다. 기존 metadata probe의 mount 금지 검사와 Console 전용 socket mount의 일치도 그 단계에서 검증한다.
 
+**2026-10-29 token 공급 준비:** host의 고정 `/usr/local/bin/oci`로 Instance Principal을 사용해
+보호된 `/etc/oioibawige/waveform-runner-secret.json`의 `secretId` 하나만 CURRENT stage에서 조회한다.
+CLI 환경은 고정 PATH·전용 HOME·locale만 전달하며 앱 credential과 사용자 OCI 설정을 상속하지 않는다.
+조회는 60초 이내로 제한하고 Base64를 해제한 64자리 소문자 hex만 `/run/oioi-waveform-private/token`에
+0600으로 원자 교체한다. 디렉터리는 root 0700, 설정·기존 token은 root 0400/0600·단일 hardlink를 요구한다.
+상위 경로 symlink/비보호 소유권·쓰기 권한, FIFO를 거절한다. 실패 시 직전 token을 보존하지만 호출은 실패하므로
+후속 systemd 시작 연결은 이전 token으로 우회하지 않아야 한다. stdout/stderr에는 정제된 사건 코드만 남긴다.
+CLI 실행기·라이브러리를 포함한 host 설치 경로는 root 신뢰 경계이며, 실제 설치·Vault 조회는 별도 승인 후 수행한다.
+합성 CLI와 실제 root 파일 권한 검증을 실제 Vault/IAM 수용으로 확대하지 않는다. 앱 env 공급·서비스 설치는 후속이다.
+
 ### 6.3. Queue 설정 후보와 활성화 관문
 
 아래 수치는 **설계·실증 후보**이며 실제 OCI에 적용하거나 실증한 값이 아니다.
