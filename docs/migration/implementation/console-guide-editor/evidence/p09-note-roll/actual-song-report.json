@@ -1,0 +1,57 @@
+{
+  "passed": true,
+  "corpusSongs": 26,
+  "songId": "01a17439-dddf-76af-9716-2c0fcf925b82",
+  "lines": 41,
+  "segments": 72,
+  "regressions": [],
+  "checks": [
+    {
+      "dragCommitsOnce": true,
+      "escapeCancels": true,
+      "actualClockPlaybackSeekCapture": true,
+      "extraRowRecordingAndLrcUndo": true,
+      "imeBlocksShortcuts": true,
+      "inputAndDialogBlockShortcuts": true,
+      "failedSaveKeepsDraft": true,
+      "emptyAndErrorKeepEditor": true
+    },
+    {
+      "noteTracksAligned": true,
+      "emptyDraftBlockedOnSave": true,
+      "noteDrawAndText": true,
+      "duplicateDeleteUndo": true,
+      "noteDragSingleUndo": true,
+      "noteEscapeCancel": true,
+      "fineNudge10ms": true,
+      "savesLegacyJson": true,
+      "noWaveformNoteInput": true,
+      "pausedClockCapture": true,
+      "selectedNoteRevealedWithoutSeeking": true,
+      "segmentEmphasisVisibleAndEditable": true,
+      "independentCheerEchoUndoRedo": true,
+      "mixedSegmentsAndOffsetsRoundTrip": true,
+      "extraFlagRoundTrip": true
+    },
+    {
+      "width": 1600,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "actualMixedTextSavePreservesMetadata": true,
+      "actualPaintPiecesKeepOffset": true,
+      "sameCuePiecesRenderTogether": true
+    },
+    {
+      "width": 1280,
+      "overflow": false,
+      "errors": []
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "errors": []
+    }
+  ]
+}

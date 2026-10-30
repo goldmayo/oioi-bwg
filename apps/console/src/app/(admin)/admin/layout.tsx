@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 import { getAdminPageContext } from "@/server/auth/admin-page-context";
 import { getPushConfig } from "@/server/notifications/config";
 
-import AdminSidebar from "./_ui/admin-sidebar";
+import { AdminWorkspace } from "./_ui/admin-sidebar";
 import { NotificationProvider } from "./_ui/notification-provider";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -11,10 +11,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <NotificationProvider key={ctx.user!.id} accountId={ctx.user!.id} config={getPushConfig()}>
-      <div className="bg-background text-foreground flex h-dvh min-w-0 flex-col overflow-hidden md:flex-row">
-        <AdminSidebar />
-        <main className="min-h-0 min-w-0 flex-1 overflow-auto">{children}</main>
-      </div>
+      <AdminWorkspace>{children}</AdminWorkspace>
     </NotificationProvider>
   );
 }

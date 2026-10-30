@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useForm } from "react-hook-form";
 import type { LyricLine } from "@oioi-bwg/contracts/song";
 
 import { Button } from "@/shared/ui/button";
@@ -23,65 +23,57 @@ interface RawTextEditorProps {
   onClose: () => void;
 }
 
-export function RawTextEditor({ line, lineIndex, isOpen, onClose }: RawTextEditorProps) {
-  const { updateLine } = useLyricsEditorContext();
-  const [text, setText] = useState("");
-
-  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
-  const [prevLine, setPrevLine] = useState(line);
-
-  if (isOpen !== prevIsOpen || line !== prevLine) {
-    setPrevIsOpen(isOpen);
-    setPrevLine(line);
-    if (isOpen) {
-      const rawText = (line.segments || []).map((s) => s.text).join("");
-      setText(rawText);
-    }
-  }
-
-  const handleSave = () => {
-    const rawText = (line.segments || []).map((s) => s.text).join("");
-    if (text !== rawText) {
-      updateLine(lineIndex, {
-        segments: [{ text, isCheer: false, isEcho: false }],
-      });
-    }
-    onClose();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSave();
-    }
-  };
-
+export function RawTextEditor({ isOpen, onClose, ...props }: RawTextEditorProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>가사 텍스트 수정</DialogTitle>
           <DialogDescription>
-            텍스트를 수정하면 해당 줄의 기존 응원법/에코 속성이 초기화됩니다.
+            조각별 내용을 수정합니다. 응원·에코 속성과 시작 시각은 유지합니다.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="가사를 입력하세요"
-            autoFocus
-            className="text-lg"
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            취소
-          </Button>
-          <Button onClick={handleSave}>저장</Button>
-        </DialogFooter>
+        {isOpen && <TextFields {...props} onClose={onClose} />}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function TextFields({ line, lineIndex, onClose }: Omit<RawTextEditorProps, "isOpen">) {
+  const { updateLine } = useLyricsEditorContext();
+  const { register, handleSubmit } = useForm({
+    defaultValues: { texts: line.segments.map((segment) => segment.text) },
+  });
+  return (
+    <form
+      onSubmit={handleSubmit(({ texts }) => {
+        if (line.segments.some((segment, index) => segment.text !== texts[index])) {
+          updateLine(lineIndex, {
+            segments: line.segments.map((segment, index) => ({ ...segment, text: texts[index] })),
+          });
+        }
+        onClose();
+      })}
+    >
+      <div className="max-h-[60vh] space-y-4 overflow-auto py-4">
+        {line.segments.map((segment, index) => (
+          <label key={index} className="flex flex-col gap-2 text-sm">
+            {line.segments.length === 1 ? "내용" : `${index + 1}번째 조각 내용`}
+            <Input
+              aria-label={`${index + 1}번째 조각 내용`}
+              {...register(`texts.${index}`)}
+              autoFocus={index === 0}
+              className="text-lg"
+            />
+          </label>
+        ))}
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose}>
+          취소
+        </Button>
+        <Button type="submit">저장</Button>
+      </DialogFooter>
+    </form>
   );
 }

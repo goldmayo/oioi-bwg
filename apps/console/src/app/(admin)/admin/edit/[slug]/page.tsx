@@ -47,7 +47,7 @@ export default async function AdminLyricsEditPage({ params }: AdminEditPageProps
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="h-screen overflow-hidden">
+      <div className="h-full min-h-0 overflow-hidden">
         <AdminLyricsEditor
           song={song}
           accountId={context.user!.id}
