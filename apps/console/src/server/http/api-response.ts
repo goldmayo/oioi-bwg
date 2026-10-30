@@ -9,6 +9,7 @@ import { logAuthRejection } from "@/server/observability/auth-rejection-logger";
 import type { ServerErrorContext } from "@/server/observability/safe-server-event";
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
+import { JsonBodyError } from "./bounded-json-body";
 import { assertConsoleOrigin } from "./console-origin";
 
 const appErrorDefinitions = {
@@ -105,6 +106,12 @@ export function toErrorResponse(
     authorization?: RequestAuthorization;
   } = {},
 ): Response {
+  if (error instanceof JsonBodyError)
+    return Response.json(
+      { code: "VALIDATION_ERROR", message: error.message },
+      { status: error.status },
+    );
+
   if (error instanceof InvalidJsonBodyError) {
     return Response.json(
       apiErrorResponseSchema.parse({
