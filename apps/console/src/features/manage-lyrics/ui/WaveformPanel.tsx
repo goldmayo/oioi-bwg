@@ -11,11 +11,11 @@ import { waveformQueries } from "@/entities/waveform";
 import { Button } from "@/shared/ui/button";
 
 import { formatTime } from "../lib/lrc-parser";
-import type { WaveformGenerationControls } from "../model/types";
+import type { WaveformImportControls } from "../model/types";
 
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 import type { CuePreview } from "./PeaksWaveform";
-import { WaveformGenerationButton } from "./WaveformGenerationButton";
+import { WaveformImportButton } from "./WaveformImportButton";
 
 const PeaksWaveform = dynamic(() => import("./PeaksWaveform"), {
   ssr: false,
@@ -34,11 +34,11 @@ function WaveformSkeleton() {
 export function WaveformPanel({
   accountId,
   disabled = false,
-  generation,
+  registration,
 }: {
   accountId: string;
   disabled?: boolean;
-  generation?: WaveformGenerationControls;
+  registration?: WaveformImportControls;
 }) {
   const editor = useLyricsEditorContext();
   const query = useQuery(waveformQueries.song(accountId, editor.songId));
@@ -123,14 +123,15 @@ export function WaveformPanel({
           </Button>
         </div>
       </div>
-      {generation ? (
+      {registration ? (
         <div className="px-4 pb-4">
-          <WaveformGenerationButton
+          <WaveformImportButton
             accountId={accountId}
             songId={editor.songId}
+            videoId={registration.videoId}
             disabled={disabled || editor.isSaving}
-            videoChanged={editor.isVideoDirty || editor.youtubeId !== generation.videoId}
-            onError={generation.onError}
+            videoChanged={editor.isVideoDirty || editor.youtubeId !== registration.videoId}
+            onError={registration.onError}
           />
         </div>
       ) : null}

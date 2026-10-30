@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-29"
-revision: 50
+updated_at: "2026-10-31"
+revision: 53
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,12 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-31 사용자 결정 — 로컬 분석·JSON 등록으로 전환:** 오사카 VM 입력 제한 이후 관리자 PC에서 JSON을 생성하고 Console로 등록하는 경로를 구현한다. 현재 계약과 정리 순서는 [DESIGN §6.5](DESIGN.md#65-로컬-분석json-등록-2026-10-31-개정), 도메인 정책은 §20.2가 소유한다. 첫 PR은 기존 Job·파형·요청자 알림 transaction을 재사용하는 제한된 PUT API와 동시/재업로드·이전 attempt 무효화 검증이다. 다음은 편집 UI·로컬 파일 생성 명령이며, 실제 운영 등록과 VM/OCI 삭제는 별도 승인 관문이다. 아래 날짜별 Queue 기록을 소급해 성공/완료로 바꾸지 않는다. 저장/API [#357](https://github.com/goldmayo/oioi-bwg/pull/357)은 CI #724 성공 후 병합했고 로컬 생성 도구는 [#358](https://github.com/goldmayo/oioi-bwg/pull/358)로 분리했다. 편집 UI의 파일 등록과 실제 로컬 출력의 격리 PostgreSQL 저장/재조회·브라우저 대역 검증을 완료했으며 운영 배포/등록은 아직 별도다. 반복 사용법은 [기존 로컬 안내](https://github.com/goldmayo/oioi-bwg/blob/278aee23e2b1d27462c2922087b63893fd06dd43/docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#로컬-파형-json-생성관리자-등록-2026-10-31)를 따른다.
+
+**2026-10-30 23시대 운영 배포·입력 지역 관문 추가:** 사용자 승인으로 [Promotion #355](https://github.com/goldmayo/oioi-bwg/pull/355)의 검증된 두 digest와 1GiB Runner를 적용했다. 실제 ADMIN/MFA 생성 요청이 OCI Queue를 거쳐 Job RUNNING으로 전환됐지만, 지정 영상 `pbELDkeLdho`는 YouTube 재생 허용 국가에서 한국 포함·일본 제외가 확인돼 오사카 VM의 추출이 실패했다. 같은 이미지·영상의 현재 로컬 metadata 요청은 성공했다. 운영 waveform JSON 적재는 미완료이며, 재전달 반복을 막기 위해 Runner를 중지했다. 생성 설정은 해당 영상 한 건에 활성 상태로 남아 있다. Job·Queue를 삭제하거나 기존 영상/Cue를 변경하지 않았다.
+
+실제 VM의 기존 CI 합성 fixture는 3.013초와 1시간 입력을 통과했고, 1시간 처리 25.22초·관측 peak 27078656 bytes·OOM 0·swap 0·세 anchor 오차 0ms와 tmpfs/음원 프로세스·컨테이너 정리를 확인했다. 이는 실제 영상의 음원 수용·offset/drift나 운영 JSON 적재 증거가 아니다. 최초 YouTube 실행의 별도 자원 observer는 TimeoutExpired로 실패했으므로 그 실행의 peak를 합격 근거로 사용하지 않는다. 배포·실패·진단·실측 상세는 #355 본문이 소유한다. 후속 입력은 실제 worker 리전의 재생 가능 여부와 이용 범위를 확인한 뒤 활성화하며, 기존 RUNNING Job 복구와 실제 JSON 저장·재조회 및 §3의 복구 수용이 남아 있다.
 
 **2026-10-30 지정 입력의 로컬 분석 확인:** 사용자가 제공한 `pbELDkeLdho`는 운영 곡 고민중독과 참조가 일치했다. 비상업적 2차창작·음원 비저장/비스트리밍 목적의 한 건 분석을 재심사 후 실행했고, 같은 ARM64 image에서 실제 yt-dlp → ffmpeg → BBC JSON을 얻었다. 256MiB OOM 기록과 512MiB의 관측 peak를 근거로 [DESIGN §6.2](DESIGN.md#62-oci-queue-연결과-완료-전달-계약)의 현재 한도를 사용자 지정 1GiB/swap 0으로 개정한다. 로컬 결과의 기존 Zod 계약 통과와 컨테이너 제거를 확인했으며, 이는 운영 Queue → worker → PostgreSQL 저장·재조회 수용이 아니다. 후속은 검증 Runner 교체·지정 입력 설정과 Promotion 후 실제 Job 한 건의 성공/JSON 적재 확인이다.
 

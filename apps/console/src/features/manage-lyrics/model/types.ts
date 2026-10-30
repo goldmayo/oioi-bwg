@@ -9,7 +9,7 @@ export interface SongEditor {
   guideWrite?: GuideWriteVersion;
 }
 
-export interface WaveformGenerationControls {
+export interface WaveformImportControls {
   videoId: string;
   onError: (error: unknown) => void;
 }

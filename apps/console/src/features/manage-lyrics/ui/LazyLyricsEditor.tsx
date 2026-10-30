@@ -2,7 +2,7 @@
 
 import { lazy, Suspense } from "react";
 
-import type { SongEditor, WaveformGenerationControls } from "../model/types";
+import type { SongEditor, WaveformImportControls } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
 // React.lazy를 사용한 클라이언트 사이드 지연 로딩
@@ -13,7 +13,7 @@ interface LazyLyricsEditorProps {
   saveSongData: SaveSongDataAction;
   accountId: string;
   disabled?: boolean;
-  waveformGeneration?: WaveformGenerationControls;
+  waveformImport?: WaveformImportControls;
 }
 
 export function LazyLyricsEditor({
@@ -21,7 +21,7 @@ export function LazyLyricsEditor({
   saveSongData,
   accountId,
   disabled,
-  waveformGeneration,
+  waveformImport,
 }: LazyLyricsEditorProps) {
   return (
     <Suspense
@@ -36,7 +36,7 @@ export function LazyLyricsEditor({
         saveSongData={saveSongData}
         accountId={accountId}
         disabled={disabled}
-        waveformGeneration={waveformGeneration}
+        waveformImport={waveformImport}
       />
     </Suspense>
   );

@@ -44,7 +44,8 @@
     "type-check:config": "tsc --noEmit -p tsconfig.config.json",
     "type-check:scripts": "tsc --noEmit -p scripts/tsconfig.json",
     "lint:deps": "pnpm --filter @oioi-bwg/repository-tools lint:deps && turbo boundaries",
-    "db:import-guides": "node --conditions=react-server --import tsx scripts/import-cheer-guides.ts"
+    "db:import-guides": "node --conditions=react-server --import tsx scripts/import-cheer-guides.ts",
+    "waveform:generate": "tsx scripts/generate-waveform.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
