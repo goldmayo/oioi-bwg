@@ -18,7 +18,13 @@ import {
 
 import { NotificationBell } from "./notification-bell";
 
-export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
+export function AdminSidebarShell({
+  children,
+  compact = false,
+}: {
+  children: React.ReactNode;
+  compact?: boolean;
+}) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const brand = (
@@ -70,8 +76,24 @@ export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
   );
   return (
     <>
-      <header className="bg-sidebar border-sidebar-border flex h-16 shrink-0 items-center justify-between border-b px-4 md:hidden">
-        {brand}
+      <header
+        className={`bg-sidebar border-sidebar-border flex shrink-0 items-center justify-between border-b px-4 ${compact ? "h-12" : "h-16 md:hidden"}`}
+      >
+        <div className="flex items-center gap-5">
+          {brand}
+          {compact && (
+            <nav
+              aria-label="현재 위치"
+              className="text-muted-foreground hidden items-center gap-2 text-xs sm:flex"
+            >
+              <Link href="/admin">Console</Link>
+              <span>/</span>
+              <Link href="/admin/songs">곡 관리</Link>
+              <span>/</span>
+              <span>응원법 편집</span>
+            </nav>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <NotificationBell />
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -101,7 +123,7 @@ export function AdminSidebarShell({ children }: { children: React.ReactNode }) {
       <aside
         data-collapsed={isMinimized}
         aria-label="관리자 탐색"
-        className={`group/sidebar bg-sidebar border-sidebar-border hidden h-full shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${isMinimized ? "w-20" : "w-60"}`}
+        className={`group/sidebar bg-sidebar border-sidebar-border hidden h-full shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${isMinimized ? "w-20" : "w-60"} ${compact ? "md:hidden" : ""}`}
       >
         <div
           className={`border-sidebar-border flex shrink-0 items-center border-b px-5 ${isMinimized ? "h-28 flex-col justify-center gap-1" : "h-20 justify-between gap-2"}`}

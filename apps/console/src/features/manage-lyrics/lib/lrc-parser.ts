@@ -1,11 +1,12 @@
 import type { LyricLine } from "@oioi-bwg/contracts/song";
 
-export function formatTime(seconds: number): string {
-  const hundredths = Math.round(Math.max(0, seconds) * 100);
-  const m = Math.floor(hundredths / 6000);
-  const s = Math.floor(hundredths / 100) % 60;
-  const ms = hundredths % 100;
-  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${ms.toString().padStart(2, "0")}`;
+export function formatTime(seconds: number, precision: 2 | 3 = 2): string {
+  const scale = 10 ** precision;
+  const hundredths = Math.round(Math.max(0, seconds) * scale);
+  const m = Math.floor(hundredths / (60 * scale));
+  const s = Math.floor(hundredths / scale) % 60;
+  const ms = hundredths % scale;
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${ms.toString().padStart(precision, "0")}`;
 }
 
 export function parseTime(timeStr: string): number {

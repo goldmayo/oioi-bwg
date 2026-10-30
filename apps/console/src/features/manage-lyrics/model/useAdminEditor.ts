@@ -2,8 +2,12 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import type { AdminSongMutationResult, SaveAdminSongLyrics } from "@oioi-bwg/contracts/song";
 import type { LyricSegment } from "@oioi-bwg/contracts/song";
+import {
+  type AdminSongMutationResult,
+  type SaveAdminSongLyrics,
+  saveAdminSongLyricsSchema,
+} from "@oioi-bwg/contracts/song";
 import { toast } from "sonner";
 
 import { useAdWatcher } from "@/shared/model/useAdWatcher";
@@ -69,6 +73,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
   const videoForm = useForm({ defaultValues: { youtubeId: song.youtubeId } });
   const youtubeId = useWatch({ control: videoForm.control, name: "youtubeId" });
   const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
   const savingRef = useRef(false);
   const guideWriteRef = useRef(song.guideWrite);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -134,20 +139,27 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
    */
   const handleSave = useCallback(async () => {
     if (savingRef.current) return;
+    const input = saveAdminSongLyricsSchema.safeParse({
+      lyrics,
+      youtubeId,
+      ...(guideWriteRef.current ? { guideWrite: guideWriteRef.current } : {}),
+    });
+    if (!input.success) {
+      toast.error("가사와 노트의 내용·시각을 확인해 주세요.");
+      return;
+    }
     savingRef.current = true;
     setIsSaving(true);
+    setHasSaved(false);
     try {
-      const saved = await saveSongData(song.id, {
-        lyrics,
-        youtubeId,
-        ...(guideWriteRef.current ? { guideWrite: guideWriteRef.current } : {}),
-      });
+      const saved = await saveSongData(song.id, input.data);
       guideWriteRef.current = saved.guideWrite;
       lyricsEditor.markSaved(lyrics);
       const currentVideo = videoForm.getValues("youtubeId");
       videoForm.reset({ youtubeId });
       if (currentVideo !== youtubeId)
         videoForm.setValue("youtubeId", currentVideo, { shouldDirty: true });
+      setHasSaved(true);
       toast.success("저장되었습니다.");
     } catch {
       // MutationCache의 전역 오류 UX가 실패를 표시한다.
@@ -193,6 +205,19 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     const element = node as HTMLElement;
     const lineIdxStr = element.getAttribute("data-line");
     const segIdxStr = element.getAttribute("data-seg");
+
+    const focusNode = selection.focusNode;
+    const focusElement =
+      focusNode?.nodeType === Node.TEXT_NODE
+        ? focusNode.parentElement
+        : (focusNode as Element | null);
+    if (
+      focusElement?.getAttribute("data-line") !== lineIdxStr ||
+      focusElement?.getAttribute("data-seg") !== segIdxStr
+    ) {
+      setToolbar(null);
+      return;
+    }
 
     if (lineIdxStr && segIdxStr && parseInt(lineIdxStr) === lineIndex) {
       const rect = selection.getRangeAt(0).getBoundingClientRect();
@@ -315,6 +340,8 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     setIsRecording,
     subscribeToTime,
     updateLine,
+    editNote: lyricsEditor.editNote,
+    editSelection: lyricsEditor.editSelection,
     captureTime: handleCaptureTime,
     addExtraLine: handleAddExtraLine,
     addSegmentToExtra,
@@ -332,6 +359,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     playerState,
     setPlayerState,
     isSaving,
+    hasSaved,
     isImportOpen,
     lrcInput,
     isAdPlaying,

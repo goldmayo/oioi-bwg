@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-31"
-revision: 53
+revision: 55
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,8 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-31 후속 운영 반영:** #357 저장/API → #358 로컬 생성 → #359 관리자 등록 UI를 검증·병합하고 [Promotion #360](https://github.com/goldmayo/oioi-bwg/pull/360)을 운영에 적용했다. 사용자 ADMIN/MFA 파일 등록 성공 보고와 운영 읽기 전용 조회로 실제 JSON 전체 일치·기존 RUNNING Job의 SUCCEEDED 전환·성공 알림 1건 저장·가사/공개 Cue 보존을 확인했다. 이번 등록의 기기 발송 대기 행은 없으며 새 OS 알림 수신 검증으로 계산하지 않는다. 사용자가 여기서 P08 작업을 멈추고 P09/P10 병합을 진행하기로 해 VM 전용 실행 구성 회수는 보류했다. P09→P10 통합은 최신 migration_main의 JSON 등록 UI/PUT 경로를 보존하며 실제 영상 anchor 수용은 별도로 남는다. 현재/남은 판정은 WORK에서 관리한다. 공통 알림과 Queue/Runner 소스·OCI 자원은 후속 장기 작업을 위해 보존한다. 실제 배포·설정/이력 예외 원복·검증 상세는 #360, 반복 연결 해제/복구 절차는 [host 안내 §11.5](../../../../ops/oci/README.md#115-로컬-json-등록-전환과-vm-실행-구성-회수--2026-10-31)가 소유한다. 실제 영상 anchor/offset/drift 수용을 로컬·대역 검사로 대체하지 않는다.
 
 **2026-10-31 사용자 결정 — 로컬 분석·JSON 등록으로 전환:** 오사카 VM 입력 제한 이후 관리자 PC에서 JSON을 생성하고 Console로 등록하는 경로를 구현한다. 현재 계약과 정리 순서는 [DESIGN §6.5](DESIGN.md#65-로컬-분석json-등록-2026-10-31-개정), 도메인 정책은 §20.2가 소유한다. 첫 PR은 기존 Job·파형·요청자 알림 transaction을 재사용하는 제한된 PUT API와 동시/재업로드·이전 attempt 무효화 검증이다. 다음은 편집 UI·로컬 파일 생성 명령이며, 실제 운영 등록과 VM/OCI 삭제는 별도 승인 관문이다. 아래 날짜별 Queue 기록을 소급해 성공/완료로 바꾸지 않는다. 저장/API [#357](https://github.com/goldmayo/oioi-bwg/pull/357)은 CI #724 성공 후 병합했고 로컬 생성 도구는 [#358](https://github.com/goldmayo/oioi-bwg/pull/358)로 분리했다. 편집 UI의 파일 등록과 실제 로컬 출력의 격리 PostgreSQL 저장/재조회·브라우저 대역 검증을 완료했으며 운영 배포/등록은 아직 별도다. 반복 사용법은 [기존 로컬 안내](https://github.com/goldmayo/oioi-bwg/blob/278aee23e2b1d27462c2922087b63893fd06dd43/docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#로컬-파형-json-생성관리자-등록-2026-10-31)를 따른다.
 
@@ -384,6 +386,8 @@ swap 가능성과 memory 한도 포함 조건도 확인한다. 이 문서의 공
 시안은 기존 Console의 색·타이포·관리자 메뉴를 확장한다. 데스크톱은 영상과 가사 표 아래에
 전체/확대 파형을, 모바일은 작은 영상→파형→가사 표를 둔다. Cue 이동은 preview만 갱신하다 놓을 때
 초안을 한 번 변경하며 Esc/Undo, LRC·강조·추임새·시간 캡처를 보존한다. P10 기능은 포함하지 않는다.
+
+**2026-10-29 후속 배치 결정:** 수동 입력 화면은 [설계 §7](DESIGN.md#7-audio-editor)의 피아노 롤 구성으로 확장한다. 데스크톱은 왼쪽 파형·노트·가사 표와 오른쪽 참고 영상·선택 노트 속성으로 배치한다. 390px에서는 단일 열과 선택 노트 속성/트랙 간 이동을 제공한다. 원래 시안의 배치 결정은 위 기록으로 보존한다.
 
 브라우저 fixture의 합성 BBC JSON·IFrame API 대역 검증과 실제 YouTube/worker 수용을 구분한다.
 후자의 3개 이상 anchor, 일정 offset/누적 drift, 실제 seek 지연과 재생 상태 확인이 남아 있으면

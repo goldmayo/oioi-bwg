@@ -1,0 +1,140 @@
+{
+  "referenceViewport": {
+    "width": 1586,
+    "height": 992
+  },
+  "method": "동결 이미지와 같은 크기에서 수동 시각 비교. 픽셀 자동 동등성 검사는 아님.",
+  "keyboardChecks": "각 캡처 전 Space로 편집 도구 열기, 영상 재생 미발생, Escape로 닫기 통과",
+  "boundary": "실제 React/Peaks 편집기, YouTube IFrame·HTTP 대역 및 합성 파형 사용",
+  "viewports": [
+    {
+      "viewport": {
+        "width": 1586,
+        "height": 992
+      },
+      "rects": {
+        "[data-lyrics-editor] > header": {
+          "x": 0,
+          "y": 48,
+          "width": 1586,
+          "height": 80,
+          "bottom": 128
+        },
+        "[data-note-ruler]": {
+          "x": 16,
+          "y": 218,
+          "width": 1554,
+          "height": 48,
+          "bottom": 266
+        },
+        "[data-note-lanes]": {
+          "x": 16,
+          "y": 412,
+          "width": 1554,
+          "height": 153,
+          "bottom": 565
+        },
+        "[data-editor-dock]": {
+          "x": 0,
+          "y": 655,
+          "width": 1586,
+          "height": 337,
+          "bottom": 992
+        },
+        "[data-editor-video]": {
+          "x": 1120.796875,
+          "y": 707,
+          "width": 449.1875,
+          "height": 269,
+          "bottom": 976
+        }
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 1000
+      },
+      "rects": {
+        "[data-lyrics-editor] > header": {
+          "x": 0,
+          "y": 48,
+          "width": 1280,
+          "height": 80,
+          "bottom": 128
+        },
+        "[data-note-ruler]": {
+          "x": 16,
+          "y": 218,
+          "width": 1248,
+          "height": 48,
+          "bottom": 266
+        },
+        "[data-note-lanes]": {
+          "x": 16,
+          "y": 412,
+          "width": 1248,
+          "height": 153,
+          "bottom": 565
+        },
+        "[data-editor-dock]": {
+          "x": 0,
+          "y": 655,
+          "width": 1280,
+          "height": 345,
+          "bottom": 1000
+        },
+        "[data-editor-video]": {
+          "x": 906.59375,
+          "y": 707,
+          "width": 357.40625,
+          "height": 277,
+          "bottom": 984
+        }
+      }
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "rects": {
+        "[data-lyrics-editor] > header": {
+          "x": 0,
+          "y": 48,
+          "width": 390,
+          "height": 193,
+          "bottom": 241
+        },
+        "[data-note-ruler]": {
+          "x": 16,
+          "y": 331,
+          "width": 358,
+          "height": 48,
+          "bottom": 379
+        },
+        "[data-note-lanes]": {
+          "x": 16,
+          "y": 509,
+          "width": 358,
+          "height": 153,
+          "bottom": 662
+        },
+        "[data-editor-dock]": {
+          "x": 0,
+          "y": 888,
+          "width": 390,
+          "height": 682.375,
+          "bottom": 1570.375
+        },
+        "[data-editor-video]": {
+          "x": 16,
+          "y": 1353,
+          "width": 358,
+          "height": 201.375,
+          "bottom": 1554.375
+        }
+      }
+    }
+  ]
+}

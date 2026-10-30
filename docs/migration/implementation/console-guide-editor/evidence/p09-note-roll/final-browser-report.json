@@ -1,0 +1,62 @@
+{
+  "passed": true,
+  "fixture": "Existing actual CLI waveform JSON for upload/display; other mechanical cases retain synthetic BBC. Actual React/Peaks/viewer; HTTP, YouTube IFrame and poster boundaries stubbed. Imported source.id is adapted to the isolated fixture video ID.",
+  "checks": [
+    {
+      "width": 1586,
+      "waveformImport": true,
+      "draftAndUndoPreserved": true,
+      "durationMs": 175880,
+      "buckets": 8794
+    },
+    {
+      "width": 1586,
+      "legacyRowEditingPreserved": true,
+      "duplicateEditorsAbsent": true,
+      "actualTextMetadataPreserved": true
+    },
+    {
+      "width": 1280,
+      "waveformImport": true,
+      "draftAndUndoPreserved": true,
+      "durationMs": 175880,
+      "buckets": 8794
+    },
+    {
+      "rowCaptureAndSegmentOffsetSeparated": true,
+      "inlineTimeAndShortcutSave": true,
+      "paintAndTextPreserveFlags": true,
+      "continuousCaptureUsesRows": true,
+      "notesSingleUndoAndEscape": true,
+      "noWaveformNoteEntryWithoutDialog": true
+    },
+    {
+      "markerEntryWithoutDialog": true,
+      "groupFourIntoOneLine": true,
+      "groupUndoRedo": true,
+      "batchTextAndNudge": true,
+      "appendKeepsGroup": true,
+      "contentWidth": true,
+      "oldShortcutsRemoved": true
+    },
+    {
+      "width": 1280,
+      "legacyRowEditingPreserved": true,
+      "duplicateEditorsAbsent": true,
+      "actualTextMetadataPreserved": true
+    },
+    {
+      "width": 390,
+      "waveformImport": true,
+      "draftAndUndoPreserved": true,
+      "durationMs": 175880,
+      "buckets": 8794
+    },
+    {
+      "width": 390,
+      "legacyRowEditingPreserved": true,
+      "duplicateEditorsAbsent": true,
+      "actualTextMetadataPreserved": true
+    }
+  ]
+}

@@ -592,6 +592,8 @@ MFA reset은 암호문을 폐기하므로 새 등록이 필요하다. 이전 JWT
 
 ## 11. P08 Runner 설치와 시작 분리
 
+2026-10-31 현재 기본 경로는 관리자 로컬 분석·Console JSON 등록이다. 연결 해제/회수는 [§11.5](#115-로컬-json-등록-전환과-vm-실행-구성-회수--2026-10-31)를 따른다. 아래 설치·연결 기록을 자동 재설치/기동 근거로 사용하지 않는다.
+
 실제 VM 적용은 별도 승인 후 수행한다. `install-waveform-runner.py`는 root 보호 staging에서만 실행한다.
 성공한 Verify의 `waveform-runner-arm64` artifact에서 `verified-commit.txt`·`verified-tree.txt`·SHA256SUMS를
 대조한 binary와 같은 승인 source의 `ops/oci` 파일을 준비한다. 전체 staging 상위 경로도 root 소유·쓰기 금지여야 한다.
@@ -699,3 +701,15 @@ Runner 설정을 준비하며 `approvedVideoIds: []`를 유지한다. config 작
 현재 app runtime env와 과거 pair snapshot은 직접 편집하지 않고 별도 Promotion이 새 runtime env를 공급한다.
 Caddy/host 준비 결과와 검증 candidate를 대조한 뒤 배포·서비스 시작 범위를 확정한다. 아직 후속 설정 적용,
 Caddy reload, Vault 조회, 새 Promotion, Runner 시작을 수행했다는 증거는 없다.
+
+### 11.5. 로컬 JSON 등록 전환과 VM 실행 구성 회수 — 2026-10-31
+
+로컬 생성/등록 사용법은 [로컬 개발 안내](../../docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#로컬-파형-json-생성관리자-등록-2026-10-31), 현재 계약·보존 범위는 [DESIGN §6.5](../../docs/migration/implementation/console-guide-editor/DESIGN.md#65-로컬-분석json-등록-2026-10-31-개정)가 소유한다. 실제 변경 source/artifact·승인·hash·수용 결과는 [Promotion #360](https://github.com/goldmayo/oioi-bwg/pull/360) 본문에 둔다.
+
+전환 순서는 deployment lock 안에서 root 전용 설정 백업 → Runner/생성 flag false·빈 영상 목록·socket GID 해제·Runner token 매핑 제거 → 정상 Promotion → 새 pair healthy/ready·Console mount/GID 없음·관리자 JSON 등록/Job/알림 확인 → 전용 VM 구성 회수다. 현재 앱 env와 과거 pair snapshot을 직접 수정하지 않는다. root 설정 변경은 다음 정상 배포가 적용한다.
+
+회수 전 실제 배포 candidate/source tree, live flag, 무 mount/GID, Runner inactive/disabled, worker/image 참조·전용 network 사용 부재, asset의 root 보호와 전용 그룹의 host 사용자 미사용을 확인한다. 준비 백업과 비교해 파형 관련 키 외 공통 public/secret 매핑이 동일해야 한다. 계획 확인을 기본으로 하고 승인된 적용만 수행한다. unit/tmpfiles·실행기/설정·overlay는 보호된 백업으로 회수하고 runtime socket/token·전용 network/nft table·해당 worker image만 제거한다. 공유 metadata guard와 양 앱의 실제 차단을 다시 확인한다. 전역 Docker prune·공통 Caddy/OCI CLI/Logging/FCM 제거·DB 이력 삭제는 하지 않는다.
+
+공통 알림의 테이블/dispatcher·재시도·기기 등록·알림함·foreground/background 전달과 Queue/Runner/Worker 소스·OCI Queue/IAM/Vault Secret은 보존한다. VM 실행 구성 회수는 OCI 자원 폐기가 아니며 `waveform_queue_enabled=false`로 바꾸지 않는다. Queue/DLQ의 잔여와 DB terminal은 별도로 대조한다.
+
+구 Runner 연결 snapshot으로 되돌리려면 전용 asset·그룹·network·검증 image의 복원이 선행돼야 한다. 회수 백업과 검증 archive/source를 보호해 보관하며 자동 app rollback이 host 구성까지 복원한다고 가정하지 않는다. 새 JSON 등록 release 이후의 무 mount pair는 기존 B2 복구 절차를 따른다. 설치·삭제·복구는 각각 승인한 VM 범위에서만 수행한다.
