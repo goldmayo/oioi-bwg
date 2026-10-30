@@ -434,6 +434,7 @@ async function verifyQA(page, width) {
     .getByRole("button", { name: "현재 초안을 사용자 화면으로 미리보기", exact: true })
     .click();
   const preview = page.getByRole("dialog");
+  assert.ok(await preview.getByRole("img", { name: "OIOIBWG", exact: true }).isVisible());
   assert.ok(await preview.getByText("초안 미리보기", { exact: true }).isVisible());
   assert.equal(lastSaved, lastWrite, "preview does not save");
   await capture(page, `qa-preview-${width}.png`);
@@ -473,10 +474,15 @@ async function verifyQA(page, width) {
   if (width !== 1280) return;
   await page.reload({ waitUntil: "networkidle" });
   await page.locator('[aria-label="확대 waveform"] canvas').first().waitFor();
-  const previous = page.getByRole("button", { name: "이전 노트 구간", exact: true });
-  if (await previous.isEnabled()) await previous.click();
-  await page.waitForTimeout(200);
+  await page.waitForFunction(() =>
+    document.querySelector('[aria-label="확대 waveform"][data-start]'),
+  );
   const note = page.locator('[data-editor-note="line:0"]');
+  for (let attempt = 0; attempt < 3 && !(await note.count()); attempt++) {
+    const previous = page.getByRole("button", { name: "이전 노트 구간", exact: true });
+    if (await previous.isEnabled()) await previous.click();
+    await page.waitForTimeout(100);
+  }
   await note.click();
   const box = await note.boundingBox();
   await page.mouse.move(box.x + 8, box.y + 12);

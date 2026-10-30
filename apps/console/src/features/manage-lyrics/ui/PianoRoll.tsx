@@ -234,7 +234,7 @@ function Lane({
         data-note-track={lane.id}
         role="group"
         aria-label={`${lane.label} 노트 트랙`}
-        className="border-border relative overflow-x-hidden overflow-y-auto border-t [scrollbar-width:none]"
+        className="border-border relative overflow-x-hidden overflow-y-auto border-t [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{ height: lane.id === "extra" ? 128 : 100 }}
       >
         <button

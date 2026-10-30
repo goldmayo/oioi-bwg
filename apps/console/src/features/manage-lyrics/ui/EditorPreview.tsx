@@ -44,7 +44,23 @@ export function EditorPreview({ blocked }: { blocked: boolean }) {
         <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-24px)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
           <DialogHeader className="border-border shrink-0 border-b px-5 py-4 text-left">
             <DialogTitle>사용자 화면 미리보기</DialogTitle>
-            <DialogDescription>현재 편집 중인 초안</DialogDescription>
+            <DialogDescription className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span
+                role="img"
+                aria-label="OIOIBWG"
+                className="text-foreground inline-flex items-center gap-2 text-lg font-black tracking-tighter"
+              >
+                <span aria-hidden="true" className="bg-qwer-rockation size-2 rounded-full" />
+                <span aria-hidden="true">
+                  <span className="text-qwer-q">O</span>
+                  <span className="text-qwer-w">I</span>
+                  <span className="text-qwer-e">O</span>
+                  <span className="text-qwer-r">I</span>
+                  <span>BWG</span>
+                </span>
+              </span>
+              <span>현재 편집 중인 초안</span>
+            </DialogDescription>
           </DialogHeader>
           {open && <DraftViewer />}
         </DialogContent>
