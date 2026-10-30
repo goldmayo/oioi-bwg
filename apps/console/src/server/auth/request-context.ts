@@ -47,6 +47,7 @@ export interface RequestAuthorization {
   context: RequestContext;
   decision: AuthorizationDecision;
   rejectionLogged: boolean;
+  mfaVersion?: number;
   observation?: RequestObservation;
 }
 
@@ -85,6 +86,7 @@ async function loadRequestAuthorization(): Promise<RequestAuthorization> {
     context: { user: { id: account.id.toString() }, ability: buildAbility(facts) },
     observation,
     decision: "authorized",
+    mfaVersion: account.version,
     rejectionLogged: false,
   };
 }
