@@ -5,13 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 
 import { waveformQueries } from "@/entities/waveform";
 
-import { Button } from "@/shared/ui/button";
-
 import { type EditorNote, getEditorNotes, type NoteEdit } from "../lib/editor-notes";
 import type { SelectionEdit } from "../lib/note-selection";
 import type { SongEditor, WaveformImportControls } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
+import { EditorControlPanel } from "./EditorControlPanel";
 import { EditorReferenceVideo } from "./EditorReferenceVideo";
 import { EditorTopBar } from "./EditorTopBar";
 import { FloatingToolbar } from "./FloatingToolbar";
@@ -38,6 +37,8 @@ function LyricsEditorWorkspace({
 }) {
   const editor = useLyricsEditorContext();
   const query = useQuery(waveformQueries.song(accountId, editor.songId));
+  const [tab, setTab] = useState("timing");
+  const [follow, setFollow] = useState(true);
   const [selection, setSelection] = useState({ ids: [] as string[], signature: "", row: -1 });
   const [loop, setLoop] = useState({ start: 0, end: 8, enabled: false, video: editor.youtubeId });
   const [selectionRevision, setSelectionRevision] = useState(0);
@@ -189,143 +190,149 @@ function LyricsEditorWorkspace({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
-  const loopSettings = looping ? (
-    <details className="absolute -top-5 right-2 z-20 text-xs">
-      <summary
-        className="bg-background/90 border-border cursor-pointer list-none rounded border px-2 py-1"
-        title="반복 구간 설정"
-      >
-        A–B
-      </summary>
-      <div
-        aria-label="반복 구간 설정"
-        className="bg-popover border-border absolute top-8 right-0 flex w-64 flex-wrap items-center gap-3 rounded border p-4 shadow-lg"
-      >
-        <span>반복 구간</span>
-        <label>
-          A{" "}
-          <input
-            aria-label="반복 시작 초"
-            type="number"
-            min="0"
-            max={loop.end - 0.1}
-            step="0.01"
-            className="bg-muted w-24 rounded px-2 py-1"
-            value={loop.start}
-            onChange={(e) => {
-              const start = e.currentTarget.valueAsNumber;
-              if (Number.isFinite(start) && start >= 0 && start < loop.end)
-                setLoop({ ...loop, start });
-            }}
-          />
-        </label>
-        <label>
-          B{" "}
-          <input
-            aria-label="반복 끝 초"
-            type="number"
-            min={loop.start + 0.1}
-            max={duration}
-            step="0.01"
-            className="bg-muted w-24 rounded px-2 py-1"
-            value={loop.end}
-            onChange={(e) => {
-              const end = e.currentTarget.valueAsNumber;
-              if (Number.isFinite(end) && end > loop.start && end <= duration)
-                setLoop({ ...loop, end });
-            }}
-          />
-        </label>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={selectedNotes.length < 2}
-          onClick={() =>
-            setLoop({
-              start: Math.min(...selectedNotes.map((n) => n.time)),
-              end: Math.min(duration, Math.max(...selectedNotes.map((n) => n.time)) + 0.5),
-              enabled: true,
-              video: editor.youtubeId,
-            })
-          }
-        >
-          선택 노트 구간 사용
-        </Button>
-      </div>
-    </details>
-  ) : null;
   return (
     <div data-lyrics-editor className="bg-background relative flex h-full min-h-0 flex-col">
       <FloatingToolbar />
-      <EditorTopBar blocked={blocked} onAdd={addNote} looping={looping} onLoop={toggleLoop} />
+      <EditorTopBar blocked={blocked} />
       <div
         data-editor-scroll
         className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden"
       >
-        <WaveformPanel
+        <EditorControlPanel
           accountId={accountId}
           registration={waveformImport}
-          selectionRevision={selectionRevision}
-          query={query}
-          duration={duration}
-          disabled={disabled}
-          selected={selected}
-          selectedIds={selectedIds}
-          loop={looping ? loop : undefined}
-          loopSettings={loopSettings}
-          onLoopRange={(range) => setLoop({ ...range, enabled: true, video: editor.youtubeId })}
-          onSelect={select}
-          onEdit={edit}
-          onMove={(id, time) => {
-            const note = notes.find((n) => n.id === id);
-            if (note)
-              editSelection({
-                type: "move",
-                ids: selectedIds.includes(id) ? selectedIds : [id],
-                delta: time - note.time,
-                duration,
-              });
-          }}
-          onPreview={() => {}}
-          onCuePreview={() => {}}
-        />
-        <NoteSelectionBar
-          key={selectedIds.join(",")}
-          notes={selectedNotes}
           blocked={blocked}
+          follow={follow}
+          onFollow={() => setFollow((value) => !value)}
+          looping={looping}
+          loop={loop}
           duration={duration}
-          time={() => editor.currentTimeRef.current}
-          onEdit={editSelection}
+          onLoop={toggleLoop}
+          onRange={(range) => setLoop({ ...range, enabled: true, video: editor.youtubeId })}
+          onAdd={addNote}
         />
-        <div
-          data-editor-dock
-          className="grid min-h-72 shrink-0 grid-cols-1 gap-4 px-4 pb-4 lg:min-h-48 lg:flex-1 lg:shrink lg:grid-cols-[minmax(0,7fr)_minmax(280px,3fr)] lg:gap-0"
-        >
-          <div className="min-h-0 min-w-0 lg:pr-4">
-            <LyricsTable
-              selectedLines={selectedNotes.reduce(
-                (counts, note) => counts.set(note.lineIndex, (counts.get(note.lineIndex) ?? 0) + 1),
-                new Map<number, number>(),
-              )}
-              onSelectNotes={(index, checked) => {
-                const rowIds = notes
-                  .filter((note) => note.lineIndex === index)
-                  .map((note) => note.id);
-                setSelection({
-                  ids: checked
-                    ? [...new Set([...selectedIds, ...rowIds])]
-                    : selectedIds.filter((id) => !rowIds.includes(id)),
-                  signature,
-                  row: index,
-                });
-                editor.setCurrentIndex(index);
-                setSelectionRevision((value) => value + 1);
-              }}
+        <div className="grid min-h-0 flex-none grid-cols-1 gap-4 p-4 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_320px]">
+          <section className="border-border bg-card/20 flex h-[860px] min-h-0 min-w-0 flex-col rounded-md border lg:h-auto">
+            <div
+              role="tablist"
+              aria-label="편집 보기"
+              className="border-border flex h-12 shrink-0 gap-5 border-b px-4"
+            >
+              {[
+                ["timing", "타이밍"],
+                ["lyrics", "가사"],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  id={`tab-${id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  aria-controls={`panel-${id}`}
+                  tabIndex={tab === id ? 0 : -1}
+                  title={`${label} 보기`}
+                  className={`border-b-2 px-1 text-sm ${tab === id ? "border-cyan-400 text-cyan-300" : "text-muted-foreground border-transparent"}`}
+                  onClick={() => setTab(id)}
+                  onKeyDown={(event) => {
+                    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+                      event.preventDefault();
+                      const next =
+                        event.key === "Home"
+                          ? "timing"
+                          : event.key === "End"
+                            ? "lyrics"
+                            : id === "timing"
+                              ? "lyrics"
+                              : "timing";
+                      setTab(next);
+                      document.getElementById(`tab-${next}`)?.focus();
+                    }
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div
+              id="panel-timing"
+              role="tabpanel"
+              aria-labelledby="tab-timing"
+              hidden={tab !== "timing"}
+              className={`min-h-0 flex-1 overflow-y-auto p-3 ${tab !== "timing" ? "hidden" : ""}`}
+            >
+              <WaveformPanel
+                selectionRevision={selectionRevision}
+                query={query}
+                duration={duration}
+                disabled={disabled}
+                selected={selected}
+                selectedIds={selectedIds}
+                loop={looping ? loop : undefined}
+                follow={follow}
+                onFollow={setFollow}
+                onLoopRange={(range) =>
+                  setLoop({ ...range, enabled: true, video: editor.youtubeId })
+                }
+                onSelect={select}
+                onEdit={edit}
+                onMove={(id, time) => {
+                  const note = notes.find((n) => n.id === id);
+                  if (note)
+                    editSelection({
+                      type: "move",
+                      ids: selectedIds.includes(id) ? selectedIds : [id],
+                      delta: time - note.time,
+                      duration,
+                    });
+                }}
+                onPreview={() => {}}
+                onCuePreview={() => {}}
+              />
+              <p className="text-muted-foreground pt-3 text-xs">
+                Shift/Ctrl/Cmd 클릭으로 여러 노트 선택
+              </p>
+            </div>
+            <div
+              id="panel-lyrics"
+              role="tabpanel"
+              aria-labelledby="tab-lyrics"
+              hidden={tab !== "lyrics"}
+              className={`min-h-0 flex-1 overflow-hidden p-3 ${tab !== "lyrics" ? "hidden" : ""}`}
+            >
+              <LyricsTable
+                selectedLines={selectedNotes.reduce(
+                  (counts, note) =>
+                    counts.set(note.lineIndex, (counts.get(note.lineIndex) ?? 0) + 1),
+                  new Map<number, number>(),
+                )}
+                onSelectNotes={(index, checked) => {
+                  const rowIds = notes
+                    .filter((note) => note.lineIndex === index)
+                    .map((note) => note.id);
+                  setSelection({
+                    ids: checked
+                      ? [...new Set([...selectedIds, ...rowIds])]
+                      : selectedIds.filter((id) => !rowIds.includes(id)),
+                    signature,
+                    row: index,
+                  });
+                  editor.setCurrentIndex(index);
+                  setSelectionRevision((value) => value + 1);
+                }}
+              />
+            </div>
+            <NoteSelectionBar
+              key={selectedIds.join(",")}
+              notes={selectedNotes}
+              blocked={blocked}
+              duration={duration}
+              time={() => editor.currentTimeRef.current}
+              onEdit={editSelection}
             />
-          </div>
+          </section>
           <aside
             aria-label="참고 영상"
-            className="border-border min-h-0 min-w-0 border-t pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4"
+            className="border-border bg-card/20 min-h-0 min-w-0 rounded-md border p-3 lg:overflow-y-auto"
           >
             <EditorReferenceVideo />
           </aside>

@@ -26,6 +26,7 @@ interface Props {
   range?: { start: number; end: number };
   seconds: number | "auto";
   follow: boolean;
+  loopMode?: boolean;
   navigation: { time: number; revision: number } | null;
   blocked: boolean;
   onTimeUpdate: (time: number) => void;
@@ -85,14 +86,14 @@ export default function PeaksWaveform(props: Props) {
               container: zoomview.current,
               autoScroll: true,
               showAxisLabels: false,
-              showPlayheadTime: true,
+              showPlayheadTime: false,
               playheadTextColor: "#062b34",
               playheadBackgroundColor: "#06c8e9",
             },
             waveformData: { json: display.json },
             player: adapter,
             waveformColor: "#65717e",
-            playheadColor: "#22d3ee",
+            playheadColor: "transparent",
             axisLabelColor: "#b3bfcb",
             axisGridlineColor: "#343d48",
             fontSize: 11,
@@ -237,12 +238,13 @@ export default function PeaksWaveform(props: Props) {
     });
     view?.enableAutoScroll(props.follow);
     engine?.views.getView("overview")?.enableSeek(!props.blocked);
-    view?.enableSeek(!props.blocked);
+    view?.enableSeek(!props.blocked && !props.loopMode);
   }, [
     engine,
     props.seconds,
     props.follow,
     props.blocked,
+    props.loopMode,
     props.data.bucketSizeMs,
     props.data.peaks.samples_per_pixel,
   ]);
@@ -252,8 +254,8 @@ export default function PeaksWaveform(props: Props) {
   useEffect(() => {
     if (!engine || !overview.current || !zoomview.current) return;
     const observer = new ResizeObserver(() => {
-      engine.views.getView("overview")?.fitToContainer();
-      engine.views.getView("zoomview")?.fitToContainer();
+      if (overview.current?.clientWidth) engine.views.getView("overview")?.fitToContainer();
+      if (zoomview.current?.clientWidth) engine.views.getView("zoomview")?.fitToContainer();
     });
     observer.observe(overview.current);
     observer.observe(zoomview.current);
@@ -279,41 +281,15 @@ export default function PeaksWaveform(props: Props) {
   }, []);
   return (
     <div className="contents">
-      <div className="border-border bg-card/20 order-1 mb-4 overflow-hidden rounded-sm border px-1 py-1.5">
-        <div ref={overview} aria-label="전체 파형" className="h-10 min-w-0" />
+      <div className="border-border bg-card/20 col-span-2 row-start-1 overflow-hidden rounded-md border px-1 py-1.5">
+        <div ref={overview} aria-label="전체 waveform" className="h-10 min-w-0" />
       </div>
-      <div className="border-border order-3 flex border-y">
-        <div aria-hidden="true" className="w-16 shrink-0 sm:w-20" />
+      <div className="border-border col-span-2 row-start-4 grid grid-cols-[var(--editor-gutter)_minmax(0,1fr)] border-y">
+        <div className="text-muted-foreground flex items-center justify-center text-[10px]">
+          waveform
+        </div>
         <div className="relative min-w-0 flex-1 overflow-hidden">
-          {props.range && (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{
-                backgroundImage:
-                  "linear-gradient(to right, rgb(255 255 255 / .045) 1px, transparent 1px)",
-                backgroundSize: `${100 / (props.range.end - props.range.start)}% 100%`,
-                backgroundPosition: `${(-(props.range.start % 1) / (props.range.end - props.range.start)) * 100}% 0`,
-              }}
-            />
-          )}
-          <div ref={zoomview} aria-label="확대 파형과 Cue" className="h-32 touch-pan-y sm:h-36" />
-          {props.loop &&
-            props.range &&
-            props.loop.end > props.range.start &&
-            props.loop.start < props.range.end && (
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 border-x border-dashed border-cyan-400/70 bg-cyan-400/10"
-                style={{
-                  left: `${Math.max(0, ((props.loop.start - props.range.start) / (props.range.end - props.range.start)) * 100)}%`,
-                  right: `${Math.max(0, ((props.range.end - props.loop.end) / (props.range.end - props.range.start)) * 100)}%`,
-                }}
-              >
-                <span className="bg-cyan-900 px-1 text-[10px] text-cyan-100">A</span>
-                <span className="float-right bg-cyan-900 px-1 text-[10px] text-cyan-100">B</span>
-              </div>
-            )}
+          <div ref={zoomview} aria-label="확대 waveform" className="h-32 touch-pan-y sm:h-36" />
         </div>
       </div>
     </div>

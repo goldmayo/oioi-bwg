@@ -407,6 +407,7 @@ describe("song-service public DTO boundary", () => {
     findAdminSongBySlug.mockResolvedValue({
       id: "019a0170-0000-7000-8000-000000000002",
       title: "Test Song",
+      albumName: "Test Album",
       youtubeId: "youtube-id",
       lyrics: [{ startTime: 1, segments: [{ text: "가사" }] }],
     });
@@ -414,6 +415,7 @@ describe("song-service public DTO boundary", () => {
     await expect(getAdminSongEditorBySlug(context, "test-song")).resolves.toEqual({
       id: "019a0170-0000-7000-8000-000000000002",
       title: "Test Song",
+      albumName: "Test Album",
       youtubeId: "youtube-id",
       lyrics: [
         {

@@ -28,6 +28,7 @@ export function FloatingToolbar() {
     >
       {/* Echo: 선택 텍스트를 isCheer + isEcho 세그먼트로 분리 */}
       <Button
+        title="선택한 글자를 에코로 표시"
         size="sm"
         variant="ghost"
         className="text-qwer-w hover:bg-qwer-w/10 hover:text-qwer-w h-7 text-xs"
@@ -41,6 +42,7 @@ export function FloatingToolbar() {
 
       {/* Reset: 선택 텍스트를 isCheer=false, isEcho=false로 초기화 */}
       <Button
+        title="선택한 글자의 강조 해제"
         size="sm"
         variant="ghost"
         className="text-muted-foreground hover:text-foreground h-7 text-xs"

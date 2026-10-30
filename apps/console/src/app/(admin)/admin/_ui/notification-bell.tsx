@@ -35,6 +35,7 @@ export function NotificationBell() {
           variant="ghost"
           size="icon"
           className="relative size-11 shrink-0"
+          title={`알림, 읽지 않은 알림 ${count}개`}
           aria-label={`알림, 읽지 않은 알림 ${count}개`}
         >
           <Bell size={20} aria-hidden="true" />

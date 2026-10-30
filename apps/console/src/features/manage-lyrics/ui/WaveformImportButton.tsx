@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef } from "react";
+import { useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 
@@ -24,7 +24,6 @@ export function WaveformImportButton({
   videoChanged: boolean;
   onError: (error: unknown) => void;
 }) {
-  const noticeId = useId();
   const input = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const upload = useMutation({
@@ -42,7 +41,7 @@ export function WaveformImportButton({
           ref={input}
           type="file"
           accept=".json,application/json"
-          aria-label="파형 JSON 파일"
+          aria-label="waveform JSON 파일"
           hidden
           disabled={blocked}
           onChange={(event) => {
@@ -56,10 +55,11 @@ export function WaveformImportButton({
           variant="outline"
           size="sm"
           disabled={blocked}
-          aria-describedby={noticeId}
+          title="waveform JSON 등록"
+          className="h-9"
           onClick={() => input.current?.click()}
         >
-          {upload.isPending ? "파형 JSON 등록 중…" : "파형 JSON 등록"}
+          {upload.isPending ? "waveform JSON 등록 중…" : "waveform JSON 등록"}
         </Button>
         {upload.data ? (
           <Link
@@ -70,11 +70,9 @@ export function WaveformImportButton({
           </Link>
         ) : null}
       </div>
-      <p id={noticeId} className="text-muted-foreground">
-        {videoChanged
-          ? "참고 영상 변경을 저장하고 화면을 다시 열어주세요."
-          : "로컬에서 생성한 JSON을 등록합니다. 기존 Cue 시각은 유지됩니다."}
-      </p>
+      {videoChanged && (
+        <p className="text-muted-foreground">참고 영상 변경을 저장하고 화면을 다시 열어주세요.</p>
+      )}
       {upload.isError ? (
         <p role="alert" className="text-destructive">
           {upload.error instanceof ApiError

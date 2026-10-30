@@ -98,7 +98,13 @@ export function AdminSidebarShell({
           <NotificationBell />
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-11" aria-label="관리자 메뉴 열기">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-11"
+                title="관리자 메뉴 열기"
+                aria-label="관리자 메뉴 열기"
+              >
                 <Menu size={20} />
               </Button>
             </SheetTrigger>
