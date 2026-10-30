@@ -26,16 +26,16 @@ func (c *Consumer) ProcessDeadLetter(ctx context.Context, d *Delivery, jobs *Job
 		}
 		job, err := jobs.Get(ctx, d.JobID)
 		if err == ErrJobNotFound {
-			return c.Delete(ctx, d)
+			return consumeFailure("delete", c.Delete(ctx, d))
 		}
 		if err != nil {
-			return err
+			return consumeFailure("job_get", err)
 		}
 		if job.SongID != d.SongID || job.VideoID != d.VideoID {
 			return ErrPayload
 		}
 		if terminalStatus(job.Status) {
-			return c.Delete(ctx, d)
+			return consumeFailure("delete", c.Delete(ctx, d))
 		}
 		if ctx.Err() != nil {
 			return context.Cause(ctx)

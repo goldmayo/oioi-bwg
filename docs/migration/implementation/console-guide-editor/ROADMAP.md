@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-29"
-revision: 50
+updated_at: "2026-10-31"
+revision: 55
 ---
 
 # 구현 순서와 PR 단위
@@ -67,6 +67,34 @@ P07의 구현 PR은 [설계 §5.6](DESIGN.md#56-구현-pr-순서와-완료-조�
 새 관리자 편집·초안/공개·복원·검토 기능은 P07 이후의 별도 관심사이며 P08~P10의 선행 조건으로 추가하지 않는다.
 
 ### 2.1. P08 착수 계획
+
+**2026-10-31 후속 운영 반영:** #357 저장/API → #358 로컬 생성 → #359 관리자 등록 UI를 검증·병합하고 [Promotion #360](https://github.com/goldmayo/oioi-bwg/pull/360)을 운영에 적용했다. 사용자 ADMIN/MFA 파일 등록 성공 보고와 운영 읽기 전용 조회로 실제 JSON 전체 일치·기존 RUNNING Job의 SUCCEEDED 전환·성공 알림 1건 저장·가사/공개 Cue 보존을 확인했다. 이번 등록의 기기 발송 대기 행은 없으며 새 OS 알림 수신 검증으로 계산하지 않는다. 사용자가 여기서 P08 작업을 멈추고 P09/P10 병합을 진행하기로 해 VM 전용 실행 구성 회수는 보류했다. P09→P10 통합은 최신 migration_main의 JSON 등록 UI/PUT 경로를 보존하며 실제 영상 anchor 수용은 별도로 남는다. 현재/남은 판정은 WORK에서 관리한다. 공통 알림과 Queue/Runner 소스·OCI 자원은 후속 장기 작업을 위해 보존한다. 실제 배포·설정/이력 예외 원복·검증 상세는 #360, 반복 연결 해제/복구 절차는 [host 안내 §11.5](../../../../ops/oci/README.md#115-로컬-json-등록-전환과-vm-실행-구성-회수--2026-10-31)가 소유한다. 실제 영상 anchor/offset/drift 수용을 로컬·대역 검사로 대체하지 않는다.
+
+**2026-10-31 사용자 결정 — 로컬 분석·JSON 등록으로 전환:** 오사카 VM 입력 제한 이후 관리자 PC에서 JSON을 생성하고 Console로 등록하는 경로를 구현한다. 현재 계약과 정리 순서는 [DESIGN §6.5](DESIGN.md#65-로컬-분석json-등록-2026-10-31-개정), 도메인 정책은 §20.2가 소유한다. 첫 PR은 기존 Job·파형·요청자 알림 transaction을 재사용하는 제한된 PUT API와 동시/재업로드·이전 attempt 무효화 검증이다. 다음은 편집 UI·로컬 파일 생성 명령이며, 실제 운영 등록과 VM/OCI 삭제는 별도 승인 관문이다. 아래 날짜별 Queue 기록을 소급해 성공/완료로 바꾸지 않는다. 저장/API [#357](https://github.com/goldmayo/oioi-bwg/pull/357)은 CI #724 성공 후 병합했고 로컬 생성 도구는 [#358](https://github.com/goldmayo/oioi-bwg/pull/358)로 분리했다. 편집 UI의 파일 등록과 실제 로컬 출력의 격리 PostgreSQL 저장/재조회·브라우저 대역 검증을 완료했으며 운영 배포/등록은 아직 별도다. 반복 사용법은 [기존 로컬 안내](https://github.com/goldmayo/oioi-bwg/blob/278aee23e2b1d27462c2922087b63893fd06dd43/docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#로컬-파형-json-생성관리자-등록-2026-10-31)를 따른다.
+
+**2026-10-30 23시대 운영 배포·입력 지역 관문 추가:** 사용자 승인으로 [Promotion #355](https://github.com/goldmayo/oioi-bwg/pull/355)의 검증된 두 digest와 1GiB Runner를 적용했다. 실제 ADMIN/MFA 생성 요청이 OCI Queue를 거쳐 Job RUNNING으로 전환됐지만, 지정 영상 `pbELDkeLdho`는 YouTube 재생 허용 국가에서 한국 포함·일본 제외가 확인돼 오사카 VM의 추출이 실패했다. 같은 이미지·영상의 현재 로컬 metadata 요청은 성공했다. 운영 waveform JSON 적재는 미완료이며, 재전달 반복을 막기 위해 Runner를 중지했다. 생성 설정은 해당 영상 한 건에 활성 상태로 남아 있다. Job·Queue를 삭제하거나 기존 영상/Cue를 변경하지 않았다.
+
+실제 VM의 기존 CI 합성 fixture는 3.013초와 1시간 입력을 통과했고, 1시간 처리 25.22초·관측 peak 27078656 bytes·OOM 0·swap 0·세 anchor 오차 0ms와 tmpfs/음원 프로세스·컨테이너 정리를 확인했다. 이는 실제 영상의 음원 수용·offset/drift나 운영 JSON 적재 증거가 아니다. 최초 YouTube 실행의 별도 자원 observer는 TimeoutExpired로 실패했으므로 그 실행의 peak를 합격 근거로 사용하지 않는다. 배포·실패·진단·실측 상세는 #355 본문이 소유한다. 후속 입력은 실제 worker 리전의 재생 가능 여부와 이용 범위를 확인한 뒤 활성화하며, 기존 RUNNING Job 복구와 실제 JSON 저장·재조회 및 §3의 복구 수용이 남아 있다.
+
+**2026-10-30 지정 입력의 로컬 분석 확인:** 사용자가 제공한 `pbELDkeLdho`는 운영 곡 고민중독과 참조가 일치했다. 비상업적 2차창작·음원 비저장/비스트리밍 목적의 한 건 분석을 재심사 후 실행했고, 같은 ARM64 image에서 실제 yt-dlp → ffmpeg → BBC JSON을 얻었다. 256MiB OOM 기록과 512MiB의 관측 peak를 근거로 [DESIGN §6.2](DESIGN.md#62-oci-queue-연결과-완료-전달-계약)의 현재 한도를 사용자 지정 1GiB/swap 0으로 개정한다. 로컬 결과의 기존 Zod 계약 통과와 컨테이너 제거를 확인했으며, 이는 운영 Queue → worker → PostgreSQL 저장·재조회 수용이 아니다. 후속은 검증 Runner 교체·지정 입력 설정과 Promotion 후 실제 Job 한 건의 성공/JSON 적재 확인이다.
+
+**2026-10-30 실제 OCI canary와 생성 진입점:** #350의 읽기 전용 mount probe 수정과 #351의 단계 진단을 반영했다. 실제 VM socket·metadata/egress guard와 일반 Queue 수신 → 없는 Job 확인 → 삭제를 검증했고, Queue/DLQ 모두 잔여 0을 확인했다. 잘못 제공한 12자 검증 영상 ID를 11자로 정정한 과정·실패·실측은 [#351](https://github.com/goldmayo/oioi-bwg/pull/351)이 소유한다. 현재 Runner는 중지·생성은 비활성이다.
+
+생성 API와 편집 화면의 조회 UI 사이에 빠져 있던 생성 버튼을 연결한다. 서버 활성 flag·해당 곡 영상의 승인 목록으로 노출을 제한하고 미저장 영상 변경·저장/전송 중에는 생성 요청을 막는다. 기존 Job 재사용·알림을 재사용하며 Cue를 저장하거나 이동하지 않는다. 다음 완료 기준은 사용자 지정 YouTube 입력의 실제 분석 → PostgreSQL 파형 JSON 적재 → API 재조회다. 실제 입력·시간축·자원·복구 수용 전에는 P08 완료로 판단하지 않는다.
+
+**2026-10-30 Console 연결 운영 배포 완료:** 사용자 VM의 보호 설정·배포 helper/overlay·Caddy 준비 성공을 확인한 뒤 [Promotion #347](https://github.com/goldmayo/oioi-bwg/pull/347)을 병합했다. 이력 충돌은 파일 tree를 유지한 #348로 해소하고 보호 설정을 원복했다. Verify #715와 ARM64 exact-image smoke 성공 후보를 Run Command로 적용했으며 [배포 run](https://github.com/goldmayo/oioi-bwg/actions/runs/40922070392)의 receipt exitCode=0, candidate 일치와 Web/Console 최종 HTTP 200·공개 내부 API 404를 확인했다. P09 병합 UI도 포함된다. Runner는 아직 시작하지 않았고 생성은 비활성이다. 배포 후 실제 VM socket/mount·metadata 수용, OCI 통신·복구와 허용 입력 수용은 남아 있다. digest·checksum·실행 기록은 #347 본문이 소유한다.
+
+**2026-10-30 첫 VM 설치 확인:** 사용자 실행 출력에서 checksum·Runner/unit/tmpfiles 설치·Worker 적재·GID 986·inactive/disabled를 확인했다. 다음 Console 연결 준비를 지시받았으며 기존 app source/Caddy import 경로를 읽기 조회했다. 실제 결과와 준비 범위는 [host 안내 §11.4](../../../../ops/oci/README.md#114-첫-vm-설치-확인과-console-연결-준비--2026-10-30)를 따른다. 아직 OCI 송수신·분석·새 배포 수용은 아니다.
+
+**2026-10-30 설치 승인 관문:** #341·#343·#344를 전체 CI 성공 후 병합했고 #711 Runner/Worker ZIP digest·내부 checksum·병합 tree를 대조했다. 로컬 적재에서 CI config ID와 containerd manifest ID 차이를 발견해 archive의 해시 연결을 확인하고 운영 안내를 정정했다. 첫 VM 설치 제안·고정 source/identity는 [host 안내 §11.3](../../../../ops/oci/README.md#113-첫-vm-적용-승인-관문--2026-10-30)이 소유한다. 실제 VM 변경·Vault 조회·새 배포는 아직 수행하지 않았다.
+
+**2026-10-30 VM 사전 점검 추가:** 사용자가 root 보호 Python 3.12 링크, `/opt/oci-cli` 내부 일반 파일/디렉터리에 비-root 소유·group/other 쓰기 항목 없음, Compose 5.5.0과 systemd 255를 확인했다. Secret 조회나 신규 서비스 실행·운영 변경은 아니다. 최초 find는 symlink의 777 표시 권한에서 멈췄으므로 수정한 조건의 무출력 결과를 근거로 사용한다.
+
+**2026-10-30 Worker 전달 산출물:** CI에서 실제 검증한 ARM64 Worker를 local image ID로 고정해 archive/checksum/source tree와 함께 내보낸다. Console 배포 연결 #343과 독립 검증 가능한 전달 관심사이며 병합 순서는 #343 → 이 산출물 → 승인된 VM 설치·수용이다. VM 재빌드·OCI 게시·Secret 조회는 수행하지 않는다. 반복 전달 절차는 [host 안내 §11.2](../../../../ops/oci/README.md#112-검증한-worker-이미지-전달)가 소유한다.
+
+**2026-10-30 Console 배포 연결:** 설치/systemd [#341](https://github.com/goldmayo/oioi-bwg/pull/341)은 Verify #706 성공 후 병합했다. Console 전용 Vault token·기본 비활성 flag·고정 읽기 전용 socket overlay를 기존 pair 배포에 연결하고, 활성/비활성 전환 실패 시 이전 env·GID·overlay를 복구한다. 실제 VM의 설치·시작·Secret 조회·Promotion은 아직 수행하지 않았다. 반복 설정·수용 순서는 [host 안내 §11](../../../../ops/oci/README.md#11-p08-runner-설치와-시작-분리)을 따른다. 사용자 지시로 페스티벌 별도 편집은 P08 완료 뒤 독립 작업으로 진행한다.
+
+**2026-10-29 host 설치 연결:** #340 token 공급 뒤 검증 binary/checksum·root staging의 설치기와 systemd 시작 준비를 구현한다. 설치와 실제 시작을 분리하고 Console env/mount 연결 전에는 활성화하지 않는다. 반복 절차는 [host 안내 §11](../../../../ops/oci/README.md#11-p08-runner-설치와-시작-분리)가 소유한다. root 파일 권한/잠금·합성 제어 명령·systemd parser 검증과 실제 VM 기동/복구를 구분한다.
 
 **2026-10-29 VM 후속 관찰 및 token 공급:** 사용자가 VM에서 `/usr/local/bin/oci` 3.92.1, nftables 1.0.9, 기존 metadata guard active/check 성공, AppArmor·seccomp·cgroupns를 확인했다. CLI 파일/상위 경로는 root 소유이고 shebang은 `/opt/oci-cli/bin/python3`다. 이는 Vault 조회·Runner 설치·worker 격리 실증을 뜻하지 않는다. 다음 구현은 고정 Secret의 root 전용 runtime token 공급이며, 합성 Secret/실제 root 파일 권한으로 검증한다. 설치/systemd·Console 공급/연결과 실제 VM 적용은 여전히 후속이다.
 

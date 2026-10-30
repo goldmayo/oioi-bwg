@@ -42,16 +42,16 @@ func (c *Consumer) Process(ctx context.Context, d *Delivery, jobs *JobClient, wo
 		}
 		job, err := jobs.Get(ctx, d.JobID)
 		if err == ErrJobNotFound {
-			return c.Delete(ctx, d)
+			return consumeFailure("delete", c.Delete(ctx, d))
 		}
 		if err != nil {
-			return err
+			return consumeFailure("job_get", err)
 		}
 		if job.SongID != d.SongID || job.VideoID != d.VideoID {
 			return ErrPayload
 		}
 		if terminalStatus(job.Status) {
-			return c.Delete(ctx, d)
+			return consumeFailure("delete", c.Delete(ctx, d))
 		}
 		if !slices.Contains(approved, d.VideoID) {
 			return ErrPayload
@@ -86,10 +86,10 @@ func terminalStatus(status string) bool { return status == "SUCCEEDED" || status
 // confirmTerminal은 DB terminal/명확한 삭제가 확인된 뒤에만 receipt를 삭제한다.
 func (c *Consumer) confirmTerminal(ctx context.Context, d *Delivery, jobs *JobClient, ack TerminalAck, err error) error {
 	if err == nil && terminalStatus(ack.Status) {
-		return c.Delete(ctx, d)
+		return consumeFailure("delete", c.Delete(ctx, d))
 	}
 	if err == ErrJobNotFound {
-		return c.Delete(ctx, d)
+		return consumeFailure("delete", c.Delete(ctx, d))
 	}
 	if err != nil && err != ErrJobAPI {
 		return err
@@ -97,7 +97,7 @@ func (c *Consumer) confirmTerminal(ctx context.Context, d *Delivery, jobs *JobCl
 	// 응답 유실·이전 attempt 거절 뒤에도 같은 Job의 정본만 재확인한다.
 	current, lookupErr := jobs.Get(ctx, d.JobID)
 	if lookupErr == ErrJobNotFound {
-		return c.Delete(ctx, d)
+		return consumeFailure("delete", c.Delete(ctx, d))
 	}
 	if lookupErr != nil {
 		return lookupErr
@@ -106,7 +106,7 @@ func (c *Consumer) confirmTerminal(ctx context.Context, d *Delivery, jobs *JobCl
 		return ErrPayload
 	}
 	if terminalStatus(current.Status) {
-		return c.Delete(ctx, d)
+		return consumeFailure("delete", c.Delete(ctx, d))
 	}
 	return ErrWorkUnconfirmed
 }

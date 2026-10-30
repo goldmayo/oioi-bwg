@@ -8,3 +8,8 @@ export interface SongEditor {
   lyrics: LyricsData;
   guideWrite?: GuideWriteVersion;
 }
+
+export interface WaveformImportControls {
+  videoId: string;
+  onError: (error: unknown) => void;
+}

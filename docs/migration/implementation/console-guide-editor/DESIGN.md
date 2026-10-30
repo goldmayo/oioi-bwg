@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-29"
-revision: 27
+updated_at: "2026-10-31"
+revision: 30
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -29,7 +29,7 @@ revision: 27
 
 같은 곡의 CONCERT/FESTIVAL 응원법을 조회·선택하고 출처를 공식/팬덤으로 표시한다.
 공식 여부는 공연 모드와 별개다. 기존 데이터는 운영자가 수동 분류하며 새 관리자 편집 기능은 P07 이후에 다룬다.
-Console에서 허용된 입력의 파형 생성을 요청하면 일회성 컨테이너가 JSON을 생성하고, 편집기는 참조 영상 재생과 JSON을 사용한다.
+2026-10-31부터 관리자가 로컬 일회성 컨테이너에서 JSON을 생성해 Console로 등록하고, 편집기는 참조 영상 재생과 JSON을 사용한다.
 **Domain §20.2의 입력 이용 범위를 먼저 확인하며 음원은 pipe/tmpfs에서만 처리한다. 브라우저에서는 분석하지 않는다.**
 2026-10-28 초기 source 정정에서는 과거 YouTube/yt-dlp 제안을 production source 승인과 구분하고 추출 금지를 따랐다.
 같은 날 후속 재설계 요청으로 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)를 조건부 허용으로 개정했다. 구체적 입력 승인은 [§6.4](#64-yt-dlp-acquisition-2026-10-28-개정)를 따른다.
@@ -264,6 +264,8 @@ i18n은 P10 이후 UI·곡별 설명만 검토한다. 설명 번역은 원문 sn
 영어·일본어·대만/홍콩 표기와 fallback은 후속 리서치로 정하고 가사 의미 번역·독음·이를 위한 영구 Cue ID는 이번 범위에서 제외한다.
 
 ## 6. Waveform Worker
+
+**2026-10-31 경로 전환:** 사용자 요청으로 현재 기본 경로는 [§6.5 로컬 분석·JSON 등록](#65-로컬-분석json-등록-2026-10-31-개정)이다. 아래 OCI Queue/Runner 설계는 이미 구현·배포한 이전 경로의 계약과 정리 근거로 보존하며, 로컬 등록의 선행 조건으로 삼지 않는다.
 
 2026-10-28 사용자 선택으로 OCI Queue 기반을 유지하고 Unix socket과 Runner의 역할을 구체화한다.
 Runner는 VM의 상주 큐 소비·실행 프로세스이며 enqueue와 consume을 함께 맡는다. Rust 분석기는 작업별 일회성 컨테이너다.
@@ -575,6 +577,8 @@ FixedWorker는 보호된 실행 어댑터 계약이며 실제 Docker 구현·정
 Rust 출력의 세 필드를 검사하고 Runner가 source/generationVersion을 붙인다. stdout은 4MiB, 제어 출력은 4KiB로 제한하고 stderr는 보관하지 않는다. BBC 내용의 정본 검증은 Console이 유지한다.
 production 네트워크 이름은 oioi-waveform-egress로 고정하며 자동 생성하지 않는다. 실제 IMDS/내부망 차단·허용 egress 실증 전에는 설치·활성화하지 않는다. 로컬 합성 검사는 network=none이며 외부 영상 요청을 하지 않는다.
 
+**2026-10-30 실제 입력 메모리 한도 개정:** 사용자 지정 `pbELDkeLdho` 한 건을 기존 ARM64 worker image로 로컬 분석했다. 256MiB는 exit 0/정상 JSON과 별개로 Docker OOMKilled가 남았다. 512MiB는 OOM 없이 관측 peak 501,796,864 bytes였고, 768MiB 재검증은 peak 406,196,224 bytes·OOM 0으로 같은 JSON hash를 생성했다. 768MiB는 중간 검증값이다. 이후 사용자 지시로 2 OCPU/12GiB VM의 예산과 더 긴 입력을 고려해 현재 고정 RAM 상한을 **1GiB, swap 0**으로 확정한다. 이 값은 예약량이 아닌 작업 중 hard limit이며 메모리 최적화 완료를 의미하지 않는다. 1GiB 재검증에서도 8.31초·관측 peak 404,447,232 bytes·OOM 0과 동일 JSON hash를 확인했다. CPU 1·동시성 1·PID 32·tmpfs 64MiB·120초·stdout 4MiB와 credential/volume 비공급 경계는 유지한다. 이 개정은 위 2026-10-29의 초기 256MiB를 대체하며 실제 운영 VM 자원 수용은 별도다.
+
 **2026-10-29 worker egress 구현:** 전용 Docker bridge `oioi-wf0`의 input/forward만
 `oioi_waveform_guard` inet table(priority -20)에서 제한한다. host 접근·IPv6·private/reserved IPv4를
 먼저 차단하고 공개 TCP 80/443 및 고정 DNS `1.1.1.1`/`1.0.0.1`의 TCP/UDP 53만 허용한다.
@@ -671,6 +675,22 @@ Rust는 추출기를 재구현하지 않고 공식 yt-dlp CLI와 포함된 EJS·
 
 실제 CLI의 로컬 HTTP streaming·시작 비용과 Rust의 합성 compressed 입력 검증을 실제 YouTube/EJS·OCI 검증과 구분한다.
 고정 버전·digest·측정 근거는 구현 PR이 소유하며 실제 허용 영상의 자원·offset/drift 수용은 후속 관문이다.
+
+### 6.5. 로컬 분석·JSON 등록 (2026-10-31 개정)
+
+```text
+관리자 PC: 고정 Rust/yt-dlp/ffmpeg/BBC 일회성 컨테이너 → WaveformData JSON 파일
+  → Console 편집 화면: ADMIN/MFA + 동일 Origin + 제한된 PUT JSON
+  → /api/admin/songs/{id}/waveform → 기존 Service/Repository
+  → PostgreSQL 결과·성공 Job·요청자 알림·기기 발송 대기 transaction
+  → 기존 GET/Query invalidation → 파형 표시 (Cue 자동 변경 없음)
+```
+
+저장 계약은 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)가 소유한다. 브라우저는 파일을 읽어 기존 JSON DTO를 전송하며 파일·음원을 R2/OCI Object Storage에 업로드하지 않는다. API는 Runner token·socket·Queue 없이 동작한다. 인증과 Origin 확인 뒤 실제 수신 byte를 4MiB, 읽기를 10초로 제한하고 기존 Zod 검증을 수행한다.
+
+전환 PR은 (1) 도메인·저장/API → (2) 편집 화면·로컬 생성 명령 → (3) 별도 승인 Promotion·실제 파일 등록 수용 → (4) 운영/인프라 정리 순서다. P09 DTO와 조회 API는 유지한다. 기존 RUNNING Job은 해당 source의 정상 관리자 등록으로 회수할 수 있으며 원래 attempt 결과를 대신 전송하지 않는다.
+
+정리는 등록 수용 후 수행한다. 먼저 서버 생성·내부 Runner API를 비활성화하고 서비스 중지/disable을 확인한 뒤 Console socket bind/GID/token 공급, systemd/tmpfiles·Runner 설치 파일, 전용 socket/runtime token·설정, worker 이미지·전용 bridge/nft table을 제거한다. 공유 metadata guard·Caddy 공개 차단·OCI CLI·공통 Vault/FCM/Logging/배포 기반은 보존한다. 2026-10-31 후속 사용자 요청으로 공통 알림/FCM과 Queue·Runner/Worker 소스 및 OCI Queue·전용 IAM·Vault Secret은 이번 작업에서 보존한다. 미래 장기 작업은 도메인별 payload·고정 worker·좁은 내부 API를 정의하고 기존 공통 알림 전달/재시도를 재사용하며, 기존 Queue에 임의 command/image/env/volume을 전달하지 않는다. Queue/DLQ 잔여와 DB 활성 Job을 대조하고 소비를 임의로 재개하지 않는다. 현재 Queue의 `prevent_destroy=true` 및 `waveform_queue_enabled`도 유지한다. OCI 자원 폐기가 필요해지면 보호 해제·Terraform 밖의 Secret까지 구분한 별도 승인 Plan/Apply로 다룬다. Job/파형/알림 이력과 migration 0011·0012는 삭제하지 않는다. 실제 경로·삭제 대상은 VM/Plan에서 확인하며 이 설계 개정만으로 운영 삭제를 승인하지 않는다.
 
 ## 7. Audio Editor
 

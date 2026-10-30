@@ -25,7 +25,7 @@ try:
                 continue
             if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
                 raise ValueError()
-    files = [runtime / 'compose.oci-development.yml', runtime / 'deploy/deployment.lock']
+    files = [runtime / 'compose.oci-development.yml', runtime / 'compose.waveform.yml', runtime / 'deploy/deployment.lock']
     files += [runtime / 'scripts' / name for name in sys.argv[3:]]
     files += [config / name for name in ('deploy.conf', 'runtime-public.env', 'runtime-secrets.env',
                                        'console-runtime-public.env', 'console-runtime-secrets.env')]
@@ -58,6 +58,7 @@ fi
 
 install -d -o root -g root -m 0750 "${runtime_root}" "${runtime_root}/deploy" "${runtime_root}/scripts" "${config_root}"
 install -m 0644 "${repository_root}/ops/oci/compose.yml" "${runtime_root}/compose.oci-development.yml"
+install -m 0644 "${repository_root}/ops/oci/compose.waveform.yml" "${runtime_root}/compose.waveform.yml"
 for script in "${host_scripts[@]}"; do
   install -m 0755 "${repository_root}/ops/oci/${script}" "${runtime_root}/scripts/${script}"
 done

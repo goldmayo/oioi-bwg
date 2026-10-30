@@ -15,7 +15,8 @@
     "./operator/policy": "./src/operators/console-mfa-operator-policy.ts",
     "./fixture/console-mfa": "./src/fixtures/console-mfa.ts",
     "./vitest/postgres": "./vitest.postgres.config.ts",
-    "./cli/import-cheer-guides": "./src/operators/import-cheer-guides.ts"
+    "./cli/import-cheer-guides": "./src/operators/import-cheer-guides.ts",
+    "./cli/generate-waveform": "./src/operators/generate-waveform.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit && pnpm type-check:tests",
