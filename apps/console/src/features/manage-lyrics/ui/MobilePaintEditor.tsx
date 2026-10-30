@@ -5,8 +5,15 @@ import type { LyricLine, LyricSegment } from "@oioi-bwg/contracts/song";
 
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
 
+import { lyricEmphasisClass } from "./lyric-emphasis";
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 
 type PaintMode = "normal" | "cheer" | "echo";
@@ -15,7 +22,10 @@ interface CharItem {
   id: string;
   char: string;
   mode: PaintMode;
+  isCheer: boolean;
+  isEcho: boolean;
   startTimeOffset?: number;
+  startsSegment: boolean;
 }
 
 interface MobilePaintEditorProps {
@@ -31,7 +41,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
   const [currentMode, setCurrentMode] = useState<PaintMode>("normal");
 
   // prop 변경 시 상태를 렌더링 중에 동기화 (You Might Not Need an Effect 패턴)
-  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
   const [prevLine, setPrevLine] = useState(line);
 
   if (isOpen !== prevIsOpen || line !== prevLine) {
@@ -49,8 +59,10 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
             id: `char-${charId++}`,
             char: seg.text[i],
             mode,
-            // 첫 번째 글자에만 기존의 startTimeOffset을 유지
-            startTimeOffset: i === 0 ? seg.startTimeOffset : undefined,
+            isCheer: seg.isCheer,
+            isEcho: seg.isEcho,
+            startsSegment: i === 0,
+            startTimeOffset: seg.startTimeOffset,
           });
         }
       }
@@ -69,12 +81,18 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
 
     for (const item of chars) {
       // 모드가 바뀌거나, 기존 세그먼트의 시작점(startTimeOffset)이 있는 글자라면 강제로 세그먼트를 분리
-      if (!currentSeg || lastMode !== item.mode || item.startTimeOffset !== undefined) {
+      if (
+        !currentSeg ||
+        lastMode !== item.mode ||
+        currentSeg.isCheer !== item.isCheer ||
+        currentSeg.isEcho !== item.isEcho ||
+        item.startsSegment
+      ) {
         if (currentSeg) newSegments.push(currentSeg);
         currentSeg = {
           text: item.char,
-          isCheer: item.mode === "cheer",
-          isEcho: item.mode === "echo",
+          isCheer: item.isCheer,
+          isEcho: item.isEcho,
         };
         if (item.startTimeOffset !== undefined) {
           currentSeg.startTimeOffset = item.startTimeOffset;
@@ -94,7 +112,12 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
     setChars((prev) => {
       const next = [...prev];
       if (next[index].mode !== currentMode) {
-        next[index] = { ...next[index], mode: currentMode };
+        next[index] = {
+          ...next[index],
+          mode: currentMode,
+          isCheer: currentMode === "cheer" || currentMode === "echo",
+          isEcho: currentMode === "echo",
+        };
       }
       return next;
     });
@@ -132,6 +155,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
       >
         <DialogHeader>
           <DialogTitle>가사 편집 (페인트 모드)</DialogTitle>
+          <DialogDescription>문자에 일반·응원·에코 강조를 적용합니다.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-1 flex-col gap-6 overflow-y-auto py-4">
@@ -149,7 +173,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
               onClick={() => setCurrentMode("cheer")}
               className={cn(
                 "flex-1",
-                currentMode === "cheer" && "bg-qwer-e text-qwer-e-foreground hover:bg-qwer-e/90",
+                currentMode === "cheer" && "bg-qwer-bwg hover:bg-qwer-bwg/90 text-black",
               )}
             >
               응원법
@@ -159,7 +183,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
               onClick={() => setCurrentMode("echo")}
               className={cn(
                 "flex-1",
-                currentMode === "echo" && "bg-qwer-r text-qwer-r-foreground hover:bg-qwer-r/90",
+                currentMode === "echo" && "bg-qwer-r hover:bg-qwer-r/90 text-black",
               )}
             >
               에코
@@ -184,9 +208,9 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
                 className={cn(
                   "flex h-12 min-w-8 cursor-pointer items-center justify-center rounded-md text-2xl font-bold transition-colors select-none",
                   item.char === " " ? "w-4 bg-transparent" : "bg-muted shadow-sm",
-                  item.mode === "cheer" && "bg-qwer-e/20 text-qwer-e ring-qwer-e ring-2",
-                  item.mode === "echo" &&
-                    "text-qwer-r ring-qwer-r decoration-qwer-r underline decoration-2 underline-offset-8 ring-2",
+                  lyricEmphasisClass(item, line.isExtra),
+                  item.mode === "cheer" && "ring-qwer-bwg ring-2",
+                  item.mode === "echo" && "ring-qwer-r ring-2",
                 )}
               >
                 {item.char}
