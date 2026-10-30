@@ -1,5 +1,6 @@
 import "server-only";
 import type {
+  WaveformData,
   WaveformEnqueuedInput,
   WaveformJob,
   WaveformQueuePayload,
@@ -7,11 +8,12 @@ import type {
   WaveformTerminal,
 } from "@oioi-bwg/contracts/waveform";
 import { requireUser, type RequestContext } from "../auth/request-context";
-import { getDatabase, type DbExecutor } from "../db";
+import { getDatabase, type DbExecutor, type Transaction } from "../db";
 import { createEntityId } from "../db/entity-id";
 import { AppError } from "../errors/app-error";
 import {
   findActiveWaveformJob,
+  findMatchingWaveformJob,
   findSongWaveform,
   findWaveformJob,
   findWaveformRequesters,
@@ -53,6 +55,47 @@ export async function getSongWaveform(ctx: RequestContext, id: string) {
   const row = await findSongWaveform(getDatabase(), id);
   if (!row) throw new AppError("SONG_NOT_FOUND");
   return row.data && row.data.source.id === row.videoId ? row.data : null;
+}
+/** 관리자 로컬 분석 결과를 원자적으로 등록한다. Runner attempt를 사칭하지 않는다. */
+export async function importSongWaveform(
+  ctx: RequestContext,
+  songId: string,
+  result: WaveformData,
+) {
+  const accountId = admin(ctx);
+  return getDatabase().transaction(async (tx) => {
+    const song = await lockWaveformSong(tx, songId);
+    if (!song) throw new AppError("SONG_NOT_FOUND");
+    if (song.youtubeId !== result.source.id) throw new AppError("WAVEFORM_SOURCE_INVALID");
+    const active = await findActiveWaveformJob(tx, songId, result.source.id);
+    const matching = !active && (await findMatchingWaveformJob(tx, songId, result));
+    if (matching) return project({ job: matching, slug: song.slug });
+    const job = active ?? (await insertWaveformJob(tx, songId, result.source.id));
+    await lockWaveformJob(tx, job.id);
+    await insertWaveformRequester(tx, job.id, accountId);
+    await storeWaveform(tx, { songId, videoId: result.source.id, data: result });
+    const finished = await updateWaveformJob(tx, job.id, {
+      status: "SUCCEEDED",
+      attemptId: createEntityId(),
+      startedAt: job.startedAt ?? new Date().toISOString(),
+      errorCode: null,
+      finishedAt: new Date().toISOString(),
+    });
+    await notifyWaveformRequesters(tx, job.id, "SUCCEEDED");
+    return project({ job: finished, slug: song.slug });
+  });
+}
+async function notifyWaveformRequesters(
+  tx: Transaction,
+  jobId: string,
+  status: "SUCCEEDED" | "FAILED",
+) {
+  for (const requester of await findWaveformRequesters(tx, jobId))
+    await recordWaveformNotification(tx, {
+      accountId: requester.accountId,
+      jobId,
+      type: status === "SUCCEEDED" ? "WAVEFORM_SUCCEEDED" : "WAVEFORM_FAILED",
+    });
 }
 /** 서비스 토큰을 검증한 Console 내부 adapter만 호출한다. */
 export async function getRunnerWaveformJob(id: string) {
@@ -170,12 +213,7 @@ export async function completeWaveformJob(input: WaveformTerminal) {
       errorCode,
       finishedAt: new Date().toISOString(),
     });
-    for (const requester of await findWaveformRequesters(tx, job.id))
-      await recordWaveformNotification(tx, {
-        accountId: requester.accountId,
-        jobId: job.id,
-        type: status === "SUCCEEDED" ? "WAVEFORM_SUCCEEDED" : "WAVEFORM_FAILED",
-      });
+    await notifyWaveformRequesters(tx, job.id, status);
     return { ...ack(true), status };
   });
 }

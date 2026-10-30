@@ -36,6 +36,8 @@ class PairedDeployTest(unittest.TestCase):
         self.state = self.runtime / 'deploy'
         self.file = self.runtime / 'compose.yml'
         self.file.write_text((ROOT / 'ops/oci/compose.yml').read_text())
+        self.overlay = self.file.with_name('compose.waveform.yml')
+        self.overlay.write_text((ROOT / 'ops/oci/compose.waveform.yml').read_text())
         self.configuration = '''IMAGE_REPOSITORY=registry.test/namespace/web
 CONSOLE_IMAGE_REPOSITORY=registry.test/namespace/console
 POSTGRES_NETWORK=fixture-network
@@ -59,7 +61,7 @@ REQUIRED_RUNTIME_KEYS="DATABASE_URL AUTH_SECRET"
 import base64,os,sys
 if os.environ.get('MOCK_VAULT_FAIL'): print(''' + repr(SECRET) + ''', file=sys.stderr); sys.exit(1)
 key=sys.argv[sys.argv.index('--secret-id')+1].rsplit('.',1)[-1]
-values=dict(db='fixture-password',web=os.environ.get('MOCK_WEB_AUTH','fixture-web-secret'),auth=''' + repr(SECRET) + ''',mfa='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',r2id='fixture-r2-id',r2secret='fixture-r2-secret')
+values=dict(db='fixture-password',web=os.environ.get('MOCK_WEB_AUTH','fixture-web-secret'),auth=''' + repr(SECRET) + ''',mfa='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',r2id='fixture-r2-id',r2secret='fixture-r2-secret',runner='a'*64)
 print(base64.b64encode(values[key].encode()).decode())
 ''')
         (self.bin / 'curl').write_text('''#!/usr/bin/python3
@@ -80,7 +82,10 @@ elif args[0]=='inspect':
     print(json.dumps([next(value for value in running.values() if value['Id']==args[-1])]))
 elif args[0]=='compose':
     file=args[args.index('-f')+1]
-    operation=args[args.index('-f')+2:]
+    first=args.index('-f'); file_indices=[first]
+    if args[first+2:first+3]==['-f']: file_indices.append(first+2)
+    overlay=pathlib.Path(args[file_indices[-1]+1]).read_text() if len(file_indices)>1 else ''
+    operation=args[file_indices[-1]+2:]
     if operation[:2]==['config','--quiet']:
         if os.environ.get('MOCK_CONFIG_FAIL'): print(''' + repr(SECRET) + ''',file=sys.stderr); sys.exit(1)
     elif operation[0]=='ps': print(running.get(operation[-1],{}).get('Id',''))
@@ -89,7 +94,7 @@ elif args[0]=='compose':
         for app in apps:
             prefix='APP' if app=='app' else app.upper()
             image=os.environ[prefix+'_IMAGE']; env=pathlib.Path(os.environ[prefix+'_ENV_FILE']).read_text()
-            config=hashlib.sha256((image+env+pathlib.Path(file).read_text()+os.environ.get('APP_PORT','')+os.environ.get('CONSOLE_PORT','')).encode()).hexdigest()
+            config=hashlib.sha256((image+env+pathlib.Path(file).read_text()+os.environ.get('APP_PORT','')+os.environ.get('CONSOLE_PORT','')+(overlay+os.environ.get('CONSOLE_WAVEFORM_SOCKET_GID','') if app=='console' else '')).encode()).hexdigest()
             if app not in running or running[app]['Config']['Labels']['com.docker.compose.config-hash']!=config:
                 count=int((root/'counter').read_text())+1 if (root/'counter').exists() else 1
                 (root/'counter').write_text(str(count))
@@ -132,6 +137,54 @@ elif args[0]=='compose':
         other = 'console' if app=='web' else 'web'
         value['images'][other].update(buildSourceSha=self.first['sourceSha'], origin='reused')
         return value
+
+    def waveform(self, enabled):
+        (self.config/'deploy.conf').write_text(self.configuration + ('CONSOLE_WAVEFORM_SOCKET_GID=1234\n' if enabled else ''))
+        public = self.config/'console-runtime-public.env'
+        mapping = self.config/'console-runtime-secrets.env'
+        for path in (public, mapping):
+            path.write_text(''.join(line+'\n' for line in path.read_text().splitlines() if not line.startswith('CONSOLE_WAVEFORM_')))
+        if enabled:
+            public.write_text(public.read_text()+'CONSOLE_WAVEFORM_RUNNER_ENABLED=true\n')
+            mapping.write_text(mapping.read_text()+'CONSOLE_WAVEFORM_RUNNER_TOKEN=ocid1.vaultsecret.test.runner\n')
+
+    def test_waveform_enable_preserves_web(self):
+        value = self.next('console'); before = self.running()
+        self.waveform(True)
+        self.assertEqual(self.execute(value).returncode, 0)
+        self.assertEqual(before['web'], self.running()['web'])
+        self.assertTrue((self.state/'current-pair'/'compose.waveform.yml').exists())
+        self.assertNotIn('CONSOLE_WAVEFORM', (self.runtime/'web.env').read_text())
+
+    def test_waveform_toggle_rollback(self):
+        for was_enabled in (False, True):
+            with self.subTest(was_enabled=was_enabled):
+                # 매 하위 사례는 독립 배포를 사용한다.
+                self.setUp()
+                self.waveform(was_enabled)
+                value = self.next('console'); before = self.running()
+                old_overlay = self.overlay.read_bytes()
+                if not was_enabled:
+                    config = self.state/'current-pair'/'config.json'
+                    old = json.loads(config.read_text()); old.pop('CONSOLE_WAVEFORM_SOCKET_GID')
+                    config.write_text(json.dumps(old))
+                self.waveform(not was_enabled)
+                self.overlay.write_bytes(old_overlay + b'\n# candidate overlay\n')
+                result = self.execute(value, MOCK_FAIL_APP='console', MOCK_FAIL_DIGEST=digest('2'), CONSOLE_WAVEFORM_SOCKET_GID='9999')
+                self.assertEqual(result.returncode, 20, result.stderr)
+                self.assertEqual(before['web'], self.running()['web'])
+                self.assertEqual(before['console']['Config'], self.running()['console']['Config'])
+                if was_enabled: self.assertEqual(old_overlay, self.overlay.read_bytes())
+
+    def test_waveform_missing_gid_or_overlay_is_rejected(self):
+        value = self.next('console'); before = self.running()
+        self.waveform(True)
+        (self.config/'deploy.conf').write_text(self.configuration)
+        self.assertEqual(self.execute(value).returncode, 1)
+        self.waveform(True)
+        self.overlay.unlink()
+        self.assertEqual(self.execute(value).returncode, 1)
+        self.assertEqual(before, self.running())
 
     def test_selective_apply(self):
         value = self.next('web'); before = self.running()

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import type { LyricLine, PublishedCheerGuide } from "@oioi-bwg/contracts/song";
 import { cva } from "class-variance-authority";
@@ -16,6 +16,7 @@ import { useAdWatcher } from "@/shared/model/useAdWatcher";
 import type { YouTubePlayerInstance } from "@/shared/model/youtube";
 import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
 
+import { getLyricsPosition } from "../lib/lyrics-position";
 import { usePublishedGuide } from "../model/use-published-guide";
 
 import { CheerGuideInfo } from "./CheerGuideInfo";
@@ -100,13 +101,7 @@ export function LyricsViewerClient({ song, album }: LyricsViewerClientProps) {
    * 라인 레벨 + isExtra 라인은 세그먼트 레벨까지 추적
    */
   const updatePosition = (lines: LyricLine[], time: number) => {
-    const line = lines.findLastIndex((item) => item.startTime <= time);
-    const current = lines[line];
-    const segment = current?.isExtra
-      ? current.segments.findLastIndex(
-          (item) => current.startTime + (item.startTimeOffset ?? 0) <= time,
-        )
-      : -1;
+    const { line, segment } = getLyricsPosition(lines, time);
     setCursor((previous) =>
       previous.lyrics === lines && previous.line === line && previous.segment === segment
         ? previous
@@ -310,6 +305,17 @@ function LyricLineItem({
   onClick,
 }: LyricLineItemProps) {
   const variantType = line.isExtra ? "extra" : "normal";
+  const groups: number[][] = [];
+  line.segments.forEach((segment, index) => {
+    const previous = groups.at(-1);
+    if (
+      line.isExtra &&
+      previous &&
+      (line.segments[previous[0]].startTimeOffset ?? 0) === (segment.startTimeOffset ?? 0)
+    )
+      previous.push(index);
+    else groups.push([index]);
+  });
   return (
     <button
       ref={onLineRef}
@@ -327,26 +333,51 @@ function LyricLineItem({
           lyricContainerVariants({ variant: variantType, isActive }),
         )}
       >
-        {line.segments.map((seg, sIdx) => {
-          let colorState: "default" | "extraTarget" | "extraUntarget" | "echo" | "cheer" =
-            "default";
-          if (line.isExtra) {
-            colorState = isActive && sIdx === activeSeg ? "extraTarget" : "extraUntarget";
-          } else {
-            if (seg.isEcho) colorState = "echo";
-            else if (seg.isCheer) colorState = "cheer";
-          }
+        {groups.map((indices, groupIndex) => {
+          const contents = indices.map((sIdx) => {
+            const seg = line.segments[sIdx];
+            let colorState: "default" | "extraTarget" | "extraUntarget" | "echo" | "cheer" =
+              "default";
+            if (line.isExtra) {
+              const sameCue =
+                activeSeg >= 0 &&
+                (seg.startTimeOffset ?? 0) === (line.segments[activeSeg]?.startTimeOffset ?? 0);
+              colorState = isActive && sameCue ? "extraTarget" : "extraUntarget";
+            } else {
+              if (seg.isEcho) colorState = "echo";
+              else if (seg.isCheer) colorState = "cheer";
+            }
 
-          return (
+            return (
+              <span
+                key={sIdx}
+                data-lyric-segment={sIdx}
+                className={cn(
+                  line.isExtra && `seg-${index}-${sIdx}`,
+                  lyricSegmentVariants({ variant: variantType, colorState }),
+                )}
+              >
+                {seg.text}
+              </span>
+            );
+          });
+          const active =
+            isActive &&
+            activeSeg >= 0 &&
+            indices.some(
+              (index) =>
+                (line.segments[index].startTimeOffset ?? 0) ===
+                (line.segments[activeSeg].startTimeOffset ?? 0),
+            );
+          return line.isExtra ? (
             <span
-              key={sIdx}
-              className={cn(
-                line.isExtra && `seg-${index}-${sIdx}`,
-                lyricSegmentVariants({ variant: variantType, colorState }),
-              )}
+              key={groupIndex}
+              className={cn("inline-flex", active && "underline underline-offset-4")}
             >
-              {seg.text}
+              {contents}
             </span>
+          ) : (
+            <Fragment key={groupIndex}>{contents}</Fragment>
           );
         })}
       </span>

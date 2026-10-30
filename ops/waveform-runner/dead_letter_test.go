@@ -74,7 +74,7 @@ func TestDeadLetterLifecycle(t *testing.T) {
 			c, _ := consumerFixture(t, func(w http.ResponseWriter, r *http.Request) {
 				path := "/20210201/queues/" + fixtureQueue + "-dlq/messages"
 				if r.Method == "GET" {
-					if r.URL.Path != path || r.URL.Query().Get("limit") != "1" {
+					if r.URL.Path != path || r.URL.Query().Encode() != "limit=1&timeoutInSeconds=0&visibilityInSeconds=180" {
 						t.Error("wrong DLQ destination")
 					}
 					io.WriteString(w, batch(message()))

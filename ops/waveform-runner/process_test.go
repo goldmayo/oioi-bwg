@@ -155,6 +155,9 @@ func TestProcessDeliveryLifecycle(t *testing.T) {
 			if (err == nil) != success {
 				t.Fatalf("unexpected outcome: %v", err)
 			}
+			if scenario == "delete failure" && consumeFailureStage(err) != "delete" {
+				t.Fatal("delete failure stage missing")
+			}
 			wantDelete := success || scenario == "delete failure"
 			if (deletes.Load() == 1) != wantDelete {
 				t.Fatal("unsafe delete decision")

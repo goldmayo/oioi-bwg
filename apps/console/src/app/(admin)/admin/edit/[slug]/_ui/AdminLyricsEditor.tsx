@@ -60,6 +60,7 @@ export function AdminLyricsEditor({ song, accountId }: { song: SongEditor; accou
           saveSongData={saveSongData}
           accountId={accountId}
           disabled={!canManage}
+          waveformImport={{ videoId: song.youtubeId, onError: recovery.handleMutationError }}
         />
       </fieldset>
     </>

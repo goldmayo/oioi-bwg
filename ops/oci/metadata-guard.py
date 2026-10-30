@@ -54,11 +54,24 @@ def host_positive():
         require(status == '200')
 
 
-def probe(container):
+def probe(container, console=False):
     require(re.fullmatch('[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}', container))
-    template = '{"mode":{{json .HostConfig.NetworkMode}},"privileged":{{json .HostConfig.Privileged}},"caps":{{json .HostConfig.CapAdd}},"mounts":{{json .Mounts}},"networks":{{json .NetworkSettings.Networks}}}'
+    template = '{"mode":{{json .HostConfig.NetworkMode}},"privileged":{{json .HostConfig.Privileged}},"caps":{{json .HostConfig.CapAdd}},"mounts":{{json .Mounts}},"networks":{{json .NetworkSettings.Networks}},"labels":{{json .Config.Labels}}}'
     config = json.loads(command(DOCKER + ['inspect', '--format', template, container]))
-    require(not config['privileged'] and (not config['caps']) and (not config['mounts']))
+    require(not config['privileged'] and not config['caps'])
+    mounts = config['mounts']
+    require(isinstance(mounts, list))
+    if console:
+        labels = config['labels']
+        require(isinstance(labels, dict) and labels.get('com.docker.compose.project') == 'oioi-bwg-development'
+                and labels.get('com.docker.compose.service') == 'console')
+        require(len(mounts) == 1)
+        mount = mounts[0]
+        require(mount['Type'] == 'bind' and mount['Source'] == '/run/oioi-waveform'
+                and mount['Destination'] == '/run/oioi-waveform' and mount['RW'] is False
+                and mount['Propagation'] == 'rprivate' and mount['Mode'] in ('', 'ro'))
+    else:
+        require(not mounts)
     require(config['mode'] == 'bridge' or config['mode'] in config['networks'])
     require(config['networks'])
     for network in config['networks']:
@@ -81,8 +94,8 @@ def main():
             counter()
         elif args == ['check']:
             counter()
-        elif len(args) == 2 and args[0] == 'probe':
-            probe(args[1])
+        elif len(args) == 2 and args[0] in ('probe', 'probe-console'):
+            probe(args[1], console=args[0] == 'probe-console')
         else:
             raise ValueError()
         print('{"event":"metadata_guard_passed"}')

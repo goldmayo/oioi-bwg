@@ -1,5 +1,6 @@
 import "server-only";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import type { WaveformData } from "@oioi-bwg/contracts/waveform";
 import type { DbExecutor } from "../db";
 import { song, waveform, waveformJob, waveformJobRequester } from "../db/schema";
 export async function lockWaveformSong(db: DbExecutor, id: string) {
@@ -31,6 +32,24 @@ export async function findActiveWaveformJob(db: DbExecutor, songId: string, vide
       ),
     );
   return row;
+}
+/** Song 잠금 안에서 JSONB 동등성을 검사해 동시 업로드·응답 유실 재시도를 재사용한다. */
+export async function findMatchingWaveformJob(db: DbExecutor, songId: string, data: WaveformData) {
+  const [row] = await db
+    .select({ job: waveformJob })
+    .from(waveformJob)
+    .innerJoin(waveform, eq(waveform.songId, waveformJob.songId))
+    .where(
+      and(
+        eq(waveformJob.songId, songId),
+        eq(waveformJob.videoId, data.source.id),
+        eq(waveformJob.status, "SUCCEEDED"),
+        sql`${waveform.data} = ${JSON.stringify(data)}::jsonb`,
+      ),
+    )
+    .orderBy(desc(waveformJob.finishedAt))
+    .limit(1);
+  return row?.job;
 }
 export async function insertWaveformJob(db: DbExecutor, songId: string, videoId: string) {
   const [row] = await db.insert(waveformJob).values({ songId, videoId }).returning();

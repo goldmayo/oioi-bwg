@@ -109,6 +109,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:unit:run
       - run: pnpm test:ops
+      - name: Verify Console Runner API ingress with isolated Caddy
+        run: python3 -I tests/ops/console-runner-ingress.py
+      - name: Verify Runner token materialization with synthetic Vault
+        run: sudo env GITHUB_ACTIONS=true python3 -I -B tests/ops/waveform-token-root-fixture.py
+      - name: Verify Runner installation and service preparation
+        run: sudo env GITHUB_ACTIONS=true python3 -I -B tests/ops/waveform-install-root-fixture.py
       - name: Verify root-protected host paths and paired upgrade
         run: sudo env GITHUB_ACTIONS=true python3 -I tests/ops/host-install-root-fixture.py
 
@@ -117,7 +123,7 @@ jobs:
     if: needs.changes.outputs.docs_only != 'true'
     name: waveform ARM64
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -143,6 +149,58 @@ jobs:
           chmod +x "$test_dir/check"
           P08_DOCKER_IMAGE=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check) \
             "$test_dir/check" -test.v -test.run '^TestDockerWorkerLifecycle$' -test.timeout=60s
+
+      - name: Export verified ARM64 Runner binary
+        run: |
+          output="${{ runner.temp }}/waveform-runner-arm64"
+          mkdir -p "$output"
+          container=$(docker create --network none --entrypoint /bin/true oioi-bwg:runner-check)
+          trap 'docker rm -f "$container" >/dev/null' EXIT
+          docker cp "$container:/usr/local/bin/oioi-waveform-runner" "$output/runner"
+          git rev-parse HEAD > "$output/verified-commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$output/verified-tree.txt"
+          (cd "$output" && sha256sum runner > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waveform-runner-arm64
+          path: ${{ runner.temp }}/waveform-runner-arm64
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Verify worker egress in an isolated kernel namespace
+        run: |
+          docker build --tag oioi-bwg:network-check - <<'DOCKERFILE'
+          FROM oioi-bwg:runner-check
+          RUN apt-get update && apt-get install -y --no-install-recommends nftables iproute2 && rm -rf /var/lib/apt/lists/*
+          DOCKERFILE
+          docker run --rm --network none --cap-add NET_ADMIN --cap-add SYS_ADMIN \
+            --security-opt apparmor=unconfined \
+            --sysctl net.ipv4.ip_forward=1 --sysctl net.ipv6.conf.all.forwarding=1 \
+            -e P08_ISOLATED_NETWORK_TEST=1 \
+            -v "$PWD/ops/oci/waveform-egress-guard.py:/repo/ops/oci/waveform-egress-guard.py:ro" \
+            -v "$PWD/ops/oci/metadata-guard.py:/repo/ops/oci/metadata-guard.py:ro" \
+            -v "$PWD/tests/ops/waveform-egress-kernel.py:/repo/tests/ops/waveform-egress-kernel.py:ro" \
+            -w /repo oioi-bwg:network-check python3 -I tests/ops/waveform-egress-kernel.py
+
+      - name: Export the verified worker image without rebuilding
+        run: |
+          set -euo pipefail
+          output="${{ runner.temp }}/waveform-worker-arm64"
+          mkdir -p "$output"
+          image=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check)
+          test "$(docker image inspect --format '{{.Architecture}}' "$image")" = arm64
+          docker image save "$image" | gzip -n > "$output/worker-image.tar.gz"
+          printf '%s\n' "$image" > "$output/image-id.txt"
+          git rev-parse HEAD > "$output/verified-commit.txt"
+          git rev-parse 'HEAD^{tree}' > "$output/verified-tree.txt"
+          (cd "$output" && sha256sum worker-image.tar.gz image-id.txt verified-commit.txt verified-tree.txt > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waveform-worker-arm64
+          path: ${{ runner.temp }}/waveform-worker-arm64
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
 
   postgres_integration:
     needs: changes
@@ -447,6 +505,8 @@ jobs:
           node tests/ops/container-readiness-smoke.mjs http://127.0.0.1:3001
           node tests/ops/console-standalone-smoke.mjs http://127.0.0.1:3001
 
+      - name: Verify Console waveform socket DAC and read-only mount
+        run: bash tests/ops/waveform-console-socket-smoke.sh
       - name: Verify paired Compose container preservation and recovery
         run: bash tests/ops/paired-compose-smoke.sh
 

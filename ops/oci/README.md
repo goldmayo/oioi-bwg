@@ -227,7 +227,14 @@ Environment에는 기존 development branch를 유지하면서 `refs/pull/*/merg
 실제 VM 적용은 [B0 계획](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-B0-PLAN.md)의
 B0-1 승인 작업이다. 기존 SSH에서 nft/iptables backend·forward/flowtable·firewall reload 규칙,
 Docker unit/drop-in·live-restore와 Web container를 선택 조회한다. env/inspect 전체는 출력하지 않는다.
-probe는 mount·추가 capability·privileged가 없는 bridge container만 허용한다.
+기존 `probe`는 mount·추가 capability·privileged가 없는 bridge container만 허용한다.
+P08의 별도 `probe-console`은 Compose project=`oioi-bwg-development`, service=`console`인
+container의 `/run/oioi-waveform` → 같은 경로 bind 한 개만 허용한다. RW=false·rprivate를
+확인하며 `Mode`는 `ro` 또는 빈 문자열만 허용한다. Docker의 구조화된 bind mount는 실제 읽기 전용이어도
+`Mode`가 빈 문자열로 보고된다(2026-10-30 VM 관찰 및 로컬 실제 쓰기 거절 확인). 다른 mount·Web label·다른 project는 거절한다. 양성 대조·차단 counter 기준은 동일하다.
+이 경로는 socket 설치 후의 수용 점검용이며 mount나 서비스 설정을 생성하지 않는다. 호스트에서
+실행할 명령은 `sudo python3 -I /usr/local/lib/oioi-metadata-guard/metadata-guard.py probe-console <console-container>`다.
+실제 설치 파일 교체와 점검은 P08 VM 작업 범위를 승인받은 뒤 수행한다.
 이 조건과 맞지 않거나 forwarded IMDS가 필요한 다른 workload가 있으면 적용 전에 변경안을 재검토한다.
 
 승인할 변경은 `/usr/local/lib/oioi-metadata-guard/`의 `metadata-guard.py`·`metadata-probe.mjs`,
@@ -582,3 +589,127 @@ attempt에 사유·변경 인자를 기록하고 파일과 디렉터리를 fsync
 READ ONLY로 대조해 실제 결과를 판단한다. 요청 내용을 바꾸어 자동 재시도하거나 version을 되돌리지 않는다.
 MFA reset은 암호문을 폐기하므로 새 등록이 필요하다. 이전 JWT 401·실제 OTP 재등록·새 로그인·등록 재차단·
 관리 CRUD 검증을 마친 뒤 공개 접근을 복원한다. 설치/호출 자체가 D 완료를 뜻하지 않는다.
+
+## 11. P08 Runner 설치와 시작 분리
+
+2026-10-31 현재 기본 경로는 관리자 로컬 분석·Console JSON 등록이다. 연결 해제/회수는 [§11.5](#115-로컬-json-등록-전환과-vm-실행-구성-회수--2026-10-31)를 따른다. 아래 설치·연결 기록을 자동 재설치/기동 근거로 사용하지 않는다.
+
+실제 VM 적용은 별도 승인 후 수행한다. `install-waveform-runner.py`는 root 보호 staging에서만 실행한다.
+성공한 Verify의 `waveform-runner-arm64` artifact에서 `verified-commit.txt`·`verified-tree.txt`·SHA256SUMS를
+대조한 binary와 같은 승인 source의 `ops/oci` 파일을 준비한다. 전체 staging 상위 경로도 root 소유·쓰기 금지여야 한다.
+installer는 ARM64 ELF·checksum을 확인하고 `/usr/local/lib/oioi-waveform-runner/`에 runner/준비/토큰/egress 도구,
+`/etc/systemd/system/oioi-waveform-runner.service`에 unit과 `/etc/tmpfiles.d/oioi-waveform.conf`를 설치하며 `oioi-waveform-console` 그룹을 생성한다.
+예: `sudo python3 -I -B /root/p08-stage/ops/oci/install-waveform-runner.py --install /root/p08-stage/runner <검증한-SHA256>`.
+이 명령은 파일별 원자 교체와 daemon-reload까지만 한다. 서비스 enable/start, Secret 조회, 네트워크 생성은 하지 않는다.
+기존 서비스는 inactive/failed 및 disabled 상태여야 하고, Runner host 잠금이 있으면 실패한다. 기존 파일은
+자동 backup하지 않으므로 upgrade 전 보호된 복구 사본을 준비한다. 중간 설치 실패 후에는 같은 검증 source로
+재실행을 완료하고 unit/파일 검사를 마치기 전 시작하지 않는다. 기존 비보호 경로는 자동 수정하지 않는다.
+
+시작 전 `/etc/oioibawige/waveform-runner.json`(root 0600)에 `queueId`, `endpoint`, `consolePort`,
+`socketGroup`(위 전용 그룹 GID), `image`(검증한 local sha256 image ID), `approvedVideoIds: []`를 준비한다.
+같은 디렉터리의 `waveform-runner-secret.json`(root 0600)은 `{"secretId":"<기존 Vault Secret OCID>"}`만 받는다.
+CLI 및 `/opt/oci-cli` 실행기/라이브러리도 root 보호 경로여야 한다. 값 자체를 명령행·문서·로그에 넣지 않는다.
+Console의 동일 token/내부 API 준비·socket mount·공개 Caddy 차단과 worker image 검증을 먼저 완료한다.
+현재 이 installer는 Console env/Compose를 바꾸지 않는다. 그 연결 전에는 서비스를 시작하지 않는다.
+
+별도 승인한 시작에서 unit은 root runtime 디렉터리 → 기존 metadata 확인 → 전용 egress apply → 고정 bridge
+생성(부재 확인 때만)/정합 검사 → 잔존 worker 정리 → Vault token 공급 → Runner 순서로 실행한다.
+실패 단계 뒤 명령은 실행되지 않는다. 중지는 Go의 drain/정리와 ExecStopPost cleanup을 거치며 Docker 재시작은
+PartOf로 연동한다. Type=exec의 active는 OCI 인증·소비 readiness 보장이 아니므로 실제 API/Queue 수용을 따로 확인한다.
+실제 재부팅·종료/재전달·DNS/내부망 차단·Console DAC·허용 입력은 VM 수용 관문이다. 로컬 systemd parser와
+mock 제어 명령 검증을 실제 서비스 기동으로 간주하지 않는다. 일반 app installer는 이 unit을 설치하지 않는다.
+
+### 11.1. Console 연결과 배포 복구
+
+2026-10-30 추가. 일반 host installer는 `compose.waveform.yml`을 배치하지만 기본 배포는 이를 사용하지 않는다.
+승인 후 `deploy.conf`의 `CONSOLE_WAVEFORM_SOCKET_GID`에 `oioi-waveform-console`의 실제 숫자 GID를 설정하고,
+Console public env에서 `CONSOLE_WAVEFORM_RUNNER_ENABLED=true`를 설정한다. Console secret mapping에는
+`CONSOLE_WAVEFORM_RUNNER_TOKEN`으로 Runner와 **동일한 기존 Vault secret OCID**를 연결한다. 값은 직접 기록하지 않는다.
+Runner flag가 꺼져 있으면 token mapping도 제거한다. 두 Auth secret과 Runner token은 달라야 한다.
+`CONSOLE_WAVEFORM_GENERATION_ENABLED=false`, 빈 `CONSOLE_WAVEFORM_ALLOWED_VIDEO_IDS`, Runner의
+`approvedVideoIds: []`는 실제 입력 이용 승인 전까지 유지한다. 생성 허용 시 양쪽 승인 목록을 대조한다.
+
+첫 연결 전 승인된 `systemd-tmpfiles --create /etc/tmpfiles.d/oioi-waveform.conf`로 root 소유
+`/run/oioi-waveform`을 전용 GID·0750으로 준비한다. installer 자체는 이 명령을 실행하지 않는다. 배포 preflight는 디렉터리 부재,
+잘못된 소유권·그룹·mode·symlink·전용 그룹의 host 사용자 연결을 거절한다. Compose의 경로 자동 생성 방지에만
+의존하지 않는다. 실제 mount는 Console에만 읽기 전용/rprivate로 추가하며 Web 구성은 보존한다.
+이 준비는 VM 변경이므로 source·artifact·설정·복구 범위를 검토한 별도 승인 단계에서 수행한다.
+
+초기 순서는 설치 산출물 및 worker image 검증 → host asset/전용 runtime 디렉터리 준비 → Caddy 내부 API 차단과
+Console token/mount를 포함한 승인된 Promotion → metadata `probe-console`/DAC 확인 → 생성은 닫은 상태에서
+Runner 시작·OCI Queue 수용 → 허용 입력 승인과 생성 활성화다. 검토 전 위 설정을 운영에 복사하지 않는다.
+Runner 시작 시 디렉터리를 다시 검증한다. 부팅 초기 tmpfiles가 디렉터리를 복원하도록 구성하며, 호스트 재부팅 후에는 실제 생성 시점과
+Console 자동 재시작/mount 복구 순서를 실제 VM에서 확인해야 한다. 코드 검증으로 이 수용을 대체하지 않는다.
+
+배포 snapshot에는 활성 GID와 overlay를 보존한다. 실패 rollback은 이전 Console env·GID·overlay를 복원하고,
+이전 snapshot에 GID가 없으면 mount 없는 상태로 복구한다. ambient GID는 이전 배포에 상속하지 않는다.
+자동 rollback은 app 컨테이너/config에 한정되며 systemd·Vault CURRENT 버전·방화벽 변경을 되돌리지 않는다.
+새 release 활성화 실패 시 runtime 원본 설정과 current snapshot의 차이를 확인한 뒤 재시도한다.
+
+### 11.2. 검증한 Worker 이미지 전달
+
+Worker는 성공한 Verify run의 `waveform-worker-arm64` artifact로 전달한다. CI가 합성 음원·획득 실패 경계·
+Docker lifecycle·격리 커널 테스트를 마친 **동일 local image ID**를 save/gzip하며 재빌드하거나 OCI에 게시하지 않는다.
+Runner binary artifact와 같은 run의 `verified-commit.txt`·`verified-tree.txt`를 대조한다. 전체 Verify 성공과
+병합 tree 일치를 확인한 뒤 ZIP 다운로드 digest 및 내부 SHA256SUMS를 검증한다. manifest에는 secret이 없다.
+
+별도 승인된 VM 설치에서는 보호 staging의 `worker-image.tar.gz`를 `docker load --input`으로 적재하고,
+CI의 `image-id.txt`를 모든 Docker store의 적재 후 ID라고 가정하지 않는다. 2026-10-30 실제 #711 archive를
+containerd store에 적재했을 때 CI의 config digest와 다른 OCI manifest digest가 `.Id`로 반환됐다.
+검증한 archive의 `index.json` → manifest blob SHA-256 → `config.digest` → config blob SHA-256이
+CI ID로 이어지는지 대조한다. VM의 적재 ID는 이 검증된 config/manifest ID 중 하나여야 하며 다른 ID는 거절한다.
+`docker image inspect`로 arm64·고정 entrypoint/user도 확인하고 **해당 VM에서 검증된 local ID**만
+Runner config의 image에 넣는다. tag를 다시 resolve하지 않으며 VM에서 도구를 재설치/재빌드하지 않는다.
+load는 서비스 시작·실제 입력 분석·운영 활성화 승인을 포함하지 않는다. 공급받은 이미지를 실제 VM의
+cgroup/DAC/egress 제약에서 검증한 뒤에만 허용 입력 수용을 진행한다. artifact 보존은 90일이므로 승인된
+원본 ZIP·checksum·검증 run/tree 근거를 보호된 운영 보관소에도 보존한다.
+
+### 11.3. 첫 VM 적용 승인 관문 — 2026-10-30
+
+코드/검증 기준은 #341 → #343 → #344 병합이며 [Verify #711](https://github.com/goldmayo/oioi-bwg/actions/runs/40902045185) 전체가 성공했다.
+검증 merge commit `b1d9a1a9e10ca8354e5a9e6acfe68034a7a24764`와 통합 commit
+`b146bce1de9c139f88c5b7ae57377506a8ffdaf7`의 tree는 `f1edd886fe666d2495cf25b12aef9641fd87cf79`로 같다.
+Runner artifact `12909908056`·Worker artifact `12910835851`의 ZIP digest와 내부 checksum을 대조했다.
+이번 Worker의 config digest는 `sha256:bed4bf48fe325872606541d0ec5233e14dfc5b32ede53482234c11b107a37247`,
+연결된 OCI manifest digest는 `sha256:60276ecfe9f487ffb50c18cee030e680833c394113b2cd5e3e3e553f29d82039`다.
+로컬 containerd store에서 후자 ID·arm64·65532:65532·고정 entrypoint를 실제 확인했다. VM 적재 확인은 아직이다.
+
+첫 승인 제안 범위는 검증 묶음을 root 보호 staging으로 옮기고 checksum 대조 후 Runner 파일·전용 그룹·
+unit/tmpfiles 설정을 설치해 daemon-reload하며 Worker 이미지를 load하는 것이다. 설치기는 기존 unit이
+active/enable이면 거절한다. 기존 설치 파일이 있으면 덮어쓰기 전에 보호 backup과 복구 범위를 추가 확인한다.
+이 단계에는 Vault 조회·runtime token/config 작성·서비스 start/enable·방화벽/Queue 변경·앱 배포가 포함되지 않는다.
+다음 단계의 Console host asset·Caddy·runtime 설정·Promotion과 Runner 시작은 실제 적용 범위를 다시 확정한다.
+원래 사용자 지시의 운영 변경 별도 승인 조건을 유지하며, 위 제안은 아직 실행 승인이나 완료 기록이 아니다.
+
+### 11.4. 첫 VM 설치 확인과 Console 연결 준비 — 2026-10-30
+
+§11.3의 첫 설치 범위를 사용자가 승인하고 VM에서 실행한 출력을 제공했다. 묶음 내부 checksum 전부 성공,
+`waveform_runner_assets_installed`의 started=false, Worker manifest ID
+`sha256:60276ecfe9f487ffb50c18cee030e680833c394113b2cd5e3e3e553f29d82039` 적재·검증,
+전용 그룹 `oioi-waveform-console` GID **986**, 서비스 inactive/disabled를 확인했다.
+Runner 파일 root:root 0755, unit/tmpfiles root:root 0644다. 이것은 OCI 통신·분석 성공이나 앱 배포 완료가 아니다.
+
+후속 읽기 조회의 현재 app source는 `5bed878e03edf05b00ce335059c361f7f46810cb`다.
+기본 Compose는 저장소와 동일하다. Console 소켓 overlay와 배포 helper 3개, Console용 metadata probe를
+검증 source로 연결해야 한다. Caddy main은 `/etc/caddy/p06-c/active.caddy`와 기존 Web 조각을 import한다.
+기존 공개 상태를 보존하며 active 조각의 `console_upstream` 내부에 Runner API 차단만 추가하고 validate/reload한다.
+저장소의 기본 closed403 조각 전체를 운영 active 파일에 덮어쓰지 않는다.
+
+사용자가 후속 Console 연결 준비를 지시했다. 먼저 확인된 GID·image와 기존 Queue/Secret OCID로 root 0600
+Runner 설정을 준비하며 `approvedVideoIds: []`를 유지한다. config 작성은 Vault 값 조회가 아니다.
+다음 host source 설정에는 Console Runner 연결을 지정하되 generation=false·빈 허용 목록을 유지한다.
+현재 app runtime env와 과거 pair snapshot은 직접 편집하지 않고 별도 Promotion이 새 runtime env를 공급한다.
+Caddy/host 준비 결과와 검증 candidate를 대조한 뒤 배포·서비스 시작 범위를 확정한다. 아직 후속 설정 적용,
+Caddy reload, Vault 조회, 새 Promotion, Runner 시작을 수행했다는 증거는 없다.
+
+### 11.5. 로컬 JSON 등록 전환과 VM 실행 구성 회수 — 2026-10-31
+
+로컬 생성/등록 사용법은 [로컬 개발 안내](../../docs/migration/implementation/LOCAL-DEVELOPMENT-ENVIRONMENT.md#로컬-파형-json-생성관리자-등록-2026-10-31), 현재 계약·보존 범위는 [DESIGN §6.5](../../docs/migration/implementation/console-guide-editor/DESIGN.md#65-로컬-분석json-등록-2026-10-31-개정)가 소유한다. 실제 변경 source/artifact·승인·hash·수용 결과는 [Promotion #360](https://github.com/goldmayo/oioi-bwg/pull/360) 본문에 둔다.
+
+전환 순서는 deployment lock 안에서 root 전용 설정 백업 → Runner/생성 flag false·빈 영상 목록·socket GID 해제·Runner token 매핑 제거 → 정상 Promotion → 새 pair healthy/ready·Console mount/GID 없음·관리자 JSON 등록/Job/알림 확인 → 전용 VM 구성 회수다. 현재 앱 env와 과거 pair snapshot을 직접 수정하지 않는다. root 설정 변경은 다음 정상 배포가 적용한다.
+
+회수 전 실제 배포 candidate/source tree, live flag, 무 mount/GID, Runner inactive/disabled, worker/image 참조·전용 network 사용 부재, asset의 root 보호와 전용 그룹의 host 사용자 미사용을 확인한다. 준비 백업과 비교해 파형 관련 키 외 공통 public/secret 매핑이 동일해야 한다. 계획 확인을 기본으로 하고 승인된 적용만 수행한다. unit/tmpfiles·실행기/설정·overlay는 보호된 백업으로 회수하고 runtime socket/token·전용 network/nft table·해당 worker image만 제거한다. 공유 metadata guard와 양 앱의 실제 차단을 다시 확인한다. 전역 Docker prune·공통 Caddy/OCI CLI/Logging/FCM 제거·DB 이력 삭제는 하지 않는다.
+
+공통 알림의 테이블/dispatcher·재시도·기기 등록·알림함·foreground/background 전달과 Queue/Runner/Worker 소스·OCI Queue/IAM/Vault Secret은 보존한다. VM 실행 구성 회수는 OCI 자원 폐기가 아니며 `waveform_queue_enabled=false`로 바꾸지 않는다. Queue/DLQ의 잔여와 DB terminal은 별도로 대조한다.
+
+구 Runner 연결 snapshot으로 되돌리려면 전용 asset·그룹·network·검증 image의 복원이 선행돼야 한다. 회수 백업과 검증 archive/source를 보호해 보관하며 자동 app rollback이 host 구성까지 복원한다고 가정하지 않는다. 새 JSON 등록 release 이후의 무 mount pair는 기존 B2 복구 절차를 따른다. 설치·삭제·복구는 각각 승인한 VM 범위에서만 수행한다.

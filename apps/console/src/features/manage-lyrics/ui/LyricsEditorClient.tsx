@@ -5,7 +5,7 @@ import { Youtube } from "lucide-react";
 
 import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
 
-import type { SongEditor } from "../model/types";
+import type { SongEditor, WaveformImportControls } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
 import { EditorTopBar } from "./EditorTopBar";
@@ -21,13 +21,16 @@ interface LyricsEditorClientProps {
   saveSongData: SaveSongDataAction;
   accountId: string;
   disabled?: boolean;
+  waveformImport?: WaveformImportControls;
 }
 function LyricsEditorWorkspace({
   accountId,
   disabled = false,
+  waveformImport,
 }: {
   accountId: string;
   disabled?: boolean;
+  waveformImport?: WaveformImportControls;
 }) {
   const editor = useLyricsEditorContext();
   useEffect(() => {
@@ -111,7 +114,11 @@ function LyricsEditorWorkspace({
             <LyricsTable />
           </div>
           <div className="order-2 min-w-0 lg:order-none lg:col-span-2">
-            <WaveformPanel accountId={accountId} disabled={disabled} />
+            <WaveformPanel
+              accountId={accountId}
+              disabled={disabled}
+              registration={waveformImport}
+            />
           </div>
           <section
             className="border-border order-4 min-w-0 border-t pt-3 lg:col-span-2"
@@ -136,10 +143,15 @@ export default function LyricsEditorClient({
   saveSongData,
   accountId,
   disabled,
+  waveformImport,
 }: LyricsEditorClientProps) {
   return (
     <LyricsEditorProvider song={song} saveSongData={saveSongData}>
-      <LyricsEditorWorkspace accountId={accountId} disabled={disabled} />
+      <LyricsEditorWorkspace
+        accountId={accountId}
+        disabled={disabled}
+        waveformImport={waveformImport}
+      />
     </LyricsEditorProvider>
   );
 }

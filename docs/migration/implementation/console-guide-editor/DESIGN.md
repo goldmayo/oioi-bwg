@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-29"
-revision: 29
+updated_at: "2026-10-31"
+revision: 31
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -29,7 +29,7 @@ revision: 29
 
 같은 곡의 CONCERT/FESTIVAL 응원법을 조회·선택하고 출처를 공식/팬덤으로 표시한다.
 공식 여부는 공연 모드와 별개다. 기존 데이터는 운영자가 수동 분류하며 새 관리자 편집 기능은 P07 이후에 다룬다.
-Console에서 허용된 입력의 파형 생성을 요청하면 일회성 컨테이너가 JSON을 생성하고, 편집기는 참조 영상 재생과 JSON을 사용한다.
+2026-10-31부터 관리자가 로컬 일회성 컨테이너에서 JSON을 생성해 Console로 등록하고, 편집기는 참조 영상 재생과 JSON을 사용한다.
 **Domain §20.2의 입력 이용 범위를 먼저 확인하며 음원은 pipe/tmpfs에서만 처리한다. 브라우저에서는 분석하지 않는다.**
 2026-10-28 초기 source 정정에서는 과거 YouTube/yt-dlp 제안을 production source 승인과 구분하고 추출 금지를 따랐다.
 같은 날 후속 재설계 요청으로 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)를 조건부 허용으로 개정했다. 구체적 입력 승인은 [§6.4](#64-yt-dlp-acquisition-2026-10-28-개정)를 따른다.
@@ -264,6 +264,8 @@ i18n은 P10 이후 UI·곡별 설명만 검토한다. 설명 번역은 원문 sn
 영어·일본어·대만/홍콩 표기와 fallback은 후속 리서치로 정하고 가사 의미 번역·독음·이를 위한 영구 Cue ID는 이번 범위에서 제외한다.
 
 ## 6. Waveform Worker
+
+**2026-10-31 경로 전환:** 사용자 요청으로 현재 기본 경로는 [§6.5 로컬 분석·JSON 등록](#65-로컬-분석json-등록-2026-10-31-개정)이다. 아래 OCI Queue/Runner 설계는 이미 구현·배포한 이전 경로의 계약과 정리 근거로 보존하며, 로컬 등록의 선행 조건으로 삼지 않는다.
 
 2026-10-28 사용자 선택으로 OCI Queue 기반을 유지하고 Unix socket과 Runner의 역할을 구체화한다.
 Runner는 VM의 상주 큐 소비·실행 프로세스이며 enqueue와 consume을 함께 맡는다. Rust 분석기는 작업별 일회성 컨테이너다.
@@ -575,6 +577,21 @@ FixedWorker는 보호된 실행 어댑터 계약이며 실제 Docker 구현·정
 Rust 출력의 세 필드를 검사하고 Runner가 source/generationVersion을 붙인다. stdout은 4MiB, 제어 출력은 4KiB로 제한하고 stderr는 보관하지 않는다. BBC 내용의 정본 검증은 Console이 유지한다.
 production 네트워크 이름은 oioi-waveform-egress로 고정하며 자동 생성하지 않는다. 실제 IMDS/내부망 차단·허용 egress 실증 전에는 설치·활성화하지 않는다. 로컬 합성 검사는 network=none이며 외부 영상 요청을 하지 않는다.
 
+**2026-10-30 실제 입력 메모리 한도 개정:** 사용자 지정 `pbELDkeLdho` 한 건을 기존 ARM64 worker image로 로컬 분석했다. 256MiB는 exit 0/정상 JSON과 별개로 Docker OOMKilled가 남았다. 512MiB는 OOM 없이 관측 peak 501,796,864 bytes였고, 768MiB 재검증은 peak 406,196,224 bytes·OOM 0으로 같은 JSON hash를 생성했다. 768MiB는 중간 검증값이다. 이후 사용자 지시로 2 OCPU/12GiB VM의 예산과 더 긴 입력을 고려해 현재 고정 RAM 상한을 **1GiB, swap 0**으로 확정한다. 이 값은 예약량이 아닌 작업 중 hard limit이며 메모리 최적화 완료를 의미하지 않는다. 1GiB 재검증에서도 8.31초·관측 peak 404,447,232 bytes·OOM 0과 동일 JSON hash를 확인했다. CPU 1·동시성 1·PID 32·tmpfs 64MiB·120초·stdout 4MiB와 credential/volume 비공급 경계는 유지한다. 이 개정은 위 2026-10-29의 초기 256MiB를 대체하며 실제 운영 VM 자원 수용은 별도다.
+
+**2026-10-29 worker egress 구현:** 전용 Docker bridge `oioi-wf0`의 input/forward만
+`oioi_waveform_guard` inet table(priority -20)에서 제한한다. host 접근·IPv6·private/reserved IPv4를
+먼저 차단하고 공개 TCP 80/443 및 고정 DNS `1.1.1.1`/`1.0.0.1`의 TCP/UDP 53만 허용한다.
+Docker 실행 옵션에도 같은 DNS를 고정한다. Queue payload로 네트워크·주소·포트를 받지 않는다.
+`waveform-egress-guard.py apply`는 자기 table만 하나의 nft transaction으로 교체하며,
+`check`는 규칙 전체·counter 형식·bridge 이름/label·ICC 비활성 설정을 확인한다.
+[Docker 방화벽 안내](https://docs.docker.com/engine/network/firewall-nftables)의 별도 table 방식과
+[nftables 계약](https://netfilter.org/projects/nftables/manpage.html)을 따른다. Docker 소유 table·daemon backend와
+기존 Web/Console `oioi_metadata_guard`는 변경하지 않는다.
+network=none 테스트 컨테이너의 별도 namespace에서 합성 목적지 양성 대조와 차단·drift를 검사한다.
+이는 실제 OCI DNS/인터넷/VM 방화벽 검증을 대신하지 않는다. 설치·재부팅 지속성·시작 전 fail-closed 확인은
+후속 설치 단위에서 연결하며, VM 변경·운영 활성화는 그 이후 별도 승인 관문이다.
+
 **재전달과 컨테이너 정리.** Runner는 receipt와 최신 visibility 기한을 메모리에만 보관한다.
 작업 중 별도 heartbeat가 UpdateMessage를 수행한다. 안전 여유 안에 연장을 확인하지 못하면 소유권 상실로 취급해
 분석을 중단·제거하고 새로운 결과 제출을 시작하지 않는다. 이미 전송 중인 결과는 DB의 attempt/terminal 검사로 판단한다.
@@ -598,6 +615,26 @@ DLQ poll/renew/delete는 같은 DLQ 주소를 사용하며, 일반 분석 경로
 새 attempt와 음원 접근은 없으므로 allowlist 철회 뒤에도 회수할 수 있다. 응답 유실·이전 attempt 거절은 한 번 재조회하고,
 정리가 불확실하면 Consumer를 격리한다. 삭제 실패로 DB 결과를 되돌리거나 terminal을 다시 제출하지 않는다.
 SDK와 로컬 HTTP fixture 검증이며 실제 OCI DLQ 이동·주소·IAM 허용 여부와 상주 반복 실행은 활성화 전 별도 검증한다.
+
+**2026-10-29 상주 실행 연결:** 고정 진입점은 root 소유 0400/0600 설정만 제한된 크기로 읽는다.
+`/etc/oioibawige/waveform-runner.json`의 queueId/endpoint/consolePort/socketGroup/image/approvedVideoIds와
+`/run/oioi-waveform-private/token`을 사용하고 임의 환경변수·명령 인자는 설정 경로를 바꾸지 못한다.
+host 잠금 → 잔존 컨테이너 정리 → token/Instance Principal 초기화 → socket 접수·순차 소비 순서다.
+일반 큐의 30초 long poll과 DLQ의 즉시 poll을 번갈아 실행해 DLQ 오류가 일반 큐를 굶기지 않게 한다.
+오류 뒤 2초 대기에는 취소가 전파되며, 연속 실패는 최초 한 번 정제된 고정 오류 코드만 기록한다. 정리 불확실은 서비스 종료로 이어진다. 종료 시 소비 취소 → HTTP drain(10초) → worker 정리 → host 잠금 해제를 수행한다.
+고정 `cleanup` 모드는 종료 후 정리용이며 token/OCI 인증 없이 동일 host 잠금 아래 전용 컨테이너만 정리한다.
+ARM64 static binary와 검증 commit/tree·checksum을 CI artifact로 남긴다. 해당 workflow의 필수 verify 성공 여부를 함께 확인해야 하며 artifact 업로드만으로 운영 배포가 승인되지는 않는다.
+systemd·Vault 공급·Console socket mount·egress/metadata 격리는 설치 연결의 후속이다. 기존 metadata probe의 mount 금지 검사와 Console 전용 socket mount의 일치도 그 단계에서 검증한다.
+
+**2026-10-29 token 공급 준비:** host의 고정 `/usr/local/bin/oci`로 Instance Principal을 사용해
+보호된 `/etc/oioibawige/waveform-runner-secret.json`의 `secretId` 하나만 CURRENT stage에서 조회한다.
+CLI 환경은 고정 PATH·전용 HOME·locale만 전달하며 앱 credential과 사용자 OCI 설정을 상속하지 않는다.
+조회는 60초 이내로 제한하고 Base64를 해제한 64자리 소문자 hex만 `/run/oioi-waveform-private/token`에
+0600으로 원자 교체한다. 디렉터리는 root 0700, 설정·기존 token은 root 0400/0600·단일 hardlink를 요구한다.
+상위 경로 symlink/비보호 소유권·쓰기 권한, FIFO를 거절한다. 실패 시 직전 token을 보존하지만 호출은 실패하므로
+후속 systemd 시작 연결은 이전 token으로 우회하지 않아야 한다. stdout/stderr에는 정제된 사건 코드만 남긴다.
+CLI 실행기·라이브러리를 포함한 host 설치 경로는 root 신뢰 경계이며, 실제 설치·Vault 조회는 별도 승인 후 수행한다.
+합성 CLI와 실제 root 파일 권한 검증을 실제 Vault/IAM 수용으로 확대하지 않는다. 앱 env 공급·서비스 설치는 후속이다.
 
 ### 6.3. Queue 설정 후보와 활성화 관문
 
@@ -638,6 +675,22 @@ Rust는 추출기를 재구현하지 않고 공식 yt-dlp CLI와 포함된 EJS·
 
 실제 CLI의 로컬 HTTP streaming·시작 비용과 Rust의 합성 compressed 입력 검증을 실제 YouTube/EJS·OCI 검증과 구분한다.
 고정 버전·digest·측정 근거는 구현 PR이 소유하며 실제 허용 영상의 자원·offset/drift 수용은 후속 관문이다.
+
+### 6.5. 로컬 분석·JSON 등록 (2026-10-31 개정)
+
+```text
+관리자 PC: 고정 Rust/yt-dlp/ffmpeg/BBC 일회성 컨테이너 → WaveformData JSON 파일
+  → Console 편집 화면: ADMIN/MFA + 동일 Origin + 제한된 PUT JSON
+  → /api/admin/songs/{id}/waveform → 기존 Service/Repository
+  → PostgreSQL 결과·성공 Job·요청자 알림·기기 발송 대기 transaction
+  → 기존 GET/Query invalidation → 파형 표시 (Cue 자동 변경 없음)
+```
+
+저장 계약은 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)가 소유한다. 브라우저는 파일을 읽어 기존 JSON DTO를 전송하며 파일·음원을 R2/OCI Object Storage에 업로드하지 않는다. API는 Runner token·socket·Queue 없이 동작한다. 인증과 Origin 확인 뒤 실제 수신 byte를 4MiB, 읽기를 10초로 제한하고 기존 Zod 검증을 수행한다.
+
+전환 PR은 (1) 도메인·저장/API → (2) 편집 화면·로컬 생성 명령 → (3) 별도 승인 Promotion·실제 파일 등록 수용 → (4) 운영/인프라 정리 순서다. P09 DTO와 조회 API는 유지한다. 기존 RUNNING Job은 해당 source의 정상 관리자 등록으로 회수할 수 있으며 원래 attempt 결과를 대신 전송하지 않는다.
+
+정리는 등록 수용 후 수행한다. 먼저 서버 생성·내부 Runner API를 비활성화하고 서비스 중지/disable을 확인한 뒤 Console socket bind/GID/token 공급, systemd/tmpfiles·Runner 설치 파일, 전용 socket/runtime token·설정, worker 이미지·전용 bridge/nft table을 제거한다. 공유 metadata guard·Caddy 공개 차단·OCI CLI·공통 Vault/FCM/Logging/배포 기반은 보존한다. 2026-10-31 후속 사용자 요청으로 공통 알림/FCM과 Queue·Runner/Worker 소스 및 OCI Queue·전용 IAM·Vault Secret은 이번 작업에서 보존한다. 미래 장기 작업은 도메인별 payload·고정 worker·좁은 내부 API를 정의하고 기존 공통 알림 전달/재시도를 재사용하며, 기존 Queue에 임의 command/image/env/volume을 전달하지 않는다. Queue/DLQ 잔여와 DB 활성 Job을 대조하고 소비를 임의로 재개하지 않는다. 현재 Queue의 `prevent_destroy=true` 및 `waveform_queue_enabled`도 유지한다. OCI 자원 폐기가 필요해지면 보호 해제·Terraform 밖의 Secret까지 구분한 별도 승인 Plan/Apply로 다룬다. Job/파형/알림 이력과 migration 0011·0012는 삭제하지 않는다. 실제 경로·삭제 대상은 VM/Plan에서 확인하며 이 설계 개정만으로 운영 삭제를 승인하지 않는다.
 
 ## 7. Audio Editor
 

@@ -89,28 +89,32 @@ func (c *Consumer) poll(ctx context.Context, deadLetter bool) (*Delivery, error)
 	}
 	defer c.activity.Store(consumerIdle)
 	started := time.Now()
-	ctx, client, cancel := c.cancellableClient(ctx, pollDeadline)
+	wait, deadline := 30, pollDeadline
+	if deadLetter {
+		wait, deadline = 0, publishDeadline
+	}
+	ctx, client, cancel := c.cancellableClient(ctx, deadline)
 	defer cancel()
 	policy := common.NoRetryPolicy()
 	response, err := client.GetMessages(ctx, queue.GetMessagesRequest{
 		QueueId: common.String(c.destination(deadLetter)), Limit: common.Int(1),
-		TimeoutInSeconds: common.Int(30), VisibilityInSeconds: common.Int(visibilitySeconds),
+		TimeoutInSeconds: common.Int(wait), VisibilityInSeconds: common.Int(visibilitySeconds),
 		RequestMetadata: common.RequestMetadata{RetryPolicy: &policy},
 	})
 	if err != nil || response.RawResponse == nil || response.RawResponse.StatusCode != 200 || response.Messages == nil || len(response.Messages) > 1 {
-		return nil, ErrConsume
+		return nil, consumeFailure("poll_response", ErrConsume)
 	}
 	if len(response.Messages) == 0 {
 		return nil, nil
 	}
 	m := response.Messages[0]
 	if m.Id == nil || m.Receipt == nil || !validReceipt(*m.Receipt) || m.DeliveryCount == nil || *m.DeliveryCount < 1 || m.VisibleAfter == nil || m.VisibleAfter.IsZero() || m.ExpireAfter == nil || m.ExpireAfter.IsZero() || m.CreatedAt == nil || m.CreatedAt.IsZero() {
-		return nil, ErrConsume
+		return nil, consumeFailure("poll_fields", ErrConsume)
 	}
 	var fields map[string]json.RawMessage
 	var value Payload
 	if m.Content == nil || len(*m.Content) > 1024 || json.Unmarshal([]byte(*m.Content), &fields) != nil || len(fields) != 3 || fields["jobId"] == nil || fields["songId"] == nil || fields["videoId"] == nil || json.Unmarshal([]byte(*m.Content), &value) != nil || !uuid7.MatchString(value.JobID) || !uuid7.MatchString(value.SongID) || !videoID.MatchString(value.VideoID) {
-		return nil, ErrPayload
+		return nil, consumeFailure("poll_payload", ErrPayload)
 	}
 	return &Delivery{Payload: value, owner: c, id: *m.Id, receipt: *m.Receipt,
 		deliveryCount: *m.DeliveryCount, visibleAfter: m.VisibleAfter.Time,

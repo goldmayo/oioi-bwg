@@ -14,7 +14,7 @@ worker = "/usr/local/bin/oioi-waveform"
 downloader = "/opt/yt-dlp/yt-dlp_linux_aarch64"
 name = f"p08-acquisition-{uuid.uuid4()}"
 flags = ["--read-only", "--network", "none", "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=67108864",
-         "--memory", "256m", "--memory-swap", "256m", "--cpus", "1", "--pids-limit", "32",
+         "--memory", "1g", "--memory-swap", "1g", "--cpus", "1", "--pids-limit", "32",
          "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--log-driver", "none", "--ulimit", "core=0:0"]
 
 

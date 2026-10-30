@@ -449,6 +449,18 @@ docker compose -f compose.dev.yml exec next pnpm db:migrate
 
 `down -v`는 로컬 개발 데이터와 cache를 복구 불가능하게 삭제한다. 운영 volume에는 사용할 수 없다.
 
+## 로컬 파형 JSON 생성·관리자 등록 (2026-10-31)
+
+입력의 이용 범위와 등록 정책은 [Domain §20.2](../DOMAIN_SPECIFICATION.md#202-source-policy), 전환·운영 정리는 [DESIGN §6.5](console-guide-editor/DESIGN.md#65-로컬-분석json-등록-2026-10-31-개정)를 따른다. 이 명령은 앱 env/DB/로그인을 사용하지 않는 Linux/WSL 호스트 도구다. Docker의 로컬 Unix socket과 검증한 ARM64 Worker image `sha256:60276ecfe9f487ffb50c18cee030e680833c394113b2cd5e3e3e553f29d82039`가 필요하다. x86 호스트에서는 ARM64 실행 지원이 선행돼야 한다. 검증 산출물 적재는 [기존 전달 절차](../../../ops/oci/README.md#112-검증한-worker-이미지-전달)의 archive/checksum/image identity를 확인하며 실행 중 임의 pull·업데이트하지 않는다.
+
+```bash
+pnpm waveform:generate --video 'https://www.youtube.com/watch?v=pbELDkeLdho' --output .local/waveform/pbELDkeLdho.json
+```
+
+11자 ID 또는 위 canonical URL만 받는다. 이용 가능한 승인 입력으로 바꾸어 사용한다. 1GiB/swap 0·CPU 1·PID 32·120초 Rust/130초 외부 대기 한도·pipe/tmpfs·log none·앱 credential 미전달을 유지한다. 고정 `oioi-waveform-local` 이름으로 동시 분석을 막고 자기 실행 label만 정리한다. 실패/정리 미확인에는 JSON을 내보내지 않으며 기존 출력 파일은 덮어쓰지 않는다. `LOCAL_WAVEFORM_FAILED`이면 입력의 접근 가능 여부·고정 image 설치·출력 파일 중복과 해당 로컬 컨테이너 상태를 확인한다. 다른 실행의 컨테이너를 임의 삭제하지 않는다.
+
+결과는 source/generationVersion을 포함한 기존 WaveformData JSON이다. Console의 해당 곡 편집 화면에서 **파형 JSON 등록**을 눌러 파일을 선택한다. ADMIN/MFA와 저장된 참고 영상이 필요하며, 영상 변경은 저장 후 다시 연다. 브라우저/서버가 크기·형식·source를 검사한 뒤 PostgreSQL에 등록하고 기존 조회·요청자 알림으로 연결한다. 별도 SSH/scp·Object Storage 업로드·분석기의 DB credential은 필요 없다. 기존 가사/Cue는 자동 변경하지 않는다. 실제 영상의 초반·중간·후반 anchor는 별도로 확인한다. 운영 사용은 해당 UI/API의 별도 승인 Promotion 이후이며 로컬 생성 성공만으로 운영 DB에 저장되지는 않는다.
+
 ## 현재 검사와 실행 소유권 (2026-10-23)
 
 root `pnpm type-check`·`pnpm lint`(양 앱 FSD 포함)·`pnpm test:unit:run`은 workspace 검사를 모은다.
