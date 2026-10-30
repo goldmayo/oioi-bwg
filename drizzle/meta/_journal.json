@@ -92,6 +92,13 @@
       "when": 1793087578112,
       "tag": "0012_waveform_notification_producer",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793389553981,
+      "tag": "0013_operator_sessions",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,7 @@ const APPLICATION_TABLES = [
   "cheer_guide_publication",
   "account",
   "admin_mfa",
+  "operator_session",
   "profile",
   "password_credential",
   "email_verification_challenge",
