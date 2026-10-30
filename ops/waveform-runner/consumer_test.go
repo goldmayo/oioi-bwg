@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -112,7 +113,7 @@ func TestPollEmptyAndMalformed(t *testing.T) {
 			}
 			c, count := consumerFixture(t, func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, body) })
 			d, err := c.Poll(context.Background())
-			if d != nil || (name == "empty" && err != nil) || (name != "empty" && err != ErrConsume) || count.Load() != 1 {
+			if d != nil || (name == "empty" && err != nil) || (name != "empty" && !errors.Is(err, ErrConsume)) || count.Load() != 1 {
 				t.Fatal("empty/malformed distinction violated")
 			}
 		})
@@ -125,7 +126,7 @@ func TestPollRejectsPayload(t *testing.T) {
 		m := message()
 		m["content"] = content
 		c, count := consumerFixture(t, func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, batch(m)) })
-		if d, err := c.Poll(context.Background()); d != nil || err != ErrPayload || count.Load() != 1 {
+		if d, err := c.Poll(context.Background()); d != nil || !errors.Is(err, ErrPayload) || count.Load() != 1 {
 			t.Fatal("invalid payload reached delivery")
 		}
 	}
@@ -185,7 +186,7 @@ func TestConsumerFailuresNeverRetry(t *testing.T) {
 						err = c.Delete(context.Background(), d)
 					}
 				}
-				if err != ErrConsume || count.Load() != want {
+				if !errors.Is(err, ErrConsume) || count.Load() != want {
 					t.Fatal("unsafe error/retry")
 				}
 			})
@@ -209,13 +210,13 @@ func TestPollLongWaitAndSingleReader(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { _, err := c.Poll(context.Background()); done <- err }()
 	<-started
-	if _, err := c.Poll(context.Background()); err != ErrConsume || count.Load() != 1 {
+	if _, err := c.Poll(context.Background()); !errors.Is(err, ErrConsume) || count.Load() != 1 {
 		t.Fatal("parallel poll admitted")
 	}
 	if err := c.RunWithLease(context.Background(), leaseDelivery(c), func(context.Context) error {
 		t.Error("execution overlapped long poll")
 		return nil
-	}); err != ErrConsume {
+	}); !errors.Is(err, ErrConsume) {
 		t.Fatal("lease admitted during poll")
 	}
 	// publisher의 2초 HTTP 기한과 분리됐는지 실제 지연으로 확인한다.
@@ -260,7 +261,7 @@ func TestConsumerCancellation(t *testing.T) {
 			cancel()
 			select {
 			case err := <-done:
-				if err != ErrConsume {
+				if !errors.Is(err, ErrConsume) {
 					t.Fatal("unsafe cancellation error")
 				}
 			case <-time.After(time.Second):
@@ -286,10 +287,10 @@ func TestConsumerRejectsForeignReceiptAndRenewal(t *testing.T) {
 		}
 	})
 	for _, d := range []*Delivery{nil, {owner: &Consumer{}, receipt: testReceipt}, {owner: c, receipt: "../private"}, {owner: c, receipt: strings.Repeat("a", 2049)}} {
-		if _, err := c.Renew(context.Background(), d); err != ErrConsume {
+		if _, err := c.Renew(context.Background(), d); !errors.Is(err, ErrConsume) {
 			t.Fatal("foreign receipt renewed")
 		}
-		if err := c.Delete(context.Background(), d); err != ErrConsume {
+		if err := c.Delete(context.Background(), d); !errors.Is(err, ErrConsume) {
 			t.Fatal("foreign receipt deleted")
 		}
 	}
@@ -297,7 +298,7 @@ func TestConsumerRejectsForeignReceiptAndRenewal(t *testing.T) {
 		t.Fatal("invalid receipt sent")
 	}
 	d := receive(t, c)
-	if _, err := c.Renew(context.Background(), d); err != ErrConsume || count.Load() != 2 {
+	if _, err := c.Renew(context.Background(), d); !errors.Is(err, ErrConsume) || count.Load() != 2 {
 		t.Fatal("different message accepted")
 	}
 	if _, err := NewConsumer(nil); err != ErrConfiguration {
@@ -326,7 +327,7 @@ func TestConsumerMaintenanceDeadline(t *testing.T) {
 			} else {
 				err = c.Delete(context.Background(), d)
 			}
-			if err != ErrConsume || time.Since(started) > 4*time.Second || count.Load() != 2 {
+			if !errors.Is(err, ErrConsume) || time.Since(started) > 4*time.Second || count.Load() != 2 {
 				t.Fatal("maintenance used long poll deadline/retry")
 			}
 		})

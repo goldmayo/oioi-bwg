@@ -11,9 +11,11 @@ import { waveformQueries } from "@/entities/waveform";
 import { Button } from "@/shared/ui/button";
 
 import { formatTime } from "../lib/lrc-parser";
+import type { WaveformGenerationControls } from "../model/types";
 
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 import type { CuePreview } from "./PeaksWaveform";
+import { WaveformGenerationButton } from "./WaveformGenerationButton";
 
 const PeaksWaveform = dynamic(() => import("./PeaksWaveform"), {
   ssr: false,
@@ -32,9 +34,11 @@ function WaveformSkeleton() {
 export function WaveformPanel({
   accountId,
   disabled = false,
+  generation,
 }: {
   accountId: string;
   disabled?: boolean;
+  generation?: WaveformGenerationControls;
 }) {
   const editor = useLyricsEditorContext();
   const query = useQuery(waveformQueries.song(accountId, editor.songId));
@@ -119,6 +123,17 @@ export function WaveformPanel({
           </Button>
         </div>
       </div>
+      {generation ? (
+        <div className="px-4 pb-4">
+          <WaveformGenerationButton
+            accountId={accountId}
+            songId={editor.songId}
+            disabled={disabled || editor.isSaving}
+            videoChanged={editor.isVideoDirty || editor.youtubeId !== generation.videoId}
+            onError={generation.onError}
+          />
+        </div>
+      ) : null}
       {query.isPending ? (
         <WaveformSkeleton />
       ) : failed ? (
