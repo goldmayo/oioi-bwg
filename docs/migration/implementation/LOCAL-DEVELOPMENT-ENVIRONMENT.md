@@ -518,7 +518,7 @@ ESLint에는 M2에서 식별된 장문 함수 warning 4건이 남아 있으며 �
 ## 로컬 operator 연결 API
 
 `CONSOLE_OPERATOR_ENABLED=true`를 Console 개인 설정에 추가하고 서버를 재시작하면
-다음 경로를 평가한다. 기본은 비활성이다. Rust CLI 실행부는 후속 구현이다.
+다음 경로를 평가한다. 기본은 비활성이다. Rust CLI는 별도 `oioi-operator` 저장소에서 관리한다.
 
 `/operator-connect`에서 기존 관리자 로그인·MFA를 확인한 뒤 CLI에 표시된 연결 코드를
 직접 입력하고 승인한다. 로그인하지 않았다면 `/admin-login?next=operator`를 거쳐 같은
@@ -568,6 +568,10 @@ matched는 songId·title·editorHref, ambiguous는 matchCount를 전달한다. �
 Console에서 확인하며 CLI가 새 곡을 만들지 않는다. 기존 schema나 운영 제약은 바꾸지 않는다.
 
 등록은 기존 Song 잠금·현재 source 대조·JSON/Job/요청자 알림 transaction을 사용한다.
-곡의 영상이 매칭 후 바뀌면 등록을 거절하고 기존 결과를 보존한다. 같은 JSON의 동시·재등록은
-기존 성공 Job을 반환한다. 응답 유실은 GET 결과와 로컬 JSON을 대조하고 같은 JSON의 PUT으로
-확인할 수 있다. Queue enqueue·서버 음원 fetch·가사/Cue·공개 상태 변경은 하지 않는다.
+곡의 영상이 매칭 후 바뀌면 등록을 거절하고 기존 결과를 보존한다. operator PUT의
+`x-oioi-waveform-write-mode`는 기본 `if-absent`다. 같은 Song 잠금 안에서 현재 영상의
+파형 존재를 검사하며 이미 있으면 `WAVEFORM_ALREADY_EXISTS`(409)를 반환한다. 따라서
+조회 이후 다른 관리자가 먼저 등록해도 덮어쓰지 않는다. CLI의 명시적 `--replace`만
+`replace`를 보내 기존 교체 동작을 허용하며, 이 경우 같은 JSON의 재등록은 기존 성공 Job을 반환한다.
+기존 브라우저 편집 페이지의 교체 동작은 유지한다. 응답 유실은 GET 결과와 로컬 JSON을 대조해
+확인하고, 서로 다르면 기본 보존 정책을 따른다. Queue enqueue·서버 음원 fetch·가사/Cue·공개 상태 변경은 하지 않는다.

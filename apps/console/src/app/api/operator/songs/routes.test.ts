@@ -143,7 +143,7 @@ it("기존 파형 계약으로 등록하고 commit 성공 뒤에만 알림 전�
   expect(mocks.wake).not.toHaveBeenCalled();
   const response = await PUT(request("PUT", data), params);
   expect(await response.json()).toEqual(job);
-  expect(mocks.save).toHaveBeenCalledWith(context, id, data);
+  expect(mocks.save).toHaveBeenCalledWith(context, id, data, { replaceExisting: false });
   expect(mocks.wake).toHaveBeenCalledOnce();
   mocks.wake.mockClear();
   mocks.save.mockRejectedValueOnce(new AppError("WAVEFORM_SOURCE_INVALID"));
@@ -158,4 +158,21 @@ it("서버 결과 계약 위반은 원문을 노출하지 않고 보고한다", 
   expect(response.status).toBe(500);
   expect(await response.text()).not.toContain("private-db-secret");
   expect(mocks.report).toHaveBeenCalledOnce();
+});
+
+it("operator는 명시한 replace만 교체하고 경합한 기존 파형은 409로 보존한다", async () => {
+  expect(
+    (await PUT(request("PUT", data, { "x-oioi-waveform-write-mode": "unknown" }), params)).status,
+  ).toBe(400);
+  expect(mocks.save).not.toHaveBeenCalled();
+  expect(
+    (await PUT(request("PUT", data, { "x-oioi-waveform-write-mode": "replace" }), params)).status,
+  ).toBe(200);
+  expect(mocks.save).toHaveBeenCalledWith(context, id, data, { replaceExisting: true });
+  mocks.wake.mockClear();
+  mocks.save.mockRejectedValueOnce(new AppError("WAVEFORM_ALREADY_EXISTS"));
+  const response = await PUT(request("PUT", data), params);
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({ code: "WAVEFORM_ALREADY_EXISTS" });
+  expect(mocks.wake).not.toHaveBeenCalled();
 });

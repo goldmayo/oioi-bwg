@@ -564,3 +564,45 @@ test("operator 매칭은 legacy nullable 제목·slug를 관리자 DTO 규칙으
     { videoId: "op-empty001", status: "matched", songId: track.id, title: "", editorHref: null },
   ]);
 });
+
+test("operator의 생성 전용 등록은 Song 잠금 안에서 경합한 다른 결과를 보존한다", async () => {
+  const track = await song("op-race0001");
+  const first = { ...result, source: { type: "youtube" as const, id: "op-race0001" } };
+  const second = { ...first, peaks: { ...first.peaks, data: [-30, 30, -10, 10] } };
+  const results = await Promise.allSettled([
+    importSongWaveform(ctx(), track.id, first, { replaceExisting: false }),
+    importSongWaveform(ctx(), track.id, second, { replaceExisting: false }),
+  ]);
+  expect(results.filter((row) => row.status === "fulfilled")).toHaveLength(1);
+  expect(results.find((row) => row.status === "rejected")).toMatchObject({
+    reason: { code: "WAVEFORM_ALREADY_EXISTS" },
+  });
+  const winner = results[0]!.status === "fulfilled" ? first : second;
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(winner);
+  const jobs = await db
+    .select()
+    .from(schema.waveformJob)
+    .where(eq(schema.waveformJob.songId, track.id));
+  expect(jobs).toHaveLength(1);
+  expect(await events(jobs[0]!.id)).toHaveLength(1);
+  await importSongWaveform(ctx(), track.id, winner === first ? second : first, {
+    replaceExisting: true,
+  });
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(winner === first ? second : first);
+});
+test("현재 영상과 다른 과거 JSON은 생성 전용 등록을 막지 않는다", async () => {
+  const track = await song("op-stale001");
+  await importSongWaveform(ctx(), track.id, {
+    ...result,
+    source: { type: "youtube", id: "op-stale001" },
+  });
+  await db
+    .update(schema.song)
+    .set({ youtubeId: "op-stale002" })
+    .where(eq(schema.song.id, track.id));
+  const next = { ...result, source: { type: "youtube" as const, id: "op-stale002" } };
+  expect((await importSongWaveform(ctx(), track.id, next, { replaceExisting: false })).status).toBe(
+    "SUCCEEDED",
+  );
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(next);
+});
