@@ -469,8 +469,11 @@ pnpm waveform:generate --video 'https://www.youtube.com/watch?v=pbELDkeLdho' --o
 파일 계약은 `version: 1`과 `videoIds` 배열이며 파일명은
 `oioi-operator-waveform_YYYYMMDD_HHmmss_SSS_KST.json`이다. 한국 시각을 사용하고 콜론은 넣지 않는다.
 
-별도 [oioi-operator](https://github.com/goldmayo/oioi-operator)는 이 파일을 소비하는 Rust CLI로 구현 중이다.
-인증·생성·등록·재개를 포함한 전체 CLI 완료 여부는 해당 README와 PR 검증 근거를 확인한다.
+별도 [oioi-operator](https://github.com/goldmayo/oioi-operator)는 이 파일을 소비하는 Rust CLI다.
+인증·생성·등록·이력·재개와 같은 실행 로직의 안내 메뉴를 제공한다. 실제 브라우저 ADMIN/MFA부터
+선택 다운로드·Rust 실제 음원 생성·서버 JSON 일치·재실행/재개까지의 로컬 검증 근거는
+[통합 검증 PR #373](https://github.com/goldmayo/oioi-bwg/pull/373)에 있다.
+사용법과 실행 이력 위치는 CLI README, 반복 검증 명령은 통합 검증 PR의 기존 개발 안내를 따른다.
 곡 신규 등록·LRC·응원법 편집·검수·공개는 Console의 책임을 유지한다.
 
 ## 현재 검사와 실행 소유권 (2026-10-23)
