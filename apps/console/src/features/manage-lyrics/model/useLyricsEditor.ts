@@ -5,6 +5,7 @@ import { useForm, useWatch } from "react-hook-form";
 import type { LyricLine } from "@oioi-bwg/contracts/song";
 
 import { applyNoteEdit, type NoteEdit } from "../lib/editor-notes";
+import { applySelectionEdit, type SelectionEdit } from "../lib/note-selection";
 
 /**
  * 가사 에디터의 핵심 상태와 조작 메소드를 제공하는 커스텀 훅.
@@ -347,13 +348,26 @@ export function useLyricsEditor(initialLyrics: LyricLine[] = []) {
       setLyrics(result.lyrics);
       saveToHistory(result.lyrics);
       setCurrentIndex(result.lineIndex);
-      return result.noteId;
+      return result;
+    },
+    [lyrics, saveToHistory, setLyrics],
+  );
+
+  const editSelection = useCallback(
+    (edit: SelectionEdit) => {
+      const result = applySelectionEdit(lyrics, edit);
+      if (!result) return;
+      setLyrics(result.lyrics);
+      saveToHistory(result.lyrics);
+      setCurrentIndex(result.lineIndex);
+      return result;
     },
     [lyrics, saveToHistory, setLyrics],
   );
 
   return {
     editNote,
+    editSelection,
     isDirty: formState.isDirty,
     markSaved,
     /** 현재 편집 중인 가사 라인 배열 */

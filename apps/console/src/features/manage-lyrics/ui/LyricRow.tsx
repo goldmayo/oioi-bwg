@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import type { LyricLine } from "@oioi-bwg/contracts/song";
-import { Paintbrush, Pencil, Plus, ScanLine, Trash2 } from "lucide-react";
+import { ChevronDown, Paintbrush, Pencil, Plus, ScanLine, Trash2 } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
 
-import { formatTime, parseTime } from "../lib/lrc-parser";
+import { formatTime } from "../lib/lrc-parser";
 
 import { ExtraSegmentEditor } from "./ExtraSegmentEditor";
+import { lyricEmphasisClass } from "./lyric-emphasis";
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 import { MobilePaintEditor } from "./MobilePaintEditor";
 import { RawTextEditor } from "./RawTextEditor";
@@ -21,16 +22,32 @@ interface LyricRowProps {
   index: number;
   isCurrent: boolean;
   isError: boolean;
+  selected: boolean | "indeterminate";
+  onSelectNotes: (checked: boolean) => void;
 }
-function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
+function LyricRowInner({
+  line,
+  index,
+  isCurrent,
+  isError,
+  selected,
+  onSelectNotes,
+}: LyricRowProps) {
   const editor = useLyricsEditorContext();
-  const [time, setTime] = useState(formatTime(line.startTime));
+  const [time, setTime] = useState(formatTime(line.startTime, 3));
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [paintOpen, setPaintOpen] = useState(false);
   const [textOpen, setTextOpen] = useState(false);
   const commit = () => {
-    const parsed = parseTime(time);
+    const text = time.trim();
+    const parts = /^(\d+):([0-5]?\d(?:\.\d{1,3})?)$/.exec(text);
+    const parsed = parts
+      ? Number(parts[1]) * 60 + Number(parts[2])
+      : /^\d+(?:\.\d+)?$/.test(text)
+        ? Number(text)
+        : NaN;
     if (Number.isFinite(parsed) && parsed >= 0) editor.updateLine(index, { startTime: parsed });
-    else setTime(formatTime(line.startTime));
+    else setTime(formatTime(line.startTime, 3));
   };
   return (
     <>
@@ -38,17 +55,22 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
         data-lyric-row={index}
         aria-current={isCurrent ? "true" : undefined}
         className={cn(
-          "border-border/60 border-b px-3",
+          "group/lyric-row border-border/60 border-b px-3",
           isCurrent && "bg-qwer-e/10 ring-qwer-e/40 ring-1 ring-inset",
           isError && "bg-destructive/10",
         )}
         onClick={() => editor.setCurrentIndex(index)}
       >
-        <div className="grid min-h-12 grid-cols-[22px_92px_minmax(0,1fr)_64px] items-center gap-2">
+        <div className="grid min-h-12 grid-cols-[20px_92px_minmax(0,1fr)_88px] items-center gap-2 sm:grid-cols-[20px_24px_112px_minmax(0,1fr)_88px]">
+          <Checkbox
+            aria-label={`${index + 1}행 노트 선택`}
+            checked={selected}
+            onCheckedChange={(checked) => onSelectNotes(checked === true)}
+          />
           <button
             aria-label={`${index + 1}행 선택`}
             className={cn(
-              "text-muted-foreground h-9 text-xs tabular-nums",
+              "text-muted-foreground hidden h-9 text-xs tabular-nums sm:block",
               isCurrent && "text-qwer-e",
             )}
           >
@@ -69,7 +91,8 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
             className="h-8 px-2 text-center font-mono text-xs tabular-nums"
           />
           <div
-            className="flex min-w-0 items-center gap-2 overflow-hidden text-sm"
+            data-row-text
+            className="min-w-0 py-2 text-sm break-words"
             onMouseUp={(e) => editor.handleMouseUpText(e, index)}
           >
             {line.segments.map((segment, i) => (
@@ -78,10 +101,9 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
                 data-line={index}
                 data-seg={i}
                 className={cn(
-                  "shrink-0 whitespace-pre",
-                  line.isExtra && "text-qwer-e",
-                  segment.isCheer && "text-qwer-r font-semibold",
-                  segment.isEcho && "text-qwer-w underline underline-offset-4",
+                  "whitespace-pre-wrap",
+                  lyricEmphasisClass(segment, line.isExtra),
+                  segment.isCheer && "font-semibold",
                 )}
               >
                 {segment.text}
@@ -92,7 +114,18 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-7 opacity-0 group-hover/lyric-row:opacity-100 focus-visible:opacity-100"
+              title="행 상세 편집"
+              aria-label={`${index + 1}행 상세 편집`}
+              aria-expanded={detailsOpen && isCurrent}
+              onClick={() => setDetailsOpen(!detailsOpen)}
+            >
+              <ChevronDown size={14} className={detailsOpen && isCurrent ? "rotate-180" : ""} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
               aria-label={`${index + 1}행 텍스트 수정`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -104,7 +137,7 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-7"
               aria-label={`${index + 1}행 시간 캡처`}
               disabled={!editor.player || editor.isAdPlaying}
               onClick={(e) => {
@@ -116,7 +149,7 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
             </Button>
           </div>
         </div>
-        {isCurrent && (
+        {isCurrent && detailsOpen && (
           <div className="pb-3 pl-0 sm:pl-8">
             {line.isExtra && <ExtraSegmentEditor line={line} lineIndex={index} />}
             <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-2 text-xs">
@@ -137,7 +170,7 @@ function LyricRowInner({ line, index, isCurrent, isError }: LyricRowProps) {
                 onClick={() => setPaintOpen(true)}
               >
                 <Paintbrush size={13} />
-                속성 칠하기
+                응원·에코 표시
               </Button>
               <Button
                 variant="ghost"

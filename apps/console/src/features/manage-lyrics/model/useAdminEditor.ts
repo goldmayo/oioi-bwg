@@ -73,6 +73,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
   const videoForm = useForm({ defaultValues: { youtubeId: song.youtubeId } });
   const youtubeId = useWatch({ control: videoForm.control, name: "youtubeId" });
   const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
   const savingRef = useRef(false);
   const guideWriteRef = useRef(song.guideWrite);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -149,6 +150,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     }
     savingRef.current = true;
     setIsSaving(true);
+    setHasSaved(false);
     try {
       const saved = await saveSongData(song.id, input.data);
       guideWriteRef.current = saved.guideWrite;
@@ -157,6 +159,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
       videoForm.reset({ youtubeId });
       if (currentVideo !== youtubeId)
         videoForm.setValue("youtubeId", currentVideo, { shouldDirty: true });
+      setHasSaved(true);
       toast.success("저장되었습니다.");
     } catch {
       // MutationCache의 전역 오류 UX가 실패를 표시한다.
@@ -338,6 +341,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     subscribeToTime,
     updateLine,
     editNote: lyricsEditor.editNote,
+    editSelection: lyricsEditor.editSelection,
     captureTime: handleCaptureTime,
     addExtraLine: handleAddExtraLine,
     addSegmentToExtra,
@@ -355,6 +359,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
     playerState,
     setPlayerState,
     isSaving,
+    hasSaved,
     isImportOpen,
     lrcInput,
     isAdPlaying,

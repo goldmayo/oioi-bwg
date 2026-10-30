@@ -1,132 +1,110 @@
 "use client";
 
-import { Check, ChevronRight, FileInput, Redo2, Undo2, Youtube } from "lucide-react";
+import { Check, LoaderCircle, MapPin, Redo2, Repeat2, Save, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/shared/ui/dialog";
-import { Input } from "@/shared/ui/input";
-import { Textarea } from "@/shared/ui/textarea";
 
+import { EditorTools } from "./EditorTools";
+import { EditorTransport } from "./EditorTransport";
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 
-export function EditorTopBar() {
+export function EditorTopBar(props: {
+  blocked: boolean;
+  looping: boolean;
+  onLoop: () => void;
+  onAdd: () => void;
+}) {
   const editor = useLyricsEditorContext();
   return (
-    <header className="shrink-0 px-4 pt-4 sm:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4">
-        <div>
-          <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs">
-            곡 관리
-            <ChevronRight size={12} />
-            가사 편집
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl font-semibold tracking-tight">{editor.title}</h1>
-            <span
-              role="status"
-              className={
-                editor.isDirty ? "text-xs text-amber-300" : "text-muted-foreground text-xs"
-              }
-            >
-              {editor.isDirty ? "저장하지 않은 변경" : "저장됨"}
-            </span>
-          </div>
-        </div>
+    <header className="border-border relative z-30 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 border-b px-4 py-4 lg:min-h-20 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-x-6 lg:py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <h1
+          className="truncate text-xl font-semibold tracking-tight xl:text-2xl"
+          title={editor.title}
+        >
+          {editor.title}
+        </h1>
+        <span
+          role="status"
+          title={editor.isDirty ? "저장하지 않은 변경" : "저장됨"}
+          className={editor.isDirty ? "size-1.5 shrink-0 rounded-full bg-amber-300" : "sr-only"}
+        >
+          <span className="sr-only">{editor.isDirty ? "저장하지 않은 변경" : "저장됨"}</span>
+        </span>
+      </div>
+      <div className="col-span-2 row-start-2 flex flex-wrap items-center justify-center gap-3 lg:col-span-1 lg:col-start-2 lg:row-start-1 xl:gap-5">
+        <EditorTransport blocked={props.blocked} />
         <div className="flex items-center gap-2">
           <Button
+            variant="outline"
+            size="icon"
+            title="구간 반복"
+            aria-label="구간 반복"
+            aria-pressed={props.looping}
+            disabled={props.blocked || !editor.player}
+            onClick={props.onLoop}
+            className={`size-11 rounded-md border-white/10 bg-white/[0.03] [&_svg]:size-5 ${props.looping ? "border-cyan-400 text-cyan-300" : ""}`}
+          >
+            <Repeat2 className="size-5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            title="현재 위치에 노트 추가"
+            aria-label="현재 위치에 노트 추가"
+            disabled={props.blocked}
+            onClick={props.onAdd}
+            className="size-11 rounded-md border-white/10 bg-white/[0.03] [&_svg]:size-6"
+          >
+            <MapPin className="size-6" strokeWidth={1.5} />
+          </Button>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
             variant="ghost"
             size="icon"
-            onClick={editor.undo}
-            disabled={!editor.canUndo}
+            title="실행 취소"
             aria-label="실행 취소"
+            onClick={editor.undo}
+            disabled={props.blocked || !editor.canUndo}
           >
-            <Undo2 size={16} />
+            <Undo2 />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            onClick={editor.redo}
-            disabled={!editor.canRedo}
+            title="다시 실행"
             aria-label="다시 실행"
+            onClick={editor.redo}
+            disabled={props.blocked || !editor.canRedo}
           >
-            <Redo2 size={16} />
-          </Button>
-          <Dialog open={editor.isImportOpen} onOpenChange={editor.setIsImportOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <FileInput size={14} />
-                <span className="hidden sm:inline">LRC 가져오기</span>
-                <span className="sr-only sm:hidden">LRC 가져오기</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>LRC 가사 가져오기</DialogTitle>
-                <DialogDescription>
-                  시간 태그가 있는 가사를 붙여 넣습니다. 적용한 변경은 실행 취소할 수 있습니다.
-                </DialogDescription>
-              </DialogHeader>
-              <Textarea
-                aria-label="LRC 가사"
-                value={editor.lrcInput}
-                onChange={(e) => editor.setLrcInput(e.target.value)}
-                placeholder="[00:12.34] 가사 내용"
-                className="min-h-72 font-mono text-sm"
-              />
-              <Button onClick={editor.handleImportLrc}>가져오기</Button>
-            </DialogContent>
-          </Dialog>
-          <Button size="sm" onClick={editor.handleSave} disabled={editor.isSaving}>
-            <Check size={15} />
-            {editor.isSaving ? "저장 중..." : "저장"}
-            <kbd className="ml-1 hidden text-xs opacity-70 sm:inline">Ctrl S</kbd>
+            <Redo2 />
           </Button>
         </div>
       </div>
-      <div className="border-border mb-4 flex flex-wrap items-center justify-between gap-3 border-y py-2.5 text-xs">
-        <div className="flex min-w-0 items-center gap-2">
-          <Youtube size={16} className="text-muted-foreground" />
-          <label htmlFor="editor-youtube-id" className="text-muted-foreground shrink-0">
-            참고 영상
-          </label>
-          <Input
-            id="editor-youtube-id"
-            value={editor.youtubeId}
-            onChange={editor.handleYoutubeIdChange}
-            placeholder="YouTube URL 또는 ID"
-            className="h-8 w-28 text-xs sm:w-52"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">
-            전체<span className="hidden sm:inline"> 오프셋</span>
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="전체 가사 0.1초 앞당기기"
-            onClick={() => editor.applyGlobalOffset(-0.1)}
-            className="h-7 px-2 text-xs"
-          >
-            −0.1s
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="전체 가사 0.1초 늦추기"
-            onClick={() => editor.applyGlobalOffset(0.1)}
-            className="h-7 px-2 text-xs"
-          >
-            +0.1s
-          </Button>
-        </div>
+      <div className="col-start-2 row-start-1 flex items-center justify-end gap-2 lg:col-start-3">
+        <EditorTools blocked={props.blocked} />
+        <Button
+          className="h-11 w-24 gap-3 border border-white/70 bg-neutral-50 font-normal text-neutral-900 hover:bg-white xl:w-32 [&_svg]:size-4 [&_svg]:stroke-[1.5]"
+          title="저장"
+          onClick={editor.handleSave}
+          disabled={props.blocked || editor.isSaving}
+          data-save-state={
+            editor.isSaving ? "saving" : editor.hasSaved && !editor.isDirty ? "saved" : "idle"
+          }
+        >
+          {editor.isSaving ? (
+            <LoaderCircle className="animate-spin motion-reduce:animate-none" />
+          ) : (
+            <span className="relative inline-flex" aria-hidden="true">
+              <Save />
+              {editor.hasSaved && !editor.isDirty && (
+                <Check className="absolute -right-1 -bottom-1 !size-3 rounded-sm bg-neutral-50" />
+              )}
+            </span>
+          )}
+          {editor.isSaving ? "저장 중" : "저장"}
+        </Button>
       </div>
     </header>
   );

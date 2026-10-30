@@ -4,6 +4,10 @@ import { useEffect, useRef } from "react";
 import type { LyricLine } from "@oioi-bwg/contracts/song";
 import gsap from "gsap";
 
+import { getEditorNotes } from "../lib/editor-notes";
+
+import { NoteText } from "./NoteText";
+
 interface LyricsTimelinePreviewProps {
   lyrics: LyricLine[];
   subscribeToTime: (listener: (time: number) => void) => () => void;
@@ -37,44 +41,16 @@ export function LyricsTimelinePreview({ lyrics, subscribeToTime }: LyricsTimelin
         ref={railRef}
         className="absolute top-0 bottom-0 left-1/2 flex items-center will-change-transform"
       >
-        {lyrics.map((line, index) => {
-          const leftPosition = line.startTime * PIXELS_PER_SECOND;
-          const segments = line.segments || [];
-
-          return (
-            <div
-              key={index}
-              className="absolute top-1/2 flex -translate-y-1/2 items-center gap-1"
-              style={{ left: `${leftPosition}px` }}
-            >
-              {segments.map((seg, sIdx) => {
-                let bgColor = "bg-muted";
-                let textColor = "text-muted-foreground";
-
-                // 디자인 시스템 멤버 컬러 적용
-                if (seg.isEcho) {
-                  bgColor = "bg-qwer-w";
-                  textColor = "text-white";
-                } else if (line.isExtra) {
-                  bgColor = "bg-qwer-e";
-                  textColor = "text-black"; // 연두색 배경에는 검정 글씨가 시인성이 좋음
-                } else if (seg.isCheer) {
-                  bgColor = "bg-qwer-r";
-                  textColor = "text-white";
-                }
-
-                return (
-                  <span
-                    key={sIdx}
-                    className={`rounded-full px-3 py-1.5 text-sm font-bold whitespace-nowrap shadow-md transition-colors ${bgColor} ${textColor}`}
-                  >
-                    {seg.text}
-                  </span>
-                );
-              })}
-            </div>
-          );
-        })}
+        {getEditorNotes(lyrics).map((note) => (
+          <span
+            key={note.id}
+            data-preview-time={note.time}
+            className="bg-muted absolute top-1/2 -translate-y-1/2 rounded px-3 py-1.5 text-sm whitespace-nowrap"
+            style={{ left: note.time * PIXELS_PER_SECOND }}
+          >
+            <NoteText note={note} className="whitespace-pre" />
+          </span>
+        ))}
       </div>
     </div>
   );

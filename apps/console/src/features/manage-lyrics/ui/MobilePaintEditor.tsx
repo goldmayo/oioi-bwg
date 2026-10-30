@@ -154,8 +154,10 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
         onPointerLeave={handlePointerUp}
       >
         <DialogHeader>
-          <DialogTitle>가사 편집 (페인트 모드)</DialogTitle>
-          <DialogDescription>문자에 일반·응원·에코 강조를 적용합니다.</DialogDescription>
+          <DialogTitle>가사 강조 편집</DialogTitle>
+          <DialogDescription>
+            일반·응원·에코를 고른 뒤 표시할 글자를 클릭하거나 드래그합니다.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-1 flex-col gap-6 overflow-y-auto py-4">

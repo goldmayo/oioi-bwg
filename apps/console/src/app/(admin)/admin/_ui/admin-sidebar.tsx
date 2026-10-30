@@ -41,5 +41,21 @@ export default function AdminSidebar() {
     </nav>
   );
 
-  return <AdminSidebarShell>{navContent}</AdminSidebarShell>;
+  return (
+    <AdminSidebarShell compact={pathname.startsWith("/admin/edit/")}>
+      {navContent}
+    </AdminSidebarShell>
+  );
+}
+
+export function AdminWorkspace({ children }: { children: React.ReactNode }) {
+  const editor = usePathname().startsWith("/admin/edit/");
+  return (
+    <div
+      className={`bg-background text-foreground flex h-dvh min-w-0 flex-col overflow-hidden ${editor ? "" : "md:flex-row"}`}
+    >
+      <AdminSidebar />
+      <main className="min-h-0 min-w-0 flex-1 overflow-auto">{children}</main>
+    </div>
+  );
 }
