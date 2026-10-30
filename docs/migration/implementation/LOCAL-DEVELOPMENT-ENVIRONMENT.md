@@ -544,9 +544,30 @@ credential을 주입하지 않는다. 승인 페이지는 요청 시점에 flag�
 | GET `/api/operator/auth/session` | bearer; cookie·Origin 금지 | accountId, expiresAt |
 | POST `/api/operator/auth/revoke` | `{}`; bearer; cookie·Origin 금지 | `{revoked:true}` |
 
-모든 응답은 `Cache-Control: no-store`다. POST 본문은 application/json·1 KiB 이하의
+모든 응답은 `Cache-Control: no-store`다. 인증 POST 본문은 application/json·1 KiB 이하의
 엄격한 계약으로 검증하며 client가 MFA version·계정·실행 명령을 지정할 수 없다.
 발급은 IP당 분당 5회, polling은 IP당 분당 60회와 device당 5초에 1회, 승인은 계정당
 분당 10회다. 제한 시 429와 Retry-After 초를 반환한다. 신뢰할 수 없는 IP는 공통 버킷을
 사용한다. 프로세스별 최대 4096개 해시 버킷이며 재시작·다중 인스턴스 공유 제한은 아니다.
 승인·교환의 일회성 및 만료는 DB에서 계속 보장한다. 비밀 원문을 URL·명령 기록에 넣지 않는다.
+
+### 기존 곡 매칭·파형 조회·등록
+
+다음 경로도 같은 활성화 설정과 현재 ADMIN/MFA를 재확인하는 bearer만 사용한다.
+브라우저 cookie·Origin은 허용하지 않으며 일반 관리자 API에서 bearer를 받지 않는다.
+
+| 메서드·경로 | 입력 | 응답 |
+| --- | --- | --- |
+| POST `/api/operator/songs/resolve` | `{videoIds:[...]}`; 1~500개 고유 ID, JSON 16 KiB 이하 | 입력 순서의 items: matched·missing·ambiguous |
+| GET `/api/operator/songs/[id]/waveform` | 매칭된 song UUID | 현재 영상의 WaveformData 또는 null |
+| PUT `/api/operator/songs/[id]/waveform` | 기존 WaveformData; 4 MiB 이하 | 기존 WaveformJob |
+
+작업 파일의 곡 수는 이 API의 batch 상한과 별개다. CLI가 500개씩 나누어 조회한다.
+matched는 songId·title·editorHref, ambiguous는 matchCount를 전달한다. 현재 schema에
+`youtube_id` UNIQUE 제약이 없으므로 중복을 임의의 한 곡으로 축약하지 않는다. missing·ambiguous는
+Console에서 확인하며 CLI가 새 곡을 만들지 않는다. 기존 schema나 운영 제약은 바꾸지 않는다.
+
+등록은 기존 Song 잠금·현재 source 대조·JSON/Job/요청자 알림 transaction을 사용한다.
+곡의 영상이 매칭 후 바뀌면 등록을 거절하고 기존 결과를 보존한다. 같은 JSON의 동시·재등록은
+기존 성공 Job을 반환한다. 응답 유실은 GET 결과와 로컬 JSON을 대조하고 같은 JSON의 PUT으로
+확인할 수 있다. Queue enqueue·서버 음원 fetch·가사/Cue·공개 상태 변경은 하지 않는다.
