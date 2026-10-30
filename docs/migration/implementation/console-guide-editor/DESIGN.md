@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-31"
-revision: 28
+revision: 29
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -690,7 +690,7 @@ Rust는 추출기를 재구현하지 않고 공식 yt-dlp CLI와 포함된 EJS·
 
 전환 PR은 (1) 도메인·저장/API → (2) 편집 화면·로컬 생성 명령 → (3) 별도 승인 Promotion·실제 파일 등록 수용 → (4) 운영/인프라 정리 순서다. P09 DTO와 조회 API는 유지한다. 기존 RUNNING Job은 해당 source의 정상 관리자 등록으로 회수할 수 있으며 원래 attempt 결과를 대신 전송하지 않는다.
 
-정리는 등록 수용 후 수행한다. 먼저 서버 생성·내부 Runner API를 비활성화하고 서비스 중지/disable을 확인한 뒤 Console socket bind/GID/token 공급, systemd/tmpfiles·Runner 설치 파일, 전용 socket/runtime token·설정, worker 이미지·전용 bridge/nft table을 제거한다. 공유 metadata guard·Caddy 공개 차단·OCI CLI·공통 Vault/FCM/Logging/배포 기반은 보존한다. Queue/DLQ 잔여와 DB 활성 Job을 확인한 뒤 전용 Queue·push/pull 및 전용 Secret 읽기 IAM·Secret을 Terraform Plan으로 검토하고 별도 승인 Apply한다. `waveform_queue_enabled=false` 적용은 리소스 파괴를 유발할 수 있으므로 단순 flag 변경으로 즉시 실행하지 않는다. Job/파형/알림 이력과 migration 0011·0012는 삭제하지 않는다. 실제 경로·삭제 대상은 VM/Plan에서 확인하며 이 설계 개정만으로 운영 삭제를 승인하지 않는다.
+정리는 등록 수용 후 수행한다. 먼저 서버 생성·내부 Runner API를 비활성화하고 서비스 중지/disable을 확인한 뒤 Console socket bind/GID/token 공급, systemd/tmpfiles·Runner 설치 파일, 전용 socket/runtime token·설정, worker 이미지·전용 bridge/nft table을 제거한다. 공유 metadata guard·Caddy 공개 차단·OCI CLI·공통 Vault/FCM/Logging/배포 기반은 보존한다. Queue/DLQ 잔여와 DB 활성 Job을 확인한 뒤 전용 Queue·push/pull 및 전용 Secret 읽기 IAM·Secret을 Terraform Plan으로 검토하고 별도 승인 Apply한다. 현재 Queue에는 `prevent_destroy=true`가 있어 `waveform_queue_enabled=false`만으로 폐기할 수 없다. 폐기 시 보호 해제도 별도 코드/Plan 검토 대상으로 하며 즉시 Apply하지 않는다. 전용 Vault Secret은 Terraform 밖에서 생성했으므로 Queue/IAM 삭제로 함께 삭제되지 않는다. Job/파형/알림 이력과 migration 0011·0012는 삭제하지 않는다. 실제 경로·삭제 대상은 VM/Plan에서 확인하며 이 설계 개정만으로 운영 삭제를 승인하지 않는다.
 
 ## 7. Audio Editor
 

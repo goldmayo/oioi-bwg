@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { waveformDataSchema } from "@oioi-bwg/contracts/waveform";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { eq, inArray } from "drizzle-orm";
 import postgres from "postgres";
@@ -90,14 +92,14 @@ afterAll(async () => {
   await db.delete(schema.account).where(inArray(schema.account.id, accounts));
   await client.end();
 });
-async function song() {
+async function song(youtubeId = videoId) {
   const [row] = await db
     .insert(schema.song)
     .values({
       albumId,
       title: "waveform fixture",
       slug: `waveform-${createEntityId()}`,
-      youtubeId: videoId,
+      youtubeId,
     })
     .returning();
   return row!;
@@ -491,4 +493,17 @@ test("JSON 업로드는 ADMIN과 현재 source를 검사하고 잘못된 입력�
   const second = await importSongWaveform(ctx(), track.id, changed);
   expect(second.id).not.toBe(first.id);
   expect(await getSongWaveform(ctx(), track.id)).toEqual(changed);
+});
+
+const localJsonPath = process.env.P08_TEST_WAVEFORM_JSON;
+test.skipIf(!localJsonPath)("실제 로컬 생성 JSON을 그대로 저장하고 재조회한다", async () => {
+  const data = waveformDataSchema.parse(JSON.parse(readFileSync(localJsonPath!, "utf8")));
+  const track = await song(data.source.id);
+  const job = await importSongWaveform(ctx(), track.id, data);
+  expect(job.status).toBe("SUCCEEDED");
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(data);
+  expect((await saved(track.id))[0]!.data).toEqual(data);
+  expect(await events(job.id)).toHaveLength(1);
+  const [after] = await db.select().from(schema.song).where(eq(schema.song.id, track.id));
+  expect(after).toEqual(track);
 });
