@@ -13,6 +13,7 @@ const rootToolEntries: Record<string, string> = {
   "scripts/check-workspace-dependencies.ts": "./cli/dependencies",
   "scripts/plan-uuid-cutover.ts": "./cli/plan-uuid-cutover",
   "scripts/import-cheer-guides.ts": "./cli/import-cheer-guides",
+  "scripts/generate-waveform.ts": "./cli/generate-waveform",
   "scripts/console-admin-bootstrap.ts": "./cli/console-admin-bootstrap",
   "scripts/run-drizzle-migrations.ts": "./migration/uuid-cutover-map",
   "scripts/console-mfa-execution.ts": "./operator/execution",
