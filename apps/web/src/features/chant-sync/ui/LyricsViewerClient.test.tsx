@@ -194,3 +194,30 @@ it("출처는 링크가 아니며 동일한 영상·원본 URL은 펼친 정보�
   expect(screen.getAllByRole("link", { name: "응원법 영상 보기" })).toHaveLength(1);
   expect(screen.queryByRole("link", { name: "원본 보기" })).not.toBeInTheDocument();
 });
+
+it("강조 편집으로 나뉜 동일 시각 추임새 조각을 함께 표시한다", () => {
+  render(
+    <NuqsTestingAdapter>
+      <LyricsViewerClient
+        song={{
+          id: guides[0].id,
+          title: "곡",
+          youtubeId: "video",
+          lyrics: [
+            {
+              startTime: 4,
+              isExtra: true,
+              segments: [
+                { text: "같은", isCheer: true, isEcho: false },
+                { text: "호출", isCheer: false, isEcho: true, startTimeOffset: 0 },
+              ],
+            },
+          ],
+        }}
+      />
+    </NuqsTestingAdapter>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "같은호출" }));
+  expect(screen.getByText("같은")).toHaveClass("underline");
+  expect(screen.getByText("호출")).toHaveClass("underline");
+});
