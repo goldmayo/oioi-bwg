@@ -1,5 +1,6 @@
 /** 앱이 소유한 경로만 고정 template/operation으로 축약한다. 원문 경로는 반환하지 않는다. */
 const routes = {
+  "/operator-connect": "operator-connect",
   "/api/operator/auth/device": "operator-auth-device-api",
   "/api/operator/auth/token": "operator-auth-token-api",
   "/api/operator/auth/approve": "operator-auth-approve-api",

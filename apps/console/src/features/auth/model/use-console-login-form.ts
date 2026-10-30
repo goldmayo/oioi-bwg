@@ -56,7 +56,10 @@ function authenticationErrorMessage(error: unknown) {
 }
 
 /** 입력/QR은 이 폼의 메모리만 소유하며 완료·취소·이탈 시 폐기한다. */
-export function useConsoleLoginForm(initialRateLimited = false) {
+export function useConsoleLoginForm(
+  initialRateLimited = false,
+  destination: "admin" | "operator" = "admin",
+) {
   const router = useRouter();
   // SSR 폼은 비활성으로 렌더하고, hydration 후에만 민감 입력을 받는다.
   const isHydrated = useSyncExternalStore(
@@ -143,7 +146,7 @@ export function useConsoleLoginForm(initialRateLimited = false) {
             form.setValue("otp", "");
           } else if (!result) {
             reset("navigating");
-            router.replace("/admin");
+            router.replace(destination === "operator" ? "/operator-connect" : "/admin");
           }
           break;
         }

@@ -25,6 +25,7 @@ export const config = {
   matcher: [
     "/admin/:path*",
     "/admin-login",
+    "/operator-connect",
     "/api/admin/:path*",
     "/api/auth/:path*",
     "/api/operator/:path*",
