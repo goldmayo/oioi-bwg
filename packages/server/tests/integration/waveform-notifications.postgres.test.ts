@@ -9,6 +9,7 @@ import * as notifications from "../../src/services/notification-service";
 import {
   completeWaveformJob,
   getSongWaveform,
+  importSongWaveform,
   getWaveformJob,
   getRunnerWaveformJob,
   requestWaveformJob as requestApprovedWaveformJob,
@@ -435,4 +436,59 @@ test("현재 영상의 파형 JSON만 읽고 영상 변경·파형 부재·삭�
   });
   await db.delete(schema.song).where(eq(schema.song.id, track.id));
   await expect(getSongWaveform(ctx(), track.id)).rejects.toMatchObject({ code: "SONG_NOT_FOUND" });
+});
+
+test("동시 JSON 업로드는 Job·파형·알림을 한 번 저장하고 기존 RUNNING attempt를 무효화한다", async () => {
+  const track = await song();
+  const { job } = await requestWaveformJob(ctx(accounts[1]), track.id);
+  const oldAttempt = await start(job.id);
+  const copies = await Promise.all(
+    Array.from({ length: 4 }, () => importSongWaveform(ctx(), track.id, result)),
+  );
+  expect(new Set(copies.map((j) => j.id))).toEqual(new Set([job.id]));
+  expect(copies.every((j) => j.status === "SUCCEEDED")).toBe(true);
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(result);
+  expect(await events(job.id)).toHaveLength(2);
+  expect(await saved(track.id)).toHaveLength(1);
+  expect(
+    await completeWaveformJob({
+      jobId: job.id,
+      attemptId: oldAttempt,
+      status: "FAILED",
+      errorCode: "DLQ",
+    }),
+  ).toMatchObject({ applied: false, status: "SUCCEEDED" });
+  expect((await getRunnerWaveformJob(job.id)).attemptId).not.toBe(oldAttempt);
+  const [unchanged] = await db.select().from(schema.song).where(eq(schema.song.id, track.id));
+  expect(unchanged).toEqual(track);
+});
+test("JSON 업로드는 ADMIN과 현재 source를 검사하고 잘못된 입력·알림 실패는 기존 JSON을 보존한다", async () => {
+  const track = await song();
+  await expect(
+    importSongWaveform(ctx(accounts[0], "USER"), track.id, result),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  const first = await importSongWaveform(ctx(), track.id, result);
+  const changed = { ...result, peaks: { ...result.peaks, data: [-5, 5, -2, 2] } };
+  const spy = vi
+    .spyOn(notifications, "recordWaveformNotification")
+    .mockRejectedValueOnce(new Error("import rollback"));
+  try {
+    await expect(importSongWaveform(ctx(), track.id, changed)).rejects.toThrow("import rollback");
+  } finally {
+    spy.mockRestore();
+  }
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(result);
+  expect(await events(first.id)).toHaveLength(1);
+  expect(
+    await db.select().from(schema.waveformJob).where(eq(schema.waveformJob.songId, track.id)),
+  ).toHaveLength(1);
+  await expect(
+    importSongWaveform(ctx(), track.id, {
+      ...result,
+      source: { type: "youtube", id: "lmnopqrstuv" },
+    }),
+  ).rejects.toMatchObject({ code: "WAVEFORM_SOURCE_INVALID" });
+  const second = await importSongWaveform(ctx(), track.id, changed);
+  expect(second.id).not.toBe(first.id);
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(changed);
 });

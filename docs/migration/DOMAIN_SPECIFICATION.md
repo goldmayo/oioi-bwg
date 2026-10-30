@@ -3,7 +3,7 @@
 > 프로젝트: **어이어이 바위게**
 >
 > 문서 성격: Product Domain Specification / Development Contract / Test Oracle / Operations Policy  
-> 상태: **Baseline v1.4 — 2026-10-28 조건부 YouTube 파형 입력 개정**
+> 상태: **Baseline v1.5 — 2026-10-31 로컬 분석 JSON 등록 개정**
 > 목적: 본 문서는 서비스의 도메인 용어, 정책, 권한, 상태 전이, 데이터 생명주기, 핵심 워크플로, ERD, 테스트 기준, 운영 규칙을 하나의 기준으로 고정한다.  
 > 우선순위: 구현 편의보다 **도메인 일관성, 이력 보존, 운영 가능성, 개인정보 최소화, 어뷰징 내성**을 우선한다.
 
@@ -1330,6 +1330,16 @@ iframe 재생/참조는 유지하며, 아래 조건을 충족한 단일 videoId�
 
 ---
 
+### 로컬 분석·관리자 JSON 등록 (2026-10-31 개정)
+
+사용자 결정으로 P08의 기본 경로를 **관리자 로컬 분석 → JSON 파일 → Console 업로드 → PostgreSQL**로 전환한다. 서버가 YouTube 음원을 fetch하지 않으며 Object Storage를 중간 저장소로 쓰지 않는다. 기존 서버 분석 경로는 전환 후 폐기 대상이며 자동 재시작하지 않는다.
+
+- 관리자는 이용 범위를 확인한 입력만 기존 Rust/yt-dlp/ffmpeg/BBC 분석기로 로컬 처리한다. 로컬 실행도 음원·PCM을 pipe/tmpfs에서만 처리하고 JSON만 파일로 내보낸다. 분석기에 앱 DB·인증·클라우드 credential을 제공하지 않는다.
+- 업로드는 현재 ADMIN/MFA와 동일 Origin을 요구한다. 기존 WaveformData 계약 전체(source·generationVersion 포함)를 4MiB/1시간/180,000 bucket 한도로 검사하고, Song 잠금 안에서 현재 youtubeId와 source.id를 대조한다. 이 식별자 일치는 실제 음원 출처나 시간축의 증명이 아니므로 관리자가 영상과 anchor를 확인한다.
+- 같은 song/video의 활성 Job이 있으면 관리자 등록으로 그 Job을 완료하며 기존 요청자와 업로더에게 알린다. 새 attempt 식별자로 이전 Runner 결과를 무효화한다. 활성 Job이 없으면 새 성공 Job을 만든다. Queue enqueue는 하지 않는다.
+- 현재 정상 JSON과 동일한 동시·재업로드는 기존 성공 Job을 반환하고 JSON·알림을 중복 생성하지 않는다. 다른 정상 JSON의 등록은 새 결과로 교체한다. 검증·source·transaction 실패는 직전 JSON과 Cue를 보존한다.
+- 결과·성공 Job·요청자·알림·기기 발송 대기는 기존 transaction을 재사용한다. JSON 등록은 가사·Cue 시각·공개 스냅샷을 자동 변경하지 않는다. §20.4.1의 source/attempt/terminal 불변성을 유지한다.
+
 ## 20.3 Worker
 
 2026-10-28 사용자 선택으로 초기 Python 가정을 Rust worker로 대체한다.
@@ -1344,7 +1354,7 @@ Rust Worker
 └─ concurrency = 1
 ```
 
-2 OCPU 서버 보호를 위해 동시 분석 1개를 기본값으로 한다.
+로컬 분석도 동시 실행 1개를 기본값으로 한다. 위 도구 체인을 재사용하며 서버 배치/Queue는 로컬 JSON 등록의 필수 구성요소가 아니다.
 
 ---
 
