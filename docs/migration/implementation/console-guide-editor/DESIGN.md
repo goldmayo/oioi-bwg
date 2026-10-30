@@ -5,8 +5,8 @@ status: draft
 authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
-updated_at: "2026-10-30"
-revision: 34
+updated_at: "2026-10-31"
+revision: 35
 ---
 
 # Console·다중 응원법·파형 편집기 최소 설계
@@ -29,7 +29,7 @@ revision: 34
 
 같은 곡의 CONCERT/FESTIVAL 응원법을 조회·선택하고 출처를 공식/팬덤으로 표시한다.
 공식 여부는 공연 모드와 별개다. 기존 데이터는 운영자가 수동 분류하며 새 관리자 편집 기능은 P07 이후에 다룬다.
-Console에서 허용된 입력의 파형 생성을 요청하면 일회성 컨테이너가 JSON을 생성하고, 편집기는 참조 영상 재생과 JSON을 사용한다.
+2026-10-31부터 관리자가 로컬 일회성 컨테이너에서 JSON을 생성해 Console로 등록하고, 편집기는 참조 영상 재생과 JSON을 사용한다.
 **Domain §20.2의 입력 이용 범위를 먼저 확인하며 음원은 pipe/tmpfs에서만 처리한다. 브라우저에서는 분석하지 않는다.**
 2026-10-28 초기 source 정정에서는 과거 YouTube/yt-dlp 제안을 production source 승인과 구분하고 추출 금지를 따랐다.
 같은 날 후속 재설계 요청으로 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)를 조건부 허용으로 개정했다. 구체적 입력 승인은 [§6.4](#64-yt-dlp-acquisition-2026-10-28-개정)를 따른다.
@@ -264,6 +264,8 @@ i18n은 P10 이후 UI·곡별 설명만 검토한다. 설명 번역은 원문 sn
 영어·일본어·대만/홍콩 표기와 fallback은 후속 리서치로 정하고 가사 의미 번역·독음·이를 위한 영구 Cue ID는 이번 범위에서 제외한다.
 
 ## 6. Waveform Worker
+
+**2026-10-31 경로 전환:** 사용자 요청으로 현재 기본 경로는 [§6.5 로컬 분석·JSON 등록](#65-로컬-분석json-등록-2026-10-31-개정)이다. 아래 OCI Queue/Runner 설계는 이미 구현·배포한 이전 경로의 계약과 정리 근거로 보존하며, 로컬 등록의 선행 조건으로 삼지 않는다.
 
 2026-10-28 사용자 선택으로 OCI Queue 기반을 유지하고 Unix socket과 Runner의 역할을 구체화한다.
 Runner는 VM의 상주 큐 소비·실행 프로세스이며 enqueue와 consume을 함께 맡는다. Rust 분석기는 작업별 일회성 컨테이너다.
@@ -674,6 +676,22 @@ Rust는 추출기를 재구현하지 않고 공식 yt-dlp CLI와 포함된 EJS·
 실제 CLI의 로컬 HTTP streaming·시작 비용과 Rust의 합성 compressed 입력 검증을 실제 YouTube/EJS·OCI 검증과 구분한다.
 고정 버전·digest·측정 근거는 구현 PR이 소유하며 실제 허용 영상의 자원·offset/drift 수용은 후속 관문이다.
 
+### 6.5. 로컬 분석·JSON 등록 (2026-10-31 개정)
+
+```text
+관리자 PC: 고정 Rust/yt-dlp/ffmpeg/BBC 일회성 컨테이너 → WaveformData JSON 파일
+  → Console 편집 화면: ADMIN/MFA + 동일 Origin + 제한된 PUT JSON
+  → /api/admin/songs/{id}/waveform → 기존 Service/Repository
+  → PostgreSQL 결과·성공 Job·요청자 알림·기기 발송 대기 transaction
+  → 기존 GET/Query invalidation → 파형 표시 (Cue 자동 변경 없음)
+```
+
+저장 계약은 [Domain §20.2](../../DOMAIN_SPECIFICATION.md#202-source-policy)가 소유한다. 브라우저는 파일을 읽어 기존 JSON DTO를 전송하며 파일·음원을 R2/OCI Object Storage에 업로드하지 않는다. API는 Runner token·socket·Queue 없이 동작한다. 인증과 Origin 확인 뒤 실제 수신 byte를 4MiB, 읽기를 10초로 제한하고 기존 Zod 검증을 수행한다.
+
+전환 PR은 (1) 도메인·저장/API → (2) 편집 화면·로컬 생성 명령 → (3) 별도 승인 Promotion·실제 파일 등록 수용 → (4) 운영/인프라 정리 순서다. P09 DTO와 조회 API는 유지한다. 기존 RUNNING Job은 해당 source의 정상 관리자 등록으로 회수할 수 있으며 원래 attempt 결과를 대신 전송하지 않는다.
+
+정리는 등록 수용 후 수행한다. 먼저 서버 생성·내부 Runner API를 비활성화하고 서비스 중지/disable을 확인한 뒤 Console socket bind/GID/token 공급, systemd/tmpfiles·Runner 설치 파일, 전용 socket/runtime token·설정, worker 이미지·전용 bridge/nft table을 제거한다. 공유 metadata guard·Caddy 공개 차단·OCI CLI·공통 Vault/FCM/Logging/배포 기반은 보존한다. 2026-10-31 후속 사용자 요청으로 공통 알림/FCM과 Queue·Runner/Worker 소스 및 OCI Queue·전용 IAM·Vault Secret은 이번 작업에서 보존한다. 미래 장기 작업은 도메인별 payload·고정 worker·좁은 내부 API를 정의하고 기존 공통 알림 전달/재시도를 재사용하며, 기존 Queue에 임의 command/image/env/volume을 전달하지 않는다. Queue/DLQ 잔여와 DB 활성 Job을 대조하고 소비를 임의로 재개하지 않는다. 현재 Queue의 `prevent_destroy=true` 및 `waveform_queue_enabled`도 유지한다. OCI 자원 폐기가 필요해지면 보호 해제·Terraform 밖의 Secret까지 구분한 별도 승인 Plan/Apply로 다룬다. Job/파형/알림 이력과 migration 0011·0012는 삭제하지 않는다. 실제 경로·삭제 대상은 VM/Plan에서 확인하며 이 설계 개정만으로 운영 삭제를 승인하지 않는다.
+
 ## 7. Audio Editor
 
 ```text
@@ -765,6 +783,8 @@ server DTO는 Query, 편집 draft는 RHF, 선택/zoom/loop/drag preview는 local
 데스크톱 dock와 영상의 화면 내 배치, 모바일 스크롤·편집 접근성을 실제 브라우저에서 확인한다.
 영상 장면·파형 모양·실제 가사의 행 수는 시안의 예시 내용과 구분하며 그림에 맞추기 위해 원본 데이터를 바꾸지 않는다.
 실행 결과와 동일 크기 비교 캡처는 기존 UI PR #335에서 관리한다.
+
+**2026-10-31 JSON 등록 배포 기준 통합:** #360의 실제 등록 수용과 #361의 운영 상태를 유지하고, 파형 생성 조작을 기존 `WaveformImportButton`으로 교체한다. 동결 P09 배치·노트/묶기/강조·Undo는 유지한다. 파일 등록은 계정별 파형 Query만 갱신하며 RHF 초안·Cue·공개 가사를 저장하거나 이동하지 않는다. 사용자 확인에 따라 콘서트/페스티벌은 같은 참조 영상의 곡 단위 파형을 공유한다. 공연 버전·P10·성능 후속 코드는 이번 P09 배포에 포함하지 않는다. 실행 검증과 Promotion 근거는 #335 및 배포 PR 본문이 소유한다.
 
 ## 8. 주요 Trade-off
 

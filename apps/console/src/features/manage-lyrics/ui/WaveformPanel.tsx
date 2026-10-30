@@ -8,12 +8,12 @@ import dynamic from "next/dynamic";
 
 import { Button } from "@/shared/ui/button";
 
-import type { WaveformGenerationControls } from "../model/types";
+import type { WaveformImportControls } from "../model/types";
 
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 import type { CuePreview } from "./PeaksWaveform";
 import { PianoRoll, type PianoRollInteraction } from "./PianoRoll";
-import { WaveformGenerationButton } from "./WaveformGenerationButton";
+import { WaveformImportButton } from "./WaveformImportButton";
 
 const compactQuery = "(max-width: 639px)";
 const subscribeCompact = (listener: () => void) => {
@@ -40,7 +40,7 @@ function WaveformSkeleton() {
 }
 export function WaveformPanel({
   accountId,
-  generation,
+  registration,
   query,
   selectionRevision,
   duration,
@@ -57,7 +57,7 @@ export function WaveformPanel({
   onCuePreview,
 }: PianoRollInteraction & {
   accountId: string;
-  generation?: WaveformGenerationControls;
+  registration?: WaveformImportControls;
   query: UseQueryResult<WaveformData | null>;
   loopSettings?: ReactNode;
   selectionRevision: number;
@@ -119,14 +119,15 @@ export function WaveformPanel({
   };
   return (
     <>
-      {generation ? (
+      {registration ? (
         <div className="mx-4 mt-4">
-          <WaveformGenerationButton
+          <WaveformImportButton
             accountId={accountId}
             songId={editor.songId}
+            videoId={registration.videoId}
             disabled={disabled || editor.isSaving}
-            videoChanged={editor.isVideoDirty || editor.youtubeId !== generation.videoId}
-            onError={generation.onError}
+            videoChanged={editor.isVideoDirty || editor.youtubeId !== registration.videoId}
+            onError={registration.onError}
           />
         </div>
       ) : null}

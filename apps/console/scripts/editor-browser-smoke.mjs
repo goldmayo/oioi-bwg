@@ -71,6 +71,15 @@ const data = {
   source: { type: "youtube", id: song.youtubeId },
   generationVersion: 1,
 };
+// An already generated JSON can exercise the upload/display boundary without extracting media.
+const importedWaveform = process.env.WAVEFORM_JSON_PATH
+  ? {
+      ...JSON.parse(await readFile(process.env.WAVEFORM_JSON_PATH, "utf8")),
+      source: data.source,
+    }
+  : data;
+let displayedWaveform = data;
+let imports = 0;
 let responseMode = "ready",
   saveStatus = 200;
 let lastSaved = null;
@@ -100,7 +109,7 @@ window.YT={PlayerState:{PLAYING:1},Player:class{
 }};
 const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
 const song=new URLSearchParams(location.search).has("actual")?await fetch("/actual-song"+location.search).then(r=>r.json()):${JSON.stringify(song)};
-createRoot(document.getElementById('root')).render(<QueryClientProvider client={client}><AdminWorkspace><Editor song={song} accountId="test-admin" saveSongData={async(id,input)=>{const response=await fetch('/save',{method:'POST',body:JSON.stringify(input)});if(!response.ok)throw Error('save rejected');return {id};}}/></AdminWorkspace><Toaster/></QueryClientProvider>);`;
+createRoot(document.getElementById('root')).render(<QueryClientProvider client={client}><AdminWorkspace><Editor song={song} accountId="test-admin" waveformImport={{videoId:song.youtubeId,onError(){}}} saveSongData={async(id,input)=>{const response=await fetch('/save',{method:'POST',body:JSON.stringify(input)});if(!response.ok)throw Error('save rejected');return {id};}}/></AdminWorkspace><Toaster/></QueryClientProvider>);`;
 const bundling = {
   stdin: { contents: fixtureSource, loader: "tsx", resolveDir: app },
   bundle: true,
@@ -213,11 +222,31 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (path.startsWith("/api/admin/songs/")) {
+      if (req.method === "PUT") {
+        const chunks = [];
+        for await (const chunk of req) chunks.push(chunk);
+        displayedWaveform = JSON.parse(Buffer.concat(chunks).toString());
+        imports++;
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: song.id,
+            songId: song.id,
+            videoId: song.youtubeId,
+            status: "SUCCEEDED",
+            errorCode: null,
+            createdAt: "2026-10-31T00:00:00Z",
+            finishedAt: "2026-10-31T00:00:00Z",
+            editorHref: "/admin/edit/test",
+          }),
+        );
+        return;
+      }
       res.writeHead(responseMode === "error" ? 500 : 200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify(
           responseMode === "ready"
-            ? data
+            ? displayedWaveform
             : responseMode === "empty"
               ? null
               : { code: "INTERNAL_SERVER_ERROR", message: "실패" },
@@ -304,6 +333,33 @@ async function verifyRows(page, width) {
   await page.getByRole("checkbox", { name: "2행 노트 선택", exact: true }).uncheck();
   await save(page);
   assert.deepEqual(lastSaved.lyrics, song.lyrics);
+  await rowTime(page, 1).fill("00:04.125");
+  await rowTime(page, 1).press("Enter");
+  const beforeImport = lastSaved;
+  const importCount = imports;
+  await Promise.all([
+    page.waitForResponse((r) => r.request().method() === "PUT" && r.url().endsWith("/waveform")),
+    page.getByLabel("파형 JSON 파일", { exact: true }).setInputFiles({
+      name: "waveform.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(importedWaveform)),
+    }),
+  ]);
+  await page.getByRole("link", { name: "등록 결과 확인", exact: true }).waitFor();
+  assert.equal(imports, importCount + 1);
+  assert.deepEqual(displayedWaveform, importedWaveform);
+  assert.equal(lastSaved, beforeImport, "waveform upload does not save lyrics");
+  assert.equal(await rowTime(page, 1).inputValue(), "00:04.125", "upload preserves the draft");
+  await page.locator('[aria-label="확대 파형과 Cue"] canvas').first().waitFor();
+  await undo(page);
+  assert.equal(await rowTime(page, 1).inputValue(), "00:04.000", "upload preserves Undo");
+  checks.push({
+    width,
+    waveformImport: true,
+    draftAndUndoPreserved: true,
+    durationMs: importedWaveform.durationMs,
+    buckets: importedWaveform.peaks.length,
+  });
   await selectRow(page, 1);
   await expandRow(page, 1);
   const offset = page.getByRole("spinbutton", { name: "2행 2번째 조각 오프셋", exact: true });

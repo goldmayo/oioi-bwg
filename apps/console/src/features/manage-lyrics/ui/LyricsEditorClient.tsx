@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/button";
 
 import { type EditorNote, getEditorNotes, type NoteEdit } from "../lib/editor-notes";
 import type { SelectionEdit } from "../lib/note-selection";
-import type { SongEditor, WaveformGenerationControls } from "../model/types";
+import type { SongEditor, WaveformImportControls } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
 import { EditorReferenceVideo } from "./EditorReferenceVideo";
@@ -25,16 +25,16 @@ interface LyricsEditorClientProps {
   saveSongData: SaveSongDataAction;
   accountId: string;
   disabled?: boolean;
-  waveformGeneration?: WaveformGenerationControls;
+  waveformImport?: WaveformImportControls;
 }
 function LyricsEditorWorkspace({
   accountId,
   disabled = false,
-  waveformGeneration,
+  waveformImport,
 }: {
   accountId: string;
   disabled?: boolean;
-  waveformGeneration?: WaveformGenerationControls;
+  waveformImport?: WaveformImportControls;
 }) {
   const editor = useLyricsEditorContext();
   const query = useQuery(waveformQueries.song(accountId, editor.songId));
@@ -264,7 +264,7 @@ function LyricsEditorWorkspace({
       >
         <WaveformPanel
           accountId={accountId}
-          generation={waveformGeneration}
+          registration={waveformImport}
           selectionRevision={selectionRevision}
           query={query}
           duration={duration}
@@ -339,14 +339,14 @@ export default function LyricsEditorClient({
   saveSongData,
   accountId,
   disabled,
-  waveformGeneration,
+  waveformImport,
 }: LyricsEditorClientProps) {
   return (
     <LyricsEditorProvider song={song} saveSongData={saveSongData}>
       <LyricsEditorWorkspace
         accountId={accountId}
         disabled={disabled}
-        waveformGeneration={waveformGeneration}
+        waveformImport={waveformImport}
       />
     </LyricsEditorProvider>
   );
