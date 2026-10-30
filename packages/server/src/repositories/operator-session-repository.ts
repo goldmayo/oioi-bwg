@@ -1,7 +1,10 @@
 import "server-only";
 import { and, eq, gt, isNotNull, isNull, lt, or } from "drizzle-orm";
+import { isPostgresUniqueViolation } from "../db/postgres-error";
 import type { DbExecutor } from "../db";
 import { operatorSession } from "../db/schema";
+
+export class OperatorSessionConflictError extends Error {}
 
 export async function insertOperatorSession(
   executor: DbExecutor,
@@ -12,8 +15,18 @@ export async function insertOperatorSession(
     expiresAt: string;
   },
 ) {
-  const [row] = await executor.insert(operatorSession).values(input).returning();
-  return row!;
+  try {
+    const [row] = await executor.insert(operatorSession).values(input).returning();
+    return row!;
+  } catch (error) {
+    if (
+      isPostgresUniqueViolation(error, "operator_session_user_code_hash_key") ||
+      isPostgresUniqueViolation(error, "operator_session_device_hash_key")
+    ) {
+      throw new OperatorSessionConflictError("OPERATOR_SESSION_CONFLICT");
+    }
+    throw error;
+  }
 }
 export async function findOperatorSessionByDevice(executor: DbExecutor, deviceHash: string) {
   const [row] = await executor
