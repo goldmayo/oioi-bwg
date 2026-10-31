@@ -590,3 +590,24 @@ Console에서 확인하며 CLI가 새 곡을 만들지 않는다. 기존 schema�
 `replace`를 보내 기존 교체 동작을 허용하며, 이 경우 같은 JSON의 재등록은 기존 성공 Job을 반환한다.
 기존 브라우저 편집 페이지의 교체 동작은 유지한다. 응답 유실은 GET 결과와 로컬 JSON을 대조해
 확인하고, 서로 다르면 기본 보존 정책을 따른다. Queue enqueue·서버 음원 fetch·가사/Cue·공개 상태 변경은 하지 않는다.
+
+### 브라우저·Rust 실제 통합 검증
+
+Console 선택 다운로드와 operator 인증·등록 API 변경을 함께 포함한 로컬 checkout에서
+Console을 빌드하고 실행한다. Docker Desktop의 고정 worker image와 Linux/WSL Rust CLI 실행
+파일을 먼저 준비한다. CLI 빌드·설정·실행 이력은 별도 [oioi-operator README](https://github.com/goldmayo/oioi-operator#readme)가 소유한다.
+
+```bash
+NEXT_PUBLIC_APP_ENV=local OIOI_EPHEMERAL_BUILD=true pnpm --filter @oioi-bwg/console build
+OIOI_OPERATOR_BINARY=/절대경로/oioi-operator pnpm exec tsx scripts/run-postgres-integration-tests.ts --local --operator-smoke
+```
+
+기존 격리 runner가 일회성 DB와 제한된 app role을 준비하고 종료 후 DB/role을 회수한다.
+개인 env·기존 로컬/복원 DB·운영 credential은 사용하지 않는다. 일반 `--admin-smoke`와는
+한 번에 하나만 선택한다. 기본 CI의 fixture 검증에서 실제 음원을 자동 fetch하지 않는다.
+
+이 검사는 실제 로그인 UI의 비밀번호·MFA → 브라우저 연결 코드 승인 → Rust token 교환 →
+Console에서 앨범/곡 작성과 선택 파일 다운로드 → 실제 Docker 음원 생성 → API 등록과 JSONB
+전체 일치 → 기존 곡 내용 보존 → 재실행/재개 시 단일 Job → 로그아웃 회수를 확인한다.
+사용자 지정 **내 이름 맑음 / 9yfrVqCcrS0**을 사용한다. stdout에는 비밀 없는 판정과 artifact
+경로만 남긴다. 상세 실행 결과와 커밋은 통합 검증 PR 본문에서 관리한다.
