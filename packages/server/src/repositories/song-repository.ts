@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, isNull, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or } from "drizzle-orm";
 
 import type { DbExecutor } from "../db";
 import { isPostgresForeignKeyViolation, isPostgresUniqueViolation } from "../db/postgres-error";
@@ -142,4 +142,12 @@ export async function removeSong(executor: DbExecutor, id: string) {
     }
     throw error;
   }
+}
+
+/** operator 작업 파일의 정확한 ID만 조회하며 중복 매칭도 숨기지 않는다. */
+export function findSongsByVideoIds(executor: DbExecutor, videoIds: string[]) {
+  return executor
+    .select({ id: song.id, title: song.title, slug: song.slug, youtubeId: song.youtubeId })
+    .from(song)
+    .where(inArray(song.youtubeId, videoIds));
 }

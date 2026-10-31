@@ -1,5 +1,7 @@
 /** 앱이 소유한 경로만 고정 template/operation으로 축약한다. 원문 경로는 반환하지 않는다. */
 const routes = {
+  "/api/operator/songs/resolve": "operator-song-resolve-api",
+  "/api/operator/songs/[id]/waveform": "operator-song-waveform-api",
   "/operator-connect": "operator-connect",
   "/api/operator/auth/device": "operator-auth-device-api",
   "/api/operator/auth/token": "operator-auth-token-api",
@@ -35,6 +37,7 @@ const routes = {
 export const SENTRY_OPERATIONS = ["album-image-upload", ...Object.values(routes)] as const;
 
 const dynamicRoutes: readonly [RegExp, keyof typeof routes][] = [
+  [/^\/api\/operator\/songs\/[^/]+\/waveform$/, "/api/operator/songs/[id]/waveform"],
   [/^\/admin\/waveform-jobs\/[^/]+$/, "/admin/waveform-jobs/[id]"],
   [/^\/api\/admin\/waveform-jobs\/[^/]+$/, "/api/admin/waveform-jobs/[id]"],
   [/^\/api\/admin\/push-installations\/[^/]+$/, "/api/admin/push-installations/[id]"],
