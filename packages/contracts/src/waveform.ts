@@ -113,3 +113,14 @@ export const waveformEnqueueAckSchema = z.strictObject({
 export type WaveformEnqueueOutcome = z.infer<typeof waveformEnqueueAckSchema>["outcome"];
 export const waveformRequestSchema = z.strictObject({ songId: entityIdSchema });
 export const waveformAcceptedSchema = z.strictObject({ jobId: entityIdSchema });
+
+/** Console 선택 다운로드와 로컬 운영 CLI 사이의 v1 작업 파일. */
+export const waveformManifestSchema = z
+  .strictObject({
+    version: z.literal(1),
+    videoIds: z.array(z.string().regex(/^[A-Za-z0-9_-]{11}$/)).min(1),
+  })
+  .refine((value) => new Set(value.videoIds).size === value.videoIds.length, {
+    message: "영상 ID가 중복되었습니다.",
+  });
+export type WaveformManifest = z.infer<typeof waveformManifestSchema>;
