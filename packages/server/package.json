@@ -39,7 +39,8 @@
     "./services/publication-service": "./src/services/publication-service.ts",
     "./services/policy-service": "./src/services/policy-service.ts",
     "./services/waveform-service": "./src/services/waveform-service.ts",
-    "./repositories/operator-session-repository": "./src/repositories/operator-session-repository.ts"
+    "./repositories/operator-session-repository": "./src/repositories/operator-session-repository.ts",
+    "./services/operator-auth-service": "./src/services/operator-auth-service.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",
