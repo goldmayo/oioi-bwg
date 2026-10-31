@@ -461,6 +461,21 @@ pnpm waveform:generate --video 'https://www.youtube.com/watch?v=pbELDkeLdho' --o
 
 결과는 source/generationVersion을 포함한 기존 WaveformData JSON이다. Console의 해당 곡 편집 화면에서 **파형 JSON 등록**을 눌러 파일을 선택한다. ADMIN/MFA와 저장된 참고 영상이 필요하며, 영상 변경은 저장 후 다시 연다. 브라우저/서버가 크기·형식·source를 검사한 뒤 PostgreSQL에 등록하고 기존 조회·요청자 알림으로 연결한다. 별도 SSH/scp·Object Storage 업로드·분석기의 DB credential은 필요 없다. 기존 가사/Cue는 자동 변경하지 않는다. 실제 영상의 초반·중간·후반 anchor는 별도로 확인한다. 운영 사용은 해당 UI/API의 별도 승인 Promotion 이후이며 로컬 생성 성공만으로 운영 DB에 저장되지는 않는다.
 
+### 선택한 곡의 operator 작업 파일
+
+곡 관리 테이블의 체크박스로 선택한 뒤 **파형 작업 파일 다운로드 (N곡)**를 누른다.
+검색·페이지 이동 후에도 선택은 유지되며 선택 해제로 비울 수 있다. 다운로드는 서버 mutation을 실행하지 않는다.
+영상 ID의 누락·형식 오류·중복이 있으면 해당 곡명을 확인하고 수정한 뒤 다시 다운로드한다.
+파일 계약은 `version: 1`과 `videoIds` 배열이며 파일명은
+`oioi-operator-waveform_YYYYMMDD_HHmmss_SSS_KST.json`이다. 한국 시각을 사용하고 콜론은 넣지 않는다.
+
+별도 [oioi-operator](https://github.com/goldmayo/oioi-operator)는 이 파일을 소비하는 Rust CLI다.
+인증·생성·등록·이력·재개와 같은 실행 로직의 안내 메뉴를 제공한다. 실제 브라우저 ADMIN/MFA부터
+선택 다운로드·Rust 실제 음원 생성·서버 JSON 일치·재실행/재개까지의 로컬 검증 근거는
+[통합 검증 PR #373](https://github.com/goldmayo/oioi-bwg/pull/373)에 있다.
+사용법과 실행 이력 위치는 CLI README, 반복 검증 명령은 통합 검증 PR의 기존 개발 안내를 따른다.
+곡 신규 등록·LRC·응원법 편집·검수·공개는 Console의 책임을 유지한다.
+
 ## 현재 검사와 실행 소유권 (2026-10-23)
 
 root `pnpm type-check`·`pnpm lint`(양 앱 FSD 포함)·`pnpm test:unit:run`은 workspace 검사를 모은다.
@@ -514,3 +529,85 @@ ESLint에는 M2에서 식별된 장문 함수 warning 4건이 남아 있으며 �
 1. read-only로 `Song.slug` unique constraint와 timestamp precision을 재확인한다.
 2. `Song_albumId_idx` 추가 여부를 실행 계획과 운영 부하 기준으로 결정한다.
 3. 운영 DB의 현재 schema를 migration baseline과 reconcile한 뒤 migration history를 도입한다.
+
+## 로컬 operator 연결 API
+
+`CONSOLE_OPERATOR_ENABLED=true`를 Console 개인 설정에 추가하고 서버를 재시작하면
+다음 경로를 평가한다. 기본은 비활성이다. Rust CLI는 별도 `oioi-operator` 저장소에서 관리한다.
+
+`/operator-connect`에서 기존 관리자 로그인·MFA를 확인한 뒤 CLI에 표시된 연결 코드를
+직접 입력하고 승인한다. 로그인하지 않았다면 `/admin-login?next=operator`를 거쳐 같은
+화면으로 돌아온다. `next`는 이 고정된 목적지만 허용하고 임의 URL을 받지 않는다.
+연결 코드는 URL·storage·Query cache에 넣지 않으며 승인 응답을 받으면 폼에서 버린다.
+승인 뒤 CLI로 돌아가 교환 결과를 확인한다. 승인 요청의 응답을 확인하지 못한 경우에도
+CLI 상태부터 확인한다. 화면을 닫는 것은 이미 승인된 연결의 회수가 아니다.
+
+`node apps/console/scripts/operator-connect-browser-smoke.mjs`는 실제 폼·Ky·응답 파서를
+1440/390 폭의 로컬 브라우저 fixture에서 검사한다. Next Link·Sentry 어댑터와 승인 HTTP
+결과만 대체하며, 실제 Auth.js·MFA·DB·Rust CLI 통합 검증을 대신하지 않는다.
+
+빌드 후 `node apps/console/scripts/operator-connect-runtime-smoke.mjs`로 실제 standalone
+앱의 비활성 404와 활성 상태의 기존 로그인 이동을 검사한다. 개인 env와 DB·R2·MFA
+credential을 주입하지 않는다. 승인 페이지는 요청 시점에 flag를 평가하므로 비활성 빌드의
+정적 404로 고정되지 않는다. 이 검사도 로그인 완료·승인·Rust 교환의 통합 검증과는 구분한다.
+
+| 메서드·경로 | 입력·인증 | 응답 |
+| --- | --- | --- |
+| POST `/api/operator/auth/device` | `{}`; cookie·Origin 없는 CLI | deviceCode, userCode, expiresAt, intervalSeconds |
+| POST `/api/operator/auth/token` | `{deviceCode}`; CLI | pending 또는 authorized·accessToken·expiresAt |
+| POST `/api/operator/auth/approve` | `{userCode}`; 현재 ADMIN/MFA 세션·동일 Origin | `{approved:true}` |
+| GET `/api/operator/auth/session` | bearer; cookie·Origin 금지 | accountId, expiresAt |
+| POST `/api/operator/auth/revoke` | `{}`; bearer; cookie·Origin 금지 | `{revoked:true}` |
+
+모든 응답은 `Cache-Control: no-store`다. 인증 POST 본문은 application/json·1 KiB 이하의
+엄격한 계약으로 검증하며 client가 MFA version·계정·실행 명령을 지정할 수 없다.
+발급은 IP당 분당 5회, polling은 IP당 분당 60회와 device당 5초에 1회, 승인은 계정당
+분당 10회다. 제한 시 429와 Retry-After 초를 반환한다. 신뢰할 수 없는 IP는 공통 버킷을
+사용한다. 프로세스별 최대 4096개 해시 버킷이며 재시작·다중 인스턴스 공유 제한은 아니다.
+승인·교환의 일회성 및 만료는 DB에서 계속 보장한다. 비밀 원문을 URL·명령 기록에 넣지 않는다.
+
+### 기존 곡 매칭·파형 조회·등록
+
+다음 경로도 같은 활성화 설정과 현재 ADMIN/MFA를 재확인하는 bearer만 사용한다.
+브라우저 cookie·Origin은 허용하지 않으며 일반 관리자 API에서 bearer를 받지 않는다.
+
+| 메서드·경로 | 입력 | 응답 |
+| --- | --- | --- |
+| POST `/api/operator/songs/resolve` | `{videoIds:[...]}`; 1~500개 고유 ID, JSON 16 KiB 이하 | 입력 순서의 items: matched·missing·ambiguous |
+| GET `/api/operator/songs/[id]/waveform` | 매칭된 song UUID | 현재 영상의 WaveformData 또는 null |
+| PUT `/api/operator/songs/[id]/waveform` | 기존 WaveformData; 4 MiB 이하 | 기존 WaveformJob |
+
+작업 파일의 곡 수는 이 API의 batch 상한과 별개다. CLI가 500개씩 나누어 조회한다.
+matched는 songId·title·editorHref, ambiguous는 matchCount를 전달한다. 현재 schema에
+`youtube_id` UNIQUE 제약이 없으므로 중복을 임의의 한 곡으로 축약하지 않는다. missing·ambiguous는
+Console에서 확인하며 CLI가 새 곡을 만들지 않는다. 기존 schema나 운영 제약은 바꾸지 않는다.
+
+등록은 기존 Song 잠금·현재 source 대조·JSON/Job/요청자 알림 transaction을 사용한다.
+곡의 영상이 매칭 후 바뀌면 등록을 거절하고 기존 결과를 보존한다. operator PUT의
+`x-oioi-waveform-write-mode`는 기본 `if-absent`다. 같은 Song 잠금 안에서 현재 영상의
+파형 존재를 검사하며 이미 있으면 `WAVEFORM_ALREADY_EXISTS`(409)를 반환한다. 따라서
+조회 이후 다른 관리자가 먼저 등록해도 덮어쓰지 않는다. CLI의 명시적 `--replace`만
+`replace`를 보내 기존 교체 동작을 허용하며, 이 경우 같은 JSON의 재등록은 기존 성공 Job을 반환한다.
+기존 브라우저 편집 페이지의 교체 동작은 유지한다. 응답 유실은 GET 결과와 로컬 JSON을 대조해
+확인하고, 서로 다르면 기본 보존 정책을 따른다. Queue enqueue·서버 음원 fetch·가사/Cue·공개 상태 변경은 하지 않는다.
+
+### 브라우저·Rust 실제 통합 검증
+
+Console 선택 다운로드와 operator 인증·등록 API 변경을 함께 포함한 로컬 checkout에서
+Console을 빌드하고 실행한다. Docker Desktop의 고정 worker image와 Linux/WSL Rust CLI 실행
+파일을 먼저 준비한다. CLI 빌드·설정·실행 이력은 별도 [oioi-operator README](https://github.com/goldmayo/oioi-operator#readme)가 소유한다.
+
+```bash
+NEXT_PUBLIC_APP_ENV=local OIOI_EPHEMERAL_BUILD=true pnpm --filter @oioi-bwg/console build
+OIOI_OPERATOR_BINARY=/절대경로/oioi-operator pnpm exec tsx scripts/run-postgres-integration-tests.ts --local --operator-smoke
+```
+
+기존 격리 runner가 일회성 DB와 제한된 app role을 준비하고 종료 후 DB/role을 회수한다.
+개인 env·기존 로컬/복원 DB·운영 credential은 사용하지 않는다. 일반 `--admin-smoke`와는
+한 번에 하나만 선택한다. 기본 CI의 fixture 검증에서 실제 음원을 자동 fetch하지 않는다.
+
+이 검사는 실제 로그인 UI의 비밀번호·MFA → 브라우저 연결 코드 승인 → Rust token 교환 →
+Console에서 앨범/곡 작성과 선택 파일 다운로드 → 실제 Docker 음원 생성 → API 등록과 JSONB
+전체 일치 → 기존 곡 내용 보존 → 재실행/재개 시 단일 Job → 로그아웃 회수를 확인한다.
+사용자 지정 **내 이름 맑음 / 9yfrVqCcrS0**을 사용한다. stdout에는 비밀 없는 판정과 artifact
+경로만 남긴다. 상세 실행 결과와 커밋은 통합 검증 PR 본문에서 관리한다.

@@ -29,10 +29,15 @@ describe("Console request observation ingress", () => {
       "/admin/edit/[slug]",
     );
   });
-  it.each(["/admin", "/admin/albums", "/api/admin/songs/42", "/api/auth/session", "/admin-login"])(
-    "matches %s",
-    (url) => expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true),
-  );
+  it.each([
+    "/admin",
+    "/admin/albums",
+    "/api/admin/songs/42",
+    "/api/auth/session",
+    "/api/operator/auth/device",
+    "/operator-connect",
+    "/admin-login",
+  ])("matches %s", (url) => expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true));
   it.each(["/healthz", "/readyz", "/_next/static/test.js", "/administrator", "/favicon.ico"])(
     "excludes %s",
     (url) => expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false),

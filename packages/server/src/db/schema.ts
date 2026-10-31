@@ -741,3 +741,45 @@ export const waveform = pgTable(
     check("waveform_data_check", sql`jsonb_typeof(${t.data}) = 'object'`),
   ],
 );
+
+/** 관리자 브라우저에서 승인한 제한된 operator 연결. 비밀 원문은 저장하지 않는다. */
+export const operatorSession = pgTable(
+  "operator_session",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    deviceHash: text("device_hash").notNull().unique("operator_session_device_hash_key"),
+    userCodeHash: text("user_code_hash").notNull().unique("operator_session_user_code_hash_key"),
+    accountId: uuid("account_id").references(() => account.id, { onDelete: "cascade" }),
+    mfaVersion: integer("mfa_version"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+    approvedAt: timestamp("approved_at", { withTimezone: true, mode: "string" }),
+    exchangedAt: timestamp("exchanged_at", { withTimezone: true, mode: "string" }),
+    tokenHash: text("token_hash").unique("operator_session_token_hash_key"),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true, mode: "string" }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+  },
+  (t) => [
+    index("operator_session_account_id_idx").on(t.accountId),
+    index("operator_session_expires_at_idx").on(t.expiresAt),
+    check(
+      "operator_session_hash_check",
+      sql`${t.deviceHash} ~ '^[a-f0-9]{64}$' and ${t.userCodeHash} ~ '^[a-f0-9]{64}$' and (${t.tokenHash} is null or ${t.tokenHash} ~ '^[a-f0-9]{64}$')`,
+    ),
+    check("operator_session_expiry_check", sql`${t.expiresAt} > ${t.createdAt}`),
+    check(
+      "operator_session_approval_check",
+      sql`(${t.approvedAt} is null and ${t.accountId} is null and ${t.mfaVersion} is null) or (${t.approvedAt} is not null and ${t.accountId} is not null and ${t.mfaVersion} is not null and ${t.mfaVersion} > 0 and ${t.approvedAt} >= ${t.createdAt} and ${t.approvedAt} < ${t.expiresAt})`,
+    ),
+    check(
+      "operator_session_exchange_check",
+      sql`(${t.exchangedAt} is null and ${t.tokenHash} is null and ${t.tokenExpiresAt} is null) or (${t.exchangedAt} is not null and ${t.approvedAt} is not null and ${t.exchangedAt} >= ${t.approvedAt} and ${t.exchangedAt} < ${t.expiresAt} and ${t.tokenHash} is not null and ${t.tokenExpiresAt} is not null and ${t.tokenExpiresAt} > ${t.exchangedAt})`,
+    ),
+    check(
+      "operator_session_revocation_check",
+      sql`${t.revokedAt} is null or (${t.exchangedAt} is not null and ${t.revokedAt} >= ${t.exchangedAt})`,
+    ),
+  ],
+);

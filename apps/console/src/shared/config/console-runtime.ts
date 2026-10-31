@@ -41,6 +41,11 @@ export function isConsoleMfaEnrollmentEnabled(env: ConsoleEnvironment = process.
   return env.CONSOLE_MFA_ENROLLMENT_ENABLED === "true";
 }
 
+/** 브라우저 승인으로 연결하는 로컬 운영 도구는 명시적으로 활성화한다. */
+export function isConsoleOperatorEnabled(env: ConsoleEnvironment = process.env) {
+  return env.CONSOLE_OPERATOR_ENABLED === "true";
+}
+
 /** 이용 범위 확인 후 운영자가 주입한다. 누락·목록 오타는 전체 거절한다. */
 export function getWaveformGenerationConfig(env: ConsoleEnvironment = process.env) {
   const ids = (env.CONSOLE_WAVEFORM_ALLOWED_VIDEO_IDS ?? "").split(",");

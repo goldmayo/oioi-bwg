@@ -7,6 +7,11 @@ import { getSentryRouteMetadata } from "./sentry-route-metadata";
 
 describe("Console route metadata privacy", () => {
   it.each([
+    [
+      "/api/operator/auth/token?deviceCode=PRIVATE",
+      "/api/operator/auth/token",
+      "operator-auth-token-api",
+    ],
     ["/admin/albums", "/admin/albums", "admin-album-list"],
     [
       "/(admin)/admin/edit/private-email@example.test?token=TOKEN",

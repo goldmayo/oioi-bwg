@@ -179,6 +179,7 @@ describe("AUTH-009 safe authorization decisions", () => {
     );
     const state = await getRequestAuthorization();
     expect(state.decision).toBe(decision);
+    expect(state.mfaVersion).toBe(mode === "authorized" ? 1 : undefined);
     expect(state.context.user !== null).toBe(mode === "authorized");
     expect(facts).toHaveBeenCalledTimes(reads);
     expect(state.context).not.toHaveProperty("decision");

@@ -15,6 +15,7 @@ import { assertConsoleOrigin } from "./console-origin";
 const appErrorDefinitions = {
   ENQUEUE_FAILED: { message: "파형 작업을 전달하지 못했습니다. 다시 요청해 주세요.", status: 503 },
   WAVEFORM_JOB_NOT_FOUND: { message: "파형 작업을 찾을 수 없습니다.", status: 404 },
+  WAVEFORM_ALREADY_EXISTS: { message: "현재 영상의 파형이 이미 등록되어 있습니다.", status: 409 },
   WAVEFORM_SOURCE_INVALID: { message: "곡의 참조 영상을 확인해 주세요.", status: 400 },
   NOTIFICATION_NOT_FOUND: { message: "알림을 찾을 수 없습니다.", status: 404 },
   CHEER_GUIDE_IMPORT_CONFLICT: {
@@ -43,6 +44,10 @@ const appErrorDefinitions = {
   UNAUTHENTICATED: { message: "로그인이 필요합니다.", status: 401 },
   FORBIDDEN: { message: "접근 권한이 없습니다.", status: 403 },
   OTP_COOLDOWN: { message: "잠시 후 다시 요청해 주세요.", status: 429 },
+  OPERATOR_RATE_LIMITED: {
+    message: "요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.",
+    status: 429,
+  },
   OTP_RATE_LIMITED: { message: "요청 횟수를 초과했습니다.", status: 429 },
   OTP_EXPIRED: { message: "인증 코드가 만료되었습니다.", status: 400 },
   OTP_INVALID: { message: "인증 코드가 올바르지 않습니다.", status: 400 },

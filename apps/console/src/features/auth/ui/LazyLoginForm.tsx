@@ -7,9 +7,11 @@ const LoginForm = lazy(() => import("./LoginForm"));
 export function LazyLoginForm({
   enrollmentEnabled = false,
   initialRateLimited = false,
+  destination = "admin",
 }: {
   enrollmentEnabled?: boolean;
   initialRateLimited?: boolean;
+  destination?: "admin" | "operator";
 }) {
   return (
     <Suspense
@@ -22,7 +24,11 @@ export function LazyLoginForm({
         </div>
       }
     >
-      <LoginForm enrollmentEnabled={enrollmentEnabled} initialRateLimited={initialRateLimited} />
+      <LoginForm
+        enrollmentEnabled={enrollmentEnabled}
+        initialRateLimited={initialRateLimited}
+        destination={destination}
+      />
     </Suspense>
   );
 }

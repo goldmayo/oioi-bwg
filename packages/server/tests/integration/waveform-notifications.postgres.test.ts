@@ -1,3 +1,4 @@
+import { resolveOperatorSongs } from "../../src/services/operator-song-service";
 import { readFileSync } from "node:fs";
 import { waveformDataSchema } from "@oioi-bwg/contracts/waveform";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -92,12 +93,12 @@ afterAll(async () => {
   await db.delete(schema.account).where(inArray(schema.account.id, accounts));
   await client.end();
 });
-async function song(youtubeId = videoId) {
+async function song(youtubeId = videoId, title = "waveform fixture") {
   const [row] = await db
     .insert(schema.song)
     .values({
       albumId,
-      title: "waveform fixture",
+      title,
       slug: `waveform-${createEntityId()}`,
       youtubeId,
     })
@@ -498,12 +499,110 @@ test("JSON 업로드는 ADMIN과 현재 source를 검사하고 잘못된 입력�
 const localJsonPath = process.env.P08_TEST_WAVEFORM_JSON;
 test.skipIf(!localJsonPath)("실제 로컬 생성 JSON을 그대로 저장하고 재조회한다", async () => {
   const data = waveformDataSchema.parse(JSON.parse(readFileSync(localJsonPath!, "utf8")));
-  const track = await song(data.source.id);
+  const track = await song(
+    data.source.id,
+    data.source.id === "9yfrVqCcrS0" ? "내 이름 맑음" : "waveform fixture",
+  );
+  expect((await resolveOperatorSongs(ctx(), [data.source.id])).items).toEqual([
+    {
+      videoId: data.source.id,
+      status: "matched",
+      songId: track.id,
+      title: track.title,
+      editorHref: `/admin/edit/${track.slug}`,
+    },
+  ]);
   const job = await importSongWaveform(ctx(), track.id, data);
   expect(job.status).toBe("SUCCEEDED");
+  const repeated = await Promise.all([
+    importSongWaveform(ctx(), track.id, data),
+    importSongWaveform(ctx(), track.id, data),
+  ]);
+  expect(repeated.map((row) => row.id)).toEqual([job.id, job.id]);
   expect(await getSongWaveform(ctx(), track.id)).toEqual(data);
   expect((await saved(track.id))[0]!.data).toEqual(data);
   expect(await events(job.id)).toHaveLength(1);
   const [after] = await db.select().from(schema.song).where(eq(schema.song.id, track.id));
   expect(after).toEqual(track);
+});
+
+test("operator는 입력 순서를 유지하며 영상 중복을 한 곡으로 축약하지 않는다", async () => {
+  const one = await song("op-match001");
+  await song("op-dupe0001");
+  await song("op-dupe0001");
+  expect(
+    (await resolveOperatorSongs(ctx(), ["op-none0001", "op-match001", "op-dupe0001"])).items,
+  ).toEqual([
+    { videoId: "op-none0001", status: "missing" },
+    {
+      videoId: "op-match001",
+      status: "matched",
+      songId: one.id,
+      title: one.title,
+      editorHref: `/admin/edit/${one.slug}`,
+    },
+    { videoId: "op-dupe0001", status: "ambiguous", matchCount: 2 },
+  ]);
+  await expect(
+    resolveOperatorSongs(ctx(accounts[0], "USER"), ["op-match001"]),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  const before = await saved(one.id);
+  await db.update(schema.song).set({ youtubeId: "op-change01" }).where(eq(schema.song.id, one.id));
+  await expect(
+    importSongWaveform(ctx(), one.id, {
+      ...result,
+      source: { type: "youtube", id: "op-match001" },
+    }),
+  ).rejects.toMatchObject({ code: "WAVEFORM_SOURCE_INVALID" });
+  expect(await saved(one.id)).toEqual(before);
+});
+
+test("operator 매칭은 legacy nullable 제목·slug를 관리자 DTO 규칙으로 정규화한다", async () => {
+  const track = await song("op-empty001");
+  await db.update(schema.song).set({ title: null, slug: null }).where(eq(schema.song.id, track.id));
+  expect((await resolveOperatorSongs(ctx(), ["op-empty001"])).items).toEqual([
+    { videoId: "op-empty001", status: "matched", songId: track.id, title: "", editorHref: null },
+  ]);
+});
+
+test("operator의 생성 전용 등록은 Song 잠금 안에서 경합한 다른 결과를 보존한다", async () => {
+  const track = await song("op-race0001");
+  const first = { ...result, source: { type: "youtube" as const, id: "op-race0001" } };
+  const second = { ...first, peaks: { ...first.peaks, data: [-30, 30, -10, 10] } };
+  const results = await Promise.allSettled([
+    importSongWaveform(ctx(), track.id, first, { replaceExisting: false }),
+    importSongWaveform(ctx(), track.id, second, { replaceExisting: false }),
+  ]);
+  expect(results.filter((row) => row.status === "fulfilled")).toHaveLength(1);
+  expect(results.find((row) => row.status === "rejected")).toMatchObject({
+    reason: { code: "WAVEFORM_ALREADY_EXISTS" },
+  });
+  const winner = results[0]!.status === "fulfilled" ? first : second;
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(winner);
+  const jobs = await db
+    .select()
+    .from(schema.waveformJob)
+    .where(eq(schema.waveformJob.songId, track.id));
+  expect(jobs).toHaveLength(1);
+  expect(await events(jobs[0]!.id)).toHaveLength(1);
+  await importSongWaveform(ctx(), track.id, winner === first ? second : first, {
+    replaceExisting: true,
+  });
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(winner === first ? second : first);
+});
+test("현재 영상과 다른 과거 JSON은 생성 전용 등록을 막지 않는다", async () => {
+  const track = await song("op-stale001");
+  await importSongWaveform(ctx(), track.id, {
+    ...result,
+    source: { type: "youtube", id: "op-stale001" },
+  });
+  await db
+    .update(schema.song)
+    .set({ youtubeId: "op-stale002" })
+    .where(eq(schema.song.id, track.id));
+  const next = { ...result, source: { type: "youtube" as const, id: "op-stale002" } };
+  expect((await importSongWaveform(ctx(), track.id, next, { replaceExisting: false })).status).toBe(
+    "SUCCEEDED",
+  );
+  expect(await getSongWaveform(ctx(), track.id)).toEqual(next);
 });

@@ -30,13 +30,17 @@ const screens = {
 export default function LoginForm({
   enrollmentEnabled = false,
   initialRateLimited = false,
+  destination = "admin",
 }: {
   enrollmentEnabled?: boolean;
   initialRateLimited?: boolean;
+  destination?: "admin" | "operator";
 }) {
   // 모델은 인증 요청/폐기를 소유하고, 이 컴포넌트는 현재 단계에 맞는 입력과 안내만 표시한다.
-  const { form, step, serverError, loading, isHydrated, submit, reset } =
-    useConsoleLoginForm(initialRateLimited);
+  const { form, step, serverError, loading, isHydrated, submit, reset } = useConsoleLoginForm(
+    initialRateLimited,
+    destination,
+  );
   const screen = screens[step.kind];
   const disabled = !isHydrated || loading;
   const showCredentials = step.kind === "credentials" || step.kind === "setup";
@@ -52,7 +56,9 @@ export default function LoginForm({
       <CardContent>
         {step.kind === "navigating" ? (
           <p role="status" className="text-muted-foreground text-center text-sm">
-            관리 화면으로 이동 중입니다.
+            {destination === "operator"
+              ? "CLI 연결 승인 화면으로 이동 중입니다."
+              : "관리 화면으로 이동 중입니다."}
           </p>
         ) : step.kind === "complete" ? (
           <div className="space-y-4" role="status">
