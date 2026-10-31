@@ -6,7 +6,7 @@ authority: plan
 source_commit: a8d157960adea83c26d692709a0ad45b71884c88
 created_at: "2026-10-05"
 updated_at: "2026-10-31"
-revision: 55
+revision: 56
 ---
 
 # 구현 순서와 PR 단위
@@ -394,6 +394,23 @@ swap 가능성과 memory 한도 포함 조건도 확인한다. 이 문서의 공
 P09 integration 완료로 처리하지 않는다. 실행·검증·실패 복구의 상세 근거는 [초안 #325](https://github.com/goldmayo/oioi-bwg/pull/325) →
 [조회 #326](https://github.com/goldmayo/oioi-bwg/pull/326) → [Peaks #327](https://github.com/goldmayo/oioi-bwg/pull/327) →
 [시안 연결 #328](https://github.com/goldmayo/oioi-bwg/pull/328)의 본문에 둔다.
+
+### 2.3. P10 BPM 기반 waveform 막대 선택 검토 (2026-10-31)
+
+P09 QA 3-2의 막대형 waveform·시각 선택 구상은 사용자 지시로 P10에 이관한다.
+이번 P09 QA에서는 기록만 남기며 구현하지 않는다. 피크를 보고 전주의 드럼 베이스 등 원하는
+타격 시각을 직접 선택한 뒤 노트 입력에 연결해, waveform을 보면서도 조작하기 어려운 문제를 줄이는 것이 목적이다.
+
+검토 후보는 BPM·첫 박 위치·한 박의 분할 수로 막대 한 칸의 시간 범위를 계산하고,
+각 구간의 waveform 피크를 높이로 표시하는 방식이다. 한 박을 n등분하면 한 칸은
+`60 / BPM / n`초이며, BPM 120에서 4등분한 구간은 125ms다.
+첫 박을 기준으로 시간축을 정렬하고 막대 선택을 해당 시각 선택·영상 seek·노트 추가로 연결하는 UX를 검토한다.
+막대별 시각 선택은 A–B 반복의 시간 구간 선택과 구분한다.
+
+기본 분할 수, 선택 시각을 막대 시작·중앙·실제 피크 중 어디로 할지, 확대 배율별 표시 밀도,
+실제 타격과 박자 격자의 차이 및 기존 미세 이동과의 관계는 P10 착수 시 결정한다.
+현재 구상만으로 기본값·Snap 규칙·구현 승인을 확정하지 않으며, 분할 변경으로 기존 Cue를 이동하지 않는
+[Audio Editor 설계](DESIGN.md#7-audio-editor)를 유지한다. 현재·보류 상태는 [WORK](../../../WORK.md)가 소유한다.
 
 ## 3. 검증과 전환 조건
 
