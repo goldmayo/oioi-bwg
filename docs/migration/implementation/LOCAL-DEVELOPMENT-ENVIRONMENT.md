@@ -533,7 +533,23 @@ ESLint에는 M2에서 식별된 장문 함수 warning 4건이 남아 있으며 �
 ## 로컬 operator 연결 API
 
 `CONSOLE_OPERATOR_ENABLED=true`를 Console 개인 설정에 추가하고 서버를 재시작하면
-다음 경로를 평가한다. 기본은 비활성이다. browser 승인 화면과 CLI 실행부는 후속 구현이다.
+다음 경로를 평가한다. 기본은 비활성이다. Rust CLI 실행부는 후속 구현이다.
+
+`/operator-connect`에서 기존 관리자 로그인·MFA를 확인한 뒤 CLI에 표시된 연결 코드를
+직접 입력하고 승인한다. 로그인하지 않았다면 `/admin-login?next=operator`를 거쳐 같은
+화면으로 돌아온다. `next`는 이 고정된 목적지만 허용하고 임의 URL을 받지 않는다.
+연결 코드는 URL·storage·Query cache에 넣지 않으며 승인 응답을 받으면 폼에서 버린다.
+승인 뒤 CLI로 돌아가 교환 결과를 확인한다. 승인 요청의 응답을 확인하지 못한 경우에도
+CLI 상태부터 확인한다. 화면을 닫는 것은 이미 승인된 연결의 회수가 아니다.
+
+`node apps/console/scripts/operator-connect-browser-smoke.mjs`는 실제 폼·Ky·응답 파서를
+1440/390 폭의 로컬 브라우저 fixture에서 검사한다. Next Link·Sentry 어댑터와 승인 HTTP
+결과만 대체하며, 실제 Auth.js·MFA·DB·Rust CLI 통합 검증을 대신하지 않는다.
+
+빌드 후 `node apps/console/scripts/operator-connect-runtime-smoke.mjs`로 실제 standalone
+앱의 비활성 404와 활성 상태의 기존 로그인 이동을 검사한다. 개인 env와 DB·R2·MFA
+credential을 주입하지 않는다. 승인 페이지는 요청 시점에 flag를 평가하므로 비활성 빌드의
+정적 404로 고정되지 않는다. 이 검사도 로그인 완료·승인·Rust 교환의 통합 검증과는 구분한다.
 
 | 메서드·경로 | 입력·인증 | 응답 |
 | --- | --- | --- |

@@ -35,6 +35,7 @@ describe("Console request observation ingress", () => {
     "/api/admin/songs/42",
     "/api/auth/session",
     "/api/operator/auth/device",
+    "/operator-connect",
     "/admin-login",
   ])("matches %s", (url) => expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true));
   it.each(["/healthz", "/readyz", "/_next/static/test.js", "/administrator", "/favicon.ico"])(

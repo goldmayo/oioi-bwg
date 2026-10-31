@@ -179,3 +179,15 @@ it("인증 코드 입력 중에는 오류를 표시하지 않고 제출 후 검�
   fireEvent.change(otp, { target: { value: "123456" } });
   await waitFor(() => expect(otp.getAttribute("aria-invalid")).toBe("false"));
 });
+
+it("CLI 연결에서 로그인하면 고정된 승인 화면으로 돌아간다", async () => {
+  signIn.mockResolvedValue(undefined);
+  render(<LoginForm destination="operator" />);
+  fillCredentials();
+  fireEvent.click(screen.getByRole("button", { name: "다음" }));
+  await screen.findByLabelText("인증 코드");
+  fireEvent.change(screen.getByLabelText("인증 코드"), { target: { value: "123456" } });
+  fireEvent.click(screen.getByRole("button", { name: "로그인" }));
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/operator-connect"));
+  expect(screen.getByRole("status").textContent).toContain("CLI 연결 승인 화면");
+});
