@@ -461,6 +461,21 @@ pnpm waveform:generate --video 'https://www.youtube.com/watch?v=pbELDkeLdho' --o
 
 결과는 source/generationVersion을 포함한 기존 WaveformData JSON이다. Console의 해당 곡 편집 화면에서 **파형 JSON 등록**을 눌러 파일을 선택한다. ADMIN/MFA와 저장된 참고 영상이 필요하며, 영상 변경은 저장 후 다시 연다. 브라우저/서버가 크기·형식·source를 검사한 뒤 PostgreSQL에 등록하고 기존 조회·요청자 알림으로 연결한다. 별도 SSH/scp·Object Storage 업로드·분석기의 DB credential은 필요 없다. 기존 가사/Cue는 자동 변경하지 않는다. 실제 영상의 초반·중간·후반 anchor는 별도로 확인한다. 운영 사용은 해당 UI/API의 별도 승인 Promotion 이후이며 로컬 생성 성공만으로 운영 DB에 저장되지는 않는다.
 
+### 선택한 곡의 operator 작업 파일
+
+곡 관리 테이블의 체크박스로 선택한 뒤 **파형 작업 파일 다운로드 (N곡)**를 누른다.
+검색·페이지 이동 후에도 선택은 유지되며 선택 해제로 비울 수 있다. 다운로드는 서버 mutation을 실행하지 않는다.
+영상 ID의 누락·형식 오류·중복이 있으면 해당 곡명을 확인하고 수정한 뒤 다시 다운로드한다.
+파일 계약은 `version: 1`과 `videoIds` 배열이며 파일명은
+`oioi-operator-waveform_YYYYMMDD_HHmmss_SSS_KST.json`이다. 한국 시각을 사용하고 콜론은 넣지 않는다.
+
+별도 [oioi-operator](https://github.com/goldmayo/oioi-operator)는 이 파일을 소비하는 Rust CLI다.
+인증·생성·등록·이력·재개와 같은 실행 로직의 안내 메뉴를 제공한다. 실제 브라우저 ADMIN/MFA부터
+선택 다운로드·Rust 실제 음원 생성·서버 JSON 일치·재실행/재개까지의 로컬 검증 근거는
+[통합 검증 PR #373](https://github.com/goldmayo/oioi-bwg/pull/373)에 있다.
+사용법과 실행 이력 위치는 CLI README, 반복 검증 명령은 통합 검증 PR의 기존 개발 안내를 따른다.
+곡 신규 등록·LRC·응원법 편집·검수·공개는 Console의 책임을 유지한다.
+
 ## 현재 검사와 실행 소유권 (2026-10-23)
 
 root `pnpm type-check`·`pnpm lint`(양 앱 FSD 포함)·`pnpm test:unit:run`은 workspace 검사를 모은다.
