@@ -1,10 +1,10 @@
 ---
 title: "Authentication / Authorization Architecture"
 document_id: "04"
-version: "1.11"
+version: "1.12"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-29"
+updated_at: "2026-10-31"
 depends_on:
   - "01"
   - "03"
@@ -21,7 +21,7 @@ tags:
   - "security"
 ---
 
-# oioi-bwg Authentication / Authorization Architecture v1.11
+# oioi-bwg Authentication / Authorization Architecture v1.12
 
 ## 1. 목적
 
@@ -116,7 +116,7 @@ Authentication은 다음 질문에 답한다.
 
 > 이 요청의 사용자는 누구인가?
 
-Auth.js가 담당한다.
+브라우저 인증은 Auth.js가 담당한다. 로컬 operator는 §4.3의 브라우저 승인으로 발급한 제한된 연결을 사용한다.
 
 Authorization은 다음 질문에 답한다.
 
@@ -272,6 +272,32 @@ started=false는 실행 허가나 Queue 삭제 근거가 아니다. receipt 소�
 HTTP 입력으로 승인 목록을 받지 않는다. 활성 Job은 요청자만 추가하고 새 Job만 고정 socket에 전달한다.
 기본 비활성 구현은 운영 활성화 승인이 아니다. [runtime §14](11-content-i18n-assets-runtime-architecture.md#14-secret)의
 socket 예외와 [배포 §21](12-deployment-migration-runbook.md#21-cicd)의 관문을 함께 따른다.
+
+---
+
+## 4.3. 로컬 operator의 브라우저 연결 (2026-10-31)
+
+사용자가 별도 Rust 운영 CLI와 기존 ADMIN/MFA의 연결을 승인했다. Console의 기존
+브라우저 로그인·Origin/CSRF는 유지하고, 브라우저에서 연결 코드를 확인·승인한 뒤에만
+CLI에 제한된 opaque bearer를 발급한다. Auth.js cookie나 비밀번호·TOTP를 CLI에 복사하지 않는다.
+WSL에서 브라우저의 localhost callback 연결을 전제하지 않는 device-code 방식으로 연결한다.
+범용 OAuth provider나 무인 Runner 인증을 추가하는 계약이 아니다.
+
+- v1 권한은 기존 곡의 조회와 파형 조회·등록, 현재 연결의 회수뿐이다. 신규 곡/앨범 생성,
+  가사/Cue·공개 변경, 내부 Runner·Queue·임의 command 권한은 부여하지 않는다.
+- 연결은 10분, bearer는 교환 후 8시간 유효하며 refresh하지 않는다. 발급·polling·승인에는
+  별도 빈도 제한을 적용하고 poll 간격은 최소 5초다. 서버 재시작은 승인/교환 소유권을 초기화하지 않는다.
+- `operator_session`에는 device code·user code·bearer의 SHA256 해시만 저장한다.
+  승인 account와 당시 MFA version을 고정하고 승인자 교체 및 두 번째 token 교환을 거절한다.
+  승인 시 서버 guard의 기대 MFA version을 현재 DB와 다시 대조하며 client 값으로 대체하지 않는다.
+- 모든 bearer 요청은 만료·회수와 현재 ACTIVE ADMIN·MFA 활성/version을 재검사한다.
+  변경은 다음 요청부터 반영하며 이미 인가한 작업의 중단은 보장하지 않는다. 로그아웃은 해당 연결을 회수한다.
+- 브라우저 승인에는 기존 세션·동일 Origin, CLI bearer 경계에는 cookie에 의한 대체 인증 금지와
+  Origin 요청 거절을 적용한다. token·device code·원문 본문은 URL/로그/Sentry에 넣지 않는다.
+- 연결과 token이 모두 만료된 뒤 24시간을 지난 행만 새 연결 접수 때 정리한다.
+  생성한 JSON·실행 이력은 CLI 호스트가 관리하고 인증 정보를 분석기에 전달하지 않는다.
+- 외부 진입점은 `CONSOLE_OPERATOR_ENABLED=true`에서만 평가하고 기본은 비활성이다.
+  이 계약과 migration 추가는 운영 적용·배포 승인이 아니다. API·브라우저 UI는 후속 구현에서 연결한다.
 
 ---
 
@@ -973,7 +999,8 @@ JWT에 authorization state를 넣지 않으므로 role 변경은 다음 요청�
 
 # 29. Session revocation은 YAGNI
 
-v1에서는 아래 세션 관리 기능을 기본 구현하지 않는다. Console 전체 회수용 MFA version은
+v1에서는 아래 세션 관리 기능을 기본 구현하지 않는다. §4.3의 제한된 operator 연결 회수는
+사용자 승인에 따른 명시적 예외다. Console 전체 회수용 MFA version은
 §4.1의 확정된 예외이며, Domain AUTH-004~006의 전체 Session 회수 요구를 없애지 않는다.
 
 ```text

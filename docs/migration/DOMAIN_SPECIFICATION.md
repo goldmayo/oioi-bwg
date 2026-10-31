@@ -3,7 +3,7 @@
 > 프로젝트: **어이어이 바위게**
 >
 > 문서 성격: Product Domain Specification / Development Contract / Test Oracle / Operations Policy  
-> 상태: **Baseline v1.5 — 2026-10-31 로컬 분석 JSON 등록 개정**
+> 상태: **Baseline v1.6 — 2026-10-31 로컬 operator 연결 추가**
 > 목적: 본 문서는 서비스의 도메인 용어, 정책, 권한, 상태 전이, 데이터 생명주기, 핵심 워크플로, ERD, 테스트 기준, 운영 규칙을 하나의 기준으로 고정한다.  
 > 우선순위: 구현 편의보다 **도메인 일관성, 이력 보존, 운영 가능성, 개인정보 최소화, 어뷰징 내성**을 우선한다.
 
@@ -1339,6 +1339,14 @@ iframe 재생/참조는 유지하며, 아래 조건을 충족한 단일 videoId�
 - 같은 song/video의 활성 Job이 있으면 관리자 등록으로 그 Job을 완료하며 기존 요청자와 업로더에게 알린다. 새 attempt 식별자로 이전 Runner 결과를 무효화한다. 활성 Job이 없으면 새 성공 Job을 만든다. Queue enqueue는 하지 않는다.
 - 현재 정상 JSON과 동일한 동시·재업로드는 기존 성공 Job을 반환하고 JSON·알림을 중복 생성하지 않는다. 다른 정상 JSON의 등록은 새 결과로 교체한다. 검증·source·transaction 실패는 직전 JSON과 Cue를 보존한다.
 - 결과·성공 Job·요청자·알림·기기 발송 대기는 기존 transaction을 재사용한다. JSON 등록은 가사·Cue 시각·공개 스냅샷을 자동 변경하지 않는다. §20.4.1의 source/attempt/terminal 불변성을 유지한다.
+
+### 로컬 operator 연결 (2026-10-31 추가)
+
+사용자는 곡 등록·LRC·응원법 편집·검수·공개를 Console에 유지하고, 별도 로컬 Rust CLI에는
+기존 곡의 파형 생성·일괄 등록만 맡긴다. CLI 등록은 기존 ADMIN/MFA를 브라우저에서 확인한
+제한된 연결로 인증하며 상세 수명·회수·권한은 [Auth §4.3](oioi-bwg-architecture-clean-v1/04-auth-authz-architecture.md#43-로컬-operator의-브라우저-연결-2026-10-31)을 따른다.
+직접 DB credential을 배포하지 않고 기존 결과·Job·요청자 알림 transaction과 source/Cue 불변성을 유지한다.
+로컬 파형 생성 자체에는 앱 인증이 필요하지 않으며 Console 조회·등록만 연결 인증을 요구한다.
 
 ## 20.3 Worker
 
