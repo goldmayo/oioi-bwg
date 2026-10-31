@@ -14,7 +14,7 @@ SECRETS = {
                 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'FIREBASE_SERVICE_ACCOUNT_JSON',
                 'CONSOLE_WAVEFORM_RUNNER_TOKEN'},
 }
-CONSOLE_PUBLIC = {'CONSOLE_ORIGIN', 'CONSOLE_MFA_ENROLLMENT_ENABLED',
+CONSOLE_PUBLIC = {'CONSOLE_ORIGIN', 'CONSOLE_MFA_ENROLLMENT_ENABLED', 'CONSOLE_OPERATOR_ENABLED',
                   'R2_ENDPOINT', 'R2_BUCKET', 'ASSETS_PUBLIC_BASE_URL', 'CONSOLE_PUSH_ENABLED',
                   'FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_APP_ID',
                   'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_VAPID_PUBLIC_KEY',
@@ -65,6 +65,8 @@ def materialize(app, public_path, map_path, output):
         require(public['CONSOLE_MFA_ENROLLMENT_ENABLED'] in {'true', 'false'})
         required = {'DB_APP_PASSWORD', 'CONSOLE_AUTH_SECRET', 'CONSOLE_MFA_ENCRYPTION_KEY',
                     'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'}
+        public.setdefault('CONSOLE_OPERATOR_ENABLED', 'false')
+        require(public['CONSOLE_OPERATOR_ENABLED'] in {'true', 'false'})
         public.setdefault('CONSOLE_PUSH_ENABLED', 'false')
         require(public['CONSOLE_PUSH_ENABLED'] in {'true', 'false'})
         if public['CONSOLE_PUSH_ENABLED'] == 'true':
