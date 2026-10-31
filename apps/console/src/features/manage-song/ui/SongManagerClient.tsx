@@ -8,7 +8,10 @@ import type { AdminSongSummary } from "@/entities/song";
 import { songQueryKeys } from "@/entities/song";
 import { songMutations, songQueries } from "@/entities/song/api";
 
+import { Button } from "@/shared/ui/button";
+
 import { type SongEditValues, toAdminSongUpdate } from "../model/schemas";
+import { createWaveformDownload } from "../model/waveform-manifest";
 
 import { SongDeleteDialog } from "./SongDeleteDialog";
 import { SongFormDialog } from "./SongFormDialog";
@@ -33,6 +36,35 @@ export function SongManagerClient({
   const {
     data: { items: albums },
   } = useSuspenseQuery(albumQueries.adminList());
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
+  const [downloadError, setDownloadError] = useState("");
+  const selectedSongs = songs.filter((song) => selectedIds.has(song.id));
+  const onSelect = useCallback((id: string, selected: boolean) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (selected) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+    setDownloadError("");
+  }, []);
+  function downloadManifest() {
+    if (!canManage) return;
+    try {
+      const file = createWaveformDownload(selectedSongs);
+      const url = URL.createObjectURL(new Blob([file.content], { type: "application/json" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = file.filename;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setDownloadError("");
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : "작업 파일을 만들지 못했습니다.");
+    }
+  }
   const [search, setSearch] = useState("");
   const [albumFilter, setAlbumFilter] = useState("all");
   const [formOpen, setFormOpen] = useState(false);
@@ -68,6 +100,10 @@ export function SongManagerClient({
     },
     [createMutation, editingSong, invalidateSongs, updateMutation],
   );
+  const handleEdit = useCallback((song: AdminSongSummary) => {
+    setEditingSong(song);
+    setFormOpen(true);
+  }, []);
   const handleDelete = useCallback(() => {
     if (!deleteTarget) return;
     deleteMutation.mutate(deleteTarget.id, {
@@ -95,14 +131,41 @@ export function SongManagerClient({
           setFormOpen(true);
         }}
       />
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="outline"
+          disabled={!canManage || !selectedSongs.length}
+          onClick={downloadManifest}
+        >
+          파형 작업 파일 다운로드 ({selectedSongs.length}곡)
+        </Button>
+        {selectedSongs.length > 0 && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSelectedIds(new Set());
+              setDownloadError("");
+            }}
+          >
+            선택 해제
+          </Button>
+        )}
+        <p className="text-muted-foreground text-sm">
+          검색·페이지를 바꿔도 선택한 곡은 유지됩니다.
+        </p>
+      </div>
+      {downloadError && (
+        <p role="alert" className="text-destructive text-sm">
+          {downloadError}
+        </p>
+      )}
       <SongManagerTable
         songs={filtered}
+        selectedIds={selectedIds}
+        onSelect={onSelect}
         canManage={canManage}
         hasFilter={!!search || albumFilter !== "all"}
-        onEdit={(song) => {
-          setEditingSong(song);
-          setFormOpen(true);
-        }}
+        onEdit={handleEdit}
         onDelete={setDeleteTarget}
       />
       <div className="flex items-center justify-between">
