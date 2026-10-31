@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
 
 import { type EditorNote, getEditorNotes, type NoteEdit, type NoteLane } from "../lib/editor-notes";
 import { formatTime } from "../lib/lrc-parser";
@@ -37,18 +35,14 @@ interface Props extends PianoRollInteraction {
   range: { start: number; end: number };
   duration: number;
   blocked: boolean;
-  mode: "select" | "draw";
-  onNavigate: (start: number) => void;
 }
 export function PianoRoll({
   range,
   duration,
   blocked,
-  mode,
-  onNavigate,
   selectedIds = [],
   onMove,
-  onLoopRange,
+  loop,
   onSelect,
   onEdit,
   onPreview,
@@ -67,18 +61,7 @@ export function PianoRoll({
     onPreview,
   });
   const ruler = useRef<HTMLDivElement>(null);
-  const loopStart = useRef<number | null>(null);
   const [rulerWidth, setRulerWidth] = useState(800);
-  useEffect(() => {
-    const cancel = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && loopStart.current !== null) {
-        loopStart.current = null;
-        event.preventDefault();
-      }
-    };
-    window.addEventListener("keydown", cancel, true);
-    return () => window.removeEventListener("keydown", cancel, true);
-  }, []);
   useEffect(() => {
     if (!ruler.current) return;
     const observer = new ResizeObserver(([entry]) => setRulerWidth(entry.contentRect.width));
@@ -92,10 +75,6 @@ export function PianoRoll({
     3600;
   for (let time = Math.ceil(range.start / step) * step; time < range.end; time += step)
     ticks.push(time);
-  const add = (lane: NoteLane, time: number) => {
-    if (!blocked)
-      onEdit({ type: "add", lane, time: Math.max(0, Math.min(duration, time)), text: "" });
-  };
   return (
     <section
       id="editor-note-tracks"
@@ -107,40 +86,13 @@ export function PianoRoll({
     >
       <div
         data-note-ruler
-        className="order-2 grid grid-cols-[64px_minmax(0,1fr)] sm:grid-cols-[80px_minmax(0,1fr)]"
+        className="col-span-2 row-start-3 grid grid-cols-[var(--editor-gutter)_minmax(0,1fr)]"
       >
         <div aria-hidden="true" />
         <div
           ref={ruler}
           className="relative h-12 touch-none overflow-hidden font-mono text-xs tabular-nums"
-          title="드래그로 반복 구간 지정"
-          onPointerDown={(e) => {
-            if (blocked || e.button !== 0) return;
-            const box = e.currentTarget.getBoundingClientRect();
-            loopStart.current = range.start + ((e.clientX - box.x) / box.width) * span;
-            e.currentTarget.setPointerCapture(e.pointerId);
-          }}
-          onPointerUp={(e) => {
-            if (loopStart.current === null) return;
-            const box = e.currentTarget.getBoundingClientRect();
-            const end = Math.max(
-              range.start,
-              Math.min(range.end, range.start + ((e.clientX - box.x) / box.width) * span),
-            );
-            const start = loopStart.current;
-            loopStart.current = null;
-            if (!blocked && Math.abs(end - start) >= 0.1)
-              onLoopRange?.({
-                start: Math.round(Math.min(start, end) * 100) / 100,
-                end: Math.round(Math.max(start, end) * 100) / 100,
-              });
-          }}
-          onPointerCancel={() => {
-            loopStart.current = null;
-          }}
-          onLostPointerCapture={() => {
-            loopStart.current = null;
-          }}
+          title="시간 눈금"
         >
           {Array.from(
             { length: Math.min(500, Math.ceil((span / step) * 5) + 1) },
@@ -168,7 +120,7 @@ export function PianoRoll({
       </div>
       <div
         data-note-lanes
-        className="border-border bg-card/10 order-4 grid grid-cols-[64px_minmax(0,1fr)] border-b sm:grid-cols-[80px_minmax(0,1fr)]"
+        className="border-border bg-card/10 col-span-2 row-start-5 grid grid-cols-[var(--editor-gutter)_minmax(0,1fr)] border-b"
       >
         {lanes.map((lane) => (
           <Lane
@@ -180,7 +132,6 @@ export function PianoRoll({
             selectedIds={selectedIds}
             trackWidth={rulerWidth}
             range={range}
-            ticks={ticks}
             blocked={blocked}
             preview={drag.preview}
             previewDelta={
@@ -190,36 +141,35 @@ export function PianoRoll({
                 : 0
             }
             onSelect={onSelect}
-            onAdd={(time) => add(lane.id, time)}
-            draw={mode === "draw"}
             drag={drag}
           />
         ))}
       </div>
-      <div className="bg-background/95 border-border absolute top-16 right-2 z-20 flex items-center gap-2 rounded border px-1 text-xs opacity-0 transition-opacity group-hover/waveform:opacity-100 focus-within:opacity-100">
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="이전 노트 구간"
-            disabled={range.start <= 0}
-            onClick={() => onNavigate(Math.max(0, range.start - span))}
+      <div
+        className="pointer-events-none absolute inset-0 col-start-2 row-start-4 row-end-6 overflow-hidden"
+        data-timeline-overlay
+      >
+        {ticks.map((time) => (
+          <span
+            key={time}
+            aria-hidden="true"
+            className="border-border absolute inset-y-0 border-l"
+            style={{ left: `${((time - range.start) / span) * 100}%` }}
+          />
+        ))}
+        {loop && loop.end > range.start && loop.start < range.end && (
+          <div
+            className="absolute inset-y-0 border-x border-dashed border-cyan-400/70 bg-cyan-400/10"
+            style={{
+              left: `${Math.max(0, ((loop.start - range.start) / span) * 100)}%`,
+              right: `${Math.max(0, ((range.end - loop.end) / span) * 100)}%`,
+            }}
           >
-            <ChevronLeft size={15} />
-          </Button>
-          <span className="font-mono tabular-nums">
-            {formatTime(range.start)} – {formatTime(range.end)}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="다음 노트 구간"
-            disabled={range.end >= duration}
-            onClick={() => onNavigate(Math.min(Math.max(0, duration - span), range.start + span))}
-          >
-            <ChevronRight size={15} />
-          </Button>
-        </div>
+            <span className="bg-cyan-900 px-1 text-[10px] text-cyan-100">A</span>
+            <span className="float-right bg-cyan-900 px-1 text-[10px] text-cyan-100">B</span>
+          </div>
+        )}
+        <Playhead range={range} />
       </div>
     </section>
   );
@@ -230,13 +180,10 @@ function Lane({
   selectedIds,
   trackWidth,
   range,
-  ticks,
   blocked,
   preview,
   previewDelta,
   onSelect,
-  onAdd,
-  draw,
   drag,
 }: {
   lane: (typeof lanes)[number];
@@ -244,13 +191,10 @@ function Lane({
   selectedIds: string[];
   trackWidth: number;
   range: Props["range"];
-  ticks: number[];
   blocked: boolean;
   preview: { id: string; time: number } | null;
   previewDelta: number;
   onSelect: (note: EditorNote, additive?: boolean) => void;
-  onAdd: (time: number) => void;
-  draw: boolean;
   drag: ReturnType<typeof useNoteDrag>;
 }) {
   const editor = useLyricsEditorContext();
@@ -285,47 +229,30 @@ function Lane({
     <>
       <div className="border-border flex flex-col items-center justify-center gap-1 border-t text-xs">
         <span>{lane.label}</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={`${lane.label} 노트를 현재 위치에 추가`}
-          disabled={blocked}
-          className="h-6 w-6 opacity-0 group-hover/waveform:opacity-100 focus-visible:opacity-100"
-          onClick={() => onAdd(editor.currentTimeRef.current)}
-        >
-          <Plus size={12} />
-        </Button>
       </div>
       <div
         data-note-track={lane.id}
         role="group"
         aria-label={`${lane.label} 노트 트랙`}
-        className="border-border relative overflow-x-hidden overflow-y-auto border-t [scrollbar-width:thin]"
-        style={{ height: lane.id === "extra" ? 88 : 64 }}
+        className="border-border relative overflow-x-hidden overflow-y-auto border-t [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ height: lane.id === "extra" ? 128 : 100 }}
       >
         <button
           type="button"
-          aria-label={`${lane.label} 트랙에 노트 추가`}
-          disabled={blocked || !draw}
+          aria-label={`${lane.label} 트랙 재생 위치 이동`}
+          title={`${lane.label} 트랙 재생 위치 이동`}
+          disabled={blocked || !editor.player}
           onClick={(event) => {
             const box = event.currentTarget.getBoundingClientRect();
-            onAdd(
+            editor.player?.seekTo(
               event.detail === 0
                 ? editor.currentTimeRef.current
                 : range.start + ((event.clientX - box.x) / box.width) * span,
+              true,
             );
           }}
           className="hover:bg-muted/30 focus-visible:ring-ring absolute inset-0 w-full cursor-crosshair focus-visible:ring-2 focus-visible:ring-inset disabled:cursor-default"
         />
-        {ticks.map((time) => (
-          <div
-            key={time}
-            aria-hidden="true"
-            className="border-border pointer-events-none absolute inset-y-0 border-l"
-            style={{ left: `${((time - range.start) / span) * 100}%` }}
-          />
-        ))}
-        <Playhead range={range} subscribe={editor.subscribeToTime} />
         {ordered.map((note) => {
           const time = timeOf(note);
           if (!Number.isFinite(time) || time < range.start || time >= range.end) return null;
@@ -360,7 +287,7 @@ function Lane({
               )}
               style={{
                 left: `${((time - range.start) / span) * 100}%`,
-                top: (lane.id === "extra" ? 36 : 12) + (rows.get(note.id) ?? 0) * 88,
+                top: (lane.id === "extra" ? 30 : 23) + (rows.get(note.id) ?? 0) * 52,
               }}
             >
               {lane.id === "extra" && (
@@ -396,30 +323,31 @@ function Lane({
     </>
   );
 }
-function Playhead({
-  range,
-  subscribe,
-}: {
-  range: Props["range"];
-  subscribe: (listener: (time: number) => void) => () => void;
-}) {
+function Playhead({ range }: { range: Props["range"] }) {
+  const { subscribeToTime, currentTimeRef } = useLyricsEditorContext();
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(
-    () =>
-      subscribe((time) => {
-        const position = ((time - range.start) / (range.end - range.start)) * 100;
-        if (ref.current) {
-          ref.current.style.left = `${Math.max(0, Math.min(100, position))}%`;
-          ref.current.hidden = position < 0 || position > 100;
-        }
-      }),
-    [range.start, range.end, subscribe],
-  );
+  const label = useRef<HTMLOutputElement>(null);
+  useEffect(() => {
+    const update = (time: number) => {
+      const position = ((time - range.start) / (range.end - range.start)) * 100;
+      if (ref.current) {
+        ref.current.style.left = `${position}%`;
+        ref.current.hidden = position < 0 || position > 100;
+      }
+      if (label.current) label.current.textContent = formatTime(time, 3);
+    };
+    update(currentTimeRef.current);
+    return subscribeToTime(update);
+  }, [range.start, range.end, subscribeToTime, currentTimeRef]);
   return (
-    <div
-      ref={ref}
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-y-0 z-20 w-px bg-cyan-300"
-    />
+    <div ref={ref} data-editor-cti className="absolute inset-y-0 z-20 w-px bg-cyan-300">
+      <output
+        ref={label}
+        aria-label="현재 재생 시각"
+        role="timer"
+        aria-live="off"
+        className="absolute top-2 left-0 rounded-r bg-cyan-300 px-1.5 py-1 font-mono text-[11px] whitespace-nowrap text-cyan-950"
+      />
+    </div>
   );
 }

@@ -27,12 +27,14 @@ export async function findAdminSongBySlug(executor: DbExecutor, slug: string) {
     .select({
       id: song.id,
       title: song.title,
+      albumName: album.name,
       youtubeId: song.youtubeId,
       lyrics: song.lyrics,
       guideId: cheerGuide.id,
       guideLockVersion: cheerGuide.lockVersion,
     })
     .from(song)
+    .innerJoin(album, eq(album.id, song.albumId))
     .leftJoin(
       cheerGuide,
       and(eq(cheerGuide.songId, song.id), eq(cheerGuide.legacyWriteTarget, true)),

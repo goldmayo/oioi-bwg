@@ -329,6 +329,7 @@ export function useAdminEditor(song: SongEditor, saveSongData: SaveSongDataActio
   return {
     songId: song.id,
     title: song.title,
+    albumName: song.albumName,
     isDirty: lyricsEditor.isDirty || videoForm.formState.isDirty,
     isVideoDirty: videoForm.formState.isDirty,
     currentTimeRef,

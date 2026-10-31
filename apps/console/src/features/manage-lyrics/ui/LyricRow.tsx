@@ -63,11 +63,13 @@ function LyricRowInner({
       >
         <div className="grid min-h-12 grid-cols-[20px_92px_minmax(0,1fr)_88px] items-center gap-2 sm:grid-cols-[20px_24px_112px_minmax(0,1fr)_88px]">
           <Checkbox
+            title={`${index + 1}행 노트 선택`}
             aria-label={`${index + 1}행 노트 선택`}
             checked={selected}
             onCheckedChange={(checked) => onSelectNotes(checked === true)}
           />
           <button
+            title={`${index + 1}행 선택`}
             aria-label={`${index + 1}행 선택`}
             className={cn(
               "text-muted-foreground hidden h-9 text-xs tabular-nums sm:block",
@@ -126,6 +128,7 @@ function LyricRowInner({
               variant="ghost"
               size="icon"
               className="size-7"
+              title="가사 텍스트 수정"
               aria-label={`${index + 1}행 텍스트 수정`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -138,6 +141,7 @@ function LyricRowInner({
               variant="ghost"
               size="icon"
               className="size-7"
+              title="현재 재생 시각을 행에 적용"
               aria-label={`${index + 1}행 시간 캡처`}
               disabled={!editor.player || editor.isAdPlaying}
               onClick={(e) => {
@@ -155,6 +159,7 @@ function LyricRowInner({
             <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-2 text-xs">
               <label className="mr-auto flex min-h-8 items-center gap-2">
                 <Checkbox
+                  title="이 행을 추임새로 표시"
                   aria-label={`${index + 1}행 추임새`}
                   checked={line.isExtra}
                   onCheckedChange={(checked) =>
@@ -167,6 +172,7 @@ function LyricRowInner({
                 variant="ghost"
                 size="sm"
                 className="h-8 px-2 text-xs"
+                title="응원·에코 표시 편집"
                 onClick={() => setPaintOpen(true)}
               >
                 <Paintbrush size={13} />
@@ -176,6 +182,7 @@ function LyricRowInner({
                 variant="ghost"
                 size="sm"
                 className="h-8 px-2 text-xs"
+                title="이 행 아래에 추임새 추가"
                 onClick={() => {
                   editor.addExtraLine(index);
                 }}
@@ -187,6 +194,7 @@ function LyricRowInner({
                 variant="ghost"
                 size="icon"
                 className="text-destructive size-8"
+                title="이 행 삭제"
                 aria-label={`${index + 1}행 삭제`}
                 onClick={() => editor.deleteLine(index)}
               >

@@ -9,10 +9,7 @@ import { useLyricsEditorContext } from "./LyricsEditorContext";
 export function EditorReferenceVideo() {
   const editor = useLyricsEditorContext();
   return (
-    <section
-      aria-labelledby="reference-video-heading"
-      className="flex h-full min-h-0 flex-col gap-3"
-    >
+    <section aria-labelledby="reference-video-heading" className="flex min-h-0 flex-col gap-3">
       <div className="flex h-10 shrink-0 items-center justify-between">
         <h2 id="reference-video-heading" className="text-sm font-medium">
           참고 영상
@@ -37,7 +34,7 @@ export function EditorReferenceVideo() {
           </label>
         </details>
       </div>
-      <div data-editor-video className="flex min-h-0 flex-1 items-start [&>div]:max-h-full">
+      <div data-editor-video className="shrink-0">
         <YouTubePlayer
           key={editor.youtubeId}
           videoId={editor.youtubeId}
@@ -46,6 +43,29 @@ export function EditorReferenceVideo() {
           onStateChange={editor.setPlayerState}
         />
       </div>
+      <dl
+        aria-label="편집 단축키"
+        className="text-muted-foreground border-border mt-2 space-y-2 border-t pt-4 text-xs"
+      >
+        {[
+          ["Space", "재생 / 일시정지"],
+          ["N", "노트 추가"],
+          ["L", "구간 반복"],
+          ["Ctrl/⌘ Z", "실행 취소"],
+          ["Ctrl/⌘ Shift Z", "다시 실행"],
+          ["Ctrl/⌘ S", "저장"],
+          ["Shift + 휠", "좌우 이동"],
+        ].map(([keys, label]) => (
+          <div key={keys} className="flex items-center justify-between gap-2">
+            <dt>{label}</dt>
+            <dd>
+              <kbd className="border-border rounded border px-1.5 py-0.5 font-mono text-[10px]">
+                {keys}
+              </kbd>
+            </dd>
+          </div>
+        ))}
+      </dl>
       {editor.isAdPlaying && (
         <p role="status" className="text-muted-foreground text-xs">
           광고 재생 중에는 시간 캡처와 노트 이동을 멈춥니다.

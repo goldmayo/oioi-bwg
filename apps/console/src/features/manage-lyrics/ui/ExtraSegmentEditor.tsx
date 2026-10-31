@@ -93,6 +93,7 @@ export function ExtraSegmentEditor({ line, lineIndex }: ExtraSegmentEditorProps)
 
       {/* 새 세그먼트 추가 버튼 */}
       <Button
+        title="추임새 조각 추가"
         size="sm"
         variant="ghost"
         className={cn(
