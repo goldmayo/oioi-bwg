@@ -529,3 +529,23 @@ ESLint에는 M2에서 식별된 장문 함수 warning 4건이 남아 있으며 �
 1. read-only로 `Song.slug` unique constraint와 timestamp precision을 재확인한다.
 2. `Song_albumId_idx` 추가 여부를 실행 계획과 운영 부하 기준으로 결정한다.
 3. 운영 DB의 현재 schema를 migration baseline과 reconcile한 뒤 migration history를 도입한다.
+
+## 로컬 operator 연결 API
+
+`CONSOLE_OPERATOR_ENABLED=true`를 Console 개인 설정에 추가하고 서버를 재시작하면
+다음 경로를 평가한다. 기본은 비활성이다. browser 승인 화면과 CLI 실행부는 후속 구현이다.
+
+| 메서드·경로 | 입력·인증 | 응답 |
+| --- | --- | --- |
+| POST `/api/operator/auth/device` | `{}`; cookie·Origin 없는 CLI | deviceCode, userCode, expiresAt, intervalSeconds |
+| POST `/api/operator/auth/token` | `{deviceCode}`; CLI | pending 또는 authorized·accessToken·expiresAt |
+| POST `/api/operator/auth/approve` | `{userCode}`; 현재 ADMIN/MFA 세션·동일 Origin | `{approved:true}` |
+| GET `/api/operator/auth/session` | bearer; cookie·Origin 금지 | accountId, expiresAt |
+| POST `/api/operator/auth/revoke` | `{}`; bearer; cookie·Origin 금지 | `{revoked:true}` |
+
+모든 응답은 `Cache-Control: no-store`다. POST 본문은 application/json·1 KiB 이하의
+엄격한 계약으로 검증하며 client가 MFA version·계정·실행 명령을 지정할 수 없다.
+발급은 IP당 분당 5회, polling은 IP당 분당 60회와 device당 5초에 1회, 승인은 계정당
+분당 10회다. 제한 시 429와 Retry-After 초를 반환한다. 신뢰할 수 없는 IP는 공통 버킷을
+사용한다. 프로세스별 최대 4096개 해시 버킷이며 재시작·다중 인스턴스 공유 제한은 아니다.
+승인·교환의 일회성 및 만료는 DB에서 계속 보장한다. 비밀 원문을 URL·명령 기록에 넣지 않는다.

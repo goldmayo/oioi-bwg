@@ -20,6 +20,7 @@ export const appErrorCodeSchema = z.enum([
   "FORBIDDEN",
   "OTP_COOLDOWN",
   "OTP_RATE_LIMITED",
+  "OPERATOR_RATE_LIMITED",
   "OTP_EXPIRED",
   "OTP_INVALID",
   "OTP_ATTEMPTS_EXCEEDED",

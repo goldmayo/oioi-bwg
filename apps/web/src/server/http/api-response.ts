@@ -38,6 +38,10 @@ const appErrorDefinitions = {
   UNAUTHENTICATED: { message: "로그인이 필요합니다.", status: 401 },
   FORBIDDEN: { message: "접근 권한이 없습니다.", status: 403 },
   OTP_COOLDOWN: { message: "잠시 후 다시 요청해 주세요.", status: 429 },
+  OPERATOR_RATE_LIMITED: {
+    message: "요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.",
+    status: 429,
+  },
   OTP_RATE_LIMITED: { message: "요청 횟수를 초과했습니다.", status: 429 },
   OTP_EXPIRED: { message: "인증 코드가 만료되었습니다.", status: 400 },
   OTP_INVALID: { message: "인증 코드가 올바르지 않습니다.", status: 400 },

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { entityIdSchema } from "./entity-id";
 const deviceCode = z.string().regex(/^[a-f0-9]{64}$/);
 const userCode = z
   .string()
@@ -23,3 +24,10 @@ export const operatorExchangeResultSchema = z.discriminatedUnion("status", [
 ]);
 export type OperatorDeviceGrant = z.infer<typeof operatorDeviceGrantSchema>;
 export type OperatorExchangeResult = z.infer<typeof operatorExchangeResultSchema>;
+
+export const operatorApprovalResultSchema = z.strictObject({ approved: z.literal(true) });
+export const operatorIdentitySchema = z.strictObject({
+  accountId: entityIdSchema,
+  expiresAt: z.iso.datetime({ offset: true }),
+});
+export const operatorRevokeResultSchema = z.strictObject({ revoked: z.literal(true) });

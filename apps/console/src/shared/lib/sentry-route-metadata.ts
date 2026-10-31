@@ -1,5 +1,11 @@
 /** 앱이 소유한 경로만 고정 template/operation으로 축약한다. 원문 경로는 반환하지 않는다. */
 const routes = {
+  "/api/operator/auth/device": "operator-auth-device-api",
+  "/api/operator/auth/token": "operator-auth-token-api",
+  "/api/operator/auth/approve": "operator-auth-approve-api",
+  "/api/operator/auth/session": "operator-auth-session-api",
+  "/api/operator/auth/revoke": "operator-auth-revoke-api",
+
   "/api/admin/push-installations": "admin-push-registration-api",
   "/api/admin/push-installations/[id]": "admin-push-unregister-api",
   "/api/admin/notifications": "admin-notifications-api",
