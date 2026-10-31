@@ -60,3 +60,19 @@ it("시작 허가는 RUNNING과 유효한 attempt를 함께 반환해야 한다"
       .success,
   ).toBe(false);
 });
+
+it("작업 파일은 단일 v1 계약이며 잘못된 실행 입력을 거절한다", async () => {
+  const { waveformManifestSchema } = await import("./waveform");
+  expect(waveformManifestSchema.parse({ version: 1, videoIds: ["pbELDkeLdho"] })).toEqual({
+    version: 1,
+    videoIds: ["pbELDkeLdho"],
+  });
+  for (const input of [
+    { version: 2, videoIds: ["pbELDkeLdho"] },
+    { version: 1, videoIds: [] },
+    { version: 1, videoIds: ["pbELDkeLdho", "pbELDkeLdho"] },
+    { version: 1, videoIds: ["https://youtu.be/pbELDkeLdho"] },
+    { version: 1, videoIds: ["pbELDkeLdho"], command: "anything" },
+  ])
+    expect(waveformManifestSchema.safeParse(input).success).toBe(false);
+});
