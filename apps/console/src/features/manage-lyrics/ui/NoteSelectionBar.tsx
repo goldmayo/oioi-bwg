@@ -33,15 +33,15 @@ export function NoteSelectionBar({
   return (
     <div
       aria-label="선택 노트 편집"
-      className="border-border bg-card/40 mx-4 my-3 flex min-h-16 shrink-0 flex-wrap items-center justify-center gap-3 rounded-sm border px-4 py-3 text-sm"
+      className="border-border bg-card/40 mx-3 my-3 flex min-h-16 shrink-0 flex-wrap items-center justify-center gap-2 rounded-md border px-4 py-3 text-sm"
     >
-      <span className="text-muted-foreground mr-2 min-w-32">
+      <span className="text-muted-foreground mr-2 min-w-24">
         {notes.length
           ? `${extras ? "추임새" : "노트"} ${notes.length}개 선택`
           : "노트를 선택하세요"}
       </span>
       <form
-        className="border-border flex items-center gap-3 sm:border-l sm:pl-4"
+        className="border-border flex max-w-full flex-wrap items-center gap-2 sm:border-l sm:pl-4"
         onSubmit={(event) => {
           event.preventDefault();
           if (editableText && text.trim() && !blocked) onEdit({ type: "text", ids, text });
@@ -53,7 +53,7 @@ export function NoteSelectionBar({
         <Input
           id="note-selection-text"
           aria-label="선택 노트 문구"
-          className="h-10 w-36 text-sm sm:w-50"
+          className="h-9 w-36 text-sm sm:w-40"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={notes.length === 1 ? notes[0].text || "문구 입력" : "문구 입력"}
@@ -61,7 +61,8 @@ export function NoteSelectionBar({
         />
         <Button
           size="sm"
-          className="h-10 min-w-36 bg-cyan-400 px-5 text-slate-950 hover:bg-cyan-300"
+          className="h-9 min-w-24 bg-cyan-400 px-5 text-slate-950 hover:bg-cyan-300"
+          title="선택 노트에 문구 적용"
           type="submit"
           disabled={!editableText || !text.trim() || blocked}
         >
@@ -71,9 +72,10 @@ export function NoteSelectionBar({
       {([-0.01, 0.01] as const).map((delta) => (
         <Button
           key={delta}
+          title={`선택 노트 10ms ${delta < 0 ? "앞당기기" : "늦추기"}`}
           variant="outline"
           size="sm"
-          className="h-10 min-w-26 bg-white/[0.025]"
+          className="h-9 min-w-16 bg-white/[0.025]"
           disabled={!ids.length || blocked}
           onClick={() => onEdit({ type: "move", ids, delta, duration })}
         >
@@ -84,8 +86,9 @@ export function NoteSelectionBar({
         <Button
           variant="outline"
           size="sm"
-          className="h-10"
+          className="h-9"
           disabled={blocked}
+          title="선택한 추임새를 한 줄로 묶기"
           onClick={() => onEdit({ type: "group", ids })}
         >
           <Link2 size={14} />한 줄로 묶기
@@ -95,8 +98,9 @@ export function NoteSelectionBar({
         <Button
           variant="outline"
           size="sm"
-          className="h-10"
+          className="h-9"
           disabled={blocked}
+          title="이 줄에 노트 추가"
           onClick={() => onEdit({ type: "append", id: ids[0], time: time() })}
         >
           <Plus size={14} />이 줄에 노트 추가
@@ -105,26 +109,24 @@ export function NoteSelectionBar({
       <Button
         variant="ghost"
         size="sm"
-        className="border-border h-10 min-w-26 border bg-white/[0.025] px-4"
+        className="border-border size-9 border bg-white/[0.025] p-0"
         title="선택 노트 복제"
         aria-label="선택 노트 복제"
         disabled={!ids.length || blocked}
         onClick={() => onEdit({ type: "duplicate", ids, delta: 0.5, duration })}
       >
         <Copy size={15} />
-        복제
       </Button>
       <Button
         variant="ghost"
         size="sm"
-        className="border-border h-10 min-w-26 border bg-white/[0.025] px-4 text-rose-400"
+        className="border-border size-9 border bg-white/[0.025] p-0 text-rose-400"
         title="선택 노트 삭제"
         aria-label="선택 노트 삭제"
         disabled={!ids.length || blocked}
         onClick={() => onEdit({ type: "delete", ids })}
       >
         <Trash2 size={15} />
-        삭제
       </Button>
     </div>
   );

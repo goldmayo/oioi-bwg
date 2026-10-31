@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { createContext, useContext, useMemo } from "react";
 import { DataTable } from "@oioi-bwg/ui/data-table";
 import { Edit, FileMusic, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -9,23 +9,56 @@ import type { AdminSongSummary } from "@/entities/song";
 
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { Checkbox } from "@/shared/ui/checkbox";
 import { createAppColumnHelper, dataTableComponents, useAppTable } from "@/shared/ui/data-table";
 
 interface Props {
   songs: AdminSongSummary[];
+  selectedIds: ReadonlySet<string>;
+  onSelect: (id: string, selected: boolean) => void;
   canManage: boolean;
   hasFilter: boolean;
   onEdit: (song: AdminSongSummary) => void;
   onDelete: (song: AdminSongSummary) => void;
 }
+const SelectionContext = createContext<Pick<
+  Props,
+  "selectedIds" | "onSelect" | "canManage"
+> | null>(null);
+function SongSelection({ song }: { song: AdminSongSummary }) {
+  const selection = useContext(SelectionContext)!;
+  return (
+    <Checkbox
+      aria-label={`${song.title} 선택`}
+      checked={selection.selectedIds.has(song.id)}
+      disabled={!selection.canManage}
+      onCheckedChange={(checked) => selection.onSelect(song.id, checked === true)}
+    />
+  );
+}
 const column = createAppColumnHelper<AdminSongSummary>();
 
-export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete }: Props) {
+export function SongManagerTable({
+  songs,
+  selectedIds,
+  onSelect,
+  canManage,
+  hasFilter,
+  onEdit,
+  onDelete,
+}: Props) {
   "use no memo";
   // AppTable은 내부 ref로 options를 읽는다. 자동 memo가 권한/DTO 변경 렌더를 건너뛰지 않게 한다.
   const columns = useMemo(
     () =>
       column.columns([
+        column.display({
+          id: "selection",
+          header: "선택",
+          enableSorting: false,
+          meta: { className: "w-14 text-center" },
+          cell: ({ row: { original: song } }) => <SongSelection song={song} />,
+        }),
         column.accessor("title", {
           header: "제목",
           meta: { className: "font-medium whitespace-normal" },
@@ -143,24 +176,26 @@ export function SongManagerTable({ songs, canManage, hasFilter, onEdit, onDelete
     initialState: { pagination: { pageIndex: 0, pageSize: 15 } },
   });
   return (
-    <DataTable.Root table={table} components={dataTableComponents}>
-      <div className="min-w-0 space-y-4">
-        <DataTable.Table
-          caption="곡 관리 목록"
-          className="bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_td]:whitespace-normal [&_th]:px-3"
-        >
-          <DataTable.Header />
-          <DataTable.Body
-            emptyState={
-              <>
-                <FileMusic className="mx-auto mb-2 h-8 w-8 opacity-50" />
-                {hasFilter ? "검색 결과가 없습니다." : "등록된 곡이 없습니다."}
-              </>
-            }
-          />
-        </DataTable.Table>
-        <DataTable.Pagination label="곡 목록 페이지" />
-      </div>
-    </DataTable.Root>
+    <SelectionContext value={{ selectedIds, onSelect, canManage }}>
+      <DataTable.Root table={table} components={dataTableComponents}>
+        <div className="min-w-0 space-y-4">
+          <DataTable.Table
+            caption="곡 관리 목록"
+            className="bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_td]:whitespace-normal [&_th]:px-3"
+          >
+            <DataTable.Header />
+            <DataTable.Body
+              emptyState={
+                <>
+                  <FileMusic className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                  {hasFilter ? "검색 결과가 없습니다." : "등록된 곡이 없습니다."}
+                </>
+              }
+            />
+          </DataTable.Table>
+          <DataTable.Pagination label="곡 목록 페이지" />
+        </div>
+      </DataTable.Root>
+    </SelectionContext>
   );
 }

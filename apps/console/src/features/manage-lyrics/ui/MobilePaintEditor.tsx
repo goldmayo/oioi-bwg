@@ -165,6 +165,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
           <div className="flex justify-center gap-2">
             <Button
               variant={currentMode === "normal" ? "default" : "outline"}
+              title="기본 글자로 표시"
               onClick={() => setCurrentMode("normal")}
               className="flex-1"
             >
@@ -172,6 +173,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
             </Button>
             <Button
               variant={currentMode === "cheer" ? "default" : "outline"}
+              title="응원법 글자로 표시"
               onClick={() => setCurrentMode("cheer")}
               className={cn(
                 "flex-1",
@@ -182,6 +184,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
             </Button>
             <Button
               variant={currentMode === "echo" ? "default" : "outline"}
+              title="에코 글자로 표시"
               onClick={() => setCurrentMode("echo")}
               className={cn(
                 "flex-1",
@@ -222,10 +225,12 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={onClose}>
+          <Button title="강조 편집 취소" variant="outline" onClick={onClose}>
             취소
           </Button>
-          <Button onClick={handleSave}>완료</Button>
+          <Button title="강조 편집 적용" onClick={handleSave}>
+            완료
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

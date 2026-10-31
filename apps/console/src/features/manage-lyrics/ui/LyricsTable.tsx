@@ -17,7 +17,7 @@ export function LyricsTable({
   const editor = useLyricsEditorContext();
   return (
     <section
-      className="border-border bg-card/30 flex h-96 min-h-0 min-w-0 flex-col overflow-hidden rounded-sm border lg:h-full"
+      className="border-border bg-card/30 flex h-96 min-h-0 min-w-0 flex-col overflow-hidden rounded-md border lg:h-full"
       aria-labelledby="lyrics-heading"
     >
       <div className="border-border flex items-center justify-between gap-3 border-b px-4 py-2.5">
@@ -33,6 +33,7 @@ export function LyricsTable({
           onClick={() => {
             editor.addExtraLine(editor.currentIndex);
           }}
+          title="가사 행 추가"
           className="text-xs"
         >
           <Plus size={14} />행 추가
@@ -65,7 +66,7 @@ export function LyricsTable({
         ))}
         {!editor.lyrics.length && (
           <p className="text-muted-foreground p-6 text-sm leading-6">
-            LRC를 가져오거나 행을 추가해 편집을 시작합니다.
+            행을 추가해 편집을 시작합니다.
           </p>
         )}
       </div>

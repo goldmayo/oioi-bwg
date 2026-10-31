@@ -4,6 +4,7 @@ import type { GuideWriteVersion, LyricsData } from "@oioi-bwg/contracts/song";
 export interface SongEditor {
   id: string;
   title: string;
+  albumName?: string;
   youtubeId: string;
   lyrics: LyricsData;
   guideWrite?: GuideWriteVersion;

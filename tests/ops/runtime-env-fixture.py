@@ -23,6 +23,8 @@ class RuntimeEnvTest(unittest.TestCase):
                       'r2id': 'R2_ACCESS_KEY_ID', 'r2secret': 'R2_SECRET_ACCESS_KEY'})}
             mapping = ''.join(f'{name}=ocid1.vaultsecret.test.{key}\n' for key, name in names.items())
             secrets = dict(VALUES)
+            if variant.startswith('operator:'):
+                public += 'CONSOLE_OPERATOR_ENABLED=' + variant.split(':', 1)[1] + '\n'
             if variant.startswith('waveform-'):
                 if variant == 'waveform-public-secret':
                     public += 'CONSOLE_WAVEFORM_RUNNER_TOKEN=invalid-public-token\n'
@@ -101,6 +103,7 @@ print(base64.b64encode(json.loads((root/'values').read_text())[key].encode()).de
                 else:
                     self.assertIn('CONSOLE_MFA_ENCRYPTION_KEY=' + MFA + '\n', output)
                     self.assertIn('CONSOLE_MFA_ENROLLMENT_ENABLED=false\n', output)
+                    self.assertIn('CONSOLE_OPERATOR_ENABLED=false\n', output)
                     self.assertNotRegex(output, r'(?m)^AUTH_SECRET=')
 
     def test_invalid_input(self):
@@ -140,6 +143,19 @@ print(base64.b64encode(json.loads((root/'values').read_text())[key].encode()).de
                 result, output, _, _ = self.run_case('console', variant)
                 self.assertEqual(result.returncode, 1)
                 self.assertEqual(output, 'previous-env')
+
+    def test_operator_is_console_only_and_explicit_boolean(self):
+        for flag in ('true', 'false'):
+            result, output, calls, mode = self.run_case('console', 'operator:' + flag)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('CONSOLE_OPERATOR_ENABLED=' + flag + '\n', output)
+            self.assertEqual(mode, 0o600)
+            self.assertEqual(len(calls), 5)
+        for app, flag in [('web', 'true'), ('console', '1'), ('console', 'TRUE')]:
+            result, output, calls, _ = self.run_case(app, 'operator:' + flag)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(output, 'previous-env')
+            self.assertEqual(calls, [])
 
     def test_waveform_configuration(self):
         for variant in ('waveform-ready', 'waveform-generate'):

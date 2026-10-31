@@ -182,6 +182,7 @@ export async function getAdminSongEditorBySlug(ctx: RequestContext, slug: string
   return {
     id: row.id,
     title: row.title ?? "",
+    albumName: row.albumName ?? "",
     youtubeId: row.youtubeId ?? "",
     lyrics: parseStoredLyrics(row.lyrics),
     ...guideVersion(row),

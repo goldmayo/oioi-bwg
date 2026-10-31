@@ -59,9 +59,9 @@ function setup(props: Partial<Parameters<typeof WaveformImportButton>[0]> = {}) 
 function choose(value = JSON.stringify(waveform)) {
   const file = new File([value], "waveform.json", { type: "application/json" });
   Object.defineProperty(file, "text", { value: () => Promise.resolve(value) });
-  fireEvent.change(screen.getByLabelText("파형 JSON 파일"), { target: { files: [file] } });
+  fireEvent.change(screen.getByLabelText("waveform JSON 파일"), { target: { files: [file] } });
 }
-it("파일 등록 후 계정의 파형을 다시 조회하며 다른 계정 cache는 보존한다", async () => {
+it("파일 등록 후 계정의 waveform을 다시 조회하며 다른 계정 cache는 보존한다", async () => {
   let finish!: (value: unknown) => void;
   mocks.put.mockReturnValue(
     new Promise((resolve) => {
@@ -73,7 +73,7 @@ it("파일 등록 후 계정의 파형을 다시 조회하며 다른 계정 cach
   await waitFor(() => expect(mocks.put).toHaveBeenCalledOnce());
   expect(mocks.put).toHaveBeenCalledWith(`/api/admin/songs/${id}/waveform`, { json: waveform });
   expect(
-    (screen.getByRole("button", { name: "파형 JSON 등록 중…" }) as HTMLButtonElement).disabled,
+    (screen.getByRole("button", { name: "waveform JSON 등록 중…" }) as HTMLButtonElement).disabled,
   ).toBe(true);
   await act(async () => finish(job));
   expect((await screen.findByRole("link", { name: "등록 결과 확인" })).getAttribute("href")).toBe(
@@ -88,7 +88,7 @@ it.each([{ videoChanged: true }, { disabled: true }])(
     setup(props);
     choose();
     expect(
-      (screen.getByRole("button", { name: "파형 JSON 등록" }) as HTMLButtonElement).disabled,
+      (screen.getByRole("button", { name: "waveform JSON 등록" }) as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(mocks.put).not.toHaveBeenCalled();
   },

@@ -61,12 +61,18 @@ export async function importSongWaveform(
   ctx: RequestContext,
   songId: string,
   result: WaveformData,
+  options: { replaceExisting?: boolean } = {},
 ) {
   const accountId = admin(ctx);
   return getDatabase().transaction(async (tx) => {
     const song = await lockWaveformSong(tx, songId);
     if (!song) throw new AppError("SONG_NOT_FOUND");
     if (song.youtubeId !== result.source.id) throw new AppError("WAVEFORM_SOURCE_INVALID");
+    if (options.replaceExisting === false) {
+      const current = await findSongWaveform(tx, songId);
+      if (current?.data && current.data.source.id === song.youtubeId)
+        throw new AppError("WAVEFORM_ALREADY_EXISTS");
+    }
     const active = await findActiveWaveformJob(tx, songId, result.source.id);
     const matching = !active && (await findMatchingWaveformJob(tx, songId, result));
     if (matching) return project({ job: matching, slug: song.slug });

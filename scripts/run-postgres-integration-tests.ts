@@ -16,10 +16,20 @@ let interruptedBy: NodeJS.Signals | undefined;
 function parseArguments() {
   const arguments_ = process.argv.slice(2);
 
-  if (arguments_.some((argument) => !["--local", "--admin-smoke"].includes(argument))) {
-    throw new Error("Usage: run-postgres-integration-tests.ts [--local] [--admin-smoke]");
+  if (
+    arguments_.some(
+      (argument) => !["--local", "--admin-smoke", "--operator-smoke"].includes(argument),
+    )
+  ) {
+    throw new Error(
+      "Usage: run-postgres-integration-tests.ts [--local] [--admin-smoke | --operator-smoke]",
+    );
+  }
+  if (arguments_.includes("--admin-smoke") && arguments_.includes("--operator-smoke")) {
+    throw new Error("Choose one browser smoke workflow");
   }
   return {
+    operatorSmoke: arguments_.includes("--operator-smoke"),
     local: arguments_.includes("--local"),
     adminSmoke: arguments_.includes("--admin-smoke"),
   };
@@ -91,7 +101,7 @@ function quoteIdentifier(identifier: string) {
 }
 
 async function main() {
-  const { local, adminSmoke } = parseArguments();
+  const { local, adminSmoke, operatorSmoke } = parseArguments();
   const adminUrl = resolveAdminUrl(local);
   assertSafeAdminUrl(adminUrl);
 
@@ -197,16 +207,18 @@ async function main() {
     });
     await runCommand(
       packageManager,
-      adminSmoke
-        ? ["exec", "node", "tests/ops/admin-migration-smoke.mjs"]
-        : [
-            "exec",
-            "vitest",
-            "run",
-            "--config",
-            "tests/integration/vitest.config.ts",
-            "--reporter=verbose",
-          ],
+      operatorSmoke
+        ? ["exec", "node", "tests/ops/operator-integration-smoke.mjs"]
+        : adminSmoke
+          ? ["exec", "node", "tests/ops/admin-migration-smoke.mjs"]
+          : [
+              "exec",
+              "vitest",
+              "run",
+              "--config",
+              "tests/integration/vitest.config.ts",
+              "--reporter=verbose",
+            ],
       childEnvironment,
     );
   } catch (error) {

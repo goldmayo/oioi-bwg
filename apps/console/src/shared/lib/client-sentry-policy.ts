@@ -9,6 +9,7 @@ import { getSentryRouteMetadata } from "./sentry-route-metadata";
 export const SENTRY_ERROR_SOURCES = [
   "admin-error-boundary",
   "admin-login-form",
+  "operator-connect-form",
   "global-error-boundary",
   "mutation-cache",
   "query-cache",

@@ -1,21 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Pause, Play, SkipBack, SkipForward } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
-
-import { formatTime } from "../lib/lrc-parser";
 
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 
 export function EditorTransport({ blocked }: { blocked: boolean }) {
   const editor = useLyricsEditorContext();
-  const [time, setTime] = useState(0);
-  const { subscribeToTime } = editor;
-  useEffect(() => subscribeToTime(setTime), [subscribeToTime]);
   const playing = editor.playerState === 1;
   const seekCue = (direction: -1 | 1) => {
+    const time = editor.currentTimeRef.current;
     const choices = editor.lyrics
       .map((line, index) => ({ time: line.startTime, index }))
       .filter((note) => (direction < 0 ? note.time < time - 0.01 : note.time > time + 0.01))
@@ -27,15 +22,13 @@ export function EditorTransport({ blocked }: { blocked: boolean }) {
     }
   };
   return (
-    <div
-      role="toolbar"
-      aria-label="재생과 시간 캡처"
-      className="flex items-center justify-center gap-4"
-    >
+    <div role="toolbar" aria-label="재생 제어" className="flex items-center justify-center gap-4">
       <div className="flex items-center gap-2">
         <Button
-          variant="ghost"
+          variant="outline"
+          className="size-9 [&_svg]:size-4"
           size="icon"
+          title="이전 행으로 이동"
           aria-label="이전 행으로 이동"
           disabled={!editor.player || blocked}
           onClick={() => seekCue(-1)}
@@ -44,7 +37,9 @@ export function EditorTransport({ blocked }: { blocked: boolean }) {
         </Button>
         <Button
           size="icon"
-          className="size-12 rounded-full bg-neutral-50 text-neutral-950 hover:bg-white sm:size-13 [&_svg]:size-5"
+          variant="outline"
+          className="size-9 [&_svg]:size-4"
+          title={playing ? "일시정지" : "재생"}
           aria-label={playing ? "일시정지" : "재생"}
           disabled={!editor.player || blocked}
           onClick={() => {
@@ -55,22 +50,16 @@ export function EditorTransport({ blocked }: { blocked: boolean }) {
           {playing ? <Pause className="size-5" /> : <Play className="size-5" />}
         </Button>
         <Button
-          variant="ghost"
+          variant="outline"
+          className="size-9 [&_svg]:size-4"
           size="icon"
+          title="다음 행으로 이동"
           aria-label="다음 행으로 이동"
           disabled={!editor.player || blocked}
           onClick={() => seekCue(1)}
         >
           <SkipForward className="size-5" />
         </Button>
-        <div className="ml-3 flex items-baseline gap-2 font-mono whitespace-nowrap tabular-nums">
-          <output className="text-base sm:text-lg" aria-label="현재 재생 시각">
-            {formatTime(time, 3)}
-          </output>
-          <span className="text-muted-foreground text-xs sm:text-sm">
-            / {formatTime(editor.player?.getDuration() || 0, 3)}
-          </span>
-        </div>
       </div>
     </div>
   );
