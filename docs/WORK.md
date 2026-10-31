@@ -17,6 +17,11 @@
 [배포·receipt #362](https://github.com/goldmayo/oioi-bwg/pull/362)가 최종 근거다.
 완료한 편집기 작업은 아래 목록에서 제거하고 실제 영상 청취 수용은 독립 후속으로 유지한다.
 
+2026-10-31 oioi-operator v1의 구현·로컬 통합 검증을 마쳤다.
+[CLI 안내·일괄 실행](https://github.com/goldmayo/oioi-operator/pull/5)과
+[실제 브라우저/MFA·음원 생성·API 등록·재개 검증 #373](https://github.com/goldmayo/oioi-bwg/pull/373)이
+최종 근거다. 관심사별 PR은 생성했고 원격 병합·운영 DB/VM/OCI·배포는 수행하지 않았다.
+
 ## 진행할 작업과 보류
 
 UUIDv7 전환은 2026-10-26 사용자 요청으로 착수했다. 아래 항목은 운영 READ ONLY 재실측과
