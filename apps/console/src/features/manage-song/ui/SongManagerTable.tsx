@@ -122,12 +122,12 @@ export function SongManagerTable({
             <>
               <div className="flex flex-wrap justify-center gap-1">
                 {song.isTitle && (
-                  <Badge variant="default" className="px-1.5 py-0.5 text-xs">
+                  <Badge variant="rockation" className="px-1.5 py-0.5 text-xs">
                     타이틀
                   </Badge>
                 )}
                 {song.hasOfficialCheer && (
-                  <Badge variant="secondary" className="px-1.5 py-0.5 text-xs">
+                  <Badge variant="q" className="px-1.5 py-0.5 text-xs">
                     응원법
                   </Badge>
                 )}
