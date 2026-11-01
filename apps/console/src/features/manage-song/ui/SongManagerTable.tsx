@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import type { AdminSongSummary } from "@/entities/song";
 
+import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
@@ -49,18 +50,24 @@ export function SongManagerTable({
 }: Props) {
   "use no memo";
   // AppTable은 내부 ref로 options를 읽는다. 자동 memo가 권한/DTO 변경 렌더를 건너뛰지 않게 한다.
+  const showOrder = useMediaQuery("(min-width: 768px)");
+  const showAlbum = useMediaQuery("(min-width: 1024px)");
+  const showSlug = useMediaQuery("(min-width: 1280px)");
   const columns = useMemo(
     () =>
       column.columns([
         column.display({
           id: "selection",
           header: "선택",
+          size: 64,
           enableSorting: false,
-          meta: { className: "w-14 text-center" },
+          meta: { className: "text-center" },
           cell: ({ row: { original: song } }) => <SongSelection song={song} />,
         }),
         column.accessor("title", {
           header: "제목",
+          size: 280,
+          minSize: 160,
           meta: { className: "font-medium whitespace-normal" },
           cell: ({ row: { original: song } }) => (
             <>
@@ -81,8 +88,10 @@ export function SongManagerTable({
         column.accessor((row) => row.album.name, {
           id: "album",
           header: "앨범",
+          size: 160,
+          minSize: 120,
           meta: {
-            className: "hidden lg:table-cell text-muted-foreground text-sm w-40",
+            className: "text-muted-foreground text-sm",
           },
           cell: ({ row: { original: song } }) => (
             <span className="block truncate" title={song.album.name}>
@@ -92,8 +101,10 @@ export function SongManagerTable({
         }),
         column.accessor("slug", {
           header: "Slug",
+          size: 160,
+          minSize: 120,
           meta: {
-            className: "hidden xl:table-cell text-muted-foreground text-xs w-40",
+            className: "text-muted-foreground text-xs",
           },
           cell: ({ row: { original: song } }) => (
             <span className="block truncate" title={song.slug ?? undefined}>
@@ -104,7 +115,9 @@ export function SongManagerTable({
         column.display({
           id: "type",
           header: "구분",
-          meta: { className: "w-20 text-center" },
+          size: 96,
+          minSize: 80,
+          meta: { className: "text-center" },
           cell: ({ row: { original: song } }) => (
             <>
               <div className="flex flex-wrap justify-center gap-1">
@@ -129,8 +142,9 @@ export function SongManagerTable({
         }),
         column.accessor("order", {
           header: "순서",
+          size: 64,
           meta: {
-            className: "hidden w-16 text-center md:table-cell text-muted-foreground text-sm",
+            className: "text-center text-muted-foreground text-sm",
           },
           cell: ({ row: { original: song } }) => <>{song.order}</>,
           sortFn: "basic",
@@ -138,7 +152,9 @@ export function SongManagerTable({
         column.display({
           id: "actions",
           header: "관리",
-          meta: { className: "w-24 text-right" },
+          size: 104,
+          minSize: 104,
+          meta: { className: "text-right" },
           cell: ({ row: { original: song } }) => (
             <>
               {canManage && (
@@ -172,6 +188,7 @@ export function SongManagerTable({
   const table = useAppTable({
     columns,
     data: songs,
+    state: { columnVisibility: { order: showOrder, album: showAlbum, slug: showSlug } },
     getRowId: (row) => String(row.id),
     initialState: { pagination: { pageIndex: 0, pageSize: 15 } },
   });

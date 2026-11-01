@@ -6,6 +6,7 @@ import { Edit, Trash2 } from "lucide-react";
 
 import type { AdminAlbumSummary } from "@/entities/album";
 
+import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { createAppColumnHelper, dataTableComponents, useAppTable } from "@/shared/ui/data-table";
@@ -22,11 +23,15 @@ const column = createAppColumnHelper<AdminAlbumSummary>();
 export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDelete }: Props) {
   "use no memo";
   // AppTable은 내부 ref로 options를 읽는다. 자동 memo가 권한/DTO 변경 렌더를 건너뛰지 않게 한다.
+  const showSlug = useMediaQuery("(min-width: 1024px)");
+  const showReleaseDate = useMediaQuery("(min-width: 1280px)");
   const columns = useMemo(
     () =>
       column.columns([
         column.accessor("name", {
           header: "이름",
+          size: 280,
+          minSize: 160,
           meta: { className: "font-medium whitespace-normal" },
           cell: ({ row: { original: album } }) => (
             <span className="block break-words">{album.name}</span>
@@ -34,8 +39,10 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
         }),
         column.accessor("slug", {
           header: "Slug",
+          size: 176,
+          minSize: 120,
           meta: {
-            className: "hidden lg:table-cell text-muted-foreground text-xs w-44",
+            className: "text-muted-foreground text-xs",
           },
           cell: ({ row: { original: album } }) => (
             <span className="block truncate" title={album.slug}>
@@ -45,7 +52,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
         }),
         column.accessor("color", {
           header: "색상",
-          meta: { className: "w-16" },
+          size: 64,
           cell: ({ row: { original: album } }) => (
             <>
               <div
@@ -59,7 +66,9 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
         }),
         column.accessor("isVisible", {
           header: "표시",
-          meta: { className: "w-16 text-center" },
+          size: 80,
+          minSize: 80,
+          meta: { className: "text-center" },
           cell: ({ row: { original: album } }) => (
             <>
               <Badge
@@ -74,8 +83,10 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
         }),
         column.accessor("releaseDate", {
           header: "발매일",
+          size: 128,
+          minSize: 112,
           meta: {
-            className: "hidden xl:table-cell text-muted-foreground text-sm w-32",
+            className: "text-muted-foreground text-sm",
           },
           cell: ({ row: { original: album } }) => (
             <>{album.releaseDate ? new Date(album.releaseDate).toLocaleDateString("ko-KR") : "-"}</>
@@ -84,7 +95,9 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
         column.display({
           id: "actions",
           header: "관리",
-          meta: { className: "w-24 text-right" },
+          size: 104,
+          minSize: 104,
+          meta: { className: "text-right" },
           cell: ({ row: { original: album } }) => (
             <>
               {canManage && (
@@ -118,6 +131,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
   const table = useAppTable({
     columns,
     data: albums,
+    state: { columnVisibility: { slug: showSlug, releaseDate: showReleaseDate } },
     getRowId: (row) => String(row.id),
     initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
   });
