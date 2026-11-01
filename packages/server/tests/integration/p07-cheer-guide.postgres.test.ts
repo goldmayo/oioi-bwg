@@ -11,6 +11,7 @@ import {
   deleteSong,
   editSong,
   getAdminSongEditorBySlug,
+  getAdminSongInformation,
   getSongDetailBySlug,
   saveSongLyrics,
 } from "@oioi-bwg/server/services/song-service";
@@ -715,6 +716,46 @@ test("Domain §8.0 rejects changed source fingerprints and conflicting mapping I
       .from(schema.cheerGuideSnapshot)
       .where(eq(schema.cheerGuideSnapshot.cheerGuideId, f.entry.guideId)),
   ).toHaveLength(1);
+});
+
+test("관리자 UUID 조회는 숨김·null slug와 두 모드 정보를 한 쿼리로 읽고 내용 이력을 노출하지 않는다", async () => {
+  const f = await importFixture();
+  await importLegacyGuide(f.context, f.entry, true);
+  const [festival] = await database
+    .insert(schema.cheerGuide)
+    .values({ songId: f.row.id, mode: "FESTIVAL" })
+    .returning();
+  await database
+    .update(schema.song)
+    .set({ slug: null, isVisible: false })
+    .where(eq(schema.song.id, f.row.id));
+  try {
+    observedQueries.length = 0;
+    const information = await getAdminSongInformation(f.context, f.row.id);
+    expect(observedQueries).toHaveLength(1);
+    expect(information).toMatchObject({
+      id: f.row.id,
+      slug: null,
+      isVisible: false,
+      hasLyrics: true,
+      guideWrite: { guideId: f.entry.guideId, lockVersion: 1 },
+      cheerGuides: [
+        {
+          id: f.entry.guideId,
+          mode: "CONCERT",
+          currentPublication: { action: "PUBLISH", sourceType: "FANDOM" },
+        },
+        { id: festival!.id, mode: "FESTIVAL", currentPublication: null },
+      ],
+    });
+    expect(information).not.toHaveProperty("lyrics");
+    expect(information.cheerGuides[0]).not.toHaveProperty("legacyWriteTarget");
+  } finally {
+    await database
+      .update(schema.song)
+      .set({ slug: f.row.slug, isVisible: f.row.isVisible })
+      .where(eq(schema.song.id, f.row.id));
+  }
 });
 
 test("Domain §8.0 serves current published modes in default order without internal history fields", async () => {

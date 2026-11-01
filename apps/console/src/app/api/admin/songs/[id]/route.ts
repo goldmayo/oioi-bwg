@@ -1,9 +1,14 @@
 import {
   adminSongIdParamsSchema,
+  adminSongInformationSchema,
   adminSongMutationResultSchema,
   updateAdminSongSchema,
 } from "@oioi-bwg/contracts/song";
-import { deleteSong, editSong } from "@oioi-bwg/server/services/song-service";
+import {
+  deleteSong,
+  editSong,
+  getAdminSongInformation,
+} from "@oioi-bwg/server/services/song-service";
 
 import { getRequestAuthorization, type RequestAuthorization } from "@/server/auth/request-context";
 import { jsonResponse, parseJsonRequest, toErrorResponse } from "@/server/http/api-response";
@@ -13,6 +18,26 @@ import { readRequestObservation } from "@/shared/lib/observability-correlation";
 
 interface SongRouteContext {
   params: Promise<{ id: string }>;
+}
+
+export async function GET(request: Request, context: SongRouteContext) {
+  let authorization: RequestAuthorization | undefined;
+  try {
+    const { id } = adminSongIdParamsSchema.parse(await context.params);
+    const song = await getAdminSongInformation(
+      (authorization = await getRequestAuthorization()).context,
+      id,
+    );
+    return jsonResponse(adminSongInformationSchema, song, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  } catch (error) {
+    return toErrorResponse(error, {
+      route: "/api/admin/songs/[id]",
+      ...readRequestObservation(request.headers, "/api/admin/songs/[id]"),
+      authorization,
+    });
+  }
 }
 
 export async function PATCH(request: Request, context: SongRouteContext) {

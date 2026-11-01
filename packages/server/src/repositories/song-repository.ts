@@ -11,6 +11,38 @@ import { SongSlugConflictError, CheerGuideReferenceError } from "./repository-er
 
 type SongUpdateRow = Partial<Omit<InsertSongRow, "slug">>;
 
+export function findAdminSongInformationById(executor: DbExecutor, id: string) {
+  return executor.query.song.findFirst({
+    where: (table, { eq: equals }) => equals(table.id, id),
+    columns: {
+      id: true,
+      albumId: true,
+      title: true,
+      slug: true,
+      youtubeId: true,
+      hasOfficialCheer: true,
+      isTitle: true,
+      isVisible: true,
+      order: true,
+      updatedAt: true,
+      lyrics: true,
+    },
+    with: {
+      album: { columns: { name: true } },
+      cheerGuides: {
+        columns: { id: true, mode: true, legacyWriteTarget: true, lockVersion: true },
+        orderBy: (table, { asc: ascending }) => [ascending(table.mode)],
+        with: {
+          currentPublication: {
+            columns: { action: true },
+            with: { snapshot: { columns: { sourceType: true } } },
+          },
+        },
+      },
+    },
+  });
+}
+
 export function findSongBySlug(executor: DbExecutor, slug: string) {
   return executor.query.song.findFirst({
     where: (table, { and, eq: equals }) =>
