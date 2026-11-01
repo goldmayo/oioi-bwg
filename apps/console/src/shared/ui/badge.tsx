@@ -6,15 +6,23 @@ import { Slot } from "radix-ui";
 
 import { cn } from "@/shared/lib/utils";
 
+const paletteBadgeClasses =
+  "border-[color-mix(in_oklab,var(--badge-color)_30%,var(--border))] bg-[color-mix(in_oklab,var(--badge-color)_10%,var(--muted))] text-foreground before:size-1.5 before:shrink-0 before:rounded-full before:border before:border-foreground/15 before:bg-[var(--badge-color)] before:content-['']";
+
 const badgeVariants = cva(
   "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
-        secondary: "bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
-        destructive:
-          "bg-destructive text-white focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90",
+        default: "border-border bg-muted text-foreground [a&]:hover:bg-accent",
+        secondary: "border-border bg-muted text-foreground [a&]:hover:bg-accent",
+        q: `${paletteBadgeClasses} [--badge-color:var(--qwer-q)]`,
+        w: `${paletteBadgeClasses} [--badge-color:var(--qwer-w)]`,
+        e: `${paletteBadgeClasses} [--badge-color:var(--qwer-e)]`,
+        r: `${paletteBadgeClasses} [--badge-color:var(--qwer-r)]`,
+        bwg: `${paletteBadgeClasses} [--badge-color:var(--qwer-bwg)]`,
+        rockation: `${paletteBadgeClasses} [--badge-color:var(--qwer-rockation)]`,
+        destructive: `${paletteBadgeClasses} [--badge-color:var(--destructive)] focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40`,
         outline:
           "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
