@@ -190,7 +190,7 @@ export function SongManagerTable({
     data: songs,
     state: { columnVisibility: { order: showOrder, album: showAlbum, slug: showSlug } },
     getRowId: (row) => String(row.id),
-    initialState: { pagination: { pageIndex: 0, pageSize: 15 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
   });
   return (
     <SelectionContext value={{ selectedIds, onSelect, canManage }}>
@@ -210,7 +210,7 @@ export function SongManagerTable({
               }
             />
           </DataTable.Table>
-          <DataTable.Pagination label="곡 목록 페이지" />
+          <DataTable.Pagination label="곡 목록 페이지" pageSizes={[10, 20, 50]} />
         </div>
       </DataTable.Root>
     </SelectionContext>
