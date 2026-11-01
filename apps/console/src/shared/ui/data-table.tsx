@@ -6,6 +6,9 @@ import type {
   DataTableComponents,
 } from "@oioi-bwg/ui/data-table";
 import {
+  columnResizingFeature,
+  columnSizingFeature,
+  columnVisibilityFeature,
   createPaginatedRowModel,
   createSortedRowModel,
   createTableHook,
@@ -29,6 +32,9 @@ export const dataTableComponents = { Button: TableButton } satisfies DataTableCo
 const features = tableFeatures({
   rowSortingFeature,
   rowPaginationFeature,
+  columnSizingFeature,
+  columnResizingFeature,
+  columnVisibilityFeature,
   sortedRowModel: createSortedRowModel(),
   paginatedRowModel: createPaginatedRowModel(),
   sortFns: { text: sortFn_text, basic: sortFn_basic },
@@ -37,5 +43,6 @@ const features = tableFeatures({
 
 export const { useAppTable, createAppColumnHelper } = createTableHook({
   features,
-  defaultColumn: { sortFn: "text", sortDescFirst: false },
+  defaultColumn: { sortFn: "text", sortDescFirst: false, minSize: 64, maxSize: 640 },
+  columnResizeMode: "onChange",
 });

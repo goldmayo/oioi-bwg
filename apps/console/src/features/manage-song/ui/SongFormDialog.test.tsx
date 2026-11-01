@@ -10,6 +10,9 @@ import { ApiError } from "@/shared/api/http-errors";
 import { SongFormDialog } from "./SongFormDialog";
 import { SongManagerTable } from "./SongManagerTable";
 
+// Slug 표시 회귀는 해당 열이 보이는 데스크톱 화면에서 검증한다.
+vi.mock("@/shared/model/useMediaQuery", () => ({ useMediaQuery: () => true }));
+
 vi.mock("@/shared/ui/dialog", () => {
   const Part = ({ children }: { children?: ReactNode }) => <>{children}</>;
   return {
