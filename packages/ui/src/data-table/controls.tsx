@@ -488,9 +488,9 @@ export function Pagination({
             </Button>
             {pageSizes && (
               <label className="flex items-center gap-2 text-sm">
-                페이지당 행
+                표시 개수
                 <select
-                  aria-label="페이지당 행"
+                  aria-label="표시 개수"
                   className={inputClass}
                   value={pagination.pageSize}
                   onChange={(event) =>
@@ -499,7 +499,7 @@ export function Pagination({
                 >
                   {sizes.map((size) => (
                     <option key={size} value={size}>
-                      {size}
+                      {size}개씩 보기
                     </option>
                   ))}
                 </select>

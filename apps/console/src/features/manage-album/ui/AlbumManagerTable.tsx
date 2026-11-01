@@ -147,7 +147,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
             emptyState={<>{hasFilter ? "검색 결과가 없습니다." : "등록된 앨범이 없습니다."}</>}
           />
         </DataTable.Table>
-        <DataTable.Pagination label="앨범 목록 페이지" />
+        <DataTable.Pagination label="앨범 목록 페이지" pageSizes={[10, 20, 50]} />
       </div>
     </DataTable.Root>
   );

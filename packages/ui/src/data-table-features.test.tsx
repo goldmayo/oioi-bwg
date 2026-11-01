@@ -67,7 +67,7 @@ describe("15개 공식 기능의 compound 조합", () => {
     expect(grid().querySelector("tfoot")).toHaveTextContent("3,000,000");
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     expect(ids()[0]).toBe("order-19");
-    fireEvent.change(screen.getByLabelText("페이지당 행"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("표시 개수"), { target: { value: "10" } });
     expect(ids()).toHaveLength(10);
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
   });
