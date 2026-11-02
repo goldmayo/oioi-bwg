@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { LogOut, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { type ReactNode, useState } from "react";
+import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
-
-import { signOut } from "@/features/auth";
 
 import { adminPaths } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
@@ -17,19 +15,18 @@ import {
   SheetTrigger,
 } from "@/shared/ui/sheet";
 
-import type { AdminBreadcrumb } from "../_config/admin-navigation";
-
-import { AdminBreadcrumbs } from "./admin-breadcrumbs";
-import { NotificationBell } from "./notification-bell";
-
 export function AdminShell({
   navigation: navContent,
   breadcrumbs,
+  headerActions,
+  sidebarFooter,
   children,
 }: {
-  navigation: React.ReactNode;
-  breadcrumbs: AdminBreadcrumb[];
-  children?: React.ReactNode;
+  navigation: ReactNode;
+  breadcrumbs: ReactNode;
+  headerActions: ReactNode;
+  sidebarFooter: ReactNode;
+  children?: ReactNode;
 }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -59,24 +56,14 @@ export function AdminShell({
         <Button
           variant="ghost"
           className="text-muted-foreground hover:text-foreground hidden min-h-11 w-full justify-start gap-3 px-3 group-data-[collapsed=true]/sidebar:justify-center md:flex"
-          onClick={() => setIsMinimized(!isMinimized)}
+          onClick={() => setIsMinimized((current) => !current)}
           aria-label={isMinimized ? "사이드바 열기" : "사이드바 접기"}
           aria-expanded={!isMinimized}
         >
           {isMinimized ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
           <span className="group-data-[collapsed=true]/sidebar:hidden">메뉴 접기</span>
         </Button>
-        <Button
-          variant="ghost"
-          className="text-muted-foreground hover:text-destructive min-h-11 w-full justify-start gap-3 px-3 group-data-[collapsed=true]/sidebar:justify-center"
-          aria-label="로그아웃"
-          onClick={() => {
-            if (confirm("로그아웃하시겠습니까?")) void signOut();
-          }}
-        >
-          <LogOut size={18} aria-hidden="true" />
-          <span className="group-data-[collapsed=true]/sidebar:hidden">로그아웃</span>
-        </Button>
+        {sidebarFooter}
       </div>
     </>
   );
@@ -97,9 +84,9 @@ export function AdminShell({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="bg-background border-border flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 md:min-h-20">
           <div className="md:hidden">{brand}</div>
-          <AdminBreadcrumbs items={breadcrumbs} />
+          {breadcrumbs}
           <div className="ml-auto flex items-center gap-2">
-            <NotificationBell />
+            {headerActions}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button
