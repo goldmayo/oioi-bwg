@@ -152,17 +152,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
+        with:
+          cleanup: false # The GitHub-hosted VM is discarded after this job.
       - name: Build and verify Rust toolchain
+        uses: docker/build-push-action@v6
+        with:
+          context: ops/waveform
+          file: ops/waveform/Dockerfile
+          platforms: linux/arm64
+          provenance: false
+          load: true
+          tags: oioi-bwg:waveform-check
+          cache-from: type=gha,scope=waveform-rust-arm64
+          cache-to: type=gha,scope=waveform-rust-arm64,mode=max,timeout=60s,ignore-error=true
+      - name: Verify Rust worker execution
         run: |
-          docker buildx build --platform linux/arm64 --provenance=false --load \
-            -t oioi-bwg:waveform-check -f ops/waveform/Dockerfile ops/waveform
           image=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check)
           python3 tests/ops/waveform-smoke.py "$image"
           python3 tests/ops/waveform-acquisition.py "$image"
       - name: Verify Go Runner Queue publisher on ARM64
-        run: |
-          docker buildx build --platform linux/arm64 --provenance=false --load \
-            -t oioi-bwg:runner-check -f ops/waveform-runner/Dockerfile ops/waveform-runner
+        uses: docker/build-push-action@v6
+        with:
+          context: ops/waveform-runner
+          file: ops/waveform-runner/Dockerfile
+          platforms: linux/arm64
+          provenance: false
+          load: true
+          tags: oioi-bwg:runner-check
+          cache-from: type=gha,scope=waveform-go-arm64
+          cache-to: type=gha,scope=waveform-go-arm64,mode=max,timeout=60s,ignore-error=true
       - name: Verify Docker worker lifecycle with synthetic input
         run: |
           test_dir=$(mktemp -d)
@@ -214,7 +232,7 @@ jobs:
           mkdir -p "$output"
           image=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check)
           test "$(docker image inspect --format '{{.Architecture}}' "$image")" = arm64
-          docker image save "$image" | gzip -n > "$output/worker-image.tar.gz"
+          docker image save "$image" | gzip -n -1 > "$output/worker-image.tar.gz"
           printf '%s\n' "$image" > "$output/image-id.txt"
           git rev-parse HEAD > "$output/verified-commit.txt"
           git rev-parse 'HEAD^{tree}' > "$output/verified-tree.txt"
@@ -473,7 +491,7 @@ jobs:
           docker load --input "${{ runner.temp }}/ci-build/console-image.tar"
 
       - name: Install smoke test browser
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps --only-shell chromium
 
       - name: Prepare isolated lyrics regression fixture
         env:

@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { expect, test, vi } from "vitest";
 

@@ -1,10 +1,10 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.22"
+version: "1.23"
 status: "active"
 authority: "architecture"
-updated_at: "2026-11-02"
+updated_at: "2026-11-03"
 depends_on:
   - "01"
   - "02"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.22
+# oioi-bwg Testing Architecture v1.23
 
 ## 1. 목적
 
@@ -323,6 +323,13 @@ fixture가 반복될 때 작은 builder를 사용할 수 있다.
   `tsc`에 전달하지 않는다. ESLint content cache와 Turbo의 입력별 task cache를 사용한다.
 - 공용 설정·manifest·저장소 도구 변경이면 repo 검사도 포함한다. 앱 소스 변경의 의존성 검사는
   선택된 workspace의 source/config graph를 대상으로 하고, 공용 입력 변경은 전체 graph를 검사한다.
+- 2026-11-03 보완: 단순 Root 운영 스크립트 수정은 변경 파일 lint·관련 ops 테스트와 필요한 Root 타입
+  프로그램만 검사한다. Turbo가 Root 변경을 전체 workspace로 반환해도 제품 검사로 확대하지 않는다.
+  제품 변경은 해당 workspace와 Turbo dependents selector를 `--affected`와 교차해 선택한다.
+  Root 문서·운영 스크립트가 함께 바뀌어도 무관한 앱을 선택하지 않으며 자체 의존 그래프를 만들지 않는다.
+  전체 repo 검사는 Root 공용 task/의존성/타입·lint 설정 및 저장소 도구 변경에 한정한다.
+  로컬 harness는 직접 수정한 테스트 파일만 실행하고 전체 architecture harness는 CI·명시적 검증이 소유한다.
+  문서 시안의 이미지·HTML·폰트·JSON·텍스트 파일은 로컬 코드 검증 대상에서 제외한다.
 - 로컬 기본 경로에서 build·DB 통합·ARM64·인프라 검사를 반복하지 않는다. 변경 위험 때문에
   추가 검증이 필요하면 해당 workspace·흐름을 명시해 실행하고 결과를 PR에 기록한다.
 - `migration_main` 병합 전 최종 PR 커밋은 기존 CI의 전체 quality/unit/PG/ARM64/build 검증을 통과한다.
@@ -359,6 +366,9 @@ Root는 내부 workspace 의존성을 선언하거나 제품 package를 직접 i
 affected 선택·hash 변화·실제 실행을 구분하고 필요한 무효화와 무관한 cache 보존을 함께 증명한다.
 
 Web과 Console은 독립 FSD root에서 lint/type-check/unit/build를 실행한다.
+양 앱의 `src/server`·`src/app/api` 단위 테스트는 파일별 `@vitest-environment node`로 Node 환경을
+명시하며 DOM 초기화를 생략한다. UI·브라우저 hook 테스트는 기존 jsdom과 DOM setup을 유지한다.
+환경 분리 때문에 테스트 수집·assertion·파일 격리를 제거하지 않는다.
 각 앱의 alias와 테스트 include는 다른 앱의 소스·테스트를 읽지 않도록 해당 workspace가 소유한다.
 Web·Console·server·contracts의 type-check는 소스와 자체 Node 설정 프로그램을 함께 실행한다.
 Next·ESLint·Vitest·Steiger 진입점은 해당 workspace의 tsconfig.config.json이 소유하며 앱 alias를

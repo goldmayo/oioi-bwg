@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { expect, test } from "vitest";
 
-import { localVerificationPlan } from "../../scripts/verify-local.mjs";
+import { localVerificationPlan, workspaceFilters } from "../../scripts/verify-local.mjs";
 
 const packages = [{ name: "@oioi-bwg/console", path: "apps/console" }];
 const base = "a".repeat(40);
@@ -14,6 +14,7 @@ test("Console UI 변경은 관련 프로젝트·테스트·경계만 검사한�
   const files = ["apps/console/src/page.tsx", "docs/WORK.md", ".impeccable/hook.cache.json"];
   const plan = localVerificationPlan({ files, base, packages });
   expect(plan[0]).toContain("--affected");
+  expect(plan[0]).toContain("--filter=...@oioi-bwg/console");
   expect(plan[1]).toContain(`--changed=${base}`);
   expect(plan).toContainEqual([
     "--filter",
@@ -28,6 +29,13 @@ test("Console UI 변경은 관련 프로젝트·테스트·경계만 검사한�
   expect(plan.at(-1)).toEqual(["exec", "prettier", "--check", "--ignore-unknown", "--", files[0]]);
 });
 
+test("문서·Root 스크립트가 함께 바뀌어도 Console과 그 consumer만 선택한다", () => {
+  const all = [...packages, { name: "@oioi-bwg/web", path: "apps/web" }];
+  const files = ["apps/console/src/page.tsx", "scripts/verify-local.mjs", "docs/prototype/a.html"];
+  expect(workspaceFilters(files, all)).toEqual(["--filter=...@oioi-bwg/console"]);
+  expect(workspaceFilters([...files, "pnpm-lock.yaml"], all)).toEqual([]);
+});
+
 test("공용 설정 변경은 저장소 검사도 선택하되 운영 테스트는 관련 항목으로 제한한다", () => {
   const plan = localVerificationPlan({
     files: ["packages/config/typescript/base.json"],
@@ -36,7 +44,7 @@ test("공용 설정 변경은 저장소 검사도 선택하되 운영 테스트�
   });
   expect(plan).toContainEqual(["type-check:repo"]);
   expect(plan).toContainEqual(["lint:deps"]);
-  expect(plan).toContainEqual(["test:harness"]);
+  expect(plan.flat()).not.toContain("test:harness");
   expect(plan).toContainEqual(["test:ops", `--changed=${base}`, "--passWithNoTests"]);
 });
 
@@ -53,8 +61,48 @@ test("삭제만 한 소스도 검사하며 포맷에는 존재하는 파일만 �
 });
 
 test("문서·빈 변경에는 코드 검사를 실행하지 않는다", () => {
-  for (const files of [[], ["docs/WORK.md"], [".impeccable/hook.cache.json"]])
+  for (const files of [
+    [],
+    ["docs/WORK.md"],
+    [".impeccable/hook.cache.json"],
+    [
+      "docs/prototype/screen.html",
+      "docs/prototype/screen.png",
+      "docs/prototype/font.woff2",
+      "docs/prototype/OFL.txt",
+    ],
+  ])
     expect(localVerificationPlan({ files, base, packages })).toEqual([]);
+});
+
+test("브라우저 smoke 선택자 변경은 루트 전체 타입·아키텍처 검증으로 확대하지 않는다", () => {
+  const file = "tests/ops/console-standalone-smoke.mjs";
+  // Turbo가 root 변경을 모든 workspace로 반환해도 제품 검사로 확대하지 않는다.
+  const plan = localVerificationPlan({ files: [file], base, packages });
+  expect(plan).toContainEqual(["exec", "eslint", "--", file]);
+  expect(plan).toContainEqual(["test:ops", `--changed=${base}`, "--passWithNoTests"]);
+  for (const command of [
+    "turbo",
+    "type-check:repo",
+    "lint:repo",
+    "lint:deps",
+    "test:harness",
+    "build",
+  ])
+    expect(plan.flat()).not.toContain(command);
+});
+
+test("소유자가 없는 변경을 무거운 검사로 바꾸거나 조용히 생략하지 않는다", () => {
+  expect(() =>
+    localVerificationPlan({ files: ["unknown/new-file.py"], base, packages: [] }),
+  ).toThrow("소유 범위");
+});
+
+test("Root 운영 테스트 수정은 Tool 테스트 타입 프로그램까지 반복하지 않는다", () => {
+  const plan = localVerificationPlan({ files: ["tests/ops/verify-local.test.ts"], base, packages });
+  expect(plan).toContainEqual(["exec", "tsc", "--noEmit", "-p", "tests/tsconfig.json"]);
+  expect(plan.flat()).not.toContain("type-check:tests");
+  expect(plan.flat()).not.toContain("turbo");
 });
 
 test("영향 workspace가 누락되면 검사를 성공으로 건너뛰지 않는다", () => {

@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const logServerError = vi.hoisted(() => vi.fn());
 const id = "0123456789abcdef0123456789abcdef";

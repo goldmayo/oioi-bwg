@@ -269,6 +269,8 @@ pnpm verify --dry-run
 증분 type-check·캐시 lint·Vitest 관련 테스트·해당 workspace 경계를 검사한다.
 공용 설정·저장소 도구 변경은 실제 영향에 따라 repo 검사도 포함한다. 검사 범위를 먼저 출력하며,
 기준 판정 실패 시 전체 검증으로 조용히 확대하지 않고 중단한다.
+단순 운영 스크립트 수정 때문에 제품 전체·repo 전체·전체 harness를 실행하지 않는다.
+문서 시안의 정적 자산은 로컬 코드 검증에서 제외한다. 상세 범위는 Testing Architecture §17을 따른다.
 
 `migration_main` 병합 전에는 최종 PR 커밋의 CI 전체 검증을 통과해야 한다.
 로컬에서 CI 전체 검증을 반복하지 않는다. 명시적 전체 재현 명령은 `pnpm verify:full`이며,

@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { takeOperatorQuota } from "./boundary";
