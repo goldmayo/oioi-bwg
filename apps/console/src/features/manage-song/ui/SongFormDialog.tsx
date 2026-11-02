@@ -1,14 +1,11 @@
 "use client";
 
-import { type ReactNode, useCallback, useState } from "react";
-import { useForm, type UseFormReturn } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 import type { AdminAlbumSummary } from "@/entities/album";
 import type { AdminSongSummary } from "@/entities/song";
 
-import { ApiError, getValidationFieldErrors } from "@/shared/api/http-errors";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -31,7 +28,8 @@ import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Switch } from "@/shared/ui/switch";
 
-import { type SongEditInput, songEditSchema, type SongEditValues } from "../model/schemas";
+import type { SongEditValues } from "../model/schemas";
+import { useSongForm } from "../model/use-song-form";
 
 import { LrcUploader } from "./LrcUploader";
 
@@ -47,44 +45,6 @@ interface SongFormDialogProps {
   onSubmit: (values: SongEditValues) => Promise<void>;
 }
 
-const songFormFieldNames = [
-  "albumId",
-  "title",
-  "slug",
-  "youtubeId",
-  "hasOfficialCheer",
-  "isTitle",
-  "isVisible",
-  "order",
-  "lrcText",
-] as const;
-
-function applySongFormError(
-  error: unknown,
-  form: UseFormReturn<SongEditInput, unknown, SongEditValues>,
-  setLrcError: (message: string) => void,
-) {
-  const fieldErrors = getValidationFieldErrors(error);
-  const isSlugConflict =
-    error instanceof ApiError &&
-    (error.code === "SONG_SLUG_ALREADY_EXISTS" || error.code === "SONG_SLUG_IMMUTABLE");
-
-  for (const fieldName of songFormFieldNames) {
-    const message = fieldErrors?.[fieldName]?.[0];
-    if (message) form.setError(fieldName, { message });
-  }
-
-  if (isSlugConflict) form.setError("slug", { message: error.message });
-
-  if (error instanceof ApiError && error.code === "SONG_LYRICS_INVALID") {
-    setLrcError(error.message);
-  } else if (!isSlugConflict && (!fieldErrors || Object.keys(fieldErrors).length === 0)) {
-    form.setError("root.server", {
-      message: error instanceof Error ? error.message : "곡 저장에 실패했습니다.",
-    });
-  }
-}
-
 export function SongFormDialog(props: SongFormDialogProps) {
   return props.open ? <SongFormSession {...props} /> : null;
 }
@@ -98,55 +58,13 @@ function SongFormSession({
   song,
   onSubmit,
 }: SongFormDialogProps) {
-  const isEdit = !!song;
-  const hasImmutableSlug = song !== undefined && song.slug !== null;
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lrcError, setLrcError] = useState<string | null>(null);
-
-  // songEditSchema(lrcText optional)로 통일하여 타입 호환성 문제를 피한다.
-  // 생성 시 lrcText 필수 검증은 onSubmit에서 직접 수행
-  const form = useForm<SongEditInput, unknown, SongEditValues>({
-    resolver: zodResolver(songEditSchema),
-    defaultValues: {
-      albumId: song?.albumId ?? "",
-      title: song?.title ?? "",
-      slug: song?.slug ?? "",
-      youtubeId: song?.youtubeId ?? "",
-      hasOfficialCheer: song?.hasOfficialCheer ?? false,
-      isTitle: song?.isTitle ?? false,
-      isVisible: song?.isVisible ?? true,
-      order: song?.order ?? 0,
-      lrcText: "",
-    },
-  });
-
-  const handleSubmit = useCallback(
-    async (values: SongEditValues) => {
-      if (!canSubmit) return;
-      if (!isEdit && values.slug === "") {
-        form.setError("slug", { message: "slug를 입력해주세요." });
-        return;
-      }
-      // 생성 시 lrcText 필수 검증
-      if (!isEdit && (!values.lrcText || values.lrcText.trim() === "")) {
-        setLrcError("LRC 파일을 업로드해주세요.");
-        return;
-      }
-      setLrcError(null);
-      form.clearErrors("root.server");
-
-      setIsSubmitting(true);
-      try {
-        await onSubmit(values);
-        onOpenChange(false);
-      } catch (error) {
-        applySongFormError(error, form, setLrcError);
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [canSubmit, form, isEdit, onOpenChange, onSubmit],
-  );
+  const { form, handleSubmit, isEdit, hasImmutableSlug, isSubmitting, lrcError, clearLrcError } =
+    useSongForm({
+      song,
+      canSubmit,
+      onSubmit: (values) => onSubmit(values),
+      onSaved: () => onOpenChange(false),
+    });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -328,7 +246,7 @@ function SongFormSession({
                     value={field.value}
                     onLrcParsed={(text) => {
                       field.onChange(text);
-                      setLrcError(null);
+                      clearLrcError();
                     }}
                     error={lrcError || fieldState.error?.message}
                   />
