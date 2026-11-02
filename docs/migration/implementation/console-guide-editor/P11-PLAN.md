@@ -243,7 +243,7 @@ GripVertical 버튼을 사용하며 hover가 없는 터치에서는 표시한다
 팝오버 버튼의 중심선을 맞춘다. 곡의 순서는 중앙 정렬, 앨범 열의 기본 너비는 270px이다.
 
 추가 버튼은 Q 토큰·장식 아이콘 없음, 취소는 destructive outline을 사용한다. 출처는 공식/Q·팬덤/W,
-모드는 단콘/R·페벌/E 배지로 표시한다. 공개/비공개 아이콘은 CircleCheckBig/success·Lock/warning이며,
+모드는 단콘/R·페벌/E 배지로 표시한다. 공개/비공개 아이콘은 CircleCheckBig/success·CircleX/destructive이며,
 Guide의 공개 조치와 실제 사용자 노출의 도메인 판정을 합치지 않는다. 날짜 표시는 `yyyy.MM.dd`다.
 곡 추가는 1열·사용자 노출 명칭, 응원법 추가는 공연 모드 라디오·`추가` 버튼·중복 복귀 링크 제거를 적용한다.
 설명은 HTML이 아닌 일반 텍스트이며 React escaping을 유지한다. 앨범에는 행 선택과 명시적 해제를 추가한다.

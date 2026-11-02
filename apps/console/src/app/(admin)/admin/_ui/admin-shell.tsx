@@ -5,6 +5,7 @@ import { Menu, PanelLeft, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 
 import { adminPaths } from "@/shared/config/admin-routes";
+import { AppLogo } from "@/shared/ui/app-logo";
 import { Button } from "@/shared/ui/button";
 import {
   Sheet,
@@ -30,26 +31,13 @@ export function AdminShell({
 }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const brandMark = (
-    <span className="bg-qwer-rockation size-2 shrink-0 rounded-full" aria-hidden="true" />
-  );
   const brand = (
     <Link
       href={adminPaths.dashboard}
       aria-label="OIOIBWG 대시보드 홈"
       className="text-foreground flex min-h-11 min-w-11 items-center gap-2 rounded-md group-data-[collapsed=true]/sidebar:justify-center focus-visible:outline-2 focus-visible:outline-offset-4"
     >
-      {brandMark}
-      <span
-        className="text-lg font-black tracking-tighter group-data-[collapsed=true]/sidebar:hidden"
-        aria-hidden="true"
-      >
-        <span className="text-qwer-q">O</span>
-        <span className="text-qwer-w">I</span>
-        <span className="text-qwer-e">O</span>
-        <span className="text-qwer-r">I</span>
-        <span>BWG</span>
-      </span>
+      <AppLogo />
     </Link>
   );
   const navigation = (
@@ -82,7 +70,7 @@ export function AdminShell({
                 className="inline-flex transition-opacity group-hover/brand:opacity-0 group-focus-visible/brand:opacity-0"
                 aria-hidden="true"
               >
-                {brandMark}
+                <AppLogo compact />
               </span>
               <PanelLeftOpen
                 className="absolute size-5 opacity-0 transition-opacity group-hover/brand:opacity-100 group-focus-visible/brand:opacity-100"

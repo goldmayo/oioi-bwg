@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { AppLogo } from "@/shared/ui/app-logo";
 import { Button } from "@/shared/ui/button";
 import {
   Card,
@@ -19,8 +20,8 @@ import { useConsoleLoginForm } from "../model/use-console-login-form";
 import { CredentialsFields, OtpField } from "./LoginFields";
 
 const screens = {
-  credentials: { description: "관리자 계정으로 로그인하세요.", submitLabel: "다음" },
-  login: { description: "관리자 계정으로 로그인하세요.", submitLabel: "로그인" },
+  credentials: { description: null, submitLabel: "다음" },
+  login: { description: null, submitLabel: "로그인" },
   setup: { description: "관리자 인증기 등록", submitLabel: "QR 생성" },
   confirm: { description: "관리자 인증기 등록", submitLabel: "등록 확인" },
   complete: { description: "인증기 등록 완료", submitLabel: "로그인으로 돌아가기" },
@@ -46,12 +47,14 @@ export default function LoginForm({
   const showCredentials = step.kind === "credentials" || step.kind === "setup";
 
   return (
-    <Card className="border-border bg-card shadow-xl">
+    <Card className="border-border bg-card pb-4 shadow-xl">
       <CardHeader className="space-y-1 text-center">
-        <CardTitle className="text-foreground text-2xl font-bold tracking-tight">
-          어이어이 바위게
+        <CardTitle className="flex justify-center">
+          <AppLogo className="text-2xl" />
         </CardTitle>
-        <CardDescription className="text-muted-foreground">{screen.description}</CardDescription>
+        {screen.description && (
+          <CardDescription className="text-muted-foreground">{screen.description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent>
         {step.kind === "navigating" ? (
@@ -98,11 +101,7 @@ export default function LoginForm({
               ) : (
                 <OtpField control={form.control} disabled={disabled} />
               )}
-              <Button
-                type="submit"
-                className="bg-qwer-w hover:bg-qwer-w/90 h-11 w-full font-bold text-white"
-                disabled={disabled}
-              >
+              <Button type="submit" className="h-11 w-full font-bold" disabled={disabled}>
                 {loading ? "확인 중..." : screen.submitLabel}
               </Button>
               {step.kind === "credentials" ? (
@@ -132,7 +131,7 @@ export default function LoginForm({
           </Form>
         )}
       </CardContent>
-      <CardFooter className="border-border/50 flex justify-center border-t pt-4">
+      <CardFooter className="border-border/50 flex justify-center border-t pt-3!">
         <Link href="/" className="text-muted-foreground hover:text-foreground text-sm">
           홈으로 돌아가기
         </Link>
