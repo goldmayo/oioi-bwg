@@ -14,6 +14,7 @@ import {
   lockSongForGuideWrite,
   insertGuideDraft,
   insertNextGuideSnapshot,
+  setGuideWorkingSnapshot,
 } from "../repositories/cheer-guide-repository";
 
 /** 공개 조치 없이 Guide와 불변 첫 작업본을 함께 저장한다. */
@@ -29,7 +30,7 @@ export async function createAdminCheerGuide(ctx: RequestContext, input: CreateAd
     if (!song.youtubeId?.trim()) throw new AppError("CHEER_GUIDE_SOURCE_INVALID");
     const guide = await insertGuideDraft(tx, { songId: input.songId, mode: input.mode });
     if (!guide) throw new AppError("CHEER_GUIDE_ALREADY_EXISTS");
-    await insertNextGuideSnapshot(tx, {
+    const snapshot = await insertNextGuideSnapshot(tx, {
       cheerGuideId: guide.id,
       lyrics: lyrics.data,
       referenceYoutubeId: song.youtubeId,
@@ -40,6 +41,7 @@ export async function createAdminCheerGuide(ctx: RequestContext, input: CreateAd
       createdByAccountId: accountId,
       changeSummary: "응원법 비공개 작업본 생성",
     });
+    await setGuideWorkingSnapshot(tx, guide.id, snapshot.id);
     return guide;
   });
 }

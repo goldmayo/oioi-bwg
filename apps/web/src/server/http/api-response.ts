@@ -27,6 +27,10 @@ const appErrorDefinitions = {
     message: "내용 또는 공개 이력이 있는 응원법은 삭제할 수 없습니다.",
     status: 409,
   },
+  CHEER_GUIDE_DRAFT_PENDING: {
+    message: "비공개 작업본이 있습니다. 응원법 관리에서 편집해주세요.",
+    status: 409,
+  },
   CHEER_GUIDE_CONFLICT: {
     message: "응원법이 변경되었습니다. 입력한 내용을 보관하고 최신 내용을 확인해 주세요.",
     status: 409,

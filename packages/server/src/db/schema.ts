@@ -369,6 +369,7 @@ export const cheerGuide = pgTable(
     mode: text().$type<"CONCERT" | "FESTIVAL">().notNull(),
     legacyWriteTarget: boolean("legacy_write_target").default(false).notNull(),
     currentPublicationId: uuid("current_publication_id"),
+    workingSnapshotId: uuid("working_snapshot_id"),
     lockVersion: integer("lock_version").default(1).notNull(),
     createdAt: timestamp("created_at", { precision: 3, withTimezone: true, mode: "string" })
       .defaultNow()
@@ -388,6 +389,11 @@ export const cheerGuide = pgTable(
       columns: [table.id, table.currentPublicationId],
       foreignColumns: [cheerGuidePublication.cheerGuideId, cheerGuidePublication.id],
       name: "cheer_guide_id_current_publication_id_fkey",
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.id, table.workingSnapshotId],
+      foreignColumns: [cheerGuideSnapshot.cheerGuideId, cheerGuideSnapshot.id],
+      name: "cheer_guide_id_working_snapshot_id_fkey",
     }).onDelete("restrict"),
     unique("cheer_guide_song_id_mode_key").on(table.songId, table.mode),
     uniqueIndex("cheer_guide_song_id_legacy_write_target_key")
