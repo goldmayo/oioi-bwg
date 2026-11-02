@@ -14,14 +14,15 @@ import {
 
 export function Table({
   caption,
+  fillWidth = false,
   children,
   className = "",
   ...props
-}: ComponentProps<"table"> & { caption: string }) {
+}: ComponentProps<"table"> & { caption: string; fillWidth?: boolean }) {
   const table = useTableContext();
   return (
     <div
-      className={`border-border max-w-full overflow-x-auto rounded-lg border ${table.options.features.columnSizingFeature ? "w-fit" : ""}`}
+      className={`border-border max-w-full overflow-x-auto rounded-lg border ${table.options.features.columnSizingFeature && !fillWidth ? "w-fit" : "w-full"}`}
     >
       <Snapshot>
         {() => (
@@ -29,7 +30,14 @@ export function Table({
             {...props}
             className={`w-full text-sm tabular-nums ${className}`}
             style={{
-              width: table.options.features.columnSizingFeature ? table.getTotalSize() : undefined,
+              width:
+                table.options.features.columnSizingFeature && !fillWidth
+                  ? table.getTotalSize()
+                  : undefined,
+              minWidth:
+                table.options.features.columnSizingFeature && fillWidth
+                  ? table.getTotalSize()
+                  : undefined,
               ...props.style,
             }}
           >

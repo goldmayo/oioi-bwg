@@ -12,6 +12,7 @@ import {
 } from "@/features/auth";
 import { LazyLyricsEditor, type SongEditor } from "@/features/manage-lyrics";
 
+import { cheerGuideQueryKeys } from "@/entities/cheer-guide";
 import { songQueryKeys } from "@/entities/song";
 import { songMutations } from "@/entities/song/api";
 import { waveformQueryKeys } from "@/entities/waveform";
@@ -29,6 +30,7 @@ export function AdminLyricsEditor({ song, accountId }: { song: SongEditor; accou
     ...songMutations.saveLyrics(),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() });
+      void queryClient.invalidateQueries({ queryKey: cheerGuideQueryKeys.adminList() });
       void queryClient.invalidateQueries({ queryKey: waveformQueryKeys.song(accountId, song.id) });
     },
     onError: recovery.handleMutationError,

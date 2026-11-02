@@ -11,6 +11,7 @@ import {
 } from "@/features/auth";
 import { AlbumManagerClient } from "@/features/manage-album";
 
+import { cheerGuideQueryKeys } from "@/entities/cheer-guide";
 import { songQueryKeys } from "@/entities/song";
 
 import { uploadAlbumImageAction } from "../_lib/upload-album-image-action";
@@ -24,6 +25,7 @@ export function AdminAlbumManager() {
   const recovery = useAdminReauthentication();
   const handleNameChangeOrDelete = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() });
+    void queryClient.invalidateQueries({ queryKey: cheerGuideQueryKeys.adminList() });
   }, [queryClient]);
 
   return (

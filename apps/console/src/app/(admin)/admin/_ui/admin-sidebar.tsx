@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Disc3, LayoutDashboard, Music } from "lucide-react";
+import { Bell, Disc3, LayoutDashboard, Megaphone, Music } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -10,6 +10,7 @@ const ADMIN_NAV = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
   { href: "/admin/albums", label: "앨범 관리", icon: Disc3 },
   { href: "/admin/songs", label: "곡 관리", icon: Music },
+  { href: "/admin/cheer-guides", label: "응원법 관리", icon: Megaphone },
   { href: "/admin/notifications", label: "알림 내역", icon: Bell },
 ] as const;
 
@@ -21,7 +22,7 @@ export default function AdminSidebar() {
         const active =
           pathname === href ||
           (href !== "/admin" && pathname.startsWith(`${href}/`)) ||
-          (href === "/admin/songs" && pathname.startsWith("/admin/edit/")) ||
+          (href === "/admin/cheer-guides" && pathname.startsWith("/admin/edit/")) ||
           (href === "/admin/notifications" && pathname.startsWith("/admin/waveform-jobs/"));
         return (
           <Link

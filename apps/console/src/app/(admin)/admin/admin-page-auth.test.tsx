@@ -1,6 +1,7 @@
 import { buildAbility } from "@oioi-bwg/server/auth/ability";
 import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { listAdminAlbums } from "@oioi-bwg/server/services/album-service";
+import { listAdminCheerGuides } from "@oioi-bwg/server/services/cheer-guide-service";
 import { getAdminSongEditorBySlug, listAdminSongs } from "@oioi-bwg/server/services/song-service";
 import { forbidden, notFound, redirect } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getRequestContext } from "@/server/auth/request-context";
 
 import AdminAlbumsPage from "./albums/page";
+import AdminCheerGuidesPage from "./cheer-guides/page";
 import AdminLyricsEditPage from "./edit/[slug]/page";
 import AdminPage from "./page";
 import AdminSongsPage from "./songs/page";
@@ -26,6 +28,8 @@ vi.mock("@/server/auth/request-context", () => {
 vi.mock("@/features/auth", () => ({
   authAbilityQueryKeys: { ability: () => ["auth", "ability"] },
 }));
+vi.mock("@oioi-bwg/server/services/cheer-guide-service", () => ({ listAdminCheerGuides: vi.fn() }));
+vi.mock("./cheer-guides/_ui/AdminGuideList", () => ({ AdminGuideList: () => null }));
 vi.mock("@oioi-bwg/server/services/album-service", () => ({ listAdminAlbums: vi.fn() }));
 vi.mock("@oioi-bwg/server/services/song-service", () => ({
   listAdminSongs: vi.fn(),
@@ -43,6 +47,7 @@ const pages = [
   ["dashboard", () => AdminPage(), listAdminSongs],
   ["albums", () => AdminAlbumsPage(), listAdminAlbums],
   ["songs", () => AdminSongsPage(), listAdminSongs],
+  ["cheer-guides", () => AdminCheerGuidesPage(), listAdminCheerGuides],
   [
     "edit",
     () => AdminLyricsEditPage({ params: Promise.resolve({ slug: "test-song" }) }),
@@ -67,6 +72,7 @@ beforeEach(() => {
   });
   vi.mocked(listAdminAlbums).mockResolvedValue({ items: [], nextCursor: null });
   vi.mocked(listAdminSongs).mockResolvedValue({ items: [], nextCursor: null });
+  vi.mocked(listAdminCheerGuides).mockResolvedValue({ items: [], nextCursor: null });
 });
 
 describe.each(pages)("%s RSC auth delivery", (_name, render, service) => {
@@ -78,6 +84,7 @@ describe.each(pages)("%s RSC auth delivery", (_name, render, service) => {
     await expect(render()).rejects.toBe(login);
     expect(listAdminAlbums).not.toHaveBeenCalled();
     expect(listAdminSongs).not.toHaveBeenCalled();
+    expect(listAdminCheerGuides).not.toHaveBeenCalled();
     expect(getAdminSongEditorBySlug).not.toHaveBeenCalled();
   });
 
@@ -114,4 +121,24 @@ it("keeps the editor not-found response after successful authentication", async 
   ).rejects.toBe(missing);
   expect(redirect).not.toHaveBeenCalled();
   expect(forbidden).not.toHaveBeenCalled();
+});
+
+it("요청한 Guide와 기존 writer 대상이 다르면 편집 화면을 열지 않는다", async () => {
+  const guideId = "019a0170-0000-7000-8000-000000000001";
+  vi.mocked(getAdminSongEditorBySlug).mockResolvedValue({
+    guideWrite: { guideId, lockVersion: 1 },
+  } as never);
+  for (const requested of ["bad", "019a0170-0000-7000-8000-000000000002", [guideId, guideId]]) {
+    await expect(
+      AdminLyricsEditPage({
+        params: Promise.resolve({ slug: "song" }),
+        searchParams: Promise.resolve({ guideId: requested }),
+      }),
+    ).rejects.toBe(missing);
+  }
+  const result = await AdminLyricsEditPage({
+    params: Promise.resolve({ slug: "song" }),
+    searchParams: Promise.resolve({ guideId }),
+  });
+  expect(result).toBeTruthy();
 });

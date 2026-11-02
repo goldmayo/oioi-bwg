@@ -1,4 +1,5 @@
 import { serializedAbilityResponseSchema } from "@oioi-bwg/contracts/authorization";
+import { entityIdSchema } from "@oioi-bwg/contracts/entity-id";
 import { getAdminSongEditorBySlug } from "@oioi-bwg/server/services/song-service";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
@@ -14,10 +15,11 @@ import { AdminLyricsEditor } from "./_ui/AdminLyricsEditor";
 
 interface AdminEditPageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ guideId?: string | string[] }>;
 }
 
 /** 관리자 가사 편집 DTO와 Ability를 서버에서 준비한다. */
-export default async function AdminLyricsEditPage({ params }: AdminEditPageProps) {
+export default async function AdminLyricsEditPage({ params, searchParams }: AdminEditPageProps) {
   const { slug } = await params;
 
   if (!slug) {
@@ -28,6 +30,14 @@ export default async function AdminLyricsEditPage({ params }: AdminEditPageProps
   const song = await getAdminSongEditorBySlug(context, slug).catch(async (error: unknown) =>
     rethrowAdminPageError(error, await getRequestAuthorization()),
   );
+
+  const requestedGuideId = (await searchParams)?.guideId;
+  if (
+    requestedGuideId !== undefined &&
+    (!entityIdSchema.safeParse(requestedGuideId).success ||
+      song?.guideWrite?.guideId !== requestedGuideId)
+  )
+    return notFound();
 
   if (!song) {
     return notFound();

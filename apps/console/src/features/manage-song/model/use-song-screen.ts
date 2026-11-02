@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { albumQueries } from "@/entities/album/api";
+import { cheerGuideQueryKeys } from "@/entities/cheer-guide";
 import { type AdminSongSummary, songQueryKeys } from "@/entities/song";
 import { songMutations, songQueries } from "@/entities/song/api";
 
@@ -23,6 +24,7 @@ export function useSongScreen(id?: string, onMutationError?: (error: unknown) =>
     savedId.current = result.id;
     // 재조회 실패가 저장 성공을 실패로 바꾸거나 재제출을 유도하지 않게 한다.
     void client.invalidateQueries({ queryKey: songQueryKeys.adminList() });
+    void client.invalidateQueries({ queryKey: cheerGuideQueryKeys.adminList() });
     void client.invalidateQueries({ queryKey: songQueryKeys.adminInformation(result.id) });
   }
   return {
