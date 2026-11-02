@@ -195,3 +195,9 @@ React context에서 사라지는 generic은 Root 내부 표시 경계에서만 �
 [공식 조합](https://tanstack.com/table/latest/docs/framework/react/guide/composable-tables),
 [공식 Compiler 구독](https://tanstack.com/table/latest/docs/framework/react/guide/react-compiler)을 따른다.
 셀 범위 선택·병합은 원본 제외 범위를 유지한다.
+
+## 헤더와 본문 정렬
+
+열의 `meta.align`에 `start`·`center`·`end`를 지정하면 헤더와 본문이 같은 정렬을 사용한다.
+정렬 버튼의 추가 수평 여백은 제거하며 가운데·끝 정렬의 표시 아이콘은 제목 정렬을 밀지 않는다.
+복합 셀의 내부 flex 정렬은 소비처가 같은 기준으로 지정한다.

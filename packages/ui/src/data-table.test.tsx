@@ -96,3 +96,30 @@ describe("Data Table 사용자 동작", () => {
     expect(screen.getByRole("button", { name: "다음" })).toBeDisabled();
   });
 });
+
+function AlignedFixture({ align }: { align: "start" | "center" | "end" }) {
+  const table = useAppTable({
+    data: items.slice(0, 1),
+    columns: helper.columns([helper.accessor("name", { header: "이름", meta: { align } })]),
+  });
+  return (
+    <DataTable.Root table={table}>
+      <DataTable.Table caption="정렬 확인">
+        <DataTable.Header />
+        <DataTable.Body />
+      </DataTable.Table>
+    </DataTable.Root>
+  );
+}
+it.each(["start", "center", "end"] as const)(
+  "열 정렬 %s를 헤더와 본문에 함께 적용하고 정렬 조작을 유지한다",
+  async (align) => {
+    const user = userEvent.setup();
+    render(<AlignedFixture align={align} />);
+    const header = screen.getByRole("columnheader");
+    expect(header.style.textAlign).toBe(align);
+    expect(screen.getByRole("cell").style.textAlign).toBe(align);
+    await user.click(screen.getByRole("button", { name: "이름" }));
+    expect(header).toHaveAttribute("aria-sort", "ascending");
+  },
+);

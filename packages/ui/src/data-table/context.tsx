@@ -6,6 +6,7 @@ import { createTableHookContexts, Subscribe } from "@tanstack/react-table";
 import type { Column, ReactTable, RowData, TableFeatures } from "@tanstack/react-table";
 
 export interface DataTableColumnMeta {
+  align?: "start" | "center" | "end";
   label?: string;
   className?: string;
   filterVariant?: "text" | "select";
@@ -78,6 +79,7 @@ export function columnStyle(column: Column<UiFeatures, RowData>): CSSProperties 
   const pinned =
     features.columnPinningFeature && features.columnSizingFeature ? column.getIsPinned() : false;
   return {
+    textAlign: column.columnDef.meta?.align,
     width: features.columnSizingFeature ? column.getSize() : undefined,
     position: pinned ? "sticky" : undefined,
     insetInlineStart: pinned === "start" ? column.getStart("start") : undefined,

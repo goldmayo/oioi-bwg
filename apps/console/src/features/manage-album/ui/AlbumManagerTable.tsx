@@ -9,7 +9,12 @@ import type { AdminAlbumSummary } from "@/entities/album";
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { createAppColumnHelper, dataTableComponents, useAppTable } from "@/shared/ui/data-table";
+import {
+  AppDataTable,
+  createAppColumnHelper,
+  dataTableComponents,
+  useAppTable,
+} from "@/shared/ui/data-table";
 
 interface Props {
   albums: AdminAlbumSummary[];
@@ -68,7 +73,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
           header: "표시",
           size: 80,
           minSize: 80,
-          meta: { className: "text-center" },
+          meta: { align: "center" },
           cell: ({ row: { original: album } }) => (
             <>
               <Badge
@@ -97,7 +102,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
           header: "관리",
           size: 104,
           minSize: 104,
-          meta: { className: "text-right" },
+          meta: { align: "end" },
           cell: ({ row: { original: album } }) => (
             <>
               {canManage && (
@@ -138,15 +143,12 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
   return (
     <DataTable.Root table={table} components={dataTableComponents}>
       <div className="min-w-0 space-y-4">
-        <DataTable.Table
-          caption="앨범 관리 목록"
-          className="bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_td]:whitespace-normal [&_th]:px-3"
-        >
+        <AppDataTable caption="앨범 관리 목록">
           <DataTable.Header />
           <DataTable.Body
             emptyState={<>{hasFilter ? "검색 결과가 없습니다." : "등록된 앨범이 없습니다."}</>}
           />
-        </DataTable.Table>
+        </AppDataTable>
         <DataTable.Pagination label="앨범 목록 페이지" pageSizes={[10, 20, 50]} />
       </div>
     </DataTable.Root>
