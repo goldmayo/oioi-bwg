@@ -106,6 +106,13 @@ export function SongGuideSummary({
               {mode === "CONCERT" ? "콘서트" : "페스티벌"}
             </span>
             <div className="flex items-center gap-2">
+              {canManage && guide?.draftEditorAvailable && (
+                <Button size="sm" variant="outline" asChild>
+                  <a href={`/admin/cheer-guides/${guide.id}/edit`}>
+                    {mode === "CONCERT" ? "콘서트" : "페스티벌"} 편집
+                  </a>
+                </Button>
+              )}
               {publication ? (
                 <>
                   <Badge variant={publication.sourceType === "OFFICIAL" ? "q" : "bwg"}>
@@ -129,15 +136,10 @@ export function SongGuideSummary({
           <a href={`/admin/cheer-guides/new?songId=${song.id}`}>응원법 추가</a>
         </Button>
       )}
-      {canManage && song.slug && (
+      {canManage && song.slug && song.cheerGuides.length === 0 && (
         <Button variant="outline" asChild className="w-full">
           <a href={`/admin/edit/${song.slug}`}>응원법 편집</a>
         </Button>
-      )}
-      {!song.slug && (
-        <p className="text-muted-foreground text-xs">
-          응원법 편집기에 들어가려면 Slug를 지정해주세요.
-        </p>
       )}
     </section>
   );

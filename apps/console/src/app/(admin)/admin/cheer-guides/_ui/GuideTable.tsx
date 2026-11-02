@@ -144,16 +144,21 @@ export function GuideTable({
                   <Info />
                 </Link>
               </Button>
-              {canManage && guide.editorAvailable && guide.song.slug && (
-                <Button variant="ghost" size="icon-sm" asChild>
-                  <Link
-                    href={`/admin/edit/${guide.song.slug}?guideId=${guide.id}`}
-                    aria-label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법 편집`}
-                  >
-                    <Pencil />
-                  </Link>
-                </Button>
-              )}
+              {canManage &&
+                (guide.draftEditorAvailable || (guide.editorAvailable && guide.song.slug)) && (
+                  <Button variant="ghost" size="icon-sm" asChild>
+                    <Link
+                      href={
+                        guide.draftEditorAvailable
+                          ? `/admin/cheer-guides/${guide.id}/edit`
+                          : `/admin/edit/${guide.song.slug}?guideId=${guide.id}`
+                      }
+                      aria-label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법 편집`}
+                    >
+                      <Pencil />
+                    </Link>
+                  </Button>
+                )}
               {canManage && (
                 <Button
                   variant="ghost"

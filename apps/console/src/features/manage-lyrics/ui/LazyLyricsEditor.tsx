@@ -14,6 +14,9 @@ interface LazyLyricsEditorProps {
   accountId: string;
   disabled?: boolean;
   waveformImport?: WaveformImportControls;
+  saveLabel?: string;
+  referenceVideoReadOnly?: boolean;
+  protectNavigation?: boolean;
 }
 
 export function LazyLyricsEditor({
@@ -22,6 +25,9 @@ export function LazyLyricsEditor({
   accountId,
   disabled,
   waveformImport,
+  saveLabel,
+  referenceVideoReadOnly,
+  protectNavigation,
 }: LazyLyricsEditorProps) {
   return (
     <Suspense
@@ -37,6 +43,9 @@ export function LazyLyricsEditor({
         accountId={accountId}
         disabled={disabled}
         waveformImport={waveformImport}
+        saveLabel={saveLabel}
+        referenceVideoReadOnly={referenceVideoReadOnly}
+        protectNavigation={protectNavigation}
       />
     </Suspense>
   );
