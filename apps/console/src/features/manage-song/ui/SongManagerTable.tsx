@@ -6,6 +6,7 @@ import { Edit, FileMusic, Trash2 } from "lucide-react";
 
 import type { AdminSongSummary } from "@/entities/song";
 
+import { adminLinks } from "@/shared/config/admin-routes";
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -75,7 +76,7 @@ export function SongManagerTable({
           meta: { className: "font-medium whitespace-normal" },
           cell: ({ row: { original: song } }) => (
             <a
-              href={`/admin/songs/${song.id}`}
+              href={adminLinks.song(song.id)}
               className="text-foreground block break-words underline-offset-4 hover:underline"
             >
               {song.title}

@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { signOut } from "@/features/auth";
 
+import { adminPaths } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
 import {
   Sheet,
@@ -34,7 +35,7 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const brand = (
     <Link
-      href="/admin"
+      href={adminPaths.dashboard}
       aria-label="OIOIBWG 대시보드 홈"
       className="text-foreground flex min-h-11 min-w-11 items-center gap-2 rounded-md group-data-[collapsed=true]/sidebar:justify-center focus-visible:outline-2 focus-visible:outline-offset-4"
     >

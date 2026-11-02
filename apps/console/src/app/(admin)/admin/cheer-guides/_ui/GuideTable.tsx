@@ -6,8 +6,8 @@ import { Eye, EyeOff, Info, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import type { AdminCheerGuideSummary } from "@/entities/cheer-guide";
-import { cheerGuideEditorHref } from "@/entities/cheer-guide";
 
+import { adminLinks, adminPaths } from "@/shared/config/admin-routes";
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -68,7 +68,7 @@ export function GuideTable({
           }) => (
             <div className="min-w-0">
               <Link
-                href={`/admin/songs/${song.id}`}
+                href={adminLinks.song(song.id)}
                 className="text-foreground block font-medium break-words hover:underline"
               >
                 {song.title || "제목 없음"}
@@ -134,49 +134,51 @@ export function GuideTable({
           meta: { align: "end" },
           size: 136,
           minSize: 128,
-          cell: ({ row: { original: guide } }) => (
-            <div className="flex justify-end gap-1">
-              <Button variant="ghost" size="icon-sm" asChild>
-                <Link
-                  href={`/admin/songs/${guide.song.id}`}
-                  aria-label={`${guide.song.title} 곡 정보`}
-                >
-                  <Info />
-                </Link>
-              </Button>
-              {canManage &&
-                (guide.draftEditorAvailable || (guide.editorAvailable && guide.song.slug)) && (
+          cell: ({ row: { original: guide } }) => {
+            let editorHref: string | undefined;
+            if (guide.draftEditorAvailable)
+              editorHref = adminLinks.guideEdit(guide.id, adminPaths.guideList);
+            else if (guide.editorAvailable && guide.song.slug)
+              editorHref = adminLinks.songLyrics(guide.song.slug, guide.id);
+            return (
+              <div className="flex justify-end gap-1">
+                <Button variant="ghost" size="icon-sm" asChild>
+                  <Link
+                    href={adminLinks.song(guide.song.id)}
+                    aria-label={`${guide.song.title} 곡 정보`}
+                  >
+                    <Info />
+                  </Link>
+                </Button>
+                {canManage && editorHref && (
                   <Button variant="ghost" size="icon-sm" asChild>
                     <a
-                      href={
-                        guide.draftEditorAvailable
-                          ? cheerGuideEditorHref(guide.id, "/admin/cheer-guides")
-                          : `/admin/edit/${guide.song.slug}?guideId=${guide.id}`
-                      }
+                      href={editorHref}
                       aria-label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법 편집`}
                     >
                       <Pencil />
                     </a>
                   </Button>
                 )}
-              {canManage && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={!guide.deletable}
-                  title={
-                    guide.deletable
-                      ? "응원법 삭제"
-                      : "내용 또는 공개 이력이 있는 응원법은 삭제할 수 없습니다."
-                  }
-                  aria-label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법 삭제`}
-                  onClick={() => onDelete(guide)}
-                >
-                  <Trash2 className="text-destructive" />
-                </Button>
-              )}
-            </div>
-          ),
+                {canManage && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={!guide.deletable}
+                    title={
+                      guide.deletable
+                        ? "응원법 삭제"
+                        : "내용 또는 공개 이력이 있는 응원법은 삭제할 수 없습니다."
+                    }
+                    aria-label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법 삭제`}
+                    onClick={() => onDelete(guide)}
+                  >
+                    <Trash2 className="text-destructive" />
+                  </Button>
+                )}
+              </div>
+            );
+          },
         }),
       ]),
     [canManage, wide, onDelete],

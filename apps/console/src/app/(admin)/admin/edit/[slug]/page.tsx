@@ -9,12 +9,11 @@ import { notFound, redirect } from "next/navigation";
 
 import { authAbilityQueryKeys } from "@/features/auth";
 
-import { cheerGuideEditorHref } from "@/entities/cheer-guide";
-
 import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-page-context";
 import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
+import { adminLinks } from "@/shared/config/admin-routes";
 
 import { getEditorReturnTarget } from "../../_lib/editor-return-target";
 import { AdminPageLocation } from "../../_model/admin-location";
@@ -55,10 +54,10 @@ export default async function AdminLyricsEditPage({ params, searchParams }: Admi
   if (requestedGuideId !== undefined) {
     const guide = information.cheerGuides.find((item) => item.id === requestedGuideId);
     if (!guide?.draftEditorAvailable) notFound();
-    redirect(cheerGuideEditorHref(guide.id, returnTarget.href));
+    redirect(adminLinks.guideEdit(guide.id, returnTarget.href));
   }
   // 곡 URL에는 공연 모드가 없다. 임의로 모드를 고르지 않고 곡 정보에서 선택한다.
-  if (information.cheerGuides.length) redirect(`/admin/songs/${song.id}#song-guides`);
+  if (information.cheerGuides.length) redirect(adminLinks.songGuides(song.id));
   const queryClient = getQueryClient();
   queryClient.setQueryData(
     authAbilityQueryKeys.ability(),

@@ -6,6 +6,8 @@ import { cheerGuideQueryKeys } from "@/entities/cheer-guide";
 import { type AdminSongSummary, songQueryKeys } from "@/entities/song";
 import { songMutations, songQueries } from "@/entities/song/api";
 
+import { adminLinks } from "@/shared/config/admin-routes";
+
 import { type SongEditValues, toAdminSongUpdate } from "./schemas";
 
 export function useSongScreen(id?: string, onMutationError?: (error: unknown) => void) {
@@ -32,7 +34,7 @@ export function useSongScreen(id?: string, onMutationError?: (error: unknown) =>
     albums,
     submit,
     saved: () => {
-      if (savedId.current) window.location.replace(`/admin/songs/${savedId.current}`);
+      if (savedId.current) window.location.replace(adminLinks.song(savedId.current));
     },
   };
 }

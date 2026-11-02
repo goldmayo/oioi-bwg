@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { adminLinks, adminPaths } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
 
 import { useSongScreen } from "../model/use-song-screen";
@@ -55,14 +56,14 @@ export function SongScreen({
               <SongGuideSummary
                 song={song}
                 canManage={canManage}
-                returnHref={`/admin/songs/${song.id}?edit=true`}
+                returnHref={adminLinks.songEdit(song.id)}
               />
             ) : undefined
           }
           submissionNotice={submissionNotice}
           onSubmit={submit}
           onSaved={saved}
-          onCancel={() => window.location.replace(id ? `/admin/songs/${id}` : "/admin/songs")}
+          onCancel={() => window.location.replace(id ? adminLinks.song(id) : adminPaths.songList)}
         />
       )}
     </>
