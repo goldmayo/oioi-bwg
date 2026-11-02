@@ -7,6 +7,7 @@ import { afterAll, beforeAll, expect, test, vi } from "vitest";
 import * as schema from "@oioi-bwg/server/db/schema";
 import { buildAbility } from "@oioi-bwg/server/auth/ability";
 import {
+  createAdminCheerGuide,
   listAdminCheerGuides,
   deleteEmptyCheerGuide,
 } from "@oioi-bwg/server/services/cheer-guide-service";
@@ -1010,4 +1011,103 @@ test("삭제 검사와 경합해 먼저 저장 중인 snapshot도 FK로 보호�
       .from(schema.cheerGuideSnapshot)
       .where(eq(schema.cheerGuideSnapshot.cheerGuideId, guide!.id)),
   ).toHaveLength(1);
+});
+
+async function newDraftSong() {
+  const [row] = await database
+    .insert(schema.song)
+    .values({
+      albumId,
+      slug: `draft-${createEntityId()}`,
+      title: "비공개 추가 테스트",
+      youtubeId: "draft-reference",
+      lyrics,
+    })
+    .returning();
+  return row!;
+}
+function draftContext() {
+  return { user: { id: accountId }, ability: buildAbility({ accountId, role: "ADMIN" }) };
+}
+const draftInput = (id: string) => ({
+  songId: id,
+  mode: "CONCERT" as const,
+  sourceType: "FANDOM" as const,
+  sourceUrl: null,
+  guideVideoUrl: null,
+  description: "비공개 설명",
+});
+
+test("P11 추가는 첫 snapshot만 저장하고 공개·기존 writer와 연결하지 않는다", async () => {
+  const source = await newDraftSong();
+  const before = await getSongDetailBySlug(source.slug!);
+  const created = await createAdminCheerGuide(draftContext(), draftInput(source.id));
+  const [guide] = await database
+    .select()
+    .from(schema.cheerGuide)
+    .where(eq(schema.cheerGuide.id, created.id));
+  expect(guide).toMatchObject({
+    legacyWriteTarget: false,
+    currentPublicationId: null,
+    lockVersion: 1,
+  });
+  const snapshots = await database
+    .select()
+    .from(schema.cheerGuideSnapshot)
+    .where(eq(schema.cheerGuideSnapshot.cheerGuideId, created.id));
+  expect(snapshots).toHaveLength(1);
+  expect(snapshots[0]).toMatchObject({
+    lyrics,
+    referenceYoutubeId: source.youtubeId,
+    sourceType: "FANDOM",
+    description: "비공개 설명",
+    createdByAccountId: accountId,
+  });
+  expect(
+    await database
+      .select()
+      .from(schema.cheerGuidePublication)
+      .where(eq(schema.cheerGuidePublication.cheerGuideId, created.id)),
+  ).toHaveLength(0);
+  expect(await getSongDetailBySlug(source.slug!)).toEqual(before);
+  await expect(
+    saveSongLyrics(draftContext(), source.id, {
+      lyrics,
+      youtubeId: source.youtubeId!,
+      guideWrite: { guideId: created.id, lockVersion: 1 },
+    }),
+  ).rejects.toMatchObject({ code: "CHEER_GUIDE_CONFLICT" });
+  await expect(deleteEmptyCheerGuide(draftContext(), created.id)).rejects.toMatchObject({
+    code: "CHEER_GUIDE_HAS_HISTORY",
+  });
+});
+
+test("P11 동시 추가는 하나만 성공하고 다른 모드는 독립한다", async () => {
+  const source = await newDraftSong();
+  const input = draftInput(source.id);
+  const results = await Promise.allSettled([
+    createAdminCheerGuide(draftContext(), input),
+    createAdminCheerGuide(draftContext(), input),
+  ]);
+  expect(results.filter(({ status }) => status === "fulfilled")).toHaveLength(1);
+  expect(results.find(({ status }) => status === "rejected")).toMatchObject({
+    reason: { code: "CHEER_GUIDE_ALREADY_EXISTS" },
+  });
+  await createAdminCheerGuide(draftContext(), { ...input, mode: "FESTIVAL" });
+  expect(
+    await database.select().from(schema.cheerGuide).where(eq(schema.cheerGuide.songId, source.id)),
+  ).toHaveLength(2);
+});
+
+test("P11 snapshot 실패 시 Guide 삽입도 rollback한다", async () => {
+  const source = await newDraftSong();
+  await expect(
+    createAdminCheerGuide(
+      { ...draftContext(), user: { id: createEntityId() } },
+      draftInput(source.id),
+    ),
+  ).rejects.toBeTruthy();
+  expect(
+    await database.select().from(schema.cheerGuide).where(eq(schema.cheerGuide.songId, source.id)),
+  ).toHaveLength(0);
 });

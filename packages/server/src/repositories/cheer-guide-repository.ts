@@ -33,6 +33,19 @@ export async function lockSongForGuideWrite(executor: DbExecutor, id: string) {
   return row;
 }
 
+/** 신규 Guide는 기존 즉시 공개 writer와 연결하지 않는다. */
+export async function insertGuideDraft(
+  executor: DbExecutor,
+  input: Pick<typeof cheerGuide.$inferInsert, "songId" | "mode">,
+) {
+  const [row] = await executor
+    .insert(cheerGuide)
+    .values(input)
+    .onConflictDoNothing({ target: [cheerGuide.songId, cheerGuide.mode] })
+    .returning({ id: cheerGuide.id });
+  return row;
+}
+
 export async function lockLegacyGuide(executor: DbExecutor, songId: string) {
   const [row] = await executor
     .select()

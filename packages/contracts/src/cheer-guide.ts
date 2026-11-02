@@ -27,6 +27,8 @@ export const createAdminCheerGuideSchema = z
   });
 export type CreateAdminCheerGuide = z.infer<typeof createAdminCheerGuideSchema>;
 
+export const adminCheerGuideMutationResultSchema = z.object({ id: entityIdSchema });
+
 /** 한 행은 Song + mode의 Guide다. 공개 조치는 실제 사용자 노출과 구분한다. */
 export const adminCheerGuideIdParamsSchema = z.object({ id: entityIdSchema });
 export const adminCheerGuideSummarySchema = z.object({
