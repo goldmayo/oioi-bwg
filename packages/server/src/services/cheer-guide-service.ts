@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { AdminCheerGuideList } from "@oioi-bwg/contracts/cheer-guide";
+import type { AdminCheerGuideList, CreateAdminCheerGuide } from "@oioi-bwg/contracts/cheer-guide";
+import { lyricsDataSchema } from "@oioi-bwg/contracts/song";
 
 import { type RequestContext, requireUser } from "../auth/request-context";
 import { getDatabase } from "../db";
@@ -10,7 +11,38 @@ import {
   findAdminCheerGuides,
   findCheerGuideIdentity,
   removeEmptyCheerGuide,
+  lockSongForGuideWrite,
+  insertGuideDraft,
+  insertNextGuideSnapshot,
 } from "../repositories/cheer-guide-repository";
+
+/** 공개 조치 없이 Guide와 불변 첫 작업본을 함께 저장한다. */
+export async function createAdminCheerGuide(ctx: RequestContext, input: CreateAdminCheerGuide) {
+  requireUser(ctx);
+  if (ctx.ability.cannot("manage", "all")) throw new AppError("FORBIDDEN");
+  const accountId = ctx.user.id;
+  return getDatabase().transaction(async (tx) => {
+    const song = await lockSongForGuideWrite(tx, input.songId);
+    if (!song) throw new AppError("SONG_NOT_FOUND");
+    const lyrics = lyricsDataSchema.safeParse(song.lyrics ?? []);
+    if (!lyrics.success) throw new AppError("SONG_LYRICS_INVALID");
+    if (!song.youtubeId?.trim()) throw new AppError("CHEER_GUIDE_SOURCE_INVALID");
+    const guide = await insertGuideDraft(tx, { songId: input.songId, mode: input.mode });
+    if (!guide) throw new AppError("CHEER_GUIDE_ALREADY_EXISTS");
+    await insertNextGuideSnapshot(tx, {
+      cheerGuideId: guide.id,
+      lyrics: lyrics.data,
+      referenceYoutubeId: song.youtubeId,
+      sourceType: input.sourceType,
+      sourceUrl: input.sourceUrl,
+      guideVideoUrl: input.guideVideoUrl,
+      description: input.description,
+      createdByAccountId: accountId,
+      changeSummary: "응원법 비공개 작업본 생성",
+    });
+    return guide;
+  });
+}
 
 export async function listAdminCheerGuides(ctx: RequestContext): Promise<AdminCheerGuideList> {
   requireUser(ctx);
