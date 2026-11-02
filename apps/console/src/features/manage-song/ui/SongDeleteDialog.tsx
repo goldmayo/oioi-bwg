@@ -21,8 +21,13 @@ interface Props {
 
 export function SongDeleteDialog({ song, pending, onClose, onConfirm }: Props) {
   return (
-    <Dialog open={!!song} onOpenChange={onClose}>
-      <DialogContent>
+    <Dialog
+      open={!!song}
+      onOpenChange={(open) => {
+        if (!open && !pending) onClose();
+      }}
+    >
+      <DialogContent showCloseButton={!pending}>
         <DialogHeader>
           <DialogTitle>곡 삭제</DialogTitle>
           <DialogDescription>
@@ -31,7 +36,7 @@ export function SongDeleteDialog({ song, pending, onClose, onConfirm }: Props) {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" disabled={pending} onClick={onClose}>
             취소
           </Button>
           <Button variant="destructive" disabled={pending} onClick={onConfirm}>

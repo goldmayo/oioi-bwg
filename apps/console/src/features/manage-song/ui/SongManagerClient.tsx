@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { albumQueries } from "@/entities/album/api";
@@ -66,6 +66,10 @@ export function SongManagerClient({
   const [search, setSearch] = useState("");
   const [albumFilter, setAlbumFilter] = useState("all");
   const [deleteTarget, setDeleteTarget] = useState<AdminSongSummary | null>(null);
+  const deletingId = useRef<string | null>(null);
+  const changeDeleteTarget = useCallback((target: AdminSongSummary | null) => {
+    if (deletingId.current === null) setDeleteTarget(target);
+  }, []);
   const deleteMutation = useMutation({ ...songMutations.delete(), onError: onMutationError });
   const filtered = useMemo(() => {
     const query = search.toLowerCase();
@@ -87,14 +91,18 @@ export function SongManagerClient({
     window.location.assign(`/admin/songs/${song.id}?edit=true`);
   }, []);
   const handleDelete = useCallback(() => {
-    if (!deleteTarget) return;
+    if (!canManage || !deleteTarget || deletingId.current !== null) return;
+    deletingId.current = deleteTarget.id;
     deleteMutation.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        setDeleteTarget(null);
+      onSuccess: (_data, id) => {
+        setDeleteTarget((current) => (current?.id === id ? null : current));
         void invalidateSongs();
       },
+      onSettled: () => {
+        deletingId.current = null;
+      },
     });
-  }, [deleteMutation, deleteTarget, invalidateSongs]);
+  }, [canManage, deleteMutation, deleteTarget, invalidateSongs]);
   return (
     <div className="space-y-4">
       <SongManagerToolbar
@@ -148,7 +156,7 @@ export function SongManagerClient({
         canManage={canManage}
         hasFilter={!!search || albumFilter !== "all"}
         onEdit={handleEdit}
-        onDelete={setDeleteTarget}
+        onDelete={changeDeleteTarget}
       />
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground text-sm">
@@ -160,7 +168,7 @@ export function SongManagerClient({
         <SongDeleteDialog
           song={deleteTarget}
           pending={deleteMutation.isPending}
-          onClose={() => setDeleteTarget(null)}
+          onClose={() => changeDeleteTarget(null)}
           onConfirm={handleDelete}
         />
       )}

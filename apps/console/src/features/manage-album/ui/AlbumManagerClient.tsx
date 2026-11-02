@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
@@ -51,6 +51,10 @@ export function AlbumManagerClient({
 
   // 삭제 확인 다이얼로그
   const [deleteTarget, setDeleteTarget] = useState<AdminAlbumSummary | null>(null);
+  const deletingId = useRef<string | null>(null);
+  const changeDeleteTarget = useCallback((target: AdminAlbumSummary | null) => {
+    if (deletingId.current === null) setDeleteTarget(target);
+  }, []);
 
   const createMutation = useMutation({
     ...albumMutations.create(),
@@ -105,15 +109,19 @@ export function AlbumManagerClient({
   );
 
   const handleDelete = useCallback(() => {
-    if (!deleteTarget) return;
+    if (!canManage || !deleteTarget || deletingId.current !== null) return;
+    deletingId.current = deleteTarget.id;
     deleteMutation.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        setDeleteTarget(null);
+      onSuccess: (_data, id) => {
+        setDeleteTarget((current) => (current?.id === id ? null : current));
         onNameChangeOrDelete?.();
         void invalidateAlbums();
       },
+      onSettled: () => {
+        deletingId.current = null;
+      },
     });
-  }, [deleteMutation, deleteTarget, invalidateAlbums, onNameChangeOrDelete]);
+  }, [canManage, deleteMutation, deleteTarget, invalidateAlbums, onNameChangeOrDelete]);
 
   return (
     <div className="space-y-4">
@@ -140,7 +148,7 @@ export function AlbumManagerClient({
         canManage={canManage}
         hasFilter={!!search}
         onEdit={handleEdit}
-        onDelete={setDeleteTarget}
+        onDelete={changeDeleteTarget}
       />
 
       {/* 앨범 폼 다이얼로그 */}
@@ -159,8 +167,13 @@ export function AlbumManagerClient({
 
       {/* 삭제 확인 다이얼로그 */}
       {canManage && (
-        <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-          <DialogContent>
+        <Dialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => {
+            if (!open) changeDeleteTarget(null);
+          }}
+        >
+          <DialogContent showCloseButton={!deleteMutation.isPending}>
             <DialogHeader>
               <DialogTitle>앨범 삭제</DialogTitle>
               <DialogDescription>
@@ -172,7 +185,11 @@ export function AlbumManagerClient({
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              <Button
+                variant="outline"
+                disabled={deleteMutation.isPending}
+                onClick={() => changeDeleteTarget(null)}
+              >
                 취소
               </Button>
               <Button
