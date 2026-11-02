@@ -40,6 +40,7 @@ function song(id: string) {
 
 export const adminLinks = {
   song,
+  waveformJob: (id: string) => withParameter(adminPaths.waveformJob, id),
   songEdit: (id: string) => `${song(id)}?edit=true`,
   songGuides: (id: string) => `${song(id)}#song-guides`,
   guideCreate: (songId?: string) => {

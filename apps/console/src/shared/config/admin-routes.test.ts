@@ -14,6 +14,7 @@ it.each([
   expect(getAdminPageId(path)).toBeUndefined();
 });
 it("기존 URL·query·fragment와 구주소를 유지한다", () => {
+  expect(adminLinks.waveformJob("123")).toBe("/admin/waveform-jobs/123");
   expect(adminLinks.song("123")).toBe("/admin/songs/123");
   expect(adminLinks.songEdit("123")).toBe("/admin/songs/123?edit=true");
   expect(adminLinks.songGuides("123")).toBe("/admin/songs/123#song-guides");

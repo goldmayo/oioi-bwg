@@ -7,6 +7,7 @@ import Link from "next/link";
 import { waveformMutations, waveformQueryKeys } from "@/entities/waveform";
 
 import { ApiError } from "@/shared/api/http-errors";
+import { adminLinks } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
 
 export function WaveformImportButton({
@@ -64,7 +65,7 @@ export function WaveformImportButton({
         {upload.data ? (
           <Link
             className="inline-flex min-h-8 items-center underline underline-offset-4"
-            href={`/admin/waveform-jobs/${upload.data.id}`}
+            href={adminLinks.waveformJob(upload.data.id)}
           >
             등록 결과 확인
           </Link>
