@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
-import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Menu, PanelLeft, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
 
 import { adminPaths } from "@/shared/config/admin-routes";
@@ -30,13 +30,16 @@ export function AdminShell({
 }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const brandMark = (
+    <span className="bg-qwer-rockation size-2 shrink-0 rounded-full" aria-hidden="true" />
+  );
   const brand = (
     <Link
       href={adminPaths.dashboard}
       aria-label="OIOIBWG 대시보드 홈"
       className="text-foreground flex min-h-11 min-w-11 items-center gap-2 rounded-md group-data-[collapsed=true]/sidebar:justify-center focus-visible:outline-2 focus-visible:outline-offset-4"
     >
-      <span className="bg-qwer-rockation size-2 shrink-0 rounded-full" aria-hidden="true" />
+      {brandMark}
       <span
         className="text-lg font-black tracking-tighter group-data-[collapsed=true]/sidebar:hidden"
         aria-hidden="true"
@@ -52,19 +55,7 @@ export function AdminShell({
   const navigation = (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">{navContent}</div>
-      <div className="border-sidebar-border border-t p-3">
-        <Button
-          variant="ghost"
-          className="text-muted-foreground hover:text-foreground hidden min-h-11 w-full justify-start gap-3 px-3 group-data-[collapsed=true]/sidebar:justify-center md:flex"
-          onClick={() => setIsMinimized((current) => !current)}
-          aria-label={isMinimized ? "사이드바 열기" : "사이드바 접기"}
-          aria-expanded={!isMinimized}
-        >
-          {isMinimized ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-          <span className="group-data-[collapsed=true]/sidebar:hidden">메뉴 접기</span>
-        </Button>
-        {sidebarFooter}
-      </div>
+      <div className="p-3">{sidebarFooter}</div>
     </>
   );
   return (
@@ -75,9 +66,45 @@ export function AdminShell({
         className={`group/sidebar bg-sidebar border-sidebar-border hidden h-full shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${isMinimized ? "w-20" : "w-60"}`}
       >
         <div
-          className={`border-sidebar-border flex h-20 shrink-0 items-center border-b px-5 ${isMinimized ? "justify-center" : "justify-start"}`}
+          className={`flex h-20 shrink-0 items-center px-3 ${isMinimized ? "justify-center" : "justify-between"}`}
         >
-          {brand}
+          {isMinimized ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="group/brand relative size-11"
+              aria-label="사이드바 열기"
+              title="사이드바 열기"
+              aria-expanded={false}
+              onClick={() => setIsMinimized(false)}
+            >
+              <span
+                className="inline-flex transition-opacity group-hover/brand:opacity-0 group-focus-visible/brand:opacity-0"
+                aria-hidden="true"
+              >
+                {brandMark}
+              </span>
+              <PanelLeftOpen
+                className="absolute size-5 opacity-0 transition-opacity group-hover/brand:opacity-100 group-focus-visible/brand:opacity-100"
+                aria-hidden="true"
+              />
+            </Button>
+          ) : (
+            <>
+              {brand}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-11"
+                aria-label="사이드바 접기"
+                title="사이드바 접기"
+                aria-expanded
+                onClick={() => setIsMinimized(true)}
+              >
+                <PanelLeft className="size-5" aria-hidden="true" />
+              </Button>
+            </>
+          )}
         </div>
         {navigation}
       </aside>
@@ -107,7 +134,7 @@ export function AdminShell({
                     setMobileOpen(false);
                 }}
               >
-                <SheetHeader className="border-sidebar-border border-b px-6 py-5">
+                <SheetHeader className="px-6 py-5">
                   <SheetTitle className="sr-only">OIOIBWG</SheetTitle>
                   {brand}
                   <SheetDescription>관리자 메뉴</SheetDescription>

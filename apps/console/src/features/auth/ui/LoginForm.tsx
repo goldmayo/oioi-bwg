@@ -118,7 +118,13 @@ export default function LoginForm({
                   </Button>
                 )
               ) : (
-                <Button type="button" variant="outline" onClick={() => reset()} disabled={loading}>
+                <Button
+                  type="button"
+                  className="h-11 w-full"
+                  variant="destructiveOutline"
+                  onClick={() => reset()}
+                  disabled={loading}
+                >
                   취소
                 </Button>
               )}

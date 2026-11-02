@@ -69,7 +69,12 @@ function TextFields({ line, lineIndex, onClose }: Omit<RawTextEditorProps, "isOp
         ))}
       </div>
       <DialogFooter>
-        <Button title="텍스트 수정 취소" type="button" variant="outline" onClick={onClose}>
+        <Button
+          title="텍스트 수정 취소"
+          type="button"
+          variant="destructiveOutline"
+          onClick={onClose}
+        >
           취소
         </Button>
         <Button title="텍스트 수정 적용" type="submit">

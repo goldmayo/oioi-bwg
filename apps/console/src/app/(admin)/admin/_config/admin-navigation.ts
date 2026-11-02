@@ -1,11 +1,11 @@
-import { Bell, Disc3, LayoutDashboard, Megaphone, Music } from "lucide-react";
+import { Bell, Disc3, Headphones, LayoutDashboard, Megaphone } from "lucide-react";
 
 import { type AdminPageId, adminPaths } from "@/shared/config/admin-routes";
 
 const sections = {
   dashboard: { href: adminPaths.dashboard, label: "대시보드", icon: LayoutDashboard },
   albums: { href: adminPaths.albumList, label: "앨범 관리", icon: Disc3 },
-  songs: { href: adminPaths.songList, label: "곡 관리", icon: Music },
+  songs: { href: adminPaths.songList, label: "곡 관리", icon: Headphones },
   guides: { href: adminPaths.guideList, label: "응원법 관리", icon: Megaphone },
   notifications: { href: adminPaths.notificationList, label: "알림 내역", icon: Bell },
 };
@@ -32,12 +32,12 @@ export interface AdminBreadcrumb {
 }
 
 export function getAdminNavigation(pageId: AdminPageId | undefined, pageTitle?: string) {
-  const root = { label: "Console", href: adminPaths.dashboard };
+  const root = { label: "콘솔", href: adminPaths.dashboard };
   if (!pageId) return { section: undefined, breadcrumbs: [root, { label: "관리자 페이지" }] };
   const page = pages[pageId];
   const section = sections[page.section];
   let breadcrumbs: AdminBreadcrumb[] = [root, { label: section.label }];
-  if (pageId === "dashboard") breadcrumbs = [{ label: "Console" }];
+  if (pageId === "dashboard") breadcrumbs = [{ label: "콘솔" }];
   else if (adminPaths[pageId] !== section.href)
     breadcrumbs = [
       root,

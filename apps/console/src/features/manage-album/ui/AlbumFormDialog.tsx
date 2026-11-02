@@ -266,10 +266,18 @@ function AlbumFormSession({
             )}
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="destructiveOutline"
+                onClick={() => onOpenChange(false)}
+              >
                 취소
               </Button>
-              <Button type="submit" disabled={isSubmitting || !canSubmit}>
+              <Button
+                type="submit"
+                variant={isEdit ? "default" : "q"}
+                disabled={isSubmitting || !canSubmit}
+              >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEdit ? "수정" : "추가"}
               </Button>
