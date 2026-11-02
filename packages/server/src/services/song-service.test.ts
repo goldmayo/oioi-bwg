@@ -117,6 +117,7 @@ describe("관리자 곡 정보 조회", () => {
         {
           id: guideId,
           mode: "CONCERT",
+          draftEditorAvailable: false,
           currentPublication: { action: "UNPUBLISH", sourceType: "OFFICIAL" },
         },
       ],
@@ -131,12 +132,14 @@ describe("관리자 곡 정보 조회", () => {
       id,
       album: { name: "앨범" },
       lyrics: null,
-      cheerGuides: [{ id: guideId, mode: "FESTIVAL", currentPublication: null }],
+      cheerGuides: [
+        { id: guideId, mode: "FESTIVAL", draftEditorAvailable: false, currentPublication: null },
+      ],
     });
     const result = await getAdminSongInformation(context, id);
     expect(result.hasLyrics).toBe(false);
     expect(result.cheerGuides).toEqual([
-      { id: guideId, mode: "FESTIVAL", currentPublication: null },
+      { id: guideId, mode: "FESTIVAL", draftEditorAvailable: false, currentPublication: null },
     ]);
     expect(result.guideWrite).toBeUndefined();
   });

@@ -5,7 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "../db";
 import { isPostgresForeignKeyViolation } from "../db/postgres-error";
 import { CheerGuideReferenceError } from "./repository-error";
-import { cheerGuide, cheerGuidePublication, cheerGuideSnapshot, song } from "../db/schema";
+import { album, cheerGuide, cheerGuidePublication, cheerGuideSnapshot, song } from "../db/schema";
 
 /** 내용·작성자·이력는 가져오지 않고 관리 목록에 필요한 관계를 한 번에 조회한다. */
 export function findAdminCheerGuides(executor: DbExecutor) {
@@ -169,7 +169,7 @@ export const publicGuideDetailSelection = {
 } as const;
 
 // 목록과 삭제가 같은 이력 판정을 사용하며 이력 내용은 읽지 않는다.
-function guideHasHistory(id: typeof cheerGuide.id) {
+export function guideHasHistory(id: typeof cheerGuide.id) {
   return sql<boolean>`exists (select 1 from cheer_guide_snapshot s where s.cheer_guide_id = ${id}) or exists (select 1 from cheer_guide_publication p where p.cheer_guide_id = ${id})`;
 }
 export async function removeEmptyCheerGuide(executor: DbExecutor, id: string) {
@@ -192,8 +192,46 @@ export async function removeEmptyCheerGuide(executor: DbExecutor, id: string) {
 }
 export async function findCheerGuideIdentity(executor: DbExecutor, id: string) {
   const [row] = await executor
-    .select({ id: cheerGuide.id })
+    .select({ id: cheerGuide.id, songId: cheerGuide.songId })
     .from(cheerGuide)
+    .where(eq(cheerGuide.id, id));
+  return row;
+}
+
+/** 포인터·내용·CAS 버전을 하나의 SQL snapshot에서 읽는다. 기존 공개본은 편집 초기값일 뿐이다. */
+export async function findGuideEditorRecord(executor: DbExecutor, id: string) {
+  const snapshotId = sql`coalesce(${cheerGuide.workingSnapshotId}, ${cheerGuidePublication.snapshotId}, (select s.id from cheer_guide_snapshot s where s.cheer_guide_id = ${cheerGuide.id} order by s.version_no desc limit 1))`;
+  const [row] = await executor
+    .select({
+      id: cheerGuide.id,
+      mode: cheerGuide.mode,
+      lockVersion: cheerGuide.lockVersion,
+      song: {
+        id: song.id,
+        title: song.title,
+        albumName: album.name,
+        currentYoutubeId: song.youtubeId,
+      },
+      snapshot: {
+        lyrics: cheerGuideSnapshot.lyrics,
+        referenceYoutubeId: cheerGuideSnapshot.referenceYoutubeId,
+        sourceType: cheerGuideSnapshot.sourceType,
+        sourceUrl: cheerGuideSnapshot.sourceUrl,
+        guideVideoUrl: cheerGuideSnapshot.guideVideoUrl,
+        description: cheerGuideSnapshot.description,
+      },
+    })
+    .from(cheerGuide)
+    .innerJoin(song, eq(song.id, cheerGuide.songId))
+    .innerJoin(album, eq(album.id, song.albumId))
+    .leftJoin(cheerGuidePublication, eq(cheerGuidePublication.id, cheerGuide.currentPublicationId))
+    .innerJoin(
+      cheerGuideSnapshot,
+      and(
+        eq(cheerGuideSnapshot.id, snapshotId),
+        eq(cheerGuideSnapshot.cheerGuideId, cheerGuide.id),
+      ),
+    )
     .where(eq(cheerGuide.id, id));
   return row;
 }

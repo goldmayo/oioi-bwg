@@ -42,7 +42,8 @@
     "./services/waveform-service": "./src/services/waveform-service.ts",
     "./repositories/operator-session-repository": "./src/repositories/operator-session-repository.ts",
     "./services/operator-auth-service": "./src/services/operator-auth-service.ts",
-    "./services/operator-song-service": "./src/services/operator-song-service.ts"
+    "./services/operator-song-service": "./src/services/operator-song-service.ts",
+    "./services/cheer-guide-draft-service": "./src/services/cheer-guide-draft-service.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",

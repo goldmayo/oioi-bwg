@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { entityIdSchema } from "./entity-id";
-import { adminSongSummarySchema } from "./song";
+import { lyricsDataSchema, adminSongSummarySchema } from "./song";
 
 export const cheerGuideModeSchema = z.enum(["CONCERT", "FESTIVAL"]);
 export const cheerGuideSourceTypeSchema = z.enum(["OFFICIAL", "FANDOM"]);
@@ -46,6 +46,7 @@ export const adminCheerGuideSummarySchema = z.object({
     })
     .nullable(),
   editorAvailable: z.boolean(),
+  draftEditorAvailable: z.boolean().optional(),
   deletable: z.boolean().default(false),
 });
 
@@ -55,3 +56,26 @@ export const adminCheerGuideListSchema = z.object({
 });
 export type AdminCheerGuideSummary = z.infer<typeof adminCheerGuideSummarySchema>;
 export type AdminCheerGuideList = z.infer<typeof adminCheerGuideListSchema>;
+
+/** 공개본과 분리한 편집 시작 시점의 작업본이다. 기준 영상·출처는 이 입력으로 바꾸지 않는다. */
+export const adminCheerGuideEditorSchema = z.object({
+  id: entityIdSchema,
+  mode: cheerGuideModeSchema,
+  lockVersion: z.number().int().positive(),
+  song: z.object({
+    id: entityIdSchema,
+    title: z.string(),
+    albumName: z.string(),
+    currentYoutubeId: z.string().nullable(),
+  }),
+  referenceYoutubeId: z.string().min(1),
+  lyrics: lyricsDataSchema,
+});
+export const saveAdminCheerGuideDraftSchema = z
+  .object({ expectedLockVersion: z.number().int().positive(), lyrics: lyricsDataSchema })
+  .strict();
+export const adminCheerGuideDraftResultSchema = adminCheerGuideMutationResultSchema.extend({
+  lockVersion: z.number().int().positive(),
+});
+export type AdminCheerGuideEditor = z.infer<typeof adminCheerGuideEditorSchema>;
+export type SaveAdminCheerGuideDraft = z.infer<typeof saveAdminCheerGuideDraftSchema>;

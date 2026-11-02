@@ -59,6 +59,7 @@ it("Guide별 행과 snapshot 출처를 반환하고 private row와 이력을 노
         song: { id, title: "", slug: "song", albumName: "앨범" },
         currentPublication: { action: "PUBLISH", sourceType: "FANDOM" },
         editorAvailable: true,
+        draftEditorAvailable: true,
         deletable: false,
       },
       {
@@ -68,6 +69,7 @@ it("Guide별 행과 snapshot 출처를 반환하고 private row와 이력을 노
         song: { id, title: "", slug: "song", albumName: "앨범" },
         currentPublication: null,
         editorAvailable: false,
+        draftEditorAvailable: false,
         deletable: true,
       },
     ],

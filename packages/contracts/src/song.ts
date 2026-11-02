@@ -86,6 +86,7 @@ export const adminSongInformationSchema = adminSongSummarySchema.extend({
       z.object({
         id: entityIdSchema,
         mode: z.enum(["CONCERT", "FESTIVAL"]),
+        draftEditorAvailable: z.boolean().optional(),
         currentPublication: z
           .object({
             action: z.enum(["PUBLISH", "UNPUBLISH"]),
