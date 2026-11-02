@@ -1,4 +1,4 @@
-/** 공유할 URL에는 실제 진입 화면만 기록하고 비밀·입력 초안은 넣지 않는다. */
-export function cheerGuideEditorHref(id: string, returnTo: string) {
-  return `/admin/cheer-guides/${encodeURIComponent(id)}/edit?${new URLSearchParams({ returnTo })}`;
-}
+// 다음 소비처 전환까지 기존 public API를 유지한다.
+import { adminLinks } from "@/shared/config/admin-routes";
+
+export const cheerGuideEditorHref = adminLinks.guideEdit;

@@ -15,8 +15,8 @@ import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-
 import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
-import { safeReturnPath } from "@/shared/lib/safe-return-path";
 
+import { getEditorReturnTarget } from "../../_lib/editor-return-target";
 import { AdminPageLocation } from "../../_model/admin-location";
 
 import { AdminLyricsEditor } from "./_ui/AdminLyricsEditor";
@@ -48,17 +48,14 @@ export default async function AdminLyricsEditPage({ params, searchParams }: Admi
     return notFound();
   }
 
-  const returnHref = safeReturnPath(query?.returnTo, `/admin/songs/${song.id}`, [
-    `/admin/songs/${song.id}`,
-    "/admin/cheer-guides",
-  ]);
+  const returnTarget = getEditorReturnTarget(query?.returnTo, song.id, "song");
   const information = await getAdminSongInformation(context, song.id).catch(
     async (error: unknown) => rethrowAdminPageError(error, await getRequestAuthorization()),
   );
   if (requestedGuideId !== undefined) {
     const guide = information.cheerGuides.find((item) => item.id === requestedGuideId);
     if (!guide?.draftEditorAvailable) notFound();
-    redirect(cheerGuideEditorHref(guide.id, returnHref));
+    redirect(cheerGuideEditorHref(guide.id, returnTarget.href));
   }
   // 곡 URL에는 공연 모드가 없다. 임의로 모드를 고르지 않고 곡 정보에서 선택한다.
   if (information.cheerGuides.length) redirect(`/admin/songs/${song.id}#song-guides`);
@@ -72,16 +69,7 @@ export default async function AdminLyricsEditPage({ params, searchParams }: Admi
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="h-full min-h-0 overflow-hidden">
         <AdminPageLocation title={`${song.title} 가사 편집`} />
-        <AdminLyricsEditor
-          song={song}
-          accountId={context.user!.id}
-          returnTo={{
-            href: returnHref,
-            label: returnHref.startsWith("/admin/cheer-guides")
-              ? "응원법 목록으로 돌아가기"
-              : "곡 정보로 돌아가기",
-          }}
-        />
+        <AdminLyricsEditor song={song} accountId={context.user!.id} returnTo={returnTarget} />
       </div>
     </HydrationBoundary>
   );

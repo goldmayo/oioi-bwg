@@ -12,7 +12,9 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 
-import { getAdminBreadcrumbs } from "../_config/admin-navigation";
+import { getAdminPageId } from "@/shared/config/admin-routes";
+
+import { getAdminNavigation } from "../_config/admin-navigation";
 
 type Location = { pathname: string; title: string } | null;
 const context = createContext<{
@@ -39,11 +41,11 @@ export function AdminPageLocation({ title }: { title: string }) {
   return null;
 }
 
-export function useAdminBreadcrumbs() {
+export function useAdminNavigation() {
   const owner = useContext(context);
   const pathname = usePathname();
-  return getAdminBreadcrumbs(
-    pathname,
+  return getAdminNavigation(
+    getAdminPageId(pathname),
     owner?.location?.pathname === pathname ? owner.location.title : undefined,
   );
 }
