@@ -2,15 +2,12 @@
 import { useMemo } from "react";
 import { DataTable } from "@oioi-bwg/ui/data-table";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
-import { Eye, EyeOff, Info, Pencil, Trash2 } from "lucide-react";
-import Link from "next/link";
 
 import type { AdminCheerGuideSummary } from "@/entities/cheer-guide";
 
 import { adminLinks, adminPaths } from "@/shared/config/admin-routes";
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
-import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import {
   AppDataTable,
@@ -18,6 +15,13 @@ import {
   dataTableComponents,
   useAppTable,
 } from "@/shared/ui/data-table";
+import {
+  TableActionsHeader,
+  TableDeleteAction,
+  TableEditAction,
+  TableRowActions,
+} from "@/shared/ui/table-row-actions";
+import { VisibilityIcon } from "@/shared/ui/visibility-icon";
 
 const column = createAppColumnHelper<AdminCheerGuideSummary>();
 export function GuideTable({
@@ -67,13 +71,12 @@ export function GuideTable({
             },
           }) => (
             <div className="min-w-0">
-              <Link
-                href={adminLinks.song(song.id)}
-                className="text-foreground block font-medium break-words hover:underline"
-              >
+              <span title={song.title} className="text-foreground block truncate font-medium">
                 {song.title || "제목 없음"}
-              </Link>
-              <span className="text-muted-foreground text-xs">{song.albumName}</span>
+              </span>
+              <span className="text-muted-foreground block truncate text-xs" title={song.albumName}>
+                {song.albumName}
+              </span>
             </div>
           ),
         }),
@@ -82,7 +85,11 @@ export function GuideTable({
           meta: { align: "center" },
           size: 120,
           minSize: 96,
-          cell: ({ row: { original } }) => (original.mode === "CONCERT" ? "콘서트" : "페스티벌"),
+          cell: ({ row: { original } }) => (
+            <Badge variant={original.mode === "CONCERT" ? "r" : "e"}>
+              {original.mode === "CONCERT" ? "단콘" : "페벌"}
+            </Badge>
+          ),
         }),
         column.accessor((guide) => guide.currentPublication?.sourceType ?? "", {
           id: "source",
@@ -96,8 +103,8 @@ export function GuideTable({
             },
           }) =>
             publication ? (
-              <Badge variant={publication.sourceType === "OFFICIAL" ? "q" : "bwg"}>
-                {publication.sourceType === "OFFICIAL" ? "official" : "fan-made"}
+              <Badge variant={publication.sourceType === "OFFICIAL" ? "q" : "w"}>
+                {publication.sourceType === "OFFICIAL" ? "공식" : "팬덤"}
               </Badge>
             ) : (
               <span className="text-muted-foreground">-</span>
@@ -115,14 +122,7 @@ export function GuideTable({
             },
           }) =>
             publication ? (
-              <span className="flex items-center justify-center gap-2">
-                {publication.action === "PUBLISH" ? (
-                  <Eye className="size-4" />
-                ) : (
-                  <EyeOff className="text-muted-foreground size-4" />
-                )}
-                {publication.action === "PUBLISH" ? "공개" : "공개 중단"}
-              </span>
+              <VisibilityIcon visible={publication.action === "PUBLISH"} />
             ) : (
               <span className="text-muted-foreground">이력 없음</span>
             ),
@@ -130,10 +130,10 @@ export function GuideTable({
         column.display({
           id: "actions",
           enableResizing: false,
-          header: "관리",
-          meta: { align: "end" },
-          size: 136,
-          minSize: 128,
+          header: () => <TableActionsHeader />,
+          meta: { align: "end", label: "관리", className: "pr-5!" },
+          size: 72,
+          minSize: 72,
           cell: ({ row: { original: guide } }) => {
             let editorHref: string | undefined;
             if (guide.draftEditorAvailable)
@@ -141,42 +141,22 @@ export function GuideTable({
             else if (guide.editorAvailable && guide.song.slug)
               editorHref = adminLinks.songLyrics(guide.song.slug, guide.id);
             return (
-              <div className="flex justify-end gap-1">
-                <Button variant="ghost" size="icon-sm" asChild>
-                  <Link
-                    href={adminLinks.song(guide.song.id)}
-                    aria-label={`${guide.song.title} 곡 정보`}
-                  >
-                    <Info />
-                  </Link>
-                </Button>
-                {canManage && editorHref && (
-                  <Button variant="ghost" size="icon-sm" asChild>
-                    <a
-                      href={editorHref}
-                      aria-label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법 편집`}
-                    >
-                      <Pencil />
-                    </a>
-                  </Button>
-                )}
-                {canManage && (
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
+              canManage && (
+                <TableRowActions
+                  label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법`}
+                >
+                  {editorHref && <TableEditAction href={editorHref} />}
+                  <TableDeleteAction
                     disabled={!guide.deletable}
                     title={
                       guide.deletable
                         ? "응원법 삭제"
                         : "내용 또는 공개 이력이 있는 응원법은 삭제할 수 없습니다."
                     }
-                    aria-label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법 삭제`}
                     onClick={() => onDelete(guide)}
-                  >
-                    <Trash2 className="text-destructive" />
-                  </Button>
-                )}
-              </div>
+                  />
+                </TableRowActions>
+              )
             );
           },
         }),
@@ -198,6 +178,7 @@ export function GuideTable({
         <AppDataTable caption="응원법 관리 목록">
           <DataTable.Header />
           <DataTable.Body
+            padToPageSize
             emptyState={hasFilter ? "검색 결과가 없습니다." : "등록된 응원법이 없습니다."}
           />
         </AppDataTable>

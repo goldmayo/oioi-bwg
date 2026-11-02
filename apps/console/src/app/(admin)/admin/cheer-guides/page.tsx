@@ -30,12 +30,6 @@ export default async function AdminCheerGuidesPage() {
   return (
     <div className="min-w-0 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-6">
-          <h1 className="text-foreground text-2xl font-semibold tracking-tight">응원법 관리</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            곡의 공연 모드별 응원법을 확인합니다.
-          </p>
-        </header>
         <HydrationBoundary state={dehydrate(client)}>
           <Suspense fallback={<p role="status">응원법을 불러오는 중입니다.</p>}>
             <AdminGuideList />

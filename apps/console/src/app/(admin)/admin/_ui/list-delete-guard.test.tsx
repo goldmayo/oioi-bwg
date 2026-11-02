@@ -62,6 +62,13 @@ function setup(kind: "song" | "album") {
   return { rows, onError };
 }
 
+function openRowDelete(row: HTMLElement) {
+  const trigger = within(row).getByRole("button", { name: /관리$/, hidden: true });
+  fireEvent.click(trigger);
+  const popover = screen.getByRole("dialog", { name: /작업$/, hidden: true });
+  fireEvent.click(within(popover).getByRole("button", { name: "삭제", hidden: true }));
+}
+
 it.each(["song", "album"] as const)(
   "%s: 삭제 중 취소·Escape·대상 교체·중복 실행을 막는다",
   async (kind) => {
@@ -73,8 +80,7 @@ it.each(["song", "album"] as const)(
         }),
     );
     const { rows } = setup(kind);
-    const open = (index: number) =>
-      fireEvent.click(within(rows[index]!).getByRole("button", { name: "삭제", hidden: true }));
+    const open = (index: number) => openRowDelete(rows[index]!);
     open(0);
     let dialog = screen.getByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "삭제", hidden: true }));
@@ -106,7 +112,7 @@ it.each(["song", "album"] as const)(
     const error = new Error("삭제 실패");
     remove.mockRejectedValueOnce(error).mockResolvedValueOnce(undefined);
     const { rows, onError } = setup(kind);
-    fireEvent.click(within(rows[0]!).getByRole("button", { name: "삭제", hidden: true }));
+    openRowDelete(rows[0]!);
     fireEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "삭제",
@@ -122,7 +128,7 @@ it.each(["song", "album"] as const)(
       ).toHaveProperty("disabled", false),
     );
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "취소" }));
-    fireEvent.click(within(rows[1]!).getByRole("button", { name: "삭제", hidden: true }));
+    openRowDelete(rows[1]!);
     fireEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: "삭제",

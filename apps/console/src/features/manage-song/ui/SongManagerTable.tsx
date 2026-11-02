@@ -2,14 +2,13 @@
 
 import { createContext, useContext, useMemo } from "react";
 import { DataTable } from "@oioi-bwg/ui/data-table";
-import { Edit, FileMusic, Trash2 } from "lucide-react";
+import { FileMusic } from "lucide-react";
 
 import type { AdminSongSummary } from "@/entities/song";
 
 import { adminLinks } from "@/shared/config/admin-routes";
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
-import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import {
   AppDataTable,
@@ -17,6 +16,13 @@ import {
   dataTableComponents,
   useAppTable,
 } from "@/shared/ui/data-table";
+import {
+  TableActionsHeader,
+  TableDeleteAction,
+  TableEditAction,
+  TableRowActions,
+} from "@/shared/ui/table-row-actions";
+import { VisibilityIcon } from "@/shared/ui/visibility-icon";
 
 interface Props {
   songs: AdminSongSummary[];
@@ -66,6 +72,7 @@ export function SongManagerTable({
           header: "선택",
           size: 64,
           enableSorting: false,
+          enableResizing: false,
           meta: { align: "center" },
           cell: ({ row: { original: song } }) => <SongSelection song={song} />,
         }),
@@ -77,7 +84,8 @@ export function SongManagerTable({
           cell: ({ row: { original: song } }) => (
             <a
               href={adminLinks.song(song.id)}
-              className="text-foreground block break-words underline-offset-4 hover:underline"
+              title={song.title}
+              className="text-foreground block truncate underline-offset-4 hover:underline"
             >
               {song.title}
             </a>
@@ -86,8 +94,8 @@ export function SongManagerTable({
         column.accessor((row) => row.album.name, {
           id: "album",
           header: "앨범",
-          size: 160,
-          minSize: 120,
+          size: 270,
+          minSize: 160,
           meta: {
             className: "text-muted-foreground text-sm",
           },
@@ -129,18 +137,22 @@ export function SongManagerTable({
                     응원법
                   </Badge>
                 )}
-                {!song.isVisible && (
-                  <Badge variant="outline" className="text-muted-foreground px-1.5 py-0.5 text-xs">
-                    숨김
-                  </Badge>
-                )}
               </div>
             </>
           ),
         }),
+        column.accessor("isVisible", {
+          header: "표시",
+          size: 80,
+          minSize: 80,
+          meta: { align: "center" },
+          cell: ({ row }) => <VisibilityIcon visible={row.original.isVisible} />,
+          enableSorting: false,
+        }),
         column.accessor("order", {
           header: "순서",
-          size: 64,
+          size: 112,
+          minSize: 112,
           meta: {
             align: "center",
             className: "text-muted-foreground text-sm",
@@ -151,36 +163,17 @@ export function SongManagerTable({
         column.display({
           id: "actions",
           enableResizing: false,
-          header: "관리",
-          size: 104,
-          minSize: 104,
-          meta: { align: "end" },
-          cell: ({ row: { original: song } }) => (
-            <>
-              {canManage && (
-                <div className="flex justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onEdit(song)}
-                    title="수정"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                    onClick={() => onDelete(song)}
-                    title="삭제"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </>
-          ),
+          header: () => <TableActionsHeader />,
+          size: 72,
+          minSize: 72,
+          meta: { align: "end", label: "관리", className: "pr-5!" },
+          cell: ({ row: { original: song } }) =>
+            canManage && (
+              <TableRowActions label={song.title}>
+                <TableEditAction onClick={() => onEdit(song)} />
+                <TableDeleteAction onClick={() => onDelete(song)} />
+              </TableRowActions>
+            ),
         }),
       ]),
     [canManage, onEdit, onDelete],
@@ -199,6 +192,7 @@ export function SongManagerTable({
           <AppDataTable caption="곡 관리 목록">
             <DataTable.Header />
             <DataTable.Body
+              padToPageSize
               emptyState={
                 <>
                   <FileMusic className="mx-auto mb-2 h-8 w-8 opacity-50" />

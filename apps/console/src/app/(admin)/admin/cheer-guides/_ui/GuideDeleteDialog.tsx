@@ -56,7 +56,7 @@ export function GuideDeleteDialog({
         )}
         {!canManage && <p className="text-muted-foreground text-sm">관리자 권한을 확인해주세요.</p>}
         <DialogFooter>
-          <Button variant="outline" disabled={deletion.pending} onClick={deletion.close}>
+          <Button variant="destructiveOutline" disabled={deletion.pending} onClick={deletion.close}>
             취소
           </Button>
           <Button
