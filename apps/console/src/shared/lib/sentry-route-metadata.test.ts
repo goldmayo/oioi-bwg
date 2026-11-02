@@ -35,6 +35,8 @@ describe("Console route metadata privacy", () => {
   });
   it.each([
     "/private/TOKEN",
+    "/admin/songs/new",
+    "/admin/songs/private-id",
     "/administrator/albums",
     "javascript:secret",
     "constructor",

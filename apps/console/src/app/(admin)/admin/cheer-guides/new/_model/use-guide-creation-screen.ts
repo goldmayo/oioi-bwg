@@ -7,6 +7,8 @@ import { cheerGuideMutations, cheerGuideQueryKeys } from "@/entities/cheer-guide
 import { songQueryKeys } from "@/entities/song";
 import { songQueries } from "@/entities/song/api";
 
+import { adminLinks, adminPaths } from "@/shared/config/admin-routes";
+
 import type { GuideCreationValues } from "../_lib/guide-creation-form";
 
 export function useGuideCreationScreen(initialSongId?: string) {
@@ -31,10 +33,10 @@ export function useGuideCreationScreen(initialSongId?: string) {
     submit: async (input: GuideCreationValues) => {
       await creation.mutateAsync(input);
     },
-    saved: () => window.location.replace("/admin/cheer-guides"),
+    saved: () => window.location.replace(adminPaths.guideList),
     cancel: () =>
       window.location.assign(
-        initialSongId ? `/admin/songs/${initialSongId}?edit=true` : "/admin/cheer-guides",
+        initialSongId ? adminLinks.songEdit(initialSongId) : adminPaths.guideList,
       ),
   };
 }

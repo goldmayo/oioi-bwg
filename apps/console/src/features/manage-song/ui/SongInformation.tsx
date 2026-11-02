@@ -1,8 +1,8 @@
 import { Eye, EyeOff, Pencil } from "lucide-react";
 
-import { cheerGuideEditorHref } from "@/entities/cheer-guide";
 import type { AdminSongInformation } from "@/entities/song";
 
+import { adminLinks } from "@/shared/config/admin-routes";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 
@@ -25,7 +25,7 @@ export function SongInformation({
         </div>
         {canManage && (
           <Button variant="brand" asChild>
-            <a href={`/admin/songs/${song.id}?edit=true`}>
+            <a href={adminLinks.songEdit(song.id)}>
               <Pencil />
               편집
             </a>
@@ -111,7 +111,7 @@ export function SongGuideSummary({
             <div className="flex items-center gap-2">
               {canManage && guide?.draftEditorAvailable && (
                 <Button size="sm" variant="outline" asChild>
-                  <a href={cheerGuideEditorHref(guide.id, returnHref ?? `/admin/songs/${song.id}`)}>
+                  <a href={adminLinks.guideEdit(guide.id, returnHref ?? adminLinks.song(song.id))}>
                     {mode === "CONCERT" ? "콘서트" : "페스티벌"} 편집
                   </a>
                 </Button>
@@ -136,12 +136,12 @@ export function SongGuideSummary({
       })}
       {canManage && song.cheerGuides.length < 2 && (
         <Button variant="outline" asChild className="w-full">
-          <a href={`/admin/cheer-guides/new?songId=${song.id}`}>응원법 추가</a>
+          <a href={adminLinks.guideCreate(song.id)}>응원법 추가</a>
         </Button>
       )}
       {canManage && song.slug && song.cheerGuides.length === 0 && (
         <Button variant="outline" asChild className="w-full">
-          <a href={`/admin/edit/${song.slug}`}>응원법 편집</a>
+          <a href={adminLinks.songLyrics(song.slug)}>응원법 편집</a>
         </Button>
       )}
     </section>

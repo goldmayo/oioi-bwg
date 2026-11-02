@@ -8,6 +8,7 @@ import type { AdminSongSummary } from "@/entities/song";
 import { songQueryKeys } from "@/entities/song";
 import { songMutations, songQueries } from "@/entities/song/api";
 
+import { adminLinks, adminPaths } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
 
 import { createWaveformDownload } from "../model/waveform-manifest";
@@ -87,8 +88,7 @@ export function SongManagerClient({
     [queryClient],
   );
   const handleEdit = useCallback((song: AdminSongSummary) => {
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 편집 진입을 문서 탐색으로 유지해 브라우저 뒤로가기를 보호한다.
-    window.location.assign(`/admin/songs/${song.id}?edit=true`);
+    window.location.assign(adminLinks.songEdit(song.id));
   }, []);
   const handleDelete = useCallback(() => {
     if (!canManage || !deleteTarget || deletingId.current !== null) return;
@@ -117,8 +117,7 @@ export function SongManagerClient({
           setAlbumFilter(value);
         }}
         onAdd={() => {
-          // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 뒤로가기도 beforeunload로 보호하도록 폼에 문서 탐색으로 진입한다.
-          window.location.assign("/admin/songs/new");
+          window.location.assign(adminPaths.songCreate);
         }}
       />
       <div className="flex flex-wrap items-center gap-3">

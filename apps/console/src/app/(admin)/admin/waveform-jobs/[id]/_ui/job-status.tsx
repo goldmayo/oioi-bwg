@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { waveformQueries } from "@/entities/waveform";
 
+import { adminLinks, adminPaths } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
 
 import { useNotificationContext } from "../../../_ui/notification-provider";
@@ -120,7 +121,7 @@ export function WaveformJobStatus({ id }: { id: string }) {
       <div className="border-border bg-muted/30 flex flex-wrap items-center gap-3 border-t px-6 py-5 sm:px-8">
         {query.data ? (
           <Button asChild className="max-sm:w-full">
-            <a href={`/admin/songs/${query.data.songId}`}>곡 정보로 돌아가기</a>
+            <a href={adminLinks.song(query.data.songId)}>곡 정보로 돌아가기</a>
           </Button>
         ) : null}
         <Button
@@ -134,7 +135,7 @@ export function WaveformJobStatus({ id }: { id: string }) {
           새로고침
         </Button>
         <Button asChild variant="ghost">
-          <Link href="/admin/notifications">알림 내역</Link>
+          <Link href={adminPaths.notificationList}>알림 내역</Link>
         </Button>
       </div>
     </div>

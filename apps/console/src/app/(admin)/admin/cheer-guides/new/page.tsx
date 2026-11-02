@@ -13,6 +13,7 @@ import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-
 import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
+import { adminPaths } from "@/shared/config/admin-routes";
 
 import { GuideCreationScreen } from "./_ui/GuideCreationScreen";
 
@@ -42,7 +43,7 @@ export default async function GuideCreationPage({
     <div className="min-w-0 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-3xl">
         <a
-          href="/admin/cheer-guides"
+          href={adminPaths.guideList}
           className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-2 text-sm"
         >
           <ArrowLeft className="size-4" />

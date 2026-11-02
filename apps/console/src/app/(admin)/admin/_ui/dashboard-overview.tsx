@@ -1,6 +1,7 @@
 import { ArrowRight, Bell, Disc3, Music } from "lucide-react";
 import Link from "next/link";
 
+import { adminPaths } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
 
 export function DashboardOverview({
@@ -26,7 +27,7 @@ export function DashboardOverview({
           <div className="bg-card border-border divide-border divide-y overflow-hidden rounded-xl border">
             {[
               {
-                href: "/admin/albums",
+                href: adminPaths.albumList,
                 title: "앨범",
                 description: "앨범 정보와 공개 상태를 관리합니다.",
                 count: albumCount,
@@ -34,7 +35,7 @@ export function DashboardOverview({
                 icon: Disc3,
               },
               {
-                href: "/admin/songs",
+                href: adminPaths.songList,
                 title: "곡",
                 description: "곡 정보와 가사를 편집합니다.",
                 count: songCount,
@@ -80,7 +81,7 @@ export function DashboardOverview({
             있습니다.
           </p>
           <Button asChild variant="outline" className="mt-5">
-            <Link href="/admin/notifications">
+            <Link href={adminPaths.notificationList}>
               알림 내역 보기
               <ArrowRight size={16} aria-hidden="true" />
             </Link>

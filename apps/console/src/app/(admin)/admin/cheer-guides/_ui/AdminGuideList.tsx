@@ -9,6 +9,7 @@ import {
   createClientAbility,
 } from "@/features/auth";
 
+import { adminPaths } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
 
 import { useGuideDeletion } from "../_model/use-guide-deletion";
@@ -35,7 +36,7 @@ export function AdminGuideList() {
       {canManage && (
         <div className="flex justify-end">
           <Button asChild className="bg-qwer-e hover:bg-qwer-e/90 text-neutral-950">
-            <a href="/admin/cheer-guides/new">응원법 추가</a>
+            <a href={adminPaths.guideCreate}>응원법 추가</a>
           </Button>
         </div>
       )}
