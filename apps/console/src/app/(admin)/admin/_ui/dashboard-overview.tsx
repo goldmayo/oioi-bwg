@@ -2,7 +2,8 @@ import { ArrowRight, Bell, Disc3, Music } from "lucide-react";
 import Link from "next/link";
 
 import { adminPaths } from "@/shared/config/admin-routes";
-import { Button } from "@/shared/ui/button";
+
+import { DashboardNotificationsLink } from "./dashboard-notifications-link";
 
 export function DashboardOverview({
   albumCount,
@@ -80,12 +81,7 @@ export function DashboardOverview({
             오래 걸리는 작업의 완료·실패 결과는 알림 내역에 남습니다. 놓친 알림도 다시 확인할 수
             있습니다.
           </p>
-          <Button asChild variant="outline" className="mt-5">
-            <Link href={adminPaths.notificationList}>
-              알림 내역 보기
-              <ArrowRight size={16} aria-hidden="true" />
-            </Link>
-          </Button>
+          <DashboardNotificationsLink />
         </section>
       </div>
     </section>
