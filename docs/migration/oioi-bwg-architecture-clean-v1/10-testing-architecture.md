@@ -1,10 +1,10 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.21"
+version: "1.22"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-28"
+updated_at: "2026-11-02"
 depends_on:
   - "01"
   - "02"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.21
+# oioi-bwg Testing Architecture v1.22
 
 ## 1. 목적
 
@@ -314,12 +314,31 @@ fixture가 반복될 때 작은 builder를 사용할 수 있다.
 
 ## 17. CI Gate
 
-일반 `migration_main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 무거운 검사를 생략한다.
-scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·빈 diff·판정 실패는 전체 검증이다.
-feature push hook도 같은 전체 diff 판정을 사용한다. Promotion과 main/develop push는 이 예외를 적용하지 않는다.
+2026-11-02 사용자 결정으로 로컬 반복 검증과 통합 CI를 분리한다.
+
+- 로컬 `pnpm verify`와 feature push hook은 merge-base 이후의 변경·미커밋·신규 파일을 기준으로
+  Turbo affected 프로젝트의 type-check/lint와 Vitest `--changed` 관련 테스트를 실행한다.
+  삭제 파일도 영향 판정에 포함하며 포맷 검사만 실제 존재하는 변경 파일에 한정한다.
+- TypeScript는 영향받는 프로젝트의 전체 타입 관계를 증분 캐시로 검사한다. 개별 변경 파일만
+  `tsc`에 전달하지 않는다. ESLint content cache와 Turbo의 입력별 task cache를 사용한다.
+- 공용 설정·manifest·저장소 도구 변경이면 repo 검사도 포함한다. 앱 소스 변경의 의존성 검사는
+  선택된 workspace의 source/config graph를 대상으로 하고, 공용 입력 변경은 전체 graph를 검사한다.
+- 로컬 기본 경로에서 build·DB 통합·ARM64·인프라 검사를 반복하지 않는다. 변경 위험 때문에
+  추가 검증이 필요하면 해당 workspace·흐름을 명시해 실행하고 결과를 PR에 기록한다.
+- `migration_main` 병합 전 최종 PR 커밋은 기존 CI의 전체 quality/unit/PG/ARM64/build 검증을 통과한다.
+  명시적 로컬 전체 재현은 `pnpm verify:full`이다. CI의 전체 검사 entry에는 `--changed`를 넣지 않는다.
+- 로컬 범위 판정 실패는 오류로 중단한다. 전체 검증을 암묵적으로 시작하지 않는다.
+
+CI cache는 검증 범위를 줄이는 권한이 아니다. TypeScript·ESLint의 입력 검증과 Turbo task hash가
+일치하는 결과만 재사용한다. 관련 테스트 옵션도 task hash에 포함되므로 로컬 부분 실행을 CI 전체
+테스트 성공으로 재사용하지 않는다. 변경 프로젝트·명령은 `pnpm verify --dry-run`으로 확인한다.
+
+일반 `migration_main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 기존처럼 무거운 검사를 생략한다.
+scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·빈 diff·CI 판정 실패는 전체 검증이다.
+Promotion 계약은 이번 로컬 최적화로 변경하지 않으며 [Runbook §21](12-deployment-migration-runbook.md#21-cicd)을 따른다.
 
 `pnpm lint:deps`는 workspace별 TS alias·package exports를 해석한 source/config/test graph와
-Turbo boundaries를 검사한다. root lint·verify·CI·push hook이 같은 entry를 실행한다.
+Turbo boundaries를 검사한다. CI·전체 lint는 같은 entry를 실행하며 로컬 verify·push hook은 해당 entry의 workspace 범위를 선택한다.
 packages의 앱 역참조·앱 간 참조·workspace 상대 경로 우회·미선언 내부 의존성·runtime의 tooling 참조와
 실제 runtime 순환을 거절한다. type import로 끊기는 순환은 별도 경고로 드러낸다.
 저장소 도구의 앱 source 참조는 tools/repository의 foundation HTTP 통합 테스트가 사용하는
@@ -333,8 +352,8 @@ root의 내부 package 소비 검증은 tools/repository로 단계적으로 이�
 harness/unit/ops/PG 수집 합집합·주 타입 소속·cwd 해석을 대조하고, 검사 entry를 먼저 제거하지 않는다.
 Root는 내부 workspace 의존성을 선언하거나 제품 package를 직접 import하지 않는다. 등록된 Tool
 공개 파일 adapter만 허용하며 manifest와 해석 graph 양쪽에서 회귀를 거절한다.
-Root orchestration은 제품 Turbo 검사에서 Tool을 제외하고 type-check:repo·lint:repo에서 Tool의
-자체 검사를 항상 위임한다. --affected가 Root 파일 변경에서 Tool을 선택하지 않아도 같은 검사를
+전체 Root orchestration은 제품 Turbo 검사에서 Tool을 제외하고 type-check:repo·lint:repo에서 Tool의
+자체 검사를 항상 위임한다. 로컬은 위 영향 판정으로 필요한 repo 검사를 선택한다. --affected가 Root 파일 변경에서 Tool을 선택하지 않아도 같은 검사를
 수행하며, 전체 검사에서 Tool을 중복 실행하지 않는다. Tool의 저장소 통합 검사는 cache하지 않는다.
 제품 task의 cache는 root 내부 package source의 전역 결합을 제거한 뒤 소비 입력으로 검증한다.
 affected 선택·hash 변화·실제 실행을 구분하고 필요한 무효화와 무관한 cache 보존을 함께 증명한다.
@@ -361,7 +380,7 @@ repo harness는 직접 앱 import와 source package·공통 설정의 필수 tas
 함께 검사한다. TypeScript 프로그램이 실제로 읽는 공통 설정·preset도 type-check 입력에 포함돼야 한다.
 제품 cache는 자체 workspace 기본 입력과 JIT source 전파를 유지하고 공통 config 입력을 build·타입·lint·unit
 소비에 따라 분리한다. config의 전파 노드(transit 및 script 없는 build)는 manifest만 입력으로 사용한다.
-Root 정책·통합 검사는 항상 실행하며 제품 hash에 전역 입력으로 섞지 않는다. Task 추가·설정 import 변경 시
+CI·명시적 전체 검증의 Root 정책·통합 검사는 항상 실행하며 제품 hash에 전역 입력으로 섞지 않는다. Task 추가·설정 import 변경 시
 입력 소속과 필수/무관 cache 회귀를 함께 갱신한다.
 루트 설정과 운영·통합 테스트도 repo 진입점의 strict 타입 검사에 포함한다. 테스트 수집·실행 성공을
 타입 검사 성공으로 취급하지 않는다. Node 테스트에는 앱 alias를 전역 적용하지 않으며 Web HTTP

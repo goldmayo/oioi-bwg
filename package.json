@@ -12,7 +12,7 @@
     "type-check": "turbo run type-check --filter=!@oioi-bwg/repository-tools && pnpm type-check:repo",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "turbo run type-check lint test --filter=!@oioi-bwg/repository-tools && pnpm type-check:repo && pnpm lint:repo && pnpm lint:deps && pnpm test:harness && pnpm test:ops && pnpm format:check && turbo run build",
+    "verify": "node scripts/verify-local.mjs",
     "prepare": "husky",
     "db:generate": "node --import tsx -- scripts/run-local-database-tool.ts generate",
     "db:plan-uuid": "node --conditions=react-server --import tsx scripts/plan-uuid-cutover.ts",
@@ -45,7 +45,8 @@
     "type-check:scripts": "tsc --noEmit -p scripts/tsconfig.json",
     "lint:deps": "pnpm --filter @oioi-bwg/repository-tools lint:deps && turbo boundaries",
     "db:import-guides": "node --conditions=react-server --import tsx scripts/import-cheer-guides.ts",
-    "waveform:generate": "tsx scripts/generate-waveform.ts"
+    "waveform:generate": "tsx scripts/generate-waveform.ts",
+    "verify:full": "turbo run type-check lint test --filter=!@oioi-bwg/repository-tools && pnpm type-check:repo && pnpm lint:repo && pnpm lint:deps && pnpm test:harness && pnpm test:ops && pnpm format:check && turbo run build"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",

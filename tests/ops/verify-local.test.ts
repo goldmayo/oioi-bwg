@@ -1,0 +1,147 @@
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { expect, test } from "vitest";
+
+import { localVerificationPlan } from "../../scripts/verify-local.mjs";
+
+const packages = [{ name: "@oioi-bwg/console", path: "apps/console" }];
+const base = "a".repeat(40);
+
+test("Console UI 변경은 관련 프로젝트·테스트·경계만 검사한다", () => {
+  const files = ["apps/console/src/page.tsx", "docs/WORK.md", ".impeccable/hook.cache.json"];
+  const plan = localVerificationPlan({ files, base, packages });
+  expect(plan[0]).toContain("--affected");
+  expect(plan[1]).toContain(`--changed=${base}`);
+  expect(plan).toContainEqual([
+    "--filter",
+    "@oioi-bwg/repository-tools",
+    "lint:deps",
+    "--scope",
+    "apps/console",
+  ]);
+  expect(plan.flat()).not.toContain("test:harness");
+  expect(plan.flat()).not.toContain("test:ops");
+  expect(plan.flat()).not.toContain("build");
+  expect(plan.at(-1)).toEqual(["exec", "prettier", "--check", "--ignore-unknown", "--", files[0]]);
+});
+
+test("공용 설정 변경은 저장소 검사도 선택하되 운영 테스트는 관련 항목으로 제한한다", () => {
+  const plan = localVerificationPlan({
+    files: ["packages/config/typescript/base.json"],
+    base,
+    packages: [...packages, { name: "@oioi-bwg/config", path: "packages/config" }],
+  });
+  expect(plan).toContainEqual(["type-check:repo"]);
+  expect(plan).toContainEqual(["lint:deps"]);
+  expect(plan).toContainEqual(["test:harness"]);
+  expect(plan).toContainEqual(["test:ops", `--changed=${base}`, "--passWithNoTests"]);
+});
+
+test("삭제만 한 소스도 검사하며 포맷에는 존재하는 파일만 전달한다", () => {
+  const plan = localVerificationPlan({
+    files: ["apps/console/src/deleted.ts"],
+    existingFiles: [],
+    base,
+    packages,
+  });
+  expect(plan[0]).toContain("type-check");
+  expect(plan[1]).toContain("test");
+  expect(plan.flat()).not.toContain("prettier");
+});
+
+test("문서·빈 변경에는 코드 검사를 실행하지 않는다", () => {
+  for (const files of [[], ["docs/WORK.md"], [".impeccable/hook.cache.json"]])
+    expect(localVerificationPlan({ files, base, packages })).toEqual([]);
+});
+
+test("영향 workspace가 누락되면 검사를 성공으로 건너뛰지 않는다", () => {
+  expect(() =>
+    localVerificationPlan({ files: ["apps/unknown/source.ts"], base, packages: [] }),
+  ).toThrow("Turbo 영향 범위");
+});
+
+test("로컬 증분과 CI 전체 검증 명령을 분리하고 캐시를 끄지 않는다", () => {
+  const manifest = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
+  expect(manifest.scripts.verify).toBe("node scripts/verify-local.mjs");
+  expect(manifest.scripts["verify:full"]).not.toMatch(/--affected|--changed/);
+  const preset = JSON.parse(
+    readFileSync(new URL("../../packages/config/typescript/base.json", import.meta.url), "utf8"),
+  );
+  expect(preset.compilerOptions.incremental).toBe(true);
+  for (const app of ["web", "console"]) {
+    const scripts = JSON.parse(
+      readFileSync(new URL(`../../apps/${app}/package.json`, import.meta.url), "utf8"),
+    ).scripts;
+    expect(scripts["type-check"]).not.toContain("incremental false");
+    expect(scripts.lint).toContain("--cache-strategy content");
+  }
+});
+
+test("실제 Git의 삭제·신규 파일과 hook 환경을 처리하며 기준 오류를 전체 실행으로 바꾸지 않는다", () => {
+  const root = mkdtempSync(join(tmpdir(), "verify-local-"));
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+  );
+  const git = (...args: string[]) =>
+    execFileSync("git", args, {
+      cwd: root,
+      env,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  try {
+    git("init", "-q");
+    mkdirSync(join(root, "apps/console/src"), { recursive: true });
+    mkdirSync(join(root, "scripts"));
+    writeFileSync(join(root, "apps/console/src/old.ts"), "export const value = 1;");
+    writeFileSync(
+      join(root, "scripts/verify-local.mjs"),
+      readFileSync(new URL("../../scripts/verify-local.mjs", import.meta.url)),
+    );
+    git("add", ".");
+    git(
+      "-c",
+      "core.hooksPath=/dev/null",
+      "-c",
+      "user.name=Fixture",
+      "-c",
+      "user.email=fixture@example.invalid",
+      "commit",
+      "-qm",
+      "fixture",
+    );
+    const base = git("rev-parse", "HEAD");
+    unlinkSync(join(root, "apps/console/src/old.ts"));
+    writeFileSync(join(root, "apps/console/src/new.ts"), "export const next = 2;");
+    const bin = join(root, ".git/bin");
+    mkdirSync(bin);
+    writeFileSync(
+      join(bin, "pnpm"),
+      `#!/bin/sh\nprintf '%s\\n' '${JSON.stringify({ packages: { items: packages } })}'\n`,
+      { mode: 0o755 },
+    );
+    const run = (reference: string) =>
+      spawnSync(process.execPath, [join(root, "scripts/verify-local.mjs"), "--dry-run"], {
+        cwd: root,
+        env: {
+          ...env,
+          GIT_DIR: "/nonexistent/hook",
+          VERIFY_BASE: reference,
+          PATH: `${bin}:${env.PATH}`,
+        },
+        encoding: "utf8",
+      });
+    const result = run(base);
+    expect(result.status, result.stderr).toBe(0);
+    const plan = JSON.parse(result.stdout);
+    expect(plan.commands[0]).toContain("--affected");
+    expect(plan.commands.at(-1)).toContain("apps/console/src/new.ts");
+    expect(plan.commands.at(-1)).not.toContain("apps/console/src/old.ts");
+    expect(run("missing-ref").status).toBe(1);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
