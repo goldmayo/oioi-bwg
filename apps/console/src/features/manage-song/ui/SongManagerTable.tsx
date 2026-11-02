@@ -10,7 +10,12 @@ import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
-import { createAppColumnHelper, dataTableComponents, useAppTable } from "@/shared/ui/data-table";
+import {
+  AppDataTable,
+  createAppColumnHelper,
+  dataTableComponents,
+  useAppTable,
+} from "@/shared/ui/data-table";
 
 interface Props {
   songs: AdminSongSummary[];
@@ -60,7 +65,7 @@ export function SongManagerTable({
           header: "선택",
           size: 64,
           enableSorting: false,
-          meta: { className: "text-center" },
+          meta: { align: "center" },
           cell: ({ row: { original: song } }) => <SongSelection song={song} />,
         }),
         column.accessor("title", {
@@ -109,7 +114,7 @@ export function SongManagerTable({
           header: "구분",
           size: 96,
           minSize: 80,
-          meta: { className: "text-center" },
+          meta: { align: "center" },
           cell: ({ row: { original: song } }) => (
             <>
               <div className="flex flex-wrap justify-center gap-1">
@@ -136,7 +141,8 @@ export function SongManagerTable({
           header: "순서",
           size: 64,
           meta: {
-            className: "text-center text-muted-foreground text-sm",
+            align: "center",
+            className: "text-muted-foreground text-sm",
           },
           cell: ({ row: { original: song } }) => <>{song.order}</>,
           sortFn: "basic",
@@ -146,7 +152,7 @@ export function SongManagerTable({
           header: "관리",
           size: 104,
           minSize: 104,
-          meta: { className: "text-right" },
+          meta: { align: "end" },
           cell: ({ row: { original: song } }) => (
             <>
               {canManage && (
@@ -188,10 +194,7 @@ export function SongManagerTable({
     <SelectionContext value={{ selectedIds, onSelect, canManage }}>
       <DataTable.Root table={table} components={dataTableComponents}>
         <div className="min-w-0 space-y-4">
-          <DataTable.Table
-            caption="곡 관리 목록"
-            className="bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_td]:whitespace-normal [&_th]:px-3"
-          >
+          <AppDataTable caption="곡 관리 목록">
             <DataTable.Header />
             <DataTable.Body
               emptyState={
@@ -201,7 +204,7 @@ export function SongManagerTable({
                 </>
               }
             />
-          </DataTable.Table>
+          </AppDataTable>
           <DataTable.Pagination label="곡 목록 페이지" pageSizes={[10, 20, 50]} />
         </div>
       </DataTable.Root>

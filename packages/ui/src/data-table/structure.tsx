@@ -106,28 +106,43 @@ export function Header({ children }: { children?: ReactNode }) {
                           {sorting && column.getCanSort() ? (
                             <Button
                               type="button"
-                              className="focus-visible:ring-ring inline-flex min-h-10 items-center gap-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
+                              className="focus-visible:ring-ring relative inline-flex min-h-10 w-full items-center gap-1 rounded-sm px-0 focus-visible:ring-2 focus-visible:outline-none has-[>svg]:px-0"
+                              style={{
+                                justifyContent:
+                                  column.columnDef.meta?.align === "end"
+                                    ? "flex-end"
+                                    : column.columnDef.meta?.align === "center"
+                                      ? "center"
+                                      : "flex-start",
+                              }}
                               onClick={column.getToggleSortingHandler()}
                             >
-                              <FlexRender header={header} />
-                              <svg
-                                aria-hidden="true"
-                                width="12"
-                                height="16"
-                                viewBox="0 0 12 16"
-                                fill="none"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  d={
-                                    sorted === "desc"
-                                      ? "M2 5l4 5 4-5"
-                                      : sorted === "asc"
-                                        ? "M2 10l4-5 4 5"
-                                        : "M2 6l4-4 4 4M2 10l4 4 4-4"
+                              <span className="relative inline-flex items-center">
+                                <FlexRender header={header} />
+                                <svg
+                                  className={
+                                    column.columnDef.meta?.align === "end"
+                                      ? "absolute end-full me-1"
+                                      : "absolute start-full ms-1"
                                   }
-                                />
-                              </svg>
+                                  aria-hidden="true"
+                                  width="12"
+                                  height="16"
+                                  viewBox="0 0 12 16"
+                                  fill="none"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    d={
+                                      sorted === "desc"
+                                        ? "M2 5l4 5 4-5"
+                                        : sorted === "asc"
+                                          ? "M2 10l4-5 4 5"
+                                          : "M2 6l4-4 4 4M2 10l4 4 4-4"
+                                    }
+                                  />
+                                </svg>
+                              </span>
                             </Button>
                           ) : (
                             <FlexRender header={header} />
