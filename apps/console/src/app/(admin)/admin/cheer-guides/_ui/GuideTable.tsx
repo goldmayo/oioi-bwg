@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { DataTable } from "@oioi-bwg/ui/data-table";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
-import { Eye, EyeOff, Info, Pencil } from "lucide-react";
+import { Eye, EyeOff, Info, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import type { AdminCheerGuideSummary } from "@/entities/cheer-guide";
@@ -26,12 +26,14 @@ export function GuideTable({
   hasFilter,
   selection,
   onSelectionChange,
+  onDelete,
 }: {
   guides: AdminCheerGuideSummary[];
   canManage: boolean;
   hasFilter: boolean;
   selection: RowSelectionState;
   onSelectionChange: OnChangeFn<RowSelectionState>;
+  onDelete: (guide: AdminCheerGuideSummary) => void;
 }) {
   "use no memo";
   const wide = useMediaQuery("(min-width: 768px)");
@@ -129,8 +131,8 @@ export function GuideTable({
           id: "actions",
           header: "관리",
           meta: { align: "end" },
-          size: 100,
-          minSize: 100,
+          size: 136,
+          minSize: 128,
           cell: ({ row: { original: guide } }) => (
             <div className="flex justify-end gap-1">
               <Button variant="ghost" size="icon-sm" asChild>
@@ -151,11 +153,27 @@ export function GuideTable({
                   </Link>
                 </Button>
               )}
+              {canManage && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={!guide.deletable}
+                  title={
+                    guide.deletable
+                      ? "응원법 삭제"
+                      : "내용 또는 공개 이력이 있는 응원법은 삭제할 수 없습니다."
+                  }
+                  aria-label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법 삭제`}
+                  onClick={() => onDelete(guide)}
+                >
+                  <Trash2 className="text-destructive" />
+                </Button>
+              )}
             </div>
           ),
         }),
       ]),
-    [canManage, wide],
+    [canManage, wide, onDelete],
   );
   const table = useAppTable({
     columns,
