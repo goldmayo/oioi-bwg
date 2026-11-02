@@ -49,7 +49,7 @@ export function SongManagerToolbar({
         </Select>
       </div>
       {canManage && (
-        <Button onClick={onAdd} className="w-full sm:w-auto">
+        <Button variant="brand" onClick={onAdd} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />곡 추가
         </Button>
       )}

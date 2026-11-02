@@ -14,6 +14,7 @@ import { songQueryKeys } from "../index";
 import {
   createAdminSong,
   deleteAdminSong,
+  getAdminSongInformation,
   getAdminSongs,
   saveAdminSongLyrics,
   updateAdminSong,
@@ -61,6 +62,21 @@ describe("song browser API", () => {
 
     await expect(getAdminSongs(controller.signal)).resolves.toEqual(list);
     expect(http.get).toHaveBeenCalledWith("/api/admin/songs", { signal: controller.signal });
+  });
+
+  it("uses a separate UUID information key, forwards cancellation and validates the response", async () => {
+    const signal = new AbortController().signal;
+    const data = { ...song, hasLyrics: true, cheerGuides: [] };
+    http.get.mockResolvedValueOnce(data).mockResolvedValueOnce(song);
+    expect(songQueries.adminInformation(song.id).queryKey).toEqual(
+      songQueryKeys.adminInformation(song.id),
+    );
+    expect(songQueryKeys.adminInformation(song.id)).not.toEqual(songQueryKeys.detail(song.id));
+    await expect(getAdminSongInformation(song.id, signal)).resolves.toEqual(data);
+    expect(http.get).toHaveBeenCalledWith(`/api/admin/songs/${song.id}`, { signal });
+    await expect(getAdminSongInformation(song.id)).rejects.toThrow(
+      "API response contract violation",
+    );
   });
 
   it("rejects an invalid response contract", async () => {

@@ -3,6 +3,7 @@ export const songQueryKeys = {
   all: ["song"] as const,
   lists: () => [...songQueryKeys.all, "list"] as const,
   adminList: () => [...songQueryKeys.lists(), "admin"] as const,
+  adminInformation: (id: string) => [...songQueryKeys.all, "admin-information", id] as const,
   details: () => [...songQueryKeys.all, "detail"] as const,
   detail: (slug: string) => [...songQueryKeys.details(), slug] as const,
 };
