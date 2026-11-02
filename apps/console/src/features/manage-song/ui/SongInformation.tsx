@@ -124,6 +124,11 @@ export function SongGuideSummary({
           </div>
         );
       })}
+      {canManage && song.cheerGuides.length < 2 && (
+        <Button variant="outline" asChild className="w-full">
+          <a href={`/admin/cheer-guides/new?songId=${song.id}`}>응원법 추가</a>
+        </Button>
+      )}
       {canManage && song.slug && (
         <Button variant="outline" asChild className="w-full">
           <a href={`/admin/edit/${song.slug}`}>응원법 편집</a>
