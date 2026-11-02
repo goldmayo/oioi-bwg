@@ -10,6 +10,7 @@ import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-
 import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
+import { safeReturnPath } from "@/shared/lib/safe-return-path";
 
 import { AdminPageLocation } from "../../_model/admin-location";
 
@@ -17,7 +18,7 @@ import { AdminLyricsEditor } from "./_ui/AdminLyricsEditor";
 
 interface AdminEditPageProps {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ guideId?: string | string[] }>;
+  searchParams?: Promise<{ guideId?: string | string[]; returnTo?: string | string[] }>;
 }
 
 /** 관리자 가사 편집 DTO와 Ability를 서버에서 준비한다. */
@@ -33,7 +34,8 @@ export default async function AdminLyricsEditPage({ params, searchParams }: Admi
     rethrowAdminPageError(error, await getRequestAuthorization()),
   );
 
-  const requestedGuideId = (await searchParams)?.guideId;
+  const query = await searchParams;
+  const requestedGuideId = query?.guideId;
   if (
     requestedGuideId !== undefined &&
     (!entityIdSchema.safeParse(requestedGuideId).success ||
@@ -45,6 +47,10 @@ export default async function AdminLyricsEditPage({ params, searchParams }: Admi
     return notFound();
   }
 
+  const returnHref = safeReturnPath(query?.returnTo, `/admin/songs/${song.id}`, [
+    `/admin/songs/${song.id}`,
+    "/admin/cheer-guides",
+  ]);
   const queryClient = getQueryClient();
   queryClient.setQueryData(
     authAbilityQueryKeys.ability(),
@@ -55,7 +61,16 @@ export default async function AdminLyricsEditPage({ params, searchParams }: Admi
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="h-full min-h-0 overflow-hidden">
         <AdminPageLocation title={`${song.title} 가사 편집`} />
-        <AdminLyricsEditor song={song} accountId={context.user!.id} />
+        <AdminLyricsEditor
+          song={song}
+          accountId={context.user!.id}
+          returnTo={{
+            href: returnHref,
+            label: returnHref.startsWith("/admin/cheer-guides")
+              ? "응원법 목록으로 돌아가기"
+              : "곡 정보로 돌아가기",
+          }}
+        />
       </div>
     </HydrationBoundary>
   );

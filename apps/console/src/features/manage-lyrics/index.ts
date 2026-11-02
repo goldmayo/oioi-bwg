@@ -1,2 +1,2 @@
-export type { SongEditor } from "./model/types";
+export type { EditorReturnTarget, SongEditor } from "./model/types";
 export { LazyLyricsEditor } from "./ui/LazyLyricsEditor";
