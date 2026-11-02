@@ -132,8 +132,8 @@ try {
   await context.route(/^https:\/\//, (route) => route.abort());
   const page = await context.newPage();
   await page.goto(`${origin}/operator-connect`);
-  await page.getByLabel("Email", { exact: true }).fill("admin@p04.example.test");
-  await page.getByLabel("Password", { exact: true }).fill("P04-fixture-pass1!");
+  await page.getByLabel("이메일", { exact: true }).fill("admin@p04.example.test");
+  await page.getByLabel("비밀번호", { exact: true }).fill("P04-fixture-pass1!");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   const otp = await nextConsoleOtp(sql);
   secrets.push(otp);
