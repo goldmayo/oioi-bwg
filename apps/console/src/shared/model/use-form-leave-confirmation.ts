@@ -8,6 +8,14 @@ export function useFormLeaveConfirmation(dirty: boolean, busy = false) {
   const [destination, setDestination] = useState<{ navigate: () => void; unload: boolean } | null>(
     null,
   );
+  useEffect(() => {
+    // BFCache에서 복원되면 이전 이탈 허용을 다음 편집 세션에 재사용하지 않는다.
+    const resume = () => {
+      allowed.current = false;
+    };
+    window.addEventListener("pageshow", resume);
+    return () => window.removeEventListener("pageshow", resume);
+  }, []);
   const requestLeave = useCallback(
     (navigate: () => void, unload = true) => {
       if (busy) return;

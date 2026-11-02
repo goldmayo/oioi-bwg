@@ -6,7 +6,7 @@ import { Input } from "@/shared/ui/input";
 import { YouTubePlayer } from "@/shared/ui/YouTubePlayer";
 
 import { useLyricsEditorContext } from "./LyricsEditorContext";
-export function EditorReferenceVideo() {
+export function EditorReferenceVideo({ readOnly = false }: { readOnly?: boolean }) {
   const editor = useLyricsEditorContext();
   return (
     <section aria-labelledby="reference-video-heading" className="flex min-h-0 flex-col gap-3">
@@ -26,6 +26,8 @@ export function EditorReferenceVideo() {
           <label className="bg-popover border-border absolute top-10 right-0 z-30 flex w-72 max-w-[85vw] flex-col gap-2 rounded border p-3 text-xs shadow-lg">
             <span>영상 주소</span>
             <Input
+              readOnly={readOnly}
+              aria-readonly={readOnly}
               value={editor.youtubeId}
               onChange={editor.handleYoutubeIdChange}
               placeholder="YouTube URL 또는 ID"
