@@ -56,6 +56,7 @@ export async function listAdminCheerGuides(ctx: RequestContext): Promise<AdminCh
       mode: guide.mode,
       updatedAt: guide.updatedAt,
       deletable: guide.hasHistory === false,
+      draftEditorAvailable: guide.hasHistory === true,
       song: { id: song.id, title: song.title ?? "", slug: song.slug, albumName: song.album.name },
       currentPublication: currentPublication
         ? {

@@ -250,12 +250,14 @@ function mapAdminSongInformation(
     hasLyrics: parseStoredLyrics(row.lyrics).some((line) =>
       line.segments.some((segment) => segment.text.trim()),
     ),
-    cheerGuides: row.cheerGuides.map(({ id, mode, currentPublication }) => {
-      if (!currentPublication) return { id, mode, currentPublication: null };
+    cheerGuides: row.cheerGuides.map(({ id, mode, currentPublication, hasHistory }) => {
+      if (!currentPublication)
+        return { id, mode, draftEditorAvailable: hasHistory === true, currentPublication: null };
       if (!currentPublication.snapshot) throw new Error("Guide publication snapshot is missing");
       return {
         id,
         mode,
+        draftEditorAvailable: hasHistory === true,
         currentPublication: {
           action: currentPublication.action,
           sourceType: currentPublication.snapshot.sourceType,

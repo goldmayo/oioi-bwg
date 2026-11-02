@@ -25,6 +25,10 @@ import {
   legacyGuideSourceFingerprint,
   planLegacyGuideImport,
 } from "@oioi-bwg/server/services/cheer-guide-import-service";
+import {
+  getAdminCheerGuideEditor,
+  saveAdminCheerGuideDraft,
+} from "@oioi-bwg/server/services/cheer-guide-draft-service";
 import { createEntityId } from "@oioi-bwg/server/db/entity-id";
 
 vi.mock("@oioi-bwg/server/db", () => ({ getDatabase: () => database }));
@@ -1172,4 +1176,74 @@ test("별도 작업본은 호환 writer의 즉시 공개 저장에서 보호한�
       .from(schema.cheerGuideSnapshot)
       .where(eq(schema.cheerGuideSnapshot.cheerGuideId, f.entry.guideId)),
   ).toHaveLength(2);
+});
+
+test("독립 작업본은 Guide ID별로 읽고 저장하며 다른 모드·공개본·Song을 보존한다", async () => {
+  const f = await importFixture();
+  await importLegacyGuide(f.context, f.entry, true);
+  const festival = await createAdminCheerGuide(f.context, {
+    ...draftInput(f.row.id),
+    mode: "FESTIVAL",
+  });
+  const originalPublic = await getSongDetailBySlug(f.row.slug!);
+  const other = await getAdminCheerGuideEditor(f.context, festival.id);
+  const first = await getAdminCheerGuideEditor(f.context, f.entry.guideId);
+  const saved = await saveAdminCheerGuideDraft(f.context, first.id, {
+    expectedLockVersion: first.lockVersion,
+    lyrics: [],
+  });
+  expect(saved.lockVersion).toBe(first.lockVersion + 1);
+  expect((await getAdminCheerGuideEditor(f.context, first.id)).lyrics).toEqual([]);
+  expect(await getAdminCheerGuideEditor(f.context, festival.id)).toEqual(other);
+  expect(await getSongDetailBySlug(f.row.slug!)).toEqual(originalPublic);
+  expect(
+    (await database.select().from(schema.song).where(eq(schema.song.id, f.row.id)))[0],
+  ).toEqual(f.row);
+  await expect(
+    saveAdminCheerGuideDraft(f.context, first.id, {
+      expectedLockVersion: first.lockVersion,
+      lyrics,
+    }),
+  ).rejects.toMatchObject({ code: "CHEER_GUIDE_CONFLICT" });
+  expect((await getAdminCheerGuideEditor(f.context, first.id)).lockVersion).toBe(saved.lockVersion);
+});
+test("독립 작업본 동시 저장은 하나만 성공하고 snapshot 실패는 CAS·포인터도 rollback한다", async () => {
+  const source = await newDraftSong();
+  const guide = await createAdminCheerGuide(draftContext(), draftInput(source.id));
+  const first = await getAdminCheerGuideEditor(draftContext(), guide.id);
+  const input = { expectedLockVersion: first.lockVersion, lyrics: [] };
+  const outcomes = await Promise.allSettled([
+    saveAdminCheerGuideDraft(draftContext(), guide.id, input),
+    saveAdminCheerGuideDraft(draftContext(), guide.id, input),
+  ]);
+  expect(outcomes.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+  expect(outcomes.find((r) => r.status === "rejected")).toMatchObject({
+    reason: { code: "CHEER_GUIDE_CONFLICT" },
+  });
+  const before = await getAdminCheerGuideEditor(draftContext(), guide.id);
+  await expect(
+    saveAdminCheerGuideDraft({ ...draftContext(), user: { id: createEntityId() } }, guide.id, {
+      ...input,
+      expectedLockVersion: before.lockVersion,
+    }),
+  ).rejects.toBeTruthy();
+  expect(await getAdminCheerGuideEditor(draftContext(), guide.id)).toEqual(before);
+});
+test("독립 편집도 인증·인가를 요구하며 이력 없는 Guide는 편집할 수 없다", async () => {
+  const id = createEntityId();
+  await expect(getAdminCheerGuideEditor({ user: null } as never, id)).rejects.toMatchObject({
+    code: "UNAUTHENTICATED",
+  });
+  const denied = { user: { id: accountId }, ability: { cannot: () => true } } as never;
+  await expect(
+    saveAdminCheerGuideDraft(denied, id, { expectedLockVersion: 1, lyrics: [] }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  const source = await newDraftSong();
+  const [empty] = await database
+    .insert(schema.cheerGuide)
+    .values({ songId: source.id, mode: "CONCERT" })
+    .returning();
+  await expect(getAdminCheerGuideEditor(draftContext(), empty!.id)).rejects.toMatchObject({
+    code: "CHEER_GUIDE_NOT_FOUND",
+  });
 });
