@@ -1,21 +1,29 @@
 import { serializedAbilityResponseSchema } from "@oioi-bwg/contracts/authorization";
 import { entityIdSchema } from "@oioi-bwg/contracts/entity-id";
-import { getAdminSongEditorBySlug } from "@oioi-bwg/server/services/song-service";
+import {
+  getAdminSongEditorBySlug,
+  getAdminSongInformation,
+} from "@oioi-bwg/server/services/song-service";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { authAbilityQueryKeys } from "@/features/auth";
+
+import { cheerGuideEditorHref } from "@/entities/cheer-guide";
 
 import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-page-context";
 import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
+import { safeReturnPath } from "@/shared/lib/safe-return-path";
+
+import { AdminPageLocation } from "../../_model/admin-location";
 
 import { AdminLyricsEditor } from "./_ui/AdminLyricsEditor";
 
 interface AdminEditPageProps {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ guideId?: string | string[] }>;
+  searchParams?: Promise<{ guideId?: string | string[]; returnTo?: string | string[] }>;
 }
 
 /** 관리자 가사 편집 DTO와 Ability를 서버에서 준비한다. */
@@ -31,18 +39,29 @@ export default async function AdminLyricsEditPage({ params, searchParams }: Admi
     rethrowAdminPageError(error, await getRequestAuthorization()),
   );
 
-  const requestedGuideId = (await searchParams)?.guideId;
-  if (
-    requestedGuideId !== undefined &&
-    (!entityIdSchema.safeParse(requestedGuideId).success ||
-      song?.guideWrite?.guideId !== requestedGuideId)
-  )
-    return notFound();
+  const query = await searchParams;
+  const requestedGuideId = query?.guideId;
+  if (requestedGuideId !== undefined && !entityIdSchema.safeParse(requestedGuideId).success)
+    notFound();
 
   if (!song) {
     return notFound();
   }
 
+  const returnHref = safeReturnPath(query?.returnTo, `/admin/songs/${song.id}`, [
+    `/admin/songs/${song.id}`,
+    "/admin/cheer-guides",
+  ]);
+  const information = await getAdminSongInformation(context, song.id).catch(
+    async (error: unknown) => rethrowAdminPageError(error, await getRequestAuthorization()),
+  );
+  if (requestedGuideId !== undefined) {
+    const guide = information.cheerGuides.find((item) => item.id === requestedGuideId);
+    if (!guide?.draftEditorAvailable) notFound();
+    redirect(cheerGuideEditorHref(guide.id, returnHref));
+  }
+  // 곡 URL에는 공연 모드가 없다. 임의로 모드를 고르지 않고 곡 정보에서 선택한다.
+  if (information.cheerGuides.length) redirect(`/admin/songs/${song.id}#song-guides`);
   const queryClient = getQueryClient();
   queryClient.setQueryData(
     authAbilityQueryKeys.ability(),
@@ -52,7 +71,17 @@ export default async function AdminLyricsEditPage({ params, searchParams }: Admi
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="h-full min-h-0 overflow-hidden">
-        <AdminLyricsEditor song={song} accountId={context.user!.id} />
+        <AdminPageLocation title={`${song.title} 가사 편집`} />
+        <AdminLyricsEditor
+          song={song}
+          accountId={context.user!.id}
+          returnTo={{
+            href: returnHref,
+            label: returnHref.startsWith("/admin/cheer-guides")
+              ? "응원법 목록으로 돌아가기"
+              : "곡 정보로 돌아가기",
+          }}
+        />
       </div>
     </HydrationBoundary>
   );

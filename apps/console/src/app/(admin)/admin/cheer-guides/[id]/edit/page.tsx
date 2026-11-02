@@ -13,11 +13,20 @@ import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-
 import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
+import { safeReturnPath } from "@/shared/lib/safe-return-path";
+
+import { AdminPageLocation } from "../../../_model/admin-location";
 
 import { GuideDraftEditor } from "./_ui/GuideDraftEditor";
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false, follow: false } };
-export default async function GuideEditPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function GuideEditPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string | string[] }>;
+}) {
   const context = await getAdminPageContext();
   const parsed = entityIdSchema.safeParse((await params).id);
   if (!parsed.success) notFound();
@@ -27,6 +36,11 @@ export default async function GuideEditPage({ params }: { params: Promise<{ id: 
       return rethrowAdminPageError(error, await getRequestAuthorization());
     },
   );
+  const { returnTo } = await searchParams;
+  const returnHref = safeReturnPath(returnTo, "/admin/cheer-guides", [
+    "/admin/cheer-guides",
+    `/admin/songs/${guide.song.id}`,
+  ]);
   const client = getQueryClient();
   client.setQueryData(cheerGuideQueryKeys.editor(guide.id), guide);
   client.setQueryData(
@@ -35,7 +49,20 @@ export default async function GuideEditPage({ params }: { params: Promise<{ id: 
   );
   return (
     <HydrationBoundary state={dehydrate(client)}>
-      <GuideDraftEditor key={guide.id} id={guide.id} accountId={context.user!.id} />
+      <AdminPageLocation
+        title={`${guide.song.title} · ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 편집`}
+      />
+      <GuideDraftEditor
+        key={guide.id}
+        id={guide.id}
+        accountId={context.user!.id}
+        returnTo={{
+          href: returnHref,
+          label: returnHref.startsWith("/admin/songs/")
+            ? "곡 정보로 돌아가기"
+            : "응원법 목록으로 돌아가기",
+        }}
+      />
     </HydrationBoundary>
   );
 }

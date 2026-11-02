@@ -10,11 +10,12 @@ import { UnsavedChangesDialog } from "@/shared/ui/unsaved-changes-dialog";
 
 import { type EditorNote, getEditorNotes, type NoteEdit } from "../lib/editor-notes";
 import type { SelectionEdit } from "../lib/note-selection";
-import type { SongEditor, WaveformImportControls } from "../model/types";
+import type { EditorReturnTarget, SongEditor, WaveformImportControls } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
 import { EditorControlPanel } from "./EditorControlPanel";
 import { EditorReferenceVideo } from "./EditorReferenceVideo";
+import { EditorReturnBar } from "./EditorReturnBar";
 import { EditorTopBar } from "./EditorTopBar";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { LyricsEditorProvider, useLyricsEditorContext } from "./LyricsEditorContext";
@@ -30,7 +31,7 @@ interface LyricsEditorClientProps {
   waveformImport?: WaveformImportControls;
   saveLabel?: string;
   referenceVideoReadOnly?: boolean;
-  protectNavigation?: boolean;
+  returnTo?: EditorReturnTarget;
 }
 function LyricsEditorWorkspace({
   accountId,
@@ -38,14 +39,14 @@ function LyricsEditorWorkspace({
   waveformImport,
   saveLabel,
   referenceVideoReadOnly,
-  protectNavigation = false,
+  returnTo,
 }: {
   accountId: string;
   disabled?: boolean;
   waveformImport?: WaveformImportControls;
   saveLabel?: string;
   referenceVideoReadOnly?: boolean;
-  protectNavigation?: boolean;
+  returnTo?: EditorReturnTarget;
 }) {
   const editor = useLyricsEditorContext();
   const query = useQuery(waveformQueries.song(accountId, editor.songId));
@@ -68,10 +69,7 @@ function LyricsEditorWorkspace({
         ...notes.map((note) => (Number.isFinite(note.time) ? note.time + 8 : 0)),
         30,
       );
-  const leave = useFormLeaveConfirmation(
-    protectNavigation && editor.isDirty,
-    protectNavigation && editor.isSaving,
-  );
+  const leave = useFormLeaveConfirmation(editor.isDirty, editor.isSaving);
   const blocked = disabled || editor.isAdPlaying || leave.open;
   const looping = loop.enabled && loop.video === editor.youtubeId;
   const select = (note: EditorNote, additive = false) => {
@@ -211,6 +209,7 @@ function LyricsEditorWorkspace({
     <div data-lyrics-editor className="bg-background relative flex h-full min-h-0 flex-col">
       <FloatingToolbar />
       <UnsavedChangesDialog open={leave.open} onStay={leave.stay} onLeave={leave.leave} />
+      {returnTo && <EditorReturnBar target={returnTo} />}
       <EditorTopBar saveLabel={saveLabel} blocked={blocked} />
       <div
         data-editor-scroll
@@ -367,7 +366,7 @@ export default function LyricsEditorClient({
   waveformImport,
   saveLabel,
   referenceVideoReadOnly,
-  protectNavigation = false,
+  returnTo,
 }: LyricsEditorClientProps) {
   return (
     <LyricsEditorProvider song={song} saveSongData={saveSongData}>
@@ -377,7 +376,7 @@ export default function LyricsEditorClient({
         waveformImport={waveformImport}
         saveLabel={saveLabel}
         referenceVideoReadOnly={referenceVideoReadOnly}
-        protectNavigation={protectNavigation}
+        returnTo={returnTo}
       />
     </LyricsEditorProvider>
   );

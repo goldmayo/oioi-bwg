@@ -1,5 +1,6 @@
 import { Eye, EyeOff, Pencil } from "lucide-react";
 
+import { cheerGuideEditorHref } from "@/entities/cheer-guide";
 import type { AdminSongInformation } from "@/entities/song";
 
 import { Badge } from "@/shared/ui/badge";
@@ -88,9 +89,11 @@ export function SongInformation({
 export function SongGuideSummary({
   song,
   canManage,
+  returnHref,
 }: {
   song: AdminSongInformation;
   canManage: boolean;
+  returnHref?: string;
 }) {
   return (
     <section className="space-y-4" aria-labelledby="song-guides">
@@ -108,7 +111,7 @@ export function SongGuideSummary({
             <div className="flex items-center gap-2">
               {canManage && guide?.draftEditorAvailable && (
                 <Button size="sm" variant="outline" asChild>
-                  <a href={`/admin/cheer-guides/${guide.id}/edit`}>
+                  <a href={cheerGuideEditorHref(guide.id, returnHref ?? `/admin/songs/${song.id}`)}>
                     {mode === "CONCERT" ? "콘서트" : "페스티벌"} 편집
                   </a>
                 </Button>

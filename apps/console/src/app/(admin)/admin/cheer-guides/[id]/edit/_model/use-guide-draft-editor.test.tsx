@@ -9,7 +9,8 @@ import { ApiError } from "@/shared/api/http-errors";
 
 import { useGuideDraftEditor } from "./use-guide-draft-editor";
 
-const { patch, get, handleMutationError } = vi.hoisted(() => ({
+const { patch, get, handleMutationError, access } = vi.hoisted(() => ({
+  access: { manage: true, recover: false },
   patch: vi.fn(),
   get: vi.fn(),
   handleMutationError: vi.fn(),
@@ -24,11 +25,18 @@ vi.mock("@/features/auth", () => ({
       initialData: { rules: [] },
     }),
   },
-  createClientAbility: () => ({ can: () => true }),
-  useAdminReauthentication: () => ({ requiresReauthentication: false, handleMutationError }),
+  createClientAbility: () => ({ can: () => access.manage }),
+  useAdminReauthentication: () => ({
+    requiresReauthentication: access.recover,
+    handleMutationError,
+  }),
 }));
 afterEach(cleanup);
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  access.manage = true;
+  access.recover = false;
+});
 const id = "019a0170-0000-7000-8000-000000000001";
 const songId = "019a0170-0000-7000-8000-000000000002";
 const guide = {
@@ -115,5 +123,14 @@ it("다른 곡·Guide·기준 영상으로의 저장은 HTTP 요청 전에 거�
   await expect(
     result.current.saveSongData(songId, { ...input, youtubeId: "other" }),
   ).rejects.toMatchObject({ status: 409 });
+  expect(patch).not.toHaveBeenCalled();
+});
+
+it.each([401, 403])("권한·인증 상태 %s에서는 서버 요청 없이 저장을 거절한다", async (status) => {
+  access.manage = false;
+  access.recover = status === 401;
+  const { result } = setup();
+  expect(result.current.canManage).toBe(false);
+  await expect(result.current.saveSongData(songId, input)).rejects.toMatchObject({ status });
   expect(patch).not.toHaveBeenCalled();
 });

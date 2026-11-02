@@ -2,7 +2,7 @@
 
 import { lazy, Suspense } from "react";
 
-import type { SongEditor, WaveformImportControls } from "../model/types";
+import type { EditorReturnTarget, SongEditor, WaveformImportControls } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
 // React.lazy를 사용한 클라이언트 사이드 지연 로딩
@@ -16,7 +16,7 @@ interface LazyLyricsEditorProps {
   waveformImport?: WaveformImportControls;
   saveLabel?: string;
   referenceVideoReadOnly?: boolean;
-  protectNavigation?: boolean;
+  returnTo?: EditorReturnTarget;
 }
 
 export function LazyLyricsEditor({
@@ -27,7 +27,7 @@ export function LazyLyricsEditor({
   waveformImport,
   saveLabel,
   referenceVideoReadOnly,
-  protectNavigation,
+  returnTo,
 }: LazyLyricsEditorProps) {
   return (
     <Suspense
@@ -45,7 +45,7 @@ export function LazyLyricsEditor({
         waveformImport={waveformImport}
         saveLabel={saveLabel}
         referenceVideoReadOnly={referenceVideoReadOnly}
-        protectNavigation={protectNavigation}
+        returnTo={returnTo}
       />
     </Suspense>
   );

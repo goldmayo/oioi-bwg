@@ -5,7 +5,7 @@ import { getPushConfig } from "@/server/notifications/config";
 
 import { NavigationConfirmationProvider } from "@/shared/model/navigation-confirmation";
 
-import { AdminWorkspace } from "./_ui/admin-sidebar";
+import { AdminWorkspace } from "./_ui/admin-workspace";
 import { NotificationProvider } from "./_ui/notification-provider";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {

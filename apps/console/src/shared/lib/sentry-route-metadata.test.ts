@@ -12,6 +12,16 @@ describe("Console route metadata privacy", () => {
       "/api/operator/auth/token",
       "operator-auth-token-api",
     ],
+    [
+      "/admin/cheer-guides/private-id/edit?returnTo=PRIVATE",
+      "/admin/cheer-guides/[id]/edit",
+      "admin-cheer-guide-edit-load",
+    ],
+    [
+      "/api/admin/cheer-guides/private-id/draft",
+      "/api/admin/cheer-guides/[id]/draft",
+      "admin-cheer-guide-draft-api",
+    ],
     ["/admin/albums", "/admin/albums", "admin-album-list"],
     [
       "/(admin)/admin/edit/private-email@example.test?token=TOKEN",

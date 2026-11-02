@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
 
 import { Button } from "@/shared/ui/button";
 
@@ -40,13 +39,6 @@ export function SongScreen({
     );
   return (
     <>
-      <nav aria-label="현재 위치" className="text-muted-foreground mb-6 text-sm">
-        <Link href="/admin/songs" className="hover:text-foreground">
-          곡 관리
-        </Link>
-        <span aria-hidden> / </span>
-        {mode === "create" ? "곡 추가" : "곡 정보"}
-      </nav>
       {mode === "view" && song ? (
         <>
           {submissionNotice}
@@ -58,7 +50,15 @@ export function SongScreen({
           albums={albums}
           song={song}
           canSubmit={canManage}
-          guideSummary={song ? <SongGuideSummary song={song} canManage={canManage} /> : undefined}
+          guideSummary={
+            song ? (
+              <SongGuideSummary
+                song={song}
+                canManage={canManage}
+                returnHref={`/admin/songs/${song.id}?edit=true`}
+              />
+            ) : undefined
+          }
           submissionNotice={submissionNotice}
           onSubmit={submit}
           onSaved={saved}

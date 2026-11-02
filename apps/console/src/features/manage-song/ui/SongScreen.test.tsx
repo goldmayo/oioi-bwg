@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import Link from "next/link";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { albumQueryKeys } from "@/entities/album";
@@ -64,13 +65,14 @@ function setup(mode: "view" | "edit") {
   const onMutationError = vi.fn();
   render(
     <QueryClientProvider client={client}>
+      <Link href="/admin/songs">곡 관리</Link>
       <SongScreen id={id} mode={mode} canManage onMutationError={onMutationError} />
     </QueryClientProvider>,
   );
   return { onMutationError };
 }
 
-it("기본은 조회이며 legacy 공식 flag로 출처를 추론하지 않고 공연 모드별 독립 편집 진입을 제공한다", () => {
+it("기본은 조회이며 legacy 공식 flag로 출처를 추론하지 않고 공연 모드별 작업본 진입을 제공한다", () => {
   setup("view");
   expect(screen.getByRole("heading", { name: "곡 정보" })).toBeTruthy();
   expect(screen.queryByRole("textbox")).toBeNull();
@@ -81,8 +83,8 @@ it("기본은 조회이며 legacy 공식 flag로 출처를 추론하지 않고 �
   expect(screen.getByRole("link", { name: /^편집$/ }).getAttribute("href")).toBe(
     `/admin/songs/${id}?edit=true`,
   );
-  expect(screen.getByRole("link", { name: /^콘서트 편집$/ }).getAttribute("href")).toBe(
-    `/admin/cheer-guides/${id}/edit`,
+  expect(screen.getByRole("link", { name: "콘서트 편집" }).getAttribute("href")).toBe(
+    `/admin/cheer-guides/${id}/edit?returnTo=${encodeURIComponent(`/admin/songs/${id}`)}`,
   );
 });
 
