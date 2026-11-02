@@ -24,6 +24,7 @@ it("같은 곡의 모드별 선택을 구분하고 필터·재조회에도 선�
     updatedAt: "",
     currentPublication: null,
     editorAvailable: false,
+    deletable: false,
   }));
   client.setQueryData(cheerGuideQueryKeys.adminList(), { items, nextCursor: null });
   const { result, unmount } = renderHook(useGuideList, {

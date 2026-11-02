@@ -580,6 +580,7 @@ deletedAt 기록
 - 공개 조치가 PUBLISH인 내용만 Song/Album visibility를 적용해 제공한다. 공개 중단 뒤 과거 Song.lyrics를 다시 노출하지 않는다.
 - 공식은 원본 링크가 필수고 팬덤은 선택이다. 타이밍 기준 재생 영상과 선택적인 응원법 안내 영상은 구분한다.
 - 이력이 있는 guide 및 부모 콘텐츠의 물리 삭제는 제한하고 숨김을 사용한다. 작성/공개 주체는 소유자가 아니며 Account tombstone과 참조를 유지한다.
+- 2026-11-02 사용자 확정: 내용 snapshot과 공개 조치가 모두 없는 Guide만 기존 ACTIVE ADMIN·MFA·Origin 검증을 거쳐 실제 삭제할 수 있다. 서버는 삭제 시점의 이력을 다시 확인하며 동시 저장된 이력도 보존한다. 공개 중단은 이력 제거가 아니므로 삭제 자격을 만들지 않는다.
 
 P07 snapshot/publication은 §10의 상태를 가진 Revision과 구분한다. APPROVED로 임의 간주하지 않는다.
 §8.3의 OFFICIAL_LOCKED와 §9~13·관련 권한/토론/검토 테스트는 후속 기여 workflow의 계약으로 유지한다.

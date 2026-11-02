@@ -9,6 +9,7 @@ const guide: AdminCheerGuideSummary = {
   mode: "CONCERT",
   updatedAt: "",
   editorAvailable: true,
+  deletable: false,
   song: { id: "song", title: "고민중독", albumName: "MANITO", slug: "song" },
   currentPublication: { sourceType: "OFFICIAL", action: "PUBLISH" },
 };
