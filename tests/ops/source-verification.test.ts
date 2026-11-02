@@ -104,5 +104,6 @@ test("일반 .md만 바뀐 기존 main 예외는 Git diff를 재판정해야 재
   expect(docsOnly).toHaveBeenCalledWith({
     eventName: "pull_request",
     event: { pull_request: f.pr },
+    fetchSource: true,
   });
 });

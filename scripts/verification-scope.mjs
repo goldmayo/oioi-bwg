@@ -36,8 +36,14 @@ export function markdownOnly(raw) {
   return true;
 }
 
-/** @param {{ eventName?: string, event?: { pull_request?: { base?: { ref?: string, sha?: string }, head?: { sha?: string } } }, local?: boolean, cwd?: string }} [options] */
-export function docsOnly({ eventName, event, local = false, cwd = process.cwd() } = {}) {
+/** @param {{ eventName?: string, event?: { pull_request?: { base?: { ref?: string, sha?: string }, head?: { sha?: string } } }, local?: boolean, fetchSource?: boolean, cwd?: string }} [options] */
+export function docsOnly({
+  eventName,
+  event,
+  local = false,
+  fetchSource = false,
+  cwd = process.cwd(),
+} = {}) {
   try {
     const env = Object.fromEntries(
       Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
@@ -63,6 +69,8 @@ export function docsOnly({ eventName, event, local = false, cwd = process.cwd() 
       base = event.pull_request.base.sha;
       head = event.pull_request.head.sha;
       if (![base, head].every((sha) => /^[0-9a-f]{40}$/.test(sha))) return false;
+      // Squash 뒤 원격 작업 브랜치가 삭제돼도 원래 PR의 Git 이력을 정확히 판정한다.
+      if (fetchSource) git("fetch", "--no-tags", "origin", base, head);
     }
     const ancestor = git("merge-base", base, head).trim();
     return markdownOnly(

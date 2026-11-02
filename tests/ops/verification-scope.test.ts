@@ -168,10 +168,11 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
     );
     const base = commit();
     git("update-ref", "refs/remotes/origin/migration_main", base);
-    const scope = (baseRef = "migration_main", eventName = "pull_request") =>
+    const scope = (baseRef = "migration_main", eventName = "pull_request", fetchSource = false) =>
       docsOnly({
         cwd: root,
         eventName,
+        fetchSource,
         event: {
           pull_request: {
             base: { ref: baseRef, sha: base },
@@ -183,6 +184,8 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
     write("docs/space and\nnewline.md");
     commit();
     expect(scope()).toBe(true);
+    git("remote", "add", "origin", root);
+    expect(scope("migration_main", "pull_request", true)).toBe(true);
     expect(scope("migration_develop")).toBe(false);
     expect(scope("migration_main", "push")).toBe(false);
     expect(docsOnly({ cwd: root, local: true })).toBe(true);

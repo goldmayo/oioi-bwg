@@ -58,7 +58,7 @@ export async function verifySource({ github, context, core }) {
   const docs =
     !full &&
     fullJobs.every((name) => result(name) === "skipped") &&
-    docsOnly({ eventName: "pull_request", event: { pull_request: pr } });
+    docsOnly({ eventName: "pull_request", event: { pull_request: pr }, fetchSource: true });
   if (!full && !docs)
     throw new Error("Source lacks complete code checks or proven Markdown-only scope");
   core.info(`Reuse main PR #${pr.number}, Verify ${run.id}, source ${head}, tree ${tree}`);
