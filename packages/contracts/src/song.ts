@@ -78,6 +78,30 @@ export const adminSongListSchema = z.object({
   nextCursor: z.null(),
 });
 
+/** 관리자 정보 화면용 projection. 공개 여부는 현재 공개 조치와 부모 표시 설정을 구분한다. */
+export const adminSongInformationSchema = adminSongSummarySchema.extend({
+  hasLyrics: z.boolean(),
+  cheerGuides: z
+    .array(
+      z.object({
+        id: entityIdSchema,
+        mode: z.enum(["CONCERT", "FESTIVAL"]),
+        currentPublication: z
+          .object({
+            action: z.enum(["PUBLISH", "UNPUBLISH"]),
+            sourceType: z.enum(["OFFICIAL", "FANDOM"]),
+          })
+          .nullable(),
+      }),
+    )
+    .max(2)
+    .refine(
+      (guides) =>
+        new Set(guides.map(({ mode }) => mode)).size === guides.length &&
+        new Set(guides.map(({ id }) => id)).size === guides.length,
+    ),
+});
+
 export const adminSongMutationResultSchema = z.object({
   id: entityIdSchema,
   guideWrite: guideWriteVersionSchema.optional(),
@@ -127,4 +151,5 @@ export type UpdateAdminSong = z.infer<typeof updateAdminSongSchema>;
 export type SaveAdminSongLyrics = z.infer<typeof saveAdminSongLyricsSchema>;
 export type AdminSongSummary = z.infer<typeof adminSongSummarySchema>;
 export type AdminSongList = z.infer<typeof adminSongListSchema>;
+export type AdminSongInformation = z.infer<typeof adminSongInformationSchema>;
 export type AdminSongMutationResult = z.infer<typeof adminSongMutationResultSchema>;

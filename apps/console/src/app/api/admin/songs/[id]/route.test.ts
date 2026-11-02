@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const getRequestContext = vi.hoisted(() => vi.fn());
 const deleteSong = vi.hoisted(() => vi.fn());
 const editSong = vi.hoisted(() => vi.fn());
+const getAdminSongInformation = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/server/auth/request-context", () => ({
@@ -15,10 +16,14 @@ vi.mock("@/server/auth/request-context", () => ({
     rejectionLogged: false,
   }),
 }));
-vi.mock("@oioi-bwg/server/services/song-service", () => ({ deleteSong, editSong }));
+vi.mock("@oioi-bwg/server/services/song-service", () => ({
+  deleteSong,
+  editSong,
+  getAdminSongInformation,
+}));
 vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
 
-import { DELETE, PATCH } from "./route";
+import { DELETE, GET, PATCH } from "./route";
 
 const context = { ability: {}, user: { id: "019a0170-0000-7000-8000-000000000001" } };
 const routeContext = { params: Promise.resolve({ id: "019a0170-0000-7000-8000-000000000002" }) };
@@ -38,6 +43,57 @@ describe("/api/admin/songs/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getRequestContext.mockResolvedValue(context);
+  });
+
+  it("UUID로 숨김·null slug 정보를 조회하며 개인 응답을 캐시하지 않는다", async () => {
+    const { lrcText: _lrcText, ...fields } = input;
+    const information = {
+      ...fields,
+      id: "019a0170-0000-7000-8000-000000000002",
+      slug: null,
+      isVisible: false,
+      album: { name: "앨범" },
+      updatedAt: "",
+      hasLyrics: false,
+      cheerGuides: [],
+    };
+    getAdminSongInformation.mockResolvedValue(information);
+    const response = await GET(
+      new Request("https://example.test/api/admin/songs/id"),
+      routeContext,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(information);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(getAdminSongInformation).toHaveBeenCalledWith(context, information.id);
+  });
+
+  it.each([
+    ["UNAUTHENTICATED", 401],
+    ["FORBIDDEN", 403],
+    ["SONG_NOT_FOUND", 404],
+  ] as const)("조회 실패 %s를 HTTP %s로 변환한다", async (code, status) => {
+    getAdminSongInformation.mockRejectedValue(new AppError(code));
+    const response = await GET(
+      new Request("https://example.test/api/admin/songs/id"),
+      routeContext,
+    );
+    expect(response.status).toBe(status);
+    expect(apiErrorResponseSchema.parse(await response.json()).code).toBe(code);
+  });
+
+  it("잘못된 UUID는 조회하지 않고 깨진 출력 계약은 500으로 처리한다", async () => {
+    const request = new Request("https://example.test/api/admin/songs/id");
+    const invalid = await GET(request, { params: Promise.resolve({ id: "invalid" }) });
+    expect(invalid.status).toBe(400);
+    expect(getAdminSongInformation).not.toHaveBeenCalled();
+    getAdminSongInformation.mockResolvedValue({ id: "private", internal: "secret" });
+    const broken = await GET(request, routeContext);
+    expect(broken.status).toBe(500);
+    expect(await broken.json()).toEqual({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "서버 오류가 발생했습니다.",
+    });
   });
 
   it("updates a song with validated path and body contracts", async () => {
