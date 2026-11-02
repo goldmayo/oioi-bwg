@@ -154,6 +154,19 @@ jobs:
       - uses: docker/setup-buildx-action@v3
         with:
           cleanup: false # The GitHub-hosted VM is discarded after this job.
+          version: v0.38.0
+          driver-opts: image=moby/buildkit:v0.33.1
+      - name: Identify native verification cache inputs
+        id: cache-key
+        run: node scripts/verification-cache.mjs waveform >> "${GITHUB_OUTPUT}"
+      - name: Restore native verification cache
+        id: build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/waveform-cache
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            Linux-verify-arm64-v1-
       - name: Build and verify Rust toolchain
         uses: docker/build-push-action@v6
         with:
@@ -163,8 +176,8 @@ jobs:
           provenance: false
           load: true
           tags: oioi-bwg:waveform-check
-          cache-from: type=gha,scope=waveform-rust-arm64
-          cache-to: type=gha,scope=waveform-rust-arm64,mode=max,timeout=60s,ignore-error=true
+          cache-from: type=local,src=${{ runner.temp }}/waveform-cache,tag=rust
+          cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/waveform-cache-new,tag=rust,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
       - name: Verify Rust worker execution
         run: |
           image=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check)
@@ -179,8 +192,8 @@ jobs:
           provenance: false
           load: true
           tags: oioi-bwg:runner-check
-          cache-from: type=gha,scope=waveform-go-arm64
-          cache-to: type=gha,scope=waveform-go-arm64,mode=max,timeout=60s,ignore-error=true
+          cache-from: type=local,src=${{ runner.temp }}/waveform-cache,tag=runner
+          cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/waveform-cache-new,tag=runner,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
       - name: Verify Docker worker lifecycle with synthetic input
         run: |
           test_dir=$(mktemp -d)
@@ -244,6 +257,30 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 90
+
+      - name: Replace native cache with current layers
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "${{ runner.temp }}/waveform-cache"
+          mv "${{ runner.temp }}/waveform-cache-new" "${{ runner.temp }}/waveform-cache"
+      - name: Save native verification cache
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/waveform-cache
+          key: ${{ steps.build-cache.outputs.cache-primary-key }}
+      - name: Export native cache for publication after merge
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          contains(fromJSON('["migration_main", "migration_develop"]'), github.base_ref)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-cache-${{ steps.cache-key.outputs.key }}
+          path: ${{ runner.temp }}/waveform-cache
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
 
   postgres_integration:
     needs: changes
