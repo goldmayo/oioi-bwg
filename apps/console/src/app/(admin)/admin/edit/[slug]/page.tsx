@@ -11,6 +11,8 @@ import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
 
+import { AdminPageLocation } from "../../_model/admin-location";
+
 import { AdminLyricsEditor } from "./_ui/AdminLyricsEditor";
 
 interface AdminEditPageProps {
@@ -52,6 +54,7 @@ export default async function AdminLyricsEditPage({ params, searchParams }: Admi
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="h-full min-h-0 overflow-hidden">
+        <AdminPageLocation title={`${song.title} 가사 편집`} />
         <AdminLyricsEditor song={song} accountId={context.user!.id} />
       </div>
     </HydrationBoundary>

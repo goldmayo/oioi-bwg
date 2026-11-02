@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import Link from "next/link";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { albumQueryKeys } from "@/entities/album";
@@ -59,6 +60,7 @@ function setup(mode: "view" | "edit") {
   const onMutationError = vi.fn();
   render(
     <QueryClientProvider client={client}>
+      <Link href="/admin/songs">곡 관리</Link>
       <SongScreen id={id} mode={mode} canManage onMutationError={onMutationError} />
     </QueryClientProvider>,
   );
