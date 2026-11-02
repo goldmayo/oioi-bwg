@@ -7,7 +7,16 @@ import { AdminWorkspace } from "./admin-workspace";
 
 const route = vi.hoisted(() => ({ pathname: "/admin/songs" }));
 vi.mock("next/navigation", () => ({ usePathname: () => route.pathname }));
-vi.mock("@/features/auth", () => ({ requestSignOut: vi.fn() }));
+vi.mock("@/features/auth", () => ({
+  useSignOut: () => ({
+    open: false,
+    pending: false,
+    error: null,
+    request: vi.fn(),
+    cancel: vi.fn(),
+    confirm: vi.fn(),
+  }),
+}));
 vi.mock("./notification-bell", () => ({ NotificationBell: () => <button>알림</button> }));
 afterEach(cleanup);
 it("대시보드·목록·상세·편집 모두 같은 루트 헤더와 사이드바를 사용한다", () => {
