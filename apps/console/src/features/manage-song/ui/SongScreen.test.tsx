@@ -28,7 +28,12 @@ const song: AdminSongInformation = {
   updatedAt: "",
   guideWrite: { guideId: id, lockVersion: 1 },
   cheerGuides: [
-    { id, mode: "CONCERT", currentPublication: { action: "UNPUBLISH", sourceType: "FANDOM" } },
+    {
+      id,
+      mode: "CONCERT",
+      draftEditorAvailable: true,
+      currentPublication: { action: "UNPUBLISH", sourceType: "FANDOM" },
+    },
   ],
 };
 let client: QueryClient;
@@ -67,7 +72,7 @@ function setup(mode: "view" | "edit") {
   return { onMutationError };
 }
 
-it("기본은 조회이며 legacy 공식 flag로 출처를 추론하지 않고 P09 진입을 제공한다", () => {
+it("기본은 조회이며 legacy 공식 flag로 출처를 추론하지 않고 공연 모드별 작업본 진입을 제공한다", () => {
   setup("view");
   expect(screen.getByRole("heading", { name: "곡 정보" })).toBeTruthy();
   expect(screen.queryByRole("textbox")).toBeNull();
@@ -78,8 +83,8 @@ it("기본은 조회이며 legacy 공식 flag로 출처를 추론하지 않고 P
   expect(screen.getByRole("link", { name: /^편집$/ }).getAttribute("href")).toBe(
     `/admin/songs/${id}?edit=true`,
   );
-  expect(screen.getByRole("link", { name: "응원법 편집" }).getAttribute("href")).toBe(
-    "/admin/edit/song",
+  expect(screen.getByRole("link", { name: "콘서트 편집" }).getAttribute("href")).toBe(
+    `/admin/cheer-guides/${id}/edit?returnTo=${encodeURIComponent(`/admin/songs/${id}`)}`,
   );
 });
 

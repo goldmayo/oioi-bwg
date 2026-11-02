@@ -50,7 +50,15 @@ export function SongScreen({
           albums={albums}
           song={song}
           canSubmit={canManage}
-          guideSummary={song ? <SongGuideSummary song={song} canManage={canManage} /> : undefined}
+          guideSummary={
+            song ? (
+              <SongGuideSummary
+                song={song}
+                canManage={canManage}
+                returnHref={`/admin/songs/${song.id}?edit=true`}
+              />
+            ) : undefined
+          }
           submissionNotice={submissionNotice}
           onSubmit={submit}
           onSaved={saved}

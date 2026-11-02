@@ -1,5 +1,4 @@
 "use client";
-
 import { useMemo } from "react";
 import { DataTable } from "@oioi-bwg/ui/data-table";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
@@ -7,6 +6,7 @@ import { Eye, EyeOff, Info, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import type { AdminCheerGuideSummary } from "@/entities/cheer-guide";
+import { cheerGuideEditorHref } from "@/entities/cheer-guide";
 
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
@@ -144,16 +144,21 @@ export function GuideTable({
                   <Info />
                 </Link>
               </Button>
-              {canManage && guide.editorAvailable && guide.song.slug && (
-                <Button variant="ghost" size="icon-sm" asChild>
-                  <Link
-                    href={`/admin/edit/${guide.song.slug}?guideId=${guide.id}`}
-                    aria-label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법 편집`}
-                  >
-                    <Pencil />
-                  </Link>
-                </Button>
-              )}
+              {canManage &&
+                (guide.draftEditorAvailable || (guide.editorAvailable && guide.song.slug)) && (
+                  <Button variant="ghost" size="icon-sm" asChild>
+                    <a
+                      href={
+                        guide.draftEditorAvailable
+                          ? cheerGuideEditorHref(guide.id, "/admin/cheer-guides")
+                          : `/admin/edit/${guide.song.slug}?guideId=${guide.id}`
+                      }
+                      aria-label={`${guide.song.title} ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 응원법 편집`}
+                    >
+                      <Pencil />
+                    </a>
+                  </Button>
+                )}
               {canManage && (
                 <Button
                   variant="ghost"

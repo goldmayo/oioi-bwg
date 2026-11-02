@@ -27,7 +27,7 @@ const states = {
   SUCCEEDED: {
     label: "완료",
     title: "파형 생성을 완료했습니다.",
-    description: "곡 편집 화면에서 작업을 이어갈 수 있습니다.",
+    description: "곡 정보에서 편집할 응원법을 확인할 수 있습니다.",
     icon: CircleCheck,
     color: "text-emerald-400",
   },
@@ -118,9 +118,9 @@ export function WaveformJobStatus({ id }: { id: string }) {
         ) : null}
       </div>
       <div className="border-border bg-muted/30 flex flex-wrap items-center gap-3 border-t px-6 py-5 sm:px-8">
-        {query.data?.editorHref ? (
+        {query.data ? (
           <Button asChild className="max-sm:w-full">
-            <Link href={query.data.editorHref}>가사 편집으로 돌아가기</Link>
+            <a href={`/admin/songs/${query.data.songId}`}>곡 정보로 돌아가기</a>
           </Button>
         ) : null}
         <Button
