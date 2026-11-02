@@ -25,7 +25,6 @@ export function createAppConfig(rootDir: string) {
       files: ["src/**/*.{ts,tsx}"],
       languageOptions: {
         parserOptions: {
-          project: tsconfigPath,
           tsconfigRootDir: appRoot,
         },
       },
@@ -85,12 +84,6 @@ export function createAppConfig(rootDir: string) {
           },
         ],
         "simple-import-sort/exports": "error",
-        "@typescript-eslint/no-floating-promises": "error",
-        "@typescript-eslint/no-misused-promises": [
-          "error",
-          { checksVoidReturn: { attributes: false } },
-        ],
-        "max-lines-per-function": ["warn", { max: 250, skipComments: true, skipBlankLines: true }],
         "no-unused-vars": "off",
         "@typescript-eslint/no-unused-vars": "off",
         "unused-imports/no-unused-imports": "error",

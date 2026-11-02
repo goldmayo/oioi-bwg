@@ -38,6 +38,11 @@ test("keeps typed lint and alias dependency boundaries from both repository and 
       path.join(webRoot, "src/app/admin-login/page.tsx"),
     );
     assert.deepEqual(effective.rules, appEffective.rules);
+    assert.equal(effective.languageOptions.parserOptions.project, undefined);
+    assert.equal(
+      effective.settings["import/resolver"].typescript.project,
+      path.join(webRoot, "tsconfig.json"),
+    );
     const filename = path.join(
       webRoot,
       `src/shared/config/eslint-policy-regression-${process.pid}.ts`,
@@ -67,7 +72,26 @@ test("keeps typed lint and alias dependency boundaries from both repository and 
         assert.equal(result.status, 1, result.stderr || result.stdout);
         const [{ messages }] = JSON.parse(result.stdout);
         const rules = messages.map(({ ruleId }) => ruleId);
-        assert.ok(rules.includes("@typescript-eslint/no-floating-promises"), result.stdout);
+        assert.ok(!rules.includes("@typescript-eslint/no-floating-promises"), result.stdout);
+        const native = spawnSync(
+          process.execPath,
+          [
+            path.join(repositoryRoot, "node_modules/oxlint/bin/oxlint"),
+            ...(cwd === repositoryRoot
+              ? []
+              : ["--config", path.join(repositoryRoot, "oxlint.config.ts")]),
+            "--format=json",
+            filename,
+          ],
+          { cwd, encoding: "utf8" },
+        );
+        assert.equal(native.status, 1, native.stderr || native.stdout);
+        assert.ok(
+          JSON.parse(native.stdout).diagnostics.some(
+            ({ code }) => code === "typescript(no-floating-promises)",
+          ),
+          native.stdout,
+        );
         assert.ok(rules.includes("boundaries/dependencies"), result.stdout);
         assert.ok(rules.includes("project/architecture"), result.stdout);
         assert.ok(

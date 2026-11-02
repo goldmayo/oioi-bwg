@@ -8,6 +8,7 @@
   },
   "include": [
     "eslint.config.ts",
+    "oxlint.config.ts",
     "drizzle.config.ts",
     "steiger.config.ts",
     "vitest.config.ts",

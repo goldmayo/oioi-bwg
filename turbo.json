@@ -13,7 +13,8 @@
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
-        "$TURBO_ROOT$/packages/config/eslint/**"
+        "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
       "outputs": ["*.tsbuildinfo"],
       "dependsOn": ["^transit"]
@@ -26,7 +27,10 @@
         "!*.tsbuildinfo",
         "!**/*.tsbuildinfo",
         "!next-env.d.ts",
-        "$TURBO_ROOT$/packages/config/eslint/**"
+        "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/oxlint/**",
+        "$TURBO_ROOT$/oxlint.config.ts",
+        "$TURBO_ROOT$/tools/repository/oxlint.config.ts"
       ],
       "outputs": ["node_modules/.cache/eslint"],
       "dependsOn": ["^transit"]
@@ -106,6 +110,7 @@
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
         "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/typescript/next.json",
         "$TURBO_ROOT$/packages/config/next.ts",
         "$TURBO_ROOT$/packages/config/sentry-build.ts",
@@ -125,9 +130,12 @@
         "!**/*.tsbuildinfo",
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
-        "$TURBO_ROOT$/packages/config/typescript/next.json"
+        "$TURBO_ROOT$/packages/config/typescript/next.json",
+        "$TURBO_ROOT$/oxlint.config.ts",
+        "$TURBO_ROOT$/tools/repository/oxlint.config.ts"
       ],
       "outputs": ["node_modules/.cache/eslint"]
     },
@@ -159,6 +167,7 @@
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
         "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/typescript/next.json",
         "$TURBO_ROOT$/packages/config/next.ts",
         "$TURBO_ROOT$/packages/config/sentry-build.ts",
@@ -178,9 +187,12 @@
         "!**/*.tsbuildinfo",
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
-        "$TURBO_ROOT$/packages/config/typescript/next.json"
+        "$TURBO_ROOT$/packages/config/typescript/next.json",
+        "$TURBO_ROOT$/oxlint.config.ts",
+        "$TURBO_ROOT$/tools/repository/oxlint.config.ts"
       ],
       "outputs": ["node_modules/.cache/eslint"]
     },
@@ -234,6 +246,7 @@
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
         "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/vitest/browser.js"
       ],
       "outputs": ["*.tsbuildinfo"],

@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.21"
+version: "2.22"
 status: "active"
 authority: "constitution"
-updated_at: "2026-10-25"
+updated_at: "2026-11-03"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.21
+# oioi-bwg Architecture Constitution v2.22
 
 ## 1. 목적
 
@@ -69,7 +69,8 @@ tags:
 - Playwright: 핵심 사용자 플로우만
 - Sentry
 - GA4
-- ESLint
+- Oxlint + ESLint 잔존 규칙
+- Oxfmt
 - Steiger
 
 ### Deployment
@@ -593,11 +594,19 @@ requireUser()
 
 FSD 구조와 계층 위반 검사.
 
-### ESLint
+### Oxlint / ESLint
 
-TypeScript, React, Next.js, import rule, unused code 등 일반 코드 품질과 프로젝트 추가 경계 검사.
+2026-11-03 사용자 승인으로 일반 코드 검사를 Oxlint와 ESLint의 명시적 책임으로 나눈다.
+Oxlint에는 호환성을 확인한 규칙만 이관하며, 동일 규칙을 두 엔진에서 중복 실행하지 않는다.
+React·Next.js·프로젝트 경계·미사용 코드·import 정렬 등 미이관 규칙과 기존 자동 수정은
+ESLint가 유지한다. 도구의 기본 preset을 추가해 기존 검사 범위·severity를 임의로 바꾸지 않는다.
+Steiger와 lint 엔진에 동일한 FSD 규칙을 중복 구현하지 않는다.
 
-Steiger와 ESLint에 동일한 FSD 규칙을 중복 구현하지 않는다.
+### Oxfmt
+
+포맷의 단일 소유자다. 기존 포맷 대상·제외 범위와 Tailwind 클래스 정렬 책임을 유지한다.
+import/export 정렬은 ESLint가 유지하며 Oxfmt의 import·package.json 정렬은 켜지 않는다.
+Prettier와의 완전한 출력 일치를 계약하지 않으며 전환 시 차이를 확인해 반영한다.
 
 ---
 

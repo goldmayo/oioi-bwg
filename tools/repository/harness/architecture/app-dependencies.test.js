@@ -118,6 +118,7 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
     "turbo.json",
     "tsconfig.config.json",
     "eslint.config.ts",
+    "oxlint.config.ts",
     ".gitignore",
     "apps/web/package.json",
     "apps/console/package.json",
@@ -258,6 +259,9 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
   const cases = [
     ["tsconfig.config.json", []],
     ["eslint.config.ts", []],
+    // 두 설정은 모든 lint hash에 포함하되, 실제 실행 선택은 verify-local의 명시적 전체 lint가 소유한다.
+    ["oxlint.config.ts", ids([...products, "config"], ["lint"]), false],
+    ["tools/repository/oxlint.config.ts", ids([...products, "config"], ["lint"]), false],
     ["tools/repository/harness/architecture/app-dependencies.test.js", []],
     ["packages/config/vitest/server-only.ts", [...appUnit, ...ids(["server"], ["test"])]],
     ["packages/config/vitest/client-only.ts", appUnit],
@@ -280,6 +284,10 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
       `packages/config/eslint/${name}.ts`,
       ids(products, ["type-check", "lint"]),
     ]),
+    ...["base.json", "index.ts"].map((name) => [
+      `packages/config/oxlint/${name}`,
+      ids(products, ["type-check", "lint"]),
+    ]),
     [
       "packages/contracts/src/song.ts",
       [
@@ -295,7 +303,7 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
       ],
     ],
   ];
-  for (const [filename, consumers] of cases) {
+  for (const [filename, consumers, requireAffectedSelection = true] of cases) {
     const changedFile = path.join(fixtureRoot, filename);
     const original = fs.readFileSync(changedFile);
     try {
@@ -309,7 +317,7 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
       for (const { taskId, hash } of baseline) {
         const task = current.find((task) => task.taskId === taskId);
         assert.equal(task.hash !== hash, expected.has(taskId), `${filename}: ${taskId}`);
-        if (expected.has(taskId))
+        if (expected.has(taskId) && requireAffectedSelection)
           assert.ok(
             affected.some((task) => task.taskId === taskId),
             `${filename} must select ${taskId}`,

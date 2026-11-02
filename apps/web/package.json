@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build && cp -R public .next/standalone/apps/web/ && cp -R .next/static .next/standalone/apps/web/.next/",
     "start": "node .next/standalone/apps/web/server.js",
-    "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint . && pnpm lint:fsd",
+    "lint": "oxlint --type-aware --format=stylish --config ../../oxlint.config.ts . && eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint . && pnpm lint:fsd",
     "lint:fsd": "NODE_OPTIONS=\"${NODE_OPTIONS:+$NODE_OPTIONS }--import tsx\" steiger src --config steiger.config.ts",
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",
     "test": "vitest run --config vitest.config.ts"
@@ -60,7 +60,9 @@
     "jsdom": "^29.0.1",
     "steiger": "0.6.0",
     "tsx": "^4.21.0",
-    "@testing-library/jest-dom": "^6.9.1"
+    "@testing-library/jest-dom": "^6.9.1",
+    "oxlint": "1.90.0",
+    "oxlint-tsgolint": "7.0.2005"
   },
   "postcss": {
     "plugins": {
