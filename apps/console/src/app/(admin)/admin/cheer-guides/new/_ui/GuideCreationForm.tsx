@@ -3,7 +3,6 @@
 import { type ReactNode, useId } from "react";
 import { useWatch } from "react-hook-form";
 import { Loader2 } from "lucide-react";
-import { ToggleGroup } from "radix-ui";
 
 import type { AdminSongSummary } from "@/entities/song";
 
@@ -57,6 +56,7 @@ export function GuideCreationForm({
   });
   const leave = useFormLeaveConfirmation(form.formState.isDirty, isSubmitting);
   const sourceId = useId();
+  const modeId = useId();
   const sourceType = useWatch({ control: form.control, name: "sourceType" });
   return (
     <>
@@ -105,14 +105,12 @@ export function GuideCreationForm({
                         공연 모드 <Required />
                       </FormLabel>
                       <FormControl>
-                        <ToggleGroup.Root
-                          type="single"
+                        <RadioGroup
+                          orientation="horizontal"
                           aria-label="공연 모드"
                           value={field.value}
-                          onValueChange={(value) => {
-                            if (value) field.onChange(value);
-                          }}
-                          className="border-input bg-input/10 flex rounded-md border p-1"
+                          onValueChange={field.onChange}
+                          className="flex min-h-12 flex-wrap items-center gap-x-6 gap-y-2"
                         >
                           {(
                             [
@@ -120,15 +118,17 @@ export function GuideCreationForm({
                               ["FESTIVAL", "페스티벌"],
                             ] as const
                           ).map(([value, label]) => (
-                            <ToggleGroup.Item
-                              key={value}
-                              value={value}
-                              className="data-[state=on]:bg-secondary data-[state=on]:text-secondary-foreground hover:bg-accent focus-visible:ring-ring/50 h-9 min-w-0 flex-1 rounded-sm text-sm outline-none focus-visible:ring-[3px]"
-                            >
-                              {label}
-                            </ToggleGroup.Item>
+                            <div key={value} className="flex items-center gap-2.5">
+                              <RadioGroupItem id={`${modeId}-${value}`} value={value} />
+                              <Label
+                                htmlFor={`${modeId}-${value}`}
+                                className="min-h-11 cursor-pointer font-normal"
+                              >
+                                {label}
+                              </Label>
+                            </div>
                           ))}
-                        </ToggleGroup.Root>
+                        </RadioGroup>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -155,8 +155,8 @@ export function GuideCreationForm({
                         >
                           {(
                             [
-                              ["OFFICIAL", "official"],
-                              ["FANDOM", "fan-made"],
+                              ["OFFICIAL", "공식"],
+                              ["FANDOM", "팬덤"],
                             ] as const
                           ).map(([value, label]) => (
                             <div key={value} className="flex items-center gap-2.5">
@@ -176,9 +176,6 @@ export function GuideCreationForm({
                   )}
                 />
               </div>
-              <p className="text-muted-foreground text-sm leading-6">
-                공연 모드마다 응원법을 하나씩 등록할 수 있습니다.
-              </p>
             </section>
             <section
               aria-labelledby="guide-source"
@@ -242,18 +239,14 @@ export function GuideCreationForm({
           <footer className="border-border mt-8 flex justify-end gap-2 border-t pt-5">
             <Button
               type="button"
-              variant="outline"
+              variant="destructive"
               disabled={isSubmitting}
               onClick={() => leave.requestLeave(onCancel)}
             >
               취소
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !canSubmit}
-              className="bg-qwer-e hover:bg-qwer-e/90 text-neutral-950"
-            >
-              {isSubmitting && <Loader2 className="size-4 animate-spin" />}응원법 추가
+            <Button type="submit" disabled={isSubmitting || !canSubmit} variant="q">
+              {isSubmitting && <Loader2 className="size-4 animate-spin" />}추가
             </Button>
           </footer>
         </form>

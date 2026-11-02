@@ -36,7 +36,7 @@ export function SongDeleteDialog({ song, pending, onClose, onConfirm }: Props) {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="destructiveOutline" disabled={pending} onClick={onClose}>
+          <Button variant="destructive" disabled={pending} onClick={onClose}>
             취소
           </Button>
           <Button variant="destructive" disabled={pending} onClick={onConfirm}>

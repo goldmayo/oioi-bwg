@@ -80,20 +80,27 @@ export function SongForm({
             <div className="flex gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="destructive"
                 disabled={isSubmitting}
                 onClick={() => leave.requestLeave(onCancel)}
               >
                 취소
               </Button>
-              <Button type="submit" variant="brand" disabled={isSubmitting || !canSubmit}>
+              <Button
+                type="submit"
+                variant={isEdit ? "default" : "q"}
+                disabled={isSubmitting || !canSubmit}
+              >
                 {isSubmitting && <Loader2 className="size-4 animate-spin" />}
                 {isEdit ? "저장" : "추가"}
               </Button>
             </div>
           </header>
           {submissionNotice}
-          <fieldset disabled={isSubmitting} className="grid min-w-0 gap-8 lg:grid-cols-3">
+          <fieldset
+            disabled={isSubmitting}
+            className={isEdit ? "grid min-w-0 gap-8 lg:grid-cols-3" : "min-w-0 space-y-8"}
+          >
             <section className="min-w-0 space-y-5 lg:col-span-2" aria-labelledby="song-form-basics">
               <h2 id="song-form-basics" className="border-b pb-3 font-medium">
                 기본 정보
@@ -111,7 +118,11 @@ export function SongForm({
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+              <div
+                className={
+                  isEdit ? "grid grid-cols-1 items-start gap-4 sm:grid-cols-2" : "space-y-4"
+                }
+              >
                 <FormField
                   control={form.control}
                   name="albumId"
@@ -157,7 +168,11 @@ export function SongForm({
                   )}
                 />
               </div>
-              <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2">
+              <div
+                className={
+                  isEdit ? "grid grid-cols-1 items-start gap-4 sm:grid-cols-2" : "space-y-4"
+                }
+              >
                 <FormField
                   control={form.control}
                   name="youtubeId"
@@ -252,7 +267,7 @@ export function SongForm({
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between gap-4">
                       <div>
-                        <FormLabel className="cursor-pointer">화면 표시</FormLabel>
+                        <FormLabel className="cursor-pointer">사용자 노출</FormLabel>
                         <p className="text-muted-foreground text-xs">
                           앨범 설정과 응원법 공개 상태도 사용자 노출에 영향을 줍니다.
                         </p>

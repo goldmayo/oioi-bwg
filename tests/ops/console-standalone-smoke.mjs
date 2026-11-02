@@ -34,8 +34,8 @@ try {
   await page.goto(new URL("/admin", origin).href);
   await page.waitForURL(new URL("/admin-login", origin).href);
   await page.getByRole("button", { name: "다음", exact: true }).waitFor();
-  await expect(page.getByLabel("Email")).toHaveCount(1);
-  await expect(page.getByLabel("Password")).toHaveCount(1);
+  await expect(page.getByLabel("이메일")).toHaveCount(1);
+  await expect(page.getByLabel("비밀번호")).toHaveCount(1);
   await expect(rateLimitAlert).toHaveCount(0);
   await page.goto(new URL("/admin-login?code=rate_limited", origin).href);
   await expect(rateLimitAlert).toHaveText("요청 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요.");
@@ -43,8 +43,8 @@ try {
   page.on("request", (request) => {
     if (request.method() === "POST") posts.push(request.url());
   });
-  await page.getByLabel("Email").fill("standalone@example.test");
-  await page.getByLabel("Password").fill("Standalone-fixture-1!");
+  await page.getByLabel("이메일").fill("standalone@example.test");
+  await page.getByLabel("비밀번호").fill("Standalone-fixture-1!");
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByLabel("인증 코드").waitFor();
   await expect(rateLimitAlert).toHaveCount(0);

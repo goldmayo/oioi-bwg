@@ -151,8 +151,8 @@ export async function assertConsoleAuthIngress(browser, origin, sql, artifacts) 
   const attempts = await browser.newContext();
   const loginPage = await attempts.newPage();
   await loginPage.goto(`${origin}/admin-login`);
-  await loginPage.getByLabel("Email").fill("rate-action@p04.example.test");
-  await loginPage.getByLabel("Password").fill(password);
+  await loginPage.getByLabel("이메일").fill("rate-action@p04.example.test");
+  await loginPage.getByLabel("비밀번호").fill(password);
   await loginPage.getByRole("button", { name: "다음", exact: true }).click();
   await loginPage.getByLabel("인증 코드").fill("000000");
   const emitted = loginPage.waitForRequest(

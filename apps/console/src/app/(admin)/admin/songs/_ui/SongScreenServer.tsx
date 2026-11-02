@@ -45,7 +45,7 @@ export async function SongScreenServer({
   );
   return (
     <div className="min-w-0 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto w-full max-w-7xl">
+      <div className={mode === "create" ? "mx-auto w-full max-w-3xl" : "mx-auto w-full max-w-7xl"}>
         <AdminPageLocation
           title={
             song ? `${song.title} · ${mode === "edit" ? "곡 정보 수정" : "곡 정보"}` : "곡 추가"

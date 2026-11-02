@@ -1,10 +1,11 @@
-import { Eye, EyeOff, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 
 import type { AdminSongInformation } from "@/entities/song";
 
 import { adminLinks } from "@/shared/config/admin-routes";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { VisibilityIcon } from "@/shared/ui/visibility-icon";
 
 export function SongInformation({
   song,
@@ -13,7 +14,6 @@ export function SongInformation({
   song: AdminSongInformation;
   canManage: boolean;
 }) {
-  const Visibility = song.isVisible ? Eye : EyeOff;
   return (
     <>
       <header className="mb-8 flex items-center justify-between gap-4">
@@ -64,9 +64,9 @@ export function SongInformation({
             </h2>
             <dl className="space-y-4 text-sm">
               <div className="flex justify-between">
-                <dt className="text-muted-foreground">곡 화면 표시</dt>
+                <dt className="text-muted-foreground">사용자 노출</dt>
                 <dd className="flex items-center gap-2">
-                  <Visibility className="size-4" />
+                  <VisibilityIcon visible={song.isVisible} />
                   {song.isVisible ? "표시" : "숨김"}
                 </dd>
               </div>
@@ -118,12 +118,10 @@ export function SongGuideSummary({
               )}
               {publication ? (
                 <>
-                  <Badge variant={publication.sourceType === "OFFICIAL" ? "q" : "bwg"}>
-                    {publication.sourceType === "OFFICIAL" ? "official" : "fan-made"}
+                  <Badge variant={publication.sourceType === "OFFICIAL" ? "q" : "w"}>
+                    {publication.sourceType === "OFFICIAL" ? "공식" : "팬덤"}
                   </Badge>
-                  {publication.action === "UNPUBLISH" && (
-                    <EyeOff aria-label="응원법 비공개" className="text-muted-foreground size-4" />
-                  )}
+                  {publication.action === "UNPUBLISH" && <VisibilityIcon visible={false} />}
                 </>
               ) : (
                 <span className="text-muted-foreground">
@@ -135,7 +133,7 @@ export function SongGuideSummary({
         );
       })}
       {canManage && song.cheerGuides.length < 2 && (
-        <Button variant="outline" asChild className="w-full">
+        <Button variant="q" asChild className="w-full">
           <a href={adminLinks.guideCreate(song.id)}>응원법 추가</a>
         </Button>
       )}

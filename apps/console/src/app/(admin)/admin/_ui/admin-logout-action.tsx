@@ -50,7 +50,7 @@ export function AdminLogoutAction() {
           </p>
         )}
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={logout.cancel}>
+          <Button type="button" variant="destructive" onClick={logout.cancel}>
             취소
           </Button>
           <Button type="button" onClick={logout.confirm}>

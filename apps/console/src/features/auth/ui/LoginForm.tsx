@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { AppLogo } from "@/shared/ui/app-logo";
 import { Button } from "@/shared/ui/button";
 import {
   Card,
@@ -19,13 +20,16 @@ import { useConsoleLoginForm } from "../model/use-console-login-form";
 import { CredentialsFields, OtpField } from "./LoginFields";
 
 const screens = {
-  credentials: { description: "관리자 계정으로 로그인하세요.", submitLabel: "다음" },
-  login: { description: "관리자 계정으로 로그인하세요.", submitLabel: "로그인" },
+  credentials: { description: null, submitLabel: "다음" },
+  login: { description: null, submitLabel: "로그인" },
   setup: { description: "관리자 인증기 등록", submitLabel: "QR 생성" },
   confirm: { description: "관리자 인증기 등록", submitLabel: "등록 확인" },
   complete: { description: "인증기 등록 완료", submitLabel: "로그인으로 돌아가기" },
   navigating: { description: "로그인 완료", submitLabel: "이동 중..." },
 };
+
+const loginActionClassName =
+  "bg-foreground/65 text-background hover:bg-foreground/75 h-11 w-full font-semibold";
 
 export default function LoginForm({
   enrollmentEnabled = false,
@@ -46,12 +50,15 @@ export default function LoginForm({
   const showCredentials = step.kind === "credentials" || step.kind === "setup";
 
   return (
-    <Card className="border-border bg-card shadow-xl">
+    <Card className="border-border bg-card pb-4 shadow-none">
       <CardHeader className="space-y-1 text-center">
-        <CardTitle className="text-foreground text-2xl font-bold tracking-tight">
-          어이어이 바위게
+        <h1 className="sr-only">관리자 로그인</h1>
+        <CardTitle className="flex justify-center">
+          <AppLogo className="text-2xl" />
         </CardTitle>
-        <CardDescription className="text-muted-foreground">{screen.description}</CardDescription>
+        {screen.description && (
+          <CardDescription className="text-muted-foreground">{screen.description}</CardDescription>
+        )}
       </CardHeader>
       <CardContent>
         {step.kind === "navigating" ? (
@@ -63,7 +70,7 @@ export default function LoginForm({
         ) : step.kind === "complete" ? (
           <div className="space-y-4" role="status">
             <p>다음 코드로 로그인하세요. 비밀번호를 다시 입력해주세요.</p>
-            <Button className="h-11 w-full" onClick={() => reset()}>
+            <Button variant="default" className={loginActionClassName} onClick={() => reset()}>
               {screen.submitLabel}
             </Button>
           </div>
@@ -79,7 +86,7 @@ export default function LoginForm({
                 <p className="text-muted-foreground text-sm">
                   {step.kind === "confirm"
                     ? "인증기 앱으로 QR을 스캔한 후 코드를 입력하세요."
-                    : "인증기 앱의 코드를 입력하세요."}
+                    : "인증기 앱의 6자리 코드를 입력하세요."}
                 </p>
               )}
               {step.kind === "confirm" && (
@@ -100,7 +107,8 @@ export default function LoginForm({
               )}
               <Button
                 type="submit"
-                className="bg-qwer-w hover:bg-qwer-w/90 h-11 w-full font-bold text-white"
+                variant="default"
+                className={loginActionClassName}
                 disabled={disabled}
               >
                 {loading ? "확인 중..." : screen.submitLabel}
@@ -118,7 +126,13 @@ export default function LoginForm({
                   </Button>
                 )
               ) : (
-                <Button type="button" variant="outline" onClick={() => reset()} disabled={loading}>
+                <Button
+                  type="button"
+                  className="h-11 w-full font-semibold"
+                  variant="destructive"
+                  onClick={() => reset()}
+                  disabled={loading}
+                >
                   취소
                 </Button>
               )}
@@ -126,8 +140,11 @@ export default function LoginForm({
           </Form>
         )}
       </CardContent>
-      <CardFooter className="border-border/50 flex justify-center border-t pt-4">
-        <Link href="/" className="text-muted-foreground hover:text-foreground text-sm">
+      <CardFooter className="flex justify-center pt-0">
+        <Link
+          href="/"
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded-sm px-2 py-1 text-sm underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+        >
           홈으로 돌아가기
         </Link>
       </CardFooter>

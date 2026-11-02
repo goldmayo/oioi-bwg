@@ -76,9 +76,9 @@ it("기본은 조회이며 legacy 공식 flag로 출처를 추론하지 않고 �
   setup("view");
   expect(screen.getByRole("heading", { name: "곡 정보" })).toBeTruthy();
   expect(screen.queryByRole("textbox")).toBeNull();
-  expect(screen.getByText("fan-made")).toBeTruthy();
-  expect(screen.queryByText("official")).toBeNull();
-  expect(screen.getByLabelText("응원법 비공개")).toBeTruthy();
+  expect(screen.getByText("팬덤")).toBeTruthy();
+  expect(screen.queryByText("공식")).toBeNull();
+  expect(screen.getAllByRole("img", { name: "비공개" })[0]).toBeTruthy();
   expect(screen.getByText("미등록")).toBeTruthy();
   expect(screen.getByRole("link", { name: /^편집$/ }).getAttribute("href")).toBe(
     `/admin/songs/${id}?edit=true`,
