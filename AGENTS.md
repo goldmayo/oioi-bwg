@@ -235,6 +235,9 @@ Base UI → shadcn/ui → Tailwind CSS
 - 공유 가능하거나 navigation과 함께 보존되어야 하는 URL state는 `nuqs`를 우선한다.
 - 순수 presentation state와 UI event는 UI에 남겨도 된다.
 
+변경 이유에 따른 책임 분리와 Shell·기능의 조합은 [Frontend §19](docs/migration/oioi-bwg-architecture-clean-v1/02-frontend-architecture.md#19-변경-경계와-화면-조합-지침)를 따른다.
+새 구현과 변경 리뷰에 적용하며, 기존 코드 전체의 일괄 리팩터링 지시로 해석하지 않는다.
+
 ## 7. 데이터베이스 및 운영 안전
 
 - production DB에 연결하거나 변경하지 않는다. 명시적인 사용자 승인 없이는 production credential을 사용하지 않는다.
