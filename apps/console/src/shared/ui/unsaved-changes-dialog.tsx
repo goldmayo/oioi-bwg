@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 
-export function SongLeaveDialog({
+export function UnsavedChangesDialog({
   open,
   onStay,
   onLeave,
