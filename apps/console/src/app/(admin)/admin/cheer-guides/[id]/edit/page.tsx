@@ -13,8 +13,8 @@ import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-
 import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
-import { safeReturnPath } from "@/shared/lib/safe-return-path";
 
+import { getEditorReturnTarget } from "../../../_lib/editor-return-target";
 import { AdminPageLocation } from "../../../_model/admin-location";
 
 import { GuideDraftEditor } from "./_ui/GuideDraftEditor";
@@ -37,10 +37,7 @@ export default async function GuideEditPage({
     },
   );
   const { returnTo } = await searchParams;
-  const returnHref = safeReturnPath(returnTo, "/admin/cheer-guides", [
-    "/admin/cheer-guides",
-    `/admin/songs/${guide.song.id}`,
-  ]);
+  const returnTarget = getEditorReturnTarget(returnTo, guide.song.id, "guideList");
   const client = getQueryClient();
   client.setQueryData(cheerGuideQueryKeys.editor(guide.id), guide);
   client.setQueryData(
@@ -56,12 +53,7 @@ export default async function GuideEditPage({
         key={guide.id}
         id={guide.id}
         accountId={context.user!.id}
-        returnTo={{
-          href: returnHref,
-          label: returnHref.startsWith("/admin/songs/")
-            ? "곡 정보로 돌아가기"
-            : "응원법 목록으로 돌아가기",
-        }}
+        returnTo={returnTarget}
       />
     </HydrationBoundary>
   );

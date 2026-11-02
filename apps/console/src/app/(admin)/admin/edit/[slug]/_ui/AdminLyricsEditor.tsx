@@ -23,6 +23,8 @@ import { waveformQueryKeys } from "@/entities/waveform";
 
 import { ApiError } from "@/shared/api/http-errors";
 
+import { getEditorReturnTarget } from "../../../_lib/editor-return-target";
+
 /** Ability와 Song mutation을 lazy lyric editor에 연결하는 route-private 조합 경계다. */
 export function AdminLyricsEditor({
   song,
@@ -71,7 +73,7 @@ export function AdminLyricsEditor({
         <LazyLyricsEditor
           key={song.id}
           song={song}
-          returnTo={returnTo ?? { href: `/admin/songs/${song.id}`, label: "곡 정보로 돌아가기" }}
+          returnTo={returnTo ?? getEditorReturnTarget(undefined, song.id, "song")}
           saveSongData={saveSongData}
           accountId={accountId}
           disabled={!canManage}

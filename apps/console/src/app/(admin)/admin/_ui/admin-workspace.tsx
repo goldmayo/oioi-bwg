@@ -1,17 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
 
-import { getAdminSection } from "../_config/admin-navigation";
-import { AdminLocationProvider, useAdminBreadcrumbs } from "../_model/admin-location";
+import { AdminLocationProvider, useAdminNavigation } from "../_model/admin-location";
 
 import { AdminShell } from "./admin-shell";
 import AdminSidebar from "./admin-sidebar";
 
 function Workspace({ children }: { children: ReactNode }) {
-  const breadcrumbs = useAdminBreadcrumbs();
-  const section = getAdminSection(usePathname());
+  const { breadcrumbs, section } = useAdminNavigation();
   return (
     <AdminShell breadcrumbs={breadcrumbs} navigation={<AdminSidebar activeHref={section?.href} />}>
       {children}

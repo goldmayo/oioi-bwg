@@ -10,6 +10,7 @@ import { assertConsoleOrigin } from "@/server/http/console-origin";
 import { logAuthRejection } from "@/server/observability/auth-rejection-logger";
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
+import { adminPaths } from "@/shared/config/admin-routes";
 import {
   readRequestObservation,
   type RequestObservation,
@@ -38,7 +39,7 @@ export async function uploadAlbumImageAction(formData: FormData) {
     if (error instanceof AppError) {
       if (error.code === "UNAUTHENTICATED" || error.code === "FORBIDDEN")
         logAuthRejection(authorization, "action_rejection_returned", "upload-album-image-action", {
-          route: "/admin/albums",
+          route: adminPaths.albumList,
           ...observation,
         });
       return { success: false, error: FALLBACK_ERROR_MESSAGE };
@@ -48,7 +49,7 @@ export async function uploadAlbumImageAction(formData: FormData) {
       event: "upload.failure",
       source: "upload-album-image-action",
       operation: "album-image-upload",
-      route: "/admin/albums",
+      route: adminPaths.albumList,
       ...observation,
       request: { routerKind: "App Router", routeType: "action" },
     });
