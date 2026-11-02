@@ -69,6 +69,9 @@ migration implementation plan/result
   `type(scope): 한글 요약`인지, PR 본문이 최종 변경 사항과 검증 결과를 한글로 설명하는지 갱신한다.
 - PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 형식을 따른다.
 - PR 리뷰 중에는 같은 브랜치에 추가 커밋을 push해 기존 PR에 반영한다.
+- 작업 중 PR은 Draft로 생성하고 의미 단위 커밋은 로컬에 쌓는다. 관련 검증·리뷰를 마친 변경을
+  모아서 push하며 최종 커밋이 준비되면 Ready로 전환한다. Ready 뒤 기능 수정이 더 필요하면
+  Draft로 되돌린 뒤 작업해 전체 CI가 수정마다 반복되지 않게 한다.
 - OCI Development 배포는 별도의 `migration_main → migration_develop` Promotion PR로만 진행한다.
   source/merge tree가 같은 squash 결과에 검증한 동일 candidate digest를 배포한다. 통합 merge만으로 배포하지 않는다.
   세부 검증·보호 설정은 active 배포 runbook §21을 따른다.
