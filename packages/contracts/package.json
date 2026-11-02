@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./cheer-guide": "./src/cheer-guide.ts",
     "./notification": "./src/notification.ts",
     "./entity-id": "./src/entity-id.ts",
     "./album": "./src/album.ts",

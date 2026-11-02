@@ -6,6 +6,7 @@ import { afterAll, beforeAll, expect, test, vi } from "vitest";
 
 import * as schema from "@oioi-bwg/server/db/schema";
 import { buildAbility } from "@oioi-bwg/server/auth/ability";
+import { listAdminCheerGuides } from "@oioi-bwg/server/services/cheer-guide-service";
 import { deleteAlbum, getAlbumDetailBySlug } from "@oioi-bwg/server/services/album-service";
 import {
   deleteSong,
@@ -756,6 +757,33 @@ test("관리자 UUID 조회는 숨김·null slug와 두 모드 정보를 한 쿼
       .set({ slug: f.row.slug, isVisible: f.row.isVisible })
       .where(eq(schema.song.id, f.row.id));
   }
+});
+
+test("관리자 응원법 목록은 모드별로 조회하고 숨김 곡과 공개 이력 없는 Guide도 보존한다", async () => {
+  const f = await importFixture();
+  await importLegacyGuide(f.context, f.entry, true);
+  const [festival] = await database
+    .insert(schema.cheerGuide)
+    .values({ songId: f.row.id, mode: "FESTIVAL" })
+    .returning();
+  await database.update(schema.song).set({ isVisible: false }).where(eq(schema.song.id, f.row.id));
+  observedQueries.length = 0;
+  const list = await listAdminCheerGuides(f.context);
+  expect(observedQueries).toHaveLength(1);
+  const guides = list.items.filter((guide) => guide.song.id === f.row.id);
+  expect(guides).toHaveLength(2);
+  expect(guides.find((guide) => guide.id === f.entry.guideId)).toMatchObject({
+    mode: "CONCERT",
+    currentPublication: { action: "PUBLISH", sourceType: "FANDOM" },
+    editorAvailable: true,
+  });
+  expect(guides.find((guide) => guide.id === festival!.id)).toMatchObject({
+    mode: "FESTIVAL",
+    currentPublication: null,
+    editorAvailable: false,
+  });
+  expect(guides[0]).not.toHaveProperty("lyrics");
+  expect(guides[0]).not.toHaveProperty("legacyWriteTarget");
 });
 
 test("Domain §8.0 serves current published modes in default order without internal history fields", async () => {
