@@ -5,6 +5,24 @@ import { and, eq, sql } from "drizzle-orm";
 import type { DbExecutor } from "../db";
 import { cheerGuide, cheerGuidePublication, cheerGuideSnapshot, song } from "../db/schema";
 
+/** 내용·작성자·이력는 가져오지 않고 관리 목록에 필요한 관계를 한 번에 조회한다. */
+export function findAdminCheerGuides(executor: DbExecutor) {
+  return executor.query.cheerGuide.findMany({
+    columns: { id: true, mode: true, updatedAt: true, legacyWriteTarget: true },
+    orderBy: (guide, { desc, asc }) => [desc(guide.updatedAt), asc(guide.id)],
+    with: {
+      song: {
+        columns: { id: true, title: true, slug: true, youtubeId: true },
+        with: { album: { columns: { name: true } } },
+      },
+      currentPublication: {
+        columns: { action: true },
+        with: { snapshot: { columns: { sourceType: true, referenceYoutubeId: true } } },
+      },
+    },
+  });
+}
+
 export async function lockSongForGuideWrite(executor: DbExecutor, id: string) {
   await executor.execute(sql`set local lock_timeout = '5s'`);
   await executor.execute(sql`set local statement_timeout = '30s'`);
