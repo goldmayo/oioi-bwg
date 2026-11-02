@@ -95,7 +95,8 @@ function renderManager() {
 }
 
 async function submitEdit() {
-  fireEvent.click(screen.getByTitle("수정"));
+  fireEvent.click(screen.getByRole("button", { name: `${album.name} 관리` }));
+  fireEvent.click(screen.getByRole("button", { name: "편집" }));
   fireEvent.click(screen.getByRole("button", { name: "편집 제출" }));
   await waitFor(() => expect(http.patch).toHaveBeenCalledOnce());
 }
@@ -115,6 +116,24 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   queryClient?.clear();
+});
+
+it("검색 결과에서 사라진 앨범의 선택을 유지하고 명시적으로 해제한다", () => {
+  renderManager();
+  fireEvent.click(screen.getByRole("checkbox", { name: `${album.name} 선택` }));
+  fireEvent.change(screen.getByRole("textbox", { name: "앨범 검색" }), {
+    target: { value: "없음" },
+  });
+  expect(screen.getByText("1개 선택됨")).toBeTruthy();
+  expect(screen.queryByRole("checkbox", { name: `${album.name} 선택` })).toBeNull();
+  fireEvent.change(screen.getByRole("textbox", { name: "앨범 검색" }), { target: { value: "" } });
+  expect(
+    screen.getByRole("checkbox", { name: `${album.name} 선택` }).getAttribute("aria-checked"),
+  ).toBe("true");
+  fireEvent.click(screen.getByRole("button", { name: "선택 해제" }));
+  expect(
+    screen.getByRole("checkbox", { name: `${album.name} 선택` }).getAttribute("aria-checked"),
+  ).toBe("false");
 });
 
 describe("AlbumManagerClient cache orchestration", () => {
@@ -172,7 +191,8 @@ describe("AlbumManagerClient cache orchestration", () => {
     http.get.mockResolvedValue({ items: [], nextCursor: null });
     const onNameChangeOrDelete = renderManager();
 
-    fireEvent.click(screen.getByTitle("삭제"));
+    fireEvent.click(screen.getByRole("button", { name: `${album.name} 관리` }));
+    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
     const deleteButtons = screen.getAllByRole("button", { name: "삭제" });
     fireEvent.click(deleteButtons[deleteButtons.length - 1]);
 

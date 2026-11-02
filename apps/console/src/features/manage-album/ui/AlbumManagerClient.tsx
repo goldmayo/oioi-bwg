@@ -2,7 +2,7 @@
 
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import type { RowSelectionState } from "@tanstack/react-table";
 
 import type { AdminAlbumSummary } from "@/entities/album";
 import { albumQueryKeys } from "@/entities/album";
@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
+import { ListHeader, ListSelection, ListToolbar } from "@/shared/ui/list-layout";
 
 import type { AlbumFormValues } from "../model/schemas";
 
@@ -43,6 +44,8 @@ export function AlbumManagerClient({
   const {
     data: { items: albums },
   } = useSuspenseQuery(albumQueries.adminList());
+  const [selection, setSelection] = useState<RowSelectionState>({});
+  const selectedCount = albums.filter((album) => selection[album.id]).length;
   const [search, setSearch] = useState("");
 
   // 폼 다이얼로그
@@ -125,26 +128,33 @@ export function AlbumManagerClient({
 
   return (
     <div className="space-y-4">
-      {/* 상단 액션 바 */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <ListHeader
+        title="앨범 관리"
+        description="앨범을 추가, 수정, 삭제할 수 있습니다."
+        action={
+          canManage && (
+            <Button variant="q" onClick={handleAdd}>
+              앨범 추가
+            </Button>
+          )
+        }
+      />
+      <ListToolbar
+        selection={<ListSelection count={selectedCount} onClear={() => setSelection({})} />}
+      >
         <Input
+          aria-label="앨범 검색"
           placeholder="앨범 이름 또는 slug로 검색..."
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-          }}
+          onChange={(event) => setSearch(event.target.value)}
           className="sm:max-w-xs"
         />
-        {canManage && (
-          <Button onClick={handleAdd} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            앨범 추가
-          </Button>
-        )}
-      </div>
+      </ListToolbar>
 
       <AlbumManagerTable
         albums={filtered}
+        selection={selection}
+        onSelectionChange={setSelection}
         canManage={canManage}
         hasFilter={!!search}
         onEdit={handleEdit}
@@ -186,7 +196,7 @@ export function AlbumManagerClient({
             </DialogHeader>
             <DialogFooter>
               <Button
-                variant="outline"
+                variant="destructiveOutline"
                 disabled={deleteMutation.isPending}
                 onClick={() => changeDeleteTarget(null)}
               >

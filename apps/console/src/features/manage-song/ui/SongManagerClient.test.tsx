@@ -76,12 +76,9 @@ it("선택한 곡만 JSON 파일로 내려받고 가사·서버 mutation을 실�
       <SongManagerClient canManage />
     </QueryClientProvider>,
   );
-  expect(
-    (screen.getByRole("button", { name: "파형 작업 파일 다운로드 (0곡)" }) as HTMLButtonElement)
-      .disabled,
-  ).toBe(true);
+  expect(screen.queryByRole("button", { name: /waveform 작업 파일 다운로드/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "첫 곡 선택" }));
-  fireEvent.click(screen.getByRole("button", { name: "파형 작업 파일 다운로드 (1곡)" }));
+  fireEvent.click(screen.getByRole("button", { name: "waveform 작업 파일 다운로드 (1)" }));
   expect(filename).toMatch(/^oioi-operator-waveform_\d{8}_\d{6}_\d{3}_KST\.json$/);
   expect(createObjectURL).toHaveBeenCalledOnce();
   expect(createObjectURL.mock.calls[0]).toHaveLength(1);

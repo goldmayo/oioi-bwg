@@ -18,8 +18,8 @@ const choices = [
     label: "출처",
     options: [
       ["all", "전체 출처"],
-      ["OFFICIAL", "official"],
-      ["FANDOM", "fan-made"],
+      ["OFFICIAL", "공식"],
+      ["FANDOM", "팬덤"],
       ["NONE", "공개 이력 없음"],
     ],
   },

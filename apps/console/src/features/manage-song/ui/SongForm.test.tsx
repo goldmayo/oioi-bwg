@@ -238,12 +238,12 @@ describe("SongManagerTable Compiler 갱신 회귀", () => {
     const { rerender } = render(
       <SongManagerTable selectedIds={new Set()} onSelect={() => {}} {...props} canManage />,
     );
-    expect(screen.getByTitle("수정")).toBeTruthy();
+    expect(screen.getByRole("button", { name: `${song.title} 관리` })).toBeTruthy();
     rerender(
       <SongManagerTable selectedIds={new Set()} onSelect={() => {}} {...props} canManage={false} />,
     );
-    expect(screen.queryByTitle("수정")).toBeNull();
-    expect(screen.queryByTitle("삭제")).toBeNull();
+    expect(screen.queryByRole("button", { name: `${song.title} 관리` })).toBeNull();
+    expect(screen.queryByRole("button", { name: "삭제" })).toBeNull();
   });
 
   it("정렬·페이지 상태가 같아도 새 DTO의 셀과 callback을 반영한다", () => {
@@ -258,7 +258,8 @@ describe("SongManagerTable Compiler 갱신 회귀", () => {
     );
     expect(screen.getByRole("link", { name: updated.title })).toBeTruthy();
     expect(screen.queryByText(song.title)).toBeNull();
-    fireEvent.click(screen.getByTitle("수정"));
+    fireEvent.click(screen.getByRole("button", { name: `${updated.title} 관리` }));
+    fireEvent.click(screen.getByRole("button", { name: "편집" }));
     expect(onEdit).toHaveBeenCalledWith(updated);
   });
 });
