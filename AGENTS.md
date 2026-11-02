@@ -258,21 +258,25 @@ Base UI → shadcn/ui → Tailwind CSS
 
 ## 8. 검증과 도구
 
-코드 변경의 기본 검증:
+기본 로컬 검증은 변경 영향 범위만 실행한다.
 
 ```bash
-pnpm type-check
-pnpm test:harness
-pnpm lint
-pnpm lint:fsd
-pnpm test:unit:run
-pnpm format:check
+pnpm verify
+pnpm verify --dry-run
 ```
 
-위험도가 있는 runtime/build 변경은 추가로 다음을 실행한다.
+`verify`는 merge-base 이후 변경·미커밋·신규 파일과 Turbo affected 프로젝트를 기준으로
+증분 type-check·캐시 lint·Vitest 관련 테스트·해당 workspace 경계를 검사한다.
+공용 설정·저장소 도구 변경은 실제 영향에 따라 repo 검사도 포함한다. 검사 범위를 먼저 출력하며,
+기준 판정 실패 시 전체 검증으로 조용히 확대하지 않고 중단한다.
+
+`migration_main` 병합 전에는 최종 PR 커밋의 CI 전체 검증을 통과해야 한다.
+로컬에서 CI 전체 검증을 반복하지 않는다. 명시적 전체 재현 명령은 `pnpm verify:full`이며,
+CI의 개별 전체 검사 entry(type-check·harness·lint·unit·format·build)는 유지한다.
+런타임 변경의 추가 로컬 build가 필요한 경우에도 영향 workspace만 선택한다.
 
 ```bash
-pnpm build
+TURBO_SCM_BASE=origin/migration_main pnpm exec turbo run build --affected
 ```
 
 - Vitest: 순수 함수, hook, 동기 component, service 단위 테스트
@@ -280,7 +284,7 @@ pnpm build
 - ESLint/FSD harness: import 방향과 파일 배치 검증
 - 문서만 변경하는 작업은 요청된 경우 lint/typecheck/test/build를 실행하지 않는다.
 - 일반 `migration_main` PR의 전체 diff가 일반 파일 `.md` 변경뿐이면 CI는 scope 판정과 필수 `verify`만 실행한다.
-  feature 브랜치의 push hook도 같은 기준으로 검증을 생략한다. 코드 혼합·판정 실패·Promotion은 전체 검증을 유지한다.
+  feature push hook은 문서 전용이면 생략하고 그 외에는 `pnpm verify`의 로컬 증분 검증을 사용한다. CI의 코드 혼합·판정 실패·Promotion은 기존 전체 검증을 유지한다.
 - 문서 작업의 push에서 Git hook이 검증을 자동 실행했다면, 별도 검증으로 계획한 것처럼 기록하지 않고 hook이 실행한 명령과 결과를 그대로 보고한다.
 - 테스트 도구나 번들러의 기본 동작을 추측하지 말고 현재 config와 공식 문서를 확인한다.
 

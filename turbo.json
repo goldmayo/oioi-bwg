@@ -15,7 +15,7 @@
         "$TURBO_ROOT$/packages/config/typescript/node.json",
         "$TURBO_ROOT$/packages/config/eslint/**"
       ],
-      "outputs": [],
+      "outputs": ["*.tsbuildinfo"],
       "dependsOn": ["^transit"]
     },
     "lint": {
@@ -28,7 +28,7 @@
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/eslint/**"
       ],
-      "outputs": [],
+      "outputs": ["node_modules/.cache/eslint"],
       "dependsOn": ["^transit"]
     },
     "test": {
@@ -113,7 +113,7 @@
         "$TURBO_ROOT$/packages/config/vitest/browser.js",
         "$TURBO_ROOT$/packages/config/vitest/postgres.js"
       ],
-      "outputs": []
+      "outputs": ["*.tsbuildinfo"]
     },
     "@oioi-bwg/web#lint": {
       "dependsOn": ["^transit"],
@@ -129,7 +129,7 @@
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/next.json"
       ],
-      "outputs": []
+      "outputs": ["node_modules/.cache/eslint"]
     },
     "@oioi-bwg/web#test": {
       "dependsOn": ["^transit"],
@@ -166,7 +166,7 @@
         "$TURBO_ROOT$/packages/config/vitest/browser.js",
         "$TURBO_ROOT$/packages/config/vitest/postgres.js"
       ],
-      "outputs": []
+      "outputs": ["*.tsbuildinfo"]
     },
     "@oioi-bwg/console#lint": {
       "dependsOn": ["^transit"],
@@ -182,7 +182,7 @@
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/next.json"
       ],
-      "outputs": []
+      "outputs": ["node_modules/.cache/eslint"]
     },
     "@oioi-bwg/console#test": {
       "dependsOn": ["^transit"],
@@ -216,12 +216,12 @@
     "@oioi-bwg/repository-tools#type-check": {
       "dependsOn": ["^transit"],
       "cache": false,
-      "outputs": []
+      "outputs": ["*.tsbuildinfo"]
     },
     "@oioi-bwg/repository-tools#lint": {
       "dependsOn": ["^transit"],
       "cache": false,
-      "outputs": []
+      "outputs": ["node_modules/.cache/eslint"]
     },
     "@oioi-bwg/ui#type-check": {
       "inputs": [
@@ -236,7 +236,7 @@
         "$TURBO_ROOT$/packages/config/eslint/**",
         "$TURBO_ROOT$/packages/config/vitest/browser.js"
       ],
-      "outputs": [],
+      "outputs": ["*.tsbuildinfo"],
       "dependsOn": ["^transit"]
     },
     "@oioi-bwg/ui#test": {

@@ -13,6 +13,10 @@ import {
 } from "@oioi-bwg/config/dependencies";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
+const scopes = process.argv.slice(2);
+if (scopes.length % 2 || scopes.some((value, index) => index % 2 === 0 && value !== "--scope"))
+  throw new Error("--scope <workspace 경로>만 지원합니다.");
+const selected = scopes.filter((_value, index) => index % 2 === 1);
 const files = execFileSync(
   "git",
   ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
@@ -22,6 +26,7 @@ const files = execFileSync(
   .filter(
     (file) =>
       /\.[cm]?[jt]sx?$/.test(file) &&
+      fs.existsSync(path.join(root, file)) &&
       !/^(?:docs|tests\/k6)\//.test(file) &&
       !file.endsWith("next-env.d.ts"),
   );
@@ -97,6 +102,8 @@ const projects = [
   },
   { label: "web-integration", config: "tools/repository/tsconfig.web.json", inputs: [webTests] },
 ];
+if (selected.some((directory) => !owners.some((owner) => owner.directory === directory)))
+  throw new Error("등록되지 않은 workspace 검사 범위입니다.");
 const rootManifest = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 let errors = workspaceDependencyErrors(owners, [], {
   ...rootManifest.dependencies,
@@ -105,6 +112,13 @@ let errors = workspaceDependencyErrors(owners, [], {
   ...rootManifest.optionalDependencies,
 });
 for (const project of projects) {
+  if (
+    selected.length &&
+    !selected.some(
+      (directory) => project.label === directory || project.label === `${directory}:config`,
+    )
+  )
+    continue;
   const config = path.join(root, project.config);
   const tsConfig = extractTSConfig(config);
   // paths가 baseUrl 없이 선언된 앱에서도 alias 기준은 소유 설정의 위치다.
