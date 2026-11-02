@@ -15,12 +15,32 @@ export interface DataTableColumnMeta {
 export type DataTableButtonProps = ComponentProps<"button">;
 export interface DataTableComponents {
   Button?: ComponentType<DataTableButtonProps>;
+  ResizeHandleIcon?: ComponentType<{ className?: string }>;
 }
 
 export const fillWidthContext = createContext(false);
 
 const defaultComponents: DataTableComponents = {};
 const componentsContext = createContext(defaultComponents);
+
+export function ResizeHandleIcon() {
+  const Icon = useContext(componentsContext).ResizeHandleIcon;
+  if (Icon) return <Icon className="size-4" />;
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      {[6, 12, 18].flatMap((cy) =>
+        [9, 15].map((cx) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1" />),
+      )}
+    </svg>
+  );
+}
 
 function DefaultButton(props: DataTableButtonProps) {
   return <button {...props} />;

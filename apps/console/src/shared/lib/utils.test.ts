@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { cn, debounce } from "./utils";
+import { cn, debounce, formatDate } from "./utils";
 
 describe("Utils 테스트", () => {
   describe("cn (Right)", () => {
@@ -43,4 +43,14 @@ describe("Utils 테스트", () => {
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
   });
+});
+
+it.each([
+  ["2024-02-01T00:00:00.000Z", "2024.02.01"],
+  ["2024-2-1", "2024.02.01"],
+  ["2024-02-01T23:00:00-08:00", "2024.02.01"],
+  [null, "-"],
+  ["invalid", "-"],
+])("calendar day %s를 시간대 변환 없이 %s로 표시한다", (input, expected) => {
+  expect(formatDate(input)).toBe(expected);
 });

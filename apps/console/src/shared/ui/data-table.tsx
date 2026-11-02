@@ -22,6 +22,7 @@ import {
   sortFn_text,
   tableFeatures,
 } from "@tanstack/react-table";
+import { GripVertical } from "lucide-react";
 
 import { cn } from "../lib/utils";
 
@@ -32,9 +33,10 @@ export function AppDataTable({ className, ...props }: ComponentProps<typeof Data
   return (
     <DataTable.Table
       fillWidth
+      viewportClassName="max-h-[70dvh]"
       {...props}
       className={cn(
-        "bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_td]:whitespace-normal [&_th]:px-3",
+        "bg-card [&_th]:bg-card table-fixed [--data-table-row-height:3.5rem] [&_tbody_tr:not([data-table-padding])]:h-14 [&_td]:h-14 [&_td]:overflow-hidden [&_td]:px-3 [&_td]:py-0 [&_td]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:px-3",
         className,
       )}
     />
@@ -45,7 +47,14 @@ function TableButton(props: DataTableButtonProps) {
   return <Button variant="ghost" {...props} />;
 }
 
-export const dataTableComponents = { Button: TableButton } satisfies DataTableComponents;
+function ResizeHandleIcon() {
+  return <GripVertical className="size-4" aria-hidden="true" />;
+}
+
+export const dataTableComponents = {
+  Button: TableButton,
+  ResizeHandleIcon,
+} satisfies DataTableComponents;
 
 // Console 목록의 선택이다. 공용 compound UI의 지원 기능을 제한하지 않는다.
 const features = tableFeatures({

@@ -46,13 +46,28 @@ function Fixture({ data }: { data: Item[] }) {
     <DataTable.Root table={table}>
       <DataTable.Table caption="예제 목록">
         <DataTable.Header />
-        <DataTable.Body emptyState="일치하는 항목이 없습니다." />
+        <DataTable.Body padToPageSize emptyState="일치하는 항목이 없습니다." />
       </DataTable.Table>
       <DataTable.Pagination />
     </DataTable.Root>
   );
 }
 afterEach(cleanup);
+
+it("마지막·빈 페이지도 높이를 예약하고 현재 항목 범위를 표시한다", async () => {
+  const user = userEvent.setup();
+  const view = render(<Fixture data={items} />);
+  expect(screen.getByText("1-2 of 3")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "다음" }));
+  expect(screen.getByText("3-3 of 3")).toBeInTheDocument();
+  expect(screen.getByRole("table").querySelector("[data-table-padding]")).toHaveAttribute(
+    "aria-hidden",
+    "true",
+  );
+  view.rerender(<Fixture data={[]} />);
+  await waitFor(() => expect(screen.getByText("0-0 of 0")).toBeInTheDocument());
+  expect(screen.getByText("일치하는 항목이 없습니다.")).toBeInTheDocument();
+});
 
 describe("Data Table 사용자 동작", () => {
   it("키보드 정렬이 전체 목록에 적용된 뒤 페이지를 이동한다", async () => {

@@ -465,30 +465,14 @@ export function Pagination({
               .filter((size) => Number.isInteger(size) && size > 0)
               .sort((a, b) => a - b)
           : [];
+        const total = table.getRowCount();
+        const first = total === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
+        const last = Math.min(total, (pagination.pageIndex + 1) * pagination.pageSize);
         return (
-          <nav aria-label={label} className="flex flex-wrap items-center justify-center gap-2">
-            <Button
-              type="button"
-              className={buttonClass}
-              disabled={!table.getCanPreviousPage()}
-              onClick={() => table.previousPage()}
-            >
-              이전
-            </Button>
-            <span className="text-muted-foreground text-sm tabular-nums" aria-live="polite">
-              {pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
-            </span>
-            <Button
-              type="button"
-              className={buttonClass}
-              disabled={!table.getCanNextPage()}
-              onClick={() => table.nextPage()}
-            >
-              다음
-            </Button>
-            {pageSizes && (
+          <nav aria-label={label} className="flex flex-wrap items-center justify-between gap-3">
+            {pageSizes ? (
               <label className="flex items-center gap-2 text-sm">
-                표시 개수
+                <span className="sr-only">표시 개수</span>
                 <select
                   aria-label="표시 개수"
                   className={inputClass}
@@ -499,12 +483,38 @@ export function Pagination({
                 >
                   {sizes.map((size) => (
                     <option key={size} value={size}>
-                      {size}개씩 보기
+                      {size}개
                     </option>
                   ))}
                 </select>
               </label>
+            ) : (
+              <span />
             )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span className="text-muted-foreground mr-2 text-sm tabular-nums" aria-live="polite">
+                {first}-{last} of {total}
+              </span>
+              <Button
+                type="button"
+                className={buttonClass}
+                disabled={!table.getCanPreviousPage()}
+                onClick={() => table.previousPage()}
+              >
+                이전
+              </Button>
+              <span className="text-muted-foreground text-sm tabular-nums">
+                {pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}
+              </span>
+              <Button
+                type="button"
+                className={buttonClass}
+                disabled={!table.getCanNextPage()}
+                onClick={() => table.nextPage()}
+              >
+                다음
+              </Button>
+            </div>
           </nav>
         );
       }}
