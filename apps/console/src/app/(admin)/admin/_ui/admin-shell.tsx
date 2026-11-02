@@ -16,14 +16,19 @@ import {
   SheetTrigger,
 } from "@/shared/ui/sheet";
 
+import type { AdminBreadcrumb } from "../_config/admin-navigation";
+
+import { AdminBreadcrumbs } from "./admin-breadcrumbs";
 import { NotificationBell } from "./notification-bell";
 
-export function AdminSidebarShell({
+export function AdminShell({
+  navigation: navContent,
+  breadcrumbs,
   children,
-  compact = false,
 }: {
-  children: React.ReactNode;
-  compact?: boolean;
+  navigation: React.ReactNode;
+  breadcrumbs: AdminBreadcrumb[];
+  children?: React.ReactNode;
 }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -48,7 +53,7 @@ export function AdminSidebarShell({
   );
   const navigation = (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">{navContent}</div>
       <div className="border-sidebar-border border-t p-3">
         <Button
           variant="ghost"
@@ -75,70 +80,58 @@ export function AdminSidebarShell({
     </>
   );
   return (
-    <>
-      <header
-        className={`bg-sidebar border-sidebar-border flex shrink-0 items-center justify-between border-b px-4 ${compact ? "h-12" : "h-16 md:hidden"}`}
-      >
-        <div className="flex items-center gap-5">
-          {brand}
-          {compact && (
-            <nav
-              aria-label="현재 위치"
-              className="text-muted-foreground hidden items-center gap-2 text-xs sm:flex"
-            >
-              <Link href="/admin">Console</Link>
-              <span>/</span>
-              <Link href="/admin/songs">곡 관리</Link>
-              <span>/</span>
-              <span>응원법 편집</span>
-            </nav>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell />
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-11"
-                title="관리자 메뉴 열기"
-                aria-label="관리자 메뉴 열기"
-              >
-                <Menu size={20} />
-              </Button>
-            </SheetTrigger>
-            <SheetContent
-              side="left"
-              className="bg-sidebar flex w-64 flex-col gap-0 p-0"
-              onClick={(event) => {
-                if (event.target instanceof Element && event.target.closest("a"))
-                  setMobileOpen(false);
-              }}
-            >
-              <SheetHeader className="border-sidebar-border border-b px-6 py-5">
-                <SheetTitle className="sr-only">OIOIBWG</SheetTitle>
-                {brand}
-                <SheetDescription>관리자 메뉴</SheetDescription>
-              </SheetHeader>
-              {navigation}
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
+    <div className="bg-background text-foreground flex h-dvh min-w-0 flex-col overflow-hidden md:flex-row">
       <aside
         data-collapsed={isMinimized}
         aria-label="관리자 탐색"
-        className={`group/sidebar bg-sidebar border-sidebar-border hidden h-full shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${isMinimized ? "w-20" : "w-60"} ${compact ? "md:hidden" : ""}`}
+        className={`group/sidebar bg-sidebar border-sidebar-border hidden h-full shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${isMinimized ? "w-20" : "w-60"}`}
       >
         <div
-          className={`border-sidebar-border flex shrink-0 items-center border-b px-5 ${isMinimized ? "h-28 flex-col justify-center gap-1" : "h-20 justify-between gap-2"}`}
+          className={`border-sidebar-border flex h-20 shrink-0 items-center border-b px-5 ${isMinimized ? "justify-center" : "justify-start"}`}
         >
           {brand}
-          <NotificationBell />
         </div>
         {navigation}
       </aside>
-    </>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="bg-background border-border flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 md:min-h-20">
+          <div className="md:hidden">{brand}</div>
+          <AdminBreadcrumbs items={breadcrumbs} />
+          <div className="ml-auto flex items-center gap-2">
+            <NotificationBell />
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-11 md:hidden"
+                  title="관리자 메뉴 열기"
+                  aria-label="관리자 메뉴 열기"
+                >
+                  <Menu size={20} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side="left"
+                className="bg-sidebar flex w-64 flex-col gap-0 p-0"
+                onClick={(event) => {
+                  if (event.target instanceof Element && event.target.closest("a"))
+                    setMobileOpen(false);
+                }}
+              >
+                <SheetHeader className="border-sidebar-border border-b px-6 py-5">
+                  <SheetTitle className="sr-only">OIOIBWG</SheetTitle>
+                  {brand}
+                  <SheetDescription>관리자 메뉴</SheetDescription>
+                </SheetHeader>
+                {navigation}
+              </SheetContent>
+            </Sheet>
+          </div>
+        </header>
+
+        <main className="min-h-0 min-w-0 flex-1 overflow-auto">{children}</main>
+      </div>
+    </div>
   );
 }

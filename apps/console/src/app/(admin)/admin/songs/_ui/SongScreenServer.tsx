@@ -16,6 +16,8 @@ import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
 
+import { AdminPageLocation } from "../../_model/admin-location";
+
 import { AdminSongScreen } from "./AdminSongScreen";
 
 export async function SongScreenServer({
@@ -44,6 +46,11 @@ export async function SongScreenServer({
   return (
     <div className="min-w-0 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto w-full max-w-7xl">
+        <AdminPageLocation
+          title={
+            song ? `${song.title} · ${mode === "edit" ? "곡 정보 수정" : "곡 정보"}` : "곡 추가"
+          }
+        />
         <HydrationBoundary state={dehydrate(client)}>
           <AdminSongScreen id={id} mode={mode} />
         </HydrationBoundary>
