@@ -14,6 +14,8 @@ import {
 } from "@/entities/notification";
 import { waveformQueryKeys } from "@/entities/waveform";
 
+import { useConfirmNavigation } from "@/shared/model/navigation-confirmation";
+
 import { connectPush, disconnectPush } from "../_lib/push-client";
 
 type PushState = "unavailable" | "unsupported" | "denied" | "disabled" | "enabled" | "loading";
@@ -53,6 +55,7 @@ export function NotificationProvider({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const confirmNavigation = useConfirmNavigation();
   const queryClient = useQueryClient();
   const { mutateAsync: bind } = useMutation({ mutationFn: registerPushInstallation });
   const { mutateAsync: unbind } = useMutation({ mutationFn: unregisterPushInstallation });
@@ -101,7 +104,7 @@ export function NotificationProvider({
                   void queryClient.invalidateQueries({
                     queryKey: notificationQueryKeys.all(accountId),
                   });
-                  router.push(item.href);
+                  confirmNavigation(() => router.push(item.href));
                 })
                 .catch(() => {
                   toast.error("알림을 열지 못했습니다. 알림함에서 다시 시도해 주세요.");
@@ -139,7 +142,7 @@ export function NotificationProvider({
             : "disabled",
         );
     }
-  }, [accountId, bind, config, queryClient, read, router]);
+  }, [accountId, bind, config, confirmNavigation, queryClient, read, router]);
   const disable = useCallback(async () => {
     save(preference, "true");
     controller.current?.abort();

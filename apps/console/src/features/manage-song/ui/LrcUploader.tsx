@@ -107,6 +107,7 @@ export function LrcUploader({ onLrcParsed, value, error }: LrcUploaderProps) {
             type="button"
             variant="ghost"
             size="icon"
+            aria-label="선택한 LRC 파일 제거"
             className="h-7 w-7"
             onClick={handleClear}
           >
@@ -116,6 +117,14 @@ export function LrcUploader({ onLrcParsed, value, error }: LrcUploaderProps) {
       ) : (
         /* ── 드래그앤드롭 영역 ── */
         <div
+          role="button"
+          tabIndex={0}
+          aria-label="LRC 파일 선택"
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            fileInputRef.current?.click();
+          }}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}

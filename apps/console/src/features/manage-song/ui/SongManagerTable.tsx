@@ -3,7 +3,6 @@
 import { createContext, useContext, useMemo } from "react";
 import { DataTable } from "@oioi-bwg/ui/data-table";
 import { Edit, FileMusic, Trash2 } from "lucide-react";
-import Link from "next/link";
 
 import type { AdminSongSummary } from "@/entities/song";
 
@@ -70,19 +69,12 @@ export function SongManagerTable({
           minSize: 160,
           meta: { className: "font-medium whitespace-normal" },
           cell: ({ row: { original: song } }) => (
-            <>
-              {song.slug === null ? (
-                song.title
-              ) : (
-                <Link
-                  href={`/admin/edit/${song.slug}`}
-                  className="text-foreground block break-words underline-offset-4 hover:underline"
-                  prefetch={false}
-                >
-                  {song.title}
-                </Link>
-              )}
-            </>
+            <a
+              href={`/admin/songs/${song.id}`}
+              className="text-foreground block break-words underline-offset-4 hover:underline"
+            >
+              {song.title}
+            </a>
           ),
         }),
         column.accessor((row) => row.album.name, {

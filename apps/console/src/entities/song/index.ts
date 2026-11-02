@@ -1,3 +1,3 @@
 export { songQueryKeys } from "./api/query-keys";
 export { SongTitleBadge } from "./ui/SongTitleBadge";
-export type { AdminSongSummary } from "@oioi-bwg/contracts/song";
+export type { AdminSongInformation, AdminSongSummary } from "@oioi-bwg/contracts/song";

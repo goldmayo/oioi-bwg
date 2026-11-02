@@ -10,11 +10,9 @@ import { songMutations, songQueries } from "@/entities/song/api";
 
 import { Button } from "@/shared/ui/button";
 
-import { type SongEditValues, toAdminSongUpdate } from "../model/schemas";
 import { createWaveformDownload } from "../model/waveform-manifest";
 
 import { SongDeleteDialog } from "./SongDeleteDialog";
-import { SongFormDialog } from "./SongFormDialog";
 import { SongManagerTable } from "./SongManagerTable";
 import { SongManagerToolbar } from "./SongManagerToolbar";
 
@@ -67,11 +65,7 @@ export function SongManagerClient({
   }
   const [search, setSearch] = useState("");
   const [albumFilter, setAlbumFilter] = useState("all");
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingSong, setEditingSong] = useState<AdminSongSummary>();
   const [deleteTarget, setDeleteTarget] = useState<AdminSongSummary | null>(null);
-  const createMutation = useMutation({ ...songMutations.create(), onError: onMutationError });
-  const updateMutation = useMutation({ ...songMutations.update(), onError: onMutationError });
   const deleteMutation = useMutation({ ...songMutations.delete(), onError: onMutationError });
   const filtered = useMemo(() => {
     const query = search.toLowerCase();
@@ -88,21 +82,9 @@ export function SongManagerClient({
     () => queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() }),
     [queryClient],
   );
-  const handleSubmit = useCallback(
-    async (values: SongEditValues) => {
-      if (editingSong) {
-        await updateMutation.mutateAsync({
-          id: editingSong.id,
-          input: { ...toAdminSongUpdate(values), guideWrite: editingSong.guideWrite },
-        });
-      } else await createMutation.mutateAsync({ ...values, lrcText: values.lrcText ?? "" });
-      await invalidateSongs();
-    },
-    [createMutation, editingSong, invalidateSongs, updateMutation],
-  );
   const handleEdit = useCallback((song: AdminSongSummary) => {
-    setEditingSong(song);
-    setFormOpen(true);
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 편집 진입을 문서 탐색으로 유지해 브라우저 뒤로가기를 보호한다.
+    window.location.assign(`/admin/songs/${song.id}?edit=true`);
   }, []);
   const handleDelete = useCallback(() => {
     if (!deleteTarget) return;
@@ -127,8 +109,8 @@ export function SongManagerClient({
           setAlbumFilter(value);
         }}
         onAdd={() => {
-          setEditingSong(undefined);
-          setFormOpen(true);
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- 뒤로가기도 beforeunload로 보호하도록 폼에 문서 탐색으로 진입한다.
+          window.location.assign("/admin/songs/new");
         }}
       />
       <div className="flex flex-wrap items-center gap-3">
@@ -173,18 +155,7 @@ export function SongManagerClient({
           총 {filtered.length}곡 {(search || albumFilter !== "all") && `(전체 ${songs.length}곡)`}
         </span>
       </div>
-      {formOpen && (
-        <SongFormDialog
-          key={editingSong?.id ?? "new"}
-          open={formOpen}
-          canSubmit={canManage}
-          submissionNotice={submissionNotice}
-          onOpenChange={setFormOpen}
-          albums={albums}
-          song={editingSong}
-          onSubmit={handleSubmit}
-        />
-      )}
+      {submissionNotice}
       {canManage && (
         <SongDeleteDialog
           song={deleteTarget}

@@ -11,6 +11,7 @@ import {
   readNotification,
 } from "@/entities/notification";
 
+import { useConfirmNavigation } from "@/shared/model/navigation-confirmation";
 import { Button } from "@/shared/ui/button";
 
 import { useNotificationContext } from "./notification-provider";
@@ -25,6 +26,7 @@ export function NotificationInbox({
   const { accountId, pushState, enable, disable } = useNotificationContext();
   const client = useQueryClient();
   const router = useRouter();
+  const confirmNavigation = useConfirmNavigation();
   const list = useInfiniteQuery(notificationQueries.list(accountId));
   const selected = useQuery({
     ...notificationQueries.detail(accountId, selectedId ?? ""),
@@ -49,12 +51,12 @@ export function NotificationInbox({
     processed.current = item.id;
     void read(item.id)
       .then(() => {
-        router.replace(item.href);
+        confirmNavigation(() => router.replace(item.href));
       })
       .catch(() => {
         processed.current = null;
       });
-  }, [read, router, selected.data]);
+  }, [confirmNavigation, read, router, selected.data]);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="border-border flex flex-wrap items-center justify-between gap-2 border-b px-5 py-4">
@@ -119,8 +121,10 @@ export function NotificationInbox({
                     onClick={() => {
                       void read(item.id)
                         .then(() => {
-                          onNavigate?.();
-                          router.push(item.href);
+                          confirmNavigation(() => {
+                            onNavigate?.();
+                            router.push(item.href);
+                          });
                         })
                         .catch(() => {});
                     }}
