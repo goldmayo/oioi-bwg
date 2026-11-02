@@ -17,6 +17,8 @@ export interface DataTableComponents {
   Button?: ComponentType<DataTableButtonProps>;
 }
 
+export const fillWidthContext = createContext(false);
+
 const defaultComponents: DataTableComponents = {};
 const componentsContext = createContext(defaultComponents);
 
@@ -74,13 +76,23 @@ export function columnLabel(column: Column<UiFeatures, RowData>) {
   );
 }
 
-export function columnStyle(column: Column<UiFeatures, RowData>): CSSProperties {
+export function isFillColumn(column: Column<UiFeatures, RowData>, fillWidth: boolean) {
+  if (!fillWidth) return false;
+  const columns = column.table.options.features.columnVisibilityFeature
+    ? column.table.getVisibleLeafColumns()
+    : column.table.getAllLeafColumns();
+  return columns.at(-1)?.id === column.id;
+}
+
+export function columnStyle(column: Column<UiFeatures, RowData>, fillWidth = false): CSSProperties {
   const features = column.table.options.features;
   const pinned =
     features.columnPinningFeature && features.columnSizingFeature ? column.getIsPinned() : false;
+  const flexible = isFillColumn(column, fillWidth);
   return {
     textAlign: column.columnDef.meta?.align,
-    width: features.columnSizingFeature ? column.getSize() : undefined,
+    width: features.columnSizingFeature && !flexible ? column.getSize() : undefined,
+    minWidth: features.columnSizingFeature && flexible ? column.getSize() : undefined,
     position: pinned ? "sticky" : undefined,
     insetInlineStart: pinned === "start" ? column.getStart("start") : undefined,
     insetInlineEnd: pinned === "end" ? column.getAfter("end") : undefined,

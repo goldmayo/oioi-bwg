@@ -99,6 +99,7 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
         }),
         column.display({
           id: "actions",
+          enableResizing: false,
           header: "관리",
           size: 104,
           minSize: 104,
