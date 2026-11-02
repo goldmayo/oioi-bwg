@@ -266,11 +266,7 @@ function AlbumFormSession({
             )}
 
             <DialogFooter>
-              <Button
-                type="button"
-                variant="destructiveOutline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="destructive" onClick={() => onOpenChange(false)}>
                 취소
               </Button>
               <Button

@@ -80,7 +80,7 @@ export function SongForm({
             <div className="flex gap-2">
               <Button
                 type="button"
-                variant="destructiveOutline"
+                variant="destructive"
                 disabled={isSubmitting}
                 onClick={() => leave.requestLeave(onCancel)}
               >

@@ -239,7 +239,7 @@ export function GuideCreationForm({
           <footer className="border-border mt-8 flex justify-end gap-2 border-t pt-5">
             <Button
               type="button"
-              variant="destructiveOutline"
+              variant="destructive"
               disabled={isSubmitting}
               onClick={() => leave.requestLeave(onCancel)}
             >

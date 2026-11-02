@@ -225,7 +225,7 @@ export function MobilePaintEditor({ line, lineIndex, isOpen, onClose }: MobilePa
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button title="강조 편집 취소" variant="destructiveOutline" onClick={onClose}>
+          <Button title="강조 편집 취소" variant="destructive" onClick={onClose}>
             취소
           </Button>
           <Button title="강조 편집 적용" onClick={handleSave}>
