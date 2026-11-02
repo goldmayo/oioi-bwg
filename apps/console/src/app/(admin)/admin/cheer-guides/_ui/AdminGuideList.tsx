@@ -32,6 +32,13 @@ export function AdminGuideList() {
   const protectedSelection = selected.some((guide) => !guide.deletable);
   return (
     <div className="space-y-4">
+      {canManage && (
+        <div className="flex justify-end">
+          <Button asChild className="bg-qwer-e hover:bg-qwer-e/90 text-neutral-950">
+            <a href="/admin/cheer-guides/new">응원법 추가</a>
+          </Button>
+        </div>
+      )}
       <GuideFilters filters={filters} onChange={changeFilter} />
       <AdminReauthenticationNotice recovery={deletion.recovery} />
       {deletion.targets.length === 0 && deletion.message && (
