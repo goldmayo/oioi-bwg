@@ -2,7 +2,7 @@ name: Verify
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches:
       - main
@@ -24,6 +24,7 @@ jobs:
     timeout-minutes: 2
     outputs:
       docs_only: ${{ steps.scope.outputs.docs_only }}
+      mode: ${{ steps.scope.outputs.mode }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,9 +33,61 @@ jobs:
         id: scope
         run: node scripts/verification-scope.mjs >> "${GITHUB_OUTPUT}"
 
+  partial:
+    name: changed files and affected workspaces
+    needs: changes
+    if: needs.changes.outputs.mode == 'partial'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/.cache/turbo
+            apps/*/*.tsbuildinfo
+            packages/*/*.tsbuildinfo
+            tools/*/*.tsbuildinfo
+            apps/*/node_modules/.cache/eslint
+            packages/*/node_modules/.cache/eslint
+          key: ${{ runner.os }}-partial-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-partial-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc') }}-
+      - name: Incremental types, lint, related tests and formatting
+        run: pnpm verify
+        env:
+          VERIFY_BASE: ${{ github.event.pull_request.base.sha }}
+
+  source_verification:
+    name: reuse main verification
+    needs: changes
+    if: needs.changes.outputs.mode == 'promotion'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify source and successful main PR checks
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const proof = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/source-verification.mjs');
+            await proof.verifySource({ github, context, core });
+
   infra:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: infra
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -56,7 +109,7 @@ jobs:
 
   quality:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: quality
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -107,7 +160,7 @@ jobs:
 
   unit:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: unit
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -145,7 +198,7 @@ jobs:
 
   waveform:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: waveform ARM64
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
@@ -284,7 +337,7 @@ jobs:
 
   postgres_integration:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: PostgreSQL integration
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -325,7 +378,7 @@ jobs:
 
   app_build:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: app build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -591,10 +644,12 @@ jobs:
         run: bash tests/ops/paired-compose-smoke.sh
 
   verify:
-    name: verify
+    name: ${{ needs.changes.outputs.mode == 'partial' && 'partial verify' || 'verify' }}
     if: always()
     needs:
       - changes
+      - partial
+      - source_verification
       - infra
       - quality
       - unit
@@ -607,7 +662,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Require all verification jobs or proven Markdown-only scope
+      - name: Require exact evidence for the selected verification mode
         env:
           VERIFICATION_NEEDS: ${{ toJSON(needs) }}
         run: node scripts/verification-scope.mjs --gate
@@ -618,6 +673,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' &&
       github.event.pull_request.base.ref == 'migration_develop' &&
+      github.event.pull_request.draft == false &&
       github.event.pull_request.head.ref == 'migration_main' &&
       github.event.pull_request.head.repo.full_name == github.repository
     needs: verify
@@ -837,7 +893,7 @@ jobs:
     needs: [verify, promotion-candidate]
     runs-on: ubuntu-latest
     steps:
-      - name: Require full verification and verified candidate
+      - name: Require source verification and verified candidate
         env:
           VERIFY_RESULT: ${{ needs.verify.result }}
           CANDIDATE_RESULT: ${{ needs.promotion-candidate.result }}

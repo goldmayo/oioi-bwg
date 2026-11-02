@@ -2,15 +2,26 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-export const verificationJobs = [
-  "infra",
-  "quality",
-  "unit",
-  "waveform",
-  "postgres_integration",
-  "app_build",
-  "build",
-];
+export const verificationJobNames = {
+  infra: "infra",
+  quality: "quality",
+  unit: "unit",
+  waveform: "waveform ARM64",
+  postgres_integration: "PostgreSQL integration",
+  app_build: "app build",
+  build: "build",
+};
+export const verificationJobs = Object.keys(verificationJobNames);
+
+export function verificationMode({ eventName, event, markdownOnlyChange = false }) {
+  if (markdownOnlyChange) return "docs";
+  if (eventName === "pull_request") {
+    if (event?.pull_request?.base?.ref === "migration_develop") return "promotion";
+    if (event?.pull_request?.base?.ref === "migration_main" && event.pull_request.draft === true)
+      return "partial";
+  }
+  return "full";
+}
 
 export function markdownOnly(raw) {
   const fields = raw.split("\0");
@@ -76,8 +87,15 @@ export function verificationPassed(needs) {
   const scope = needs.changes;
   if (scope?.result !== "success" || !["true", "false"].includes(scope.outputs?.docs_only))
     return false;
-  const expected = scope.outputs.docs_only === "true" ? "skipped" : "success";
-  return verificationJobs.every((name) => needs[name]?.result === expected);
+  const mode = scope.outputs.mode;
+  if (!["full", "partial", "promotion", "docs"].includes(mode)) return false;
+  if ((mode === "docs") !== (scope.outputs.docs_only === "true")) return false;
+  const expected = mode === "full" ? "success" : "skipped";
+  return (
+    verificationJobs.every((name) => needs[name]?.result === expected) &&
+    needs.partial?.result === (mode === "partial" ? "success" : "skipped") &&
+    needs.source_verification?.result === (mode === "promotion" ? "success" : "skipped")
+  );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -99,8 +117,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     } catch {
       /* full verification */
     }
-    console.log(
-      `docs_only=${docsOnly({ eventName: process.env.GITHUB_EVENT_NAME, event, local: process.argv[2] === "--local" })}`,
-    );
+    const markdownOnlyChange = docsOnly({
+      eventName: process.env.GITHUB_EVENT_NAME,
+      event,
+      local: process.argv[2] === "--local",
+    });
+    console.log(`docs_only=${markdownOnlyChange}`);
+    if (process.argv[2] !== "--local")
+      console.log(
+        `mode=${verificationMode({ eventName: process.env.GITHUB_EVENT_NAME, event, markdownOnlyChange })}`,
+      );
   }
 }

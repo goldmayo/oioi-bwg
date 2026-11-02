@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.23"
+version: "1.24"
 status: "active"
 authority: "architecture"
 updated_at: "2026-11-03"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.23
+# oioi-bwg Testing Architecture v1.24
 
 ## 1. 목적
 
@@ -332,7 +332,9 @@ fixture가 반복될 때 작은 builder를 사용할 수 있다.
   문서 시안의 이미지·HTML·폰트·JSON·텍스트 파일은 로컬 코드 검증 대상에서 제외한다.
 - 로컬 기본 경로에서 build·DB 통합·ARM64·인프라 검사를 반복하지 않는다. 변경 위험 때문에
   추가 검증이 필요하면 해당 workspace·흐름을 명시해 실행하고 결과를 PR에 기록한다.
-- `migration_main` 병합 전 최종 PR 커밋은 기존 CI의 전체 quality/unit/PG/ARM64/build 검증을 통과한다.
+- 2026-11-03 사용자 결정: Draft PR은 로컬과 같은 증분 검증이며 `partial verify`로만 보고한다.
+  Ready 전환에 전체 검증을 실행하고 병합 필수 `verify`에는 부분 검증 성공을 게시하지 않는다.
+- `migration_main` 병합 전 최종 PR 커밋은 CI의 전체 quality/unit/PG/ARM64/build 검증을 통과한다.
   명시적 로컬 전체 재현은 `pnpm verify:full`이다. CI의 전체 검사 entry에는 `--changed`를 넣지 않는다.
 - 로컬 범위 판정 실패는 오류로 중단한다. 전체 검증을 암묵적으로 시작하지 않는다.
 
@@ -342,7 +344,10 @@ CI cache는 검증 범위를 줄이는 권한이 아니다. TypeScript·ESLint�
 
 일반 `migration_main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 기존처럼 무거운 검사를 생략한다.
 scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·빈 diff·CI 판정 실패는 전체 검증이다.
-Promotion 계약은 이번 로컬 최적화로 변경하지 않으며 [Runbook §21](12-deployment-migration-runbook.md#21-cicd)을 따른다.
+Promotion은 main 병합 당시의 동일 source/tree와 성공한 전체 job·verify를 확인해 코드 검증을 재사용한다.
+main의 일반 Markdown-only 예외는 실제 Git diff를 다시 판정해야 한다. 근거 누락·불일치·실패·부분 검증은
+재사용하지 않고 중단한다. Promotion에서는 코드 검사를 반복하지 않으며 배포 설정·최종 이미지 조합·digest·
+기동 검증을 수행한다. [Runbook §21](12-deployment-migration-runbook.md#21-cicd)이 구체 조건을 소유한다.
 
 `pnpm lint:deps`는 workspace별 TS alias·package exports를 해석한 source/config/test graph와
 Turbo boundaries를 검사한다. CI·전체 lint는 같은 entry를 실행하며 로컬 verify·push hook은 해당 entry의 workspace 범위를 선택한다.

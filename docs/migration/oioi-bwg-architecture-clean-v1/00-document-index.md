@@ -1,7 +1,7 @@
 ---
 title: "Architecture Document Index"
 document_id: "00"
-version: "1.63"
+version: "1.64"
 status: "active"
 authority: "index"
 updated_at: "2026-11-03"
@@ -51,7 +51,7 @@ migration / implementation plan
 
 | ID | 문서 | 버전 | 상태 | 책임 |
 |---|---|---:|---|---|
-| 00 | Document Index | 1.63 | active | 문서 상태 / 버전 / 책임 SSOT |
+| 00 | Document Index | 1.64 | active | 문서 상태 / 버전 / 책임 SSOT |
 | 01 | Architecture Constitution | 2.21 | active | 전체 시스템 헌법 |
 | 02 | Frontend Architecture | 1.13 | active | FSD, UI/model/lib, Query, 변경 경계와 Shell 조합 원칙 |
 | 03 | API / Error Architecture | 1.6 | active | HTTP / AppError / ApiError / error mapping |
@@ -61,9 +61,9 @@ migration / implementation plan
 | 07 | Rendering / Query / Cache Architecture | 1.2 | active | RSC / Query / hydration / cache / retry 전략 |
 | 08 | Form / Client State Architecture | 1.0 | active | form / URL / local client state ownership |
 | 09 | Error UX / Observability Architecture | 1.5 | active | query/mutation error UX / logging / Sentry |
-| 10 | Testing Architecture | 1.23 | active | unit / integration / component / E2E strategy, 로컬 영향 범위와 테스트 환경 분리 |
+| 10 | Testing Architecture | 1.24 | active | unit / integration / component / E2E strategy, 로컬 영향 범위와 테스트 환경 분리 |
 | 11 | Content / i18n / Assets / Runtime Architecture | 1.14 | active | locale / content / assets / env / runtime |
-| 12 | Deployment / Migration Runbook | 1.25 | active | migration phases / test infra / Docker / OCI / rollback |
+| 12 | Deployment / Migration Runbook | 1.26 | active | migration phases / test infra / Docker / OCI / rollback |
 
 ---
 
