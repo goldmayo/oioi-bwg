@@ -1,0 +1,2 @@
+ALTER TABLE "cheer_guide" ADD COLUMN "working_snapshot_id" uuid;--> statement-breakpoint
+ALTER TABLE "cheer_guide" ADD CONSTRAINT "cheer_guide_id_working_snapshot_id_fkey" FOREIGN KEY ("id","working_snapshot_id") REFERENCES "public"."cheer_guide_snapshot"("cheer_guide_id","id") ON DELETE restrict ON UPDATE no action;

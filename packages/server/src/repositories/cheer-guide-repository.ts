@@ -129,6 +129,13 @@ export function setGuidePublication(executor: DbExecutor, id: string, publicatio
     .where(eq(cheerGuide.id, id));
 }
 
+export function setGuideWorkingSnapshot(executor: DbExecutor, id: string, snapshotId: string) {
+  return executor
+    .update(cheerGuide)
+    .set({ workingSnapshotId: snapshotId })
+    .where(eq(cheerGuide.id, id));
+}
+
 export const publicGuideSummarySelection = {
   columns: { id: true, mode: true },
   with: {

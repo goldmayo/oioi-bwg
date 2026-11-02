@@ -5,11 +5,13 @@ const database = vi.hoisted(() => vi.fn(() => ({ transaction })));
 const lock = vi.hoisted(() => vi.fn());
 const insert = vi.hoisted(() => vi.fn());
 const snapshot = vi.hoisted(() => vi.fn());
+const setWorking = vi.hoisted(() => vi.fn());
 vi.mock("../db", () => ({ getDatabase: database }));
 vi.mock("../repositories/cheer-guide-repository", () => ({
   lockSongForGuideWrite: lock,
   insertGuideDraft: insert,
   insertNextGuideSnapshot: snapshot,
+  setGuideWorkingSnapshot: setWorking,
 }));
 import { createAdminCheerGuide } from "./cheer-guide-service";
 
@@ -41,6 +43,7 @@ it("인증·인가를 DB 획득 전에 검사한다", async () => {
 it("기준 영상·가사·작성자를 서버에서 가져오고 공개 조치 없이 하나의 transaction으로 저장한다", async () => {
   expect(await createAdminCheerGuide(context, input)).toEqual({ id });
   expect(transaction).toHaveBeenCalledTimes(1);
+  expect(setWorking).toHaveBeenCalledWith({}, id, id);
   expect(insert).toHaveBeenCalledWith({}, { songId: id, mode: "CONCERT" });
   expect(snapshot).toHaveBeenCalledWith(
     {},

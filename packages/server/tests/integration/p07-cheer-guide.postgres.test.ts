@@ -1111,3 +1111,65 @@ test("P11 snapshot 실패 시 Guide 삽입도 rollback한다", async () => {
     await database.select().from(schema.cheerGuide).where(eq(schema.cheerGuide.songId, source.id)),
   ).toHaveLength(0);
 });
+
+test("작업본 포인터는 같은 Guide의 snapshot만 참조한다", async () => {
+  const f = await importFixture();
+  await importLegacyGuide(f.context, f.entry, true);
+  const [before] = await database
+    .select()
+    .from(schema.cheerGuide)
+    .where(eq(schema.cheerGuide.id, f.entry.guideId));
+  await expect(
+    database
+      .update(schema.cheerGuide)
+      .set({ workingSnapshotId: festivalSnapshotId })
+      .where(eq(schema.cheerGuide.id, f.entry.guideId)),
+  ).rejects.toMatchObject({
+    cause: { code: "23503", constraint_name: "cheer_guide_id_working_snapshot_id_fkey" },
+  });
+  expect(
+    await database
+      .select()
+      .from(schema.cheerGuide)
+      .where(eq(schema.cheerGuide.id, f.entry.guideId)),
+  ).toEqual([before]);
+});
+test("별도 작업본은 호환 writer의 즉시 공개 저장에서 보호한다", async () => {
+  const f = await importFixture();
+  await importLegacyGuide(f.context, f.entry, true);
+  const before = await getSongDetailBySlug(f.row.slug!);
+  const [draft] = await database
+    .insert(schema.cheerGuideSnapshot)
+    .values({
+      cheerGuideId: f.entry.guideId,
+      versionNo: 2,
+      lyrics: [],
+      referenceYoutubeId: f.row.youtubeId!,
+      sourceType: "FANDOM",
+      changeSummary: "비공개 작업본",
+    })
+    .returning();
+  await database
+    .update(schema.cheerGuide)
+    .set({ workingSnapshotId: draft!.id })
+    .where(eq(schema.cheerGuide.id, f.entry.guideId));
+  await expect(
+    saveSongLyrics(f.context, f.row.id, {
+      lyrics,
+      youtubeId: f.row.youtubeId!,
+      guideWrite: { guideId: f.entry.guideId, lockVersion: 1 },
+    }),
+  ).rejects.toMatchObject({ code: "CHEER_GUIDE_DRAFT_PENDING" });
+  expect(await getSongDetailBySlug(f.row.slug!)).toEqual(before);
+  const [guide] = await database
+    .select()
+    .from(schema.cheerGuide)
+    .where(eq(schema.cheerGuide.id, f.entry.guideId));
+  expect(guide!.workingSnapshotId).toBe(draft!.id);
+  expect(
+    await database
+      .select()
+      .from(schema.cheerGuideSnapshot)
+      .where(eq(schema.cheerGuideSnapshot.cheerGuideId, f.entry.guideId)),
+  ).toHaveLength(2);
+});

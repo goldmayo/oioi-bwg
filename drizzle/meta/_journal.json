@@ -99,6 +99,13 @@
       "when": 1793389553981,
       "tag": "0013_operator_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793600852644,
+      "tag": "0014_cheer_guide_working_snapshot",
+      "breakpoints": true
     }
   ]
 }
