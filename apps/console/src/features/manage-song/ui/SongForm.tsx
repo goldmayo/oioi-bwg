@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import type { AdminAlbumSummary } from "@/entities/album";
 import type { AdminSongSummary } from "@/entities/song";
 
+import { useFormLeaveConfirmation } from "@/shared/model/use-form-leave-confirmation";
 import { Button } from "@/shared/ui/button";
 import {
   Form,
@@ -19,13 +20,12 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Switch } from "@/shared/ui/switch";
+import { UnsavedChangesDialog } from "@/shared/ui/unsaved-changes-dialog";
 
 import type { SongEditValues } from "../model/schemas";
 import { useSongForm } from "../model/use-song-form";
-import { useSongLeaveConfirmation } from "../model/use-song-leave-confirmation";
 
 import { LrcUploader } from "./LrcUploader";
-import { SongLeaveDialog } from "./SongLeaveDialog";
 
 interface SongFormProps {
   canSubmit?: boolean;
@@ -61,7 +61,7 @@ export function SongForm({
       },
     });
 
-  const leave = useSongLeaveConfirmation(form.formState.isDirty);
+  const leave = useFormLeaveConfirmation(form.formState.isDirty);
   return (
     <>
       <Form {...form}>
@@ -269,7 +269,7 @@ export function SongForm({
           </fieldset>
         </form>
       </Form>
-      <SongLeaveDialog open={leave.open} onStay={leave.stay} onLeave={leave.leave} />
+      <UnsavedChangesDialog open={leave.open} onStay={leave.stay} onLeave={leave.leave} />
     </>
   );
 }

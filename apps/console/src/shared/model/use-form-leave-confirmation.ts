@@ -3,25 +3,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigationBlocker } from "@/shared/model/navigation-confirmation";
 
 /** 이 폼의 문서 탐색만 보호한다. History API나 다른 화면의 라우터를 변경하지 않는다. */
-export function useSongLeaveConfirmation(dirty: boolean) {
+export function useFormLeaveConfirmation(dirty: boolean, busy = false) {
   const allowed = useRef(false);
   const [destination, setDestination] = useState<{ navigate: () => void; unload: boolean } | null>(
     null,
   );
   const requestLeave = useCallback(
     (navigate: () => void, unload = true) => {
+      if (busy) return;
       if (dirty && !allowed.current) setDestination({ navigate, unload });
       else navigate();
     },
-    [dirty],
+    [dirty, busy],
   );
   const blockNavigation = useCallback(
     (navigate: () => void) => requestLeave(navigate, false),
     [requestLeave],
   );
-  useNavigationBlocker(dirty ? blockNavigation : null);
+  useNavigationBlocker(dirty || busy ? blockNavigation : null);
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty && !busy) return;
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (allowed.current) return;
       event.preventDefault();
@@ -63,7 +64,7 @@ export function useSongLeaveConfirmation(dirty: boolean) {
       window.removeEventListener("beforeunload", beforeUnload);
       document.removeEventListener("click", followLink, true);
     };
-  }, [dirty, requestLeave]);
+  }, [dirty, busy, requestLeave]);
   return {
     open: destination !== null,
     requestLeave,
@@ -72,7 +73,7 @@ export function useSongLeaveConfirmation(dirty: boolean) {
       allowed.current = true;
     },
     leave: () => {
-      if (!destination) return;
+      if (!destination || busy) return;
       allowed.current = destination.unload;
       setDestination(null);
       destination.navigate();
