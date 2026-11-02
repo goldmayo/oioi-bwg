@@ -18,8 +18,14 @@ cat >"${root}/override.yml" <<'YAML'
 services:
   web:
     extra_hosts: ["host.docker.internal:host-gateway"]
+    healthcheck:
+      interval: 1s
+      start_interval: 1s
   console:
     extra_hosts: ["host.docker.internal:host-gateway"]
+    healthcheck:
+      interval: 1s
+      start_interval: 1s
 YAML
 printf '%s\n' 'DATABASE_URL=postgresql://postgres@host.docker.internal:5432/image_smoke' >"${WEB_ENV_FILE}"
 printf '%s\n' 'DATABASE_URL=postgresql://postgres@host.docker.internal:5432/image_smoke' 'CONSOLE_AUTH_SECRET=console-workspace-smoke-local-only-secret' 'CONSOLE_ORIGIN=http://127.0.0.1:3001' 'CONSOLE_MFA_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' \

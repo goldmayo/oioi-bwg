@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ dispatch: vi.fn(), report: vi.fn(), sender: vi.fn() }));
 vi.mock("@oioi-bwg/server/services/notification-delivery-service", () => ({

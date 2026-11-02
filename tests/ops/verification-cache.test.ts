@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { findMergedCache } from "../../scripts/verification-cache.mjs";
 
@@ -78,6 +82,25 @@ describe("merged PR cache publication", () => {
     expect(f.core.setOutput).toHaveBeenCalledWith("artifact_id", 200);
   });
 
+  it("파형 cache는 app build 대신 성공한 ARM64 job을 요구한다", async () => {
+    const f = fixture();
+    await findMergedCache({ ...f, kind: "waveform" });
+    expect(f.core.setOutput).not.toHaveBeenCalled();
+    f.jobs[0].name = "waveform ARM64";
+    await findMergedCache({ ...f, kind: "waveform" });
+    expect(f.core.setOutput).toHaveBeenCalledWith("artifact_id", 200);
+  });
+
+  it.each(["failure", "skipped", "cancelled"])(
+    "파형 job이 %s면 cache를 게시하지 않는다",
+    async (conclusion) => {
+      const f = fixture();
+      f.jobs[0] = { name: "waveform ARM64", conclusion };
+      await findMergedCache({ ...f, kind: "waveform" });
+      expect(f.core.setOutput).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     ["context.eventName", "pull_request"],
     ["context.ref", "refs/heads/feature/test"],
@@ -120,4 +143,40 @@ describe("merged PR cache publication", () => {
       expect(f.core.setOutput).not.toHaveBeenCalled();
     },
   );
+});
+
+it("실제 Git에서 앱 변경은 파형 key를 보존하고 Rust·Go 입력 변경은 무효화한다", () => {
+  const root = mkdtempSync(join(tmpdir(), "native-cache-key-"));
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+  );
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: root, env, stdio: "pipe" });
+  const write = (file: string, content: string) => {
+    const path = join(root, file);
+    mkdirSync(join(path, ".."), { recursive: true });
+    writeFileSync(path, content);
+    git("add", "--", file);
+  };
+  const key = (kind: string) =>
+    execFileSync(
+      process.execPath,
+      [new URL("../../scripts/verification-cache.mjs", import.meta.url).pathname, kind],
+      { cwd: root, env, encoding: "utf8" },
+    ).trim();
+  try {
+    git("init", "-q");
+    write("ops/waveform/Cargo.lock", "rust-1");
+    write("ops/waveform-runner/go.sum", "go-1");
+    const first = key("waveform");
+    write("apps/console/src/page.tsx", "changed UI");
+    expect(key("waveform")).toBe(first);
+    write("ops/waveform/Cargo.lock", "rust-2");
+    const rust = key("waveform");
+    expect(rust).not.toBe(first);
+    write("ops/waveform-runner/go.sum", "go-2");
+    expect(key("waveform")).not.toBe(rust);
+    expect(key("apps")).not.toBe(key("waveform"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

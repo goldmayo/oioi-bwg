@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { adminAlbumListSchema, albumSummarySchema } from "@oioi-bwg/contracts/album";
 import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { AppError } from "@oioi-bwg/server/errors/app-error";

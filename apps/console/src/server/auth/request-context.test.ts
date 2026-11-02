@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { getDatabase } from "@oioi-bwg/server/db";
 import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { findConsoleAuthorizationFacts } from "@oioi-bwg/server/repositories/admin-mfa-repository";

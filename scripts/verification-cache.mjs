@@ -2,13 +2,33 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
-export function cacheKey() {
-  const index = execFileSync("git", ["ls-files", "-s", "--", ".", ":(exclude)docs/**"]);
-  return `Linux-verify-amd64-v4-${createHash("sha256").update(index).digest("hex")}`;
+const cacheInputs = {
+  apps: { paths: [".", ":(exclude)docs/**"], prefix: "Linux-verify-amd64-v4", job: "app build" },
+  waveform: {
+    paths: ["ops/waveform", "ops/waveform-runner"],
+    prefix: "Linux-verify-arm64-v1",
+    job: "waveform ARM64",
+  },
+};
+
+export function cacheKey(kind = "apps") {
+  const input = cacheInputs[kind];
+  if (!input) throw new Error("Unknown verification cache");
+  const index = execFileSync("git", ["ls-files", "-s", "--", ...input.paths]);
+  return `${input.prefix}-${createHash("sha256").update(index).digest("hex")}`;
 }
 
 // Cache is optional build input, never evidence that a new run passed verification.
-export async function findMergedCache({ github, context, core, key = cacheKey(), tree }) {
+export async function findMergedCache({
+  github,
+  context,
+  core,
+  kind = "apps",
+  key = cacheKey(kind),
+  tree,
+}) {
+  const input = cacheInputs[kind];
+  if (!input) throw new Error("Unknown verification cache");
   const branch = context.ref?.replace(/^refs\/heads\//, "");
   if (context.eventName !== "push" || !["migration_main", "migration_develop"].includes(branch))
     return;
@@ -54,7 +74,7 @@ export async function findMergedCache({ github, context, core, key = cacheKey(),
       per_page: 100,
     });
     if (
-      !["app build", "verify"].every((name) =>
+      ![input.job, "verify"].every((name) =>
         jobs.some((j) => j.name === name && j.conclusion === "success"),
       )
     )
@@ -82,4 +102,4 @@ export async function findMergedCache({ github, context, core, key = cacheKey(),
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
-  console.log(`key=${cacheKey()}`);
+  console.log(`key=${cacheKey(process.argv[2] ?? "apps")}`);

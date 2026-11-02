@@ -69,6 +69,9 @@ migration implementation plan/result
   `type(scope): 한글 요약`인지, PR 본문이 최종 변경 사항과 검증 결과를 한글로 설명하는지 갱신한다.
 - PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 형식을 따른다.
 - PR 리뷰 중에는 같은 브랜치에 추가 커밋을 push해 기존 PR에 반영한다.
+- 작업 중 PR은 Draft로 생성하고 의미 단위 커밋은 로컬에 쌓는다. 관련 검증·리뷰를 마친 변경을
+  모아서 push하며 최종 커밋이 준비되면 Ready로 전환한다. Ready 뒤 기능 수정이 더 필요하면
+  Draft로 되돌린 뒤 작업해 전체 CI가 수정마다 반복되지 않게 한다.
 - OCI Development 배포는 별도의 `migration_main → migration_develop` Promotion PR로만 진행한다.
   source/merge tree가 같은 squash 결과에 검증한 동일 candidate digest를 배포한다. 통합 merge만으로 배포하지 않는다.
   세부 검증·보호 설정은 active 배포 runbook §21을 따른다.
@@ -269,8 +272,13 @@ pnpm verify --dry-run
 증분 type-check·캐시 lint·Vitest 관련 테스트·해당 workspace 경계를 검사한다.
 공용 설정·저장소 도구 변경은 실제 영향에 따라 repo 검사도 포함한다. 검사 범위를 먼저 출력하며,
 기준 판정 실패 시 전체 검증으로 조용히 확대하지 않고 중단한다.
+단순 운영 스크립트 수정 때문에 제품 전체·repo 전체·전체 harness를 실행하지 않는다.
+문서 시안의 정적 자산은 로컬 코드 검증에서 제외한다. 상세 범위는 Testing Architecture §17을 따른다.
 
-`migration_main` 병합 전에는 최종 PR 커밋의 CI 전체 검증을 통과해야 한다.
+Draft PR은 로컬과 같은 영향 범위 검증만 수행하며 결과 이름은 `partial verify`로 구분한다.
+Ready 전환 이후 `migration_main` 병합 전에는 최종 PR 커밋의 CI 전체 `verify`를 통과해야 한다.
+Promotion은 동일 source/tree의 main 병합 전 성공을 확인해 재사용하고 배포 이미지·설정 검증만 수행한다.
+검증 근거가 없거나 불일치하면 중단하며 전체 검증을 암묵적으로 재실행하지 않는다.
 로컬에서 CI 전체 검증을 반복하지 않는다. 명시적 전체 재현 명령은 `pnpm verify:full`이며,
 CI의 개별 전체 검사 entry(type-check·harness·lint·unit·format·build)는 유지한다.
 런타임 변경의 추가 로컬 build가 필요한 경우에도 영향 workspace만 선택한다.
@@ -284,7 +292,7 @@ TURBO_SCM_BASE=origin/migration_main pnpm exec turbo run build --affected
 - ESLint/FSD harness: import 방향과 파일 배치 검증
 - 문서만 변경하는 작업은 요청된 경우 lint/typecheck/test/build를 실행하지 않는다.
 - 일반 `migration_main` PR의 전체 diff가 일반 파일 `.md` 변경뿐이면 CI는 scope 판정과 필수 `verify`만 실행한다.
-  feature push hook은 문서 전용이면 생략하고 그 외에는 `pnpm verify`의 로컬 증분 검증을 사용한다. CI의 코드 혼합·판정 실패·Promotion은 기존 전체 검증을 유지한다.
+  feature push hook은 문서 전용이면 생략하고 그 외에는 `pnpm verify`의 로컬 증분 검증을 사용한다. Ready PR의 코드 혼합·판정 실패는 전체 검증을 유지한다. Promotion은 source 검증 근거와 배포 후보를 검사한다.
 - 문서 작업의 push에서 Git hook이 검증을 자동 실행했다면, 별도 검증으로 계획한 것처럼 기록하지 않고 hook이 실행한 명령과 결과를 그대로 보고한다.
 - 테스트 도구나 번들러의 기본 동작을 추측하지 말고 현재 config와 공식 문서를 확인한다.
 

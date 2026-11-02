@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { beforeEach, expect, it, vi } from "vitest";
 

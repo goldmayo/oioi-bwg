@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { buildAbility } from "@oioi-bwg/server/auth/ability";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

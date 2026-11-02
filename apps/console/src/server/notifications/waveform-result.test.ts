@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { beforeEach, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => ({ complete: vi.fn(), wake: vi.fn() }));
 vi.mock("@oioi-bwg/server/services/waveform-service", () => ({
