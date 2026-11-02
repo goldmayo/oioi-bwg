@@ -6,7 +6,10 @@ import { afterAll, beforeAll, expect, test, vi } from "vitest";
 
 import * as schema from "@oioi-bwg/server/db/schema";
 import { buildAbility } from "@oioi-bwg/server/auth/ability";
-import { listAdminCheerGuides } from "@oioi-bwg/server/services/cheer-guide-service";
+import {
+  listAdminCheerGuides,
+  deleteEmptyCheerGuide,
+} from "@oioi-bwg/server/services/cheer-guide-service";
 import { deleteAlbum, getAlbumDetailBySlug } from "@oioi-bwg/server/services/album-service";
 import {
   deleteSong,
@@ -898,4 +901,113 @@ test("Domain §8.0 keeps legacy reads only before publication history and applie
       .set({ isVisible: true })
       .where(eq(schema.album.id, albumId));
   }
+});
+
+test("이력 없는 Guide만 삭제하며 snapshot만 있거나 공개를 중단한 이력도 보존한다", async () => {
+  const f = await importFixture();
+  await importLegacyGuide(f.context, f.entry, true);
+  const [empty] = await database
+    .insert(schema.cheerGuide)
+    .values({ songId: f.row.id, mode: "FESTIVAL" })
+    .returning();
+  const before = await listAdminCheerGuides(f.context);
+  expect(before.items.find((g) => g.id === empty!.id)?.deletable).toBe(true);
+  expect(before.items.find((g) => g.id === f.entry.guideId)?.deletable).toBe(false);
+  await deleteEmptyCheerGuide(f.context, empty!.id);
+  await expect(deleteEmptyCheerGuide(f.context, empty!.id)).rejects.toMatchObject({
+    code: "CHEER_GUIDE_NOT_FOUND",
+  });
+  const [draft] = await database
+    .insert(schema.cheerGuide)
+    .values({ songId: f.row.id, mode: "FESTIVAL" })
+    .returning();
+  await database.insert(schema.cheerGuideSnapshot).values({
+    cheerGuideId: draft!.id,
+    versionNo: 1,
+    lyrics,
+    referenceYoutubeId: f.row.youtubeId!,
+    sourceType: "FANDOM",
+    changeSummary: "삭제 보호 검증",
+  });
+  expect(
+    (await listAdminCheerGuides(f.context)).items.find((g) => g.id === draft!.id)?.deletable,
+  ).toBe(false);
+  await expect(deleteEmptyCheerGuide(f.context, draft!.id)).rejects.toMatchObject({
+    code: "CHEER_GUIDE_HAS_HISTORY",
+  });
+  await expect(deleteEmptyCheerGuide(f.context, f.entry.guideId)).rejects.toMatchObject({
+    code: "CHEER_GUIDE_HAS_HISTORY",
+  });
+  const [unpublished] = await database
+    .insert(schema.cheerGuidePublication)
+    .values({
+      ...publicationInput(),
+      cheerGuideId: f.entry.guideId,
+      snapshotId: f.entry.snapshotId,
+      publicationNo: 2,
+      action: "UNPUBLISH",
+    })
+    .returning();
+  await database
+    .update(schema.cheerGuide)
+    .set({ currentPublicationId: unpublished!.id })
+    .where(eq(schema.cheerGuide.id, f.entry.guideId));
+  await expect(deleteEmptyCheerGuide(f.context, f.entry.guideId)).rejects.toMatchObject({
+    code: "CHEER_GUIDE_HAS_HISTORY",
+  });
+  expect(
+    await database
+      .select()
+      .from(schema.cheerGuideSnapshot)
+      .where(eq(schema.cheerGuideSnapshot.cheerGuideId, draft!.id)),
+  ).toHaveLength(1);
+});
+
+test("삭제 검사와 경합해 먼저 저장 중인 snapshot도 FK로 보호한다", async () => {
+  const f = await importFixture();
+  const [guide] = await database
+    .insert(schema.cheerGuide)
+    .values({ songId: f.row.id, mode: "FESTIVAL" })
+    .returning();
+  let inserted!: () => void;
+  let commit!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    inserted = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    commit = resolve;
+  });
+  const writer = database.transaction(async (transaction) => {
+    await transaction.insert(schema.cheerGuideSnapshot).values({
+      cheerGuideId: guide!.id,
+      versionNo: 1,
+      lyrics,
+      referenceYoutubeId: f.row.youtubeId!,
+      sourceType: "FANDOM",
+      changeSummary: "동시 삭제 보호",
+    });
+    inserted();
+    await gate;
+  });
+  await Promise.race([ready, writer]);
+  const deletion = expect(deleteEmptyCheerGuide(f.context, guide!.id)).rejects.toMatchObject({
+    code: "CHEER_GUIDE_HAS_HISTORY",
+  });
+  try {
+    await vi.waitFor(async () => {
+      const [state] =
+        await owner`select count(*)::int as count from pg_stat_activity where datname = current_database() and query like 'delete from "cheer_guide"%' and wait_event_type = 'Lock'`;
+      expect(state!.count).toBeGreaterThan(0);
+    });
+  } finally {
+    commit();
+    await writer;
+    await deletion;
+  }
+  expect(
+    await database
+      .select()
+      .from(schema.cheerGuideSnapshot)
+      .where(eq(schema.cheerGuideSnapshot.cheerGuideId, guide!.id)),
+  ).toHaveLength(1);
 });

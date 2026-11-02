@@ -4,6 +4,7 @@ import { entityIdSchema } from "./entity-id";
 import { adminSongSummarySchema } from "./song";
 
 /** 한 행은 Song + mode의 Guide다. 공개 조치는 실제 사용자 노출과 구분한다. */
+export const adminCheerGuideIdParamsSchema = z.object({ id: entityIdSchema });
 export const adminCheerGuideSummarySchema = z.object({
   id: entityIdSchema,
   mode: z.enum(["CONCERT", "FESTIVAL"]),
@@ -19,6 +20,7 @@ export const adminCheerGuideSummarySchema = z.object({
     })
     .nullable(),
   editorAvailable: z.boolean(),
+  deletable: z.boolean().default(false),
 });
 
 export const adminCheerGuideListSchema = z.object({

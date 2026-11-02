@@ -3,12 +3,15 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 
 import type { DbExecutor } from "../db";
+import { isPostgresForeignKeyViolation } from "../db/postgres-error";
+import { CheerGuideReferenceError } from "./repository-error";
 import { cheerGuide, cheerGuidePublication, cheerGuideSnapshot, song } from "../db/schema";
 
 /** 내용·작성자·이력는 가져오지 않고 관리 목록에 필요한 관계를 한 번에 조회한다. */
 export function findAdminCheerGuides(executor: DbExecutor) {
   return executor.query.cheerGuide.findMany({
     columns: { id: true, mode: true, updatedAt: true, legacyWriteTarget: true },
+    extras: (guide) => ({ hasHistory: guideHasHistory(guide.id).as("has_history") }),
     orderBy: (guide, { desc, asc }) => [desc(guide.updatedAt), asc(guide.id)],
     with: {
       song: {
@@ -144,3 +147,33 @@ export const publicGuideDetailSelection = {
     },
   },
 } as const;
+
+// 목록과 삭제가 같은 이력 판정을 사용하며 이력 내용은 읽지 않는다.
+function guideHasHistory(id: typeof cheerGuide.id) {
+  return sql<boolean>`exists (select 1 from cheer_guide_snapshot s where s.cheer_guide_id = ${id}) or exists (select 1 from cheer_guide_publication p where p.cheer_guide_id = ${id})`;
+}
+export async function removeEmptyCheerGuide(executor: DbExecutor, id: string) {
+  try {
+    const [row] = await executor
+      .delete(cheerGuide)
+      .where(and(eq(cheerGuide.id, id), sql`not (${guideHasHistory(cheerGuide.id)})`))
+      .returning({ id: cheerGuide.id });
+    return row;
+  } catch (error) {
+    if (
+      [
+        "cheer_guide_snapshot_cheer_guide_id_fkey",
+        "cheer_guide_publication_cheer_guide_id_fkey",
+      ].some((constraint) => isPostgresForeignKeyViolation(error, constraint))
+    )
+      throw new CheerGuideReferenceError();
+    throw error;
+  }
+}
+export async function findCheerGuideIdentity(executor: DbExecutor, id: string) {
+  const [row] = await executor
+    .select({ id: cheerGuide.id })
+    .from(cheerGuide)
+    .where(eq(cheerGuide.id, id));
+  return row;
+}
