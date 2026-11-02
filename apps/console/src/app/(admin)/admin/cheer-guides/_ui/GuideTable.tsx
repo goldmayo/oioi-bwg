@@ -129,6 +129,7 @@ export function GuideTable({
         }),
         column.display({
           id: "actions",
+          enableResizing: false,
           header: "관리",
           meta: { align: "end" },
           size: 136,

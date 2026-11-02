@@ -1,12 +1,14 @@
 "use client";
 
-import type { ComponentProps, ReactNode } from "react";
+import { useContext, type ComponentProps, type ReactNode } from "react";
 import { flexRender, FlexRender } from "@tanstack/react-table";
 
 import {
   Button,
   columnLabel,
   columnStyle,
+  fillWidthContext,
+  isFillColumn,
   setColumnWidth,
   Snapshot,
   useTableContext,
@@ -21,32 +23,47 @@ export function Table({
 }: ComponentProps<"table"> & { caption: string; fillWidth?: boolean }) {
   const table = useTableContext();
   return (
-    <div
-      className={`border-border max-w-full overflow-x-auto rounded-lg border ${table.options.features.columnSizingFeature && !fillWidth ? "w-fit" : "w-full"}`}
-    >
-      <Snapshot>
-        {() => (
-          <table
-            {...props}
-            className={`w-full text-sm tabular-nums ${className}`}
-            style={{
-              width:
-                table.options.features.columnSizingFeature && !fillWidth
-                  ? table.getTotalSize()
-                  : undefined,
-              minWidth:
-                table.options.features.columnSizingFeature && fillWidth
-                  ? table.getTotalSize()
-                  : undefined,
-              ...props.style,
-            }}
-          >
-            <caption className="sr-only">{caption}</caption>
-            {children}
-          </table>
-        )}
-      </Snapshot>
-    </div>
+    <fillWidthContext.Provider value={fillWidth}>
+      <div
+        className={`border-border max-w-full overflow-x-auto rounded-lg border ${table.options.features.columnSizingFeature && !fillWidth ? "w-fit" : "w-full"}`}
+      >
+        <Snapshot>
+          {() => (
+            <table
+              {...props}
+              className={`w-full text-sm tabular-nums ${className}`}
+              style={{
+                width:
+                  table.options.features.columnSizingFeature && !fillWidth
+                    ? table.getTotalSize()
+                    : undefined,
+                minWidth:
+                  table.options.features.columnSizingFeature && fillWidth
+                    ? table.getTotalSize()
+                    : undefined,
+                ...props.style,
+              }}
+            >
+              <caption className="sr-only">{caption}</caption>
+              {fillWidth && table.options.features.columnSizingFeature && (
+                <colgroup>
+                  {(table.options.features.columnVisibilityFeature
+                    ? table.getVisibleLeafColumns()
+                    : table.getAllLeafColumns()
+                  ).map((column, index, columns) => (
+                    <col
+                      key={column.id}
+                      style={{ width: index === columns.length - 1 ? undefined : column.getSize() }}
+                    />
+                  ))}
+                </colgroup>
+              )}
+              {children}
+            </table>
+          )}
+        </Snapshot>
+      </div>
+    </fillWidthContext.Provider>
   );
 }
 
@@ -75,6 +92,7 @@ export function Head({ className = "", ...props }: ComponentProps<"th">) {
 
 export function Header({ children }: { children?: ReactNode }) {
   const table = useTableContext();
+  const fillWidth = useContext(fillWidthContext);
   return (
     <Snapshot>
       {() => (
@@ -92,7 +110,7 @@ export function Header({ children }: { children?: ReactNode }) {
                       scope={header.subHeaders.length ? "colgroup" : "col"}
                       colSpan={header.colSpan}
                       className={`relative h-10 px-2 text-left align-middle font-medium whitespace-nowrap ${column.columnDef.meta?.className ?? ""}`}
-                      style={columnStyle(column)}
+                      style={columnStyle(column, fillWidth)}
                       aria-sort={
                         sorted === "asc"
                           ? "ascending"
@@ -148,7 +166,10 @@ export function Header({ children }: { children?: ReactNode }) {
                             <FlexRender header={header} />
                           )}
                           {table.options.features.columnResizingFeature &&
-                            column.getCanResize() && (
+                            column.getCanResize() &&
+                            !header
+                              .getLeafHeaders()
+                              .some((leaf) => isFillColumn(leaf.column, fillWidth)) && (
                               <div
                                 role="separator"
                                 tabIndex={0}
@@ -195,6 +216,7 @@ export function Body({
   children?: ReactNode;
 }) {
   const table = useTableContext();
+  const fillWidth = useContext(fillWidthContext);
   return (
     <Snapshot>
       {() => {
@@ -225,7 +247,7 @@ export function Body({
                   ).map((cell) => (
                     <td
                       key={cell.id}
-                      style={columnStyle(cell.column)}
+                      style={columnStyle(cell.column, fillWidth)}
                       className={`p-2 align-middle whitespace-nowrap ${cell.column.columnDef.meta?.className ?? ""}`}
                     >
                       {features.columnGroupingFeature && cell.getIsGrouped() ? (
@@ -279,6 +301,7 @@ export function Body({
 
 export function Footer({ children }: { children?: ReactNode }) {
   const table = useTableContext();
+  const fillWidth = useContext(fillWidthContext);
   return (
     <Snapshot>
       {() => (
@@ -290,7 +313,7 @@ export function Footer({ children }: { children?: ReactNode }) {
                   <td
                     key={footer.id}
                     colSpan={footer.colSpan}
-                    style={columnStyle(footer.column)}
+                    style={columnStyle(footer.column, fillWidth)}
                     className={`p-2 ${footer.column.columnDef.meta?.className ?? ""}`}
                   >
                     {footer.isPlaceholder ? null : <FlexRender footer={footer} />}
