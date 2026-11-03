@@ -334,7 +334,7 @@ fixture가 반복될 때 작은 builder를 사용할 수 있다.
   추가 검증이 필요하면 해당 workspace·흐름을 명시해 실행하고 결과를 PR에 기록한다.
 - 2026-11-03 사용자 결정: Draft PR은 로컬과 같은 증분 검증이며 `partial verify`로만 보고한다.
   Ready 전환에 전체 검증을 실행하고 병합 필수 `verify`에는 부분 검증 성공을 게시하지 않는다.
-- `migration_main` 병합 전 최종 PR 커밋은 CI의 전체 quality/unit/PG/ARM64/build 검증을 통과한다.
+- `main` 병합 전 최종 PR 커밋은 CI의 전체 quality/unit/PG/ARM64/build 검증을 통과한다.
   명시적 로컬 전체 재현은 `pnpm verify:full`이다. CI의 전체 검사 entry에는 `--changed`를 넣지 않는다.
 - 로컬 범위 판정 실패는 오류로 중단한다. 전체 검증을 암묵적으로 시작하지 않는다.
 
@@ -363,7 +363,7 @@ package.json 재정렬은 맡기지 않는다. 로컬 변경 포맷과 전체 CI
 공용 native preset·workspace 설정은 실제 lint task와 로컬 영향 판정의 입력에 포함하고,
 포맷 설정 변경만으로 제품 build·DB·브라우저 검사를 로컬에서 확대하지 않는다.
 
-일반 `migration_main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 기존처럼 무거운 검사를 생략한다.
+일반 `main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 기존처럼 무거운 검사를 생략한다.
 scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·일반 빈 diff·CI 판정 실패는 전체 검증이다.
 2026-11-04 배포선 정책은 2026-11-03의 별도 이력 연결 절차를 정상 배포에서 대체한다.
 일반 feature PR은 main strict·squash를 유지하고 Ready UI 영향 검증 또는 전체 CI를 요구하며, Promotion은 develop loose·merge commit으로

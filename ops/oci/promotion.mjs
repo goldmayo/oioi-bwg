@@ -6,13 +6,11 @@ const digest = /^sha256:[0-9a-f]{64}$/;
 
 export function assertPromotion(pr, repository) {
   if (
-    pr.base.ref !== "migration_develop" ||
-    pr.head.ref !== "migration_main" ||
+    pr.base.ref !== "develop" ||
+    pr.head.ref !== "main" ||
     pr.head.repo?.full_name !== repository
   ) {
-    throw new Error(
-      "Only same-repository migration_main → migration_develop promotions are allowed",
-    );
+    throw new Error("Only same-repository main → develop promotions are allowed");
   }
 }
 
@@ -117,7 +115,7 @@ export function selectCandidateRun(runs, pr) {
       (item) =>
         item.event === "pull_request" &&
         item.head_sha === pr.head.sha &&
-        item.head_branch === "migration_main" &&
+        item.head_branch === "main" &&
         item.head_repository?.full_name === pr.head.repo.full_name &&
         // GitHub can clear associations after merge; candidate.json still binds the exact PR.
         (item.pull_requests.length === 0 ||
@@ -141,7 +139,7 @@ export async function prepare({ github, context, core }) {
   assertPromotion(pr, context.repo.owner + "/" + context.repo.repo);
   const { data: branch } = await github.rest.repos.getBranch({
     ...context.repo,
-    branch: "migration_main",
+    branch: "main",
   });
   if (
     pr.state !== "open" ||
@@ -153,7 +151,7 @@ export async function prepare({ github, context, core }) {
   }
   const { data: base } = await github.rest.repos.getBranch({
     ...context.repo,
-    branch: "migration_develop",
+    branch: "develop",
   });
   if (
     !sha.test(eventPr.base.sha) ||
@@ -348,7 +346,7 @@ export async function resolve({ github, context, core }) {
   }
   const { data: branch } = await github.rest.repos.getBranch({
     ...context.repo,
-    branch: "migration_develop",
+    branch: "develop",
   });
   if (branch.commit.sha !== pr.merge_commit_sha)
     throw new Error("Promotion was superseded by a newer merge");

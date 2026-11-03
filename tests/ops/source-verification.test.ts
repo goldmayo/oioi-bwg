@@ -20,7 +20,7 @@ function fixture() {
     number: 1,
     merged_at: "2026-11-03T01:00:00Z",
     merge_commit_sha: "merged",
-    base: { ref: "migration_main" },
+    base: { ref: "main" },
     head: { sha: "source", repo: { full_name: "owner/repo" } },
   };
   const run = {
@@ -64,7 +64,7 @@ test("main 병합 당시 동일 source/tree의 전체 성공을 재사용한다"
 
 test.each([
   ["pr.merge_commit_sha", "other"],
-  ["pr.base.ref", "migration_develop"],
+  ["pr.base.ref", "develop"],
   ["pr.head.repo.full_name", "fork/repo"],
   ["run.head_sha", "other"],
   ["run.head_commit.tree_id", "different"],
@@ -126,14 +126,14 @@ function historyFixture() {
     draft: false,
     merged_at: "2026-11-03T02:00:00Z",
     merge_commit_sha: ids.merged,
-    base: { ref: "migration_main", sha: ids.base },
+    base: { ref: "main", sha: ids.base },
     head: { sha: ids.head, ref: "feature/history", repo: { full_name: "owner/repo" } },
   };
   const promotion = {
     ...pr,
     merge_commit_sha: ids.develop,
-    base: { ref: "migration_develop", sha: "old" },
-    head: { ...pr.head, ref: "migration_main", sha: ids.source },
+    base: { ref: "develop", sha: "old" },
+    head: { ...pr.head, ref: "main", sha: ids.source },
   };
   const commits: Record<string, { tree: { sha: string }; parents: { sha: string }[] }> = {
     [ids.head]: { tree: { sha: "tree" }, parents: [{ sha: ids.base }, { sha: ids.develop }] },
@@ -143,8 +143,8 @@ function historyFixture() {
     [ids.merged]: { tree: { sha: "tree" }, parents: [{ sha: ids.base }, { sha: ids.head }] },
   };
   const branches = {
-    migration_main: { commit: { sha: ids.base } },
-    migration_develop: { commit: { sha: ids.develop } },
+    main: { commit: { sha: ids.base } },
+    develop: { commit: { sha: ids.develop } },
   };
   const comparison = { status: "ahead" };
   const historyRun = { ...f.run, id: 11, head_sha: ids.head, updated_at: "2026-11-03T01:59:00Z" };
@@ -242,8 +242,8 @@ test.each([
   const f = historyFixture();
   if (fault === "tree") f.commits[f.ids.head].tree.sha = "different";
   if (fault === "parent") f.commits[f.ids.head].parents.pop();
-  if (fault === "stale-main") f.branches.migration_main.commit.sha = "other";
-  if (fault === "stale-develop") f.branches.migration_develop.commit.sha = "other";
+  if (fault === "stale-main") f.branches.main.commit.sha = "other";
+  if (fault === "stale-develop") f.branches.develop.commit.sha = "other";
   if (fault === "fork") f.pr.head.repo.full_name = "fork/repo";
   if (fault === "draft") f.pr.draft = true;
   if (fault === "promotion-tree") f.commits[f.ids.source].tree.sha = "changed";

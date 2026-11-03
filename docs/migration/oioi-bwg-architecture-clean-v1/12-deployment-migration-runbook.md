@@ -487,11 +487,16 @@ Production DB를 test target으로 사용하지 않는다.
 
 ## 21. CI/CD
 
+2026-11-04 이름 전환은 `migration_main` → `main`, `migration_develop` → `develop`이다.
+기존 레거시 main/develop은 삭제 전 마지막 SHA를 보존하고, 기본 브랜치·보호 규칙·Environment의
+배포 branch policy와 local upstream을 함께 전환한다. 아래 이름은 새 역할을 가리키며, 과거의
+실제 PR/receipt/run에 기록된 옛 이름은 읽기 검증에서만 허용한다. 현재 발행·배포 입력에는 새 이름을 요구한다.
+
 현재 migration 브랜치와 CI/CD 계약:
 
 ```text
-feature/* → PR → migration_main (통합, 배포 없음)
-migration_main → Promotion PR → migration_develop (OCI Development 배포 대상)
+feature/* → PR → main (통합, 배포 없음)
+main → Promotion PR → develop (OCI Development 배포 대상)
 ```
 
 2026-11-03 사용자 결정으로 작업 중 Draft PR과 병합 전 Ready PR을 분리한다.
@@ -504,24 +509,25 @@ ARM64·Terraform·이미지 build/smoke를 실행하지 않는다. 결과는 `pa
 `impact`는 기존 증분 검사와 app_build/build의 같은 run 이미지·브라우저 smoke를 모두 요구한다.
 현재 build consumer는 두 앱의 paired 검증이므로 이 단계는 유지하고 전용 PG integration·native·infra·
 전체 quality/unit job을 생략한다. 그 밖의 Ready는 기존 전체 job을 모두 통과해야 한다.
-정기 전체 검증 연결을 완료한 뒤 정책을 활성화하며 Draft 성공을 필수 verify로 게시하지 않는다. `converted_to_draft`는 진행 중 전체 실행을 취소하고
+매일 UTC 21:00(한국시간 06:00)의 기본 main 예약 실행과 workflow_dispatch는 전체 검증한다.
+main/develop merge push에서는 전체 검증을 반복하지 않는다. 정기 실행의 기본 브랜치 연결을 확인한 뒤 Draft 성공을 필수 verify로 게시하지 않는다. `converted_to_draft`는 진행 중 전체 실행을 취소하고
 부분 검증으로 돌아간다. 필수 `verify`에는 Draft 성공을 게시하지 않는다.
 관리자 전체 Playwright E2E(`Admin migration integration`)는 자동 workflow job과 required verify에서 제외한다.
 관리자 E2E 수동 실행 원칙은 일반 PR·기존 push·Promotion에 동일하며 `pnpm test:integration:admin` 계열 명령으로 필요 시 직접 실행한다.
 관리자 E2E 제외는 container native/readiness·간단한 화면 smoke나 아래 Promotion exact digest 검증을 생략하는 조건이 아니다.
-단, `migration_main` 대상 전체 PR diff가 일반 파일 `.md` 변경뿐이면 scope 판정과 필수 `verify`만 실행한다.
+단, `main` 대상 전체 PR diff가 일반 파일 `.md` 변경뿐이면 scope 판정과 필수 `verify`만 실행한다.
 이력 누락·일반 빈 diff·symlink/실행 mode·MDX·코드 혼합은 전체 검증이다. Git raw diff의 삭제/추가 양쪽을
 검사해 code→md rename과 API 파일 수 제한에 의한 누락을 방지한다. workflow 자체를 path filter로 생략하지 않는다.
 Promotion은 main의 코드 검증 근거를 확인하며, 문서 예외를 포함해 현재 source/tree가 검증된 main 병합 결과여야 한다.
 배포 후보는 기존 계약에 따라 현재 run에서 검증한다. 문서 예외가 과거 candidate 재사용 권한을 주지 않는다.
-`migration_main` merge push와 `migration_develop` push에서는 무거운 검증·image build를 반복하지 않는다.
+`main` merge push와 `develop` push에서는 무거운 검증·image build를 반복하지 않는다.
 두 push에서는 성공한 동일 저장소 PR의 head/tree·검증 job·입력 key·미만료 artifact를 확인한 뒤
 검증용 BuildKit 캐시만 base branch에 발행할 수 있다. 캐시 누락은 직접 빌드로 복구하며
 다른 run의 cache를 verify 통과·검증 image·배포 candidate 증거로 사용하지 않는다.
 일반 CI는 같은 run의 앱별 pruned builder에서 만든 두 runtime image만 후속 smoke에 전달한다. 사용하지 않는 standalone tar는 별도로 생성·전송하지 않는다.
 Docker builder는 다음 변경 build에 복원하지 않는 Next 파일시스템 cache와 Turbo output archive를 쓰지 않으며,
 의존성·빌드 레이어의 BuildKit cache와 로컬 개발 cache는 유지한다.
-기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
+기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `develop`으로 직접 보내면
 `promotion` check가 실패한다.
 
 2026-11-04 배포선 단순화: 일반 feature는 main strict·squash·전체 CI를 유지하고, Promotion은
@@ -542,7 +548,7 @@ squash-only로 복원한다. 이후 feature는 squash, Promotion은 merge commit
 사용하지 않는다. 당시 파일 변경 없는 배포선 이력 연결에 한정해 `history` 검증을 허용했다.
 scope는 현재 main SHA가 첫 부모인 두 부모 merge이고 head/base tree가 같을 때만 이 모드를 선택한다.
 검증 job은 같은 저장소의 열린 Ready PR·현재 main/develop 부모·검증용 merge tree를 다시 대조한다.
-develop 부모는 정상 `migration_main → migration_develop` Promotion의 source tree와 같아야 하고,
+develop 부모는 정상 `main → develop` Promotion의 source tree와 같아야 하고,
 그 source가 첫 부모의 조상이어야 한다. 배포선의 고유 변경을 버리는 연결은 거절한다.
 첫 부모의 main 병합 당시 source/tree·최종 head·전체 job·필수 verify 성공 근거를 확인하며
 부모·코드·시각·저장소 불일치나 근거 누락은 실패한다. 무거운 검사를 조용히 재실행하지 않는다.
@@ -556,7 +562,7 @@ Promotion PR의 `reuse main verification`은 현재 main head의 병합 PR과 �
 과거 history 예외는 위의 부모·Promotion source·같은 tree의 원래 검증까지 대조한다.
 Ready UI 검증은 원래 PR raw diff를 재판정하고 증분 job 및 app build/browser 성공과 나머지 생략을
 정확히 대조한다. 누락·불일치·실패·Draft 부분 검증은 거절하고 전체 검사를 몰래 시작하지 않는다. source 검증 성공 뒤
-현재 `migration_main` head에서 하나의 paired release를 검증하며 타입/lint/unit/PG/ARM64 검사를 반복하지 않는다.
+현재 `main` head에서 하나의 paired release를 검증하며 타입/lint/unit/PG/ARM64 검사를 반복하지 않는다.
 Draft Promotion에서는 후보 빌드·게시를 실행하지 않는다.
 P06 선택적 재사용 계약은 마지막 **실제 배포 exit 0**의 immutable Actions receipt/candidate artifact만 기준으로 삼는다.
 최신 정상 배포의 PR/source/tree/run/attempt·artifact 미만료·성공 check·registry를 검증하고,
@@ -662,13 +668,13 @@ Queue 실제 권한·소비/복구와 Domain §20.2의 허용 입력 수용 전�
 
 Branch protection/ruleset은 수동 설정이며 코드로 완료 처리하지 않는다.
 
-- `migration_main`: PR 필수, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
-- `migration_main`의 일반 PR 허용 merge 방식은 squash-only다. 위의 한 번의 정책 전환만 별도 예외다.
-- `migration_develop`: PR 필수, required `verify`와 `promotion`, direct/force push 금지,
+- `main`: PR 필수, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
+- `main`의 일반 PR 허용 merge 방식은 squash-only다. 위의 한 번의 정책 전환만 별도 예외다.
+- `develop`: PR 필수, required `verify`와 `promotion`, direct/force push 금지,
   loose status checks와 stale approval 재검토, merge commit만 허용한다. 정상 source는 동일 저장소
-  `migration_main`뿐이다. repository는 merge commit과 squash를 허용하고 각 branch ruleset이 방식을 제한한다.
-- 기존 `oci-development-image` Environment는 `migration_develop` 및 `refs/pull/*/merge` 실행을 허용해야 한다.
-  PR secret job은 동일 저장소의 `migration_main → migration_develop` 조건으로만 실행한다.
+  `main`뿐이다. repository는 merge commit과 squash를 허용하고 각 branch ruleset이 방식을 제한한다.
+- 기존 `oci-development-image` Environment는 `develop` 및 `refs/pull/*/merge` 실행을 허용해야 한다.
+  PR secret job은 동일 저장소의 `main → develop` 조건으로만 실행한다.
 - artifact 보관은 90일이다. 만료 전에 검증·merge하며 만료/삭제 시 digest 추측이나 merge 후 재build를 하지 않는다.
 
 main은 GitHub의 `Require branches to be up to date before merging`을 활성화하고 develop만 비활성화한다.
@@ -774,7 +780,7 @@ DB application user least privilege
 Instance Principal secret/image access
 OCI Monitoring/Logging/Notifications
 기존 Object Storage backup resource 비재생성과 추후 safe import 가능성
-`migration_main` / `migration_develop` branch protection과 verify/promotion required checks
+`main` / `develop` branch protection과 verify/promotion required checks
 
 배포 DoD에는 애플리케이션 health 확인, 핵심 익명·인증 사용자 smoke test, 이전 이미지로의
 rollback 절차 확인을 포함한다. DB 변경이 있는 경우 backup 존재만 확인하지 않고 restore 또는

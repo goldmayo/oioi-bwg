@@ -52,7 +52,7 @@ migration / implementation plan
 | ID | 문서 | 버전 | 상태 | 책임 |
 |---|---|---:|---|---|
 | 00 | Document Index | 1.68 | active | 문서 상태 / 버전 / 책임 SSOT |
-| 01 | Architecture Constitution | 2.23 | active | 전체 시스템 헌법 |
+| 01 | Architecture Constitution | 2.24 | active | 전체 시스템 헌법 |
 | 02 | Frontend Architecture | 1.13 | active | FSD, UI/model/lib, Query, 변경 경계와 Shell 조합 원칙 |
 | 03 | API / Error Architecture | 1.6 | active | HTTP / AppError / ApiError / error mapping |
 | 04 | Auth / Authz Architecture | 1.12 | active | Auth.js, RequestContext, CASL, Console MFA 회수, P08 내부 결과·로컬 operator 연결 인증 |

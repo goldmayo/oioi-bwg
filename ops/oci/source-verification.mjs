@@ -16,10 +16,10 @@ async function mainVerification({ github, context, head, tree }, depth = 0) {
     (item) =>
       item.merged_at &&
       item.merge_commit_sha === head &&
-      item.base.ref === "migration_main" &&
+      ["main", "migration_main"].includes(item.base.ref) &&
       item.head.repo?.full_name === repository,
   );
-  if (!pr) throw new Error("Source has no merged migration_main PR verification");
+  if (!pr) throw new Error("Source has no merged main PR verification");
   const { data } = await github.rest.actions.listWorkflowRuns({
     ...context.repo,
     workflow_id: "verify.yml",
@@ -84,7 +84,7 @@ async function mainVerification({ github, context, head, tree }, depth = 0) {
 
 async function historyParents({ github, context, pr, tree, mergedSha }) {
   const repository = `${context.repo.owner}/${context.repo.repo}`;
-  if (pr.base.ref !== "migration_main" || pr.head.repo?.full_name !== repository)
+  if (!["main", "migration_main"].includes(pr.base.ref) || pr.head.repo?.full_name !== repository)
     throw new Error("Only same-repository main history is reusable");
   const { data: head } = await github.rest.git.getCommit({
     ...context.repo,
@@ -110,9 +110,7 @@ async function historyParents({ github, context, pr, tree, mergedSha }) {
       throw new Error("History merge did not preserve its reviewed parents");
   } else {
     const branches = await Promise.all(
-      ["migration_main", "migration_develop"].map((branch) =>
-        github.rest.repos.getBranch({ ...context.repo, branch }),
-      ),
+      ["main", "develop"].map((branch) => github.rest.repos.getBranch({ ...context.repo, branch })),
     );
     if (branches[0].data.commit.sha !== baseSha || branches[1].data.commit.sha !== developSha)
       throw new Error("History parents are not the current branch heads");
@@ -126,8 +124,8 @@ async function historyParents({ github, context, pr, tree, mergedSha }) {
     (item) =>
       item.merged_at &&
       item.merge_commit_sha === developSha &&
-      item.base.ref === "migration_develop" &&
-      item.head.ref === "migration_main" &&
+      ["develop", "migration_develop"].includes(item.base.ref) &&
+      ["main", "migration_main"].includes(item.head.ref) &&
       item.head.repo?.full_name === repository,
   );
   if (!promotion) throw new Error("History parent has no normal Promotion");

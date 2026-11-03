@@ -3,7 +3,7 @@ name: Deploy promotion
 on:
   pull_request:
     types: [closed]
-    branches: [migration_develop]
+    branches: [develop]
 
 concurrency:
   group: oci-development-deployment
@@ -14,7 +14,7 @@ jobs:
     name: deploy
     if: >-
       github.event.pull_request.merged == true &&
-      github.event.pull_request.head.ref == 'migration_main' &&
+      github.event.pull_request.head.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -189,7 +189,7 @@ jobs:
     name: notify deploy
     if: >-
       always() && github.event.pull_request.merged == true &&
-      github.event.pull_request.head.ref == 'migration_main' &&
+      github.event.pull_request.head.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository
     needs: deploy
     runs-on: ubuntu-latest

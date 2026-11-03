@@ -17,7 +17,7 @@ export async function findBaseline({ github, context, core }) {
     const run = runs
       .filter(
         (r) =>
-          r.head_branch === "migration_main" &&
+          ["main", "migration_main"].includes(r.head_branch) &&
           r.head_repository?.full_name === `${context.repo.owner}/${context.repo.repo}`,
       )
       .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))[0];
@@ -64,7 +64,7 @@ export async function validateBaseline({
   if (
     run.path !== ".github/workflows/deploy-promotion.yml" ||
     run.event !== "pull_request" ||
-    run.head_branch !== "migration_main" ||
+    !["main", "migration_main"].includes(run.head_branch) ||
     run.head_sha !== candidate.sourceSha ||
     run.head_repository?.full_name !== `${context.repo.owner}/${context.repo.repo}` ||
     run.status !== "completed" ||
@@ -104,8 +104,8 @@ export async function validateBaseline({
     !pr.merged ||
     pr.head.sha !== candidate.sourceSha ||
     pr.merge_commit_sha !== receipt.mergedSha ||
-    pr.base.ref !== "migration_develop" ||
-    pr.head.ref !== "migration_main" ||
+    !["develop", "migration_develop"].includes(pr.base.ref) ||
+    !["main", "migration_main"].includes(pr.head.ref) ||
     pr.head.repo?.full_name !== `${context.repo.owner}/${context.repo.repo}`
   )
     throw new Error("Deployment PR mismatch");
@@ -138,7 +138,7 @@ export async function validateBaseline({
     verification.path !== ".github/workflows/verify.yml" ||
     verification.head_sha !== candidate.sourceSha ||
     verification.event !== "pull_request" ||
-    verification.head_branch !== "migration_main" ||
+    !["main", "migration_main"].includes(verification.head_branch) ||
     verification.head_repository?.full_name !== `${context.repo.owner}/${context.repo.repo}` ||
     verification.run_attempt !== candidate.runAttempt ||
     verification.conclusion !== "success"

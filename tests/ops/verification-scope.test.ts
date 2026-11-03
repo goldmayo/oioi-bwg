@@ -77,11 +77,11 @@ test.each([
 });
 
 test.each([
-  ["migration_main", true, "partial"],
-  ["migration_main", false, "full"],
-  ["migration_main", undefined, "full"],
-  ["migration_develop", true, "promotion"],
-  ["migration_develop", false, "promotion"],
+  ["main", true, "partial"],
+  ["main", false, "full"],
+  ["main", undefined, "full"],
+  ["develop", true, "promotion"],
+  ["develop", false, "promotion"],
   ["other", true, "full"],
 ])("PR base=%s draft=%s selects %s", (ref, draft, mode) => {
   expect(
@@ -115,14 +115,14 @@ test("이력 연결 재사용은 Draft 부분 검증과 일반 코드 변경의 
     expect(
       verificationMode({
         eventName: "pull_request",
-        event: { pull_request: { base: { ref: "migration_main" }, draft } },
+        event: { pull_request: { base: { ref: "main" }, draft } },
         historyOnlyChange: true,
       }),
     ).toBe(expected);
   expect(
     verificationMode({
       eventName: "pull_request",
-      event: { pull_request: { base: { ref: "migration_main" }, draft: false } },
+      event: { pull_request: { base: { ref: "main" }, draft: false } },
       historyOnlyChange: false,
     }),
   ).toBe("full");
@@ -160,7 +160,7 @@ test("실제 Git에서 같은 tree·현재 base를 첫 부모로 한 이력 연�
         cwd: root,
         eventName: "pull_request",
         event: {
-          pull_request: { base: { ref: "migration_main", sha: parent }, head: { sha: head } },
+          pull_request: { base: { ref: "main", sha: parent }, head: { sha: head } },
         },
       });
     expect(eligible(base)).toBe(false);
@@ -208,8 +208,8 @@ test("Promotion 후보는 선행 생략에 전파되지 않으며 성공한 검�
     repository: "goldmayo/oioi-bwg",
     event: {
       pull_request: {
-        base: { ref: "migration_develop" },
-        head: { ref: "migration_main", repo: { full_name: "goldmayo/oioi-bwg" } },
+        base: { ref: "develop" },
+        head: { ref: "main", repo: { full_name: "goldmayo/oioi-bwg" } },
         draft: false,
       },
     },
@@ -264,10 +264,10 @@ test("Promotion 후보는 선행 생략에 전파되지 않으며 성공한 검�
   github.event.pull_request.head.repo.full_name = github.repository;
   github.event.pull_request.head.ref = "feature/other";
   expect(run()).toBe(false);
-  github.event.pull_request.head.ref = "migration_main";
-  github.event.pull_request.base.ref = "migration_main";
+  github.event.pull_request.head.ref = "main";
+  github.event.pull_request.base.ref = "main";
   expect(run()).toBe(false);
-  github.event.pull_request.base.ref = "migration_develop";
+  github.event.pull_request.base.ref = "develop";
   github.event_name = "push";
   expect(run()).toBe(false);
 });
@@ -324,8 +324,8 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
       readFileSync(new URL("../../scripts/verification-scope.mjs", import.meta.url), "utf8"),
     );
     const base = commit();
-    git("update-ref", "refs/remotes/origin/migration_main", base);
-    const scope = (baseRef = "migration_main", eventName = "pull_request", fetchSource = false) =>
+    git("update-ref", "refs/remotes/origin/main", base);
+    const scope = (baseRef = "main", eventName = "pull_request", fetchSource = false) =>
       docsOnly({
         cwd: root,
         eventName,
@@ -342,9 +342,9 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
     commit();
     expect(scope()).toBe(true);
     git("remote", "add", "origin", root);
-    expect(scope("migration_main", "pull_request", true)).toBe(true);
-    expect(scope("migration_develop")).toBe(false);
-    expect(scope("migration_main", "push")).toBe(false);
+    expect(scope("main", "pull_request", true)).toBe(true);
+    expect(scope("develop")).toBe(false);
+    expect(scope("main", "push")).toBe(false);
     expect(docsOnly({ cwd: root, local: true })).toBe(true);
     const fakeBin = join(root, ".git/fixture-bin");
     mkdirSync(fakeBin);
@@ -357,7 +357,7 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
         timeout: 10_000,
       });
     expect(pushHook().status).toBe(0); // no pnpm command is executed
-    git("branch", "-m", "migration_main");
+    git("branch", "-m", "main");
     expect(docsOnly({ cwd: root, local: true })).toBe(false);
     git("branch", "-m", "feature/docs");
     vi.stubEnv("GIT_DIR", "/nonexistent/inherited-hook-dir");
@@ -394,7 +394,7 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
     write("page.mdx");
     commit();
     expect(scope()).toBe(false);
-    git("update-ref", "-d", "refs/remotes/origin/migration_main");
+    git("update-ref", "-d", "refs/remotes/origin/main");
     expect(docsOnly({ cwd: root, local: true })).toBe(false);
     expect(docsOnly({ cwd: root, eventName: "pull_request", event: {} })).toBe(false);
   } finally {
@@ -436,7 +436,7 @@ test("Ready UI changes require incremental checks AND app build/browser evidence
   expect(
     verificationMode({
       eventName: "pull_request",
-      event: { pull_request: { base: { ref: "migration_main" }, draft: false } },
+      event: { pull_request: { base: { ref: "main" }, draft: false } },
       impactOnlyChange: true,
     }),
   ).toBe("impact");

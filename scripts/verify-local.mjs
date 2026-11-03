@@ -144,7 +144,7 @@ function main() {
   const git = (...args) =>
     execFileSync("git", args, { cwd: root, env: environment, encoding: "utf8" });
   // 전체 diff와 미커밋·신규 파일을 함께 보며, 기준을 못 읽으면 전체 검증을 몰래 실행하지 않는다.
-  const base = git("merge-base", process.env.VERIFY_BASE ?? "origin/migration_main", "HEAD").trim();
+  const base = git("merge-base", process.env.VERIFY_BASE ?? "origin/main", "HEAD").trim();
   environment.TURBO_SCM_BASE = base;
   delete environment.TURBO_SCM_HEAD;
   const files = [

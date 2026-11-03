@@ -177,17 +177,20 @@ sudo systemctl status oioi-filesystem-metric.timer
 
 secret value, auth token, API signing private key, webhook URL, full `DATABASE_URL`은 evidence에 기록하지 않는다.
 
-## 6. Migration branch 및 GitHub 수동 설정
+## 6. main/develop 및 GitHub 설정
+
+2026-11-04부터 활성 브랜치는 main/develop이다. 이전 migration_main/migration_develop의
+실제 관측·배포 기록은 원래 이름으로 보존하며 읽기 검증에서 호환한다. 기존 레거시 브랜치와 혼동하지 않는다.
 
 정책 SSOT는 [active 배포 runbook §21](../../docs/migration/oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md#21-cicd)이다.
-일반 작업은 최신 `migration_main`에서 분기하여 PR/squash로 통합한다. 배포는 별도 `migration_main → migration_develop`
+일반 작업은 최신 `main`에서 분기하여 PR/squash로 통합한다. 배포는 별도 `main → develop`
 Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollback 경계는 변경하지 않는다.
 
-- `migration_main`: PR required, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
-- `migration_develop`: PR required, required `verify`·`promotion`, loose status checks·merge commit only,
+- `main`: PR required, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
+- `develop`: PR required, required `verify`·`promotion`, loose status checks·merge commit only,
   direct/force push 금지·stale approval 재검토다. repository는 merge와 squash를 허용하고 main은 squash-only로 제한한다.
-- `oci-development-image` Environment: 기존 `migration_develop`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
-  credential을 사용하는 PR job은 동일 저장소 `migration_main → migration_develop`에서만 실행된다.
+- `oci-development-image` Environment: 기존 `develop`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
+  credential을 사용하는 PR job은 동일 저장소 `main → develop`에서만 실행된다.
 - 후보 기록은 GitHub Actions artifact `promotion-<source SHA>-<attempt>`의 `candidate.json`이다.
   공통 PR/source SHA/tree/run/attempt는 조합 검증 출처이며 `images.web`·`images.console`에 repository/digest/buildSourceSha/origin을 기록한다.
   보관 90일 안에 merge하며, 단일 이미지 이전 형식·한쪽 누락·다른 registry·삭제/만료/미완료 run/다른 tree는 거절한다.

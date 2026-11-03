@@ -22,12 +22,12 @@ export function verificationMode({
 }) {
   if (markdownOnlyChange) return "docs";
   if (eventName === "pull_request") {
-    if (event?.pull_request?.base?.ref === "migration_develop") return "promotion";
-    if (event?.pull_request?.base?.ref === "migration_main" && event.pull_request.draft === true)
+    if (event?.pull_request?.base?.ref === "develop") return "promotion";
+    if (event?.pull_request?.base?.ref === "main" && event.pull_request.draft === true)
       return "partial";
-    if (event?.pull_request?.base?.ref === "migration_main" && historyOnlyChange) return "history";
+    if (event?.pull_request?.base?.ref === "main" && historyOnlyChange) return "history";
     if (
-      event?.pull_request?.base?.ref === "migration_main" &&
+      event?.pull_request?.base?.ref === "main" &&
       event.pull_request.draft === false &&
       impactOnlyChange
     )
@@ -40,7 +40,7 @@ export function verificationMode({
 /** @param {{ eventName?: string, event?: { pull_request?: { base?: { ref?: string, sha?: string }, head?: { sha?: string } } }, cwd?: string }} [options] */
 export function historyOnly({ eventName, event, cwd = process.cwd() } = {}) {
   const pr = event?.pull_request;
-  if (eventName !== "pull_request" || pr?.base?.ref !== "migration_main") return false;
+  if (eventName !== "pull_request" || pr?.base?.ref !== "main") return false;
   const { sha: head } = pr.head ?? {};
   const { sha: base } = pr.base ?? {};
   if (![head, base].every((value) => /^[0-9a-f]{40}$/.test(value ?? ""))) return false;
@@ -102,10 +102,16 @@ function changesMatch({
     if (local) {
       const branch = git("branch", "--show-current").trim();
       if (!branch.startsWith("feature/")) return false;
-      base = "origin/migration_main";
+      base = "origin/main";
       head = "HEAD";
     } else {
-      if (eventName !== "pull_request" || event?.pull_request?.base?.ref !== "migration_main")
+      if (
+        eventName !== "pull_request" ||
+        !(
+          event?.pull_request?.base?.ref === "main" ||
+          (fetchSource && event?.pull_request?.base?.ref === "migration_main")
+        )
+      )
         return false;
       base = event.pull_request.base.sha;
       head = event.pull_request.head.sha;
