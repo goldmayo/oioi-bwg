@@ -138,17 +138,29 @@ export async function prepare({ github, context, core }) {
     ...context.repo,
     pull_number: eventPr.number,
   });
+  assertPromotion(pr, context.repo.owner + "/" + context.repo.repo);
   const { data: branch } = await github.rest.repos.getBranch({
     ...context.repo,
     branch: "migration_main",
   });
   if (
     pr.state !== "open" ||
+    pr.draft ||
     pr.head.sha !== eventPr.head.sha ||
     branch.commit.sha !== pr.head.sha
   ) {
     throw new Error("Promotion head changed; verify and build the new head");
   }
+  const { data: base } = await github.rest.repos.getBranch({
+    ...context.repo,
+    branch: "migration_develop",
+  });
+  if (
+    !sha.test(eventPr.base.sha) ||
+    pr.base.sha !== eventPr.base.sha ||
+    base.commit.sha !== eventPr.base.sha
+  )
+    throw new Error("Promotion base changed; start verification for the current base");
   const { data: source } = await github.rest.git.getCommit({
     ...context.repo,
     commit_sha: pr.head.sha,
@@ -157,6 +169,12 @@ export async function prepare({ github, context, core }) {
     ...context.repo,
     commit_sha: context.sha,
   });
+  if (
+    verified.parents.length !== 2 ||
+    verified.parents[0].sha !== eventPr.base.sha ||
+    verified.parents[1].sha !== pr.head.sha
+  )
+    throw new Error("Promotion verification merge parents mismatch");
   assertSameTree(source.tree.sha, verified.tree.sha);
   core.setOutput("source_sha", pr.head.sha);
   core.setOutput("source_tree", source.tree.sha);
@@ -342,7 +360,14 @@ export async function resolve({ github, context, core }) {
     ...context.repo,
     commit_sha: pr.merge_commit_sha,
   });
-  if (merged.parents.length !== 1) throw new Error("Promotion must use squash merge");
+  if (
+    !sha.test(eventPr.base.sha) ||
+    pr.base.sha !== eventPr.base.sha ||
+    merged.parents.length !== 2 ||
+    merged.parents[0].sha !== eventPr.base.sha ||
+    merged.parents[1].sha !== pr.head.sha
+  )
+    throw new Error("Promotion must merge the reviewed base and source");
   assertSameTree(source.tree.sha, merged.tree.sha);
   const { data } = await github.rest.actions.listWorkflowRuns({
     ...context.repo,

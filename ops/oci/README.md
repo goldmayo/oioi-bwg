@@ -6,8 +6,8 @@
 ```text
 feature/* → PR → migration_main (verify, 배포 없음)
 migration_main → Promotion PR → migration_develop
-  → full verify → ARM64 candidate publish → 동일 digest pull/container smoke → 검증 artifact
-Promotion squash merge
+  → main source/tree 검증 근거 재사용 → ARM64 candidate publish → 동일 digest pull/container smoke → 검증 artifact
+Promotion merge commit
   → source SHA/tree·merged tree·성공한 run/artifact 대조
   → 새 build/publish 없이 검증한 동일 digest 선택
   → OCI Run Command API → Oracle Cloud Agent / ocarun
@@ -184,7 +184,8 @@ secret value, auth token, API signing private key, webhook URL, full `DATABASE_U
 Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollback 경계는 변경하지 않는다.
 
 - `migration_main`: PR required, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
-- `migration_develop`: 기존 PR/force-push/verify ruleset에 required `promotion`과 최신 base 포함 검증(strict)·stale approval 재검토를 추가한다.
+- `migration_develop`: PR required, required `verify`·`promotion`, loose status checks·merge commit only,
+  direct/force push 금지·stale approval 재검토다. repository는 merge와 squash를 허용하고 main은 squash-only로 제한한다.
 - `oci-development-image` Environment: 기존 `migration_develop`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
   credential을 사용하는 PR job은 동일 저장소 `migration_main → migration_develop`에서만 실행된다.
 - 후보 기록은 GitHub Actions artifact `promotion-<source SHA>-<attempt>`의 `candidate.json`이다.
@@ -204,9 +205,10 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
   paired deploy가 이 helper로 두 env를 만들고 installer/preflight도 helper 파일을 포함한다.
   Console 입력 예시는 `console-runtime-{public,secrets}.env.example`이다. installer는 Console 설정을 생성/덮어쓰지 않는다.
   두 env의 서비스 적용·pair state·복구·최초 전환은 아래 B2 paired host 계약을 따른다. 실제 host 설치는 별도 승인이다.
-- repository의 squash-only 전략을 유지한다. 테스트 merge tree와 실제 squash tree 모두 source tree와 같아야 한다.
-  일치하지 않으면 source를 먼저 갱신하고 PR 검증을 다시 수행한다.
-- base를 바꾼 PR은 새 synchronize/reopen 실행에서 검증한다. 제목·본문 수정만으로 candidate를 다시 build하지 않는다.
+- 일반 feature는 squash, 새 Promotion은 merge commit이다. 검증용 merge와 실제 merge의 두 부모는
+  각 event의 develop base·main source이며 순서와 tree를 대조한다. 두 tree 모두 source tree와 같아야 한다.
+  발행 중 source/base가 바뀌면 새 PR event에서 검증한다. 발행 뒤 base 변경도 실제 merge tree와
+  검증한 source tree가 같아야 수용한다. 제목·본문 수정만으로 candidate를 다시 build하지 않는다.
 - `Deploy promotion` run summary에 source/tree·merge SHA·candidate run/attempt·exact digest가 남는다.
   실제 배포 상태는 host current-pair와 성공한 health/readiness/smoke가 기준이다. merge만으로 성공을 간주하지 않는다.
 
@@ -221,6 +223,12 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
 기존 `migration_develop` ruleset `22798840`에도 strict 검사와 required `promotion`을 적용했다.
 두 ruleset은 PR/필수 검사/force-push 금지와 stale approval 재검토를 적용하며 bypass actor가 없다.
 Environment에는 기존 development branch를 유지하면서 `refs/pull/*/merge` 정책 `62037752`를 추가했다.
+
+2026-11-04 정책 개정은 위의 양쪽 strict·squash-only 배포를 대체한다. 정상 배포에서 별도 이력 연결
+PR을 만들지 않는다. `feature/promotion-without-history` 전환 PR 한 번만 기존 배포 조상을 포함해
+전체 CI 후 main에 merge commit으로 통합하고 main의 squash-only를 복원한다. 이후 develop은
+merge-only·loose, main은 squash-only·strict다. 기존 squash receipt/history 근거의 조회 호환은 유지한다.
+위 값은 목표 설정이며 실제 적용·복원과 필수 check/bypass 보존은 전환 PR의 원격 조회 근거로 확인한다.
 
 ## 7. P06 Metadata 차단
 

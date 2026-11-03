@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { prepareCommand } from "../../ops/oci/b0-command-gate.mjs";
 const sha = "a".repeat(40),
   tree = "b".repeat(40),
+  base = "e".repeat(40),
   repository = "fixture/repo";
 function fixture(variant) {
   const pr = {
     number: 1,
     state: "open",
     head: { sha, ref: "migration_main", repo: { full_name: repository } },
-    base: { ref: "migration_develop" },
+    base: { ref: "migration_develop", sha: base },
     labels: [{ name: `b0-host-${sha}` }],
   };
   if (variant === "stale-attestation") pr.labels = [{ name: `b0-host-${"c".repeat(40)}` }];
@@ -33,11 +34,16 @@ function fixture(variant) {
   const github = {
     rest: {
       pulls: { get: async () => ({ data: pr }) },
-      repos: { getBranch: async () => ({ data: { commit: { sha } } }) },
+      repos: {
+        getBranch: async ({ branch }) => ({
+          data: { commit: { sha: branch === "migration_main" ? sha : base } },
+        }),
+      },
       git: {
         getCommit: async ({ commit_sha }) => ({
           data: {
             tree: { sha: variant === "wrong-tree" && commit_sha !== sha ? "d".repeat(40) : tree },
+            parents: [{ sha: base }, { sha }],
           },
         }),
       },
