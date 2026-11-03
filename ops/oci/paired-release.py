@@ -35,7 +35,7 @@ def timing(stage):
     finally:
         elapsed = (time.monotonic_ns() - started) // 1_000_000
         try:
-            print(f'OIOI_DEPLOY_TIMING {stage} {elapsed}', flush=True)
+            os.write(1, f'OIOI_DEPLOY_TIMING {stage} {elapsed}\n'.encode('ascii'))
         except (OSError, ValueError):
             pass  # Measurement must not change apply/rollback exit semantics.
 

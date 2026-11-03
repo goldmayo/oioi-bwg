@@ -1,7 +1,6 @@
 import base64
 import hashlib
 import json
-import io
 import runpy
 import os
 from pathlib import Path
@@ -9,7 +8,6 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stdout
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -324,13 +322,12 @@ class DeploymentTimingTest(unittest.TestCase):
         self.module = runpy.run_path(str(ROOT / 'ops/oci/paired-release.py'))
 
     def test_fixed_stage_and_monotonic_duration_survive_failure(self):
-        output = io.StringIO()
-        with patch.object(self.module['time'], 'monotonic_ns', side_effect=[0, 123_000_000]), redirect_stdout(output):
+        with patch.object(self.module['time'], 'monotonic_ns', side_effect=[0, 123_000_000]), patch.object(self.module['os'], 'write') as output:
             with self.assertRaisesRegex(ValueError, 'fixture failure'):
                 with self.module['timing']('pull_web'):
                     raise ValueError('fixture failure')
-        self.assertEqual(output.getvalue(), 'OIOI_DEPLOY_TIMING pull_web 123\n')
-        self.assertEqual(self.module['timings_from_output'](output.getvalue()), {'pull_web': 123})
+        output.assert_called_once_with(1, b'OIOI_DEPLOY_TIMING pull_web 123\n')
+        self.assertEqual(self.module['timings_from_output'](output.call_args[0][1].decode()), {'pull_web': 123})
 
     def test_parser_rejects_unknown_duplicate_oversized_and_non_numeric_fields(self):
         parse = self.module['timings_from_output']
@@ -344,10 +341,23 @@ class DeploymentTimingTest(unittest.TestCase):
         self.assertEqual(parse(SECRET + '\nOIOI_DEPLOY_TIMING smoke 7\n'), {'smoke': 7})
 
     def test_timing_output_failure_preserves_original_error(self):
-        with patch('builtins.print', side_effect=OSError('closed output')):
+        with patch.object(self.module['os'], 'write', side_effect=OSError('closed output')):
             with self.assertRaisesRegex(ValueError, 'original failure'):
                 with self.module['timing']('rollback'):
                     raise ValueError('original failure')
+
+    def test_closed_stdout_keeps_real_process_exit_codes(self):
+        for code in (0, 20, 21):
+            read_fd, write_fd = os.pipe()
+            os.close(read_fd)
+            try:
+                script = ("import runpy,sys\nm=runpy.run_path('ops/oci/paired-release.py')\n"
+                          "with m['timing']('total'):\n sys.exit(" + str(code) + ")")
+                result = subprocess.run(['python3', '-I', '-c', script], cwd=ROOT,
+                                        stdout=write_fd, stderr=subprocess.PIPE, timeout=5)
+                self.assertEqual(result.returncode, code, result.stderr)
+            finally:
+                os.close(write_fd)
 
 
 if __name__ == '__main__': unittest.main()
