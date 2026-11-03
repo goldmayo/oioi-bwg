@@ -8,6 +8,7 @@ import type { AdminAlbumSummary } from "@/entities/album";
 
 import { formatDate } from "@/shared/lib/utils";
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
+import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import {
   AppDataTable,
@@ -71,11 +72,21 @@ export function AlbumManagerTable({
           size: 280,
           minSize: 160,
           meta: { className: "font-medium whitespace-normal" },
-          cell: ({ row: { original: album } }) => (
-            <span className="block truncate" title={album.name}>
-              {album.name}
-            </span>
-          ),
+          cell: ({ row: { original: album } }) =>
+            canManage ? (
+              <Button
+                variant="link"
+                className="text-foreground h-auto max-w-full justify-start p-0 text-left"
+                onClick={() => onEdit(album)}
+                title={album.name}
+              >
+                <span className="truncate">{album.name}</span>
+              </Button>
+            ) : (
+              <span className="block truncate" title={album.name}>
+                {album.name}
+              </span>
+            ),
         }),
         column.accessor("slug", {
           header: "Slug",

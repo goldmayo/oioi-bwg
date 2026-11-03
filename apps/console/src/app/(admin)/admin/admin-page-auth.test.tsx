@@ -60,7 +60,6 @@ const pages = [
     () =>
       GuideEditPage({
         params: Promise.resolve({ id: "019a0170-0000-7000-8000-000000000001" }),
-        searchParams: Promise.resolve({}),
       }),
     getAdminCheerGuideEditor,
   ],
@@ -221,11 +220,7 @@ it.each([
   );
 });
 
-it.each([
-  [undefined, "/admin/cheer-guides"],
-  ["//evil.test", "/admin/cheer-guides"],
-  [`/admin/songs/${songId}?edit=true`, `/admin/songs/${songId}?edit=true`],
-] as const)("Guide 편집 복귀 경로 %s를 검증한다", async (returnTo, expected) => {
+it("Guide 편집은 전역 브레드크럼에 제목을 전달하고 별도 복귀 바를 주입하지 않는다", async () => {
   vi.mocked(getAdminCheerGuideEditor).mockResolvedValue({
     id: guideId,
     mode: "FESTIVAL",
@@ -236,18 +231,15 @@ it.each([
   });
   const page = await GuideEditPage({
     params: Promise.resolve({ id: guideId }),
-    searchParams: Promise.resolve({ returnTo }),
   });
-  expect(page.props.children[1].props.returnTo.href).toBe(expected);
+  expect(page.props.children[0].props.title).toBe("곡 · 페스티벌 편집");
+  expect(page.props.children[1].props.id).toBe(guideId);
+  expect(page.props.children[1].props.returnTo).toBeUndefined();
 });
 it("Guide 편집의 없는 대상은 404이고 잘못된 UUID는 조회 전에 차단한다", async () => {
   vi.mocked(getAdminCheerGuideEditor).mockRejectedValue(new AppError("CHEER_GUIDE_NOT_FOUND"));
-  await expect(
-    GuideEditPage({ params: Promise.resolve({ id: guideId }), searchParams: Promise.resolve({}) }),
-  ).rejects.toBe(missing);
+  await expect(GuideEditPage({ params: Promise.resolve({ id: guideId }) })).rejects.toBe(missing);
   vi.mocked(getAdminCheerGuideEditor).mockClear();
-  await expect(
-    GuideEditPage({ params: Promise.resolve({ id: "bad" }), searchParams: Promise.resolve({}) }),
-  ).rejects.toBe(missing);
+  await expect(GuideEditPage({ params: Promise.resolve({ id: "bad" }) })).rejects.toBe(missing);
   expect(getAdminCheerGuideEditor).not.toHaveBeenCalled();
 });

@@ -24,6 +24,13 @@ import {
 import { VisibilityIcon } from "@/shared/ui/visibility-icon";
 
 const column = createAppColumnHelper<AdminCheerGuideSummary>();
+
+function guideEditorHref(guide: AdminCheerGuideSummary) {
+  if (guide.draftEditorAvailable) return adminLinks.guideEdit(guide.id, adminPaths.guideList);
+  if (guide.editorAvailable && guide.song.slug)
+    return adminLinks.songLyrics(guide.song.slug, guide.id);
+}
+
 export function GuideTable({
   guides,
   canManage,
@@ -65,20 +72,33 @@ export function GuideTable({
           header: "곡",
           size: wide ? 310 : 160,
           minSize: 160,
-          cell: ({
-            row: {
-              original: { song },
-            },
-          }) => (
-            <div className="min-w-0">
-              <span title={song.title} className="text-foreground block truncate font-medium">
-                {song.title || "제목 없음"}
-              </span>
-              <span className="text-muted-foreground block truncate text-xs" title={song.albumName}>
-                {song.albumName}
-              </span>
-            </div>
-          ),
+          cell: ({ row: { original: guide } }) => {
+            const { song } = guide;
+            const href = canManage ? guideEditorHref(guide) : undefined;
+            return (
+              <div className="min-w-0">
+                {href ? (
+                  <a
+                    href={href}
+                    title={song.title}
+                    className="text-foreground focus-visible:ring-ring block truncate rounded-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    {song.title || "제목 없음"}
+                  </a>
+                ) : (
+                  <span title={song.title} className="text-foreground block truncate font-medium">
+                    {song.title || "제목 없음"}
+                  </span>
+                )}
+                <span
+                  className="text-muted-foreground block truncate text-xs"
+                  title={song.albumName}
+                >
+                  {song.albumName}
+                </span>
+              </div>
+            );
+          },
         }),
         column.accessor("mode", {
           header: "모드",
@@ -135,11 +155,7 @@ export function GuideTable({
           size: 72,
           minSize: 72,
           cell: ({ row: { original: guide } }) => {
-            let editorHref: string | undefined;
-            if (guide.draftEditorAvailable)
-              editorHref = adminLinks.guideEdit(guide.id, adminPaths.guideList);
-            else if (guide.editorAvailable && guide.song.slug)
-              editorHref = adminLinks.songLyrics(guide.song.slug, guide.id);
+            const editorHref = guideEditorHref(guide);
             return (
               canManage && (
                 <TableRowActions
