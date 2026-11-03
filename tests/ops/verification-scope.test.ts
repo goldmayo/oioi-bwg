@@ -194,7 +194,7 @@ test("Promotion 후보는 선행 생략에 전파되지 않으며 성공한 검�
     "utf8",
   );
   const job = workflow.split("\n  promotion-candidate:\n")[1].split("\n    runs-on:")[0];
-  expect(job).toContain("needs: verify");
+  expect(job).toContain("needs: [verify, promotion_plan, promotion_images]");
   const condition = job
     .split("if: >-\n")[1]
     .split("\n    needs:")[0]
@@ -213,13 +213,46 @@ test("Promotion 후보는 선행 생략에 전파되지 않으며 성공한 검�
       },
     },
   };
-  const run = (result = "success", cancelled = false) =>
-    runInNewContext(condition, {
+  const gate = workflow
+    .split("      - name: Require complete image builds\n")[1]
+    .split("        run: |\n")[1]
+    .split("      - uses:")[0];
+  const needs = {
+    verify: { result: "success" },
+    promotion_plan: {
+      result: "success",
+      outputs: { build_matrix: '[{"app":"web"},{"app":"console"}]' },
+    },
+    promotion_images: { result: "success" },
+  };
+  const run = (result = "success", cancelled = false) => {
+    const allowed = runInNewContext(condition, {
       github,
-      needs: { verify: { result } },
+      needs: { ...needs, verify: { result } },
       cancelled: () => cancelled,
     });
+    if (!allowed) return false;
+    return (
+      spawnSync("bash", ["-c", gate], {
+        env: {
+          PLAN_RESULT: needs.promotion_plan.result,
+          IMAGE_RESULT: needs.promotion_images.result,
+          BUILD_MATRIX: needs.promotion_plan.outputs.build_matrix,
+        },
+      }).status === 0
+    );
+  };
   expect(run()).toBe(true);
+  for (const result of ["failure", "cancelled", "skipped"]) {
+    needs.promotion_images.result = result;
+    expect(run()).toBe(false);
+  }
+  needs.promotion_plan.outputs.build_matrix = "[]";
+  expect(run()).toBe(true);
+  needs.promotion_plan.result = "failure";
+  expect(run()).toBe(false);
+  needs.promotion_plan.result = "success";
+  needs.promotion_images.result = "success";
   for (const result of ["failure", "cancelled", "skipped", ""]) expect(run(result)).toBe(false);
   expect(run("success", true)).toBe(false);
   github.event.pull_request.draft = true;

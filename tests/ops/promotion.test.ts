@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
 import { describe, expect, test, vi } from "vitest";
@@ -8,8 +8,11 @@ import {
   assertPromotion,
   assertSameTree,
   buildConfigHash,
+  collectImages,
   prepare,
   record,
+  recordImage,
+  resolveImages,
   recordDeployment,
   resolve as resolvePromotion,
   selectCandidateRun,
@@ -18,6 +21,7 @@ import {
 vi.mock("node:fs/promises", async (original) => ({
   ...(await original<typeof import("node:fs/promises")>()),
   writeFile: vi.fn(),
+  readdir: vi.fn(),
   readFile: vi.fn((await original<typeof import("node:fs/promises")>()).readFile),
 }));
 
@@ -70,6 +74,118 @@ const run = {
   status: "completed",
   conclusion: "success",
 };
+
+describe("parallel image results", () => {
+  const plan = (build: { web: boolean; console: boolean }) => ({
+    sourceSha,
+    buildConfigHash: candidate.buildConfigHash,
+    build,
+    baseline: { artifactId: 1, runId: 2, runAttempt: 1, releaseId: "f".repeat(64) },
+    images: Object.fromEntries(
+      Object.entries(candidate.images).map(([app, image]) => [
+        app,
+        { ...image, origin: build[app as keyof typeof build] ? "built" : "reused" },
+      ]),
+    ),
+  });
+  const results = (build: { web: boolean; console: boolean }) =>
+    Object.entries(candidate.images)
+      .filter(([app]) => build[app as keyof typeof build])
+      .map(([app, image]) => ({
+        app,
+        repository: image.repository,
+        digest: image.digest,
+        sourceSha,
+        sourceTree,
+        buildConfigHash: candidate.buildConfigHash,
+        runId: candidate.runId,
+        runAttempt: candidate.runAttempt,
+      }));
+  test.each([
+    { web: true, console: true },
+    { web: true, console: false },
+    { web: false, console: true },
+    { web: false, console: false },
+  ])("collects exactly the selected builds and keeps reused digests: %j", (build) => {
+    const images = collectImages(plan(build), results(build).reverse(), candidate);
+    expect(images.web.digest).toBe(candidate.images.web.digest);
+    expect(images.console.digest).toBe(candidate.images.console.digest);
+  });
+  test.each([
+    "sourceSha",
+    "sourceTree",
+    "buildConfigHash",
+    "runId",
+    "runAttempt",
+    "repository",
+    "digest",
+    "app",
+  ])("rejects changed %s before paired smoke", (key) => {
+    const build = { web: true, console: true };
+    const changed = results(build);
+    Object.assign(changed[0], { [key]: "wrong" });
+    expect(() => collectImages(plan(build), changed, candidate)).toThrow();
+  });
+  test("rejects missing, duplicate and extra artifacts", () => {
+    const build = { web: true, console: true };
+    const items = results(build);
+    for (const changed of [
+      items.slice(1),
+      [items[0], items[0]],
+      [...items, items[0]],
+      [{ ...items[0], extra: true }, items[1]],
+    ])
+      expect(() => collectImages(plan(build), changed, candidate)).toThrow();
+    expect(() =>
+      collectImages({ ...plan(build), sourceSha: mergedSha }, items, candidate),
+    ).toThrow();
+    expect(() =>
+      collectImages({ ...plan(build), buildConfigHash: "0".repeat(64) }, items, candidate),
+    ).toThrow();
+  });
+  test("image jobs record actual source/run and the collector binds both files before smoke", async () => {
+    const f = fixture();
+    f.livePr.state = "open";
+    f.github.rest.repos.getBranch.mockResolvedValue({ data: { commit: { sha: sourceSha } } });
+    const build = { web: true, console: true };
+    const items = results(build);
+    for (const [key, value] of Object.entries({
+      GITHUB_RUN_ID: "17",
+      GITHUB_RUN_ATTEMPT: "1",
+      BUILD_APP: "web",
+      IMAGE_DIGEST: candidate.images.web.digest,
+      BUILT_IMAGE_REPOSITORY: candidate.images.web.repository,
+      IMAGE_PLAN_FILE: "plan.json",
+      IMAGE_RESULTS_DIR: "images",
+      IMAGE_REPOSITORY: candidate.images.web.repository,
+      CONSOLE_IMAGE_REPOSITORY: candidate.images.console.repository,
+    }))
+      vi.stubEnv(key, value);
+    vi.mocked(readdir).mockResolvedValue(["web.json", "console.json"] as never);
+    vi.mocked(readFile).mockImplementation(async (path) => {
+      if (path === "plan.json") return JSON.stringify(plan(build));
+      return JSON.stringify(items.find((item) => path === `images/${item.app}.json`));
+    });
+    try {
+      await recordImage(f);
+      const written = vi.mocked(writeFile).mock.calls.find(([file]) => file === "web.json");
+      expect(JSON.parse(String(written?.[1]))).toEqual(items[0]);
+      await resolveImages(f);
+      expect(f.core.setOutput).toHaveBeenCalledWith("web_digest", candidate.images.web.digest);
+      expect(f.core.setOutput).toHaveBeenCalledWith(
+        "console_digest",
+        candidate.images.console.digest,
+      );
+      vi.mocked(readdir).mockResolvedValue(["promotion-image-plan.json"] as never);
+      await expect(resolveImages(f)).rejects.toThrow("Unexpected image result artifact");
+    } finally {
+      vi.unstubAllEnvs();
+      vi.mocked(readFile).mockImplementation(
+        (await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises")).readFile,
+      );
+    }
+  });
+});
 
 function fixture() {
   const jobs = ["verify", "promotion", "promotion candidate"].map((name) => ({

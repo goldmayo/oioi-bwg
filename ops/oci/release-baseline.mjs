@@ -325,5 +325,13 @@ export async function selectImages({ github, context, core }) {
     core.setOutput(`${app}_digest`, plan.images[app].digest || "");
     core.setOutput(`${app}_build_source_sha`, plan.images[app].buildSourceSha);
   }
+  core.setOutput(
+    "build_matrix",
+    JSON.stringify(
+      ["web", "console"]
+        .filter((app) => plan.build[app])
+        .map((app) => ({ app, repository: plan.images[app].repository })),
+    ),
+  );
   await writeFile(process.env.IMAGE_PLAN_FILE, JSON.stringify(plan) + "\n");
 }

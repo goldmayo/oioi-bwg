@@ -665,8 +665,8 @@ jobs:
         run: node scripts/verification-scope.mjs --gate
 
   # One release verification; build only affected apps using proven paired deployment evidence.
-  promotion-candidate:
-    name: promotion candidate
+  promotion_plan:
+    name: promotion plan
     if: >-
       ${{ !cancelled() &&
       needs.verify.result == 'success' &&
@@ -676,22 +676,12 @@ jobs:
       github.event.pull_request.head.ref == 'migration_main' &&
       github.event.pull_request.head.repo.full_name == github.repository }}
     needs: verify
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: oci-development-image
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_DB: promotion_smoke
-          POSTGRES_HOST_AUTH_METHOD: trust
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d promotion_smoke"
-          --health-interval 5s --health-timeout 5s --health-retries 10
-    env:
+    outputs:
+      build_matrix: ${{ steps.selection.outputs.build_matrix }}
+    env: &promotion-env
       OCIR_REGISTRY: ${{ vars.OCIR_REGISTRY }}
       OCIR_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
       OCIR_REPOSITORY: ${{ vars.OCIR_REPOSITORY }}
@@ -764,68 +754,153 @@ jobs:
           script: |
             const reuse = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/release-baseline.mjs');
             await reuse.selectImages({ github, context, core });
+      - uses: actions/upload-artifact@v4
+        with:
+          name: promotion-image-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/promotion-image-plan.json
+          if-no-files-found: error
+          retention-days: 1
+
+  promotion_images:
+    name: promotion image (${{ matrix.app }})
+    if: ${{ !cancelled() && needs.promotion_plan.result == 'success' && needs.promotion_plan.outputs.build_matrix != '[]' }}
+    needs: promotion_plan
+    strategy:
+      fail-fast: true
+      max-parallel: 2
+      matrix:
+        include: ${{ fromJSON(needs.promotion_plan.outputs.build_matrix) }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    environment: oci-development-image
+    env: *promotion-env
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
       - uses: docker/setup-buildx-action@v3
         with:
-          cleanup: false # The GitHub-hosted VM is discarded after this job.
+          cleanup: false
       - name: Log in to OCIR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.OCIR_REGISTRY }}
           username: ${{ secrets.OCIR_USERNAME }}
           password: ${{ secrets.OCIR_AUTH_TOKEN }}
-      - name: Build and publish ARM64 Web candidate
+      - name: Build and publish ARM64 candidate
         id: image
-        if: steps.selection.outputs.build_web == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: apps/web/Dockerfile
+          file: apps/${{ matrix.app }}/Dockerfile
           target: runner
           platforms: linux/arm64
           push: true
-          tags: ${{ env.IMAGE_REPOSITORY }}:candidate-${{ steps.source.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          tags: ${{ matrix.repository }}:candidate-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           build-args: |
-            BUILD_APP=web
+            BUILD_APP=${{ matrix.app }}
             NEXT_PUBLIC_APP_ENV=production
-            NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID }}
+            NEXT_PUBLIC_GTM_ID=${{ matrix.app == 'web' && vars.NEXT_PUBLIC_GTM_ID || '' }}
             NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
             SENTRY_ORG=${{ env.SENTRY_ORG }}
             SENTRY_PROJECT=${{ env.SENTRY_PROJECT }}
-            SENTRY_RELEASE=oioi-bwg@${{ steps.source.outputs.source_sha }}
+            SENTRY_RELEASE=oioi-bwg@${{ github.event.pull_request.head.sha }}
             SENTRY_SOURCE_MAPS_ENABLED=true
           secrets: |
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           labels: |
-            org.opencontainers.image.revision=${{ steps.source.outputs.source_sha }}
+            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          cache-from: type=registry,ref=${{ env.IMAGE_REPOSITORY }}:buildcache-arm64-v1
-          cache-to: type=registry,ref=${{ env.IMAGE_REPOSITORY }}:buildcache-arm64-v1,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
-      - name: Build and publish ARM64 Console candidate
-        id: console-image
-        if: steps.selection.outputs.build_console == 'true'
-        uses: docker/build-push-action@v6
+          cache-from: type=registry,ref=${{ matrix.repository }}:buildcache-arm64-v1
+          cache-to: type=registry,ref=${{ matrix.repository }}:buildcache-arm64-v1,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
+      - name: Record image source and run identity
+        uses: actions/github-script@v7
+        env:
+          BUILD_APP: ${{ matrix.app }}
+          BUILT_IMAGE_REPOSITORY: ${{ matrix.repository }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
         with:
-          context: .
-          file: apps/console/Dockerfile
-          target: runner
-          platforms: linux/arm64
-          push: true
-          tags: ${{ env.CONSOLE_IMAGE_REPOSITORY }}:candidate-${{ steps.source.outputs.source_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          build-args: |
-            BUILD_APP=console
-            NEXT_PUBLIC_APP_ENV=production
-            NEXT_PUBLIC_SENTRY_DSN=${{ env.NEXT_PUBLIC_SENTRY_DSN }}
-            SENTRY_ORG=${{ env.SENTRY_ORG }}
-            SENTRY_PROJECT=${{ env.SENTRY_PROJECT }}
-            SENTRY_RELEASE=oioi-bwg@${{ steps.source.outputs.source_sha }}
-            SENTRY_SOURCE_MAPS_ENABLED=true
-          secrets: |
-            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
-          labels: |
-            org.opencontainers.image.revision=${{ steps.source.outputs.source_sha }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          cache-from: type=registry,ref=${{ env.CONSOLE_IMAGE_REPOSITORY }}:buildcache-arm64-v1
-          cache-to: type=registry,ref=${{ env.CONSOLE_IMAGE_REPOSITORY }}:buildcache-arm64-v1,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
+          script: |
+            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
+            await promotion.recordImage({ github, context, core });
+      - uses: actions/upload-artifact@v4
+        with:
+          name: promotion-built-${{ matrix.app }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ matrix.app }}.json
+          if-no-files-found: error
+          retention-days: 1
+
+  promotion-candidate:
+    name: promotion candidate
+    if: >-
+      ${{ !cancelled() &&
+      needs.verify.result == 'success' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.base.ref == 'migration_develop' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.ref == 'migration_main' &&
+      github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: [verify, promotion_plan, promotion_images]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    environment: oci-development-image
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: promotion_smoke
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d promotion_smoke"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env: *promotion-env
+    steps:
+      - name: Require complete image builds
+        env:
+          PLAN_RESULT: ${{ needs.promotion_plan.result }}
+          IMAGE_RESULT: ${{ needs.promotion_images.result }}
+          BUILD_MATRIX: ${{ needs.promotion_plan.outputs.build_matrix }}
+        run: |
+          [[ "${PLAN_RESULT}" == 'success' &&
+             ( "${IMAGE_RESULT}" == 'success' ||
+             ( "${IMAGE_RESULT}" == 'skipped' && "${BUILD_MATRIX}" == '[]' ) ) ]]
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: promotion-image-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/promotion-plan
+      - run: mkdir -p "${{ runner.temp }}/promotion-images"
+      - uses: actions/download-artifact@v4
+        if: needs.promotion_plan.outputs.build_matrix != '[]'
+        with:
+          pattern: promotion-built-*-${{ github.run_id }}-${{ github.run_attempt }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/promotion-images
+      - name: Validate parallel image results and current source
+        id: images
+        uses: actions/github-script@v7
+        env:
+          IMAGE_PLAN_FILE: ${{ runner.temp }}/promotion-plan/promotion-image-plan.json
+          IMAGE_RESULTS_DIR: ${{ runner.temp }}/promotion-images
+        with:
+          script: |
+            const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
+            await promotion.resolveImages({ github, context, core });
       - name: Migrate isolated smoke database
         run: |
           pnpm db:migrate
@@ -836,10 +911,10 @@ jobs:
       - name: Pull and smoke the exact image pair together
         env:
           PAIR_SMOKE_FILE: ${{ runner.temp }}/promotion-pair-smoke.json
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.selection.outputs.web_digest }}
-          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest || steps.selection.outputs.console_digest }}
-          WEB_BUILD_SOURCE_SHA: ${{ steps.selection.outputs.web_build_source_sha }}
-          CONSOLE_BUILD_SOURCE_SHA: ${{ steps.selection.outputs.console_build_source_sha }}
+          IMAGE_DIGEST: ${{ steps.images.outputs.web_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.images.outputs.console_digest }}
+          WEB_BUILD_SOURCE_SHA: ${{ steps.images.outputs.web_build_source_sha }}
+          CONSOLE_BUILD_SOURCE_SHA: ${{ steps.images.outputs.console_build_source_sha }}
         run: bash ops/oci/smoke-paired-candidate.sh
       - uses: actions/upload-artifact@v4
         if: always()
@@ -850,17 +925,17 @@ jobs:
       - name: Record verified candidate and recheck head
         uses: actions/github-script@v7
         env:
-          IMAGE_PLAN_FILE: ${{ runner.temp }}/promotion-image-plan.json
+          IMAGE_PLAN_FILE: ${{ runner.temp }}/promotion-plan/promotion-image-plan.json
           PAIR_SMOKE_FILE: ${{ runner.temp }}/promotion-pair-smoke.json
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.selection.outputs.web_digest }}
-          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest || steps.selection.outputs.console_digest }}
+          IMAGE_DIGEST: ${{ steps.images.outputs.web_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.images.outputs.console_digest }}
         with:
           script: |
             const promotion = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/promotion.mjs');
             await promotion.record({ github, context, core });
       - uses: actions/upload-artifact@v4
         with:
-          name: promotion-${{ steps.source.outputs.source_sha }}-${{ github.run_attempt }}
+          name: promotion-${{ github.event.pull_request.head.sha }}-${{ github.run_attempt }}
           path: candidate.json
           if-no-files-found: error
           retention-days: 90
@@ -873,12 +948,12 @@ jobs:
         env:
           SLACK_DEPLOY_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK_URL }}
           PHASE: candidate
-          PUBLISH_RESULT: ${{ steps.image.outcome == 'skipped' && 'reused' || steps.image.outcome }}
-          CONSOLE_PUBLISH_RESULT: ${{ steps.console-image.outcome == 'skipped' && 'reused' || steps.console-image.outcome }}
+          PUBLISH_RESULT: ${{ steps.images.outputs.web_publish_result || needs.promotion_images.result }}
+          CONSOLE_PUBLISH_RESULT: ${{ steps.images.outputs.console_publish_result || needs.promotion_images.result }}
           CANDIDATE_RESULT: ${{ job.status }}
           SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest || steps.selection.outputs.web_digest }}
-          CONSOLE_IMAGE_DIGEST: ${{ steps.console-image.outputs.digest || steps.selection.outputs.console_digest }}
+          IMAGE_DIGEST: ${{ steps.images.outputs.web_digest }}
+          CONSOLE_IMAGE_DIGEST: ${{ steps.images.outputs.console_digest }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           python3 ops/oci/slack-deploy-payload.py > /tmp/slack-payload.json
