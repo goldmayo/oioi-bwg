@@ -7,6 +7,30 @@ import YAML from "yaml";
 import { createSentryBuildOptions } from "@oioi-bwg/config/sentry-build";
 
 describe("GitHub Actions OCI Run Command deployment", () => {
+  test("each private image consumer authenticates in its own runner before registry access", async () => {
+    const workflow = YAML.parse(await readFile(resolve(".github/workflows/verify.yml"), "utf8"));
+    type Step = { uses?: string; run?: string; if?: string; with?: Record<string, string> };
+    for (const job of ["promotion_images", "promotion-candidate"]) {
+      const steps: Step[] = workflow.jobs[job].steps;
+      const consumer = steps.findIndex(
+        (step) =>
+          step.uses === "docker/build-push-action@v6" ||
+          step.run?.includes("bash ops/oci/smoke-paired-candidate.sh"),
+      );
+      expect(consumer).toBeGreaterThanOrEqual(0);
+      const logins = steps
+        .slice(0, consumer)
+        .filter((step) => step.uses === "docker/login-action@v3");
+      expect(logins).toHaveLength(1);
+      expect(logins[0].if).toBeUndefined();
+      expect(logins[0].with).toEqual({
+        registry: "${{ env.OCIR_REGISTRY }}",
+        username: "${{ secrets.OCIR_USERNAME }}",
+        password: "${{ secrets.OCIR_AUTH_TOKEN }}",
+      });
+    }
+  });
+
   test("uses local verification builds and production VM candidates", async () => {
     const [workflow, ...dockerfiles] = await Promise.all([
       readFile(resolve(".github/workflows/verify.yml"), "utf8"),

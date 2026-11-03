@@ -908,6 +908,12 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres@127.0.0.1:5432/promotion_smoke
       - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: Log in to OCIR for paired smoke
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.OCIR_REGISTRY }}
+          username: ${{ secrets.OCIR_USERNAME }}
+          password: ${{ secrets.OCIR_AUTH_TOKEN }}
       - name: Pull and smoke the exact image pair together
         env:
           PAIR_SMOKE_FILE: ${{ runner.temp }}/promotion-pair-smoke.json
