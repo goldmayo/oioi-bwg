@@ -54,7 +54,7 @@ else:
         print('NotAuthorizedOrNotFound ${secret}', file=sys.stderr); sys.exit(1)
     print(json.dumps({'data':{'lifecycle-state':os.environ.get('MOCK_STATE','SUCCEEDED'),
         'content':{'exit-code':json.loads(os.environ.get('MOCK_EXIT','0')),
-        'message':'${secret}', 'text':'CONSOLE_MFA_ENCRYPTION_KEY=${secret}'}}}))
+        'message':'${secret}', 'text':os.environ.get('MOCK_TEXT','CONSOLE_MFA_ENCRYPTION_KEY=${secret}')}}}))
 `,
   );
   await writeFile(join(root, "sleep"), "#!/bin/sh\nexit 0\n");
@@ -66,6 +66,8 @@ else:
       PATH: `${root}:${process.env.PATH}`,
       TMPDIR: root,
       MOCK_ROOT: root,
+      GITHUB_STEP_SUMMARY: join(root, "summary"),
+      GITHUB_OUTPUT: join(root, "output"),
       OCI_COMPUTE_COMPARTMENT_OCID: "fixture-compartment",
       OCI_COMPUTE_INSTANCE_OCID: "fixture-instance",
       ...extra,
@@ -81,7 +83,12 @@ else:
     .catch(() => []);
   expect(`${result.stdout}${result.stderr}`).not.toContain(secret);
   expect((await readdir(root)).filter((name) => name.startsWith("tmp."))).toEqual([]);
-  return { result, calls };
+  const report = await readFile(join(root, "deployment-timing.json"), "utf8")
+    .then(JSON.parse)
+    .catch(() => null);
+  const summary = await readFile(join(root, "summary"), "utf8").catch(() => "");
+  expect(JSON.stringify(report) + summary).not.toContain(secret);
+  return { result, calls, report, summary };
 }
 
 afterEach(async () => {
@@ -89,6 +96,41 @@ afterEach(async () => {
 });
 
 describe("paired OCI Run Command transport", () => {
+  test("exports only allowlisted stage numbers while legacy output remains optional", async () => {
+    const { result, report, summary } = await execute(validArgs, {
+      MOCK_TEXT: `${secret}\nOIOI_DEPLOY_TIMING materialize_web 125\nOIOI_DEPLOY_TIMING total 250\n`,
+    });
+    expect(result.status).toBe(0);
+    expect(report.host).toEqual({ materialize_web: 125, total: 250 });
+    expect(report.commandCreateMs).toBeGreaterThanOrEqual(0);
+    expect(report.waitAndExecutionMs).toBeGreaterThanOrEqual(0);
+    expect(summary).toContain("| materialize_web | 125 |");
+    const legacy = await execute();
+    expect(legacy.result.status).toBe(0);
+    expect(legacy.report.host).toEqual({});
+  });
+  test("invalid timing never changes the deployment result or leaks raw output", async () => {
+    const { result, report } = await execute(validArgs, {
+      MOCK_EXIT: "20",
+      MOCK_STATE: "FAILED",
+      MOCK_TEXT: `OIOI_DEPLOY_TIMING total 10\nOIOI_DEPLOY_TIMING total ${secret}`,
+    });
+    expect(result.status).toBe(20);
+    expect(report.host).toEqual({});
+  });
+  test.each([0, 20, 21])(
+    "preserves exit %i when the timing report cannot be written",
+    async (code) => {
+      const { result, report } = await execute(validArgs, {
+        MOCK_EXIT: String(code),
+        MOCK_STATE: code ? "FAILED" : "SUCCEEDED",
+        RUNNER_TEMP: "/dev/null",
+      });
+      expect(result.status).toBe(code);
+      expect(result.stdout).toContain("Deployment timing unavailable");
+      expect(report).toBeNull();
+    },
+  );
   test.each([
     [],
     [pair[0]],
