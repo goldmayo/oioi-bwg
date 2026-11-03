@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": true,
+  "trailingComma": "all",
+  "singleQuote": false,
+  "printWidth": 100,
+  "tabWidth": 2,
+  "sortPackageJson": false,
+  "sortImports": false,
+  "sortTailwindcss": {},
+  "ignorePatterns": [
+    ".next",
+    ".agents",
+    ".vscode",
+    "coverage",
+    "drizzle",
+    "node_modules",
+    "out",
+    "pnpm-lock.yaml",
+    "docs/**",
+    "CHANGELOG.md",
+    ".github/ISSUE_TEMPLATE/**",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    "apps/console/public/notification-worker.js",
+    "**/*.toml",
+    "**/*.pcss",
+    "**/*.postcss"
+  ]
+}

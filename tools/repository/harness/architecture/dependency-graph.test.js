@@ -23,7 +23,7 @@ const owners = [
       : "@oioi-bwg/" + directory.split("/")[1],
   exports: {
     "./public": directory === "packages/config" ? "./public.ts" : "./src/public.ts",
-    ...(directory === "tools/repository" ? { "./eslint": "./eslint.config.ts" } : {}),
+    ...(directory === "tools/repository" ? { "./oxlint": "./oxlint.config.ts" } : {}),
   },
   dependencies: Object.fromEntries(
     ["server", "contracts", "config"].map((name) => ["@oioi-bwg/" + name, "workspace:*"]),
@@ -43,27 +43,27 @@ test("root orchestration cannot declare internal workspace dependencies", () => 
 const cases = [
   ["root public core", "scripts/probe.ts", 'export * from "@oioi-bwg/server/public";', true],
   [
-    "registered root tooling",
-    "eslint.config.ts",
-    'export * from "./tools/repository/eslint.config.ts";',
+    "registered root native lint tooling",
+    "oxlint.config.ts",
+    'export * from "./tools/repository/oxlint.config.ts";',
     false,
   ],
   [
-    "private root tooling",
-    "eslint.config.ts",
+    "private root native lint tooling",
+    "oxlint.config.ts",
     'export * from "./tools/repository/private.ts";',
     true,
   ],
   [
-    "bare root tooling",
-    "eslint.config.ts",
-    'export * from "@oioi-bwg/repository-tools/eslint";',
+    "bare root native lint tooling",
+    "oxlint.config.ts",
+    'export * from "@oioi-bwg/repository-tools/oxlint";',
     true,
   ],
   [
-    "unregistered root tooling",
+    "unregistered root native lint tooling",
     "tests/ops/probe.test.ts",
-    'export * from "../../tools/repository/eslint.config.ts";',
+    'export * from "../../tools/repository/oxlint.config.ts";',
     true,
   ],
   [
@@ -234,7 +234,7 @@ test("resolved graphs enforce boundaries in source, config, tests and package ex
             include: ["src"],
           }),
         );
-        write("tools/repository/eslint.config.ts", "export const value = 1;");
+        write("tools/repository/oxlint.config.ts", "export const value = 1;");
         write("tools/repository/private.ts", "export const value = 1;");
         write("apps/web/src/server/http/api-response.ts", "export const value = 1;");
         write(filename, source);

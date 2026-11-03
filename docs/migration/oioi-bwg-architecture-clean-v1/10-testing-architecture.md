@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.24"
+version: "1.26"
 status: "active"
 authority: "architecture"
 updated_at: "2026-11-03"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.24
+# oioi-bwg Testing Architecture v1.26
 
 ## 1. 목적
 
@@ -320,7 +320,7 @@ fixture가 반복될 때 작은 builder를 사용할 수 있다.
   Turbo affected 프로젝트의 type-check/lint와 Vitest `--changed` 관련 테스트를 실행한다.
   삭제 파일도 영향 판정에 포함하며 포맷 검사만 실제 존재하는 변경 파일에 한정한다.
 - TypeScript는 영향받는 프로젝트의 전체 타입 관계를 증분 캐시로 검사한다. 개별 변경 파일만
-  `tsc`에 전달하지 않는다. ESLint content cache와 Turbo의 입력별 task cache를 사용한다.
+  `tsc`에 전달하지 않는다. Oxlint를 포함한 Turbo의 입력별 task cache를 사용한다.
 - 공용 설정·manifest·저장소 도구 변경이면 repo 검사도 포함한다. 앱 소스 변경의 의존성 검사는
   선택된 workspace의 source/config graph를 대상으로 하고, 공용 입력 변경은 전체 graph를 검사한다.
 - 2026-11-03 보완: 단순 Root 운영 스크립트 수정은 변경 파일 lint·관련 ops 테스트와 필요한 Root 타입
@@ -338,9 +338,30 @@ fixture가 반복될 때 작은 builder를 사용할 수 있다.
   명시적 로컬 전체 재현은 `pnpm verify:full`이다. CI의 전체 검사 entry에는 `--changed`를 넣지 않는다.
 - 로컬 범위 판정 실패는 오류로 중단한다. 전체 검증을 암묵적으로 시작하지 않는다.
 
-CI cache는 검증 범위를 줄이는 권한이 아니다. TypeScript·ESLint의 입력 검증과 Turbo task hash가
+CI cache는 검증 범위를 줄이는 권한이 아니다. TypeScript·Oxlint의 입력 검증과 Turbo task hash가
 일치하는 결과만 재사용한다. 관련 테스트 옵션도 task hash에 포함되므로 로컬 부분 실행을 CI 전체
 테스트 성공으로 재사용하지 않는다. 변경 프로젝트·명령은 `pnpm verify --dry-run`으로 확인한다.
+
+2026-11-03 품질 도구 전환: 현행 규칙을 전수 대조하고 실행기·파일 범위·severity·옵션을 명시해
+Oxlint 하나로 검사한다. 차이가 있는 규칙과 커스텀 정책은 원본 JS rule을 같은 실행기에서 재사용한다.
+ESLint 엔진을 별도 호출하거나 기존 설정을 병행하지 않는다. 원본 rule을 위한 라이브러리/peer는
+실행기와 구분한다. TypeScript의 기존 `tsc` 프로그램은 native typed lint로 대체하지 않는다.
+
+커밋은 staged 파일만 공식 `oxlint --fix` → Oxfmt 순서로 처리한다. 2026-11-03 사용자 결정으로
+겹치는 수정이 후속 실행/저장을 요구할 수 있는 공식 동작을 수용한다. 기존 ESLint의 반복 수렴을
+재현하는 자체 스크립트·AST 변환·fix 충돌 해결은 추가하지 않는다. suggestion/dangerous fix도
+일괄 활성화하지 않는다. 검출·severity·권한 경계는 보존하며 commit 검사를 push로 미루지 않는다.
+
+공식 nearest nested config를 사용하고 공통 rules/preset만 공유한다. workspace별 최상위
+settings로 앱의 Next·React·alias 경계를 정한다. npm JS plugin은 공식 `jsPlugins` alias로 직접
+등록하고 로컬 project·Worker 및 core 원본 연결만 작은 plugin으로 유지한다. 설정을 가로채거나
+전체 rule ID를 번역하는 자체 registry는 만들지 않는다. 예외는 `oxlint-disable*`로 통일하고
+미사용 예외는 기존 `warn`으로 보고한다.
+
+Oxfmt는 기존 Prettier 대상과 ignore를 유지하고 TOML을 추가하지 않는다. import/export 정렬과
+package.json 재정렬은 맡기지 않는다. 로컬 변경 포맷과 전체 CI 포맷은 동일 설정을 사용한다.
+공용 native preset·workspace 설정은 실제 lint task와 로컬 영향 판정의 입력에 포함하고,
+포맷 설정 변경만으로 제품 build·DB·브라우저 검사를 로컬에서 확대하지 않는다.
 
 일반 `migration_main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 기존처럼 무거운 검사를 생략한다.
 scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·빈 diff·CI 판정 실패는 전체 검증이다.
@@ -355,7 +376,7 @@ packages의 앱 역참조·앱 간 참조·workspace 상대 경로 우회·미�
 실제 runtime 순환을 거절한다. type import로 끊기는 순환은 별도 경고로 드러낸다.
 저장소 도구의 앱 source 참조는 tools/repository의 foundation HTTP 통합 테스트가 사용하는
 Web response adapter 한 곳으로 제한한다. 이전 Root 테스트 경로나 인접 Tool 테스트에는 예외를 허용하지 않는다.
-FSD/계층 규칙은 ESLint·Steiger가 계속 소유한다. 정적 해석 불가능한 계산형 dynamic import는
+FSD/계층 규칙은 Oxlint의 프로젝트 규칙·Steiger가 계속 소유한다. 정적 해석 불가능한 계산형 dynamic import는
 별도 runtime/build 검증 대상이며 Turbo boundaries의 실험적 검사만으로 경계 보장을 대체하지 않는다.
 
 root의 내부 package 소비 검증은 tools/repository로 단계적으로 이관한다. workspace는
@@ -376,12 +397,12 @@ Web과 Console은 독립 FSD root에서 lint/type-check/unit/build를 실행한�
 환경 분리 때문에 테스트 수집·assertion·파일 격리를 제거하지 않는다.
 각 앱의 alias와 테스트 include는 다른 앱의 소스·테스트를 읽지 않도록 해당 workspace가 소유한다.
 Web·Console·server·contracts의 type-check는 소스와 자체 Node 설정 프로그램을 함께 실행한다.
-Next·ESLint·Vitest·Steiger 진입점은 해당 workspace의 tsconfig.config.json이 소유하며 앱 alias를
+Next·Oxlint·Vitest·Steiger 진입점은 해당 workspace의 tsconfig.config.json이 소유하며 앱 alias를
 Node 프로그램에 주입하지 않는다. 앱 Sentry runtime 진입점은 앱 소스 프로그램에서 검사한다.
 Relay·config는 기존 자체 프로그램을 유지한다. root는 root 설정·scripts·독립 ops 검사를 소유하고
 내부 package를 직접 소비하는 통합 검사는 Tool이 소유한다.
 root lint orchestration은 workspace lint와 repo lint를 나눠 실행하며 repo lint는 apps/packages/tools를
-재검사하지 않는다. root ESLint의 설정 조합은 staged 파일과 harness의 cwd별 정책 대조를 위해 유지한다.
+재검사하지 않는다. root와 workspace의 Oxlint 설정은 공통 preset을 사용하고 각 파일의 owner 설정을 자동 선택한다.
 양 앱의 FSD 정책·해석 graph·검사 소속 회귀는 repository-tools의 architecture harness가 소유한다.
 Root test:harness와 lint:deps는 Tool의 자체 명령을 통해 같은 검증을 실행한다.
 기존 dependency CLI 파일도 등록된 Tool 공개 entry를 import하는 호환 진입점으로 유지한다.

@@ -19,9 +19,10 @@ export const guideCreationFormSchema = z
     sourceUrl: optionalText,
     description: optionalText,
   })
-  .transform(
-    (values): z.input<typeof createAdminCheerGuideSchema> => ({ ...values, guideVideoUrl: null }),
-  )
+  .transform((values): z.input<typeof createAdminCheerGuideSchema> => ({
+    ...values,
+    guideVideoUrl: null,
+  }))
   .pipe(createAdminCheerGuideSchema);
 
 export type GuideCreationInput = z.input<typeof guideCreationFormSchema>;

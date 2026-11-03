@@ -26,7 +26,16 @@ test("Console UI 변경은 관련 프로젝트·테스트·경계만 검사한�
   expect(plan.flat()).not.toContain("test:harness");
   expect(plan.flat()).not.toContain("test:ops");
   expect(plan.flat()).not.toContain("build");
-  expect(plan.at(-1)).toEqual(["exec", "prettier", "--check", "--ignore-unknown", "--", files[0]]);
+  expect(plan.at(-1)).toEqual([
+    "exec",
+    "oxfmt",
+    "--check",
+    "--no-error-on-unmatched-pattern",
+    "-c",
+    ".oxfmtrc.json",
+    "--",
+    files[0],
+  ]);
 });
 
 test("문서·Root 스크립트가 함께 바뀌어도 Console과 그 consumer만 선택한다", () => {
@@ -48,6 +57,73 @@ test("공용 설정 변경은 저장소 검사도 선택하되 운영 테스트�
   expect(plan).toContainEqual(["test:ops", `--changed=${base}`, "--passWithNoTests"]);
 });
 
+test.each([
+  ".oxlintrc.json",
+  ".oxlintrc.jsonc",
+  "oxlint.config.ts",
+  "oxlint.config.mts",
+  "tools/repository/oxlint.config.ts",
+])("Root·Tool lint 설정 %s 변경은 저장소 소유 검사만 실행한다", (file) => {
+  expect(workspaceFilters([file], packages)).toEqual([]);
+  const plan = localVerificationPlan({ files: [file], base, packages });
+  expect(plan).toContainEqual(["type-check:repo"]);
+  expect(plan).toContainEqual(["lint:repo"]);
+  expect(plan).toContainEqual(["lint:deps"]);
+  expect(plan.flat()).not.toContain("turbo");
+  expect(plan.flat()).not.toContain("build");
+});
+
+test("공용 native lint 정책 변경은 config consumer와 저장소 검사를 함께 선택한다", () => {
+  const file = "packages/config/oxlint/base.ts";
+  const affected = [...packages, { name: "@oioi-bwg/config", path: "packages/config" }];
+  const plan = localVerificationPlan({ files: [file], base, packages: affected });
+  expect(plan[0]).toContain("--filter=...@oioi-bwg/config");
+  expect(plan).toContainEqual(["type-check:repo"]);
+  expect(plan).toContainEqual(["lint:repo"]);
+  expect(plan).toContainEqual(["lint:deps"]);
+});
+
+test("workspace native 설정 변경은 해당 workspace와 consumer만 검사한다", () => {
+  const file = "apps/console/oxlint.config.ts";
+  const plan = localVerificationPlan({ files: [file], base, packages });
+  expect(plan[0]).toContain("--filter=...@oioi-bwg/console");
+  expect(plan[0]).toContain("--affected");
+  expect(plan.flat()).not.toContain("lint:repo");
+  expect(plan.flat()).not.toContain("build");
+});
+
+test("Root manifest 변경도 기존 affected 검사를 전체 lint로 바꾸지 않는다", () => {
+  const plan = localVerificationPlan({ files: ["package.json"], base, packages });
+  expect(plan[0]).toContain("type-check");
+  expect(plan[0]).toContain("lint");
+  expect(plan[0]).toContain("--affected");
+  expect(
+    plan.filter((command) => command.includes("lint") && !command.includes("--affected")),
+  ).toEqual([]);
+});
+
+test("포맷 지원 대상이 없는 운영 파일도 검증 오류로 처리하지 않는다", () => {
+  const file = "scripts/check-local.sh";
+  const plan = localVerificationPlan({ files: [file], base, packages });
+  const formatter = plan.at(-1);
+  expect(formatter).toContain("oxfmt");
+  expect(formatter).toContain("--check");
+  expect(formatter).toContain("--no-error-on-unmatched-pattern");
+  expect(formatter).toContain(file);
+});
+
+test("에디터 설정 변경은 제품과 저장소 전체 검사를 실행하지 않는다", () => {
+  const plan = localVerificationPlan({
+    files: [".vscode/settings.json", ".vscode/extensions.json"],
+    base,
+    packages,
+  });
+  expect(plan).toHaveLength(1);
+  expect(plan[0]).toContain("oxfmt");
+  expect(plan.flat()).not.toContain("turbo");
+  expect(plan.flat()).not.toContain("lint:repo");
+});
+
 test("삭제만 한 소스도 검사하며 포맷에는 존재하는 파일만 전달한다", () => {
   const plan = localVerificationPlan({
     files: ["apps/console/src/deleted.ts"],
@@ -57,7 +133,7 @@ test("삭제만 한 소스도 검사하며 포맷에는 존재하는 파일만 �
   });
   expect(plan[0]).toContain("type-check");
   expect(plan[1]).toContain("test");
-  expect(plan.flat()).not.toContain("prettier");
+  expect(plan.flat()).not.toContain("oxfmt");
 });
 
 test("문서·빈 변경에는 코드 검사를 실행하지 않는다", () => {
@@ -79,7 +155,17 @@ test("브라우저 smoke 선택자 변경은 루트 전체 타입·아키텍처 
   const file = "tests/ops/console-standalone-smoke.mjs";
   // Turbo가 root 변경을 모든 workspace로 반환해도 제품 검사로 확대하지 않는다.
   const plan = localVerificationPlan({ files: [file], base, packages });
-  expect(plan).toContainEqual(["exec", "eslint", "--", file]);
+  expect(plan).toContainEqual([
+    "exec",
+    "oxlint",
+    "--type-aware",
+    "--format=stylish",
+    "--report-unused-disable-directives-severity",
+    "warn",
+    "--",
+    file,
+  ]);
+  expect(plan.flat()).not.toContain("eslint");
   expect(plan).toContainEqual(["test:ops", `--changed=${base}`, "--passWithNoTests"]);
   for (const command of [
     "turbo",
@@ -119,12 +205,20 @@ test("로컬 증분과 CI 전체 검증 명령을 분리하고 캐시를 끄지 
     readFileSync(new URL("../../packages/config/typescript/base.json", import.meta.url), "utf8"),
   );
   expect(preset.compilerOptions.incremental).toBe(true);
+  const turbo = JSON.parse(readFileSync(new URL("../../turbo.json", import.meta.url), "utf8"));
+  expect(turbo.tasks.lint.outputs).toEqual([]);
+  expect(JSON.stringify(turbo)).not.toContain(".cache/eslint");
   for (const app of ["web", "console"]) {
     const scripts = JSON.parse(
       readFileSync(new URL(`../../apps/${app}/package.json`, import.meta.url), "utf8"),
     ).scripts;
     expect(scripts["type-check"]).not.toContain("incremental false");
-    expect(scripts.lint).toContain("--cache-strategy content");
+    expect(scripts["type-check"]).toContain("tsc --noEmit");
+    expect(scripts.lint).toContain("oxlint --type-aware");
+    expect(scripts.lint).not.toContain("--type-check");
+    expect(scripts.lint).not.toMatch(/\beslint\b/);
+    expect(scripts.lint).not.toContain("--config");
+    expect(scripts.lint).toContain("--report-unused-disable-directives-severity warn");
   }
 });
 

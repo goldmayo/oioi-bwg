@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "type-check": "tsc --noEmit",
-    "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint .",
+    "lint": "oxlint --type-aware --report-unused-disable-directives-severity warn --format=stylish .",
     "test": "vitest run --config vitest.config.ts"
   },
   "devDependencies": {
@@ -13,7 +13,7 @@
     "@types/node": "^20",
     "typescript": "^5",
     "vitest": "^4.1.2",
-    "eslint": "^9",
-    "jiti": "2.6.1"
+    "jiti": "2.6.1",
+    "oxlint": "1.90.0"
   }
 }

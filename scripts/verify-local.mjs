@@ -17,6 +17,10 @@ function isGlobalProductInput(file) {
   );
 }
 
+function isRootLintConfig(file) {
+  return /^(?:oxlint\.config\.[^/]+|\.oxlintrc\.jsonc?)$/.test(file);
+}
+
 export function workspaceFilters(files, packages) {
   if (files.some(isGlobalProductInput)) return [];
   return packages
@@ -31,12 +35,13 @@ export function localVerificationPlan({ files, existingFiles = files, base, pack
   const repo = changes.some(
     (file) =>
       isGlobalProductInput(file) ||
-      /^(?:packages\/config\/(?:typescript|eslint)|tools\/repository)\//.test(file),
+      isRootLintConfig(file) ||
+      /^(?:packages\/config\/(?:typescript|eslint|oxlint)|tools\/repository)\//.test(file),
   );
   const rootFiles = changes.filter((file) => !/^(?:apps|packages|tools)\//.test(file));
   const unknown = rootFiles.filter(
     (file) =>
-      !/^(?:(?:ops|scripts|tests|infra|\.github|\.husky)\/.*|[^/]+\.(?:json|ya?ml|[cm]?[jt]s)|\.(?:nvmrc|npmrc|gitignore|gitattributes|dockerignore|prettierignore|prettierrc)|LICENSE|\.env\.example)$/.test(
+      !/^(?:(?:ops|scripts|tests|infra|\.github|\.husky|\.vscode)\/.*|[^/]+\.(?:jsonc?|ya?ml|[cm]?[jt]s)|\.(?:nvmrc|npmrc|gitignore|gitattributes|dockerignore|prettierignore|prettierrc)|LICENSE|\.env\.example)$/.test(
         file,
       ),
   );
@@ -58,33 +63,31 @@ export function localVerificationPlan({ files, existingFiles = files, base, pack
       "변경 workspace가 Turbo 영향 범위에 없습니다. 기준과 workspace 등록을 확인해주세요.",
     );
   const product =
-    changes.some((file) => /^(?:apps|packages)\//.test(file)) ||
-    (repo && changes.some((file) => !file.startsWith("tools/repository/")));
-  if (product)
-    commands.push(
-      [
-        "exec",
-        "turbo",
-        "run",
-        "type-check",
-        "lint",
-        "--affected",
-        ...workspaceFilters(changes, packages),
-        "--filter=!@oioi-bwg/repository-tools",
-      ],
-      [
-        "exec",
-        "turbo",
-        "run",
-        "test",
-        "--affected",
-        ...workspaceFilters(changes, packages),
-        "--filter=!@oioi-bwg/repository-tools",
-        "--",
-        `--changed=${base}`,
-        "--passWithNoTests",
-      ],
-    );
+    changes.some(isGlobalProductInput) || changes.some((file) => /^(?:apps|packages)\//.test(file));
+  if (product) {
+    commands.push([
+      "exec",
+      "turbo",
+      "run",
+      "type-check",
+      "lint",
+      "--affected",
+      ...workspaceFilters(changes, packages),
+      "--filter=!@oioi-bwg/repository-tools",
+    ]);
+    commands.push([
+      "exec",
+      "turbo",
+      "run",
+      "test",
+      "--affected",
+      ...workspaceFilters(changes, packages),
+      "--filter=!@oioi-bwg/repository-tools",
+      "--",
+      `--changed=${base}`,
+      "--passWithNoTests",
+    ]);
+  }
   if (repo) commands.push(["type-check:repo"], ["lint:repo"], ["lint:deps"]);
   else if (product && packages.length)
     commands.push([
@@ -93,7 +96,17 @@ export function localVerificationPlan({ files, existingFiles = files, base, pack
       "lint:deps",
       ...packages.flatMap(({ path }) => ["--scope", path]),
     ]);
-  if (!repo && rootLint.length) commands.push(["exec", "eslint", "--", ...rootLint]);
+  if (!repo && rootLint.length)
+    commands.push([
+      "exec",
+      "oxlint",
+      "--type-aware",
+      "--format=stylish",
+      "--report-unused-disable-directives-severity",
+      "warn",
+      "--",
+      ...rootLint,
+    ]);
   if (!repo && changes.some((file) => /^scripts\/.*\.tsx?$/.test(file)))
     commands.push(["type-check:scripts"]);
   if (!repo && changes.some((file) => /^tests\/.*\.tsx?$/.test(file)))
@@ -106,7 +119,16 @@ export function localVerificationPlan({ files, existingFiles = files, base, pack
   if (harness.length) commands.push(["exec", "node", "--import", "tsx", "--test", ...harness]);
   const formatted = changes.filter((file) => existingFiles.includes(file));
   if (formatted.length)
-    commands.push(["exec", "prettier", "--check", "--ignore-unknown", "--", ...formatted]);
+    commands.push([
+      "exec",
+      "oxfmt",
+      "--check",
+      "--no-error-on-unmatched-pattern",
+      "-c",
+      ".oxfmtrc.json",
+      "--",
+      ...formatted,
+    ]);
   return commands;
 }
 

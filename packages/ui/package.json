@@ -8,7 +8,7 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",
-    "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint .",
+    "lint": "oxlint --type-aware --report-unused-disable-directives-severity warn --format=stylish .",
     "test": "vitest run"
   },
   "dependencies": {
@@ -29,12 +29,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^9",
     "jiti": "2.6.1",
     "jsdom": "^29.0.1",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "typescript": "^5",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "oxlint": "1.90.0"
   }
 }
