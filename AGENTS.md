@@ -279,6 +279,8 @@ pnpm verify --dry-run
 
 Draft PR은 로컬과 같은 영향 범위 검증만 수행하며 결과 이름은 `partial verify`로 구분한다.
 Ready 전환 이후 `migration_main` 병합 전에는 최종 PR 커밋의 CI 전체 `verify`를 통과해야 한다.
+파일 tree가 같은 배포선 이력 연결은 Runbook §21의 부모·배포 source·성공한 main 검증 근거를
+대조하는 `history` 예외를 허용한다. 코드 변경이나 불완전한 근거를 이 예외로 통과시키지 않는다.
 Promotion은 동일 source/tree의 main 병합 전 성공을 확인해 재사용하고 배포 이미지·설정 검증만 수행한다.
 검증 근거가 없거나 불일치하면 중단하며 전체 검증을 암묵적으로 재실행하지 않는다.
 로컬에서 CI 전체 검증을 반복하지 않는다. 명시적 전체 재현 명령은 `pnpm verify:full`이며,

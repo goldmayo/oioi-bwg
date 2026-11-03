@@ -16,6 +16,7 @@ import { expect, test, vi } from "vitest";
 
 import {
   docsOnly,
+  historyOnly,
   markdownOnly,
   verificationJobs,
   verificationPassed,
@@ -90,20 +91,91 @@ test.each([
   ).toBe(mode);
 });
 
-test.each(["partial", "promotion"])(
+test.each(["partial", "promotion", "history"])(
   "%s requires exact selected checks and rejects heavy checks being silently lost",
   (mode) => {
     const needs: Record<string, { result: string; outputs?: Record<string, string> }> =
       Object.fromEntries(verificationJobs.map((name) => [name, { result: "skipped" }]));
     needs.changes = { result: "success", outputs: { docs_only: "false", mode } };
     needs.partial = { result: mode === "partial" ? "success" : "skipped" };
-    needs.source_verification = { result: mode === "promotion" ? "success" : "skipped" };
+    needs.source_verification = { result: mode === "partial" ? "skipped" : "success" };
     expect(verificationPassed(needs)).toBe(true);
     const selected = mode === "partial" ? "partial" : "source_verification";
     needs[selected] = { result: "failure" };
     expect(verificationPassed(needs)).toBe(false);
   },
 );
+
+test("이력 연결 재사용은 Draft 부분 검증과 일반 코드 변경의 전체 검증을 대체하지 않는다", () => {
+  for (const [draft, expected] of [
+    [true, "partial"],
+    [false, "history"],
+  ] as const)
+    expect(
+      verificationMode({
+        eventName: "pull_request",
+        event: { pull_request: { base: { ref: "migration_main" }, draft } },
+        historyOnlyChange: true,
+      }),
+    ).toBe(expected);
+  expect(
+    verificationMode({
+      eventName: "pull_request",
+      event: { pull_request: { base: { ref: "migration_main" }, draft: false } },
+      historyOnlyChange: false,
+    }),
+  ).toBe("full");
+});
+
+test("실제 Git에서 같은 tree·현재 base를 첫 부모로 한 이력 연결만 분리한다", () => {
+  const root = mkdtempSync(join(tmpdir(), "history-scope-"));
+  const env = {
+    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))),
+    GIT_CONFIG_GLOBAL: "/dev/null",
+    GIT_CONFIG_NOSYSTEM: "1",
+  };
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { cwd: root, env, encoding: "utf8", stdio: "pipe" }).trim();
+  try {
+    git("init", "-q");
+    git("config", "user.name", "Fixture");
+    git("config", "user.email", "fixture@example.invalid");
+    writeFileSync(join(root, "app.ts"), "base");
+    git("add", ".");
+    git("commit", "-qm", "base");
+    const first = git("rev-parse", "HEAD");
+    git("checkout", "-qb", "deployed");
+    writeFileSync(join(root, "release.txt"), "old release");
+    git("add", ".");
+    git("commit", "-qm", "deployment");
+    const develop = git("rev-parse", "HEAD");
+    git("checkout", "-qb", "source", first);
+    writeFileSync(join(root, "app.ts"), "source");
+    git("add", ".");
+    git("commit", "-qm", "source");
+    const base = git("rev-parse", "HEAD");
+    const eligible = (head: string, parent = base) =>
+      historyOnly({
+        cwd: root,
+        eventName: "pull_request",
+        event: {
+          pull_request: { base: { ref: "migration_main", sha: parent }, head: { sha: head } },
+        },
+      });
+    expect(eligible(base)).toBe(false);
+    git("merge", "-s", "ours", "--no-ff", develop, "-m", "history");
+    const head = git("rev-parse", "HEAD");
+    expect(eligible(head)).toBe(true);
+    expect(eligible(head, first)).toBe(false);
+    writeFileSync(join(root, "app.ts"), "changed");
+    git("add", ".");
+    git("commit", "--amend", "--no-edit", "-q");
+    expect(eligible(git("rev-parse", "HEAD"))).toBe(false);
+    expect(eligible("f".repeat(40))).toBe(false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("Draft 결과는 병합 필수 verify라는 이름으로 게시하지 않고 Ready 전환에 전체 검증을 건다", () => {
   const workflow = readFileSync(

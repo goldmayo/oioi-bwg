@@ -14,19 +14,12 @@ import { getRequestAuthorization } from "@/server/auth/request-context";
 
 import { getQueryClient } from "@/shared/api/query/get-query-client";
 
-import { getEditorReturnTarget } from "../../../_lib/editor-return-target";
 import { AdminPageLocation } from "../../../_model/admin-location";
 
 import { GuideDraftEditor } from "./_ui/GuideDraftEditor";
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false, follow: false } };
-export default async function GuideEditPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ returnTo?: string | string[] }>;
-}) {
+export default async function GuideEditPage({ params }: { params: Promise<{ id: string }> }) {
   const context = await getAdminPageContext();
   const parsed = entityIdSchema.safeParse((await params).id);
   if (!parsed.success) notFound();
@@ -36,8 +29,6 @@ export default async function GuideEditPage({
       return rethrowAdminPageError(error, await getRequestAuthorization());
     },
   );
-  const { returnTo } = await searchParams;
-  const returnTarget = getEditorReturnTarget(returnTo, guide.song.id, "guideList");
   const client = getQueryClient();
   client.setQueryData(cheerGuideQueryKeys.editor(guide.id), guide);
   client.setQueryData(
@@ -49,12 +40,7 @@ export default async function GuideEditPage({
       <AdminPageLocation
         title={`${guide.song.title} · ${guide.mode === "CONCERT" ? "콘서트" : "페스티벌"} 편집`}
       />
-      <GuideDraftEditor
-        key={guide.id}
-        id={guide.id}
-        accountId={context.user!.id}
-        returnTo={returnTarget}
-      />
+      <GuideDraftEditor key={guide.id} id={guide.id} accountId={context.user!.id} />
     </HydrationBoundary>
   );
 }

@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.26"
+version: "1.27"
 status: "active"
 authority: "architecture"
 updated_at: "2026-11-03"
@@ -364,7 +364,11 @@ package.json 재정렬은 맡기지 않는다. 로컬 변경 포맷과 전체 CI
 포맷 설정 변경만으로 제품 build·DB·브라우저 검사를 로컬에서 확대하지 않는다.
 
 일반 `migration_main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 기존처럼 무거운 검사를 생략한다.
-scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·빈 diff·CI 판정 실패는 전체 검증이다.
+scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·일반 빈 diff·CI 판정 실패는 전체 검증이다.
+2026-11-03 배포 시간 개선 결정: 현재 main을 첫 부모로 연결하고 파일 tree가 같은 배포선 merge는
+`history` 모드에서 기존 main 검증의 source/tree·job·완료 시각과 배포 부모를 재검증한다.
+Draft는 여전히 부분 검증이며, Ready의 이 예외는 성공한 원래 전체 검증까지 연결되는 근거가 있어야 한다.
+새 코드나 build cache를 검증 성공으로 간주하지 않는다. 자세한 수용·거절 조건은 Runbook §21을 따른다.
 Promotion은 main 병합 당시의 동일 source/tree와 성공한 전체 job·verify를 확인해 코드 검증을 재사용한다.
 main의 일반 Markdown-only 예외는 실제 Git diff를 다시 판정해야 한다. 근거 누락·불일치·실패·부분 검증은
 재사용하지 않고 중단한다. Promotion에서는 코드 검사를 반복하지 않으며 배포 설정·최종 이미지 조합·digest·
