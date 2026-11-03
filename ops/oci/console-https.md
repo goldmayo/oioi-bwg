@@ -1,5 +1,10 @@
 # Console HTTPS 지속 공개 운영
 
+2026-11-04 브랜치명 전환: 현재 통합 브랜치는 `main`, 배포 브랜치는 `production`이다.
+아래 과거 절차의 migration_main/migration_develop 이름은 각각 이 역할에 대응하며 고정 SHA 관측은 보존한다.
+Resource Manager Git 소스는 `main`·작업 디렉터리 `infra/oci`로 갱신하고 기존 변수는 유지한다.
+브랜치 참조 수정만으로 Plan/Apply를 자동 실행하지 않는다.
+
 정책과 실행 범위는 [P06 계획의 회사 검증용 공개 개정](https://github.com/goldmayo/oioi-bwg/blob/e93ae610169e4ce0e9b7f1a75a9a02cbf179d46f/docs/migration/implementation/console-guide-editor/P06-PLAN.md#2026-10-21-회사-검증용-console-공개-유지-개정)이 소유한다.
 실제 실행 증거와 남은 인증 검증은 [P06-C 결과](../../docs/migration/implementation/console-guide-editor/P06-C-RESULT.md)에 기록한다.
 이 문서는 새 호스트에 즉시 실행하는 설치 스크립트가 아니다. 실제 파일·배포 상태를 대조한 운영 변경 절차다.

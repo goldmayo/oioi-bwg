@@ -37,8 +37,8 @@ const pr = {
   merged: true,
   merged_at: "2026-10-05T10:10:00Z",
   merge_commit_sha: mergedSha,
-  base: { ref: "migration_develop", sha: baseSha },
-  head: { ref: "migration_main", sha: sourceSha, repo: { full_name: repository } },
+  base: { ref: "production", sha: baseSha },
+  head: { ref: "main", sha: sourceSha, repo: { full_name: repository } },
 };
 const candidate = {
   prNumber: pr.number,
@@ -68,7 +68,7 @@ const run = {
   run_attempt: 1,
   event: "pull_request",
   head_sha: sourceSha,
-  head_branch: "migration_main",
+  head_branch: "main",
   head_repository: { full_name: repository },
   pull_requests: [{ number: pr.number }],
   created_at: "2026-10-05T10:00:00Z",
@@ -206,7 +206,7 @@ function fixture() {
       pulls: { get: vi.fn(async () => ({ data: livePr })) },
       repos: {
         getBranch: vi.fn(async ({ branch }: { branch: string }) => ({
-          data: { commit: { sha: branch === "migration_main" ? sourceSha : mergedSha } },
+          data: { commit: { sha: branch === "main" ? sourceSha : mergedSha } },
         })),
       },
       git: {
@@ -244,14 +244,14 @@ function openFixture() {
   const f = fixture();
   f.livePr.state = "open";
   f.github.rest.repos.getBranch.mockImplementation(async ({ branch }) => ({
-    data: { commit: { sha: branch === "migration_main" ? sourceSha : baseSha } },
+    data: { commit: { sha: branch === "main" ? sourceSha : baseSha } },
   }));
   return f;
 }
 
 describe("migration promotion identity", () => {
   test.each([
-    { ...pr, base: { ref: "migration_main" } },
+    { ...pr, base: { ref: "main" } },
     { ...pr, head: { ...pr.head, ref: "feature/P01" } },
     { ...pr, head: { ...pr.head, repo: { full_name: "fork/oioi-bwg" } } },
   ])("rejects ordinary feature or fork promotions", (value) => {
@@ -310,10 +310,10 @@ describe("migration promotion identity", () => {
       if (change === "pr-base") f.livePr.base.sha = mergedSha;
       if (change === "branch-base")
         f.github.rest.repos.getBranch.mockImplementation(async ({ branch }) => ({
-          data: { commit: { sha: branch === "migration_main" ? sourceSha : mergedSha } },
+          data: { commit: { sha: branch === "main" ? sourceSha : mergedSha } },
         }));
       if (change === "draft") Object.assign(f.livePr, { draft: true });
-      if (change === "retarget") f.livePr.base.ref = "migration_main";
+      if (change === "retarget") f.livePr.base.ref = "main";
       if (change === "merge-parents")
         f.github.rest.git.getCommit.mockResolvedValue({
           data: { tree: { sha: sourceTree }, parents: [{ sha: sourceSha }, { sha: baseSha }] },
@@ -556,10 +556,9 @@ describe("migration promotion identity", () => {
   test("keeps migration pushes out of verification and build out of deployment", async () => {
     const verify = await readFile(".github/workflows/verify.yml", "utf8");
     const deploy = await readFile(".github/workflows/deploy-promotion.yml", "utf8");
-    const push = verify.slice(verify.indexOf("  push:"), verify.indexOf("concurrency:"));
-    expect(push).toContain("- main");
-    expect(push).toContain("- develop");
-    expect(push).not.toContain("migration_");
+    expect(verify).not.toMatch(/^  push:/m);
+    expect(verify).toContain("  schedule:");
+    expect(verify).toContain("  workflow_dispatch:");
     expect(deploy).toContain("types: [closed]");
     expect(deploy).not.toContain("docker/build-push-action");
     expect(deploy).not.toContain("pnpm build");

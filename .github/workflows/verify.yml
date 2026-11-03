@@ -3,10 +3,9 @@ name: Verify
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
-  push:
-    branches:
-      - main
-      - develop
+  workflow_dispatch:
+  schedule:
+    - cron: "0 21 * * *"
 
 concurrency:
   group: verify-${{ github.workflow }}-${{ github.ref }}
@@ -36,7 +35,7 @@ jobs:
   partial:
     name: changed files and affected workspaces
     needs: changes
-    if: needs.changes.outputs.mode == 'partial'
+    if: contains(fromJSON('["partial", "impact"]'), needs.changes.outputs.mode)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -81,7 +80,7 @@ jobs:
         with:
           script: |
             const proof = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/source-verification.mjs');
-            const verify = context.payload.pull_request.base.ref === 'migration_main'
+            const verify = context.payload.pull_request.base.ref === 'main'
               ? proof.verifyHistory : proof.verifySource;
             await verify({ github, context, core });
 
@@ -323,7 +322,7 @@ jobs:
         if: >-
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
-          contains(fromJSON('["migration_main", "migration_develop"]'), github.base_ref)
+          contains(fromJSON('["main", "production"]'), github.base_ref)
         uses: actions/upload-artifact@v4
         with:
           name: ci-build-cache-${{ steps.cache-key.outputs.key }}
@@ -375,7 +374,7 @@ jobs:
 
   app_build:
     needs: changes
-    if: needs.changes.outputs.mode == 'full'
+    if: contains(fromJSON('["full", "impact"]'), needs.changes.outputs.mode)
     name: app build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -522,7 +521,7 @@ jobs:
         if: >-
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
-          contains(fromJSON('["migration_main", "migration_develop"]'), github.base_ref)
+          contains(fromJSON('["main", "production"]'), github.base_ref)
         uses: actions/upload-artifact@v4
         with:
           name: ci-build-cache-${{ steps.cache-key.outputs.key }}
@@ -671,9 +670,9 @@ jobs:
       ${{ !cancelled() &&
       needs.verify.result == 'success' &&
       github.event_name == 'pull_request' &&
-      github.event.pull_request.base.ref == 'migration_develop' &&
+      github.event.pull_request.base.ref == 'production' &&
       github.event.pull_request.draft == false &&
-      github.event.pull_request.head.ref == 'migration_main' &&
+      github.event.pull_request.head.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository }}
     needs: verify
     runs-on: ubuntu-latest
@@ -839,9 +838,9 @@ jobs:
       ${{ !cancelled() &&
       needs.verify.result == 'success' &&
       github.event_name == 'pull_request' &&
-      github.event.pull_request.base.ref == 'migration_develop' &&
+      github.event.pull_request.base.ref == 'production' &&
       github.event.pull_request.draft == false &&
-      github.event.pull_request.head.ref == 'migration_main' &&
+      github.event.pull_request.head.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository }}
     needs: [verify, promotion_plan, promotion_images]
     runs-on: ubuntu-24.04-arm
@@ -968,7 +967,7 @@ jobs:
 
   promotion:
     name: promotion
-    if: always() && github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'migration_develop'
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'production'
     needs: [verify, promotion-candidate]
     runs-on: ubuntu-latest
     steps:

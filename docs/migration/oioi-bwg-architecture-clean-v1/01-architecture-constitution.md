@@ -1,10 +1,10 @@
 ---
 title: "Architecture Constitution"
 document_id: "01"
-version: "2.23"
+version: "2.24"
 status: "active"
 authority: "constitution"
-updated_at: "2026-11-03"
+updated_at: "2026-11-04"
 depends_on:
   - "00"
 supersedes:
@@ -18,7 +18,7 @@ tags:
 
 ---
 
-# oioi-bwg Architecture Constitution v2.23
+# oioi-bwg Architecture Constitution v2.24
 
 ## 1. 목적
 
@@ -131,12 +131,12 @@ Browser
                                            `-> Drizzle -> PostgreSQL
 
 Infrastructure
-feature PR -> migration_main -> Promotion PR -> OCIR candidate -> migration_develop -> OCI Run Command -> OCI Compute
+feature PR -> main -> Promotion PR -> OCIR candidate -> production -> OCI Run Command -> OCI Compute
 Internet -> Caddy -> Next standalone -> PostgreSQL
 ```
 
-`migration_main`은 migration 통합선이고 `migration_develop`은 OCI Development promotion/deployment 선이다.
-일반 feature PR은 `migration_main`에서 검증하며 배포하지 않는다. Promotion PR은 현재 source head의
+`main`은 migration 통합선이고 `production`은 OCI Development promotion/deployment 선이다.
+일반 feature PR은 `main`에서 검증하며 배포하지 않는다. Promotion PR은 현재 source head의
 ARM64 candidate를 게시·검증하고, merge 후 같은 immutable digest만 OCI Run Command로 배포한다.
 GitHub는 최소 Run Command credential만 사용하며 runtime Vault secret/DB/SSH에는 접근하지 않는다.
 OCIR tag immutability를 가정하지 않는다. source/merge tree 일치, 기록·권한·rollback은 12를 따른다.

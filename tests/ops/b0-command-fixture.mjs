@@ -8,8 +8,8 @@ function fixture(variant) {
   const pr = {
     number: 1,
     state: "open",
-    head: { sha, ref: "migration_main", repo: { full_name: repository } },
-    base: { ref: "migration_develop", sha: base },
+    head: { sha, ref: "main", repo: { full_name: repository } },
+    base: { ref: "production", sha: base },
     labels: [{ name: `b0-host-${sha}` }],
   };
   if (variant === "stale-attestation") pr.labels = [{ name: `b0-host-${"c".repeat(40)}` }];
@@ -18,7 +18,7 @@ function fixture(variant) {
     status: "completed",
     conclusion: "failure",
     head_sha: sha,
-    head_branch: "migration_main",
+    head_branch: "main",
     head_repository: { full_name: repository },
     pull_requests: [{ number: 1 }],
     run_attempt: 1,
@@ -36,7 +36,7 @@ function fixture(variant) {
       pulls: { get: async () => ({ data: pr }) },
       repos: {
         getBranch: async ({ branch }) => ({
-          data: { commit: { sha: branch === "migration_main" ? sha : base } },
+          data: { commit: { sha: branch === "main" ? sha : base } },
         }),
       },
       git: {

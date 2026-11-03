@@ -1,4 +1,4 @@
-import { docsOnly, verificationJobNames } from "../../scripts/verification-scope.mjs";
+import { docsOnly, impactOnly, verificationJobNames } from "../../scripts/verification-scope.mjs";
 import { prepare } from "./promotion.mjs";
 
 const fullJobs = Object.values(verificationJobNames);
@@ -16,10 +16,10 @@ async function mainVerification({ github, context, head, tree }, depth = 0) {
     (item) =>
       item.merged_at &&
       item.merge_commit_sha === head &&
-      item.base.ref === "migration_main" &&
+      ["main", "migration_main"].includes(item.base.ref) &&
       item.head.repo?.full_name === repository,
   );
-  if (!pr) throw new Error("Source has no merged migration_main PR verification");
+  if (!pr) throw new Error("Source has no merged main PR verification");
   const { data } = await github.rest.actions.listWorkflowRuns({
     ...context.repo,
     workflow_id: "verify.yml",
@@ -58,7 +58,17 @@ async function mainVerification({ github, context, head, tree }, depth = 0) {
     !full &&
     fullJobs.every((name) => result(name) === "skipped") &&
     docsOnly({ eventName: "pull_request", event: { pull_request: pr }, fetchSource: true });
-  if (!full && !docs) {
+  const impact =
+    !full &&
+    !docs &&
+    impactOnly({ eventName: "pull_request", event: { pull_request: pr }, fetchSource: true }) &&
+    Object.entries(verificationJobNames).every(
+      ([key, name]) =>
+        result(name) === (["app_build", "build"].includes(key) ? "success" : "skipped"),
+    ) &&
+    result("changed files and affected workspaces") === "success" &&
+    result("reuse main verification") === "skipped";
+  if (!full && !docs && !impact) {
     if (
       !fullJobs.every((name) => result(name) === "skipped") ||
       result("reuse main verification") !== "success" ||
@@ -74,7 +84,7 @@ async function mainVerification({ github, context, head, tree }, depth = 0) {
 
 async function historyParents({ github, context, pr, tree, mergedSha }) {
   const repository = `${context.repo.owner}/${context.repo.repo}`;
-  if (pr.base.ref !== "migration_main" || pr.head.repo?.full_name !== repository)
+  if (!["main", "migration_main"].includes(pr.base.ref) || pr.head.repo?.full_name !== repository)
     throw new Error("Only same-repository main history is reusable");
   const { data: head } = await github.rest.git.getCommit({
     ...context.repo,
@@ -100,7 +110,7 @@ async function historyParents({ github, context, pr, tree, mergedSha }) {
       throw new Error("History merge did not preserve its reviewed parents");
   } else {
     const branches = await Promise.all(
-      ["migration_main", "migration_develop"].map((branch) =>
+      ["main", "production"].map((branch) =>
         github.rest.repos.getBranch({ ...context.repo, branch }),
       ),
     );
@@ -116,8 +126,8 @@ async function historyParents({ github, context, pr, tree, mergedSha }) {
     (item) =>
       item.merged_at &&
       item.merge_commit_sha === developSha &&
-      item.base.ref === "migration_develop" &&
-      item.head.ref === "migration_main" &&
+      ["production", "migration_develop"].includes(item.base.ref) &&
+      ["main", "migration_main"].includes(item.head.ref) &&
       item.head.repo?.full_name === repository,
   );
   if (!promotion) throw new Error("History parent has no normal Promotion");

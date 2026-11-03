@@ -16,6 +16,7 @@ import { expect, test, vi } from "vitest";
 
 import {
   docsOnly,
+  uiOnly,
   historyOnly,
   markdownOnly,
   verificationJobs,
@@ -76,11 +77,11 @@ test.each([
 });
 
 test.each([
-  ["migration_main", true, "partial"],
-  ["migration_main", false, "full"],
-  ["migration_main", undefined, "full"],
-  ["migration_develop", true, "promotion"],
-  ["migration_develop", false, "promotion"],
+  ["main", true, "partial"],
+  ["main", false, "full"],
+  ["main", undefined, "full"],
+  ["production", true, "promotion"],
+  ["production", false, "promotion"],
   ["other", true, "full"],
 ])("PR base=%s draft=%s selects %s", (ref, draft, mode) => {
   expect(
@@ -114,14 +115,14 @@ test("이력 연결 재사용은 Draft 부분 검증과 일반 코드 변경의 
     expect(
       verificationMode({
         eventName: "pull_request",
-        event: { pull_request: { base: { ref: "migration_main" }, draft } },
+        event: { pull_request: { base: { ref: "main" }, draft } },
         historyOnlyChange: true,
       }),
     ).toBe(expected);
   expect(
     verificationMode({
       eventName: "pull_request",
-      event: { pull_request: { base: { ref: "migration_main" }, draft: false } },
+      event: { pull_request: { base: { ref: "main" }, draft: false } },
       historyOnlyChange: false,
     }),
   ).toBe("full");
@@ -159,7 +160,7 @@ test("실제 Git에서 같은 tree·현재 base를 첫 부모로 한 이력 연�
         cwd: root,
         eventName: "pull_request",
         event: {
-          pull_request: { base: { ref: "migration_main", sha: parent }, head: { sha: head } },
+          pull_request: { base: { ref: "main", sha: parent }, head: { sha: head } },
         },
       });
     expect(eligible(base)).toBe(false);
@@ -207,8 +208,8 @@ test("Promotion 후보는 선행 생략에 전파되지 않으며 성공한 검�
     repository: "goldmayo/oioi-bwg",
     event: {
       pull_request: {
-        base: { ref: "migration_develop" },
-        head: { ref: "migration_main", repo: { full_name: "goldmayo/oioi-bwg" } },
+        base: { ref: "production" },
+        head: { ref: "main", repo: { full_name: "goldmayo/oioi-bwg" } },
         draft: false,
       },
     },
@@ -263,10 +264,10 @@ test("Promotion 후보는 선행 생략에 전파되지 않으며 성공한 검�
   github.event.pull_request.head.repo.full_name = github.repository;
   github.event.pull_request.head.ref = "feature/other";
   expect(run()).toBe(false);
-  github.event.pull_request.head.ref = "migration_main";
-  github.event.pull_request.base.ref = "migration_main";
+  github.event.pull_request.head.ref = "main";
+  github.event.pull_request.base.ref = "main";
   expect(run()).toBe(false);
-  github.event.pull_request.base.ref = "migration_develop";
+  github.event.pull_request.base.ref = "production";
   github.event_name = "push";
   expect(run()).toBe(false);
 });
@@ -323,8 +324,8 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
       readFileSync(new URL("../../scripts/verification-scope.mjs", import.meta.url), "utf8"),
     );
     const base = commit();
-    git("update-ref", "refs/remotes/origin/migration_main", base);
-    const scope = (baseRef = "migration_main", eventName = "pull_request", fetchSource = false) =>
+    git("update-ref", "refs/remotes/origin/main", base);
+    const scope = (baseRef = "main", eventName = "pull_request", fetchSource = false) =>
       docsOnly({
         cwd: root,
         eventName,
@@ -341,9 +342,9 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
     commit();
     expect(scope()).toBe(true);
     git("remote", "add", "origin", root);
-    expect(scope("migration_main", "pull_request", true)).toBe(true);
-    expect(scope("migration_develop")).toBe(false);
-    expect(scope("migration_main", "push")).toBe(false);
+    expect(scope("main", "pull_request", true)).toBe(true);
+    expect(scope("production")).toBe(false);
+    expect(scope("main", "push")).toBe(false);
     expect(docsOnly({ cwd: root, local: true })).toBe(true);
     const fakeBin = join(root, ".git/fixture-bin");
     mkdirSync(fakeBin);
@@ -356,7 +357,7 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
         timeout: 10_000,
       });
     expect(pushHook().status).toBe(0); // no pnpm command is executed
-    git("branch", "-m", "migration_main");
+    git("branch", "-m", "main");
     expect(docsOnly({ cwd: root, local: true })).toBe(false);
     git("branch", "-m", "feature/docs");
     vi.stubEnv("GIT_DIR", "/nonexistent/inherited-hook-dir");
@@ -393,11 +394,83 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
     write("page.mdx");
     commit();
     expect(scope()).toBe(false);
-    git("update-ref", "-d", "refs/remotes/origin/migration_main");
+    git("update-ref", "-d", "refs/remotes/origin/main");
     expect(docsOnly({ cwd: root, local: true })).toBe(false);
     expect(docsOnly({ cwd: root, eventName: "pull_request", event: {} })).toBe(false);
   } finally {
     vi.unstubAllEnvs();
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("UI scope rejects security, shared configuration, malformed diff and executable files", () => {
+  const raw = (path: string, mode = "100644") =>
+    `:${mode} ${mode} ${"a".repeat(40)} ${"b".repeat(40)} M\0${path}\0`;
+  for (const path of [
+    "apps/console/src/app/(admin)/admin/_ui/song-table.tsx",
+    "apps/web/src/shared/ui/button.tsx",
+    "apps/web/public/logo.png",
+  ])
+    expect(uiOnly(raw(path))).toBe(true);
+  for (const path of [
+    "apps/console/src/app/admin-login/_ui/form.tsx",
+    "apps/console/src/auth.ts",
+    "packages/ui/src/button.tsx",
+    "packages/server/src/db/schema.ts",
+    "pnpm-lock.yaml",
+    ".github/workflows/verify.yml",
+    "ops/waveform/src/main.rs",
+    "apps/web/src/app/page.tsx",
+  ])
+    expect(uiOnly(raw(path))).toBe(false);
+  expect(uiOnly(raw("apps/web/src/shared/ui/button.tsx", "100755"))).toBe(false);
+  expect(uiOnly(raw("apps/web/src/shared/ui/button.tsx", "120000"))).toBe(false);
+  expect(uiOnly("")).toBe(false);
+  expect(uiOnly(raw("docs/guide.md"))).toBe(false);
+  expect(uiOnly(raw("apps/web/src/shared/ui/button.tsx") + raw("packages/server/index.ts"))).toBe(
+    false,
+  );
+});
+
+test("Ready UI changes require incremental checks AND app build/browser evidence", () => {
+  expect(
+    verificationMode({
+      eventName: "pull_request",
+      event: { pull_request: { base: { ref: "main" }, draft: false } },
+      impactOnlyChange: true,
+    }),
+  ).toBe("impact");
+  expect(verificationMode({ eventName: "schedule", event: {}, impactOnlyChange: true })).toBe(
+    "full",
+  );
+  const needs: Record<string, { result: string; outputs?: Record<string, string> }> =
+    Object.fromEntries(
+      verificationJobs.map((name) => [
+        name,
+        { result: ["app_build", "build"].includes(name) ? "success" : "skipped" },
+      ]),
+    );
+  needs.changes = { result: "success", outputs: { docs_only: "false", mode: "impact" } };
+  needs.partial = { result: "success" };
+  needs.source_verification = { result: "skipped" };
+  expect(verificationPassed(needs)).toBe(true);
+  for (const key of ["partial", "app_build", "build"]) {
+    const changed = structuredClone(needs);
+    changed[key].result = "skipped";
+    expect(verificationPassed(changed)).toBe(false);
+  }
+});
+
+test("active deployment and cache workflows target the renamed branches", () => {
+  const deploy = readFileSync(
+    new URL("../../.github/workflows/deploy-promotion.yml", import.meta.url),
+    "utf8",
+  );
+  const cache = readFileSync(
+    new URL("../../.github/workflows/publish-build-cache.yml", import.meta.url),
+    "utf8",
+  );
+  expect(deploy).toContain("branches: [production]");
+  expect(deploy).toContain("github.event.pull_request.head.ref == 'main'");
+  expect(cache).toContain("branches: [main, production]");
 });

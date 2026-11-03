@@ -47,9 +47,12 @@ migration implementation plan/result
 
 ## 2. 브랜치와 변경 절차
 
+2026-11-04 브랜치명 전환: `migration_main` → `main`, `migration_develop` → `production`.
+기존 레거시 main 브랜치는 정리하고 원격 develop은 없는 상태다. 과거 배포 증거 안의 옛 이름은 읽기 호환으로 보존한다.
+
 - migration 구현·수정은 `feature/*` 브랜치에서 수행한다. 기존 열린 `migration_*` 작업 브랜치는 그대로 사용할 수 있다.
-- 새 단계 브랜치는 최신 `migration_main` merge head에서 만든다. 분기 전 local과
-  `origin/migration_main`의 기준 커밋을 확인해 stale local branch에서 분기하지 않는다.
+- 새 단계 브랜치는 최신 `main` merge head에서 만든다. 분기 전 local과
+  `origin/main`의 기준 커밋을 확인해 stale local branch에서 분기하지 않는다.
 - 작업 중에는 해당 단계 브랜치만 수정한다.
 - 단계 전체를 한 PR에 몰아넣지 않는다. 하나의 PR은 하나의 reviewable concern 또는 하나의
   migration checkpoint만 다룬다.
@@ -63,10 +66,10 @@ migration implementation plan/result
 - Git 커밋 제목은 Conventional Commit의 `type(scope): 한글 요약` 형식을 유지한다. 규격상
   `type`과 선택적 `scope`만 영어로 쓰고, 모든 개별 커밋의 제목 요약과 본문은 반드시 한글로 작성한다.
 - 사용자가 보류를 요청하지 않은 단계 완료 작업은 commit → push → PR 생성까지 진행하고 링크를 보고한다.
-- 일반 feature PR 대상은 `migration_main`이며, merge 방식은 squash and merge를 전제로 한다. 작업 브랜치의
+- 일반 feature PR 대상은 `main`이며, merge 방식은 squash and merge를 전제로 한다. 작업 브랜치의
   upstream은 PR 대상이 아니라 같은 이름의 원격 작업 브랜치로만 설정한다.
 - 2026-11-04 정책 전환의 `feature/promotion-without-history` PR 한 번만 기존 배포선 조상을 포함한
-  merge commit으로 통합한다. 최종 head의 전체 CI·부모·tree를 대조하고 `migration_main`의 허용
+  merge commit으로 통합한다. 최종 head의 전체 CI·부모·tree를 대조하고 `main`의 허용
   merge 방식은 이 PR 직후 squash-only로 복원한다. 일반 feature PR의 예외로 반복 사용하지 않는다.
 - squash 커밋 제목은 PR 제목, 본문은 PR 본문을 사용한다. 병합 전에 PR 제목이
   `type(scope): 한글 요약`인지, PR 본문이 최종 변경 사항과 검증 결과를 한글로 설명하는지 갱신한다.
@@ -75,7 +78,7 @@ migration implementation plan/result
 - 작업 중 PR은 Draft로 생성하고 의미 단위 커밋은 로컬에 쌓는다. 관련 검증·리뷰를 마친 변경을
   모아서 push하며 최종 커밋이 준비되면 Ready로 전환한다. Ready 뒤 기능 수정이 더 필요하면
   Draft로 되돌린 뒤 작업해 전체 CI가 수정마다 반복되지 않게 한다.
-- OCI Development 배포는 별도의 `migration_main → migration_develop` Promotion PR로만 진행한다.
+- OCI Development 배포는 별도의 `main → production` Promotion PR로만 진행한다.
   Promotion은 merge commit으로 source 조상을 보존하고 source/merge tree가 같은 결과에 검증한 동일
   candidate digest를 배포한다. 정상 배포를 위한 별도 이력 연결 PR은 만들지 않는다. 통합 merge만으로 배포하지 않는다.
   세부 검증·보호 설정은 active 배포 runbook §21을 따른다.
@@ -282,7 +285,9 @@ pnpm verify --dry-run
 문서 시안의 정적 자산은 로컬 코드 검증에서 제외한다. 상세 범위는 Testing Architecture §17을 따른다.
 
 Draft PR은 로컬과 같은 영향 범위 검증만 수행하며 결과 이름은 `partial verify`로 구분한다.
-Ready 전환 이후 `migration_main` 병합 전에는 최종 PR 커밋의 CI 전체 `verify`를 통과해야 한다.
+Ready 전환 이후 `main` 병합 전에는 최종 PR 커밋의 영향 범위에 맞는 필수 `verify`를 통과해야 한다.
+확인된 UI 변경은 증분 검사와 앱 build/browser smoke를 요구하고, 인증·DB·네이티브·공용 설정·미분류
+변경과 판정 실패는 전체 검증한다. 정기 전체 검증도 유지한다. 분류와 필수 job은 Runbook §21을 따른다.
 2026-11-04부터 정상 Promotion은 별도 이력 연결 없이 진행하며, 기존 `history` 근거의 조회·검증
 호환은 보존한다. 정책 전환 PR의 코드 변경은 `history` 예외로 통과시키지 않는다.
 Promotion은 동일 source/tree의 main 병합 전 성공을 확인해 재사용하고 배포 이미지·설정 검증만 수행한다.
@@ -292,15 +297,15 @@ CI의 개별 전체 검사 entry(type-check·harness·lint·unit·format·build)
 런타임 변경의 추가 로컬 build가 필요한 경우에도 영향 workspace만 선택한다.
 
 ```bash
-TURBO_SCM_BASE=origin/migration_main pnpm exec turbo run build --affected
+TURBO_SCM_BASE=origin/main pnpm exec turbo run build --affected
 ```
 
 - Vitest: 순수 함수, hook, 동기 component, service 단위 테스트
 - Playwright: 브라우저, 핵심 사용자 흐름, async Server Component와 UI regression
 - Oxlint/FSD harness: 코드 품질·import 방향과 파일 배치 검증
 - 문서만 변경하는 작업은 요청된 경우 lint/typecheck/test/build를 실행하지 않는다.
-- 일반 `migration_main` PR의 전체 diff가 일반 파일 `.md` 변경뿐이면 CI는 scope 판정과 필수 `verify`만 실행한다.
-  feature push hook은 문서 전용이면 생략하고 그 외에는 `pnpm verify`의 로컬 증분 검증을 사용한다. Ready PR의 코드 혼합·판정 실패는 전체 검증을 유지한다. Promotion은 source 검증 근거와 배포 후보를 검사한다.
+- 일반 `main` PR의 전체 diff가 일반 파일 `.md` 변경뿐이면 CI는 scope 판정과 필수 `verify`만 실행한다.
+  feature push hook은 문서 전용이면 생략하고 그 외에는 `pnpm verify`의 로컬 증분 검증을 사용한다. Ready PR은 확인된 UI 범위를 제외한 코드 혼합·판정 실패에서 전체 검증을 유지한다. Promotion은 source 검증 근거와 배포 후보를 검사한다.
 - 문서 작업의 push에서 Git hook이 검증을 자동 실행했다면, 별도 검증으로 계획한 것처럼 기록하지 않고 hook이 실행한 명령과 결과를 그대로 보고한다.
 - 테스트 도구나 번들러의 기본 동작을 추측하지 말고 현재 config와 공식 문서를 확인한다.
 

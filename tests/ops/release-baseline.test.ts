@@ -72,7 +72,7 @@ function fixture() {
     path: ".github/workflows/deploy-promotion.yml",
     event: "pull_request",
     head_sha: candidate.sourceSha,
-    head_branch: "migration_main",
+    head_branch: "main",
     head_repository: { full_name: "goldmayo/oioi-bwg" },
     status: "completed",
     conclusion: "success",
@@ -86,10 +86,10 @@ function fixture() {
     merge_commit_sha: receipt.mergedSha,
     head: {
       sha: candidate.sourceSha,
-      ref: "migration_main",
+      ref: "main",
       repo: { full_name: "goldmayo/oioi-bwg" },
     },
-    base: { ref: "migration_develop", sha: "f".repeat(40) },
+    base: { ref: "production", sha: "f".repeat(40) },
   };
   const checks = ["verify", "promotion", "promotion candidate"].map((name) => ({
     name,
@@ -402,4 +402,13 @@ describe("paired release evidence and conservative image selection", () => {
       "Deployment evidence unavailable; rebuild both images",
     );
   });
+});
+
+test("old migration branch names remain readable in immutable deployment evidence", async () => {
+  const f = fixture();
+  f.run.head_branch = "migration_main";
+  f.verification.head_branch = "migration_main";
+  f.pr.head.ref = "migration_main";
+  f.pr.base.ref = "migration_develop";
+  await expect(validateBaseline(f)).resolves.toEqual(proof);
 });

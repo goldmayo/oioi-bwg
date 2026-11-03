@@ -2,7 +2,7 @@ name: Publish build cache
 
 on:
   push:
-    branches: [migration_main, migration_develop]
+    branches: [main, production]
 
 permissions:
   contents: read

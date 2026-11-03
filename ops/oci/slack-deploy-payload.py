@@ -67,7 +67,7 @@ else:
 
 fields = [
     {"type": "mrkdwn", "text": "*환경*\nOCI Development"},
-    {"type": "mrkdwn", "text": "*브랜치*\n`migration_develop`"},
+    {"type": "mrkdwn", "text": "*브랜치*\n`production`"},
     {"type": "mrkdwn", "text": f"*소스 커밋*\n`{short_sha}`"},
     {"type": "mrkdwn", "text": f"*Web*\n`{short_digest(digest)}`"},
     {"type": "mrkdwn", "text": f"*Console*\n`{short_digest(os.environ.get('CONSOLE_IMAGE_DIGEST', ''))}`"},

@@ -30,8 +30,7 @@ export async function findMergedCache({
   const input = cacheInputs[kind];
   if (!input) throw new Error("Unknown verification cache");
   const branch = context.ref?.replace(/^refs\/heads\//, "");
-  if (context.eventName !== "push" || !["migration_main", "migration_develop"].includes(branch))
-    return;
+  if (context.eventName !== "push" || !["main", "production"].includes(branch)) return;
   tree ??= execFileSync("git", ["rev-parse", "HEAD^{tree}"], { encoding: "utf8" }).trim();
   const repository = `${context.repo.owner}/${context.repo.repo}`;
   const prs = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
