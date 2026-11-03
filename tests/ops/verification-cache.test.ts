@@ -1,10 +1,27 @@
 import { describe, expect, it, vi } from "vitest";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { findMergedCache } from "../../scripts/verification-cache.mjs";
+
+it("native 캐시의 저장·조회·복원은 같은 경로 버전을 사용한다", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/verify.yml", import.meta.url),
+    "utf8",
+  );
+  const publisher = readFileSync(
+    new URL("../../.github/workflows/publish-build-cache.yml", import.meta.url),
+    "utf8",
+  );
+  const native = workflow.split("\n  waveform:\n")[1].split("\n  postgres_integration:")[0];
+  const restorePath = native.match(/path: (.+)\n\s+key:/)?.[1];
+  expect(restorePath).toBeTruthy();
+  expect(publisher.match(/path: (.+)\n\s+key:/g)).toHaveLength(2);
+  for (const path of publisher.matchAll(/path: (.+)\n\s+key:/g)) expect(path[1]).toBe(restorePath);
+  expect(native).not.toContain("waveform-cache");
+});
 
 function fixture() {
   const key = "Linux-verify-amd64-v4-input";

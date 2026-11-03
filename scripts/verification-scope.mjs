@@ -13,14 +13,47 @@ export const verificationJobNames = {
 };
 export const verificationJobs = Object.keys(verificationJobNames);
 
-export function verificationMode({ eventName, event, markdownOnlyChange = false }) {
+export function verificationMode({
+  eventName,
+  event,
+  markdownOnlyChange = false,
+  historyOnlyChange = false,
+}) {
   if (markdownOnlyChange) return "docs";
   if (eventName === "pull_request") {
     if (event?.pull_request?.base?.ref === "migration_develop") return "promotion";
     if (event?.pull_request?.base?.ref === "migration_main" && event.pull_request.draft === true)
       return "partial";
+    if (event?.pull_request?.base?.ref === "migration_main" && historyOnlyChange) return "history";
   }
   return "full";
+}
+
+/** 파일 tree가 같고 현재 main을 첫 부모로 연결한 merge만 별도 근거 검증으로 보낸다. */
+/** @param {{ eventName?: string, event?: { pull_request?: { base?: { ref?: string, sha?: string }, head?: { sha?: string } } }, cwd?: string }} [options] */
+export function historyOnly({ eventName, event, cwd = process.cwd() } = {}) {
+  const pr = event?.pull_request;
+  if (eventName !== "pull_request" || pr?.base?.ref !== "migration_main") return false;
+  const { sha: head } = pr.head ?? {};
+  const { sha: base } = pr.base ?? {};
+  if (![head, base].every((value) => /^[0-9a-f]{40}$/.test(value ?? ""))) return false;
+  try {
+    const git = (...args) =>
+      execFileSync("git", args, {
+        cwd,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 10_000,
+      }).trim();
+    const parents = git("show", "-s", "--format=%P", head).split(" ");
+    return (
+      parents.length === 2 &&
+      parents[0] === base &&
+      git("rev-parse", `${head}^{tree}`) === git("rev-parse", `${base}^{tree}`)
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function markdownOnly(raw) {
@@ -96,13 +129,14 @@ export function verificationPassed(needs) {
   if (scope?.result !== "success" || !["true", "false"].includes(scope.outputs?.docs_only))
     return false;
   const mode = scope.outputs.mode;
-  if (!["full", "partial", "promotion", "docs"].includes(mode)) return false;
+  if (!["full", "partial", "promotion", "history", "docs"].includes(mode)) return false;
   if ((mode === "docs") !== (scope.outputs.docs_only === "true")) return false;
   const expected = mode === "full" ? "success" : "skipped";
   return (
     verificationJobs.every((name) => needs[name]?.result === expected) &&
     needs.partial?.result === (mode === "partial" ? "success" : "skipped") &&
-    needs.source_verification?.result === (mode === "promotion" ? "success" : "skipped")
+    needs.source_verification?.result ===
+      (["promotion", "history"].includes(mode) ? "success" : "skipped")
   );
 }
 
@@ -133,7 +167,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`docs_only=${markdownOnlyChange}`);
     if (process.argv[2] !== "--local")
       console.log(
-        `mode=${verificationMode({ eventName: process.env.GITHUB_EVENT_NAME, event, markdownOnlyChange })}`,
+        `mode=${verificationMode({ eventName: process.env.GITHUB_EVENT_NAME, event, markdownOnlyChange, historyOnlyChange: historyOnly({ eventName: process.env.GITHUB_EVENT_NAME, event }) })}`,
       );
   }
 }
