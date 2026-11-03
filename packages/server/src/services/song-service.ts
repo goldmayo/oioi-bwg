@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   type AdminSongList,
+  type AdminSongInformation,
   type CreateAdminSong,
   type LyricsData,
   lyricsDataSchema,
@@ -21,6 +22,7 @@ import { AppError } from "../errors/app-error";
 import { SongSlugConflictError, CheerGuideReferenceError } from "../repositories/repository-error";
 import {
   findAdminSongBySlug,
+  findAdminSongInformationById,
   findSongBySlug,
   findSongsWithAlbum,
   findVisibleSongs,
@@ -214,6 +216,54 @@ export async function listAdminSongs(ctx: RequestContext): Promise<AdminSongList
       hasOfficialCheer: song.hasOfficialCheer ?? false,
     })),
     nextCursor: null,
+  };
+}
+
+/** 비공개·legacy null slug도 포함하는 관리용 정보다. */
+export async function getAdminSongInformation(
+  ctx: RequestContext,
+  id: string,
+): Promise<AdminSongInformation> {
+  requireAdmin(ctx);
+  const row = await findAdminSongInformationById(getDatabase(), id);
+  if (!row) throw new AppError("SONG_NOT_FOUND");
+  return mapAdminSongInformation(row);
+}
+
+function mapAdminSongInformation(
+  row: NonNullable<Awaited<ReturnType<typeof findAdminSongInformationById>>>,
+): AdminSongInformation {
+  const legacy = row.cheerGuides.find((guide) => guide.legacyWriteTarget);
+  return {
+    id: row.id,
+    albumId: row.albumId,
+    album: { name: row.album.name },
+    title: row.title ?? "",
+    slug: row.slug,
+    youtubeId: row.youtubeId ?? "",
+    hasOfficialCheer: row.hasOfficialCheer ?? false,
+    isTitle: row.isTitle,
+    isVisible: row.isVisible,
+    order: row.order ?? 0,
+    updatedAt: row.updatedAt ?? "",
+    ...guideVersion({ guideId: legacy?.id, guideLockVersion: legacy?.lockVersion }),
+    hasLyrics: parseStoredLyrics(row.lyrics).some((line) =>
+      line.segments.some((segment) => segment.text.trim()),
+    ),
+    cheerGuides: row.cheerGuides.map(({ id, mode, currentPublication, hasHistory }) => {
+      if (!currentPublication)
+        return { id, mode, draftEditorAvailable: hasHistory === true, currentPublication: null };
+      if (!currentPublication.snapshot) throw new Error("Guide publication snapshot is missing");
+      return {
+        id,
+        mode,
+        draftEditorAvailable: hasHistory === true,
+        currentPublication: {
+          action: currentPublication.action,
+          sourceType: currentPublication.snapshot.sourceType,
+        },
+      };
+    }),
   };
 }
 

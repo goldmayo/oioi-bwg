@@ -289,7 +289,7 @@ required `promotion`은 실패하므로 probe용 Promotion PR을 병합하지 �
    빌드하지 않는다. `b0-publish-<source SHA>-<attempt>` artifact의 `b0-proof.json`만 전달한다.
 2. 검토한 소스의 `b0-host-probe.py`와 입력을 보호된 root 경로에 전달한다. 두 JSON 입력은
    root 소유·0600 일반 파일이어야 한다. 두 번째 JSON은 `{"auth":"<기존 Auth Secret OCID>",
-"mfa":"<기존 MFA Secret OCID>"}`이며 실제 ID는 비공개 기록에서 가져온다. Secret 값이 아니다.
+   "mfa":"<기존 MFA Secret OCID>"}`이며 실제 ID는 비공개 기록에서 가져온다. Secret 값이 아니다.
 
    ```bash
    sudo python3 -I /protected/path/b0-host-probe.py /protected/path/b0-proof.json /protected/path/console-secret-ids.json

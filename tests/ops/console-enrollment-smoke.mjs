@@ -51,7 +51,7 @@ export async function assertEnrollmentClosed(browser, origin) {
   }
   const page = await context.newPage();
   await page.goto(`${origin}/admin-login`);
-  await page.getByLabel("Email").waitFor();
+  await page.getByLabel("이메일").waitFor();
   assert.equal(await page.getByRole("button", { name: "인증기 등록", exact: true }).count(), 0);
   await context.close();
 }
@@ -162,12 +162,12 @@ export async function assertConsoleEnrollment(browser, origin, sql, artifacts) {
     if (request.method() === "POST") uiPosts.push(new URL(request.url()).pathname);
   });
   await page.goto(`${origin}/admin-login`);
-  await page.getByLabel("Email").waitFor();
+  await page.getByLabel("이메일").waitFor();
   await page.screenshot({ path: path.join(artifacts, "p05d-login.png") });
   async function register() {
     await page.getByRole("button", { name: "인증기 등록", exact: true }).click();
-    await page.getByLabel("Email").fill(uiEmail);
-    await page.getByLabel("Password").fill(password);
+    await page.getByLabel("이메일").fill(uiEmail);
+    await page.getByLabel("비밀번호").fill(password);
     await page.getByRole("button", { name: "QR 생성", exact: true }).click();
     const image = page.getByAltText("인증기 등록 QR 코드", { exact: true });
     await image.waitFor();
@@ -180,14 +180,14 @@ export async function assertConsoleEnrollment(browser, origin, sql, artifacts) {
   const abandoned = await register();
   await page.getByRole("button", { name: "취소", exact: true }).click();
   assert.equal(await page.getByAltText("인증기 등록 QR 코드").count(), 0);
-  assert.equal(await page.getByLabel("Password").inputValue(), "");
+  assert.equal(await page.getByLabel("비밀번호").inputValue(), "");
   const abandonedAgain = await register();
   assert.ok(abandoned.secret === abandonedAgain.secret, "retry reuses pending secret");
   await page.goto(`${origin}/`);
   await page.goBack();
-  await page.getByLabel("Email").waitFor();
+  await page.getByLabel("이메일").waitFor();
   assert.equal(await page.getByAltText("인증기 등록 QR 코드").count(), 0);
-  assert.equal(await page.getByLabel("Password").inputValue(), "");
+  assert.equal(await page.getByLabel("비밀번호").inputValue(), "");
 
   const current = await register();
   let usedOtp = generateSync({ secret: current.secret });
@@ -201,8 +201,8 @@ export async function assertConsoleEnrollment(browser, origin, sql, artifacts) {
   await page.screenshot({ path: path.join(artifacts, "p05d-enrolled.png") });
 
   async function login(token, success) {
-    await page.getByLabel("Email").fill(uiEmail);
-    await page.getByLabel("Password").fill(password);
+    await page.getByLabel("이메일").fill(uiEmail);
+    await page.getByLabel("비밀번호").fill(password);
     const count = uiPosts.length;
     await page.getByRole("button", { name: "다음", exact: true }).click();
     await page.getByLabel("인증 코드").waitFor();

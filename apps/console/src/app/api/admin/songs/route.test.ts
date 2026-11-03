@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { adminSongListSchema } from "@oioi-bwg/contracts/song";
 import { AppError } from "@oioi-bwg/server/errors/app-error";

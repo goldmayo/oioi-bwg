@@ -1,28 +1,14 @@
 "use client";
 
-import { Bell, Disc3, LayoutDashboard, Music } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
-import { AdminSidebarShell } from "./admin-sidebar-shell";
+import { ADMIN_NAV } from "../_config/admin-navigation";
 
-const ADMIN_NAV = [
-  { href: "/admin", label: "대시보드", icon: LayoutDashboard },
-  { href: "/admin/albums", label: "앨범 관리", icon: Disc3 },
-  { href: "/admin/songs", label: "곡 관리", icon: Music },
-  { href: "/admin/notifications", label: "알림 내역", icon: Bell },
-] as const;
-
-export default function AdminSidebar() {
-  const pathname = usePathname();
-  const navContent = (
+export default function AdminSidebar({ activeHref }: { activeHref?: string }) {
+  return (
     <nav aria-label="관리자 메뉴" className="flex flex-col gap-1">
       {ADMIN_NAV.map(({ href, label, icon: Icon }) => {
-        const active =
-          pathname === href ||
-          (href !== "/admin" && pathname.startsWith(`${href}/`)) ||
-          (href === "/admin/songs" && pathname.startsWith("/admin/edit/")) ||
-          (href === "/admin/notifications" && pathname.startsWith("/admin/waveform-jobs/"));
+        const active = href === activeHref;
         return (
           <Link
             key={href}
@@ -39,23 +25,5 @@ export default function AdminSidebar() {
         );
       })}
     </nav>
-  );
-
-  return (
-    <AdminSidebarShell compact={pathname.startsWith("/admin/edit/")}>
-      {navContent}
-    </AdminSidebarShell>
-  );
-}
-
-export function AdminWorkspace({ children }: { children: React.ReactNode }) {
-  const editor = usePathname().startsWith("/admin/edit/");
-  return (
-    <div
-      className={`bg-background text-foreground flex h-dvh min-w-0 flex-col overflow-hidden ${editor ? "" : "md:flex-row"}`}
-    >
-      <AdminSidebar />
-      <main className="min-h-0 min-w-0 flex-1 overflow-auto">{children}</main>
-    </div>
   );
 }

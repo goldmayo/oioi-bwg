@@ -1,3 +1,5 @@
+import { adminPaths, getAdminPageId } from "@/shared/config/admin-routes";
+
 /** 앱이 소유한 경로만 고정 template/operation으로 축약한다. 원문 경로는 반환하지 않는다. */
 const routes = {
   "/api/operator/songs/resolve": "operator-song-resolve-api",
@@ -15,14 +17,18 @@ const routes = {
   "/api/admin/notifications/[id]": "admin-notification-api",
   "/api/admin/notifications/[id]/read": "admin-notification-read-api",
   "/api/admin/notifications/read-all": "admin-notifications-read-all-api",
-  "/admin/waveform-jobs/[id]": "admin-waveform-job",
+  [adminPaths.waveformJob]: "admin-waveform-job",
   "/api/admin/waveform-jobs/[id]": "admin-waveform-job-api",
-  "/admin": "admin-home",
-  "/admin/notifications": "admin-notification-list",
+  [adminPaths.dashboard]: "admin-home",
+  [adminPaths.notificationList]: "admin-notification-list",
   "/admin-login": "admin-login",
-  "/admin/albums": "admin-album-list",
-  "/admin/songs": "admin-song-list",
-  "/admin/edit/[slug]": "admin-song-edit-load",
+  [adminPaths.albumList]: "admin-album-list",
+  [adminPaths.albumCreate]: "admin-album-create",
+  [adminPaths.albumEdit]: "admin-album-edit",
+  [adminPaths.songList]: "admin-song-list",
+  [adminPaths.songLyrics]: "admin-song-edit-load",
+  [adminPaths.guideEdit]: "admin-cheer-guide-edit-load",
+  "/api/admin/cheer-guides/[id]/draft": "admin-cheer-guide-draft-api",
   "/api/admin/albums": "admin-albums-api",
   "/api/admin/albums/[id]": "admin-album-api",
   "/api/admin/songs": "admin-songs-api",
@@ -38,12 +44,11 @@ export const SENTRY_OPERATIONS = ["album-image-upload", ...Object.values(routes)
 
 const dynamicRoutes: readonly [RegExp, keyof typeof routes][] = [
   [/^\/api\/operator\/songs\/[^/]+\/waveform$/, "/api/operator/songs/[id]/waveform"],
-  [/^\/admin\/waveform-jobs\/[^/]+$/, "/admin/waveform-jobs/[id]"],
   [/^\/api\/admin\/waveform-jobs\/[^/]+$/, "/api/admin/waveform-jobs/[id]"],
   [/^\/api\/admin\/push-installations\/[^/]+$/, "/api/admin/push-installations/[id]"],
   [/^\/api\/admin\/notifications\/[^/]+\/read$/, "/api/admin/notifications/[id]/read"],
   [/^\/api\/admin\/notifications\/[^/]+$/, "/api/admin/notifications/[id]"],
-  [/^\/admin\/edit\/[^/]+$/, "/admin/edit/[slug]"],
+  [/^\/api\/admin\/cheer-guides\/[^/]+\/draft$/, "/api/admin/cheer-guides/[id]/draft"],
   [/^\/api\/admin\/albums\/[^/]+$/, "/api/admin/albums/[id]"],
   [/^\/api\/admin\/songs\/[^/]+\/lyrics$/, "/api/admin/songs/[id]/lyrics"],
   [/^\/api\/admin\/songs\/[^/]+$/, "/api/admin/songs/[id]"],
@@ -62,9 +67,13 @@ export function getSentryRouteMetadata(value: unknown) {
     return undefined;
   }
   path = path.replace(/^\/\(admin\)(?=\/)/, "");
-  const template =
-    Object.keys(routes).find((candidate) => candidate === path) ??
-    dynamicRoutes.find(([pattern]) => pattern.test(path))?.[1];
+  const templates = Object.keys(routes);
+  let template = templates.find((candidate) => candidate === path);
+  if (!template) {
+    const pageId = getAdminPageId(path);
+    if (pageId && templates.includes(adminPaths[pageId])) template = adminPaths[pageId];
+  }
+  template ??= dynamicRoutes.find(([pattern]) => pattern.test(path))?.[1];
   if (!template) return undefined;
   const entry = Object.entries(routes).find(([candidate]) => candidate === template);
   return entry ? { template: entry[0], operation: entry[1] } : undefined;

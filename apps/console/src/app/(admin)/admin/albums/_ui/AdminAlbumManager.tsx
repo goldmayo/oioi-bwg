@@ -11,9 +11,8 @@ import {
 } from "@/features/auth";
 import { AlbumManagerClient } from "@/features/manage-album";
 
+import { cheerGuideQueryKeys } from "@/entities/cheer-guide";
 import { songQueryKeys } from "@/entities/song";
-
-import { uploadAlbumImageAction } from "../_lib/upload-album-image-action";
 
 /** 관리 권한과 재인증 안내를 조합하며 열린 폼의 초안을 보존한다. */
 export function AdminAlbumManager() {
@@ -24,6 +23,7 @@ export function AdminAlbumManager() {
   const recovery = useAdminReauthentication();
   const handleNameChangeOrDelete = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() });
+    void queryClient.invalidateQueries({ queryKey: cheerGuideQueryKeys.adminList() });
   }, [queryClient]);
 
   return (
@@ -31,8 +31,6 @@ export function AdminAlbumManager() {
       <AdminReauthenticationNotice recovery={recovery} />
       <AlbumManagerClient
         canManage={ability.can("manage", "all") && !recovery.requiresReauthentication}
-        submissionNotice={<AdminReauthenticationNotice recovery={recovery} />}
-        onUploadImage={uploadAlbumImageAction}
         onMutationError={recovery.handleMutationError}
         onNameChangeOrDelete={handleNameChangeOrDelete}
       />

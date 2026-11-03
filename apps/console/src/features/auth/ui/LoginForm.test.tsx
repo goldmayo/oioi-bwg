@@ -25,8 +25,10 @@ afterEach(() => {
 });
 
 function fillCredentials() {
-  fireEvent.change(screen.getByLabelText("Email"), { target: { value: "admin@p04.example.test" } });
-  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "fixture-password" } });
+  fireEvent.change(screen.getByLabelText("이메일"), {
+    target: { value: "admin@p04.example.test" },
+  });
+  fireEvent.change(screen.getByLabelText("비밀번호"), { target: { value: "fixture-password" } });
 }
 
 it("등록 confirmation은 저장 version을 사용하며 완료 후 QR과 입력을 버린다", async () => {
@@ -51,8 +53,8 @@ it("등록 confirmation은 저장 version을 사용하며 완료 후 QR과 입�
   expect(signIn).not.toHaveBeenCalled();
   expect(screen.queryByAltText("인증기 등록 QR 코드")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "로그인으로 돌아가기" }));
-  expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("");
-  expect((screen.getByLabelText("Password") as HTMLInputElement).value).toBe("");
+  expect((screen.getByLabelText("이메일") as HTMLInputElement).value).toBe("");
+  expect((screen.getByLabelText("비밀번호") as HTMLInputElement).value).toBe("");
 });
 
 it("이탈로 중단한 setup 응답이 늦게 도착해도 QR을 복원하지 않는다", async () => {
@@ -73,8 +75,8 @@ it("이탈로 중단한 setup 응답이 늦게 도착해도 QR을 복원하지 �
     finish({ qrDataUrl: "data:image/png;base64,late", version: 7 });
   });
   expect(screen.queryByAltText("인증기 등록 QR 코드")).toBeNull();
-  expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("");
-  expect((screen.getByLabelText("Password") as HTMLInputElement).value).toBe("");
+  expect((screen.getByLabelText("이메일") as HTMLInputElement).value).toBe("");
+  expect((screen.getByLabelText("비밀번호") as HTMLInputElement).value).toBe("");
 });
 
 it("로그인 제한 안내를 표시하고 제출한 OTP를 지운다", async () => {
@@ -99,19 +101,19 @@ it.each([false, true])(
     expect(screen.queryByRole("alert")?.textContent ?? null).toBe(
       initialRateLimited ? "요청 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요." : null,
     );
-    expect((screen.getByLabelText("Email") as HTMLInputElement).disabled).toBe(true);
-    expect((screen.getByLabelText("Password") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText("이메일") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText("비밀번호") as HTMLInputElement).disabled).toBe(true);
     expect((screen.getByRole("button", { name: "다음" }) as HTMLButtonElement).disabled).toBe(true);
     await act(async () => {
       root = hydrateRoot(container, <LoginForm initialRateLimited={initialRateLimited} />);
     });
     await waitFor(() =>
-      expect((screen.getByLabelText("Email") as HTMLInputElement).disabled).toBe(false),
+      expect((screen.getByLabelText("이메일") as HTMLInputElement).disabled).toBe(false),
     );
-    fireEvent.change(screen.getByLabelText("Email"), {
+    fireEvent.change(screen.getByLabelText("이메일"), {
       target: { value: "admin@p04.example.test" },
     });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "fixture-password" } });
+    fireEvent.change(screen.getByLabelText("비밀번호"), { target: { value: "fixture-password" } });
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     await screen.findByLabelText("인증 코드");
     expect(signIn).not.toHaveBeenCalled();
@@ -138,15 +140,15 @@ it("성공하면 입력과 오류를 버리고 관리 화면 이동 안내를 �
   await screen.findByRole("status");
   expect(replace).toHaveBeenCalledExactlyOnceWith("/admin");
   expect(screen.queryByRole("alert")).toBeNull();
-  expect(screen.queryByLabelText("Email")).toBeNull();
-  expect(screen.queryByLabelText("Password")).toBeNull();
+  expect(screen.queryByLabelText("이메일")).toBeNull();
+  expect(screen.queryByLabelText("비밀번호")).toBeNull();
   expect(screen.queryByLabelText("인증 코드")).toBeNull();
   expect(screen.queryByRole("button", { name: "다음" })).toBeNull();
 });
 
 it("입력 전 포커스와 단계 취소만으로 필드 오류를 표시하지 않는다", async () => {
   render(<LoginForm />);
-  for (const label of ["Email", "Password"]) {
+  for (const label of ["이메일", "비밀번호"]) {
     fireEvent.focus(screen.getByLabelText(label));
     fireEvent.blur(screen.getByLabelText(label));
     expect(screen.getByLabelText(label).getAttribute("aria-invalid")).toBe("false");
@@ -157,9 +159,9 @@ it("입력 전 포커스와 단계 취소만으로 필드 오류를 표시하지
   fireEvent.click(screen.getByRole("button", { name: "다음" }));
   await screen.findByLabelText("인증 코드");
   fireEvent.click(screen.getByRole("button", { name: "취소" }));
-  fireEvent.focus(screen.getByLabelText("Email"));
-  expect(screen.getByLabelText("Email").getAttribute("aria-invalid")).toBe("false");
-  expect(screen.getByLabelText("Password").getAttribute("aria-invalid")).toBe("false");
+  fireEvent.focus(screen.getByLabelText("이메일"));
+  expect(screen.getByLabelText("이메일").getAttribute("aria-invalid")).toBe("false");
+  expect(screen.getByLabelText("비밀번호").getAttribute("aria-invalid")).toBe("false");
 });
 
 it("인증 코드 입력 중에는 오류를 표시하지 않고 제출 후 검증한다", async () => {

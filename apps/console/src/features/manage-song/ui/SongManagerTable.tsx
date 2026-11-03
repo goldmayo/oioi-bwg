@@ -2,15 +2,27 @@
 
 import { createContext, useContext, useMemo } from "react";
 import { DataTable } from "@oioi-bwg/ui/data-table";
-import { Edit, FileMusic, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { FileMusic } from "lucide-react";
 
 import type { AdminSongSummary } from "@/entities/song";
 
+import { adminLinks } from "@/shared/config/admin-routes";
+import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
-import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
-import { createAppColumnHelper, dataTableComponents, useAppTable } from "@/shared/ui/data-table";
+import {
+  AppDataTable,
+  createAppColumnHelper,
+  dataTableComponents,
+  useAppTable,
+} from "@/shared/ui/data-table";
+import {
+  TableActionsHeader,
+  TableDeleteAction,
+  TableEditAction,
+  TableRowActions,
+} from "@/shared/ui/table-row-actions";
+import { VisibilityIcon } from "@/shared/ui/visibility-icon";
 
 interface Props {
   songs: AdminSongSummary[];
@@ -49,40 +61,43 @@ export function SongManagerTable({
 }: Props) {
   "use no memo";
   // AppTable은 내부 ref로 options를 읽는다. 자동 memo가 권한/DTO 변경 렌더를 건너뛰지 않게 한다.
+  const showOrder = useMediaQuery("(min-width: 768px)");
+  const showAlbum = useMediaQuery("(min-width: 1024px)");
+  const showSlug = useMediaQuery("(min-width: 1280px)");
   const columns = useMemo(
     () =>
       column.columns([
         column.display({
           id: "selection",
           header: "선택",
+          size: 64,
           enableSorting: false,
-          meta: { className: "w-14 text-center" },
+          enableResizing: false,
+          meta: { align: "center" },
           cell: ({ row: { original: song } }) => <SongSelection song={song} />,
         }),
         column.accessor("title", {
           header: "제목",
+          size: 280,
+          minSize: 160,
           meta: { className: "font-medium whitespace-normal" },
           cell: ({ row: { original: song } }) => (
-            <>
-              {song.slug === null ? (
-                song.title
-              ) : (
-                <Link
-                  href={`/admin/edit/${song.slug}`}
-                  className="text-foreground block break-words underline-offset-4 hover:underline"
-                  prefetch={false}
-                >
-                  {song.title}
-                </Link>
-              )}
-            </>
+            <a
+              href={adminLinks.song(song.id)}
+              title={song.title}
+              className="text-foreground block truncate underline-offset-4 hover:underline"
+            >
+              {song.title}
+            </a>
           ),
         }),
         column.accessor((row) => row.album.name, {
           id: "album",
           header: "앨범",
+          size: 270,
+          minSize: 160,
           meta: {
-            className: "hidden lg:table-cell text-muted-foreground text-sm w-40",
+            className: "text-muted-foreground text-sm",
           },
           cell: ({ row: { original: song } }) => (
             <span className="block truncate" title={song.album.name}>
@@ -92,8 +107,10 @@ export function SongManagerTable({
         }),
         column.accessor("slug", {
           header: "Slug",
+          size: 160,
+          minSize: 120,
           meta: {
-            className: "hidden xl:table-cell text-muted-foreground text-xs w-40",
+            className: "text-muted-foreground text-xs",
           },
           cell: ({ row: { original: song } }) => (
             <span className="block truncate" title={song.slug ?? undefined}>
@@ -104,67 +121,59 @@ export function SongManagerTable({
         column.display({
           id: "type",
           header: "구분",
-          meta: { className: "w-20 text-center" },
+          size: 96,
+          minSize: 80,
+          meta: { align: "center" },
           cell: ({ row: { original: song } }) => (
             <>
               <div className="flex flex-wrap justify-center gap-1">
                 {song.isTitle && (
-                  <Badge variant="default" className="px-1.5 py-0.5 text-xs">
+                  <Badge variant="rockation" className="px-1.5 py-0.5 text-xs">
                     타이틀
                   </Badge>
                 )}
                 {song.hasOfficialCheer && (
-                  <Badge variant="secondary" className="px-1.5 py-0.5 text-xs">
+                  <Badge variant="q" className="px-1.5 py-0.5 text-xs">
                     응원법
-                  </Badge>
-                )}
-                {!song.isVisible && (
-                  <Badge variant="outline" className="text-muted-foreground px-1.5 py-0.5 text-xs">
-                    숨김
                   </Badge>
                 )}
               </div>
             </>
           ),
         }),
+        column.accessor("isVisible", {
+          header: "표시",
+          size: 80,
+          minSize: 80,
+          meta: { align: "center" },
+          cell: ({ row }) => <VisibilityIcon visible={row.original.isVisible} />,
+          enableSorting: false,
+        }),
         column.accessor("order", {
           header: "순서",
+          size: 112,
+          minSize: 112,
           meta: {
-            className: "hidden w-16 text-center md:table-cell text-muted-foreground text-sm",
+            align: "center",
+            className: "text-muted-foreground text-sm",
           },
           cell: ({ row: { original: song } }) => <>{song.order}</>,
           sortFn: "basic",
         }),
         column.display({
           id: "actions",
-          header: "관리",
-          meta: { className: "w-24 text-right" },
-          cell: ({ row: { original: song } }) => (
-            <>
-              {canManage && (
-                <div className="flex justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onEdit(song)}
-                    title="수정"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                    onClick={() => onDelete(song)}
-                    title="삭제"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </>
-          ),
+          enableResizing: false,
+          header: () => <TableActionsHeader />,
+          size: 72,
+          minSize: 72,
+          meta: { align: "end", label: "관리", className: "pr-5!" },
+          cell: ({ row: { original: song } }) =>
+            canManage && (
+              <TableRowActions label={song.title}>
+                <TableEditAction onClick={() => onEdit(song)} />
+                <TableDeleteAction onClick={() => onDelete(song)} />
+              </TableRowActions>
+            ),
         }),
       ]),
     [canManage, onEdit, onDelete],
@@ -172,19 +181,18 @@ export function SongManagerTable({
   const table = useAppTable({
     columns,
     data: songs,
+    state: { columnVisibility: { order: showOrder, album: showAlbum, slug: showSlug } },
     getRowId: (row) => String(row.id),
-    initialState: { pagination: { pageIndex: 0, pageSize: 15 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
   });
   return (
     <SelectionContext value={{ selectedIds, onSelect, canManage }}>
       <DataTable.Root table={table} components={dataTableComponents}>
         <div className="min-w-0 space-y-4">
-          <DataTable.Table
-            caption="곡 관리 목록"
-            className="bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_td]:whitespace-normal [&_th]:px-3"
-          >
+          <AppDataTable caption="곡 관리 목록">
             <DataTable.Header />
             <DataTable.Body
+              padToPageSize
               emptyState={
                 <>
                   <FileMusic className="mx-auto mb-2 h-8 w-8 opacity-50" />
@@ -192,8 +200,8 @@ export function SongManagerTable({
                 </>
               }
             />
-          </DataTable.Table>
-          <DataTable.Pagination label="곡 목록 페이지" />
+          </AppDataTable>
+          <DataTable.Pagination label="곡 목록 페이지" pageSizes={[10, 20, 50]} />
         </div>
       </DataTable.Root>
     </SelectionContext>

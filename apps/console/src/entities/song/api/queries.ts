@@ -2,7 +2,7 @@
 
 import { queryOptions } from "@tanstack/react-query";
 
-import { getAdminSongs, getSongDetail } from "./api";
+import { getAdminSongInformation, getAdminSongs, getSongDetail } from "./api";
 import { songQueryKeys } from "./query-keys";
 
 export const songQueries = {
@@ -12,6 +12,12 @@ export const songQueries = {
       queryFn: ({ signal }) => getSongDetail(slug, signal),
     }),
 
+  adminInformation: (id: string) =>
+    queryOptions({
+      queryKey: songQueryKeys.adminInformation(id),
+      staleTime: 30_000,
+      queryFn: ({ signal }) => getAdminSongInformation(id, signal),
+    }),
   adminList: () =>
     queryOptions({
       queryKey: songQueryKeys.adminList(),

@@ -195,7 +195,7 @@ try {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(`${origin}/admin-login`);
-  await page.getByLabel("Email").waitFor();
+  await page.getByLabel("이메일").waitFor();
   const browserCsrf = await page.evaluate(async () => (await fetch("/api/auth/csrf")).json());
   const require = createRequire(new URL("../../apps/console/package.json", import.meta.url));
   const { encode } = await import(require.resolve("next-auth/jwt"));

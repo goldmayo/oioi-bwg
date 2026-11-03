@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { runInNewContext } from "node:vm";
 
 import { expect, test, vi } from "vitest";
 
@@ -18,11 +19,14 @@ import {
   markdownOnly,
   verificationJobs,
   verificationPassed,
+  verificationMode,
 } from "../../scripts/verification-scope.mjs";
 
 test("manual admin E2E is absent while remaining build evidence stays required", () => {
-  const needs: Record<string, { result: string; outputs?: { docs_only: string } }> = {
-    changes: { result: "success", outputs: { docs_only: "false" } },
+  const needs: Record<string, { result: string; outputs?: Record<string, string> }> = {
+    changes: { result: "success", outputs: { docs_only: "false", mode: "full" } },
+    partial: { result: "skipped" },
+    source_verification: { result: "skipped" },
     infra: { result: "success" },
     quality: { result: "success" },
     unit: { result: "success" },
@@ -40,15 +44,23 @@ test.each(["success", "failure", "cancelled", "skipped", "missing"])(
   "gate requires exact evidence: %s",
   (result) => {
     for (const docs of [true, false]) {
-      const needs: Record<string, { result: string; outputs?: { docs_only: string } }> =
+      const needs: Record<string, { result: string; outputs?: Record<string, string> }> =
         Object.fromEntries(
           verificationJobs.map((name) => [name, { result: docs ? "skipped" : "success" }]),
         );
-      needs.changes = { result: "success", outputs: { docs_only: String(docs) } };
+      needs.partial = needs.source_verification = { result: "skipped" };
+      needs.changes = {
+        result: "success",
+        outputs: { docs_only: String(docs), mode: docs ? "docs" : "full" },
+      };
       expect(verificationPassed(needs)).toBe(true);
       needs.unit = { result };
       expect(verificationPassed(needs)).toBe(result === (docs ? "skipped" : "success"));
-      needs.changes = { result: "failure", outputs: { docs_only: String(docs) } };
+      needs.partial = needs.source_verification = { result: "skipped" };
+      needs.changes = {
+        result: "failure",
+        outputs: { docs_only: String(docs), mode: docs ? "docs" : "full" },
+      };
       expect(verificationPassed(needs)).toBe(false);
     }
   },
@@ -60,6 +72,98 @@ test.each([
   { changes: { result: "skipped" } },
 ])("gate rejects absent scope/job proof", (needs) => {
   expect(verificationPassed(needs)).toBe(false);
+});
+
+test.each([
+  ["migration_main", true, "partial"],
+  ["migration_main", false, "full"],
+  ["migration_main", undefined, "full"],
+  ["migration_develop", true, "promotion"],
+  ["migration_develop", false, "promotion"],
+  ["other", true, "full"],
+])("PR base=%s draft=%s selects %s", (ref, draft, mode) => {
+  expect(
+    verificationMode({
+      eventName: "pull_request",
+      event: { pull_request: { base: { ref }, draft } },
+    }),
+  ).toBe(mode);
+});
+
+test.each(["partial", "promotion"])(
+  "%s requires exact selected checks and rejects heavy checks being silently lost",
+  (mode) => {
+    const needs: Record<string, { result: string; outputs?: Record<string, string> }> =
+      Object.fromEntries(verificationJobs.map((name) => [name, { result: "skipped" }]));
+    needs.changes = { result: "success", outputs: { docs_only: "false", mode } };
+    needs.partial = { result: mode === "partial" ? "success" : "skipped" };
+    needs.source_verification = { result: mode === "promotion" ? "success" : "skipped" };
+    expect(verificationPassed(needs)).toBe(true);
+    const selected = mode === "partial" ? "partial" : "source_verification";
+    needs[selected] = { result: "failure" };
+    expect(verificationPassed(needs)).toBe(false);
+  },
+);
+
+test("Draft 결과는 병합 필수 verify라는 이름으로 게시하지 않고 Ready 전환에 전체 검증을 건다", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/verify.yml", import.meta.url),
+    "utf8",
+  );
+  expect(workflow).toContain("ready_for_review");
+  expect(workflow).toContain("converted_to_draft");
+  expect(workflow).toContain("'partial verify' || 'verify'");
+  expect(workflow).toContain("VERIFY_BASE: ${{ github.event.pull_request.base.sha }}");
+});
+
+test("Promotion 후보는 선행 생략에 전파되지 않으며 성공한 검증·정상 PR·취소 여부를 요구한다", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/verify.yml", import.meta.url),
+    "utf8",
+  );
+  const job = workflow.split("\n  promotion-candidate:\n")[1].split("\n    runs-on:")[0];
+  expect(job).toContain("needs: verify");
+  const condition = job
+    .split("if: >-\n")[1]
+    .split("\n    needs:")[0]
+    .trim()
+    .replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+  // GitHub의 암묵적 success()가 skipped 조상에 적용되지 않도록 상태 함수를 명시해야 한다.
+  expect(condition).toContain("cancelled()");
+  const github = {
+    event_name: "pull_request",
+    repository: "goldmayo/oioi-bwg",
+    event: {
+      pull_request: {
+        base: { ref: "migration_develop" },
+        head: { ref: "migration_main", repo: { full_name: "goldmayo/oioi-bwg" } },
+        draft: false,
+      },
+    },
+  };
+  const run = (result = "success", cancelled = false) =>
+    runInNewContext(condition, {
+      github,
+      needs: { verify: { result } },
+      cancelled: () => cancelled,
+    });
+  expect(run()).toBe(true);
+  for (const result of ["failure", "cancelled", "skipped", ""]) expect(run(result)).toBe(false);
+  expect(run("success", true)).toBe(false);
+  github.event.pull_request.draft = true;
+  expect(run()).toBe(false);
+  github.event.pull_request.draft = false;
+  github.event.pull_request.head.repo.full_name = "fork/oioi-bwg";
+  expect(run()).toBe(false);
+  github.event.pull_request.head.repo.full_name = github.repository;
+  github.event.pull_request.head.ref = "feature/other";
+  expect(run()).toBe(false);
+  github.event.pull_request.head.ref = "migration_main";
+  github.event.pull_request.base.ref = "migration_main";
+  expect(run()).toBe(false);
+  github.event.pull_request.base.ref = "migration_develop";
+  github.event_name = "push";
+  expect(run()).toBe(false);
 });
 
 test.each([
@@ -115,10 +219,11 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
     );
     const base = commit();
     git("update-ref", "refs/remotes/origin/migration_main", base);
-    const scope = (baseRef = "migration_main", eventName = "pull_request") =>
+    const scope = (baseRef = "migration_main", eventName = "pull_request", fetchSource = false) =>
       docsOnly({
         cwd: root,
         eventName,
+        fetchSource,
         event: {
           pull_request: {
             base: { ref: baseRef, sha: base },
@@ -130,6 +235,8 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
     write("docs/space and\nnewline.md");
     commit();
     expect(scope()).toBe(true);
+    git("remote", "add", "origin", root);
+    expect(scope("migration_main", "pull_request", true)).toBe(true);
     expect(scope("migration_develop")).toBe(false);
     expect(scope("migration_main", "push")).toBe(false);
     expect(docsOnly({ cwd: root, local: true })).toBe(true);

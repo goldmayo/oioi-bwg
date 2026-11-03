@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { albumQueries } from "@/entities/album/api";
@@ -8,13 +8,13 @@ import type { AdminSongSummary } from "@/entities/song";
 import { songQueryKeys } from "@/entities/song";
 import { songMutations, songQueries } from "@/entities/song/api";
 
+import { adminLinks, adminPaths } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
+import { ListHeader, ListSelection, ListToolbar } from "@/shared/ui/list-layout";
 
-import { type SongEditValues, toAdminSongUpdate } from "../model/schemas";
 import { createWaveformDownload } from "../model/waveform-manifest";
 
 import { SongDeleteDialog } from "./SongDeleteDialog";
-import { SongFormDialog } from "./SongFormDialog";
 import { SongManagerTable } from "./SongManagerTable";
 import { SongManagerToolbar } from "./SongManagerToolbar";
 
@@ -67,11 +67,11 @@ export function SongManagerClient({
   }
   const [search, setSearch] = useState("");
   const [albumFilter, setAlbumFilter] = useState("all");
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingSong, setEditingSong] = useState<AdminSongSummary>();
   const [deleteTarget, setDeleteTarget] = useState<AdminSongSummary | null>(null);
-  const createMutation = useMutation({ ...songMutations.create(), onError: onMutationError });
-  const updateMutation = useMutation({ ...songMutations.update(), onError: onMutationError });
+  const deletingId = useRef<string | null>(null);
+  const changeDeleteTarget = useCallback((target: AdminSongSummary | null) => {
+    if (deletingId.current === null) setDeleteTarget(target);
+  }, []);
   const deleteMutation = useMutation({ ...songMutations.delete(), onError: onMutationError });
   const filtered = useMemo(() => {
     const query = search.toLowerCase();
@@ -88,72 +88,61 @@ export function SongManagerClient({
     () => queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() }),
     [queryClient],
   );
-  const handleSubmit = useCallback(
-    async (values: SongEditValues) => {
-      if (editingSong) {
-        await updateMutation.mutateAsync({
-          id: editingSong.id,
-          input: { ...toAdminSongUpdate(values), guideWrite: editingSong.guideWrite },
-        });
-      } else await createMutation.mutateAsync({ ...values, lrcText: values.lrcText ?? "" });
-      await invalidateSongs();
-    },
-    [createMutation, editingSong, invalidateSongs, updateMutation],
-  );
   const handleEdit = useCallback((song: AdminSongSummary) => {
-    setEditingSong(song);
-    setFormOpen(true);
+    window.location.assign(adminLinks.songEdit(song.id));
   }, []);
   const handleDelete = useCallback(() => {
-    if (!deleteTarget) return;
+    if (!canManage || !deleteTarget || deletingId.current !== null) return;
+    deletingId.current = deleteTarget.id;
     deleteMutation.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        setDeleteTarget(null);
+      onSuccess: (_data, id) => {
+        setDeleteTarget((current) => (current?.id === id ? null : current));
         void invalidateSongs();
       },
+      onSettled: () => {
+        deletingId.current = null;
+      },
     });
-  }, [deleteMutation, deleteTarget, invalidateSongs]);
+  }, [canManage, deleteMutation, deleteTarget, invalidateSongs]);
   return (
     <div className="space-y-4">
-      <SongManagerToolbar
-        search={search}
-        albumFilter={albumFilter}
-        albums={albums}
-        canManage={canManage}
-        onSearchChange={(value) => {
-          setSearch(value);
-        }}
-        onAlbumChange={(value) => {
-          setAlbumFilter(value);
-        }}
-        onAdd={() => {
-          setEditingSong(undefined);
-          setFormOpen(true);
-        }}
+      <ListHeader
+        title="곡 관리"
+        description="곡을 추가, 수정, 삭제할 수 있습니다. 곡 추가 시 LRC 파일이 필요합니다."
+        action={
+          canManage && (
+            <Button variant="q" asChild>
+              <a href={adminPaths.songCreate}>곡 추가</a>
+            </Button>
+          )
+        }
       />
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          variant="outline"
-          disabled={!canManage || !selectedSongs.length}
-          onClick={downloadManifest}
-        >
-          파형 작업 파일 다운로드 ({selectedSongs.length}곡)
-        </Button>
-        {selectedSongs.length > 0 && (
-          <Button
-            variant="ghost"
-            onClick={() => {
+      <ListToolbar
+        selection={
+          <ListSelection
+            count={selectedSongs.length}
+            onClear={() => {
               setSelectedIds(new Set());
               setDownloadError("");
             }}
-          >
-            선택 해제
-          </Button>
-        )}
-        <p className="text-muted-foreground text-sm">
-          검색·페이지를 바꿔도 선택한 곡은 유지됩니다.
-        </p>
-      </div>
+          />
+        }
+        actions={
+          selectedSongs.length > 0 && (
+            <Button variant="outline" disabled={!canManage} onClick={downloadManifest}>
+              waveform 작업 파일 다운로드 ({selectedSongs.length})
+            </Button>
+          )
+        }
+      >
+        <SongManagerToolbar
+          search={search}
+          albumFilter={albumFilter}
+          albums={albums}
+          onSearchChange={setSearch}
+          onAlbumChange={setAlbumFilter}
+        />
+      </ListToolbar>
       {downloadError && (
         <p role="alert" className="text-destructive text-sm">
           {downloadError}
@@ -166,30 +155,14 @@ export function SongManagerClient({
         canManage={canManage}
         hasFilter={!!search || albumFilter !== "all"}
         onEdit={handleEdit}
-        onDelete={setDeleteTarget}
+        onDelete={changeDeleteTarget}
       />
-      <div className="flex items-center justify-between">
-        <span className="text-muted-foreground text-sm">
-          총 {filtered.length}곡 {(search || albumFilter !== "all") && `(전체 ${songs.length}곡)`}
-        </span>
-      </div>
-      {formOpen && (
-        <SongFormDialog
-          key={editingSong?.id ?? "new"}
-          open={formOpen}
-          canSubmit={canManage}
-          submissionNotice={submissionNotice}
-          onOpenChange={setFormOpen}
-          albums={albums}
-          song={editingSong}
-          onSubmit={handleSubmit}
-        />
-      )}
+      {submissionNotice}
       {canManage && (
         <SongDeleteDialog
           song={deleteTarget}
           pending={deleteMutation.isPending}
-          onClose={() => setDeleteTarget(null)}
+          onClose={() => changeDeleteTarget(null)}
           onConfirm={handleDelete}
         />
       )}

@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it } from "vitest";
 import {
   columnPinningFeature,
+  columnResizingFeature,
   columnSizingFeature,
   columnVisibilityFeature,
   createColumnHelper,
@@ -19,6 +20,53 @@ import type { DataTableButtonProps } from "./data-table";
 import { exampleOrders, FullExample, ManualExample } from "./data-table.examples";
 
 afterEach(cleanup);
+
+const layout = createTableHook({
+  features: tableFeatures({ columnSizingFeature, columnResizingFeature, columnVisibilityFeature }),
+});
+const layoutColumn = layout.createAppColumnHelper<{ id: number; name: string }>();
+const layoutColumns = layoutColumn.columns([
+  layoutColumn.accessor("id", { header: "번호", size: 100 }),
+  layoutColumn.accessor("name", { header: "이름", size: 160 }),
+  layoutColumn.display({ id: "actions", header: "관리", size: 80, enableResizing: false }),
+]);
+function WidthLayout({ fillWidth }: { fillWidth: boolean }) {
+  const table = layout.useAppTable({ columns: layoutColumns, data: [{ id: 1, name: "곡" }] });
+  return (
+    <DataTable.Root table={table}>
+      <button onClick={() => table.setColumnSizing({ id: 140 })}>번호 확장</button>
+      <button onClick={() => table.getColumn("actions")?.toggleVisibility(false)}>관리 숨김</button>
+      <DataTable.Table caption="너비 배분" fillWidth={fillWidth}>
+        <DataTable.Header />
+        <DataTable.Body />
+      </DataTable.Table>
+    </DataTable.Root>
+  );
+}
+
+it("본문 채우기는 마지막 열에만 여유 공간을 주고 앞선 열은 sizing 변경을 그대로 반영한다", () => {
+  const view = render(<WidthLayout fillWidth />);
+  const table = screen.getByRole("table", { name: "너비 배분" });
+  const cols = () => Array.from(table.querySelectorAll("col"));
+  expect(cols().map((col) => col.style.width)).toEqual(["100px", "160px", ""]);
+  expect(table.style.minWidth).toBe("340px");
+  expect(table.querySelectorAll("th")[2]!.style.width).toBe("");
+  expect(table.querySelectorAll("td")[2]!.style.minWidth).toBe("80px");
+  expect(screen.getByRole("separator", { name: "이름 크기 조절" })).toBeInTheDocument();
+  fireEvent.click(screen.getByText("번호 확장"));
+  expect(cols()[0]!.style.width).toBe("140px");
+  expect(table.querySelector("td")!.style.width).toBe("140px");
+  expect(table.style.minWidth).toBe("380px");
+  fireEvent.click(screen.getByText("관리 숨김"));
+  expect(cols().map((col) => col.style.width)).toEqual(["140px", ""]);
+  expect(table.querySelectorAll("th")[1]!.style.width).toBe("");
+  expect(table.querySelectorAll("td")[1]!.style.minWidth).toBe("160px");
+  expect(screen.queryByRole("separator", { name: "이름 크기 조절" })).toBeNull();
+  view.rerender(<WidthLayout fillWidth={false} />);
+  expect(table.querySelector("colgroup")).toBeNull();
+  expect(table.style.width).toBe("300px");
+  expect(table.querySelectorAll("th")[1]!.style.width).toBe("160px");
+});
 const grid = () => screen.getByRole("table");
 const rows = () =>
   Array.from(grid().querySelectorAll<HTMLTableRowElement>("tbody tr[data-row-id]"));
@@ -67,7 +115,7 @@ describe("15개 공식 기능의 compound 조합", () => {
     expect(grid().querySelector("tfoot")).toHaveTextContent("3,000,000");
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
     expect(ids()[0]).toBe("order-19");
-    fireEvent.change(screen.getByLabelText("페이지당 행"), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("표시 개수"), { target: { value: "10" } });
     expect(ids()).toHaveLength(10);
     expect(screen.getByText("1 / 3")).toBeInTheDocument();
   });

@@ -31,6 +31,19 @@ export const notificationListSchema = z.object({
   nextCursor: z.string().nullable(),
   unreadCount: z.number().int().nonnegative(),
 });
+export const notificationHistoryInputSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+  offset: z.coerce.number().int().nonnegative().default(0),
+  status: z.enum(["all", "unread"]).default("all"),
+  type: notificationTypeSchema.optional(),
+});
+export const notificationHistorySchema = z.object({
+  items: z.array(notificationSchema),
+  totalCount: z.number().int().nonnegative(),
+  unreadCount: z.number().int().nonnegative(),
+});
+export type NotificationHistoryInput = z.infer<typeof notificationHistoryInputSchema>;
+export type NotificationHistory = z.infer<typeof notificationHistorySchema>;
 export const pushInstallationInputSchema = z.object({
   fid: z.string().regex(/^[A-Za-z0-9_-]{16,256}$/),
 });

@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 
 import { getAdminPageContext } from "@/server/auth/admin-page-context";
 
+import { adminPaths } from "@/shared/config/admin-routes";
+
 import { WaveformJobStatus } from "./_ui/job-status";
 export default async function WaveformJobPage({ params }: { params: Promise<{ id: string }> }) {
   await getAdminPageContext();
@@ -13,7 +15,7 @@ export default async function WaveformJobPage({ params }: { params: Promise<{ id
   return (
     <section className="mx-auto w-full max-w-4xl p-4 sm:p-6 lg:p-8">
       <Link
-        href="/admin/notifications"
+        href={adminPaths.notificationList}
         className="text-muted-foreground hover:text-foreground mb-6 inline-flex min-h-11 items-center gap-2 text-sm"
       >
         <ArrowLeft size={16} aria-hidden="true" />

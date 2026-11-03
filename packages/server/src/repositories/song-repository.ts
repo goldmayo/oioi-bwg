@@ -6,10 +6,47 @@ import type { DbExecutor } from "../db";
 import { isPostgresForeignKeyViolation, isPostgresUniqueViolation } from "../db/postgres-error";
 import { album, cheerGuide, type InsertSongRow, song } from "../db/schema";
 
-import { publicGuideDetailSelection, publicGuideSummarySelection } from "./cheer-guide-repository";
+import {
+  guideHasHistory,
+  publicGuideDetailSelection,
+  publicGuideSummarySelection,
+} from "./cheer-guide-repository";
 import { SongSlugConflictError, CheerGuideReferenceError } from "./repository-error";
 
 type SongUpdateRow = Partial<Omit<InsertSongRow, "slug">>;
+
+export function findAdminSongInformationById(executor: DbExecutor, id: string) {
+  return executor.query.song.findFirst({
+    where: (table, { eq: equals }) => equals(table.id, id),
+    columns: {
+      id: true,
+      albumId: true,
+      title: true,
+      slug: true,
+      youtubeId: true,
+      hasOfficialCheer: true,
+      isTitle: true,
+      isVisible: true,
+      order: true,
+      updatedAt: true,
+      lyrics: true,
+    },
+    with: {
+      album: { columns: { name: true } },
+      cheerGuides: {
+        columns: { id: true, mode: true, legacyWriteTarget: true, lockVersion: true },
+        extras: (guide) => ({ hasHistory: guideHasHistory(guide.id).as("has_history") }),
+        orderBy: (table, { asc: ascending }) => [ascending(table.mode)],
+        with: {
+          currentPublication: {
+            columns: { action: true },
+            with: { snapshot: { columns: { sourceType: true } } },
+          },
+        },
+      },
+    },
+  });
+}
 
 export function findSongBySlug(executor: DbExecutor, slug: string) {
   return executor.query.song.findFirst({

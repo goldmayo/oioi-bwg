@@ -1,4 +1,4 @@
-import { adminSongListSchema } from "@oioi-bwg/contracts/song";
+import { adminSongInformationSchema, adminSongListSchema } from "@oioi-bwg/contracts/song";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError } from "../errors/app-error";
@@ -8,6 +8,7 @@ const removeSong = vi.hoisted(() => vi.fn());
 const insertSong = vi.hoisted(() => vi.fn());
 const findVisibleSongs = vi.hoisted(() => vi.fn());
 const findAdminSongBySlug = vi.hoisted(() => vi.fn());
+const findAdminSongInformationById = vi.hoisted(() => vi.fn());
 const findSongBySlug = vi.hoisted(() => vi.fn());
 const findSongsWithAlbum = vi.hoisted(() => vi.fn());
 const updateSong = vi.hoisted(() => vi.fn());
@@ -32,6 +33,7 @@ beforeEach(() => {
 });
 vi.mock("../repositories/song-repository", () => ({
   findAdminSongBySlug,
+  findAdminSongInformationById,
   findSongBySlug,
   findSongsWithAlbum,
   findVisibleSongs,
@@ -46,6 +48,7 @@ import {
   deleteSong,
   editSong,
   getAdminSongEditorBySlug,
+  getAdminSongInformation,
   getSongDetailBySlug,
   listAdminSongs,
   listVisibleSongsForSitemap,
@@ -66,6 +69,95 @@ const input = {
   isVisible: true,
   order: 1,
 };
+
+describe("관리자 곡 정보 조회", () => {
+  beforeEach(() => vi.clearAllMocks());
+  const id = "019a0170-0000-7000-8000-000000000002";
+  const guideId = "019a0170-0000-7000-8000-000000000003";
+
+  it("숨김·null slug를 보존하고 출처는 현재 snapshot에서 읽으며 내부 행을 노출하지 않는다", async () => {
+    findAdminSongInformationById.mockResolvedValue({
+      ...input,
+      id,
+      slug: null,
+      isVisible: false,
+      order: null,
+      updatedAt: null,
+      album: { name: "앨범", internal: "private" },
+      lyrics: [{ startTime: 0, segments: [{ text: "검증" }] }],
+      cheerGuides: [
+        {
+          id: guideId,
+          mode: "CONCERT",
+          legacyWriteTarget: true,
+          lockVersion: 3,
+          currentPublication: {
+            action: "UNPUBLISH",
+            snapshot: {
+              sourceType: "OFFICIAL",
+              createdByAccountId: id,
+              lyrics: ["private"],
+            },
+          },
+        },
+      ],
+    });
+    const result = await getAdminSongInformation(context, id);
+    expect(result).toEqual({
+      ...input,
+      id,
+      slug: null,
+      isVisible: false,
+      order: 0,
+      updatedAt: "",
+      album: { name: "앨범" },
+      hasLyrics: true,
+      guideWrite: { guideId, lockVersion: 3 },
+      cheerGuides: [
+        {
+          id: guideId,
+          mode: "CONCERT",
+          draftEditorAvailable: false,
+          currentPublication: { action: "UNPUBLISH", sourceType: "OFFICIAL" },
+        },
+      ],
+    });
+    expect(adminSongInformationSchema.parse(result)).toEqual(result);
+    expect(findAdminSongInformationById).toHaveBeenCalledWith(expect.anything(), id);
+  });
+
+  it("가사와 공개 조치가 없는 응원법을 공개·미등록으로 추정하지 않는다", async () => {
+    findAdminSongInformationById.mockResolvedValue({
+      ...input,
+      id,
+      album: { name: "앨범" },
+      lyrics: null,
+      cheerGuides: [
+        { id: guideId, mode: "FESTIVAL", draftEditorAvailable: false, currentPublication: null },
+      ],
+    });
+    const result = await getAdminSongInformation(context, id);
+    expect(result.hasLyrics).toBe(false);
+    expect(result.cheerGuides).toEqual([
+      { id: guideId, mode: "FESTIVAL", draftEditorAvailable: false, currentPublication: null },
+    ]);
+    expect(result.guideWrite).toBeUndefined();
+  });
+
+  it("권한 검사 후에만 조회하고 없는 곡은 도메인 오류로 처리한다", async () => {
+    await expect(
+      getAdminSongInformation({ user: null, ability: { cannot: () => false } } as never, id),
+    ).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
+    await expect(
+      getAdminSongInformation({ user: { id }, ability: { cannot: () => true } } as never, id),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(findAdminSongInformationById).not.toHaveBeenCalled();
+    findAdminSongInformationById.mockResolvedValue(undefined);
+    await expect(getAdminSongInformation(context, id)).rejects.toMatchObject({
+      code: "SONG_NOT_FOUND",
+    });
+  });
+});
 
 describe("song-service admin list DTO", () => {
   beforeEach(() => vi.clearAllMocks());

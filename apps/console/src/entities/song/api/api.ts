@@ -1,4 +1,5 @@
 import {
+  adminSongInformationSchema,
   adminSongListSchema,
   adminSongMutationResultSchema,
   type CreateAdminSong,
@@ -20,6 +21,12 @@ export async function getSongDetail(slug: string, signal?: AbortSignal) {
 export async function getAdminSongs(signal?: AbortSignal) {
   const data = await http.get("/api/admin/songs", { signal });
   return parseClientResponse(adminSongListSchema, data);
+}
+
+/** UUID로 비공개 곡도 조회하며 공개 slug 조회와 응답 계약을 구분한다. */
+export async function getAdminSongInformation(id: string, signal?: AbortSignal) {
+  const data = await http.get(`/api/admin/songs/${encodeURIComponent(id)}`, { signal });
+  return parseClientResponse(adminSongInformationSchema, data);
 }
 
 /** 관리자 곡을 생성하고 생성된 식별자를 검증한다. */

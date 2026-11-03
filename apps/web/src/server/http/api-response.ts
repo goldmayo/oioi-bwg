@@ -17,6 +17,20 @@ const appErrorDefinitions = {
     status: 409,
     message: "검토한 이관 정보와 현재 응원법이 다릅니다.",
   },
+  CHEER_GUIDE_ALREADY_EXISTS: {
+    message: "이 곡의 해당 공연 모드에 응원법이 이미 있습니다.",
+    status: 409,
+  },
+  CHEER_GUIDE_SOURCE_INVALID: { message: "곡의 기준 영상을 확인해 주세요.", status: 400 },
+  CHEER_GUIDE_NOT_FOUND: { message: "응원법을 찾을 수 없습니다.", status: 404 },
+  CHEER_GUIDE_HAS_HISTORY: {
+    message: "내용 또는 공개 이력이 있는 응원법은 삭제할 수 없습니다.",
+    status: 409,
+  },
+  CHEER_GUIDE_DRAFT_PENDING: {
+    message: "비공개 작업본이 있습니다. 응원법 관리에서 편집해주세요.",
+    status: 409,
+  },
   CHEER_GUIDE_CONFLICT: {
     message: "응원법이 변경되었습니다. 입력한 내용을 보관하고 최신 내용을 확인해 주세요.",
     status: 409,

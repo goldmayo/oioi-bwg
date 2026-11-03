@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./eslint": "./eslint.config.ts",
     "./steiger": "./steiger.config.ts",
     "./typescript/repository.json": "./typescript/repository.json",
     "./cli/dependencies": "./src/check-workspace-dependencies.ts",
@@ -16,11 +15,12 @@
     "./fixture/console-mfa": "./src/fixtures/console-mfa.ts",
     "./vitest/postgres": "./vitest.postgres.config.ts",
     "./cli/import-cheer-guides": "./src/operators/import-cheer-guides.ts",
-    "./cli/generate-waveform": "./src/operators/generate-waveform.ts"
+    "./cli/generate-waveform": "./src/operators/generate-waveform.ts",
+    "./oxlint": "./oxlint.config.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit && pnpm type-check:tests",
-    "lint": "eslint .",
+    "lint": "oxlint --type-aware --report-unused-disable-directives-severity warn --format=stylish .",
     "test:harness": "node --import tsx --test harness/architecture/*.test.js",
     "lint:deps": "tsx src/check-workspace-dependencies.ts",
     "type-check:tests": "tsc --noEmit -p tsconfig.tests.json && tsc --noEmit -p tsconfig.web.json"
@@ -28,7 +28,6 @@
   "devDependencies": {
     "@oioi-bwg/config": "workspace:*",
     "@types/node": "^20",
-    "eslint": "^9",
     "jiti": "2.6.1",
     "typescript": "^5",
     "dependency-cruiser": "18.7.0",
@@ -41,6 +40,7 @@
     "postgres": "^3.4.8",
     "drizzle-orm": "^0.45.1",
     "yaml": "2.8.2",
-    "zod": "4.3.6"
+    "zod": "4.3.6",
+    "oxlint": "1.90.0"
   }
 }

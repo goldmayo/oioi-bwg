@@ -1,10 +1,10 @@
 ---
 title: "Architecture Document Index"
 document_id: "00"
-version: "1.60"
+version: "1.66"
 status: "active"
 authority: "index"
-updated_at: "2026-10-31"
+updated_at: "2026-11-03"
 tags:
   - "architecture"
   - "documentation"
@@ -51,9 +51,9 @@ migration / implementation plan
 
 | ID | 문서 | 버전 | 상태 | 책임 |
 |---|---|---:|---|---|
-| 00 | Document Index | 1.60 | active | 문서 상태 / 버전 / 책임 SSOT |
-| 01 | Architecture Constitution | 2.21 | active | 전체 시스템 헌법 |
-| 02 | Frontend Architecture | 1.12 | active | FSD, UI/model/lib, Query 사용 원칙 |
+| 00 | Document Index | 1.66 | active | 문서 상태 / 버전 / 책임 SSOT |
+| 01 | Architecture Constitution | 2.23 | active | 전체 시스템 헌법 |
+| 02 | Frontend Architecture | 1.13 | active | FSD, UI/model/lib, Query, 변경 경계와 Shell 조합 원칙 |
 | 03 | API / Error Architecture | 1.6 | active | HTTP / AppError / ApiError / error mapping |
 | 04 | Auth / Authz Architecture | 1.12 | active | Auth.js, RequestContext, CASL, Console MFA 회수, P08 내부 결과·로컬 operator 연결 인증 |
 | 05 | Contract / Validation Architecture | 1.7 | active | Zod contract / DTO / boundary validation |
@@ -61,9 +61,9 @@ migration / implementation plan
 | 07 | Rendering / Query / Cache Architecture | 1.2 | active | RSC / Query / hydration / cache / retry 전략 |
 | 08 | Form / Client State Architecture | 1.0 | active | form / URL / local client state ownership |
 | 09 | Error UX / Observability Architecture | 1.5 | active | query/mutation error UX / logging / Sentry |
-| 10 | Testing Architecture | 1.21 | active | unit / integration / component / E2E strategy |
+| 10 | Testing Architecture | 1.26 | active | unit / integration / component / E2E strategy, 로컬 영향 범위와 테스트 환경 분리 |
 | 11 | Content / i18n / Assets / Runtime Architecture | 1.14 | active | locale / content / assets / env / runtime |
-| 12 | Deployment / Migration Runbook | 1.25 | active | migration phases / test infra / Docker / OCI / rollback |
+| 12 | Deployment / Migration Runbook | 1.26 | active | migration phases / test infra / Docker / OCI / rollback |
 
 ---
 

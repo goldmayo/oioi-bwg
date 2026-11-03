@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { buildAbility } from "@oioi-bwg/server/auth/ability";
 import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { forbidden, redirect } from "next/navigation";

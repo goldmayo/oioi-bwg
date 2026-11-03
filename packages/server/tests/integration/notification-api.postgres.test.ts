@@ -8,6 +8,7 @@ import * as schema from "../../src/db/schema";
 import {
   getNotification,
   listNotifications,
+  listNotificationHistory,
   readAllNotifications,
   readNotification,
   recordWaveformNotification,
@@ -120,4 +121,60 @@ test("조회는 읽음으로 바뀌지 않고 개별 읽음은 멱등이며 모�
     .where(eq(schema.notification.eventKey, jobId));
   ids.push(created!.id);
   expect((await listNotifications(ctx(), { limit: 20 })).unreadCount).toBe(1);
+});
+
+test("전체 내역에서 상태·작업 결과를 함께 필터링하고 계정별 개수를 센다", async () => {
+  const rows = await db
+    .insert(schema.notification)
+    .values(
+      Array.from({ length: 25 }, (_, index) => ({
+        recipientAccountId: owners[1]!,
+        type: index < 23 ? ("WAVEFORM_SUCCEEDED" as const) : ("WAVEFORM_FAILED" as const),
+        resourceType: "WAVEFORM_JOB" as const,
+        resourceId: createEntityId(),
+        eventKey: createEntityId(),
+        createdAt: new Date(Date.UTC(2026, 0, 1, 0, 25 - index)).toISOString(),
+        readAt: index < 23 ? "2026-02-01T00:00:00Z" : null,
+      })),
+    )
+    .returning();
+  ids.push(...rows.map((row) => row.id));
+  const input = { limit: 10, offset: 0, status: "all" as const };
+  const first = await listNotificationHistory(ctx(owners[1]), input);
+  const second = await listNotificationHistory(ctx(owners[1]), { ...input, offset: 10 });
+  const third = await listNotificationHistory(ctx(owners[1]), { ...input, offset: 20 });
+  expect(first.totalCount).toBe(25);
+  expect(first.unreadCount).toBe(2);
+  expect([...first.items, ...second.items, ...third.items].map((item) => item.id)).toEqual(
+    rows.map((row) => row.id),
+  );
+  const filtered = await listNotificationHistory(ctx(owners[1]), {
+    ...input,
+    status: "unread",
+    type: "WAVEFORM_FAILED",
+  });
+  expect(filtered.totalCount).toBe(2);
+  expect(filtered.items.map((item) => item.id)).toEqual(rows.slice(23).map((row) => row.id));
+  expect(filtered.items.every((item) => item.readAt === null)).toBe(true);
+  expect(
+    await listNotificationHistory(ctx(owners[1]), {
+      ...input,
+      status: "unread",
+      type: "WAVEFORM_SUCCEEDED",
+    }),
+  ).toMatchObject({ items: [], totalCount: 0, unreadCount: 2 });
+  await expect(listNotificationHistory(ctx(owners[1], "USER"), input)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+  });
+  await expect(
+    listNotificationHistory(
+      { user: null, ability: buildAbility({ accountId: null, role: null }) },
+      input,
+    ),
+  ).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
+  await readAllNotifications(ctx(owners[1]));
+  expect(
+    (await listNotificationHistory(ctx(owners[1]), { ...input, status: "unread" })).totalCount,
+  ).toBe(0);
+  expect((await listNotificationHistory(ctx(), input)).unreadCount).toBe(1);
 });

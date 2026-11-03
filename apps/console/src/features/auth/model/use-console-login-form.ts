@@ -16,6 +16,7 @@ import { z } from "zod";
 
 import { captureClientErrorOnce } from "@/shared/api/capture-client-error";
 import { ApiError } from "@/shared/api/http-errors";
+import { adminPaths } from "@/shared/config/admin-routes";
 
 import { signIn } from "../api/actions";
 import { confirmMfa, setupMfa } from "../api/api";
@@ -146,7 +147,7 @@ export function useConsoleLoginForm(
             form.setValue("otp", "");
           } else if (!result) {
             reset("navigating");
-            router.replace(destination === "operator" ? "/operator-connect" : "/admin");
+            router.replace(destination === "operator" ? "/operator-connect" : adminPaths.dashboard);
           }
           break;
         }

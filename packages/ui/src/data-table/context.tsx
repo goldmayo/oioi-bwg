@@ -6,6 +6,7 @@ import { createTableHookContexts, Subscribe } from "@tanstack/react-table";
 import type { Column, ReactTable, RowData, TableFeatures } from "@tanstack/react-table";
 
 export interface DataTableColumnMeta {
+  align?: "start" | "center" | "end";
   label?: string;
   className?: string;
   filterVariant?: "text" | "select";
@@ -14,10 +15,32 @@ export interface DataTableColumnMeta {
 export type DataTableButtonProps = ComponentProps<"button">;
 export interface DataTableComponents {
   Button?: ComponentType<DataTableButtonProps>;
+  ResizeHandleIcon?: ComponentType<{ className?: string }>;
 }
+
+export const fillWidthContext = createContext(false);
 
 const defaultComponents: DataTableComponents = {};
 const componentsContext = createContext(defaultComponents);
+
+export function ResizeHandleIcon() {
+  const Icon = useContext(componentsContext).ResizeHandleIcon;
+  if (Icon) return <Icon className="size-4" />;
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      {[6, 12, 18].flatMap((cy) =>
+        [9, 15].map((cx) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1" />),
+      )}
+    </svg>
+  );
+}
 
 function DefaultButton(props: DataTableButtonProps) {
   return <button {...props} />;
@@ -73,12 +96,23 @@ export function columnLabel(column: Column<UiFeatures, RowData>) {
   );
 }
 
-export function columnStyle(column: Column<UiFeatures, RowData>): CSSProperties {
+export function isFillColumn(column: Column<UiFeatures, RowData>, fillWidth: boolean) {
+  if (!fillWidth) return false;
+  const columns = column.table.options.features.columnVisibilityFeature
+    ? column.table.getVisibleLeafColumns()
+    : column.table.getAllLeafColumns();
+  return columns.at(-1)?.id === column.id;
+}
+
+export function columnStyle(column: Column<UiFeatures, RowData>, fillWidth = false): CSSProperties {
   const features = column.table.options.features;
   const pinned =
     features.columnPinningFeature && features.columnSizingFeature ? column.getIsPinned() : false;
+  const flexible = isFillColumn(column, fillWidth);
   return {
-    width: features.columnSizingFeature ? column.getSize() : undefined,
+    textAlign: column.columnDef.meta?.align,
+    width: features.columnSizingFeature && !flexible ? column.getSize() : undefined,
+    minWidth: features.columnSizingFeature && flexible ? column.getSize() : undefined,
     position: pinned ? "sticky" : undefined,
     insetInlineStart: pinned === "start" ? column.getStart("start") : undefined,
     insetInlineEnd: pinned === "end" ? column.getAfter("end") : undefined,

@@ -69,6 +69,9 @@ migration implementation plan/result
   `type(scope): 한글 요약`인지, PR 본문이 최종 변경 사항과 검증 결과를 한글로 설명하는지 갱신한다.
 - PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 형식을 따른다.
 - PR 리뷰 중에는 같은 브랜치에 추가 커밋을 push해 기존 PR에 반영한다.
+- 작업 중 PR은 Draft로 생성하고 의미 단위 커밋은 로컬에 쌓는다. 관련 검증·리뷰를 마친 변경을
+  모아서 push하며 최종 커밋이 준비되면 Ready로 전환한다. Ready 뒤 기능 수정이 더 필요하면
+  Draft로 되돌린 뒤 작업해 전체 CI가 수정마다 반복되지 않게 한다.
 - OCI Development 배포는 별도의 `migration_main → migration_develop` Promotion PR로만 진행한다.
   source/merge tree가 같은 squash 결과에 검증한 동일 candidate digest를 배포한다. 통합 merge만으로 배포하지 않는다.
   세부 검증·보호 설정은 active 배포 runbook §21을 따른다.
@@ -235,6 +238,9 @@ Base UI → shadcn/ui → Tailwind CSS
 - 공유 가능하거나 navigation과 함께 보존되어야 하는 URL state는 `nuqs`를 우선한다.
 - 순수 presentation state와 UI event는 UI에 남겨도 된다.
 
+변경 이유에 따른 책임 분리와 Shell·기능의 조합은 [Frontend §19](docs/migration/oioi-bwg-architecture-clean-v1/02-frontend-architecture.md#19-변경-경계와-화면-조합-지침)를 따른다.
+새 구현과 변경 리뷰에 적용하며, 기존 코드 전체의 일괄 리팩터링 지시로 해석하지 않는다.
+
 ## 7. 데이터베이스 및 운영 안전
 
 - production DB에 연결하거나 변경하지 않는다. 명시적인 사용자 승인 없이는 production credential을 사용하지 않는다.
@@ -255,29 +261,40 @@ Base UI → shadcn/ui → Tailwind CSS
 
 ## 8. 검증과 도구
 
-코드 변경의 기본 검증:
+기본 로컬 검증은 변경 영향 범위만 실행한다.
+커밋은 staged 파일만 Oxlint safe fix → Oxfmt로 검사한다.
+현행 규칙을 native 또는 원본 JS plugin으로 모두 검사하며 기존 `tsc`는 유지한다.
 
 ```bash
-pnpm type-check
-pnpm test:harness
-pnpm lint
-pnpm lint:fsd
-pnpm test:unit:run
-pnpm format:check
+pnpm verify
+pnpm verify --dry-run
 ```
 
-위험도가 있는 runtime/build 변경은 추가로 다음을 실행한다.
+`verify`는 merge-base 이후 변경·미커밋·신규 파일과 Turbo affected 프로젝트를 기준으로
+증분 type-check·캐시 lint·Vitest 관련 테스트·해당 workspace 경계를 검사한다.
+공용 설정·저장소 도구 변경은 실제 영향에 따라 repo 검사도 포함한다. 검사 범위를 먼저 출력하며,
+기준 판정 실패 시 전체 검증으로 조용히 확대하지 않고 중단한다.
+단순 운영 스크립트 수정 때문에 제품 전체·repo 전체·전체 harness를 실행하지 않는다.
+문서 시안의 정적 자산은 로컬 코드 검증에서 제외한다. 상세 범위는 Testing Architecture §17을 따른다.
+
+Draft PR은 로컬과 같은 영향 범위 검증만 수행하며 결과 이름은 `partial verify`로 구분한다.
+Ready 전환 이후 `migration_main` 병합 전에는 최종 PR 커밋의 CI 전체 `verify`를 통과해야 한다.
+Promotion은 동일 source/tree의 main 병합 전 성공을 확인해 재사용하고 배포 이미지·설정 검증만 수행한다.
+검증 근거가 없거나 불일치하면 중단하며 전체 검증을 암묵적으로 재실행하지 않는다.
+로컬에서 CI 전체 검증을 반복하지 않는다. 명시적 전체 재현 명령은 `pnpm verify:full`이며,
+CI의 개별 전체 검사 entry(type-check·harness·lint·unit·format·build)는 유지한다.
+런타임 변경의 추가 로컬 build가 필요한 경우에도 영향 workspace만 선택한다.
 
 ```bash
-pnpm build
+TURBO_SCM_BASE=origin/migration_main pnpm exec turbo run build --affected
 ```
 
 - Vitest: 순수 함수, hook, 동기 component, service 단위 테스트
 - Playwright: 브라우저, 핵심 사용자 흐름, async Server Component와 UI regression
-- ESLint/FSD harness: import 방향과 파일 배치 검증
+- Oxlint/FSD harness: 코드 품질·import 방향과 파일 배치 검증
 - 문서만 변경하는 작업은 요청된 경우 lint/typecheck/test/build를 실행하지 않는다.
 - 일반 `migration_main` PR의 전체 diff가 일반 파일 `.md` 변경뿐이면 CI는 scope 판정과 필수 `verify`만 실행한다.
-  feature 브랜치의 push hook도 같은 기준으로 검증을 생략한다. 코드 혼합·판정 실패·Promotion은 전체 검증을 유지한다.
+  feature push hook은 문서 전용이면 생략하고 그 외에는 `pnpm verify`의 로컬 증분 검증을 사용한다. Ready PR의 코드 혼합·판정 실패는 전체 검증을 유지한다. Promotion은 source 검증 근거와 배포 후보를 검사한다.
 - 문서 작업의 push에서 Git hook이 검증을 자동 실행했다면, 별도 검증으로 계획한 것처럼 기록하지 않고 hook이 실행한 명령과 결과를 그대로 보고한다.
 - 테스트 도구나 번들러의 기본 동작을 추측하지 말고 현재 config와 공식 문서를 확인한다.
 
@@ -354,11 +371,13 @@ pnpm build
 ## 10. 설정 파일 배치
 
 설정 파일을 미관만을 이유로 일괄적으로 `configs/`로 이동하지 않는다. Next.js, TypeScript,
-ESLint, Vitest, Drizzle Kit, Steiger, Sentry, Prettier, shadcn CLI처럼 프로젝트 루트에서
+Oxlint, Oxfmt, Vitest, Drizzle Kit, Steiger, Sentry, shadcn CLI처럼 프로젝트 루트에서
 자동 탐색하는 도구의 진입점은 루트에 유지한다.
 
-- `next.config.ts`, `tsconfig.json`, `eslint.config.mts`, `vitest.config.ts`, `drizzle.config.ts`,
-  `steiger.config.ts`, `components.json`, `.prettierrc`, `.prettierignore`, `sentry*.config.ts`는 루트가 기본 위치다.
+- `next.config.ts`, `tsconfig.json`, `oxlint.config.ts`, `.oxfmtrc.json`,
+  `vitest.config.ts`, `drizzle.config.ts`,
+  `steiger.config.ts`, `components.json`, `sentry*.config.ts`는 루트가 기본 위치다.
+  Oxlint는 공식 nested config로 workspace별 설정을 선택하고 공통 preset을 공유한다.
 - 애플리케이션의 런타임 설정·feature flag·환경변수 해석은 `src/shared/config`에 둔다. domain- 또는
   route 전용 설정은 해당 slice의 `config/` 또는 route-private `_config/`에 둔다.
 - 별도 `configs/`가 필요하면 CI/스크립트 등 명시적인 `--config` 호출이 보장되는 설정만 둔다.

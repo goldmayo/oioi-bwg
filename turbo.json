@@ -13,9 +13,9 @@
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
-        "$TURBO_ROOT$/packages/config/eslint/**"
+        "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
-      "outputs": [],
+      "outputs": ["*.tsbuildinfo"],
       "dependsOn": ["^transit"]
     },
     "lint": {
@@ -26,7 +26,7 @@
         "!*.tsbuildinfo",
         "!**/*.tsbuildinfo",
         "!next-env.d.ts",
-        "$TURBO_ROOT$/packages/config/eslint/**"
+        "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
       "outputs": [],
       "dependsOn": ["^transit"]
@@ -105,15 +105,15 @@
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
-        "$TURBO_ROOT$/packages/config/eslint/**",
         "$TURBO_ROOT$/packages/config/typescript/next.json",
         "$TURBO_ROOT$/packages/config/next.ts",
         "$TURBO_ROOT$/packages/config/sentry-build.ts",
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/vitest/browser.js",
-        "$TURBO_ROOT$/packages/config/vitest/postgres.js"
+        "$TURBO_ROOT$/packages/config/vitest/postgres.js",
+        "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
-      "outputs": []
+      "outputs": ["*.tsbuildinfo"]
     },
     "@oioi-bwg/web#lint": {
       "dependsOn": ["^transit"],
@@ -124,7 +124,7 @@
         "!*.tsbuildinfo",
         "!**/*.tsbuildinfo",
         "!next-env.d.ts",
-        "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/next.json"
@@ -158,15 +158,15 @@
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
-        "$TURBO_ROOT$/packages/config/eslint/**",
         "$TURBO_ROOT$/packages/config/typescript/next.json",
         "$TURBO_ROOT$/packages/config/next.ts",
         "$TURBO_ROOT$/packages/config/sentry-build.ts",
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/vitest/browser.js",
-        "$TURBO_ROOT$/packages/config/vitest/postgres.js"
+        "$TURBO_ROOT$/packages/config/vitest/postgres.js",
+        "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
-      "outputs": []
+      "outputs": ["*.tsbuildinfo"]
     },
     "@oioi-bwg/console#lint": {
       "dependsOn": ["^transit"],
@@ -177,7 +177,7 @@
         "!*.tsbuildinfo",
         "!**/*.tsbuildinfo",
         "!next-env.d.ts",
-        "$TURBO_ROOT$/packages/config/eslint/**",
+        "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/next.json"
@@ -216,7 +216,7 @@
     "@oioi-bwg/repository-tools#type-check": {
       "dependsOn": ["^transit"],
       "cache": false,
-      "outputs": []
+      "outputs": ["*.tsbuildinfo"]
     },
     "@oioi-bwg/repository-tools#lint": {
       "dependsOn": ["^transit"],
@@ -233,10 +233,10 @@
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
-        "$TURBO_ROOT$/packages/config/eslint/**",
-        "$TURBO_ROOT$/packages/config/vitest/browser.js"
+        "$TURBO_ROOT$/packages/config/vitest/browser.js",
+        "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
-      "outputs": [],
+      "outputs": ["*.tsbuildinfo"],
       "dependsOn": ["^transit"]
     },
     "@oioi-bwg/ui#test": {

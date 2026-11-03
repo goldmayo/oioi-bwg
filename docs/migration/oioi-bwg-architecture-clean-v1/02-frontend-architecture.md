@@ -1,10 +1,10 @@
 ---
 title: "Frontend Architecture & Refactoring Rules"
 document_id: "02"
-version: "1.12"
+version: "1.13"
 status: "active"
 authority: "architecture"
-updated_at: "2026-10-25"
+updated_at: "2026-11-02"
 depends_on:
   - "01"
 supersedes:
@@ -17,7 +17,7 @@ tags:
   - "refactoring"
 ---
 
-# oioi-bwg Frontend Architecture & Refactoring Rules v1.12
+# oioi-bwg Frontend Architecture & Refactoring Rules v1.13
 
 ## 1. 목적
 
@@ -776,3 +776,104 @@ rendering과 interaction contract 중심으로 테스트한다.
 18. 외부 상태를 변경하는 mutation과 side effect는 가능한 한 model에 격리한다.
 19. 순수 presentation state와 UI event는 UI에 남겨도 된다.
 20. Base UI 기반 shadcn/ui + Tailwind CSS를 프로젝트 스타일링 표준으로 사용한다.
+
+---
+
+## 19. 변경 경계와 화면 조합 지침
+
+2026-11-02 사용자 결정으로 Console Shell 논의에서 도출한 지침을 Web·Console의 신규 구현과
+변경 리뷰에 적용한다. 기존 §3~5·§8~12·§15를 구체화하며 헌법의 KISS·YAGNI·FSD 경계를 유지한다.
+이 개정은 기존 구현 전체의 준수 완료나 일괄 리팩터링 착수를 뜻하지 않는다.
+
+### 19.1. 독립적으로 바뀌는 결정을 분리한다
+
+책임 경계는 줄 수나 화면에서의 인접성보다 변경 이유로 정한다. 함께 바뀌는 표현과 상호작용은
+가까이 두고, 독립적으로 바뀌는 정책·외부 효과는 소유 경계 뒤에 둔다. 기능을 이해하기 위해
+따라가야 할 파일과 전달 계층이 늘기만 한다면 분리 효과를 다시 검토한다.
+
+- UI는 표시와 이벤트를 맡고 접힘·포커스·overlay 열림 같은 presentation state를 소유할 수 있다.
+- model은 React lifecycle·구독·폼·mutation·탐색을 use-case 단위로 조합한다.
+- React가 필요 없는 계산·변환·판정은 먼저 순수 함수로 분리한다. 억지로 hook을 만들지 않는다.
+- app의 page/layout과 route-private 조합 컴포넌트는 기능을 선택하고 연결할 수 있다.
+  기능을 import한다는 사실만으로 책임 위반으로 판정하지 않는다. 내부 정책을 직접 구현하는지 본다.
+
+함수를 hook으로 옮기는 것만으로 책임 분리가 끝나지 않는다. 거대한 `useShell`·`usePage`에
+관련 없는 기능을 모으거나, 한 줄의 전달만 하는 wrapper를 늘리지 않는다.
+
+### 19.2. 전역 Shell은 배치를 소유하고 기능은 조합한다
+
+Shell의 응집도는 공통 화면의 배치·반응형·접근성·배치에 속한 상호작용을 중심으로 유지한다.
+메뉴 정책, 인증, 알림, 계정 기능은 각 소유자가 처리하고 app의 조합 경계가 연결한다.
+기능 UI 자체도 hook과 순수 함수를 조합할 수 있으며 모든 기능을 무상태 UI로 만들지 않는다.
+
+예를 들어 알림 조회·읽음 처리는 알림 기능이, 로그아웃 확인·세션 종료·실패 처리는 인증 행동이
+소유한다. Shell은 이 기능의 API·Query·세션 처리 세부사항 없이 배치할 수 있어야 한다.
+사이드바 접힘과 모바일 메뉴 열림은 Shell 내부에 남길 수 있다.
+
+다음은 조합 방향을 설명하는 예시이며 컴포넌트 이름과 props를 고정한 공용 API가 아니다.
+
+```tsx
+<AdminShell
+  navigation={<AdminSidebar items={items} />}
+  breadcrumbs={<AdminBreadcrumbs items={breadcrumbs} />}
+  headerActions={<NotificationBell />}
+  sidebarFooter={<LogoutAction />}
+>
+  {children}
+</AdminShell>
+```
+
+실제로 필요한 영역만 `children`·이름 있는 JSX props·이벤트 callback으로 전달한다.
+미래 확장을 위한 slot registry, plugin lifecycle, 설정 DSL이나 범용 Shell framework는 만들지 않는다.
+Shell의 위치는 §8의 실제 소유 범위로 판단하며 전역 사용만으로 `shared`나 공용 package에 올리지 않는다.
+Web과 Console의 제품별 조합도 억지로 하나로 합치지 않는다.
+
+### 19.3. 기존 기반과 상태 소유권을 보존한다
+
+먼저 현재 사용하는 공용 컴포넌트·hook·순수 함수와 라이브러리의 공개 API로 해결 가능한지 확인한다.
+도메인 의미를 추가하는 작은 helper는 허용하되, 라우터·history·Query·폼·UI primitive의 기능을
+다시 구현하거나 라이브러리 어휘를 숨기는 기반 계층을 만들지 않는다. 새 의존성도 작은 helper를
+없애기 위한 목적으로 자동 도입하지 않는다. 외부 효과는 기능 경계에서 명시적으로 실행한다.
+
+경로 템플릿과 링크 생성은 앱의 소유 경계에서 한 번 정의하고, 메뉴·브레드크럼·관측 정책은
+각 소유 경계가 그 정의를 참조한다. 화면 URL·API URL·인가 정책을 하나의 전역 registry로 합치지 않는다.
+유한한 대응 관계는 의미 있는 키와 객체 참조로 표현하고 배열 순번에 의미를 부여하지 않는다.
+삼항 연산자를 중첩하지 않는다. 대응은 객체 lookup, 실행 분기는 guard·early return으로 표현한다.
+단일 조건의 간단한 표시에는 삼항 연산자를 사용할 수 있다.
+
+클라이언트가 계속 소비하는 서버 상태는 Query, 폼 초안은 RHF, 공유·탐색과 함께 보존할 상태는
+URL이라는 기존 소유권을 유지한다. RSC 전용 조회 등은 §6~7과 Rendering/Query 계약을 따른다.
+Shell·Context를 기능별 Query 데이터의 복제 저장소로 사용하거나 같은 소유 범위에서 props로 계산할
+값을 effect로 동기화하지 않는다. 다른 트리의 헤더에 전달할 페이지 제목 같은 최소 UI metadata는
+공유 필요성을 확인해 전달할 수 있다. Context는 필요한 상태만 담고 실제 소비 범위에 둔다.
+확장을 이유로 모든 상태와 provider를 최상위에 올리지 않는다. 필요한 기능의 구독·실패 처리는 그 기능 가까이에 둔다.
+
+### 19.4. 변경 전파와 회귀로 설계를 검증한다
+
+리뷰에서는 파일 수나 hook 유무보다 다음 변경 시나리오로 경계를 확인한다.
+
+- 알림 조회·읽음 처리 변경에 Shell의 배치 구현까지 수정해야 하는가?
+- 메뉴 추가에 레이아웃 수정이나 경로 문자열 재작성이 필요한가?
+- 모바일 메뉴 수정에 인증·도메인 정책 이해가 필요한가?
+- 페이지 이동·계정 변경으로 상태가 잘못 공유되거나 불필요한 remount로 편집 초안이 사라지는가?
+- 추출 후 caller가 의존하는 지식과 변경 파일이 줄었으며 실행 흐름을 추적하기 쉬운가?
+
+이 질문은 설계 판단 기준이며 위반 파일을 자동 판정하거나 기존 코드를 일괄 이동하는 규칙이 아니다.
+순수 계산은 의미 있는 입력·경계 사례의 unit test로, Shell은 desktop/mobile·키보드·포커스·스크롤
+상호작용으로, 제품 조합은 대표 route의 진입·이탈·미저장 변경 보호로 검증한다.
+영향받는 공개 UI와 편집 흐름을 대조하며 검증 범위·제약은 PR에 기록한다. 세부 테스트 정책은
+[Testing](10-testing-architecture.md)을 따른다.
+
+### 19.5. 근거와 해석 범위
+
+- Parnas의 [모듈 분해 기준](https://www.cs.lafayette.edu/~gexia/cs301/resources/parnas.html):
+  변경될 설계 결정을 모듈 경계 뒤에 숨긴다는 원칙을 변경 이유에 따른 분리에 적용했다.
+- [React의 JSX 조합](https://react.dev/learn/passing-props-to-a-component#passing-jsx-as-children):
+  컨테이너가 내부 내용의 구현을 몰라도 조합할 수 있다는 설명을 Shell의 영역 전달에 적용했다.
+- Dan Abramov의 [Writing Resilient Components](https://overreacted.io/writing-resilient-components/):
+  데이터 흐름 유지와 로컬 상태 격리를 UI 상태와 기능 상태의 소유권 판단에 참고했다.
+- Gary Bernhardt의 [Functional Core, Imperative Shell](https://www.destroyallsoftware.com/screencasts/catalog/functional-core-imperative-shell):
+  순수 계산과 외부 효과를 구분하는 접근을 참고했다. 여기서의 imperative shell은 화면 Shell과 다른 개념이다.
+
+위 자료는 설계 근거다. 이 저장소의 배치·hook·경로·검증 규칙은 사용자 합의에 따른 적용이며
+원저자 모두가 동일한 React 구조를 권고했다는 의미가 아니다.

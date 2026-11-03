@@ -1,10 +1,10 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.25"
+version: "1.26"
 status: "active"
 authority: "runbook"
-updated_at: "2026-10-29"
+updated_at: "2026-11-03"
 depends_on:
   - "01"
   - "02"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.25
+# oioi-bwg Deployment / Migration Runbook v1.26
 
 ## 1. 목적
 
@@ -494,14 +494,20 @@ feature/* → PR → migration_main (통합, 배포 없음)
 migration_main → Promotion PR → migration_develop (OCI Development 배포 대상)
 ```
 
-일반 feature PR의 verify는 정적 검사·unit/ops/PostgreSQL·Next build와 컨테이너 smoke를 수행한다.
+2026-11-03 사용자 결정으로 작업 중 Draft PR과 병합 전 Ready PR을 분리한다.
+Draft는 `pnpm verify`의 영향 workspace·관련 테스트·타입/lint 캐시·변경 포맷만 검사하며 PostgreSQL·
+ARM64·Terraform·이미지 build/smoke를 실행하지 않는다. 결과는 `partial verify`로 보고한다.
+Ready 전환(`ready_for_review`)과 Ready 상태의 최종 커밋 push는 전체 정적 검사·unit/ops/PostgreSQL·
+ARM64·Next build와 컨테이너 smoke를 수행한다. `converted_to_draft`는 진행 중 전체 실행을 취소하고
+부분 검증으로 돌아간다. 필수 `verify`에는 Draft 성공을 게시하지 않는다.
 관리자 전체 Playwright E2E(`Admin migration integration`)는 자동 workflow job과 required verify에서 제외한다.
-일반 PR·기존 push·Promotion 모두 동일하며 `pnpm test:integration:admin` 계열 명령으로 필요 시 직접 실행한다.
+관리자 E2E 수동 실행 원칙은 일반 PR·기존 push·Promotion에 동일하며 `pnpm test:integration:admin` 계열 명령으로 필요 시 직접 실행한다.
 관리자 E2E 제외는 container native/readiness·간단한 화면 smoke나 아래 Promotion exact digest 검증을 생략하는 조건이 아니다.
 단, `migration_main` 대상 전체 PR diff가 일반 파일 `.md` 변경뿐이면 scope 판정과 필수 `verify`만 실행한다.
 이력 누락·빈 diff·symlink/실행 mode·MDX·코드 혼합은 전체 검증이다. Git raw diff의 삭제/추가 양쪽을
 검사해 code→md rename과 API 파일 수 제한에 의한 누락을 방지한다. workflow 자체를 path filter로 생략하지 않는다.
-Promotion은 문서만 달라도 전체 검증·후보 계약을 유지하며 이 예외로 과거 candidate를 재사용하지 않는다.
+Promotion은 main의 코드 검증 근거를 확인하며, 문서 예외를 포함해 현재 source/tree가 검증된 main 병합 결과여야 한다.
+배포 후보는 기존 계약에 따라 현재 run에서 검증한다. 문서 예외가 과거 candidate 재사용 권한을 주지 않는다.
 `migration_main` merge push와 `migration_develop` push에서는 무거운 검증·image build를 반복하지 않는다.
 두 push에서는 성공한 동일 저장소 PR의 head/tree·검증 job·입력 key·미만료 artifact를 확인한 뒤
 검증용 BuildKit 캐시만 base branch에 발행할 수 있다. 캐시 누락은 직접 빌드로 복구하며
@@ -512,7 +518,12 @@ Docker builder는 다음 변경 build에 복원하지 않는 Next 파일시스�
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
 `promotion` check가 실패한다.
 
-Promotion PR은 full verify 후 현재 `migration_main` head에서 하나의 논리적 paired release를 검증한다.
+Promotion PR의 `reuse main verification`은 현재 main head의 병합 PR과 검증 run을 대조한다.
+동일 저장소·main 대상 squash 결과 SHA·PR 최종 head·source/tree·Verify workflow·병합 이전 성공 시각과
+전체 job 및 필수 verify 성공을 확인한다. main의 일반 Markdown-only 예외만 Git raw diff로 재판정한다.
+누락·불일치·실패·Draft 부분 검증은 거절하고 전체 검사를 몰래 시작하지 않는다. source 검증 성공 뒤
+현재 `migration_main` head에서 하나의 paired release를 검증하며 타입/lint/unit/PG/ARM64 검사를 반복하지 않는다.
+Draft Promotion에서는 후보 빌드·게시를 실행하지 않는다.
 P06 선택적 재사용 계약은 마지막 **실제 배포 exit 0**의 immutable Actions receipt/candidate artifact만 기준으로 삼는다.
 최신 정상 배포의 PR/source/tree/run/attempt·artifact 미만료·성공 check·registry를 검증하고,
 그 기준 source부터 현재 source까지 앱 경로와 Turbo affected 결과를 함께 확인한다. 공통/알 수 없는 경로,

@@ -5,13 +5,17 @@ import { useQuery } from "@tanstack/react-query";
 
 import { waveformQueries } from "@/entities/waveform";
 
+import { useFormLeaveConfirmation } from "@/shared/model/use-form-leave-confirmation";
+import { UnsavedChangesDialog } from "@/shared/ui/unsaved-changes-dialog";
+
 import { type EditorNote, getEditorNotes, type NoteEdit } from "../lib/editor-notes";
 import type { SelectionEdit } from "../lib/note-selection";
-import type { SongEditor, WaveformImportControls } from "../model/types";
+import type { EditorReturnTarget, SongEditor, WaveformImportControls } from "../model/types";
 import type { SaveSongDataAction } from "../model/useAdminEditor";
 
 import { EditorControlPanel } from "./EditorControlPanel";
 import { EditorReferenceVideo } from "./EditorReferenceVideo";
+import { EditorReturnBar } from "./EditorReturnBar";
 import { EditorTopBar } from "./EditorTopBar";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { LyricsEditorProvider, useLyricsEditorContext } from "./LyricsEditorContext";
@@ -25,15 +29,24 @@ interface LyricsEditorClientProps {
   accountId: string;
   disabled?: boolean;
   waveformImport?: WaveformImportControls;
+  saveLabel?: string;
+  referenceVideoReadOnly?: boolean;
+  returnTo?: EditorReturnTarget;
 }
 function LyricsEditorWorkspace({
   accountId,
   disabled = false,
   waveformImport,
+  saveLabel,
+  referenceVideoReadOnly,
+  returnTo,
 }: {
   accountId: string;
   disabled?: boolean;
   waveformImport?: WaveformImportControls;
+  saveLabel?: string;
+  referenceVideoReadOnly?: boolean;
+  returnTo?: EditorReturnTarget;
 }) {
   const editor = useLyricsEditorContext();
   const query = useQuery(waveformQueries.song(accountId, editor.songId));
@@ -56,7 +69,8 @@ function LyricsEditorWorkspace({
         ...notes.map((note) => (Number.isFinite(note.time) ? note.time + 8 : 0)),
         30,
       );
-  const blocked = disabled || editor.isAdPlaying;
+  const leave = useFormLeaveConfirmation(editor.isDirty, editor.isSaving);
+  const blocked = disabled || editor.isAdPlaying || leave.open;
   const looping = loop.enabled && loop.video === editor.youtubeId;
   const select = (note: EditorNote, additive = false) => {
     setSelection({
@@ -121,6 +135,7 @@ function LyricsEditorWorkspace({
     const onKeyDown = (event: KeyboardEvent) => {
       if (
         disabled ||
+        leave.open ||
         event.isComposing ||
         event.defaultPrevented ||
         document.querySelector('[role="dialog"][data-state="open"], dialog[open]')
@@ -193,7 +208,9 @@ function LyricsEditorWorkspace({
   return (
     <div data-lyrics-editor className="bg-background relative flex h-full min-h-0 flex-col">
       <FloatingToolbar />
-      <EditorTopBar blocked={blocked} />
+      <UnsavedChangesDialog open={leave.open} onStay={leave.stay} onLeave={leave.leave} />
+      {returnTo && <EditorReturnBar target={returnTo} />}
+      <EditorTopBar saveLabel={saveLabel} blocked={blocked} />
       <div
         data-editor-scroll
         className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-hidden"
@@ -334,7 +351,7 @@ function LyricsEditorWorkspace({
             aria-label="참고 영상"
             className="border-border bg-card/20 min-h-0 min-w-0 rounded-md border p-3 lg:overflow-y-auto"
           >
-            <EditorReferenceVideo />
+            <EditorReferenceVideo readOnly={referenceVideoReadOnly} />
           </aside>
         </div>
       </div>
@@ -347,6 +364,9 @@ export default function LyricsEditorClient({
   accountId,
   disabled,
   waveformImport,
+  saveLabel,
+  referenceVideoReadOnly,
+  returnTo,
 }: LyricsEditorClientProps) {
   return (
     <LyricsEditorProvider song={song} saveSongData={saveSongData}>
@@ -354,6 +374,9 @@ export default function LyricsEditorClient({
         accountId={accountId}
         disabled={disabled}
         waveformImport={waveformImport}
+        saveLabel={saveLabel}
+        referenceVideoReadOnly={referenceVideoReadOnly}
+        returnTo={returnTo}
       />
     </LyricsEditorProvider>
   );

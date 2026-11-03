@@ -35,6 +35,7 @@ export async function writeLegacyGuide(
     throw new AppError("CHEER_GUIDE_CHANGE_RESTRICTED");
   }
   if (!changes.lyrics) return { guideId: guide.id, lockVersion: guide.lockVersion };
+  if (guide.workingSnapshotId) throw new AppError("CHEER_GUIDE_DRAFT_PENDING");
   if (expected?.guideId !== guide.id || expected.lockVersion !== guide.lockVersion) {
     throw new AppError("CHEER_GUIDE_CONFLICT");
   }

@@ -2,6 +2,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import {
+  NavigationConfirmationProvider,
+  useNavigationBlocker,
+} from "@/shared/model/navigation-confirmation";
+
 import { NotificationInbox } from "./notification-inbox";
 import { NotificationProvider } from "./notification-provider";
 const mocks = vi.hoisted(() => ({
@@ -85,4 +90,28 @@ it("다른 계정의 조회 캐시를 함께 사용하지 않는다", async () =
   expect(notificationQueryKeys.all(accountId)).not.toEqual(
     notificationQueryKeys.all("other-account"),
   );
+});
+
+it("알림을 읽은 뒤에도 미저장 폼의 승인이 있어야 결과로 이동한다", async () => {
+  const block = vi.fn();
+  function DirtyForm() {
+    useNavigationBlocker(block);
+    return null;
+  }
+  render(
+    <QueryClientProvider client={client}>
+      <NavigationConfirmationProvider>
+        <DirtyForm />
+        <NotificationProvider accountId={accountId} config={null}>
+          <NotificationInbox />
+        </NotificationProvider>
+      </NavigationConfirmationProvider>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: /파형 생성을 완료했습니다/ }));
+  await waitFor(() => expect(block).toHaveBeenCalledTimes(1));
+  expect(mocks.patch).toHaveBeenCalledTimes(1);
+  expect(mocks.push).not.toHaveBeenCalled();
+  await act(() => block.mock.calls[0][0]());
+  expect(mocks.push).toHaveBeenCalledWith(item.href);
 });

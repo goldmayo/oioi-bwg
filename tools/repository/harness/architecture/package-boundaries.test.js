@@ -1,75 +1,139 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-import { ESLint } from "eslint";
+const root = path.resolve(import.meta.dirname, "../../../..");
+const nativeBin = path.join(root, "node_modules/oxlint/bin/oxlint");
 
-test("independent Worker runtime boundaries match in repository and workspace lint", async () => {
-  const root = path.resolve(import.meta.dirname, "../../../..");
-  const workspace = path.join(root, "apps/sentry-slack-relay");
-  for (const source of [
-    'export * from "@oioi-bwg/config/next";',
-    'export * from "@oioi-bwg/server/db";',
-    'export * from "../../web/src/auth";',
-    'export * from "../../../packages/server/src/db";',
-    'export * from "next/server";',
-    'export * from "node:fs";',
-    'export const load = () => import("@oioi-bwg/config/next");',
-  ]) {
-    const configs = [];
-    for (const cwd of [root, workspace]) {
-      const eslint = new ESLint({ cwd });
-      const filePath = path.join(workspace, "src/boundary-probe.mts");
-      configs.push((await eslint.calculateConfigForFile(filePath)).rules);
-      const [{ messages }] = await eslint.lintText(source, { filePath });
-      assert.ok(
-        messages.some(({ ruleId }) =>
-          [
-            "no-restricted-imports",
-            "no-restricted-syntax",
-            "worker-boundary/local-import",
-          ].includes(ruleId),
-        ),
-        `${cwd}: ${source}`,
-      );
+// 실제 owner 경로에서 검사해 root와 workspace의 설정 선택을 함께 보호한다.
+test("runtime dependency boundaries match in repository and workspace checks", (context) => {
+  const cases = [
+    ...[
+      "@oioi-bwg/config/next",
+      "@oioi-bwg/server/db",
+      "../../web/src/auth",
+      "../../../packages/server/src/db",
+      "next/server",
+      "node:fs",
+    ].map((dependency) => ({ owner: "apps/sentry-slack-relay", folder: "src", dependency })),
+    {
+      owner: "apps/sentry-slack-relay",
+      folder: "src",
+      dependency: "@oioi-bwg/config/next",
+      dynamic: true,
+    },
+    {
+      owner: "apps/sentry-slack-relay",
+      folder: `src/native-boundary-${process.pid}`,
+      dependency: "../index.mts",
+      allowed: true,
+    },
+    ...[
+      "node:fs",
+      "react",
+      "next/server",
+      "@oioi-bwg/server/db",
+      "../../../apps/web/src/auth",
+      "@oioi-bwg/config/next",
+    ].map((dependency) => ({ owner: "packages/contracts", folder: "src", dependency })),
+    { owner: "packages/contracts", folder: "src", dependency: "zod", allowed: true },
+    ...[
+      "react",
+      "@oioi-bwg/config/next",
+      "next/server",
+      "@/auth",
+      "@oioi-bwg/web/src/auth",
+      "../../../apps/web/src/auth",
+    ].map((dependency) => ({ owner: "packages/server", folder: "src/auth", dependency })),
+    ...["drizzle-orm", "../db/postgres-error.js"].map((dependency) => ({
+      owner: "packages/server",
+      folder: "src/services",
+      dependency,
+    })),
+    ...["../services/song-service.js", "../errors/app-error.js"].map((dependency) => ({
+      owner: "packages/server",
+      folder: "src/repositories",
+      dependency,
+    })),
+    {
+      owner: "packages/server",
+      folder: "src/services",
+      dependency: "../db/index.js",
+      allowed: true,
+    },
+    ...["next/server", "@oioi-bwg/server/db", "@oioi-bwg/contracts/song"].map((dependency) => ({
+      owner: "packages/ui",
+      folder: "src",
+      dependency,
+    })),
+  ];
+  const created = [];
+  const directories = new Set();
+  context.after(() => {
+    for (const filename of created) fs.unlinkSync(filename);
+    for (const directory of directories) {
+      try {
+        fs.rmdirSync(directory);
+      } catch (error) {
+        if (error.code !== "ENOTEMPTY") throw error;
+      }
     }
-    assert.deepEqual(configs[0]["no-restricted-imports"], configs[1]["no-restricted-imports"]);
-  }
-  for (const cwd of [root, workspace]) {
-    const [{ errorCount }] = await new ESLint({ cwd }).lintText('export * from "../index.mts";', {
-      filePath: path.join(workspace, "src/nested/probe.mts"),
-    });
-    assert.equal(errorCount, 0);
-  }
-});
-
-test("contracts lint rejects platform and implementation dependencies", async () => {
-  const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
-  const eslint = new ESLint({ cwd: path.join(repositoryRoot, "packages/contracts") });
-  for (const source of [
-    'export { readFile } from "node:fs";',
-    'export { cache } from "react";',
-    'export { NextResponse } from "next/server";',
-    'export { getDatabase } from "@oioi-bwg/server/db";',
-    'export { auth } from "../../../apps/web/src/auth";',
-    'export * from "@oioi-bwg/config/next";',
-  ]) {
-    const [{ messages }] = await eslint.lintText(source, { filePath: "src/boundary-probe.ts" });
-    assert.ok(
-      messages.some(({ ruleId }) => ruleId === "no-restricted-imports"),
-      source,
-    );
-  }
-  const [{ errorCount }] = await eslint.lintText('export { z } from "zod";', {
-    filePath: "src/boundary-probe.ts",
   });
-  assert.equal(errorCount, 0);
+  for (const [index, item] of cases.entries()) {
+    const directory = path.join(root, item.owner, item.folder);
+    if (!fs.existsSync(directory)) {
+      fs.mkdirSync(directory, { recursive: true });
+      directories.add(directory);
+    }
+    const extension = item.owner.startsWith("apps/") ? "mts" : "ts";
+    item.filename = path.join(directory, `native-boundary-${process.pid}-${index}.${extension}`);
+    const source = item.dynamic
+      ? `export const load = () => import(${JSON.stringify(item.dependency)});`
+      : `export * from ${JSON.stringify(item.dependency)};`;
+    fs.writeFileSync(item.filename, source, { flag: "wx" });
+    created.push(item.filename);
+  }
+  for (const cwd of [root, ...new Set(cases.map(({ owner }) => path.join(root, owner)))]) {
+    const selected = cases.filter(({ owner }) => cwd === root || cwd === path.join(root, owner));
+    const result = spawnSync(
+      process.execPath,
+      [
+        nativeBin,
+        "--type-aware",
+        "--report-unused-disable-directives-severity",
+        "warn",
+        "--format=json",
+        ...selected.map(({ filename }) => filename),
+      ],
+      { cwd, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 },
+    );
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    const { diagnostics } = JSON.parse(result.stdout);
+    for (const item of selected) {
+      const found = diagnostics.filter(
+        ({ filename }) => path.resolve(cwd, filename) === item.filename,
+      );
+      if (item.allowed) assert.deepEqual(found, [], `${cwd}: ${item.dependency}`);
+      else
+        assert.ok(
+          found.some(({ code }) =>
+            [
+              "core-js(no-restricted-imports)",
+              "core-js(no-restricted-syntax)",
+              "worker-boundary(local-import)",
+            ].includes(code),
+          ),
+          `${cwd}: ${item.dependency}: ${JSON.stringify(found)}`,
+        );
+    }
+  }
 });
 
 test("server database entry rejects client conditions and loads without connecting under server conditions", () => {
-  const entry = "@oioi-bwg/server/db";
-  const code = `import(${JSON.stringify(entry)})`;
+  const code = 'import("@oioi-bwg/server/db")';
   const env = { ...process.env };
   delete env.DATABASE_URL;
   const options = { cwd: path.resolve(import.meta.dirname, "../.."), encoding: "utf8", env };
@@ -84,57 +148,4 @@ test("server database entry rejects client conditions and loads without connecti
   );
   assert.equal(server.error, undefined);
   assert.equal(server.status, 0, server.stderr);
-});
-
-test("server lint rejects app/framework dependencies and reversed persistence boundaries", async () => {
-  const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
-  const eslint = new ESLint({ cwd: path.join(repositoryRoot, "packages/server") });
-  for (const [filePath, dependency] of [
-    ["src/auth/probe.ts", "react"],
-    ["src/auth/probe.ts", "@oioi-bwg/config/next"],
-    ["src/auth/probe.ts", "next/server"],
-    ["src/auth/probe.ts", "@/auth"],
-    ["src/auth/probe.ts", "@oioi-bwg/web/src/auth"],
-    ["src/auth/probe.ts", "../../../apps/web/src/auth"],
-    ["src/services/probe.ts", "drizzle-orm"],
-    ["src/services/probe.ts", "../db/postgres-error.js"],
-    ["src/repositories/probe.ts", "../services/song-service.js"],
-    ["src/repositories/probe.ts", "../errors/app-error.js"],
-  ]) {
-    const [{ messages }] = await eslint.lintText(`export * from "${dependency}";`, { filePath });
-    assert.ok(
-      messages.some(({ ruleId }) => ruleId === "no-restricted-imports"),
-      dependency,
-    );
-  }
-  const [{ errorCount }] = await eslint.lintText('export { getDatabase } from "../db/index.js";', {
-    filePath: "src/services/probe.ts",
-  });
-  assert.equal(errorCount, 0);
-});
-
-test("repository hooks and package commands apply the same dependency boundaries", async () => {
-  const root = path.resolve(import.meta.dirname, "../../../..");
-  for (const [workspace, filename, dependency] of [
-    ["server", "src/services/album-image-service.ts", "drizzle-orm"],
-    ["server", "src/repositories/song-repository.ts", "../services/song-service"],
-    ["contracts", "src/song.ts", "node:fs"],
-    ["ui", "src/data-table.tsx", "next/server"],
-    ["ui", "src/data-table.tsx", "@oioi-bwg/server/db"],
-    ["ui", "src/data-table.tsx", "@oioi-bwg/contracts/song"],
-  ]) {
-    const filePath = path.join(root, "packages", workspace, filename);
-    const configs = [];
-    for (const cwd of [root, path.join(root, "packages", workspace)]) {
-      const eslint = new ESLint({ cwd });
-      const config = await eslint.calculateConfigForFile(filePath);
-      configs.push(config.rules["no-restricted-imports"]);
-      const [{ messages }] = await eslint.lintText(`export * from "${dependency}";`, { filePath });
-      assert.ok(
-        messages.some(({ ruleId }) => ruleId === "no-restricted-imports"),
-        `${cwd}: ${dependency}`,
-      );
-    }
-    assert.deepEqual(configs[0], configs[1]);
-  }
 });

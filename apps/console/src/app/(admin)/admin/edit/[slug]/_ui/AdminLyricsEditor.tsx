@@ -10,16 +10,31 @@ import {
   createClientAbility,
   useAdminReauthentication,
 } from "@/features/auth";
-import { LazyLyricsEditor, type SongEditor } from "@/features/manage-lyrics";
+import {
+  type EditorReturnTarget,
+  LazyLyricsEditor,
+  type SongEditor,
+} from "@/features/manage-lyrics";
 
+import { cheerGuideQueryKeys } from "@/entities/cheer-guide";
 import { songQueryKeys } from "@/entities/song";
 import { songMutations } from "@/entities/song/api";
 import { waveformQueryKeys } from "@/entities/waveform";
 
 import { ApiError } from "@/shared/api/http-errors";
 
+import { getEditorReturnTarget } from "../../../_lib/editor-return-target";
+
 /** Ability와 Song mutation을 lazy lyric editor에 연결하는 route-private 조합 경계다. */
-export function AdminLyricsEditor({ song, accountId }: { song: SongEditor; accountId: string }) {
+export function AdminLyricsEditor({
+  song,
+  accountId,
+  returnTo,
+}: {
+  song: SongEditor;
+  accountId: string;
+  returnTo?: EditorReturnTarget;
+}) {
   const queryClient = useQueryClient();
   const { data } = useSuspenseQuery(authAbilityQueries.current());
   const ability = useMemo(() => createClientAbility(data.rules), [data.rules]);
@@ -29,6 +44,7 @@ export function AdminLyricsEditor({ song, accountId }: { song: SongEditor; accou
     ...songMutations.saveLyrics(),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: songQueryKeys.adminList() });
+      void queryClient.invalidateQueries({ queryKey: cheerGuideQueryKeys.adminList() });
       void queryClient.invalidateQueries({ queryKey: waveformQueryKeys.song(accountId, song.id) });
     },
     onError: recovery.handleMutationError,
@@ -57,6 +73,7 @@ export function AdminLyricsEditor({ song, accountId }: { song: SongEditor; accou
         <LazyLyricsEditor
           key={song.id}
           song={song}
+          returnTo={returnTo ?? getEditorReturnTarget(undefined, song.id, "song")}
           saveSongData={saveSongData}
           accountId={accountId}
           disabled={!canManage}

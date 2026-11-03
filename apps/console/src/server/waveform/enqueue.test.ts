@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { rmSync } from "node:fs";
 import { createServer, type RequestListener, type Server, type ServerResponse } from "node:http";
 import type { Socket } from "node:net";

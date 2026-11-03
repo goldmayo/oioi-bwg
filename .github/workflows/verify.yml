@@ -2,7 +2,7 @@ name: Verify
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches:
       - main
@@ -24,6 +24,7 @@ jobs:
     timeout-minutes: 2
     outputs:
       docs_only: ${{ steps.scope.outputs.docs_only }}
+      mode: ${{ steps.scope.outputs.mode }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,9 +33,59 @@ jobs:
         id: scope
         run: node scripts/verification-scope.mjs >> "${GITHUB_OUTPUT}"
 
+  partial:
+    name: changed files and affected workspaces
+    needs: changes
+    if: needs.changes.outputs.mode == 'partial'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/.cache/turbo
+            apps/*/*.tsbuildinfo
+            packages/*/*.tsbuildinfo
+            tools/*/*.tsbuildinfo
+          key: ${{ runner.os }}-partial-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-partial-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc') }}-
+      - name: Incremental types, lint, related tests and formatting
+        run: pnpm verify
+        env:
+          VERIFY_BASE: ${{ github.event.pull_request.base.sha }}
+
+  source_verification:
+    name: reuse main verification
+    needs: changes
+    if: needs.changes.outputs.mode == 'promotion'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify source and successful main PR checks
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const proof = await import(process.env.GITHUB_WORKSPACE + '/ops/oci/source-verification.mjs');
+            await proof.verifySource({ github, context, core });
+
   infra:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: infra
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -56,7 +107,7 @@ jobs:
 
   quality:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: quality
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -75,13 +126,28 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Restore type and lint caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules/.cache/turbo
+            apps/*/*.tsbuildinfo
+            packages/*/*.tsbuildinfo
+            tools/*/*.tsbuildinfo
+            scripts/*.tsbuildinfo
+            tests/*.tsbuildinfo
+            *.tsbuildinfo
+          key: ${{ runner.os }}-quality-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc', 'packages/config/oxlint/**', 'packages/config/typescript/**') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-quality-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc', 'packages/config/oxlint/**', 'packages/config/typescript/**') }}-
+
       - name: Type check
         run: pnpm type-check
 
       - name: Architecture harness
         run: pnpm test:harness
 
-      - name: ESLint
+      - name: Oxlint
         run: pnpm lint
 
       - name: Format check
@@ -89,7 +155,7 @@ jobs:
 
   unit:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: unit
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -107,6 +173,13 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - name: Restore complete unit-task cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/turbo
+          key: ${{ runner.os }}-unit-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-unit-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc') }}-
       - run: pnpm test:unit:run
       - run: pnpm test:ops
       - name: Verify Console Runner API ingress with isolated Caddy
@@ -120,24 +193,55 @@ jobs:
 
   waveform:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: waveform ARM64
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
+        with:
+          cleanup: false # The GitHub-hosted VM is discarded after this job.
+          version: v0.38.0
+          driver-opts: image=moby/buildkit:v0.33.1
+      - name: Identify native verification cache inputs
+        id: cache-key
+        run: node scripts/verification-cache.mjs waveform >> "${GITHUB_OUTPUT}"
+      - name: Restore native verification cache
+        id: build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/waveform-cache
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            Linux-verify-arm64-v1-
       - name: Build and verify Rust toolchain
+        uses: docker/build-push-action@v6
+        with:
+          context: ops/waveform
+          file: ops/waveform/Dockerfile
+          platforms: linux/arm64
+          provenance: false
+          load: true
+          tags: oioi-bwg:waveform-check
+          cache-from: type=local,src=${{ runner.temp }}/waveform-cache,tag=rust
+          cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/waveform-cache-new,tag=rust,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
+      - name: Verify Rust worker execution
         run: |
-          docker buildx build --platform linux/arm64 --provenance=false --load \
-            -t oioi-bwg:waveform-check -f ops/waveform/Dockerfile ops/waveform
           image=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check)
           python3 tests/ops/waveform-smoke.py "$image"
           python3 tests/ops/waveform-acquisition.py "$image"
       - name: Verify Go Runner Queue publisher on ARM64
-        run: |
-          docker buildx build --platform linux/arm64 --provenance=false --load \
-            -t oioi-bwg:runner-check -f ops/waveform-runner/Dockerfile ops/waveform-runner
+        uses: docker/build-push-action@v6
+        with:
+          context: ops/waveform-runner
+          file: ops/waveform-runner/Dockerfile
+          platforms: linux/arm64
+          provenance: false
+          load: true
+          tags: oioi-bwg:runner-check
+          cache-from: type=local,src=${{ runner.temp }}/waveform-cache,tag=runner
+          cache-to: ${{ steps.build-cache.outputs.cache-hit != 'true' && format('type=local,dest={0}/waveform-cache-new,tag=runner,mode=max,compression=zstd,compression-level=3', runner.temp) || '' }}
       - name: Verify Docker worker lifecycle with synthetic input
         run: |
           test_dir=$(mktemp -d)
@@ -189,7 +293,7 @@ jobs:
           mkdir -p "$output"
           image=$(docker image inspect --format '{{.Id}}' oioi-bwg:waveform-check)
           test "$(docker image inspect --format '{{.Architecture}}' "$image")" = arm64
-          docker image save "$image" | gzip -n > "$output/worker-image.tar.gz"
+          docker image save "$image" | gzip -n -1 > "$output/worker-image.tar.gz"
           printf '%s\n' "$image" > "$output/image-id.txt"
           git rev-parse HEAD > "$output/verified-commit.txt"
           git rev-parse 'HEAD^{tree}' > "$output/verified-tree.txt"
@@ -202,9 +306,33 @@ jobs:
           compression-level: 0
           retention-days: 90
 
+      - name: Replace native cache with current layers
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          rm -rf "${{ runner.temp }}/waveform-cache"
+          mv "${{ runner.temp }}/waveform-cache-new" "${{ runner.temp }}/waveform-cache"
+      - name: Save native verification cache
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/waveform-cache
+          key: ${{ steps.build-cache.outputs.cache-primary-key }}
+      - name: Export native cache for publication after merge
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          contains(fromJSON('["migration_main", "migration_develop"]'), github.base_ref)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-cache-${{ steps.cache-key.outputs.key }}
+          path: ${{ runner.temp }}/waveform-cache
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
   postgres_integration:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: PostgreSQL integration
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -245,7 +373,7 @@ jobs:
 
   app_build:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.mode == 'full'
     name: app build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -448,7 +576,7 @@ jobs:
           docker load --input "${{ runner.temp }}/ci-build/console-image.tar"
 
       - name: Install smoke test browser
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps --only-shell chromium
 
       - name: Prepare isolated lyrics regression fixture
         env:
@@ -511,10 +639,12 @@ jobs:
         run: bash tests/ops/paired-compose-smoke.sh
 
   verify:
-    name: verify
+    name: ${{ needs.changes.outputs.mode == 'partial' && 'partial verify' || 'verify' }}
     if: always()
     needs:
       - changes
+      - partial
+      - source_verification
       - infra
       - quality
       - unit
@@ -527,7 +657,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Require all verification jobs or proven Markdown-only scope
+      - name: Require exact evidence for the selected verification mode
         env:
           VERIFICATION_NEEDS: ${{ toJSON(needs) }}
         run: node scripts/verification-scope.mjs --gate
@@ -536,10 +666,13 @@ jobs:
   promotion-candidate:
     name: promotion candidate
     if: >-
+      ${{ !cancelled() &&
+      needs.verify.result == 'success' &&
       github.event_name == 'pull_request' &&
       github.event.pull_request.base.ref == 'migration_develop' &&
+      github.event.pull_request.draft == false &&
       github.event.pull_request.head.ref == 'migration_main' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository }}
     needs: verify
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
@@ -757,7 +890,7 @@ jobs:
     needs: [verify, promotion-candidate]
     runs-on: ubuntu-latest
     steps:
-      - name: Require full verification and verified candidate
+      - name: Require source verification and verified candidate
         env:
           VERIFY_RESULT: ${{ needs.verify.result }}
           CANDIDATE_RESULT: ${{ needs.promotion-candidate.result }}

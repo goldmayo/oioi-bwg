@@ -5,5 +5,5 @@
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true
   },
-  "include": ["src/**/*.mts", "tests/**/*.ts", "vitest.config.ts", "eslint.config.ts"]
+  "include": ["src/**/*.mts", "tests/**/*.ts", "vitest.config.ts", "oxlint.config.ts"]
 }

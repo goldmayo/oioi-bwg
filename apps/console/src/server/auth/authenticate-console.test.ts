@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { authenticateConsoleMfa } from "@oioi-bwg/server/services/console-mfa-service";
 import { afterEach, expect, it, vi } from "vitest";
 

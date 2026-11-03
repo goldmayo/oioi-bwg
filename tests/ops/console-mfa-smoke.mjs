@@ -265,7 +265,7 @@ export async function assertConsoleRscAuth(browser, origin, sql, artifacts) {
     for (const route of routes) {
       await page.goto(`${origin}${route}`);
       await page.waitForURL(`${origin}/admin-login`);
-      await page.getByLabel("Email", { exact: true }).waitFor();
+      await page.getByLabel("이메일", { exact: true }).waitFor();
       assert.equal(await page.getByRole("heading", { name: "앨범 관리", exact: true }).count(), 0);
       assert.equal(await page.getByRole("heading", { name: "곡 관리", exact: true }).count(), 0);
     }

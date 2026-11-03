@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { AppError } from "@oioi-bwg/server/errors/app-error";
 import type { ErrorEvent } from "@sentry/nextjs";
 import { DrizzleQueryError } from "drizzle-orm/errors";

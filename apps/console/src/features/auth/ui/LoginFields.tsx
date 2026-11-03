@@ -15,13 +15,14 @@ export function CredentialsFields({ control, disabled }: Props) {
         name="email"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Email</FormLabel>
+            <FormLabel>이메일</FormLabel>
             <FormControl>
               <Input
                 {...field}
                 type="text"
                 autoComplete="email"
                 inputMode="email"
+                className="h-11"
                 disabled={disabled}
               />
             </FormControl>
@@ -34,12 +35,13 @@ export function CredentialsFields({ control, disabled }: Props) {
         name="password"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Password</FormLabel>
+            <FormLabel>비밀번호</FormLabel>
             <FormControl>
               <Input
                 {...field}
                 type="password"
                 autoComplete="current-password"
+                className="h-11"
                 disabled={disabled}
               />
             </FormControl>
@@ -66,6 +68,7 @@ export function OtpField({ control, disabled }: Props) {
               autoComplete="one-time-code"
               inputMode="numeric"
               maxLength={6}
+              className="h-11 text-center text-lg tracking-[0.3em] tabular-nums"
               disabled={disabled}
             />
           </FormControl>

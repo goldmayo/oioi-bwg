@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { albumQueryKeys } from "@/entities/album";
+import { cheerGuideQueryKeys } from "@/entities/cheer-guide";
 import { songQueryKeys } from "@/entities/song";
 import { waveformQueryKeys } from "@/entities/waveform";
 
@@ -91,6 +92,7 @@ function renderEditor() {
     nextCursor: null,
   });
 
+  queryClient.setQueryData(cheerGuideQueryKeys.adminList(), { items: [], nextCursor: null });
   queryClient.setQueryData(waveformQueryKeys.song("admin", song.id), null);
   queryClient.setQueryData(waveformQueryKeys.song("other", song.id), null);
 
@@ -128,6 +130,7 @@ describe("AdminLyricsEditor cache orchestration", () => {
     await waitFor(() =>
       expect(queryClient.getQueryState(songQueryKeys.adminList())?.isInvalidated).toBe(true),
     );
+    expect(queryClient.getQueryState(cheerGuideQueryKeys.adminList())?.isInvalidated).toBe(true);
     expect(queryClient.getQueryState(albumQueryKeys.adminList())?.isInvalidated).toBe(false);
     expect(queryClient.getQueryState(["auth", "ability"])?.isInvalidated).toBe(false);
     expect((draft as HTMLInputElement).value).toBe("changed-id");
@@ -153,6 +156,7 @@ describe("AdminLyricsEditor cache orchestration", () => {
     await waitFor(() => expect(auth.query).toHaveBeenCalledOnce());
     expect(queryClient.getQueryState(songQueryKeys.adminList())?.isInvalidated).toBe(false);
     expect(queryClient.getQueryState(albumQueryKeys.adminList())?.isInvalidated).toBe(false);
+    expect(queryClient.getQueryState(cheerGuideQueryKeys.adminList())?.isInvalidated).toBe(false);
     expect((draft as HTMLInputElement).value).toBe("unsaved-id");
   });
 });

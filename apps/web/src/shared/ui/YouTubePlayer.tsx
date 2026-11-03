@@ -20,7 +20,7 @@ interface YouTubePlayerProps {
 // YouTube IFrame API 전역 객체 타입 선언
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
     YT: any;
     onYouTubeIframeAPIReady: () => void;
   }

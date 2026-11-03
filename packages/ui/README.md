@@ -169,6 +169,15 @@ const components = { Button: TableButton };
 - 행 고정을 현재 페이지 안에서만 표시하려면 `keepPinnedRows: false`를 사용한다. 별도 viewport sticky row
   정책은 없다. 열의 sticky offset에는 `columnPinningFeature`와 `columnSizingFeature`가 함께 필요하다.
 
+## 표 너비
+
+열 sizing을 사용하는 표는 기본적으로 열 너비 합에 맞춘다. 열 고정 없이 본문 너비를 채우는 목록은
+`<DataTable.Table fillWidth ...>`를 선택할 수 있다. 이 모드에서는 여유 너비를 브라우저 표 레이아웃이
+마지막 표시 열에 배분하며, 앞선 열은 공식 sizing의 픽셀 너비를 그대로 사용한다. 마지막 열은
+`enableResizing: false`로 선언해 남는 공간을 채우는 열로 사용한다. 열 너비 합은 최소 표 너비이며,
+작은 화면에서는 표 내부에서 가로 스크롤한다.
+기존 소비처의 너비와 열 고정 offset은 기본 동작을 유지한다.
+
 ## 타입·구독·경계
 
 공식 `tableFeatures`의 선행 조건과 미등록 API 타입 제한은 그대로 유지한다.
@@ -188,3 +197,9 @@ React context에서 사라지는 generic은 Root 내부 표시 경계에서만 �
 [공식 조합](https://tanstack.com/table/latest/docs/framework/react/guide/composable-tables),
 [공식 Compiler 구독](https://tanstack.com/table/latest/docs/framework/react/guide/react-compiler)을 따른다.
 셀 범위 선택·병합은 원본 제외 범위를 유지한다.
+
+## 헤더와 본문 정렬
+
+열의 `meta.align`에 `start`·`center`·`end`를 지정하면 헤더와 본문이 같은 정렬을 사용한다.
+정렬 버튼의 추가 수평 여백은 제거하며 가운데·끝 정렬의 표시 아이콘은 제목 정렬을 밀지 않는다.
+복합 셀의 내부 flex 정렬은 소비처가 같은 기준으로 지정한다.

@@ -1,6 +1,9 @@
 import "server-only";
 import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
-import type { NotificationListInput } from "@oioi-bwg/contracts/notification";
+import type {
+  NotificationHistoryInput,
+  NotificationListInput,
+} from "@oioi-bwg/contracts/notification";
 import type { DbExecutor } from "../db";
 import { notification, notificationDelivery, pushInstallation } from "../db/schema";
 
@@ -24,6 +27,37 @@ export async function countUnreadNotifications(db: DbExecutor, accountId: string
     .select({ count: count() })
     .from(notification)
     .where(and(eq(notification.recipientAccountId, accountId), isNull(notification.readAt)));
+  return row?.count ?? 0;
+}
+function historyFilter(accountId: string, input: NotificationHistoryInput) {
+  return and(
+    eq(notification.recipientAccountId, accountId),
+    input.status === "unread" ? isNull(notification.readAt) : undefined,
+    input.type ? eq(notification.type, input.type) : undefined,
+  );
+}
+export function findNotificationHistory(
+  db: DbExecutor,
+  accountId: string,
+  input: NotificationHistoryInput,
+) {
+  return db
+    .select()
+    .from(notification)
+    .where(historyFilter(accountId, input))
+    .orderBy(desc(notification.createdAt), desc(notification.id))
+    .limit(input.limit)
+    .offset(input.offset);
+}
+export async function countNotificationHistory(
+  db: DbExecutor,
+  accountId: string,
+  input: NotificationHistoryInput,
+) {
+  const [row] = await db
+    .select({ count: count() })
+    .from(notification)
+    .where(historyFilter(accountId, input));
   return row?.count ?? 0;
 }
 export async function findNotification(db: DbExecutor, accountId: string, id: string) {

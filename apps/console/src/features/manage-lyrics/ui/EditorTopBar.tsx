@@ -8,7 +8,13 @@ import { EditorPreview } from "./EditorPreview";
 import { EditorTransport } from "./EditorTransport";
 import { useLyricsEditorContext } from "./LyricsEditorContext";
 
-export function EditorTopBar({ blocked }: { blocked: boolean }) {
+export function EditorTopBar({
+  blocked,
+  saveLabel = "저장",
+}: {
+  blocked: boolean;
+  saveLabel?: string;
+}) {
   const editor = useLyricsEditorContext();
   return (
     <header className="border-border relative z-30 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 border-b px-4 py-4 lg:min-h-20 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-x-6 lg:py-3">
@@ -66,7 +72,7 @@ export function EditorTopBar({ blocked }: { blocked: boolean }) {
           variant="outline"
           size="sm"
           className="h-9 gap-2 px-3 [&_svg]:size-4"
-          title="저장"
+          title={saveLabel}
           onClick={editor.handleSave}
           disabled={blocked || editor.isSaving}
           data-save-state={
@@ -83,7 +89,7 @@ export function EditorTopBar({ blocked }: { blocked: boolean }) {
               )}
             </span>
           )}
-          {editor.isSaving ? "저장 중" : "저장"}
+          {editor.isSaving ? "저장 중" : saveLabel}
         </Button>
       </div>
     </header>

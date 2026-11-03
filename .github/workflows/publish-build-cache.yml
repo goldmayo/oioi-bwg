@@ -15,7 +15,10 @@ concurrency:
 
 jobs:
   publish:
-    name: publish merged verification cache
+    name: publish merged ${{ matrix.cache }} cache
+    strategy:
+      matrix:
+        cache: [apps, waveform]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -28,7 +31,7 @@ jobs:
         with:
           script: |
             const cache = await import(process.env.GITHUB_WORKSPACE + '/scripts/verification-cache.mjs');
-            await cache.findMergedCache({ github, context, core });
+            await cache.findMergedCache({ github, context, core, kind: '${{ matrix.cache }}' });
       - name: Check shared cache
         if: steps.source.outputs.artifact_id != ''
         id: cache

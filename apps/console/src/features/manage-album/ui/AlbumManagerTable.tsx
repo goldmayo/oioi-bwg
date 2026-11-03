@@ -2,16 +2,31 @@
 
 import { useMemo } from "react";
 import { DataTable } from "@oioi-bwg/ui/data-table";
-import { Edit, Trash2 } from "lucide-react";
+import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
 
 import type { AdminAlbumSummary } from "@/entities/album";
 
-import { Badge } from "@/shared/ui/badge";
-import { Button } from "@/shared/ui/button";
-import { createAppColumnHelper, dataTableComponents, useAppTable } from "@/shared/ui/data-table";
+import { formatDate } from "@/shared/lib/utils";
+import { useMediaQuery } from "@/shared/model/useMediaQuery";
+import { Checkbox } from "@/shared/ui/checkbox";
+import {
+  AppDataTable,
+  createAppColumnHelper,
+  dataTableComponents,
+  useAppTable,
+} from "@/shared/ui/data-table";
+import {
+  TableActionsHeader,
+  TableDeleteAction,
+  TableEditAction,
+  TableRowActions,
+} from "@/shared/ui/table-row-actions";
+import { VisibilityIcon } from "@/shared/ui/visibility-icon";
 
 interface Props {
   albums: AdminAlbumSummary[];
+  selection: RowSelectionState;
+  onSelectionChange: OnChangeFn<RowSelectionState>;
   canManage: boolean;
   hasFilter: boolean;
   onEdit: (album: AdminAlbumSummary) => void;
@@ -19,23 +34,55 @@ interface Props {
 }
 const column = createAppColumnHelper<AdminAlbumSummary>();
 
-export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDelete }: Props) {
+export function AlbumManagerTable({
+  albums,
+  selection,
+  onSelectionChange,
+  canManage,
+  hasFilter,
+  onEdit,
+  onDelete,
+}: Props) {
   "use no memo";
   // AppTable은 내부 ref로 options를 읽는다. 자동 memo가 권한/DTO 변경 렌더를 건너뛰지 않게 한다.
+  const showSlug = useMediaQuery("(min-width: 1024px)");
+  const showReleaseDate = useMediaQuery("(min-width: 1280px)");
   const columns = useMemo(
     () =>
       column.columns([
+        column.display({
+          id: "selection",
+          header: "선택",
+          size: 56,
+          minSize: 48,
+          enableResizing: false,
+          meta: { align: "center" },
+          cell: ({ row }) => (
+            <Checkbox
+              aria-label={`${row.original.name} 선택`}
+              checked={row.getIsSelected()}
+              disabled={!row.getCanSelect()}
+              onCheckedChange={(checked) => row.toggleSelected(checked === true)}
+            />
+          ),
+        }),
         column.accessor("name", {
           header: "이름",
+          size: 280,
+          minSize: 160,
           meta: { className: "font-medium whitespace-normal" },
           cell: ({ row: { original: album } }) => (
-            <span className="block break-words">{album.name}</span>
+            <span className="block truncate" title={album.name}>
+              {album.name}
+            </span>
           ),
         }),
         column.accessor("slug", {
           header: "Slug",
+          size: 176,
+          minSize: 120,
           meta: {
-            className: "hidden lg:table-cell text-muted-foreground text-xs w-44",
+            className: "text-muted-foreground text-xs",
           },
           cell: ({ row: { original: album } }) => (
             <span className="block truncate" title={album.slug}>
@@ -45,11 +92,12 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
         }),
         column.accessor("color", {
           header: "색상",
-          meta: { className: "w-16" },
+          meta: { align: "center" },
+          size: 64,
           cell: ({ row: { original: album } }) => (
             <>
               <div
-                className="h-5 w-5 rounded-md border"
+                className="mx-auto h-5 w-5 rounded-md border"
                 style={{ backgroundColor: album.color }}
                 title={album.color}
               />
@@ -59,58 +107,36 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
         }),
         column.accessor("isVisible", {
           header: "표시",
-          meta: { className: "w-16 text-center" },
-          cell: ({ row: { original: album } }) => (
-            <>
-              <Badge
-                variant={album.isVisible ? "default" : "outline"}
-                className="px-2 py-0.5 text-xs"
-              >
-                {album.isVisible ? "표시" : "숨김"}
-              </Badge>
-            </>
-          ),
+          size: 80,
+          minSize: 80,
+          meta: { align: "center" },
+          cell: ({ row: { original: album } }) => <VisibilityIcon visible={album.isVisible} />,
           enableSorting: false,
         }),
         column.accessor("releaseDate", {
           header: "발매일",
+          size: 128,
+          minSize: 112,
           meta: {
-            className: "hidden xl:table-cell text-muted-foreground text-sm w-32",
+            align: "center",
+            className: "text-muted-foreground text-sm",
           },
-          cell: ({ row: { original: album } }) => (
-            <>{album.releaseDate ? new Date(album.releaseDate).toLocaleDateString("ko-KR") : "-"}</>
-          ),
+          cell: ({ row: { original: album } }) => <>{formatDate(album.releaseDate)}</>,
         }),
         column.display({
           id: "actions",
-          header: "관리",
-          meta: { className: "w-24 text-right" },
-          cell: ({ row: { original: album } }) => (
-            <>
-              {canManage && (
-                <div className="flex justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onEdit(album)}
-                    title="수정"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                    onClick={() => onDelete(album)}
-                    title="삭제"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </>
-          ),
+          enableResizing: false,
+          header: () => <TableActionsHeader />,
+          size: 72,
+          minSize: 72,
+          meta: { align: "end", label: "관리", className: "pr-5!" },
+          cell: ({ row: { original: album } }) =>
+            canManage && (
+              <TableRowActions label={album.name}>
+                <TableEditAction onClick={() => onEdit(album)} />
+                <TableDeleteAction onClick={() => onDelete(album)} />
+              </TableRowActions>
+            ),
         }),
       ]),
     [canManage, onEdit, onDelete],
@@ -118,22 +144,26 @@ export function AlbumManagerTable({ albums, canManage, hasFilter, onEdit, onDele
   const table = useAppTable({
     columns,
     data: albums,
+    state: {
+      rowSelection: selection,
+      columnVisibility: { slug: showSlug, releaseDate: showReleaseDate },
+    },
+    onRowSelectionChange: onSelectionChange,
+    enableRowSelection: canManage,
     getRowId: (row) => String(row.id),
     initialState: { pagination: { pageIndex: 0, pageSize: 10 } },
   });
   return (
     <DataTable.Root table={table} components={dataTableComponents}>
       <div className="min-w-0 space-y-4">
-        <DataTable.Table
-          caption="앨범 관리 목록"
-          className="bg-card table-fixed [&_td]:px-3 [&_td]:py-3 [&_td]:whitespace-normal [&_th]:px-3"
-        >
+        <AppDataTable caption="앨범 관리 목록">
           <DataTable.Header />
           <DataTable.Body
+            padToPageSize
             emptyState={<>{hasFilter ? "검색 결과가 없습니다." : "등록된 앨범이 없습니다."}</>}
           />
-        </DataTable.Table>
-        <DataTable.Pagination label="앨범 목록 페이지" />
+        </AppDataTable>
+        <DataTable.Pagination label="앨범 목록 페이지" pageSizes={[10, 20, 50]} />
       </div>
     </DataTable.Root>
   );

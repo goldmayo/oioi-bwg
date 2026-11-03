@@ -39,12 +39,6 @@ export default async function AdminAlbumsPage() {
   return (
     <div className="min-w-0 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto w-full max-w-7xl">
-        <div className="mb-6">
-          <h1 className="text-foreground text-2xl font-semibold tracking-tight">앨범 관리</h1>
-          <p className="text-muted-foreground mt-2 text-sm leading-6">
-            앨범을 추가, 수정, 삭제할 수 있습니다.
-          </p>
-        </div>
         <HydrationBoundary state={dehydrate(queryClient)}>
           <Suspense fallback={<div className="text-muted-foreground">앨범을 불러오는 중...</div>}>
             <AdminAlbumManager />
