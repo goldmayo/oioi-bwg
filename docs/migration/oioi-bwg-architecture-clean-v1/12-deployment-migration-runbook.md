@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.29"
+version: "1.30"
 status: "active"
 authority: "runbook"
 updated_at: "2026-11-03"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.29
+# oioi-bwg Deployment / Migration Runbook v1.30
 
 ## 1. 목적
 
@@ -606,10 +606,18 @@ B2의 paired 구현·CI 실제 Compose 복구 검증과 승인된 host upgrade·
 공개 gate는 별개이며, 실제 증거가 갖춰질 때까지 B 완료나 공개 전환을 선언하지 않는다.
 B2의 CI Run Command adapter는 Web·Console 순서의 immutable digest 두 개와 제한된 base64url candidate 하나를 받고,
 누락·추가 인자·가변 tag는 OCI 호출 전에 거절한다. 원격 message/text와 OCI 오류 원문은
-CI 로그로 전달하지 않는다. lifecycle·정수 exit code·고정 진단만 기록하며 0/20/21을 유지한다.
+CI 로그로 전달하지 않는다. lifecycle·정수 exit code·고정 진단과 아래의 제한된 시간 측정값만 기록하며 0/20/21을 유지한다.
 전달 전에 candidate schema와 두 digest를 대조하고 원격에서도 strict하게 검증한다.
 B2-2 materializer를 사용한 B2-3 host의 pair state/apply/rollback·최초 전환 구현은 §19를 따른다.
 로컬/mock 검증을 실제 host upgrade로 간주하지 않는다. 임시 차단 제거 전 승인된 upgrade의 실제 결과를 확인한다.
+
+2026-11-03 배포 시간 계측: host는 materialize·pull을 앱별로, activate·smoke·rollback·total을
+monotonic 밀리초로 기록한다. adapter는 고정 단계 allowlist와 정수 범위·중복을 검사하고 원격 원문을
+노출하지 않는다. 명령 생성 시간과 agent 대기/실행/RPC를 합친 시간도 분리해 Actions summary와
+별도 `deployment-timing-<run>-<attempt>` artifact에 90일 보관한다. 대기/실행 합계를 순수 VM
+실행 시간으로 해석하지 않는다. 계측·업로드 실패는 배포/복구 exit와 성공 receipt를 바꾸지 않으며,
+이 artifact는 candidate/receipt·health 증거를 대체하지 않는다. 기존 host helper의 측정값이 없어도
+배포는 호환되며 보호된 helper의 실제 갱신은 §19의 별도 승인·lock·백업·권한 검증을 유지한다.
 
 배포 workflow는 image를 다시 build/publish하지 않고 검증된 digest를 기존 OCI Run Command와
 `deploy-release.sh`에 전달한다. health/readiness/smoke 및 직전 정상 digest/env rollback, exit 0/20/21은 유지한다.

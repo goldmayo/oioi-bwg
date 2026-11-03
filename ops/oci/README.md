@@ -329,6 +329,14 @@ installer는 기존 Compose/script/deploy.conf를 root-only `deploy/legacy-host`
 보호된 deploy.conf의 Console repository/port/smoke와 두 Console env 파일을 운영자가 명시적으로 준비하고
 preflight를 통과해야 한다. 예시는 자동 덮어쓰기/Secret 생성이 아니다. 설치 자체로 container/state를 전환하지 않는다.
 
+배포 시간 계측은 `materialize_web/console`, `pull_web/console`, `activate`, `smoke`, `rollback`,
+`total`의 monotonic 밀리초만 출력한다. Run Command adapter는 단계 allowlist·숫자 범위·중복을
+검사하고 원격 원문을 가린 채 Actions summary와 별도 `deployment-timing-<run>-<attempt>` artifact에
+기록한다. 명령 생성과 대기/실행 시간은 별도로 기록하며 대기 시간을 순수 VM 실행 시간으로 해석하지 않는다.
+이 측정값은 배포 성공 증거가 아니며 측정 실패가 apply/rollback의 exit 0/20/21을 바꾸지 않는다.
+기존 host helper에 계측이 없으면 host 항목은 비어 있고 기존 배포 동작을 유지한다. repo 병합만으로
+보호된 host 파일을 갱신하지 않으며 실제 적용도 위 승인·lock·백업·권한/해시 확인 절차를 따른다.
+
 성공 pair는 `deploy/current-pair` → root-only snapshot이며 `previous-pair`에 직전 pair를 보관한다.
 웹/콘솔 runtime env 경로는 `web.env`·`console.env`로 고정한다. pending-pair가 남으면 새 배포를 거절한다.
 중단/복구 실패 시 maintenance를 유지하고 current snapshot의 candidate/env/Compose/config를 검토하여 명시적으로
