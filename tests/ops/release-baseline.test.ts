@@ -89,7 +89,7 @@ function fixture() {
       ref: "migration_main",
       repo: { full_name: "goldmayo/oioi-bwg" },
     },
-    base: { ref: "migration_develop" },
+    base: { ref: "migration_develop", sha: "f".repeat(40) },
   };
   const checks = ["verify", "promotion", "promotion candidate"].map((name) => ({
     name,
@@ -103,6 +103,10 @@ function fixture() {
     path: ".github/workflows/verify.yml",
     head_sha: candidate.sourceSha,
   };
+  const merged = {
+    tree: { sha: candidate.sourceTree },
+    parents: [{}] as { sha?: string }[],
+  };
   const github = {
     rest: {
       actions: {
@@ -115,8 +119,11 @@ function fixture() {
       },
       pulls: { get: vi.fn(async () => ({ data: pr })) },
       git: {
-        getCommit: vi.fn(async () => ({
-          data: { tree: { sha: candidate.sourceTree }, parents: [{}] },
+        getCommit: vi.fn(async ({ commit_sha }: { commit_sha: string }) => ({
+          data:
+            commit_sha === receipt.mergedSha
+              ? merged
+              : { tree: { sha: candidate.sourceTree }, parents: [] },
         })),
       },
     },
@@ -142,6 +149,7 @@ function fixture() {
     verifiedArtifacts,
     checks,
     verification,
+    merged,
     receipt: structuredClone(receipt),
     candidate: structuredClone(candidate),
     proof,
@@ -275,6 +283,34 @@ describe("paired release evidence and conservative image selection", () => {
     expect(f.core.setOutput).toHaveBeenCalledWith("artifact_id", 99);
     await expect(validateBaseline(f)).resolves.toEqual(proof);
   });
+  test("keeps successful legacy squash receipts as reuse evidence", async () => {
+    const f = fixture();
+    expect(f.merged.parents).toEqual([{}]);
+    await expect(validateBaseline(f)).resolves.toEqual(proof);
+  });
+  test("accepts a deployed merge with the exact reviewed base and source parents", async () => {
+    const f = fixture();
+    f.merged.parents = [{ sha: f.pr.base.sha }, { sha: candidate.sourceSha }];
+    await expect(validateBaseline(f)).resolves.toEqual(proof);
+  });
+  test.each(["base", "source", "reversed", "extra", "missing", "invalid-base", "tree"])(
+    "rejects a deployed merge with mismatched %s",
+    async (failure) => {
+      const f = fixture();
+      f.merged.parents = [{ sha: f.pr.base.sha }, { sha: candidate.sourceSha }];
+      if (failure === "base") f.merged.parents[0].sha = "0".repeat(40);
+      if (failure === "source") f.merged.parents[1].sha = "0".repeat(40);
+      if (failure === "reversed") f.merged.parents.reverse();
+      if (failure === "extra") f.merged.parents.push({ sha: "0".repeat(40) });
+      if (failure === "missing") f.merged.parents = [];
+      if (failure === "invalid-base") {
+        f.pr.base.sha = "invalid";
+        f.merged.parents[0].sha = "invalid";
+      }
+      if (failure === "tree") f.merged.tree.sha = "0".repeat(40);
+      await expect(validateBaseline(f)).rejects.toThrow("Deployment tree mismatch");
+    },
+  );
   test.each([{ associations: [] }, { associations: [{ number: 159 }] }])(
     "keeps the immutable deployment PR when GitHub changes run associations to $associations",
     async ({ associations }) => {

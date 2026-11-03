@@ -117,10 +117,17 @@ export async function validateBaseline({
     ...context.repo,
     commit_sha: receipt.mergedSha,
   });
+  // Existing successful squash receipts remain valid reuse sources after the policy transition.
+  const legacySquash = merged.parents.length === 1;
+  const promotionMerge =
+    merged.parents.length === 2 &&
+    /^[0-9a-f]{40}$/.test(pr.base.sha ?? "") &&
+    merged.parents[0].sha === pr.base.sha &&
+    merged.parents[1].sha === candidate.sourceSha;
   if (
     source.tree.sha !== candidate.sourceTree ||
     merged.tree.sha !== candidate.sourceTree ||
-    merged.parents.length !== 1
+    (!legacySquash && !promotionMerge)
   )
     throw new Error("Deployment tree mismatch");
   const { data: verification } = await github.rest.actions.getWorkflowRun({

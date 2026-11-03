@@ -59,12 +59,15 @@ migration implementation plan/result
 - 무관한 리팩터링, 의존성 정리, 설정 변경을 기능 PR에 끼워 넣지 않는다. 리뷰 중 발견한 별도 관심사는
   후속 PR 후보로 기록한다.
 - 각 PR 작업이 끝나면 검증 후 하나 이상의 의미 있는 커밋을 만든다. 리뷰 중 추가 작업도 의미 단위로
-  커밋하며 기존 커밋을 임의로 합치지 않는다. 최종 병합 시에만 GitHub가 squash한다.
+  커밋하며 기존 커밋을 임의로 합치지 않는다. 일반 feature PR의 최종 병합 시에만 GitHub가 squash한다.
 - Git 커밋 제목은 Conventional Commit의 `type(scope): 한글 요약` 형식을 유지한다. 규격상
   `type`과 선택적 `scope`만 영어로 쓰고, 모든 개별 커밋의 제목 요약과 본문은 반드시 한글로 작성한다.
 - 사용자가 보류를 요청하지 않은 단계 완료 작업은 commit → push → PR 생성까지 진행하고 링크를 보고한다.
 - 일반 feature PR 대상은 `migration_main`이며, merge 방식은 squash and merge를 전제로 한다. 작업 브랜치의
   upstream은 PR 대상이 아니라 같은 이름의 원격 작업 브랜치로만 설정한다.
+- 2026-11-04 정책 전환의 `feature/promotion-without-history` PR 한 번만 기존 배포선 조상을 포함한
+  merge commit으로 통합한다. 최종 head의 전체 CI·부모·tree를 대조하고 `migration_main`의 허용
+  merge 방식은 이 PR 직후 squash-only로 복원한다. 일반 feature PR의 예외로 반복 사용하지 않는다.
 - squash 커밋 제목은 PR 제목, 본문은 PR 본문을 사용한다. 병합 전에 PR 제목이
   `type(scope): 한글 요약`인지, PR 본문이 최종 변경 사항과 검증 결과를 한글로 설명하는지 갱신한다.
 - PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 형식을 따른다.
@@ -73,7 +76,8 @@ migration implementation plan/result
   모아서 push하며 최종 커밋이 준비되면 Ready로 전환한다. Ready 뒤 기능 수정이 더 필요하면
   Draft로 되돌린 뒤 작업해 전체 CI가 수정마다 반복되지 않게 한다.
 - OCI Development 배포는 별도의 `migration_main → migration_develop` Promotion PR로만 진행한다.
-  source/merge tree가 같은 squash 결과에 검증한 동일 candidate digest를 배포한다. 통합 merge만으로 배포하지 않는다.
+  Promotion은 merge commit으로 source 조상을 보존하고 source/merge tree가 같은 결과에 검증한 동일
+  candidate digest를 배포한다. 정상 배포를 위한 별도 이력 연결 PR은 만들지 않는다. 통합 merge만으로 배포하지 않는다.
   세부 검증·보호 설정은 active 배포 runbook §21을 따른다.
 
 현재 단계가 끝났다는 보고에는 변경 범위, 보류 항목, 검증 결과, 커밋을 포함한다.
@@ -279,8 +283,8 @@ pnpm verify --dry-run
 
 Draft PR은 로컬과 같은 영향 범위 검증만 수행하며 결과 이름은 `partial verify`로 구분한다.
 Ready 전환 이후 `migration_main` 병합 전에는 최종 PR 커밋의 CI 전체 `verify`를 통과해야 한다.
-파일 tree가 같은 배포선 이력 연결은 Runbook §21의 부모·배포 source·성공한 main 검증 근거를
-대조하는 `history` 예외를 허용한다. 코드 변경이나 불완전한 근거를 이 예외로 통과시키지 않는다.
+2026-11-04부터 정상 Promotion은 별도 이력 연결 없이 진행하며, 기존 `history` 근거의 조회·검증
+호환은 보존한다. 정책 전환 PR의 코드 변경은 `history` 예외로 통과시키지 않는다.
 Promotion은 동일 source/tree의 main 병합 전 성공을 확인해 재사용하고 배포 이미지·설정 검증만 수행한다.
 검증 근거가 없거나 불일치하면 중단하며 전체 검증을 암묵적으로 재실행하지 않는다.
 로컬에서 CI 전체 검증을 반복하지 않는다. 명시적 전체 재현 명령은 `pnpm verify:full`이며,
