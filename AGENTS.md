@@ -282,7 +282,9 @@ pnpm verify --dry-run
 문서 시안의 정적 자산은 로컬 코드 검증에서 제외한다. 상세 범위는 Testing Architecture §17을 따른다.
 
 Draft PR은 로컬과 같은 영향 범위 검증만 수행하며 결과 이름은 `partial verify`로 구분한다.
-Ready 전환 이후 `migration_main` 병합 전에는 최종 PR 커밋의 CI 전체 `verify`를 통과해야 한다.
+Ready 전환 이후 `migration_main` 병합 전에는 최종 PR 커밋의 영향 범위에 맞는 필수 `verify`를 통과해야 한다.
+확인된 UI 변경은 증분 검사와 앱 build/browser smoke를 요구하고, 인증·DB·네이티브·공용 설정·미분류
+변경과 판정 실패는 전체 검증한다. 정기 전체 검증도 유지한다. 분류와 필수 job은 Runbook §21을 따른다.
 2026-11-04부터 정상 Promotion은 별도 이력 연결 없이 진행하며, 기존 `history` 근거의 조회·검증
 호환은 보존한다. 정책 전환 PR의 코드 변경은 `history` 예외로 통과시키지 않는다.
 Promotion은 동일 source/tree의 main 병합 전 성공을 확인해 재사용하고 배포 이미지·설정 검증만 수행한다.
@@ -300,7 +302,7 @@ TURBO_SCM_BASE=origin/migration_main pnpm exec turbo run build --affected
 - Oxlint/FSD harness: 코드 품질·import 방향과 파일 배치 검증
 - 문서만 변경하는 작업은 요청된 경우 lint/typecheck/test/build를 실행하지 않는다.
 - 일반 `migration_main` PR의 전체 diff가 일반 파일 `.md` 변경뿐이면 CI는 scope 판정과 필수 `verify`만 실행한다.
-  feature push hook은 문서 전용이면 생략하고 그 외에는 `pnpm verify`의 로컬 증분 검증을 사용한다. Ready PR의 코드 혼합·판정 실패는 전체 검증을 유지한다. Promotion은 source 검증 근거와 배포 후보를 검사한다.
+  feature push hook은 문서 전용이면 생략하고 그 외에는 `pnpm verify`의 로컬 증분 검증을 사용한다. Ready PR은 확인된 UI 범위를 제외한 코드 혼합·판정 실패에서 전체 검증을 유지한다. Promotion은 source 검증 근거와 배포 후보를 검사한다.
 - 문서 작업의 push에서 Git hook이 검증을 자동 실행했다면, 별도 검증으로 계획한 것처럼 기록하지 않고 hook이 실행한 명령과 결과를 그대로 보고한다.
 - 테스트 도구나 번들러의 기본 동작을 추측하지 말고 현재 config와 공식 문서를 확인한다.
 

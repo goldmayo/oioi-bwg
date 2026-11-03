@@ -18,6 +18,7 @@ export function verificationMode({
   event,
   markdownOnlyChange = false,
   historyOnlyChange = false,
+  impactOnlyChange = false,
 }) {
   if (markdownOnlyChange) return "docs";
   if (eventName === "pull_request") {
@@ -25,6 +26,12 @@ export function verificationMode({
     if (event?.pull_request?.base?.ref === "migration_main" && event.pull_request.draft === true)
       return "partial";
     if (event?.pull_request?.base?.ref === "migration_main" && historyOnlyChange) return "history";
+    if (
+      event?.pull_request?.base?.ref === "migration_main" &&
+      event.pull_request.draft === false &&
+      impactOnlyChange
+    )
+      return "impact";
   }
   return "full";
 }
@@ -69,13 +76,14 @@ export function markdownOnly(raw) {
   return true;
 }
 
-/** @param {{ eventName?: string, event?: { pull_request?: { base?: { ref?: string, sha?: string }, head?: { sha?: string } } }, local?: boolean, fetchSource?: boolean, cwd?: string }} [options] */
-export function docsOnly({
+/** @param {{ eventName?: string, event?: { pull_request?: { base?: { ref?: string, sha?: string }, head?: { sha?: string } } }, local?: boolean, fetchSource?: boolean, cwd?: string, matches?: (raw: string) => boolean }} [options] */
+function changesMatch({
   eventName,
   event,
   local = false,
   fetchSource = false,
   cwd = process.cwd(),
+  matches = markdownOnly,
 } = {}) {
   try {
     const env = Object.fromEntries(
@@ -106,7 +114,7 @@ export function docsOnly({
       if (fetchSource) git("fetch", "--no-tags", "origin", base, head);
     }
     const ancestor = git("merge-base", base, head).trim();
-    return markdownOnly(
+    return matches(
       git(
         "diff",
         "--raw",
@@ -124,17 +132,52 @@ export function docsOnly({
   }
 }
 
+/** @param {Parameters<typeof changesMatch>[0]} [options] */
+export function docsOnly(options = {}) {
+  return changesMatch(options);
+}
+
+export function uiOnly(raw) {
+  const fields = raw.split("\0");
+  if (fields.pop() !== "" || !fields.length || fields.length % 2) return false;
+  let ui = false;
+  for (let i = 0; i < fields.length; i += 2) {
+    if (!/^:(000000|100644) (000000|100644) [0-9a-f]{40,64} [0-9a-f]{40,64} [AMD]$/.test(fields[i]))
+      return false;
+    const file = fields[i + 1];
+    if (file.endsWith(".md")) continue;
+    if (/(?:^|\/)(?:auth|admin-login|login|mfa|security|api|server)(?:[./-]|$)/i.test(file))
+      return false;
+    const selected =
+      /^apps\/(web|console)\/(?:src\/.*\.css|src\/(?:shared\/ui\/|.*\/_ui\/).*\.(?:tsx|test\.ts)|public\/.*\.(?:png|jpe?g|webp|gif|ico|woff2?))$/.test(
+        file,
+      );
+    if (!selected) return false;
+    ui = true;
+  }
+  return ui;
+}
+
+/** @param {Parameters<typeof changesMatch>[0]} [options] */
+export function impactOnly(options = {}) {
+  return changesMatch({ ...options, matches: uiOnly });
+}
+
 export function verificationPassed(needs) {
   const scope = needs.changes;
   if (scope?.result !== "success" || !["true", "false"].includes(scope.outputs?.docs_only))
     return false;
   const mode = scope.outputs.mode;
-  if (!["full", "partial", "promotion", "history", "docs"].includes(mode)) return false;
+  if (!["full", "partial", "impact", "promotion", "history", "docs"].includes(mode)) return false;
   if ((mode === "docs") !== (scope.outputs.docs_only === "true")) return false;
   const expected = mode === "full" ? "success" : "skipped";
   return (
-    verificationJobs.every((name) => needs[name]?.result === expected) &&
-    needs.partial?.result === (mode === "partial" ? "success" : "skipped") &&
+    verificationJobs.every(
+      (name) =>
+        needs[name]?.result ===
+        (mode === "impact" && ["app_build", "build"].includes(name) ? "success" : expected),
+    ) &&
+    needs.partial?.result === (["partial", "impact"].includes(mode) ? "success" : "skipped") &&
     needs.source_verification?.result ===
       (["promotion", "history"].includes(mode) ? "success" : "skipped")
   );
@@ -167,7 +210,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`docs_only=${markdownOnlyChange}`);
     if (process.argv[2] !== "--local")
       console.log(
-        `mode=${verificationMode({ eventName: process.env.GITHUB_EVENT_NAME, event, markdownOnlyChange, historyOnlyChange: historyOnly({ eventName: process.env.GITHUB_EVENT_NAME, event }) })}`,
+        `mode=${verificationMode({ eventName: process.env.GITHUB_EVENT_NAME, event, markdownOnlyChange, impactOnlyChange: impactOnly({ eventName: process.env.GITHUB_EVENT_NAME, event }), historyOnlyChange: historyOnly({ eventName: process.env.GITHUB_EVENT_NAME, event }) })}`,
       );
   }
 }

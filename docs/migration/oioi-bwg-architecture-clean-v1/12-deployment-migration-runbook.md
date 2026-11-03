@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.31"
+version: "1.32"
 status: "active"
 authority: "runbook"
 updated_at: "2026-11-04"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.31
+# oioi-bwg Deployment / Migration Runbook v1.32
 
 ## 1. 목적
 
@@ -497,8 +497,14 @@ migration_main → Promotion PR → migration_develop (OCI Development 배포 �
 2026-11-03 사용자 결정으로 작업 중 Draft PR과 병합 전 Ready PR을 분리한다.
 Draft는 `pnpm verify`의 영향 workspace·관련 테스트·타입/lint 캐시·변경 포맷만 검사하며 PostgreSQL·
 ARM64·Terraform·이미지 build/smoke를 실행하지 않는다. 결과는 `partial verify`로 보고한다.
-Ready 전환(`ready_for_review`)과 Ready 상태의 최종 커밋 push는 전체 정적 검사·unit/ops/PostgreSQL·
-ARM64·Next build와 컨테이너 smoke를 수행한다. `converted_to_draft`는 진행 중 전체 실행을 취소하고
+2026-11-04 Ready 영향 검증 결정은 위의 Ready 전체 검증 정책을 대체한다. Ready의 `impact`는
+앱별 `_ui`·`shared/ui`의 TSX/연관 테스트, 앱 CSS, public bitmap/font 변경으로 한정한다.
+인증/login/MFA/security/api/server 경로, 공용 package·설정·lockfile·DB·native·미분류 파일,
+실행 mode·symlink·불완전한 raw diff는 전체 검증으로 보낸다. Git rename은 삭제/추가 양쪽을 본다.
+`impact`는 기존 증분 검사와 app_build/build의 같은 run 이미지·브라우저 smoke를 모두 요구한다.
+현재 build consumer는 두 앱의 paired 검증이므로 이 단계는 유지하고 전용 PG integration·native·infra·
+전체 quality/unit job을 생략한다. 그 밖의 Ready는 기존 전체 job을 모두 통과해야 한다.
+정기 전체 검증 연결을 완료한 뒤 정책을 활성화하며 Draft 성공을 필수 verify로 게시하지 않는다. `converted_to_draft`는 진행 중 전체 실행을 취소하고
 부분 검증으로 돌아간다. 필수 `verify`에는 Draft 성공을 게시하지 않는다.
 관리자 전체 Playwright E2E(`Admin migration integration`)는 자동 workflow job과 required verify에서 제외한다.
 관리자 E2E 수동 실행 원칙은 일반 PR·기존 push·Promotion에 동일하며 `pnpm test:integration:admin` 계열 명령으로 필요 시 직접 실행한다.
@@ -546,9 +552,10 @@ develop 부모는 정상 `migration_main → migration_develop` Promotion의 sou
 
 Promotion PR의 `reuse main verification`은 현재 main head의 병합 PR과 검증 run을 대조한다.
 동일 저장소·main 대상 병합 결과 SHA·PR 최종 head·source/tree·Verify workflow·병합 이전 성공 시각과
-전체 job 및 필수 verify 성공을 확인한다. main의 일반 Markdown-only 예외는 Git raw diff로 재판정하고,
+전체 또는 재판정한 UI 영향 job 및 필수 verify 성공을 확인한다. main의 일반 Markdown-only 예외는 Git raw diff로 재판정하고,
 과거 history 예외는 위의 부모·Promotion source·같은 tree의 원래 검증까지 대조한다.
-누락·불일치·실패·Draft 부분 검증은 거절하고 전체 검사를 몰래 시작하지 않는다. source 검증 성공 뒤
+Ready UI 검증은 원래 PR raw diff를 재판정하고 증분 job 및 app build/browser 성공과 나머지 생략을
+정확히 대조한다. 누락·불일치·실패·Draft 부분 검증은 거절하고 전체 검사를 몰래 시작하지 않는다. source 검증 성공 뒤
 현재 `migration_main` head에서 하나의 paired release를 검증하며 타입/lint/unit/PG/ARM64 검사를 반복하지 않는다.
 Draft Promotion에서는 후보 빌드·게시를 실행하지 않는다.
 P06 선택적 재사용 계약은 마지막 **실제 배포 exit 0**의 immutable Actions receipt/candidate artifact만 기준으로 삼는다.

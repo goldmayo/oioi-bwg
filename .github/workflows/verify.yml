@@ -36,7 +36,7 @@ jobs:
   partial:
     name: changed files and affected workspaces
     needs: changes
-    if: needs.changes.outputs.mode == 'partial'
+    if: contains(fromJSON('["partial", "impact"]'), needs.changes.outputs.mode)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -375,7 +375,7 @@ jobs:
 
   app_build:
     needs: changes
-    if: needs.changes.outputs.mode == 'full'
+    if: contains(fromJSON('["full", "impact"]'), needs.changes.outputs.mode)
     name: app build
     runs-on: ubuntu-latest
     timeout-minutes: 10

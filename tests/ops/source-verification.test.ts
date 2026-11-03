@@ -1,15 +1,17 @@
 import { expect, test, vi } from "vitest";
 import { verifyHistory, verifySource } from "../../ops/oci/source-verification.mjs";
-import { docsOnly, verificationJobNames } from "../../scripts/verification-scope.mjs";
+import { docsOnly, impactOnly, verificationJobNames } from "../../scripts/verification-scope.mjs";
 
 vi.mock("../../ops/oci/promotion.mjs", () => ({ prepare: vi.fn(async () => "tree") }));
 vi.mock("../../scripts/verification-scope.mjs", async (original) => ({
   ...(await original<typeof import("../../scripts/verification-scope.mjs")>()),
   docsOnly: vi.fn(() => false),
+  impactOnly: vi.fn(() => false),
 }));
 
 function fixture() {
   vi.mocked(docsOnly).mockReturnValue(false);
+  vi.mocked(impactOnly).mockReturnValue(false);
   const context = {
     payload: { pull_request: { head: { sha: "merged" } } },
     repo: { owner: "owner", repo: "repo" },
@@ -261,4 +263,27 @@ test("병합 뒤 부모 유실 또는 재사용 job 실패를 Promotion 근거�
       f.historyJobs.find((job) => job.name === "reuse main verification")!.conclusion = "failure";
     await expect(verifySource(f)).rejects.toThrow();
   }
+});
+
+test("Promotion rechecks UI scope and exact successful affected-build evidence", async () => {
+  const f = fixture();
+  vi.mocked(impactOnly).mockReturnValue(true);
+  for (const job of f.jobs)
+    job.conclusion = ["verify", "app build", "build"].includes(job.name) ? "success" : "skipped";
+  f.jobs.push({
+    name: "changed files and affected workspaces",
+    conclusion: "success",
+    completed_at: f.jobs[0].completed_at,
+  });
+  f.jobs.push({
+    name: "reuse main verification",
+    conclusion: "skipped",
+    completed_at: f.jobs[0].completed_at,
+  });
+  await expect(verifySource(f)).resolves.toMatchObject({ sourceSha: "merged" });
+  f.jobs.find((j) => j.name === "build")!.conclusion = "skipped";
+  await expect(verifySource(f)).rejects.toThrow();
+  f.jobs.find((j) => j.name === "build")!.conclusion = "success";
+  vi.mocked(impactOnly).mockReturnValue(false);
+  await expect(verifySource(f)).rejects.toThrow();
 });

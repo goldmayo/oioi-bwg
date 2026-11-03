@@ -1,4 +1,4 @@
-import { docsOnly, verificationJobNames } from "../../scripts/verification-scope.mjs";
+import { docsOnly, impactOnly, verificationJobNames } from "../../scripts/verification-scope.mjs";
 import { prepare } from "./promotion.mjs";
 
 const fullJobs = Object.values(verificationJobNames);
@@ -58,7 +58,17 @@ async function mainVerification({ github, context, head, tree }, depth = 0) {
     !full &&
     fullJobs.every((name) => result(name) === "skipped") &&
     docsOnly({ eventName: "pull_request", event: { pull_request: pr }, fetchSource: true });
-  if (!full && !docs) {
+  const impact =
+    !full &&
+    !docs &&
+    impactOnly({ eventName: "pull_request", event: { pull_request: pr }, fetchSource: true }) &&
+    Object.entries(verificationJobNames).every(
+      ([key, name]) =>
+        result(name) === (["app_build", "build"].includes(key) ? "success" : "skipped"),
+    ) &&
+    result("changed files and affected workspaces") === "success" &&
+    result("reuse main verification") === "skipped";
+  if (!full && !docs && !impact) {
     if (
       !fullJobs.every((name) => result(name) === "skipped") ||
       result("reuse main verification") !== "success" ||

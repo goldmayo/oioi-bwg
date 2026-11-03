@@ -1,7 +1,7 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.28"
+version: "1.29"
 status: "active"
 authority: "architecture"
 updated_at: "2026-11-04"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.28
+# oioi-bwg Testing Architecture v1.29
 
 ## 1. 목적
 
@@ -366,13 +366,15 @@ package.json 재정렬은 맡기지 않는다. 로컬 변경 포맷과 전체 CI
 일반 `migration_main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 기존처럼 무거운 검사를 생략한다.
 scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·일반 빈 diff·CI 판정 실패는 전체 검증이다.
 2026-11-04 배포선 정책은 2026-11-03의 별도 이력 연결 절차를 정상 배포에서 대체한다.
-일반 feature PR은 main strict·squash·전체 CI를 유지하고, Promotion은 develop loose·merge commit으로
+일반 feature PR은 main strict·squash를 유지하고 Ready UI 영향 검증 또는 전체 CI를 요구하며, Promotion은 develop loose·merge commit으로
 진행한다. 발행 중 base가 바뀌면 중단하고, source/검증용 merge/실제 merge의 tree와 각 event의
 base·source 부모를 대조한다.
 한 번의 정책 전환 PR도 코드 변경을 포함하므로 전체 CI를 통과해야 한다. 과거 `history` 검증 근거의
 조회·검증 호환은 보존하며 새 코드나 build cache를 검증 성공으로 간주하지 않는다.
 자세한 전환·수용·거절 조건은 Runbook §21을 따른다.
-Promotion은 main 병합 당시의 동일 source/tree와 성공한 전체 job·verify를 확인해 코드 검증을 재사용한다.
+Promotion은 main 병합 당시의 동일 source/tree와 재판정한 범위의 job·verify를 확인해 코드 검증을 재사용한다.
+Ready UI 범위는 Runbook §21을 따르며 증분 검사와 앱 build/browser smoke 성공을 모두 요구한다.
+인증·DB·공용 설정·미분류 변경은 전체 검증하고 정기 전체 검증을 연결한 뒤 전환한다.
 main의 일반 Markdown-only 예외는 실제 Git diff를 다시 판정해야 한다. 근거 누락·불일치·실패·부분 검증은
 재사용하지 않고 중단한다. Promotion에서는 코드 검사를 반복하지 않으며 배포 설정·최종 이미지 조합·digest·
 기동 검증을 수행한다. [Runbook §21](12-deployment-migration-runbook.md#21-cicd)이 구체 조건을 소유한다.

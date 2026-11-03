@@ -16,6 +16,7 @@ import { expect, test, vi } from "vitest";
 
 import {
   docsOnly,
+  uiOnly,
   historyOnly,
   markdownOnly,
   verificationJobs,
@@ -399,5 +400,63 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
   } finally {
     vi.unstubAllEnvs();
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("UI scope rejects security, shared configuration, malformed diff and executable files", () => {
+  const raw = (path: string, mode = "100644") =>
+    `:${mode} ${mode} ${"a".repeat(40)} ${"b".repeat(40)} M\0${path}\0`;
+  for (const path of [
+    "apps/console/src/app/(admin)/admin/_ui/song-table.tsx",
+    "apps/web/src/shared/ui/button.tsx",
+    "apps/web/public/logo.png",
+  ])
+    expect(uiOnly(raw(path))).toBe(true);
+  for (const path of [
+    "apps/console/src/app/admin-login/_ui/form.tsx",
+    "apps/console/src/auth.ts",
+    "packages/ui/src/button.tsx",
+    "packages/server/src/db/schema.ts",
+    "pnpm-lock.yaml",
+    ".github/workflows/verify.yml",
+    "ops/waveform/src/main.rs",
+    "apps/web/src/app/page.tsx",
+  ])
+    expect(uiOnly(raw(path))).toBe(false);
+  expect(uiOnly(raw("apps/web/src/shared/ui/button.tsx", "100755"))).toBe(false);
+  expect(uiOnly(raw("apps/web/src/shared/ui/button.tsx", "120000"))).toBe(false);
+  expect(uiOnly("")).toBe(false);
+  expect(uiOnly(raw("docs/guide.md"))).toBe(false);
+  expect(uiOnly(raw("apps/web/src/shared/ui/button.tsx") + raw("packages/server/index.ts"))).toBe(
+    false,
+  );
+});
+
+test("Ready UI changes require incremental checks AND app build/browser evidence", () => {
+  expect(
+    verificationMode({
+      eventName: "pull_request",
+      event: { pull_request: { base: { ref: "migration_main" }, draft: false } },
+      impactOnlyChange: true,
+    }),
+  ).toBe("impact");
+  expect(verificationMode({ eventName: "schedule", event: {}, impactOnlyChange: true })).toBe(
+    "full",
+  );
+  const needs: Record<string, { result: string; outputs?: Record<string, string> }> =
+    Object.fromEntries(
+      verificationJobs.map((name) => [
+        name,
+        { result: ["app_build", "build"].includes(name) ? "success" : "skipped" },
+      ]),
+    );
+  needs.changes = { result: "success", outputs: { docs_only: "false", mode: "impact" } };
+  needs.partial = { result: "success" };
+  needs.source_verification = { result: "skipped" };
+  expect(verificationPassed(needs)).toBe(true);
+  for (const key of ["partial", "app_build", "build"]) {
+    const changed = structuredClone(needs);
+    changed[key].result = "skipped";
+    expect(verificationPassed(changed)).toBe(false);
   }
 });
