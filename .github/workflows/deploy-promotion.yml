@@ -3,7 +3,7 @@ name: Deploy promotion
 on:
   pull_request:
     types: [closed]
-    branches: [develop]
+    branches: [production]
 
 concurrency:
   group: oci-development-deployment

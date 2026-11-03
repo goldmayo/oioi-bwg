@@ -104,7 +104,7 @@ export async function validateBaseline({
     !pr.merged ||
     pr.head.sha !== candidate.sourceSha ||
     pr.merge_commit_sha !== receipt.mergedSha ||
-    !["develop", "migration_develop"].includes(pr.base.ref) ||
+    !["production", "migration_develop"].includes(pr.base.ref) ||
     !["main", "migration_main"].includes(pr.head.ref) ||
     pr.head.repo?.full_name !== `${context.repo.owner}/${context.repo.repo}`
   )

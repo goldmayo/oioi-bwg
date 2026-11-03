@@ -117,8 +117,8 @@ describe("merged PR cache publication", () => {
 
   it("also publishes Promotion cache under develop", async () => {
     const f = fixture();
-    f.context.ref = "refs/heads/develop";
-    f.pr.base.ref = "develop";
+    f.context.ref = "refs/heads/production";
+    f.pr.base.ref = "production";
     await findMergedCache(f);
     expect(f.core.setOutput).toHaveBeenCalledWith("artifact_id", 200);
   });

@@ -47,8 +47,8 @@ migration implementation plan/result
 
 ## 2. 브랜치와 변경 절차
 
-2026-11-04 브랜치명 전환: `migration_main` → `main`, `migration_develop` → `develop`.
-기존 레거시 main/develop 브랜치는 정리하며 과거 배포 증거 안의 옛 이름은 읽기 호환으로 보존한다.
+2026-11-04 브랜치명 전환: `migration_main` → `main`, `migration_develop` → `production`.
+기존 레거시 main 브랜치는 정리하고 원격 develop은 없는 상태다. 과거 배포 증거 안의 옛 이름은 읽기 호환으로 보존한다.
 
 - migration 구현·수정은 `feature/*` 브랜치에서 수행한다. 기존 열린 `migration_*` 작업 브랜치는 그대로 사용할 수 있다.
 - 새 단계 브랜치는 최신 `main` merge head에서 만든다. 분기 전 local과
@@ -78,7 +78,7 @@ migration implementation plan/result
 - 작업 중 PR은 Draft로 생성하고 의미 단위 커밋은 로컬에 쌓는다. 관련 검증·리뷰를 마친 변경을
   모아서 push하며 최종 커밋이 준비되면 Ready로 전환한다. Ready 뒤 기능 수정이 더 필요하면
   Draft로 되돌린 뒤 작업해 전체 CI가 수정마다 반복되지 않게 한다.
-- OCI Development 배포는 별도의 `main → develop` Promotion PR로만 진행한다.
+- OCI Development 배포는 별도의 `main → production` Promotion PR로만 진행한다.
   Promotion은 merge commit으로 source 조상을 보존하고 source/merge tree가 같은 결과에 검증한 동일
   candidate digest를 배포한다. 정상 배포를 위한 별도 이력 연결 PR은 만들지 않는다. 통합 merge만으로 배포하지 않는다.
   세부 검증·보호 설정은 active 배포 runbook §21을 따른다.

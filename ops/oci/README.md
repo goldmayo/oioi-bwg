@@ -177,20 +177,20 @@ sudo systemctl status oioi-filesystem-metric.timer
 
 secret value, auth token, API signing private key, webhook URL, full `DATABASE_URL`은 evidence에 기록하지 않는다.
 
-## 6. main/develop 및 GitHub 설정
+## 6. main/production 및 GitHub 설정
 
-2026-11-04부터 활성 브랜치는 main/develop이다. 이전 migration_main/migration_develop의
+2026-11-04부터 활성 브랜치는 main/production이다. 이전 migration_main/migration_develop의
 실제 관측·배포 기록은 원래 이름으로 보존하며 읽기 검증에서 호환한다. 기존 레거시 브랜치와 혼동하지 않는다.
 
 정책 SSOT는 [active 배포 runbook §21](../../docs/migration/oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md#21-cicd)이다.
-일반 작업은 최신 `main`에서 분기하여 PR/squash로 통합한다. 배포는 별도 `main → develop`
+일반 작업은 최신 `main`에서 분기하여 PR/squash로 통합한다. 배포는 별도 `main → production`
 Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollback 경계는 변경하지 않는다.
 
 - `main`: PR required, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
-- `develop`: PR required, required `verify`·`promotion`, loose status checks·merge commit only,
+- `production`: PR required, required `verify`·`promotion`, loose status checks·merge commit only,
   direct/force push 금지·stale approval 재검토다. repository는 merge와 squash를 허용하고 main은 squash-only로 제한한다.
-- `oci-development-image` Environment: 기존 `develop`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
-  credential을 사용하는 PR job은 동일 저장소 `main → develop`에서만 실행된다.
+- `oci-development-image` Environment: 기존 `production`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
+  credential을 사용하는 PR job은 동일 저장소 `main → production`에서만 실행된다.
 - 후보 기록은 GitHub Actions artifact `promotion-<source SHA>-<attempt>`의 `candidate.json`이다.
   공통 PR/source SHA/tree/run/attempt는 조합 검증 출처이며 `images.web`·`images.console`에 repository/digest/buildSourceSha/origin을 기록한다.
   보관 90일 안에 merge하며, 단일 이미지 이전 형식·한쪽 누락·다른 registry·삭제/만료/미완료 run/다른 tree는 거절한다.
@@ -209,7 +209,7 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
   Console 입력 예시는 `console-runtime-{public,secrets}.env.example`이다. installer는 Console 설정을 생성/덮어쓰지 않는다.
   두 env의 서비스 적용·pair state·복구·최초 전환은 아래 B2 paired host 계약을 따른다. 실제 host 설치는 별도 승인이다.
 - 일반 feature는 squash, 새 Promotion은 merge commit이다. 검증용 merge와 실제 merge의 두 부모는
-  각 event의 develop base·main source이며 순서와 tree를 대조한다. 두 tree 모두 source tree와 같아야 한다.
+  각 event의 production base·main source이며 순서와 tree를 대조한다. 두 tree 모두 source tree와 같아야 한다.
   발행 중 source/base가 바뀌면 새 PR event에서 검증한다. 발행 뒤 base 변경도 실제 merge tree와
   검증한 source tree가 같아야 수용한다. 제목·본문 수정만으로 candidate를 다시 build하지 않는다.
 - `Deploy promotion` run summary에 source/tree·merge SHA·candidate run/attempt·exact digest가 남는다.

@@ -1,5 +1,10 @@
 # M9 OCI Resource Manager stack
 
+2026-11-04 브랜치명 전환: 현재 통합 브랜치는 `main`, 배포 브랜치는 `production`이다.
+아래 과거 절차의 migration_main/migration_develop 이름은 각각 이 역할에 대응하며 고정 SHA 관측은 보존한다.
+Resource Manager Git 소스는 `main`·작업 디렉터리 `infra/oci`로 갱신하고 기존 변수는 유지한다.
+브랜치 참조 수정만으로 Plan/Apply를 자동 실행하지 않는다.
+
 이 root stack은 기존 Ubuntu Compute를 직접 소유하지 않고 M9에 필요한 OCI 주변 리소스와 최소 IAM만 관리한다.
 기존 Compute, VCN, boot volume, PostgreSQL data와 PostgreSQL backup bucket은 조회만 하며 생성·수정·import하지 않는다.
 서비스 리전은 `ap-osaka-1`이다.

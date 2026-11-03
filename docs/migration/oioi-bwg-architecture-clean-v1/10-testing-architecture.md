@@ -366,7 +366,7 @@ package.json 재정렬은 맡기지 않는다. 로컬 변경 포맷과 전체 CI
 일반 `main` PR의 전체 merge-base diff가 일반 파일 `.md` 변경뿐이면 기존처럼 무거운 검사를 생략한다.
 scope와 필수 `verify`는 실행하고 모든 생략 job의 상태를 대조한다. 코드 혼합·일반 빈 diff·CI 판정 실패는 전체 검증이다.
 2026-11-04 배포선 정책은 2026-11-03의 별도 이력 연결 절차를 정상 배포에서 대체한다.
-일반 feature PR은 main strict·squash를 유지하고 Ready UI 영향 검증 또는 전체 CI를 요구하며, Promotion은 develop loose·merge commit으로
+일반 feature PR은 main strict·squash를 유지하고 Ready UI 영향 검증 또는 전체 CI를 요구하며, Promotion은 production loose·merge commit으로
 진행한다. 발행 중 base가 바뀌면 중단하고, source/검증용 merge/실제 merge의 tree와 각 event의
 base·source 부모를 대조한다.
 한 번의 정책 전환 PR도 코드 변경을 포함하므로 전체 CI를 통과해야 한다. 과거 `history` 검증 근거의

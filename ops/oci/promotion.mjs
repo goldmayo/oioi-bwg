@@ -6,11 +6,11 @@ const digest = /^sha256:[0-9a-f]{64}$/;
 
 export function assertPromotion(pr, repository) {
   if (
-    pr.base.ref !== "develop" ||
+    pr.base.ref !== "production" ||
     pr.head.ref !== "main" ||
     pr.head.repo?.full_name !== repository
   ) {
-    throw new Error("Only same-repository main → develop promotions are allowed");
+    throw new Error("Only same-repository main → production promotions are allowed");
   }
 }
 
@@ -151,7 +151,7 @@ export async function prepare({ github, context, core }) {
   }
   const { data: base } = await github.rest.repos.getBranch({
     ...context.repo,
-    branch: "develop",
+    branch: "production",
   });
   if (
     !sha.test(eventPr.base.sha) ||
@@ -346,7 +346,7 @@ export async function resolve({ github, context, core }) {
   }
   const { data: branch } = await github.rest.repos.getBranch({
     ...context.repo,
-    branch: "develop",
+    branch: "production",
   });
   if (branch.commit.sha !== pr.merge_commit_sha)
     throw new Error("Promotion was superseded by a newer merge");

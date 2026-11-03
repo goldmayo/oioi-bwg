@@ -37,7 +37,7 @@ const pr = {
   merged: true,
   merged_at: "2026-10-05T10:10:00Z",
   merge_commit_sha: mergedSha,
-  base: { ref: "develop", sha: baseSha },
+  base: { ref: "production", sha: baseSha },
   head: { ref: "main", sha: sourceSha, repo: { full_name: repository } },
 };
 const candidate = {

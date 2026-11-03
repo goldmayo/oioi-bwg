@@ -9,7 +9,7 @@ function fixture(variant) {
     number: 1,
     state: "open",
     head: { sha, ref: "main", repo: { full_name: repository } },
-    base: { ref: "develop", sha: base },
+    base: { ref: "production", sha: base },
     labels: [{ name: `b0-host-${sha}` }],
   };
   if (variant === "stale-attestation") pr.labels = [{ name: `b0-host-${"c".repeat(40)}` }];

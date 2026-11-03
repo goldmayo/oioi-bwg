@@ -89,7 +89,7 @@ function fixture() {
       ref: "main",
       repo: { full_name: "goldmayo/oioi-bwg" },
     },
-    base: { ref: "develop", sha: "f".repeat(40) },
+    base: { ref: "production", sha: "f".repeat(40) },
   };
   const checks = ["verify", "promotion", "promotion candidate"].map((name) => ({
     name,

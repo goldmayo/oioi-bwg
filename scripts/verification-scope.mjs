@@ -22,7 +22,7 @@ export function verificationMode({
 }) {
   if (markdownOnlyChange) return "docs";
   if (eventName === "pull_request") {
-    if (event?.pull_request?.base?.ref === "develop") return "promotion";
+    if (event?.pull_request?.base?.ref === "production") return "promotion";
     if (event?.pull_request?.base?.ref === "main" && event.pull_request.draft === true)
       return "partial";
     if (event?.pull_request?.base?.ref === "main" && historyOnlyChange) return "history";

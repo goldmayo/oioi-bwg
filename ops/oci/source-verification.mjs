@@ -110,7 +110,9 @@ async function historyParents({ github, context, pr, tree, mergedSha }) {
       throw new Error("History merge did not preserve its reviewed parents");
   } else {
     const branches = await Promise.all(
-      ["main", "develop"].map((branch) => github.rest.repos.getBranch({ ...context.repo, branch })),
+      ["main", "production"].map((branch) =>
+        github.rest.repos.getBranch({ ...context.repo, branch }),
+      ),
     );
     if (branches[0].data.commit.sha !== baseSha || branches[1].data.commit.sha !== developSha)
       throw new Error("History parents are not the current branch heads");
@@ -124,7 +126,7 @@ async function historyParents({ github, context, pr, tree, mergedSha }) {
     (item) =>
       item.merged_at &&
       item.merge_commit_sha === developSha &&
-      ["develop", "migration_develop"].includes(item.base.ref) &&
+      ["production", "migration_develop"].includes(item.base.ref) &&
       ["main", "migration_main"].includes(item.head.ref) &&
       item.head.repo?.full_name === repository,
   );

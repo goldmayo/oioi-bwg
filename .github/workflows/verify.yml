@@ -322,7 +322,7 @@ jobs:
         if: >-
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
-          contains(fromJSON('["main", "develop"]'), github.base_ref)
+          contains(fromJSON('["main", "production"]'), github.base_ref)
         uses: actions/upload-artifact@v4
         with:
           name: ci-build-cache-${{ steps.cache-key.outputs.key }}
@@ -521,7 +521,7 @@ jobs:
         if: >-
           github.event_name == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
-          contains(fromJSON('["main", "develop"]'), github.base_ref)
+          contains(fromJSON('["main", "production"]'), github.base_ref)
         uses: actions/upload-artifact@v4
         with:
           name: ci-build-cache-${{ steps.cache-key.outputs.key }}
@@ -670,7 +670,7 @@ jobs:
       ${{ !cancelled() &&
       needs.verify.result == 'success' &&
       github.event_name == 'pull_request' &&
-      github.event.pull_request.base.ref == 'develop' &&
+      github.event.pull_request.base.ref == 'production' &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository }}
@@ -838,7 +838,7 @@ jobs:
       ${{ !cancelled() &&
       needs.verify.result == 'success' &&
       github.event_name == 'pull_request' &&
-      github.event.pull_request.base.ref == 'develop' &&
+      github.event.pull_request.base.ref == 'production' &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository }}
@@ -967,7 +967,7 @@ jobs:
 
   promotion:
     name: promotion
-    if: always() && github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'develop'
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'production'
     needs: [verify, promotion-candidate]
     runs-on: ubuntu-latest
     steps:

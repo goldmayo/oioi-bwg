@@ -80,8 +80,8 @@ test.each([
   ["main", true, "partial"],
   ["main", false, "full"],
   ["main", undefined, "full"],
-  ["develop", true, "promotion"],
-  ["develop", false, "promotion"],
+  ["production", true, "promotion"],
+  ["production", false, "promotion"],
   ["other", true, "full"],
 ])("PR base=%s draft=%s selects %s", (ref, draft, mode) => {
   expect(
@@ -208,7 +208,7 @@ test("Promotion 후보는 선행 생략에 전파되지 않으며 성공한 검�
     repository: "goldmayo/oioi-bwg",
     event: {
       pull_request: {
-        base: { ref: "develop" },
+        base: { ref: "production" },
         head: { ref: "main", repo: { full_name: "goldmayo/oioi-bwg" } },
         draft: false,
       },
@@ -267,7 +267,7 @@ test("Promotion 후보는 선행 생략에 전파되지 않으며 성공한 검�
   github.event.pull_request.head.ref = "main";
   github.event.pull_request.base.ref = "main";
   expect(run()).toBe(false);
-  github.event.pull_request.base.ref = "develop";
+  github.event.pull_request.base.ref = "production";
   github.event_name = "push";
   expect(run()).toBe(false);
 });
@@ -343,7 +343,7 @@ test("real Git handles entire branch, rename, delete, modes, large diffs and hoo
     expect(scope()).toBe(true);
     git("remote", "add", "origin", root);
     expect(scope("main", "pull_request", true)).toBe(true);
-    expect(scope("develop")).toBe(false);
+    expect(scope("production")).toBe(false);
     expect(scope("main", "push")).toBe(false);
     expect(docsOnly({ cwd: root, local: true })).toBe(true);
     const fakeBin = join(root, ".git/fixture-bin");
@@ -459,4 +459,18 @@ test("Ready UI changes require incremental checks AND app build/browser evidence
     changed[key].result = "skipped";
     expect(verificationPassed(changed)).toBe(false);
   }
+});
+
+test("active deployment and cache workflows target the renamed branches", () => {
+  const deploy = readFileSync(
+    new URL("../../.github/workflows/deploy-promotion.yml", import.meta.url),
+    "utf8",
+  );
+  const cache = readFileSync(
+    new URL("../../.github/workflows/publish-build-cache.yml", import.meta.url),
+    "utf8",
+  );
+  expect(deploy).toContain("branches: [production]");
+  expect(deploy).toContain("github.event.pull_request.head.ref == 'main'");
+  expect(cache).toContain("branches: [main, production]");
 });

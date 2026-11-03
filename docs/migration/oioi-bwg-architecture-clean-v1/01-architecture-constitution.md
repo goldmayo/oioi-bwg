@@ -131,11 +131,11 @@ Browser
                                            `-> Drizzle -> PostgreSQL
 
 Infrastructure
-feature PR -> main -> Promotion PR -> OCIR candidate -> develop -> OCI Run Command -> OCI Compute
+feature PR -> main -> Promotion PR -> OCIR candidate -> production -> OCI Run Command -> OCI Compute
 Internet -> Caddy -> Next standalone -> PostgreSQL
 ```
 
-`main`은 migration 통합선이고 `develop`은 OCI Development promotion/deployment 선이다.
+`main`은 migration 통합선이고 `production`은 OCI Development promotion/deployment 선이다.
 일반 feature PR은 `main`에서 검증하며 배포하지 않는다. Promotion PR은 현재 source head의
 ARM64 candidate를 게시·검증하고, merge 후 같은 immutable digest만 OCI Run Command로 배포한다.
 GitHub는 최소 Run Command credential만 사용하며 runtime Vault secret/DB/SSH에는 접근하지 않는다.

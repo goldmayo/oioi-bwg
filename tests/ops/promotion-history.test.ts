@@ -26,7 +26,7 @@ function fixture() {
   git("config", "user.name", "fixture");
   git("config", "user.email", "fixture@example.invalid");
   commit("app.txt", "release-0\n", "initial");
-  git("branch", "develop");
+  git("branch", "production");
   const feature = (cycle: number) => {
     git("switch", "-q", "main");
     git("switch", "-qc", `feature/${cycle}`);
@@ -35,17 +35,17 @@ function fixture() {
     git("merge", "--squash", `feature/${cycle}`);
     git("commit", "-qm", `feature squash ${cycle}`);
   };
-  const preview = () => git("merge-tree", "--write-tree", "develop", "main").split("\n")[0];
+  const preview = () => git("merge-tree", "--write-tree", "production", "main").split("\n")[0];
   const adapter = () => {
     const source = git("rev-parse", "main");
-    const base = git("rev-parse", "develop");
+    const base = git("rev-parse", "production");
     const merge = git("commit-tree", preview(), "-p", base, "-p", source, "-m", "preview");
     const pr = {
       number: 1,
       state: "open",
       draft: false,
       merge_commit_sha: merge,
-      base: { ref: "develop", sha: base },
+      base: { ref: "production", sha: base },
       head: { ref: "main", sha: source, repo: { full_name: "owner/repo" } },
     };
     const context = {
@@ -89,7 +89,7 @@ test("세 차례 feature squash와 Promotion merge에서 main 역병합 없이 �
       expect(() => f.git("merge-base", "--is-ancestor", a.base, a.source)).toThrow();
     }
     await expect(prepare(a)).resolves.toBe(sourceTree);
-    f.git("switch", "-q", "develop");
+    f.git("switch", "-q", "production");
     f.git("merge", "--no-ff", "main", "-m", `promotion ${cycle}`);
     expect(f.git("rev-parse", "HEAD^1")).toBe(a.base);
     expect(f.git("rev-parse", "HEAD^2")).toBe(a.source);
@@ -100,7 +100,7 @@ test("세 차례 feature squash와 Promotion merge에서 main 역병합 없이 �
 test("동일 파일을 반복 squash하면 두 번째 배포에서 실제 Git 충돌이 생긴다", () => {
   const f = fixture();
   f.feature(1);
-  f.git("switch", "-q", "develop");
+  f.git("switch", "-q", "production");
   f.git("merge", "--squash", "main");
   f.git("commit", "-qm", "old promotion squash");
   f.feature(2);
@@ -110,7 +110,7 @@ test("동일 파일을 반복 squash하면 두 번째 배포에서 실제 Git �
 test("develop에만 있는 파일이 합쳐진 미검증 tree는 배포 후보로 받아들이지 않는다", async () => {
   const f = fixture();
   f.feature(1);
-  f.git("switch", "-q", "develop");
+  f.git("switch", "-q", "production");
   f.commit("develop-only.txt", "unreviewed\n", "develop drift");
   const a = f.adapter();
   expect(() => assertSameTree(f.git("rev-parse", "main^{tree}"), f.preview())).toThrow();
@@ -123,9 +123,9 @@ test.each([false, true])(
     const f = fixture();
     f.feature(1);
     const a = f.adapter();
-    f.git("switch", "-q", "develop");
+    f.git("switch", "-q", "production");
     f.commit("later.txt", "changed\n", "advance base");
-    if (updatePr) a.pr.base.sha = f.git("rev-parse", "develop");
+    if (updatePr) a.pr.base.sha = f.git("rev-parse", "production");
     await expect(prepare(a)).rejects.toThrow("Promotion base changed");
     expect(a.core.setOutput).not.toHaveBeenCalled();
   },

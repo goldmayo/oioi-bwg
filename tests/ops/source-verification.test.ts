@@ -64,7 +64,7 @@ test("main 병합 당시 동일 source/tree의 전체 성공을 재사용한다"
 
 test.each([
   ["pr.merge_commit_sha", "other"],
-  ["pr.base.ref", "develop"],
+  ["pr.base.ref", "production"],
   ["pr.head.repo.full_name", "fork/repo"],
   ["run.head_sha", "other"],
   ["run.head_commit.tree_id", "different"],
@@ -132,7 +132,7 @@ function historyFixture() {
   const promotion = {
     ...pr,
     merge_commit_sha: ids.develop,
-    base: { ref: "develop", sha: "old" },
+    base: { ref: "production", sha: "old" },
     head: { ...pr.head, ref: "main", sha: ids.source },
   };
   const commits: Record<string, { tree: { sha: string }; parents: { sha: string }[] }> = {
@@ -144,7 +144,7 @@ function historyFixture() {
   };
   const branches = {
     main: { commit: { sha: ids.base } },
-    develop: { commit: { sha: ids.develop } },
+    production: { commit: { sha: ids.develop } },
   };
   const comparison = { status: "ahead" };
   const historyRun = { ...f.run, id: 11, head_sha: ids.head, updated_at: "2026-11-03T01:59:00Z" };
@@ -243,7 +243,7 @@ test.each([
   if (fault === "tree") f.commits[f.ids.head].tree.sha = "different";
   if (fault === "parent") f.commits[f.ids.head].parents.pop();
   if (fault === "stale-main") f.branches.main.commit.sha = "other";
-  if (fault === "stale-develop") f.branches.develop.commit.sha = "other";
+  if (fault === "stale-develop") f.branches.production.commit.sha = "other";
   if (fault === "fork") f.pr.head.repo.full_name = "fork/repo";
   if (fault === "draft") f.pr.draft = true;
   if (fault === "promotion-tree") f.commits[f.ids.source].tree.sha = "changed";
