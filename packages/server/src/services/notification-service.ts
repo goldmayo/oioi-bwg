@@ -1,6 +1,7 @@
 import "server-only";
 import type {
   Notification,
+  NotificationHistoryInput,
   NotificationListInput,
   NotificationType,
 } from "@oioi-bwg/contracts/notification";
@@ -9,6 +10,8 @@ import { getDatabase, type Transaction } from "../db";
 import { AppError } from "../errors/app-error";
 import {
   countUnreadNotifications,
+  countNotificationHistory,
+  findNotificationHistory,
   findNotification,
   findNotifications,
   insertNotification,
@@ -55,6 +58,19 @@ export async function getNotification(ctx: RequestContext, id: string) {
   const row = await findNotification(getDatabase(), owner(ctx), id);
   if (!row) throw new AppError("NOTIFICATION_NOT_FOUND");
   return project(row);
+}
+export async function listNotificationHistory(
+  ctx: RequestContext,
+  input: NotificationHistoryInput,
+) {
+  const accountId = owner(ctx);
+  const db = getDatabase();
+  const [rows, totalCount, unreadCount] = await Promise.all([
+    findNotificationHistory(db, accountId, input),
+    countNotificationHistory(db, accountId, input),
+    countUnreadNotifications(db, accountId),
+  ]);
+  return { items: rows.map(project), totalCount, unreadCount };
 }
 export async function readNotification(ctx: RequestContext, id: string) {
   const [row] = await setNotificationRead(getDatabase(), owner(ctx), id);
