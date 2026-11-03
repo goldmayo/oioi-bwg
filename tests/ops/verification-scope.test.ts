@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { runInNewContext } from "node:vm";
 
 import { expect, test, vi } from "vitest";
 
@@ -113,6 +114,56 @@ test("Draft 결과는 병합 필수 verify라는 이름으로 게시하지 않�
   expect(workflow).toContain("converted_to_draft");
   expect(workflow).toContain("'partial verify' || 'verify'");
   expect(workflow).toContain("VERIFY_BASE: ${{ github.event.pull_request.base.sha }}");
+});
+
+test("Promotion 후보는 선행 생략에 전파되지 않으며 성공한 검증·정상 PR·취소 여부를 요구한다", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/verify.yml", import.meta.url),
+    "utf8",
+  );
+  const job = workflow.split("\n  promotion-candidate:\n")[1].split("\n    runs-on:")[0];
+  expect(job).toContain("needs: verify");
+  const condition = job
+    .split("if: >-\n")[1]
+    .split("\n    needs:")[0]
+    .trim()
+    .replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+  // GitHub의 암묵적 success()가 skipped 조상에 적용되지 않도록 상태 함수를 명시해야 한다.
+  expect(condition).toContain("cancelled()");
+  const github = {
+    event_name: "pull_request",
+    repository: "goldmayo/oioi-bwg",
+    event: {
+      pull_request: {
+        base: { ref: "migration_develop" },
+        head: { ref: "migration_main", repo: { full_name: "goldmayo/oioi-bwg" } },
+        draft: false,
+      },
+    },
+  };
+  const run = (result = "success", cancelled = false) =>
+    runInNewContext(condition, {
+      github,
+      needs: { verify: { result } },
+      cancelled: () => cancelled,
+    });
+  expect(run()).toBe(true);
+  for (const result of ["failure", "cancelled", "skipped", ""]) expect(run(result)).toBe(false);
+  expect(run("success", true)).toBe(false);
+  github.event.pull_request.draft = true;
+  expect(run()).toBe(false);
+  github.event.pull_request.draft = false;
+  github.event.pull_request.head.repo.full_name = "fork/oioi-bwg";
+  expect(run()).toBe(false);
+  github.event.pull_request.head.repo.full_name = github.repository;
+  github.event.pull_request.head.ref = "feature/other";
+  expect(run()).toBe(false);
+  github.event.pull_request.head.ref = "migration_main";
+  github.event.pull_request.base.ref = "migration_main";
+  expect(run()).toBe(false);
+  github.event.pull_request.base.ref = "migration_develop";
+  github.event_name = "push";
+  expect(run()).toBe(false);
 });
 
 test.each([
