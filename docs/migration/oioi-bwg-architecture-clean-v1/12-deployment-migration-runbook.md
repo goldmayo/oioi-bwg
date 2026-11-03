@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.26"
+version: "1.27"
 status: "active"
 authority: "runbook"
 updated_at: "2026-11-03"
@@ -504,7 +504,7 @@ ARM64·Next build와 컨테이너 smoke를 수행한다. `converted_to_draft`는
 관리자 E2E 수동 실행 원칙은 일반 PR·기존 push·Promotion에 동일하며 `pnpm test:integration:admin` 계열 명령으로 필요 시 직접 실행한다.
 관리자 E2E 제외는 container native/readiness·간단한 화면 smoke나 아래 Promotion exact digest 검증을 생략하는 조건이 아니다.
 단, `migration_main` 대상 전체 PR diff가 일반 파일 `.md` 변경뿐이면 scope 판정과 필수 `verify`만 실행한다.
-이력 누락·빈 diff·symlink/실행 mode·MDX·코드 혼합은 전체 검증이다. Git raw diff의 삭제/추가 양쪽을
+이력 누락·일반 빈 diff·symlink/실행 mode·MDX·코드 혼합은 전체 검증이다. Git raw diff의 삭제/추가 양쪽을
 검사해 code→md rename과 API 파일 수 제한에 의한 누락을 방지한다. workflow 자체를 path filter로 생략하지 않는다.
 Promotion은 main의 코드 검증 근거를 확인하며, 문서 예외를 포함해 현재 source/tree가 검증된 main 병합 결과여야 한다.
 배포 후보는 기존 계약에 따라 현재 run에서 검증한다. 문서 예외가 과거 candidate 재사용 권한을 주지 않는다.
@@ -518,9 +518,21 @@ Docker builder는 다음 변경 build에 복원하지 않는 Next 파일시스�
 기존 `main`/`develop` push 정책은 유지한다. 일반 feature PR을 `migration_develop`으로 직접 보내면
 `promotion` check가 실패한다.
 
+2026-11-03 배포 시간 개선: 파일 변경 없는 배포선 이력 연결에 한정해 `history` 검증을 허용한다.
+scope는 현재 main SHA가 첫 부모인 두 부모 merge이고 head/base tree가 같을 때만 이 모드를 선택한다.
+검증 job은 같은 저장소의 열린 Ready PR·현재 main/develop 부모·검증용 merge tree를 다시 대조한다.
+develop 부모는 정상 `migration_main → migration_develop` Promotion의 source tree와 같아야 하고,
+그 source가 첫 부모의 조상이어야 한다. 배포선의 고유 변경을 버리는 연결은 거절한다.
+첫 부모의 main 병합 당시 source/tree·최종 head·전체 job·필수 verify 성공 근거를 확인하며
+부모·코드·시각·저장소 불일치나 근거 누락은 실패한다. 무거운 검사를 조용히 재실행하지 않는다.
+일반 Ready 코드 PR은 계속 전체 검증을 수행한다. history 검증에서도 필수 `verify`와 생략 job을 대조한다.
+후속 Promotion은 성공한 history 검증과 실제 병합 부모를 확인하고 최대 4단계까지 같은 tree의
+원래 main 전체 검증을 따라간다. 검증 결과 재사용은 새 배포 이미지나 candidate의 재사용 허가가 아니다.
+
 Promotion PR의 `reuse main verification`은 현재 main head의 병합 PR과 검증 run을 대조한다.
 동일 저장소·main 대상 squash 결과 SHA·PR 최종 head·source/tree·Verify workflow·병합 이전 성공 시각과
-전체 job 및 필수 verify 성공을 확인한다. main의 일반 Markdown-only 예외만 Git raw diff로 재판정한다.
+전체 job 및 필수 verify 성공을 확인한다. main의 일반 Markdown-only 예외는 Git raw diff로 재판정하고,
+파일 변경 없는 history 예외는 위의 부모·Promotion source·같은 tree의 원래 검증까지 대조한다.
 누락·불일치·실패·Draft 부분 검증은 거절하고 전체 검사를 몰래 시작하지 않는다. source 검증 성공 뒤
 현재 `migration_main` head에서 하나의 paired release를 검증하며 타입/lint/unit/PG/ARM64 검사를 반복하지 않는다.
 Draft Promotion에서는 후보 빌드·게시를 실행하지 않는다.
