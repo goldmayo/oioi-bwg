@@ -32,6 +32,8 @@ test("uses the installed Turbo graph and real Git history for each app and share
       "pnpm-workspace.yaml",
       "turbo.json",
       ".gitignore",
+      ".dockerignore",
+      ".nvmrc",
       ...[
         "apps/web",
         "apps/console",
@@ -39,6 +41,8 @@ test("uses the installed Turbo graph and real Git history for each app and share
         "packages/server",
         "packages/contracts",
         "packages/config",
+        "packages/ui",
+        "tools/repository",
       ].map((p) => p + "/package.json"),
     ]) {
       mkdirSync(dirname(join(root, file)), { recursive: true });
@@ -74,7 +78,10 @@ test("uses the installed Turbo graph and real Git history for each app and share
     for (const app of [
       "web",
       "console",
+      "console-docs",
+      "docs-only",
       "shared",
+      "ui",
       "config",
       "sentry-slack-relay",
       "web-docker",
@@ -101,21 +108,27 @@ test("uses the installed Turbo graph and real Git history for each app and share
           ]),
         ),
       };
+      const paths: Record<string, string> = {
+        web: "apps/web/fixture.ts",
+        console: "apps/console/fixture.ts",
+        "console-docs": "apps/console/fixture.ts",
+        "docs-only": "docs/note.md",
+        shared: "packages/server/fixture.ts",
+        ui: "packages/ui/fixture.ts",
+        config: "packages/config/fixture.ts",
+        "sentry-slack-relay": "apps/sentry-slack-relay/fixture.ts",
+        "web-docker": "apps/web/Dockerfile",
+        "console-docker": "apps/console/Dockerfile",
+      };
       if (app === "rename") git(["mv", "apps/web/fixture.ts", "apps/console/moved.ts"]);
       else {
-        writeFileSync(
-          join(
-            root,
-            app === "shared"
-              ? "packages/server/fixture.ts"
-              : app === "config"
-                ? "packages/config/fixture.ts"
-                : app.endsWith("-docker")
-                  ? `apps/${app.replace("-docker", "")}/Dockerfile`
-                  : `apps/${app}/fixture.ts`,
-          ),
-          `// ${app}\n`,
-        );
+        const file = join(root, paths[app]);
+        mkdirSync(dirname(file), { recursive: true });
+        writeFileSync(file, `// ${app}\n`);
+        if (app === "console-docs") {
+          mkdirSync(join(root, "docs"), { recursive: true });
+          writeFileSync(join(root, "docs/mockup.png"), "evidence");
+        }
       }
       const head = commit();
       const execute = (
@@ -134,7 +147,13 @@ test("uses the installed Turbo graph and real Git history for each app and share
         sourceSha: head,
         execute,
       });
-      expect(result.build).toEqual({ web: app !== "console", console: app !== "web" });
+      const expected: Record<string, { web: boolean; console: boolean }> = {
+        web: { web: true, console: false },
+        console: { web: false, console: true },
+        "console-docs": { web: false, console: true },
+        "docs-only": { web: false, console: false },
+      };
+      expect(result.build).toEqual(expected[app] ?? { web: true, console: true });
       sourceSha = head;
     }
   } finally {

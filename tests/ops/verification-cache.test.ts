@@ -23,6 +23,27 @@ it("native 캐시의 저장·조회·복원은 같은 경로 버전을 사용한
   expect(native).not.toContain("waveform-cache");
 });
 
+it("Promotion cache는 앱별 registry를 공유하며 후보 검증과 lockfile 설치를 유지한다", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/verify.yml", import.meta.url),
+    "utf8",
+  );
+  const candidate = workflow.split("\n  promotion-candidate:\n")[1].split("\n  promotion:\n")[0];
+  for (const repository of ["IMAGE_REPOSITORY", "CONSOLE_IMAGE_REPOSITORY"]) {
+    const ref = `type=registry,ref=\${{ env.${repository} }}:buildcache-arm64-v1`;
+    expect(candidate).toContain(`cache-from: ${ref}`);
+    expect(candidate).toContain(
+      `cache-to: ${ref},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true`,
+    );
+  }
+  expect(candidate).not.toContain("type=gha");
+  expect(candidate).not.toContain("cache: pnpm");
+  expect(candidate).toContain("pnpm install --frozen-lockfile");
+  expect(candidate).toContain("playwright install --with-deps --only-shell chromium");
+  expect(candidate).toContain("bash ops/oci/smoke-paired-candidate.sh");
+  expect(candidate).toContain("await promotion.record({ github, context, core })");
+});
+
 function fixture() {
   const key = "Linux-verify-amd64-v4-input";
   const context = {
