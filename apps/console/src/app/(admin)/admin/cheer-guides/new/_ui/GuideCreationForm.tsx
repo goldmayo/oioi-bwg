@@ -63,11 +63,11 @@ export function GuideCreationForm({
       <Form {...form}>
         <form onSubmit={submit} noValidate>
           {submissionNotice}
-          <fieldset disabled={isSubmitting || !canSubmit} className="min-w-0 space-y-10">
-            <section aria-labelledby="guide-basics" className="space-y-6">
+          <fieldset disabled={isSubmitting || !canSubmit} className="min-w-0 space-y-8">
+            <section aria-labelledby="guide-basics" className="space-y-5">
               <div className="flex items-baseline justify-between gap-4">
                 <h2 id="guide-basics" className="text-lg font-semibold">
-                  기본 정보
+                  적용 대상
                 </h2>
                 <span className="text-muted-foreground text-sm">
                   <span className="text-destructive">*</span> 필수 항목
@@ -95,7 +95,7 @@ export function GuideCreationForm({
                   </FormItem>
                 )}
               />
-              <div className="grid items-start gap-6 sm:grid-cols-2">
+              <div className="min-w-0">
                 <FormField
                   control={form.control}
                   name="mode"
@@ -134,56 +134,53 @@ export function GuideCreationForm({
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="sourceType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        출처 <Required />
-                      </FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          orientation="horizontal"
-                          aria-label="출처"
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            void form.trigger("sourceUrl");
-                          }}
-                          className="flex min-h-12 flex-wrap items-center gap-x-6 gap-y-2"
-                        >
-                          {(
-                            [
-                              ["OFFICIAL", "공식"],
-                              ["FANDOM", "팬덤"],
-                            ] as const
-                          ).map(([value, label]) => (
-                            <div key={value} className="flex items-center gap-2.5">
-                              <RadioGroupItem id={`${sourceId}-${value}`} value={value} />
-                              <Label
-                                htmlFor={`${sourceId}-${value}`}
-                                className="min-h-11 cursor-pointer font-normal"
-                              >
-                                {label}
-                              </Label>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
             </section>
-            <section
-              aria-labelledby="guide-source"
-              className="border-border space-y-6 border-t pt-8"
-            >
+            <section aria-labelledby="guide-source" className="space-y-5">
               <h2 id="guide-source" className="text-lg font-semibold">
                 출처 정보
               </h2>
+              <FormField
+                control={form.control}
+                name="sourceType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      출처 <Required />
+                    </FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        orientation="horizontal"
+                        aria-label="출처"
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          void form.trigger("sourceUrl");
+                        }}
+                        className="flex min-h-12 flex-wrap items-center gap-x-6 gap-y-2"
+                      >
+                        {(
+                          [
+                            ["OFFICIAL", "공식"],
+                            ["FANDOM", "팬덤"],
+                          ] as const
+                        ).map(([value, label]) => (
+                          <div key={value} className="flex items-center gap-2.5">
+                            <RadioGroupItem id={`${sourceId}-${value}`} value={value} />
+                            <Label
+                              htmlFor={`${sourceId}-${value}`}
+                              className="min-h-11 cursor-pointer font-normal"
+                            >
+                              {label}
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="sourceUrl"
@@ -236,16 +233,22 @@ export function GuideCreationForm({
               {form.formState.errors.root.server.message}
             </p>
           )}
-          <footer className="border-border mt-8 flex justify-end gap-2 border-t pt-5">
+          <footer className="mt-10 flex justify-end gap-2">
             <Button
               type="button"
               variant="destructive"
+              className="h-11"
               disabled={isSubmitting}
               onClick={() => leave.requestLeave(onCancel)}
             >
               취소
             </Button>
-            <Button type="submit" disabled={isSubmitting || !canSubmit} variant="q">
+            <Button
+              type="submit"
+              className="h-11"
+              disabled={isSubmitting || !canSubmit}
+              variant="q"
+            >
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}추가
             </Button>
           </footer>
@@ -264,5 +267,5 @@ function Required() {
   );
 }
 function Optional() {
-  return <span className="text-muted-foreground font-normal">선택</span>;
+  return <span className="text-muted-foreground font-normal">(선택)</span>;
 }

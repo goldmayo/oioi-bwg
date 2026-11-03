@@ -23,6 +23,8 @@ const routes = {
   [adminPaths.notificationList]: "admin-notification-list",
   "/admin-login": "admin-login",
   [adminPaths.albumList]: "admin-album-list",
+  [adminPaths.albumCreate]: "admin-album-create",
+  [adminPaths.albumEdit]: "admin-album-edit",
   [adminPaths.songList]: "admin-song-list",
   [adminPaths.songLyrics]: "admin-song-edit-load",
   [adminPaths.guideEdit]: "admin-cheer-guide-edit-load",

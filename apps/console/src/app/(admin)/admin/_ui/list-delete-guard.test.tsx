@@ -54,7 +54,7 @@ function setup(kind: "song" | "album") {
       {kind === "song" ? (
         <SongManagerClient canManage onMutationError={onError} />
       ) : (
-        <AlbumManagerClient canManage onUploadImage={vi.fn()} onMutationError={onError} />
+        <AlbumManagerClient canManage onMutationError={onError} />
       )}
     </QueryClientProvider>,
   );
