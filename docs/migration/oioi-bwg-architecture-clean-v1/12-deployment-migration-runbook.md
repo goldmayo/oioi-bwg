@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.27"
+version: "1.28"
 status: "active"
 authority: "runbook"
 updated_at: "2026-11-03"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.26
+# oioi-bwg Deployment / Migration Runbook v1.28
 
 ## 1. 목적
 
@@ -540,6 +540,11 @@ P06 선택적 재사용 계약은 마지막 **실제 배포 exit 0**의 immutabl
 최신 정상 배포의 PR/source/tree/run/attempt·artifact 미만료·성공 check·registry를 검증하고,
 그 기준 source부터 현재 source까지 앱 경로와 Turbo affected 결과를 함께 확인한다. 공통/알 수 없는 경로,
 lockfile·앱 Dockerfile·공통 build 설정·build-time 공개 설정 변경, 이력/분석 오류는 두 이미지를 빌드한다.
+2026-11-03 보완: 현재 source의 `.dockerignore`가 `docs`를 제외하고 negation 규칙이 없으면
+일반 파일인 `docs/` 문서·시안 변경은 이미지 입력에서 제외한다. Git raw diff를 rename 탐지 없이
+읽어 삭제·추가 양쪽을 판정하며 symlink·실행 mode·불완전한 diff는 예외로 통과시키지 않는다.
+앱 변경은 Turbo의 실제 affected 결과와 함께 확인한다. 변경되지 않은 공용 UI 패키지의 transit
+노드가 결과에 있다는 이유만으로 두 앱을 재빌드하지 않으며 공용 UI source 변경은 계속 두 앱을 빌드한다.
 증거 누락/만료/불일치는 재사용을 금지한다. 첫 paired deployment는 두 이미지를 빌드한다.
 기존 source/run은 현재 조합 검증의 출처다. 각 image의 `buildSourceSha`와 `origin`(built/reused)을
 별도로 기록하고 Sentry release·OCI revision은 실제 build source를 유지한다. 재사용한 digest도 현재
@@ -560,6 +565,13 @@ OCI 저장소 하나의 `web`·`console` tag로 각각 lookup/export하며 diges
 이미지 크기·local image ID·build digest·checkout/source/tree는 해당 run의 metadata로 추적하며
 이를 OCIR release candidate나 다른 run의 성공 증거로 취급하지 않는다.
 Promotion은 BUILD_APP=web/console로 필요한 앱만 빌드한다.
+2026-11-03 Promotion 캐시 개선: 앱별 기존 private OCIR repository의 별도 `buildcache-arm64-v1`
+tag에 Docker 공식 registry cache(`mode=max`, OCI image manifest)를 읽고 쓴다. PR merge ref에
+격리되는 `gha` 캐시를 대체하며 cache tag는 배포 입력이나 성공 증거로 사용하지 않는다.
+캐시가 없으면 직접 빌드하고 선택적 cache export 실패는 허용하되 이미지 게시·현재 pair smoke·
+candidate 기록 실패는 계속 배포를 차단한다. secret job은 기존 동일 저장소 Ready Promotion 조건을 유지한다.
+Promotion job은 lockfile 설치를 유지하면서 PR별 pnpm store 저장을 생략한다. 브라우저 검증은 기존과
+같은 Chromium headless shell로 수행하고 사용하지 않는 full Chromium 다운로드만 생략한다.
 어느 앱의 Dockerfile 변경이든 기존 보수적 재사용 조건에 따라 두 이미지를 다시 빌드한다.
 두 exact digest를 같은 격리 DB에서 **동시에 실행**해 native/readiness/browser smoke를 통과해야 한다.
 현재 run/attempt·각 digest/buildSourceSha를 묶은 smoke proof가 없거나 다르면 candidate.json을 쓰지 않는다.

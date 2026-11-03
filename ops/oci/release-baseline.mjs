@@ -176,6 +176,27 @@ export async function validateBaseline({
 /** @type {(file: string, args: string[], options: import('node:child_process').ExecFileSyncOptions) => string | Buffer} */
 const executeImagePlanCommand = execFileSync;
 
+// docs/는 Docker context에서 제외된다. mode 변경·symlink·rename 양쪽은 무시하지 않는다.
+function imageInputFiles(raw, docsExcluded) {
+  if (raw === "") return [];
+  const fields = raw.split("\0");
+  if (fields.pop() !== "" || fields.length % 2 !== 0) throw new Error("Invalid image diff");
+  const files = [];
+  for (let i = 0; i < fields.length; i += 2) {
+    if (
+      !/^:(000000|100644|100755) (000000|100644|100755) [0-9a-f]{40,64} [0-9a-f]{40,64} [AMD]$/.test(
+        fields[i],
+      )
+    )
+      throw new Error("Unsupported image input mode");
+    const file = fields[i + 1];
+    if (!file) throw new Error("Missing image input path");
+    if (docsExcluded && file.startsWith("docs/") && !fields[i].includes("100755")) continue;
+    files.push(file);
+  }
+  return files;
+}
+
 export function planImages({
   baseline,
   proof,
@@ -193,14 +214,28 @@ export function planImages({
     execute("git", ["merge-base", "--is-ancestor", baseline.sourceSha, sourceSha], {
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const files = String(
-      execute("git", ["diff", "--no-renames", "--name-only", "-z", baseline.sourceSha, sourceSha], {
+    const raw = String(
+      execute(
+        "git",
+        ["diff", "--no-renames", "--raw", "--no-abbrev", "-z", baseline.sourceSha, sourceSha],
+        {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      ),
+    );
+    const ignore = String(
+      execute("git", ["show", `${sourceSha}:.dockerignore`], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       }),
     )
-      .split("\0")
-      .filter(Boolean);
+      .split(/\r?\n/)
+      .map((line) => line.trim());
+    const files = imageInputFiles(
+      raw,
+      ignore.includes("docs") && !ignore.some((line) => line.startsWith("!")),
+    );
     // Root configuration, shared packages, lockfile, Dockerfile, workflows, or any
     // unknown path invalidate both. Turbo supplies the existing dependency graph.
     if (files.some((f) => f.endsWith("/Dockerfile") || !/^apps\/(web|console)\//.test(f)))
@@ -224,6 +259,7 @@ export function planImages({
             "@oioi-bwg/contracts",
             "@oioi-bwg/config",
             "@oioi-bwg/server",
+            "@oioi-bwg/ui",
           ].includes(t.package),
       )
     )

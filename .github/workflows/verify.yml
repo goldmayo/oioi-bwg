@@ -734,7 +734,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Find last successful paired deployment evidence
         id: baseline
@@ -799,8 +798,8 @@ jobs:
           labels: |
             org.opencontainers.image.revision=${{ steps.source.outputs.source_sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          cache-from: type=gha,scope=promotion-web
-          cache-to: type=gha,scope=promotion-web,mode=min
+          cache-from: type=registry,ref=${{ env.IMAGE_REPOSITORY }}:buildcache-arm64-v1
+          cache-to: type=registry,ref=${{ env.IMAGE_REPOSITORY }}:buildcache-arm64-v1,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
       - name: Build and publish ARM64 Console candidate
         id: console-image
         if: steps.selection.outputs.build_console == 'true'
@@ -825,15 +824,15 @@ jobs:
           labels: |
             org.opencontainers.image.revision=${{ steps.source.outputs.source_sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          cache-from: type=gha,scope=promotion-console
-          cache-to: type=gha,scope=promotion-console,mode=min
+          cache-from: type=registry,ref=${{ env.CONSOLE_IMAGE_REPOSITORY }}:buildcache-arm64-v1
+          cache-to: type=registry,ref=${{ env.CONSOLE_IMAGE_REPOSITORY }}:buildcache-arm64-v1,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
       - name: Migrate isolated smoke database
         run: |
           pnpm db:migrate
           LYRICS_SMOKE_DATABASE_URL="$DATABASE_URL" node tests/ops/lyrics-viewer-fixture.mjs
         env:
           DATABASE_URL: postgresql://postgres@127.0.0.1:5432/promotion_smoke
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
       - name: Pull and smoke the exact image pair together
         env:
           PAIR_SMOKE_FILE: ${{ runner.temp }}/promotion-pair-smoke.json

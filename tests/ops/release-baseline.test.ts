@@ -41,6 +41,18 @@ const receipt = {
   candidateArtifactId: 88,
 };
 
+const rawChange = (path: string, before = "100644", after = "100644", status = "M") =>
+  `:${before} ${after} ${"a".repeat(40)} ${"b".repeat(40)} ${status}\0${path}\0`;
+
+function imageCommands(raw: string, tasks: { package: string }[] = [], ignore = "docs\n") {
+  return vi.fn((cmd: string, args: string[]) => {
+    if (cmd !== "git") return JSON.stringify({ tasks });
+    if (args[0] === "show") return ignore;
+    if (args[0] === "diff") return raw;
+    return "";
+  });
+}
+
 function fixture() {
   const artifacts = [
     { id: 99, name: "paired-deployment-31-2", expired: false, expires_at: "2999-01-01" },
@@ -141,7 +153,7 @@ describe("paired release evidence and conservative image selection", () => {
   test.each(["web", "console"])("reuses only the unchanged app when %s changes", (app) => {
     const execute = vi.fn((cmd: string) =>
       cmd === "git"
-        ? `apps/${app}/src/page.tsx\0`
+        ? rawChange(`apps/${app}/src/page.tsx`)
         : JSON.stringify({
             tasks: [
               { package: `@oioi-bwg/${app}` },
@@ -169,7 +181,7 @@ describe("paired release evidence and conservative image selection", () => {
     "config/build.ts",
     "unknown/file",
   ])("rebuilds both for %s", (path) => {
-    const execute = vi.fn(() => path + "\0");
+    const execute = vi.fn(() => rawChange(path));
     expect(
       planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
     ).toEqual({ web: true, console: true });
@@ -184,11 +196,51 @@ describe("paired release evidence and conservative image selection", () => {
           throw new Error("git unavailable");
         },
       },
-      { execute: (cmd: string) => (cmd === "git" ? "apps/web/a\0" : "invalid JSON") },
+      { execute: (cmd: string) => (cmd === "git" ? rawChange("apps/web/a") : "invalid JSON") },
     ])
       expect(
         planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), ...input }).build,
       ).toEqual({ web: true, console: true });
+  });
+  test("문서·시안이 섞인 Console 변경은 UI transit 때문에 Web을 재빌드하지 않는다", () => {
+    const execute = imageCommands(
+      rawChange("apps/console/src/page.tsx") + rawChange("docs/mockup.png"),
+      [{ package: "@oioi-bwg/console" }, { package: "@oioi-bwg/ui" }],
+    );
+    expect(
+      planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+    ).toEqual({ web: false, console: true });
+  });
+  test.each(["docs", "!docs/a.md\ndocs", "docs\n!docs/a.md"])(
+    "문서 제외는 현재 Docker ignore 계약 %s에 종속된다",
+    (ignore) => {
+      const execute = imageCommands(rawChange("docs/a.md"), [], ignore);
+      const reused = ignore === "docs";
+      expect(
+        planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+      ).toEqual({ web: !reused, console: !reused });
+    },
+  );
+  test.each([
+    rawChange("docs/a.md", "100755"),
+    rawChange("docs/a.md", "100644", "120000"),
+    rawChange("docs/a.md") + rawChange("packages/ui/src/data-table.tsx"),
+    rawChange("docs/a.md") + "malformed\0",
+    rawChange("docs/a.md").slice(0, -1),
+  ])("mode·공용 소스·불완전 diff는 보수적으로 두 이미지를 빌드한다", (raw) => {
+    const execute = imageCommands(raw);
+    expect(
+      planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+    ).toEqual({ web: true, console: true });
+  });
+  test("rename 양쪽의 앱 경로를 보존한다", () => {
+    const execute = imageCommands(
+      rawChange("apps/web/a.ts", "100644", "000000", "D") +
+        rawChange("docs/a.md", "000000", "100644", "A"),
+    );
+    expect(
+      planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+    ).toEqual({ web: true, console: false });
   });
   test("keeps build provenance separate and binds canonical pair identity", () => {
     const next = {
