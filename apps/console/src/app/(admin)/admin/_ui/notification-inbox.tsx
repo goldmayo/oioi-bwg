@@ -1,18 +1,12 @@
 "use client";
-import { useEffect, useRef } from "react";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Bell, CheckCheck, ChevronRight, CircleCheck, Loader2, OctagonX } from "lucide-react";
-import { useRouter } from "next/navigation";
 
-import {
-  notificationQueries,
-  notificationQueryKeys,
-  readAllNotifications,
-  readNotification,
-} from "@/entities/notification";
+import { notificationQueries } from "@/entities/notification";
 
-import { useConfirmNavigation } from "@/shared/model/navigation-confirmation";
 import { Button } from "@/shared/ui/button";
+
+import { useNotificationActions } from "../_model/use-notification-actions";
 
 import { useNotificationContext } from "./notification-provider";
 
@@ -24,39 +18,12 @@ export function NotificationInbox({
   selectedId?: string;
 }) {
   const { accountId, pushState, enable, disable } = useNotificationContext();
-  const client = useQueryClient();
-  const router = useRouter();
-  const confirmNavigation = useConfirmNavigation();
   const list = useInfiniteQuery(notificationQueries.list(accountId));
-  const selected = useQuery({
-    ...notificationQueries.detail(accountId, selectedId ?? ""),
-    enabled: Boolean(selectedId),
-  });
-  const processed = useRef<string | null>(null);
-  const invalidate = () =>
-    client.invalidateQueries({ queryKey: notificationQueryKeys.all(accountId) });
-  const all = useMutation({ mutationFn: readAllNotifications, onSuccess: invalidate });
-  const {
-    mutateAsync: read,
-    isPending,
-    isError: readError,
-  } = useMutation({
-    mutationFn: readNotification,
-    onSuccess: invalidate,
+  const { read, all, selected, open } = useNotificationActions(accountId, {
+    selectedId,
+    onNavigate,
   });
   const count = list.data?.pages[0]?.unreadCount ?? 0;
-  useEffect(() => {
-    const item = selected.data;
-    if (!item || processed.current === item.id) return;
-    processed.current = item.id;
-    void read(item.id)
-      .then(() => {
-        confirmNavigation(() => router.replace(item.href));
-      })
-      .catch(() => {
-        processed.current = null;
-      });
-  }, [confirmNavigation, read, router, selected.data]);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="border-border flex flex-wrap items-center justify-between gap-2 border-b px-5 py-4">
@@ -72,7 +39,7 @@ export function NotificationInbox({
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto" aria-busy={list.isPending}>
-        {readError || all.isError ? (
+        {read.isError || all.isError ? (
           <p role="alert" className="text-destructive p-4 text-sm">
             읽음 처리를 완료하지 못했습니다. 다시 선택해 주세요.
           </p>
@@ -117,17 +84,8 @@ export function NotificationInbox({
                   <button
                     type="button"
                     className="hover:bg-accent/40 focus-visible:ring-ring flex w-full items-start gap-3 px-5 py-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset disabled:opacity-60"
-                    disabled={isPending}
-                    onClick={() => {
-                      void read(item.id)
-                        .then(() => {
-                          confirmNavigation(() => {
-                            onNavigate?.();
-                            router.push(item.href);
-                          });
-                        })
-                        .catch(() => {});
-                    }}
+                    disabled={read.isPending}
+                    onClick={() => open(item.id)}
                   >
                     <span
                       className={`bg-muted flex size-10 shrink-0 items-center justify-center rounded-lg ${item.type === "WAVEFORM_FAILED" ? "text-destructive" : "text-emerald-400"}`}
