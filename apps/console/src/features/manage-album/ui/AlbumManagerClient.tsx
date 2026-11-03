@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import type { RowSelectionState } from "@tanstack/react-table";
 
@@ -8,6 +8,7 @@ import type { AdminAlbumSummary } from "@/entities/album";
 import { albumQueryKeys } from "@/entities/album";
 import { albumMutations, albumQueries } from "@/entities/album/api";
 
+import { adminLinks, adminPaths } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -20,23 +21,16 @@ import {
 import { Input } from "@/shared/ui/input";
 import { ListHeader, ListSelection, ListToolbar } from "@/shared/ui/list-layout";
 
-import type { AlbumFormValues } from "../model/schemas";
-
-import { AlbumFormDialog, type UploadAlbumImage } from "./AlbumFormDialog";
 import { AlbumManagerTable } from "./AlbumManagerTable";
 
 interface AlbumManagerClientProps {
   canManage: boolean;
-  submissionNotice?: ReactNode;
-  onUploadImage: UploadAlbumImage;
   onMutationError?: (error: unknown) => void;
   onNameChangeOrDelete?: () => void;
 }
 
 export function AlbumManagerClient({
   canManage,
-  submissionNotice,
-  onUploadImage,
   onMutationError,
   onNameChangeOrDelete,
 }: AlbumManagerClientProps) {
@@ -48,10 +42,6 @@ export function AlbumManagerClient({
   const selectedCount = albums.filter((album) => selection[album.id]).length;
   const [search, setSearch] = useState("");
 
-  // 폼 다이얼로그
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingAlbum, setEditingAlbum] = useState<AdminAlbumSummary | undefined>();
-
   // 삭제 확인 다이얼로그
   const [deleteTarget, setDeleteTarget] = useState<AdminAlbumSummary | null>(null);
   const deletingId = useRef<string | null>(null);
@@ -59,14 +49,6 @@ export function AlbumManagerClient({
     if (deletingId.current === null) setDeleteTarget(target);
   }, []);
 
-  const createMutation = useMutation({
-    ...albumMutations.create(),
-    onError: onMutationError,
-  });
-  const updateMutation = useMutation({
-    ...albumMutations.update(),
-    onError: onMutationError,
-  });
   const deleteMutation = useMutation({
     ...albumMutations.delete(),
     onError: onMutationError,
@@ -81,34 +63,13 @@ export function AlbumManagerClient({
     );
   }, [albums, search]);
 
-  const handleAdd = useCallback(() => {
-    setEditingAlbum(undefined);
-    setFormOpen(true);
-  }, []);
-
   const handleEdit = useCallback((album: AdminAlbumSummary) => {
-    setEditingAlbum(album);
-    setFormOpen(true);
+    window.location.assign(adminLinks.albumEdit(album.id));
   }, []);
 
   const invalidateAlbums = useCallback(
     () => queryClient.invalidateQueries({ queryKey: albumQueryKeys.adminList() }),
     [queryClient],
-  );
-
-  const handleSubmit = useCallback(
-    async (values: AlbumFormValues) => {
-      const input = { ...values, releaseDate: values.releaseDate || null };
-
-      if (editingAlbum) {
-        const updatedAlbum = await updateMutation.mutateAsync({ id: editingAlbum.id, input });
-        if (updatedAlbum.name !== editingAlbum.name) onNameChangeOrDelete?.();
-      } else {
-        await createMutation.mutateAsync(input);
-      }
-      await invalidateAlbums();
-    },
-    [createMutation, editingAlbum, invalidateAlbums, onNameChangeOrDelete, updateMutation],
   );
 
   const handleDelete = useCallback(() => {
@@ -133,8 +94,8 @@ export function AlbumManagerClient({
         description="앨범을 추가, 수정, 삭제할 수 있습니다."
         action={
           canManage && (
-            <Button variant="q" onClick={handleAdd}>
-              앨범 추가
+            <Button variant="q" asChild>
+              <a href={adminPaths.albumCreate}>앨범 추가</a>
             </Button>
           )
         }
@@ -160,20 +121,6 @@ export function AlbumManagerClient({
         onEdit={handleEdit}
         onDelete={changeDeleteTarget}
       />
-
-      {/* 앨범 폼 다이얼로그 */}
-      {formOpen && (
-        <AlbumFormDialog
-          key={editingAlbum?.id ?? "new"}
-          open={formOpen}
-          canSubmit={canManage}
-          submissionNotice={submissionNotice}
-          onOpenChange={setFormOpen}
-          album={editingAlbum}
-          onUploadImage={onUploadImage}
-          onSubmit={handleSubmit}
-        />
-      )}
 
       {/* 삭제 확인 다이얼로그 */}
       {canManage && (

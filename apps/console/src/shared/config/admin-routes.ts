@@ -2,6 +2,8 @@
 export const adminPaths = {
   dashboard: "/admin",
   albumList: "/admin/albums",
+  albumCreate: "/admin/albums/new",
+  albumEdit: "/admin/albums/[id]/edit",
   songList: "/admin/songs",
   songCreate: "/admin/songs/new",
   songDetail: "/admin/songs/[id]",
@@ -39,6 +41,7 @@ function song(id: string) {
 }
 
 export const adminLinks = {
+  albumEdit: (id: string) => withParameter(adminPaths.albumEdit, id),
   song,
   waveformJob: (id: string) => withParameter(adminPaths.waveformJob, id),
   songEdit: (id: string) => `${song(id)}?edit=true`,

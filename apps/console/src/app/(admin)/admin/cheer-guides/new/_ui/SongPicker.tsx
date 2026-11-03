@@ -30,7 +30,7 @@ export function SongPicker({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="h-12 w-full justify-between px-3 font-normal"
+          className="h-11 w-full justify-between px-3 font-normal"
         >
           <span className="flex min-w-0 items-center gap-3">
             <span className="truncate">{selected?.title || "곡 선택"}</span>

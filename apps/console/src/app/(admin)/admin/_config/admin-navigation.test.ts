@@ -7,6 +7,8 @@ import { getAdminNavigation } from "./admin-navigation";
 it.each([
   ["/admin", ["콘솔"]],
   ["/admin/albums", ["콘솔", "앨범 관리"]],
+  ["/admin/albums/new", ["콘솔", "앨범 관리", "앨범 추가"]],
+  ["/admin/albums/123/edit", ["콘솔", "앨범 관리", "앨범 정보 수정"]],
   ["/admin/songs", ["콘솔", "곡 관리"]],
   ["/admin/songs/new", ["콘솔", "곡 관리", "곡 추가"]],
   ["/admin/songs/123", ["콘솔", "곡 관리", "곡 정보"]],

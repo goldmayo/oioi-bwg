@@ -1,13 +1,11 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import type { AdminAlbumSummary } from "@/entities/album";
 import { albumQueryKeys } from "@/entities/album";
 import { songQueryKeys } from "@/entities/song";
-
-import type { AlbumFormValues } from "../model/schemas";
 
 import { AlbumManagerClient } from "./AlbumManagerClient";
 
@@ -17,30 +15,7 @@ const http = vi.hoisted(() => ({
   patch: vi.fn(),
   post: vi.fn(),
 }));
-const formHarness = vi.hoisted(() => ({
-  values: {} as AlbumFormValues,
-}));
-
 vi.mock("@/shared/api/http-client", () => ({ http }));
-vi.mock("./AlbumFormDialog", () => ({
-  AlbumFormDialog: ({
-    album,
-    onSubmit,
-    open,
-  }: {
-    album?: AdminAlbumSummary;
-    onSubmit: (values: AlbumFormValues) => Promise<void>;
-    open: boolean;
-  }) =>
-    open ? (
-      <button
-        type="button"
-        onClick={() => void onSubmit(formHarness.values).catch(() => undefined)}
-      >
-        {album ? "편집 제출" : "생성 제출"}
-      </button>
-    ) : null,
-}));
 vi.mock("@/shared/ui/dialog", () => {
   const Part = ({ children }: { children?: ReactNode }) => <>{children}</>;
   return {
@@ -83,35 +58,14 @@ function renderManager() {
 
   render(
     <QueryClientProvider client={queryClient}>
-      <AlbumManagerClient
-        canManage
-        onUploadImage={vi.fn()}
-        onNameChangeOrDelete={onNameChangeOrDelete}
-      />
+      <AlbumManagerClient canManage onNameChangeOrDelete={onNameChangeOrDelete} />
     </QueryClientProvider>,
   );
 
   return onNameChangeOrDelete;
 }
 
-async function submitEdit() {
-  fireEvent.click(screen.getByRole("button", { name: `${album.name} 관리` }));
-  fireEvent.click(screen.getByRole("button", { name: "편집" }));
-  fireEvent.click(screen.getByRole("button", { name: "편집 제출" }));
-  await waitFor(() => expect(http.patch).toHaveBeenCalledOnce());
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  formHarness.values = {
-    name: album.name,
-    slug: album.slug,
-    imgUrl: album.imgUrl,
-    color: album.color,
-    releaseDate: "2024-04-01",
-    isVisible: album.isVisible,
-  };
-});
+beforeEach(() => vi.clearAllMocks());
 
 afterEach(() => {
   cleanup();
@@ -136,89 +90,26 @@ it("검색 결과에서 사라진 앨범의 선택을 유지하고 명시적으�
   ).toBe("false");
 });
 
-describe("AlbumManagerClient cache orchestration", () => {
-  it("keeps the Song list fresh after create", async () => {
-    const created = {
-      ...album,
-      id: "019a0170-0000-7000-8000-000000000003",
-      name: "NEW",
-      slug: "new",
-    };
-    http.post.mockResolvedValue(created);
-    http.get.mockResolvedValue({ items: [album, created], nextCursor: null });
-    const onNameChangeOrDelete = renderManager();
+it("refetches the active Album list and stales the Song list after delete", async () => {
+  http.delete.mockResolvedValue(undefined);
+  http.get.mockResolvedValue({ items: [], nextCursor: null });
+  const onNameChangeOrDelete = renderManager();
 
-    fireEvent.click(screen.getByRole("button", { name: /앨범 추가/ }));
-    fireEvent.click(screen.getByRole("button", { name: "생성 제출" }));
+  fireEvent.click(screen.getByRole("button", { name: `${album.name} 관리` }));
+  fireEvent.click(screen.getByRole("button", { name: "삭제" }));
+  const deleteButtons = screen.getAllByRole("button", { name: "삭제" });
+  fireEvent.click(deleteButtons[deleteButtons.length - 1]);
 
-    await waitFor(() => expect(http.get).toHaveBeenCalledOnce());
-    expect(onNameChangeOrDelete).not.toHaveBeenCalled();
-    expect(queryClient.getQueryState(songQueryKeys.adminList())?.isInvalidated).toBe(false);
+  await waitFor(() =>
+    expect(http.delete).toHaveBeenCalledWith(
+      "/api/admin/albums/019a0170-0000-7000-8000-000000000001",
+    ),
+  );
+  await waitFor(() => expect(http.get).toHaveBeenCalledOnce());
+  expect(onNameChangeOrDelete).toHaveBeenCalledOnce();
+  expect(queryClient.getQueryData(albumQueryKeys.adminList())).toEqual({
+    items: [],
+    nextCursor: null,
   });
-
-  it("keeps the Song list fresh when an update returns the same name", async () => {
-    http.patch.mockResolvedValue(album);
-    http.get.mockResolvedValue({ items: [album], nextCursor: null });
-    const onNameChangeOrDelete = renderManager();
-
-    await submitEdit();
-    await waitFor(() => expect(http.get).toHaveBeenCalledOnce());
-
-    expect(onNameChangeOrDelete).not.toHaveBeenCalled();
-    expect(queryClient.getQueryState(songQueryKeys.adminList())?.isInvalidated).toBe(false);
-  });
-
-  it("refetches the active Album list and stales the Song list after a rename", async () => {
-    const renamed = { ...album, name: "MANITO RENAMED" };
-    formHarness.values.name = renamed.name;
-    http.patch.mockResolvedValue(renamed);
-    http.get.mockResolvedValue({ items: [renamed], nextCursor: null });
-    const onNameChangeOrDelete = renderManager();
-
-    await submitEdit();
-    await waitFor(() => expect(http.get).toHaveBeenCalledOnce());
-
-    expect(onNameChangeOrDelete).toHaveBeenCalledOnce();
-    expect(queryClient.getQueryData(albumQueryKeys.adminList())).toEqual({
-      items: [renamed],
-      nextCursor: null,
-    });
-    expect(queryClient.getQueryState(songQueryKeys.adminList())?.isInvalidated).toBe(true);
-  });
-
-  it("refetches the active Album list and stales the Song list after delete", async () => {
-    http.delete.mockResolvedValue(undefined);
-    http.get.mockResolvedValue({ items: [], nextCursor: null });
-    const onNameChangeOrDelete = renderManager();
-
-    fireEvent.click(screen.getByRole("button", { name: `${album.name} 관리` }));
-    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
-    const deleteButtons = screen.getAllByRole("button", { name: "삭제" });
-    fireEvent.click(deleteButtons[deleteButtons.length - 1]);
-
-    await waitFor(() =>
-      expect(http.delete).toHaveBeenCalledWith(
-        "/api/admin/albums/019a0170-0000-7000-8000-000000000001",
-      ),
-    );
-    await waitFor(() => expect(http.get).toHaveBeenCalledOnce());
-    expect(onNameChangeOrDelete).toHaveBeenCalledOnce();
-    expect(queryClient.getQueryData(albumQueryKeys.adminList())).toEqual({
-      items: [],
-      nextCursor: null,
-    });
-    expect(queryClient.getQueryState(songQueryKeys.adminList())?.isInvalidated).toBe(true);
-  });
-
-  it("does not invalidate either list when update fails", async () => {
-    http.patch.mockRejectedValue(new Error("update failed"));
-    const onNameChangeOrDelete = renderManager();
-
-    await submitEdit();
-
-    expect(onNameChangeOrDelete).not.toHaveBeenCalled();
-    expect(http.get).not.toHaveBeenCalled();
-    expect(queryClient.getQueryState(albumQueryKeys.adminList())?.isInvalidated).toBe(false);
-    expect(queryClient.getQueryState(songQueryKeys.adminList())?.isInvalidated).toBe(false);
-  });
+  expect(queryClient.getQueryState(songQueryKeys.adminList())?.isInvalidated).toBe(true);
 });
