@@ -13,10 +13,16 @@ describe("GitHub Actions OCI Run Command deployment", () => {
       readFile(resolve("apps/web/Dockerfile"), "utf8"),
       readFile(resolve("apps/console/Dockerfile"), "utf8"),
     ]);
-    const [verification, promotion] = workflow.split("  promotion-candidate:");
+    const [verification] = workflow.split("  promotion_plan:");
+    const jobs = YAML.parse(workflow).jobs;
+    const builds = jobs.promotion_images.steps.filter(
+      (step: { uses?: string }) => step.uses === "docker/build-push-action@v6",
+    );
     expect(verification.match(/NEXT_PUBLIC_APP_ENV=local/g)).toHaveLength(4);
-    expect(promotion.match(/NEXT_PUBLIC_APP_ENV=production/g)).toHaveLength(2);
-    expect(promotion).toContain("NEXT_PUBLIC_APP_ENV: production");
+    expect(builds).toHaveLength(1);
+    expect(builds[0].with["build-args"]).toContain("NEXT_PUBLIC_APP_ENV=production");
+    for (const job of ["promotion_plan", "promotion_images", "promotion-candidate"])
+      expect(jobs[job].env.NEXT_PUBLIC_APP_ENV).toBe("production");
     expect(workflow).not.toMatch(/NEXT_PUBLIC_APP_ENV[:=]\s*staging/);
     for (const dockerfile of dockerfiles)
       expect(dockerfile).toContain("ARG NEXT_PUBLIC_APP_ENV=local");
@@ -111,7 +117,10 @@ describe("GitHub Actions OCI Run Command deployment", () => {
 
     expect(workflow).toContain("SENTRY_ORG: ${{ vars.SENTRY_ORG }}");
     expect(workflow).toContain("SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}");
-    expect(workflow).toContain("SENTRY_RELEASE=oioi-bwg@${{ steps.source.outputs.source_sha }}");
+    expect(workflow).toContain("SENTRY_RELEASE=oioi-bwg@${{ github.event.pull_request.head.sha }}");
+    expect(workflow).toContain(
+      "org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}",
+    );
     expect(workflow).toContain("SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}");
     for (const dockerfile of dockerfiles) {
       expect(dockerfile).toContain("RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN");

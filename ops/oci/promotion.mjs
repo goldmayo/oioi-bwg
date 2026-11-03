@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 
 const sha = /^[0-9a-f]{40}$/;
 const digest = /^sha256:[0-9a-f]{64}$/;
@@ -161,6 +161,86 @@ export async function prepare({ github, context, core }) {
   core.setOutput("source_sha", pr.head.sha);
   core.setOutput("source_tree", source.tree.sha);
   return source.tree.sha;
+}
+
+export function collectImages(plan, results, expected) {
+  if (plan.sourceSha !== expected.sourceSha || plan.buildConfigHash !== expected.buildConfigHash)
+    throw new Error("Image plan source/configuration changed");
+  const selected = ["web", "console"].filter((app) => plan.build[app] === true);
+  if (results.length !== selected.length) throw new Error("Image results are incomplete");
+  const images = { web: plan.images.web, console: plan.images.console };
+  for (const app of ["web", "console"]) {
+    if (typeof plan.build[app] !== "boolean") throw new Error("Invalid image selection");
+    const image = plan.images[app];
+    if (plan.build[app]) {
+      const matches = results.filter((result) => result.app === app);
+      if (matches.length !== 1 || image.origin !== "built") throw new Error("Invalid image result");
+      const result = matches[0];
+      if (
+        Object.keys(result).sort().join(",") !==
+        "app,buildConfigHash,digest,repository,runAttempt,runId,sourceSha,sourceTree"
+      )
+        throw new Error("Invalid image result fields");
+      for (const key of ["sourceSha", "sourceTree", "buildConfigHash", "runId", "runAttempt"])
+        if (result[key] !== expected[key]) throw new Error("Image build provenance changed");
+      if (result.repository !== image.repository) throw new Error("Image build repository changed");
+      images[app] = { ...image, digest: result.digest };
+    } else {
+      if (image.origin !== "reused") throw new Error("Missing reused image");
+      images[app] = image;
+    }
+  }
+  const candidate = { ...expected, baseline: plan.baseline, images };
+  assertCandidate(candidate, expected);
+  return images;
+}
+
+export async function recordImage({ github, context, core }) {
+  const sourceTree = await prepare({ github, context, core });
+  const app = process.env.BUILD_APP;
+  if (!["web", "console"].includes(app) || !digest.test(process.env.IMAGE_DIGEST ?? ""))
+    throw new Error("Invalid built image");
+  const result = {
+    app,
+    digest: process.env.IMAGE_DIGEST,
+    repository: process.env.BUILT_IMAGE_REPOSITORY,
+    sourceSha: context.payload.pull_request.head.sha,
+    sourceTree,
+    buildConfigHash: buildConfigHash(),
+    runId: Number(process.env.GITHUB_RUN_ID),
+    runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+  };
+  await writeFile(`${app}.json`, JSON.stringify(result) + "\n");
+}
+
+export async function resolveImages({ github, context, core }) {
+  const sourceTree = await prepare({ github, context, core });
+  const plan = JSON.parse(await readFile(process.env.IMAGE_PLAN_FILE, "utf8"));
+  const files = await readdir(process.env.IMAGE_RESULTS_DIR);
+  if (files.some((file) => !["web.json", "console.json"].includes(file)))
+    throw new Error("Unexpected image result artifact");
+  const results = await Promise.all(
+    files.map(async (file) =>
+      JSON.parse(await readFile(`${process.env.IMAGE_RESULTS_DIR}/${file}`, "utf8")),
+    ),
+  );
+  const images = collectImages(plan, results, {
+    prNumber: context.payload.pull_request.number,
+    sourceSha: context.payload.pull_request.head.sha,
+    sourceTree,
+    buildConfigHash: buildConfigHash(),
+    runId: Number(process.env.GITHUB_RUN_ID),
+    runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+    images: {
+      web: { repository: process.env.IMAGE_REPOSITORY },
+      console: { repository: process.env.CONSOLE_IMAGE_REPOSITORY },
+    },
+  });
+  for (const app of ["web", "console"]) {
+    core.setOutput(`${app}_publish_result`, images[app].origin === "built" ? "success" : "reused");
+    core.setOutput(`${app}_digest`, images[app].digest);
+    core.setOutput(`${app}_build_source_sha`, images[app].buildSourceSha);
+  }
 }
 
 export async function record({ github, context, core }) {

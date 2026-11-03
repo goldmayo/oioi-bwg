@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.28"
+version: "1.29"
 status: "active"
 authority: "runbook"
 updated_at: "2026-11-03"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.28
+# oioi-bwg Deployment / Migration Runbook v1.29
 
 ## 1. 목적
 
@@ -572,6 +572,14 @@ tag에 Docker 공식 registry cache(`mode=max`, OCI image manifest)를 읽고 �
 candidate 기록 실패는 계속 배포를 차단한다. secret job은 기존 동일 저장소 Ready Promotion 조건을 유지한다.
 Promotion job은 lockfile 설치를 유지하면서 PR별 pnpm store 저장을 생략한다. 브라우저 검증은 기존과
 같은 Chromium headless shell로 수행하고 사용하지 않는 full Chromium 다운로드만 생략한다.
+2026-11-03 병렬 후보: `promotion plan`이 검증된 baseline과 앱별 선택을 한 번 고정하고,
+필요한 앱만 독립 ARM64 matrix runner에서 최대 두 개까지 동시에 빌드한다. 공개 build 설정은
+같은 env 정의를 소비한다. 같은 run/attempt의 앱별 artifact에 source SHA/tree·공개 설정 hash·
+repository·digest를 기록하고 collector가 현재 source와 대조한다. 누락·중복·다른 source/config/run/
+attempt·repository는 paired smoke 전에 거절한다. 빌드가 하나도 없을 때만 빈 matrix를 생략하고
+검증된 두 digest를 재사용한다. plan/build 실패는 candidate 생성을 차단하고 기존 실패 알림을 유지한다.
+필수 `promotion candidate`는 이 결과를 모아 두 exact digest의 공동 smoke와 candidate 기록을
+수행한다. 병렬 job 성공만으로 후보/배포 검증을 대체하지 않는다.
 어느 앱의 Dockerfile 변경이든 기존 보수적 재사용 조건에 따라 두 이미지를 다시 빌드한다.
 두 exact digest를 같은 격리 DB에서 **동시에 실행**해 native/readiness/browser smoke를 통과해야 한다.
 현재 run/attempt·각 digest/buildSourceSha를 묶은 smoke proof가 없거나 다르면 candidate.json을 쓰지 않는다.

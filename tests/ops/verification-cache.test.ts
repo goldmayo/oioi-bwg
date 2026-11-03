@@ -29,14 +29,17 @@ it("Promotion cache는 앱별 registry를 공유하며 후보 검증과 lockfile
     "utf8",
   );
   const candidate = workflow.split("\n  promotion-candidate:\n")[1].split("\n  promotion:\n")[0];
-  for (const repository of ["IMAGE_REPOSITORY", "CONSOLE_IMAGE_REPOSITORY"]) {
-    const ref = `type=registry,ref=\${{ env.${repository} }}:buildcache-arm64-v1`;
-    expect(candidate).toContain(`cache-from: ${ref}`);
-    expect(candidate).toContain(
-      `cache-to: ${ref},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true`,
-    );
-  }
-  expect(candidate).not.toContain("type=gha");
+  const images = workflow
+    .split("\n  promotion_images:\n")[1]
+    .split("\n  promotion-candidate:\n")[0];
+  const ref = "type=registry,ref=${{ matrix.repository }}:buildcache-arm64-v1";
+  expect(images).toContain(`cache-from: ${ref}`);
+  expect(images).toContain(
+    `cache-to: ${ref},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true`,
+  );
+  expect(images).toContain("file: apps/${{ matrix.app }}/Dockerfile");
+  expect(images).toContain("max-parallel: 2");
+  expect(images).not.toContain("type=gha");
   expect(candidate).not.toContain("cache: pnpm");
   expect(candidate).toContain("pnpm install --frozen-lockfile");
   expect(candidate).toContain("playwright install --with-deps --only-shell chromium");
