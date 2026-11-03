@@ -8,7 +8,6 @@ export interface WorkspaceDependencyOwner {
 }
 
 const rootToolEntries: Record<string, string> = {
-  "eslint.config.ts": "./eslint",
   "oxlint.config.ts": "./oxlint",
   "steiger.config.ts": "./steiger",
   "scripts/check-workspace-dependencies.ts": "./cli/dependencies",

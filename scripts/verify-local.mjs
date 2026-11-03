@@ -12,13 +12,13 @@ export function isLocalDocumentation(file) {
 }
 
 function isGlobalProductInput(file) {
-  return /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc|tsconfig[^/]*\.json|(?:eslint|oxlint)\.config\.[^/]+|\.oxlintrc\.jsonc?|tools\/repository\/oxlint\.config\.[^/]+|vitest\.config\.[^/]+)$/.test(
+  return /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc|tsconfig[^/]*\.json|eslint\.config\.[^/]+|vitest\.config\.[^/]+)$/.test(
     file,
   );
 }
 
-function isCanonicalLintInput(file) {
-  return file === "oxlint.config.ts" || file === "tools/repository/oxlint.config.ts";
+function isRootLintConfig(file) {
+  return /^(?:oxlint\.config\.[^/]+|\.oxlintrc\.jsonc?)$/.test(file);
 }
 
 export function workspaceFilters(files, packages) {
@@ -35,6 +35,7 @@ export function localVerificationPlan({ files, existingFiles = files, base, pack
   const repo = changes.some(
     (file) =>
       isGlobalProductInput(file) ||
+      isRootLintConfig(file) ||
       /^(?:packages\/config\/(?:typescript|eslint|oxlint)|tools\/repository)\//.test(file),
   );
   const rootFiles = changes.filter((file) => !/^(?:apps|packages|tools)\//.test(file));
@@ -62,25 +63,18 @@ export function localVerificationPlan({ files, existingFiles = files, base, pack
       "변경 workspace가 Turbo 영향 범위에 없습니다. 기준과 workspace 등록을 확인해주세요.",
     );
   const product =
-    changes.some(isGlobalProductInput) ||
-    changes.some((file) => /^(?:apps|packages)\//.test(file)) ||
-    (repo && changes.some((file) => !file.startsWith("tools/repository/")));
+    changes.some(isGlobalProductInput) || changes.some((file) => /^(?:apps|packages)\//.test(file));
   if (product) {
-    const allLint = changes.some(isCanonicalLintInput);
-    // Turbo affected는 workspace 밖의 task 입력 변경을 제품 선택에 반영하지 않는다.
-    // 공용 native 설정 두 파일은 전체 lint만 선택하고 타입·관련 테스트 범위는 유지한다.
     commands.push([
       "exec",
       "turbo",
       "run",
       "type-check",
-      ...(allLint ? [] : ["lint"]),
+      "lint",
       "--affected",
       ...workspaceFilters(changes, packages),
       "--filter=!@oioi-bwg/repository-tools",
     ]);
-    if (allLint)
-      commands.push(["exec", "turbo", "run", "lint", "--filter=!@oioi-bwg/repository-tools"]);
     commands.push([
       "exec",
       "turbo",
@@ -103,10 +97,16 @@ export function localVerificationPlan({ files, existingFiles = files, base, pack
       ...packages.flatMap(({ path }) => ["--scope", path]),
     ]);
   if (!repo && rootLint.length)
-    commands.push(
-      ["exec", "oxlint", "--type-aware", "--", ...rootLint],
-      ["exec", "eslint", "--", ...rootLint],
-    );
+    commands.push([
+      "exec",
+      "oxlint",
+      "--type-aware",
+      "--format=stylish",
+      "--report-unused-disable-directives-severity",
+      "warn",
+      "--",
+      ...rootLint,
+    ]);
   if (!repo && changes.some((file) => /^scripts\/.*\.tsx?$/.test(file)))
     commands.push(["type-check:scripts"]);
   if (!repo && changes.some((file) => /^tests\/.*\.tsx?$/.test(file)))
@@ -192,10 +192,7 @@ function main() {
     console.log(JSON.stringify({ base, packages, commands: plan }, null, 2));
     return;
   }
-  const lintScope = files.some(isCanonicalLintInput) ? " / 공용 설정: 전체 workspace lint" : "";
-  console.log(
-    `로컬 변경 검증: ${packages.map(({ name }) => name).join(", ") || "저장소 도구"}${lintScope}`,
-  );
+  console.log(`로컬 변경 검증: ${packages.map(({ name }) => name).join(", ") || "저장소 도구"}`);
   for (const command of plan) {
     const result = spawnSync(pnpm, command, { cwd: root, env: environment, stdio: "inherit" });
     if (result.error) throw result.error;

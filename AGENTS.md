@@ -262,8 +262,8 @@ Base UI → shadcn/ui → Tailwind CSS
 ## 8. 검증과 도구
 
 기본 로컬 검증은 변경 영향 범위만 실행한다.
-커밋은 staged 파일만 Oxlint → ESLint 잔존 규칙의 `--fix` → Oxfmt로 검사한다.
-미이관 규칙·경계·import 정렬·미사용 코드 검사를 생략하지 않으며 기존 `tsc`는 유지한다.
+커밋은 staged 파일만 Oxlint safe fix → Oxfmt로 검사한다.
+현행 규칙을 native 또는 원본 JS plugin으로 모두 검사하며 기존 `tsc`는 유지한다.
 
 ```bash
 pnpm verify
@@ -291,7 +291,7 @@ TURBO_SCM_BASE=origin/migration_main pnpm exec turbo run build --affected
 
 - Vitest: 순수 함수, hook, 동기 component, service 단위 테스트
 - Playwright: 브라우저, 핵심 사용자 흐름, async Server Component와 UI regression
-- Oxlint + ESLint 잔존 규칙/FSD harness: 코드 품질·import 방향과 파일 배치 검증
+- Oxlint/FSD harness: 코드 품질·import 방향과 파일 배치 검증
 - 문서만 변경하는 작업은 요청된 경우 lint/typecheck/test/build를 실행하지 않는다.
 - 일반 `migration_main` PR의 전체 diff가 일반 파일 `.md` 변경뿐이면 CI는 scope 판정과 필수 `verify`만 실행한다.
   feature push hook은 문서 전용이면 생략하고 그 외에는 `pnpm verify`의 로컬 증분 검증을 사용한다. Ready PR의 코드 혼합·판정 실패는 전체 검증을 유지한다. Promotion은 source 검증 근거와 배포 후보를 검사한다.
@@ -371,14 +371,13 @@ TURBO_SCM_BASE=origin/migration_main pnpm exec turbo run build --affected
 ## 10. 설정 파일 배치
 
 설정 파일을 미관만을 이유로 일괄적으로 `configs/`로 이동하지 않는다. Next.js, TypeScript,
-Oxlint, ESLint, Oxfmt, Vitest, Drizzle Kit, Steiger, Sentry, shadcn CLI처럼 프로젝트 루트에서
+Oxlint, Oxfmt, Vitest, Drizzle Kit, Steiger, Sentry, shadcn CLI처럼 프로젝트 루트에서
 자동 탐색하는 도구의 진입점은 루트에 유지한다.
 
-- `next.config.ts`, `tsconfig.json`, `eslint.config.ts`, `oxlint.config.ts`, `.oxfmtrc.json`,
+- `next.config.ts`, `tsconfig.json`, `oxlint.config.ts`, `.oxfmtrc.json`,
   `vitest.config.ts`, `drizzle.config.ts`,
   `steiger.config.ts`, `components.json`, `sentry*.config.ts`는 루트가 기본 위치다.
-  Oxlint는 루트 설정 하나를 사용하고 workspace 명령은 이를 명시한다.
-  workspace별 ESLint 진입점은 해당 workspace 루트에 둔다.
+  Oxlint는 공식 nested config로 workspace별 설정을 선택하고 공통 preset을 공유한다.
 - 애플리케이션의 런타임 설정·feature flag·환경변수 해석은 `src/shared/config`에 둔다. domain- 또는
   route 전용 설정은 해당 slice의 `config/` 또는 route-private `_config/`에 둔다.
 - 별도 `configs/`가 필요하면 CI/스크립트 등 명시적인 `--config` 호출이 보장되는 설정만 둔다.

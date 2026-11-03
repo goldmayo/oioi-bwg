@@ -5,6 +5,5 @@ export default {
   options: {
     typeAware: true,
     reportUnusedDisableDirectives: "warn" as const,
-    respectEslintDisableDirectives: false,
   },
 };

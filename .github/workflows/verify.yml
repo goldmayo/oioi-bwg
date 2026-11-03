@@ -58,8 +58,6 @@ jobs:
             apps/*/*.tsbuildinfo
             packages/*/*.tsbuildinfo
             tools/*/*.tsbuildinfo
-            apps/*/node_modules/.cache/eslint
-            packages/*/node_modules/.cache/eslint
           key: ${{ runner.os }}-partial-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-partial-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc') }}-
@@ -139,12 +137,9 @@ jobs:
             scripts/*.tsbuildinfo
             tests/*.tsbuildinfo
             *.tsbuildinfo
-            apps/*/node_modules/.cache/eslint
-            packages/*/node_modules/.cache/eslint
-            tools/*/node_modules/.cache/eslint
-          key: ${{ runner.os }}-quality-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc', 'oxlint.config.ts', 'tools/repository/oxlint.config.ts', 'packages/config/oxlint/**', 'packages/config/eslint/**', 'packages/config/typescript/**') }}-${{ github.sha }}
+          key: ${{ runner.os }}-quality-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc', 'packages/config/oxlint/**', 'packages/config/typescript/**') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-quality-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc', 'oxlint.config.ts', 'tools/repository/oxlint.config.ts', 'packages/config/oxlint/**', 'packages/config/eslint/**', 'packages/config/typescript/**') }}-
+            ${{ runner.os }}-quality-v1-${{ hashFiles('pnpm-lock.yaml', '.nvmrc', 'packages/config/oxlint/**', 'packages/config/typescript/**') }}-
 
       - name: Type check
         run: pnpm type-check
@@ -152,7 +147,7 @@ jobs:
       - name: Architecture harness
         run: pnpm test:harness
 
-      - name: Oxlint and remaining ESLint rules
+      - name: Oxlint
         run: pnpm lint
 
       - name: Format check

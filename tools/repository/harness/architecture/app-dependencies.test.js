@@ -7,7 +7,7 @@ import test from "node:test";
 
 import ts from "typescript";
 
-import { getSourceParts, resolveImportedParts } from "@oioi-bwg/config/eslint/import-path";
+import { getSourceParts, resolveImportedParts } from "@oioi-bwg/config/oxlint/import-path";
 
 const dependencyFields = [
   "dependencies",
@@ -110,6 +110,14 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
   const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "oioi-turbo-affected-"));
   context.after(() => fs.rmSync(fixtureRoot, { recursive: true, force: true }));
+  // 병렬 경계 검사가 실제 src에 만드는 금지 import가 타입 소비 입력으로 섞이는 회귀를 재현한다.
+  const boundaryProbe = path.join(
+    repositoryRoot,
+    "apps/sentry-slack-relay/src",
+    `native-boundary-${process.pid}-999999.mts`,
+  );
+  fs.writeFileSync(boundaryProbe, 'export * from "@oioi-bwg/config/next";', { flag: "wx" });
+  context.after(() => fs.unlinkSync(boundaryProbe));
 
   for (const filename of [
     "package.json",
@@ -117,12 +125,14 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
     "pnpm-workspace.yaml",
     "turbo.json",
     "tsconfig.config.json",
-    "eslint.config.ts",
     "oxlint.config.ts",
     ".gitignore",
     "apps/web/package.json",
+    "apps/web/oxlint.config.ts",
     "apps/console/package.json",
+    "apps/console/oxlint.config.ts",
     "apps/sentry-slack-relay/package.json",
+    "apps/sentry-slack-relay/oxlint.config.ts",
   ]) {
     const destination = path.join(fixtureRoot, filename);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -246,7 +256,18 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
           onUnRecoverableConfigFileDiagnostic: (error) => assert.fail(String(error.messageText)),
         },
       );
-      const program = ts.createProgram(parsed.fileNames, parsed.options);
+      // 이 세 이름은 병렬 harness가 잠시 만드는 root다. 실제 파일과 transitive 의존성은 유지한다.
+      const fileNames = parsed.fileNames.filter(
+        (file) =>
+          !/[/\\](?:native-boundary-\d+-\d+|native-policy-probe-\d+-\d+|native-policy-regression-\d+)\.(?:d\.)?[cm]?[jt]sx?$/.test(
+            file,
+          ),
+      );
+      if (directory === "apps/sentry-slack-relay" && config === "tsconfig.json") {
+        assert.ok(parsed.fileNames.includes(boundaryProbe));
+        assert.ok(!fileNames.includes(boundaryProbe));
+      }
+      const program = ts.createProgram(fileNames, parsed.options);
       for (const { fileName } of program.getSourceFiles())
         if (fileName.startsWith(path.join(repositoryRoot, "packages/config/")))
           inputs.add(fileName);
@@ -257,11 +278,11 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
     }
   }
   const cases = [
+    ["package.json", []],
     ["tsconfig.config.json", []],
-    ["eslint.config.ts", []],
-    // 두 설정은 모든 lint hash에 포함하되, 실제 실행 선택은 verify-local의 명시적 전체 lint가 소유한다.
-    ["oxlint.config.ts", ids([...products, "config"], ["lint"]), false],
-    ["tools/repository/oxlint.config.ts", ids([...products, "config"], ["lint"]), false],
+    ["oxlint.config.ts", []],
+    ["tools/repository/oxlint.config.ts", []],
+    ["apps/console/oxlint.config.ts", ids(["console"], ["type-check", "lint", "test", "build"])],
     ["tools/repository/harness/architecture/app-dependencies.test.js", []],
     ["packages/config/vitest/server-only.ts", [...appUnit, ...ids(["server"], ["test"])]],
     ["packages/config/vitest/client-only.ts", appUnit],
@@ -280,14 +301,11 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
     ],
     ["packages/config/typescript/next.json", [...appTypes, ...appLint, ...appBuilds]],
     ["packages/config/typescript/node.json", ids(products, ["type-check"])],
-    ...["app", "base", "architecture-rule"].map((name) => [
-      `packages/config/eslint/${name}.ts`,
-      ids(products, ["type-check", "lint"]),
-    ]),
-    ...["base.json", "index.ts"].map((name) => [
-      `packages/config/oxlint/${name}`,
-      ids(products, ["type-check", "lint"]),
-    ]),
+    ...fs
+      .readdirSync(path.join(repositoryRoot, "packages/config/oxlint"), { recursive: true })
+      .filter((name) => /\.(?:json|[cm]?[jt]s)$/.test(name))
+      .sort()
+      .map((name) => [`packages/config/oxlint/${name}`, ids(products, ["type-check", "lint"])]),
     [
       "packages/contracts/src/song.ts",
       [
@@ -303,11 +321,14 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
       ],
     ],
   ];
-  for (const [filename, consumers, requireAffectedSelection = true] of cases) {
+  for (const [filename, consumers] of cases) {
     const changedFile = path.join(fixtureRoot, filename);
     const original = fs.readFileSync(changedFile);
     try {
-      fs.appendFileSync(changedFile, "\n// cache input change\n");
+      if (filename === "package.json") {
+        const manifest = JSON.parse(original.toString());
+        fs.writeFileSync(changedFile, JSON.stringify({ ...manifest, cacheInputProbe: true }));
+      } else fs.appendFileSync(changedFile, "\n// cache input change\n");
       const current = dryRun();
       const affected = dryRun(true);
       const expected = new Set([
@@ -317,7 +338,7 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
       for (const { taskId, hash } of baseline) {
         const task = current.find((task) => task.taskId === taskId);
         assert.equal(task.hash !== hash, expected.has(taskId), `${filename}: ${taskId}`);
-        if (expected.has(taskId) && requireAffectedSelection)
+        if (expected.has(taskId))
           assert.ok(
             affected.some((task) => task.taskId === taskId),
             `${filename} must select ${taskId}`,

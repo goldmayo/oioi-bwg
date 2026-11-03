@@ -1,6 +1,5 @@
 {
   "recommendations": [
-    "oxc.oxc-vscode",
-    "dbaeumer.vscode-eslint"
+    "oxc.oxc-vscode"
   ]
 }

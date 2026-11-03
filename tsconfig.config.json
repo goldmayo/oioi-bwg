@@ -7,7 +7,6 @@
     "allowJs": true
   },
   "include": [
-    "eslint.config.ts",
     "oxlint.config.ts",
     "drizzle.config.ts",
     "steiger.config.ts",

@@ -47,7 +47,7 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.config.json",
-    "lint": "oxlint --type-aware --format=stylish --config ../../oxlint.config.ts . && eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint .",
+    "lint": "oxlint --type-aware --report-unused-disable-directives-severity warn --format=stylish .",
     "test": "vitest run"
   },
   "dependencies": {
@@ -68,7 +68,6 @@
     "typescript": "^5",
     "vitest": "^4.1.2",
     "@oioi-bwg/config": "workspace:*",
-    "eslint": "^9",
     "jiti": "2.6.1",
     "oxlint": "1.90.0"
   }

@@ -1,193 +1,152 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import { createRequire } from "node:module";
-import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ESLint } from "eslint";
-
-import { createOxlintConfig, transferredTypeScriptRules } from "@oioi-bwg/config/oxlint";
+import { createAppConfig } from "@oioi-bwg/config/oxlint/app";
+import { contractsConfig } from "@oioi-bwg/config/oxlint/contracts";
+import { nodeConfig } from "@oioi-bwg/config/oxlint/node";
+import { serverConfig } from "@oioi-bwg/config/oxlint/server";
+import { uiConfig } from "@oioi-bwg/config/oxlint/ui";
+import { workerConfig } from "@oioi-bwg/config/oxlint/worker";
 
 const root = path.resolve(import.meta.dirname, "../../../..");
-const requireConfig = createRequire(path.join(root, "packages/config/package.json"));
-const tseslint = requireConfig("typescript-eslint");
 const nativeBin = path.join(root, "node_modules/oxlint/bin/oxlint");
+let fixtureId = 0;
+
+function fixture(context, directory, source, extension = "ts") {
+  const filename = path.join(
+    root,
+    directory,
+    `native-policy-probe-${process.pid}-${fixtureId++}.${extension}`,
+  );
+  fs.writeFileSync(filename, source, { flag: "wx" });
+  context.after(() => fs.unlinkSync(filename));
+  return filename;
+}
 
 function runNative(cwd, ...args) {
-  const result = spawnSync(process.execPath, [nativeBin, ...args], { cwd, encoding: "utf8" });
+  const result = spawnSync(
+    process.execPath,
+    [nativeBin, "--type-aware", "--report-unused-disable-directives-severity", "warn", ...args],
+    {
+      cwd,
+      encoding: "utf8",
+      maxBuffer: 4 * 1024 * 1024,
+    },
+  );
   assert.equal(result.error, undefined);
   assert.ok([0, 1].includes(result.status), result.stderr || result.stdout);
-  return JSON.parse(result.stdout);
+  return { ...JSON.parse(result.stdout), status: result.status };
 }
 
-function signature(messages, ruleName) {
-  return messages
-    .filter(({ rule }) => rule === ruleName)
-    .map(({ severity }) => severity)
-    .sort();
+function reports(diagnostics, canonicalId) {
+  const name = canonicalId.split("/").at(-1);
+  return diagnostics.filter(({ code }) => code?.endsWith(`(${name})`));
 }
 
-test("native allowlist preserves the original TypeScript checks and exceptions", async (context) => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "oioi-native-lint-"));
-  context.after(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const nativeConfig = createOxlintConfig();
-  const configPath = path.join(directory, ".oxlintrc.json");
-  fs.writeFileSync(configPath, JSON.stringify(nativeConfig));
-  const original = new ESLint({
-    cwd: directory,
-    overrideConfigFile: true,
-    overrideConfig: [
-      {
-        files: ["**/*.{ts,tsx}"],
-        languageOptions: { parser: tseslint.parser },
-        plugins: { "@typescript-eslint": tseslint.plugin },
-        rules: Object.fromEntries(
-          transferredTypeScriptRules.map((rule) => [`@typescript-eslint/${rule}`, "error"]),
-        ),
-      },
-    ],
-  });
-  const cases = {
-    "ban-ts-comment": [
-      "// @ts-ignore\nexport const value = 1;",
-      "// @ts-expect-error: reason\nexport const value = 1;",
-    ],
-    "no-duplicate-enum-values": [
-      "export enum Choice { A = 1, B = 1 }",
-      "export enum Choice { A = 1, B = 2 }",
-    ],
-    "no-empty-object-type": ["export type Empty = {};", "export type Value = object;"],
-    "no-explicit-any": ["export type Value = any;", "export type Value = unknown;"],
-    "no-misused-new": [
-      "export interface Widget { new(): Widget; }",
-      "export interface Widget { new(): object; }",
-    ],
-    "no-namespace": [
-      "namespace Helpers { export const n = 1; }",
-      "export const Helpers = { n: 1 };",
-    ],
-    "no-non-null-asserted-optional-chain": [
-      "export const n = object?.value!;",
-      "export const n = object?.value;",
-    ],
-    "no-require-imports": [
-      "export const fs = require('node:fs');",
-      "import fs from 'node:fs'; export { fs };",
-    ],
-    "no-this-alias": [
-      "export function capture() { const self = this; return self; }",
-      "export function capture() { const { value } = this; return value; }",
-    ],
-    "no-unnecessary-type-constraint": [
-      "export const id = <T extends unknown>(value: T) => value;",
-      "export const id = <T>(value: T) => value;",
-    ],
-    "no-unsafe-function-type": [
-      "export type Call = Function;",
-      "export type Call = () => unknown;",
-    ],
-    "triple-slash-reference": [
-      "/// <reference path='./types.d.ts' />\nexport const n = 1;",
-      "/// <reference lib='esnext' />\nexport const n = 1;",
-    ],
-  };
-  assert.deepEqual(Object.keys(cases).sort(), [...transferredTypeScriptRules].sort());
-  for (const [rule, sources] of Object.entries(cases)) {
-    for (const [index, source] of sources.entries()) {
-      const filename = path.join(directory, `${rule}-${index}.ts`);
-      fs.writeFileSync(filename, source);
-      const [baseline] = await original.lintFiles([filename]);
-      const native = runNative(directory, "--config", configPath, "--format=json", filename);
-      const expected = baseline.messages.map(({ ruleId, severity }) => ({
-        rule: ruleId?.replace("@typescript-eslint/", ""),
-        severity,
-      }));
-      const actual = native.diagnostics.map(({ code, severity }) => ({
-        rule: code.replace(/^typescript\((.*)\)$/, "$1"),
-        severity: severity === "error" ? 2 : 1,
-      }));
-      assert.deepEqual(
-        signature(actual, rule),
-        signature(expected, rule),
-        `${rule} fixture ${index}`,
-      );
-      assert.equal(signature(expected, rule).length, index === 0 ? 1 : 0, rule);
+test("standard nearest-workspace configurations retain the 98 configured checks", () => {
+  const configs = [
+    nodeConfig,
+    createAppConfig(path.join(root, "apps/console"), "19.2.4"),
+    serverConfig,
+    contractsConfig,
+    uiConfig,
+    workerConfig,
+  ];
+  const activeRules = new Set();
+  for (const config of configs) {
+    assert.deepEqual(config.categories, { correctness: "off" });
+    assert.ok(config.ignorePatterns.includes("**/*.jsx"));
+    assert.equal(config.options, undefined);
+    for (const plugin of config.jsPlugins ?? []) {
+      assert.ok(path.isAbsolute(plugin.specifier));
+      assert.ok(plugin.name);
     }
+    for (const rules of [config.rules, ...(config.overrides ?? []).map(({ rules }) => rules)])
+      for (const [rule, value] of Object.entries(rules ?? {}))
+        if (![0, "off"].includes(Array.isArray(value) ? value[0] : value)) activeRules.add(rule);
   }
-  const definition = path.join(directory, "ambient.d.ts");
-  fs.writeFileSync(definition, "declare namespace Helpers { const n: number; }");
-  const [ambientBaseline] = await original.lintFiles([definition]);
-  assert.equal(ambientBaseline.errorCount, 0);
-  assert.deepEqual(runNative(directory, "--format=json", definition).diagnostics, []);
-  const defaults = path.join(directory, "defaults.ts");
-  fs.writeFileSync(defaults, "debugger; const unused = 1;");
-  assert.deepEqual(runNative(directory, "--format=json", defaults).diagnostics, []);
+  assert.equal(activeRules.size, 98);
 });
 
-test("residual ESLint keeps unused rules, React scope helpers and multipass fixes", async () => {
-  const eslint = new ESLint({ cwd: root, fix: true });
-  const source = [
-    'import { cn } from "@/shared/lib/utils";',
-    'import React, { useMemo } from "react";',
-    'import { existsSync } from "node:fs";',
-    'export function Probe() { return <div className={cn(String(existsSync(".")))} />; }',
-  ].join("\n");
-  const [result] = await eslint.lintText(source, {
-    filePath: path.join(root, "apps/console/src/features/lint-probe/ui/fix.tsx"),
-  });
-  assert.equal(result.errorCount, 0, JSON.stringify(result.messages));
-  assert.ok(result.output.includes('import React from "react";'), result.output);
-  assert.ok(!result.output.includes("useMemo"), result.output);
-  assert.ok(result.output.indexOf('from "node:fs"') < result.output.indexOf('from "react"'));
-  const [unused] = await eslint.lintText("const _unused = 1; export {};", {
-    filePath: path.join(root, "packages/ui/src/unused-probe.ts"),
-  });
-  assert.ok(
-    unused.messages.some(
-      ({ ruleId, severity }) => ruleId === "@typescript-eslint/no-unused-vars" && severity === 1,
-    ),
-  );
-  const [merging] = await eslint.lintText("export interface Thing {} export class Thing {}", {
-    filePath: path.join(root, "packages/ui/src/merging-probe.ts"),
-  });
-  assert.equal(
-    merging.messages.filter(
-      ({ ruleId }) => ruleId === "@typescript-eslint/no-unsafe-declaration-merging",
-    ).length,
-    2,
-  );
-  const config = await eslint.calculateConfigForFile(
-    path.join(root, "apps/console/src/app/page.tsx"),
-  );
-  assert.equal(config.rules["react/jsx-uses-react"][0], 2);
-  assert.equal(config.rules["react/jsx-uses-vars"][0], 2);
-  for (const rule of transferredTypeScriptRules)
-    assert.equal(config.rules[`@typescript-eslint/${rule}`][0], 0);
-});
-
-test("function length keeps the original threshold and comment/blank-line exceptions", async (context) => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "oioi-native-lines-"));
-  context.after(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const config = createOxlintConfig(["**/*.{ts,tsx}"]);
-  fs.writeFileSync(path.join(directory, ".oxlintrc.json"), JSON.stringify(config));
-  const original = new ESLint({
-    cwd: directory,
-    overrideConfigFile: true,
-    overrideConfig: [
-      {
-        files: ["**/*.{ts,tsx}"],
-        languageOptions: { parser: tseslint.parser },
-        rules: {
-          "max-lines-per-function": [
-            "warn",
-            { max: 250, skipComments: true, skipBlankLines: true },
-          ],
-        },
-      },
+test("the single engine retains scope, severity and the former parser exceptions", (context) => {
+  const examples = [
+    ["packages/contracts/src", "export * from 'react';", "no-restricted-imports", 2, 1],
+    ["packages/contracts/src", "export * from 'zod/v4';", "no-restricted-imports", 2, 1],
+    ["packages/contracts/src", "export * from 'zod';", "no-restricted-imports", 2, 0],
+    ["packages/ui/src", "export * from 'next';", "no-restricted-imports", 2, 1],
+    ["packages/server/src/services", "export * from 'drizzle-orm';", "no-restricted-imports", 2, 1],
+    [
+      "packages/server/src/repositories",
+      "export * from '../services/song-service';",
+      "no-restricted-imports",
+      2,
+      1,
     ],
-  });
+    ["apps/sentry-slack-relay/src", "export * from 'node:fs';", "no-restricted-imports", 2, 1],
+    ["packages/ui/src", "const _unused = 1; export {};", "@typescript-eslint/no-unused-vars", 1, 1],
+    [
+      "packages/ui/src",
+      "const value = 1; export type Value = typeof value;",
+      "@typescript-eslint/no-unused-vars",
+      1,
+      1,
+    ],
+    [
+      "packages/ui/src",
+      "const unused = 1; export {};",
+      "@typescript-eslint/no-unused-vars",
+      1,
+      1,
+      "d.ts",
+    ],
+    [
+      "packages/ui/src",
+      "export interface Thing {} export class Thing {}",
+      "@typescript-eslint/no-unsafe-declaration-merging",
+      2,
+      2,
+    ],
+    ["packages/ui/src", "value as number;", "@typescript-eslint/no-unused-expressions", 1, 1],
+  ];
+  const expected = examples.map(([directory, source, rule, severity, count, extension]) => ({
+    filename: fixture(context, directory, source, extension),
+    rule,
+    severity,
+    count,
+  }));
+  const { diagnostics } = runNative(
+    root,
+    "--format=json",
+    ...expected.map(({ filename }) => filename),
+  );
+  for (const { filename, rule, severity, count } of expected) {
+    const messages = reports(
+      diagnostics.filter((entry) => path.resolve(root, entry.filename) === filename),
+      rule,
+    );
+    assert.equal(messages.length, count, `${rule}: ${filename}`);
+    assert.ok(
+      messages.every((message) => message.severity === (severity === 2 ? "error" : "warning")),
+    );
+    if (rule === "no-restricted-imports" && filename.includes("/packages/contracts/"))
+      assert.ok(
+        messages.every(({ message }) =>
+          message.includes("공통 계약은 Zod와 내부 계약만 참조합니다."),
+        ),
+      );
+  }
+});
+
+test("native defaults add no checks outside the original rules", (context) => {
+  const filename = fixture(context, "packages/ui/src", "debugger; export {};\n");
+  assert.deepEqual(runNative(root, "--format=json", filename).diagnostics, []);
+});
+
+test("function length keeps the 250-line threshold for TS, JSX, comments and blanks", (context) => {
+  const expected = [];
   for (const jsx of [false, true]) {
     for (const count of [250, 251]) {
       const body = jsx
@@ -198,84 +157,131 @@ test("function length keeps the original threshold and comment/blank-line except
             "    </div>",
             "  );",
           ]
-        : Array.from({ length: count - 2 }, (_, index) => `  const value${index} = ${index};`);
+        : Array.from({ length: count - 2 }, (_, index) => `  console.log(${index});`);
       const source = ["export function probe() {", "  // ignored comment", "", ...body, "}"].join(
         "\n",
       );
-      const filename = path.join(directory, `probe-${count}.${jsx ? "tsx" : "ts"}`);
-      fs.writeFileSync(filename, source);
-      const [baseline] = await original.lintFiles([filename]);
-      const actual = runNative(directory, "--format=json", filename).diagnostics;
-      assert.equal(actual.length, baseline.messages.length, `function length ${count}, jsx=${jsx}`);
-      assert.equal(actual.length, count === 250 ? 0 : 1);
-      assert.ok(
-        actual.every(
-          ({ code, severity }) =>
-            code === "eslint(max-lines-per-function)" && severity === "warning",
-        ),
+      const filename = fixture(
+        context,
+        "apps/console/src/shared/config",
+        source,
+        jsx ? "tsx" : "ts",
       );
+      expected.push({ filename, count });
     }
   }
-});
-
-test("typed lint resolves application/package aliases and preserves the JSX callback exception", (context) => {
-  const appRoot = path.join(root, "apps/console");
-  const filename = path.join(appRoot, `src/shared/config/native-policy-probe-${process.pid}.tsx`);
-  const source = [
-    'import { getAdminSongs } from "@/entities/song/api/api";',
-    'import { createAdminSongSchema } from "@oioi-bwg/contracts/song";',
-    'import type { ReactNode } from "react";',
-    "Promise.resolve(1);",
-    "getAdminSongs();",
-    "createAdminSongSchema.parseAsync({});",
-    "[1].forEach(async () => {});",
-    "declare const C: (props: { onClick: () => void }) => ReactNode;",
-    "export const allowed = <C onClick={async () => {}} />;",
-    "void Promise.resolve(1);",
-    "Promise.resolve(1).catch(() => {});",
-  ].join("\n");
-  fs.writeFileSync(filename, source, { flag: "wx" });
-  context.after(() => fs.unlinkSync(filename));
-  for (const cwd of [root, appRoot]) {
-    const { diagnostics } = runNative(
-      cwd,
-      ...(cwd === root ? [] : ["--config", path.join(root, "oxlint.config.ts")]),
-      "--format=json",
-      filename,
+  const { diagnostics } = runNative(
+    root,
+    "--format=json",
+    ...expected.map(({ filename }) => filename),
+  );
+  for (const { filename, count } of expected) {
+    const messages = reports(
+      diagnostics.filter((entry) => path.resolve(root, entry.filename) === filename),
+      "max-lines-per-function",
     );
-    const codes = diagnostics.map(({ code }) => code).sort();
-    assert.deepEqual(codes, [
-      "typescript(no-floating-promises)",
-      "typescript(no-floating-promises)",
-      "typescript(no-floating-promises)",
-      "typescript(no-misused-promises)",
-    ]);
-    assert.ok(diagnostics.every(({ severity }) => severity === "error"));
+    assert.equal(messages.length, count === 250 ? 0 : 1);
+    assert.ok(messages.every(({ severity }) => severity === "warning"));
   }
 });
 
-test("each linter reports unused directives only for the rules it owns", (context) => {
-  const filename = path.join(root, `packages/ui/src/native-directive-probe-${process.pid}.ts`);
-  context.after(() => fs.unlinkSync(filename));
-  for (const [source, unused] of [
+test("root and app invocation share typed aliases and the JSX callback exception", (context) => {
+  const filename = fixture(
+    context,
+    "apps/console/src/shared/config",
+    [
+      'import { getAdminSongs } from "@/entities/song/api/api";',
+      'import { createAdminSongSchema } from "@oioi-bwg/contracts/song";',
+      'import type { ReactNode } from "react";',
+      "Promise.resolve(1);",
+      "getAdminSongs();",
+      "createAdminSongSchema.parseAsync({});",
+      "[1].forEach(async () => {});",
+      "declare const C: (props: { onClick: () => void }) => ReactNode;",
+      "export const allowed = <C onClick={async () => {}} />;",
+      "void Promise.resolve(1);",
+      "Promise.resolve(1).catch(() => {});",
+    ].join("\n"),
+    "tsx",
+  );
+  for (const cwd of [root, path.join(root, "apps/console")]) {
+    const { diagnostics } = runNative(cwd, "--format=json", filename);
+    assert.equal(reports(diagnostics, "@typescript-eslint/no-floating-promises").length, 3);
+    assert.equal(reports(diagnostics, "@typescript-eslint/no-misused-promises").length, 1);
+  }
+});
+
+test("native directive ownership retains stale suppression warnings", (context) => {
+  const expected = [
     ["// oxlint-disable-next-line typescript/no-explicit-any\nexport type Value = any;", 0],
     ["// oxlint-disable-next-line typescript/no-explicit-any\nexport type Value = string;", 1],
-    ["// eslint-disable-next-line react-hooks/set-state-in-effect\nexport const value = 1;", 0],
-  ]) {
-    fs.writeFileSync(filename, source);
-    const { diagnostics } = runNative(root, "--format=json", filename);
-    assert.equal(diagnostics.length, unused);
+  ].map(([source, unused]) => ({ filename: fixture(context, "packages/ui/src", source), unused }));
+  const actualFiles = [
+    "apps/web/src/shared/ui/theme-toggle.tsx",
+    "apps/web/src/shared/ui/YouTubePlayer.tsx",
+    "apps/console/src/shared/ui/YouTubePlayer.tsx",
+  ];
+  const { diagnostics } = runNative(
+    root,
+    "--format=json",
+    ...expected.map(({ filename }) => filename),
+    ...actualFiles,
+  );
+  for (const { filename, unused } of expected) {
+    const messages = diagnostics.filter((entry) => path.resolve(root, entry.filename) === filename);
+    assert.equal(messages.length, unused);
     assert.ok(
-      diagnostics.every(
+      messages.every(
         ({ message, severity }) =>
           message.startsWith("Unused oxlint-disable") && severity === "warning",
       ),
     );
   }
-  const files = [
-    "apps/web/src/shared/ui/theme-toggle.tsx",
-    "apps/web/src/shared/ui/YouTubePlayer.tsx",
-    "apps/console/src/shared/ui/YouTubePlayer.tsx",
-  ];
-  assert.deepEqual(runNative(root, "--format=json", ...files).diagnostics, []);
+  for (const filename of actualFiles)
+    assert.ok(
+      !diagnostics.some(
+        (entry) => path.resolve(root, entry.filename) === path.resolve(root, filename),
+      ),
+    );
+});
+
+test("original React and Next rules retain their wrapper and application-root behavior", (context) => {
+  const anonymous = fixture(
+    context,
+    "apps/console/src/shared/config",
+    'import React from "react"; export default React.memo(() => <div />);',
+    "tsx",
+  );
+  const functionDocument = fixture(
+    context,
+    "apps/console/src/shared/config",
+    'import {Head} from "next/document"; export default function Document() { return <><Head /><Head /></>; }',
+    "tsx",
+  );
+  const classDocument = fixture(
+    context,
+    "apps/console/src/shared/config",
+    'import Document, {Html, Head} from "next/document"; export default class MyDocument extends Document { render() { return <Html><Head /><Head /><body /></Html>; } }',
+    "tsx",
+  );
+  const crossApp = fixture(
+    context,
+    "apps/web/src/shared/config",
+    'export const view = <a href="/admin">Console</a>;',
+    "tsx",
+  );
+  const { diagnostics } = runNative(
+    root,
+    "--format=json",
+    anonymous,
+    functionDocument,
+    classDocument,
+    crossApp,
+  );
+  const forFile = (filename) =>
+    diagnostics.filter((entry) => path.resolve(root, entry.filename) === filename);
+  assert.equal(reports(forFile(anonymous), "react/display-name").length, 1);
+  assert.equal(reports(forFile(functionDocument), "@next/next/no-duplicate-head").length, 0);
+  assert.equal(reports(forFile(classDocument), "@next/next/no-duplicate-head").length, 1);
+  assert.equal(reports(forFile(crossApp), "@next/next/no-html-link-for-pages").length, 0);
 });

@@ -13,7 +13,6 @@
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
-        "$TURBO_ROOT$/packages/config/eslint/**",
         "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
       "outputs": ["*.tsbuildinfo"],
@@ -27,12 +26,9 @@
         "!*.tsbuildinfo",
         "!**/*.tsbuildinfo",
         "!next-env.d.ts",
-        "$TURBO_ROOT$/packages/config/eslint/**",
-        "$TURBO_ROOT$/packages/config/oxlint/**",
-        "$TURBO_ROOT$/oxlint.config.ts",
-        "$TURBO_ROOT$/tools/repository/oxlint.config.ts"
+        "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
-      "outputs": ["node_modules/.cache/eslint"],
+      "outputs": [],
       "dependsOn": ["^transit"]
     },
     "test": {
@@ -109,14 +105,13 @@
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
-        "$TURBO_ROOT$/packages/config/eslint/**",
-        "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/typescript/next.json",
         "$TURBO_ROOT$/packages/config/next.ts",
         "$TURBO_ROOT$/packages/config/sentry-build.ts",
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/vitest/browser.js",
-        "$TURBO_ROOT$/packages/config/vitest/postgres.js"
+        "$TURBO_ROOT$/packages/config/vitest/postgres.js",
+        "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
       "outputs": ["*.tsbuildinfo"]
     },
@@ -129,15 +124,12 @@
         "!*.tsbuildinfo",
         "!**/*.tsbuildinfo",
         "!next-env.d.ts",
-        "$TURBO_ROOT$/packages/config/eslint/**",
         "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
-        "$TURBO_ROOT$/packages/config/typescript/next.json",
-        "$TURBO_ROOT$/oxlint.config.ts",
-        "$TURBO_ROOT$/tools/repository/oxlint.config.ts"
+        "$TURBO_ROOT$/packages/config/typescript/next.json"
       ],
-      "outputs": ["node_modules/.cache/eslint"]
+      "outputs": []
     },
     "@oioi-bwg/web#test": {
       "dependsOn": ["^transit"],
@@ -166,14 +158,13 @@
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
-        "$TURBO_ROOT$/packages/config/eslint/**",
-        "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/typescript/next.json",
         "$TURBO_ROOT$/packages/config/next.ts",
         "$TURBO_ROOT$/packages/config/sentry-build.ts",
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/vitest/browser.js",
-        "$TURBO_ROOT$/packages/config/vitest/postgres.js"
+        "$TURBO_ROOT$/packages/config/vitest/postgres.js",
+        "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
       "outputs": ["*.tsbuildinfo"]
     },
@@ -186,15 +177,12 @@
         "!*.tsbuildinfo",
         "!**/*.tsbuildinfo",
         "!next-env.d.ts",
-        "$TURBO_ROOT$/packages/config/eslint/**",
         "$TURBO_ROOT$/packages/config/oxlint/**",
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
-        "$TURBO_ROOT$/packages/config/typescript/next.json",
-        "$TURBO_ROOT$/oxlint.config.ts",
-        "$TURBO_ROOT$/tools/repository/oxlint.config.ts"
+        "$TURBO_ROOT$/packages/config/typescript/next.json"
       ],
-      "outputs": ["node_modules/.cache/eslint"]
+      "outputs": []
     },
     "@oioi-bwg/console#test": {
       "dependsOn": ["^transit"],
@@ -233,7 +221,7 @@
     "@oioi-bwg/repository-tools#lint": {
       "dependsOn": ["^transit"],
       "cache": false,
-      "outputs": ["node_modules/.cache/eslint"]
+      "outputs": []
     },
     "@oioi-bwg/ui#type-check": {
       "inputs": [
@@ -245,9 +233,8 @@
         "!next-env.d.ts",
         "$TURBO_ROOT$/packages/config/typescript/base.json",
         "$TURBO_ROOT$/packages/config/typescript/node.json",
-        "$TURBO_ROOT$/packages/config/eslint/**",
-        "$TURBO_ROOT$/packages/config/oxlint/**",
-        "$TURBO_ROOT$/packages/config/vitest/browser.js"
+        "$TURBO_ROOT$/packages/config/vitest/browser.js",
+        "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
       "outputs": ["*.tsbuildinfo"],
       "dependsOn": ["^transit"]

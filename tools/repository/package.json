@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./eslint": "./eslint.config.ts",
     "./steiger": "./steiger.config.ts",
     "./typescript/repository.json": "./typescript/repository.json",
     "./cli/dependencies": "./src/check-workspace-dependencies.ts",
@@ -21,7 +20,7 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit && pnpm type-check:tests",
-    "lint": "oxlint --type-aware --format=stylish --config ../../oxlint.config.ts . && eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint .",
+    "lint": "oxlint --type-aware --report-unused-disable-directives-severity warn --format=stylish .",
     "test:harness": "node --import tsx --test harness/architecture/*.test.js",
     "lint:deps": "tsx src/check-workspace-dependencies.ts",
     "type-check:tests": "tsc --noEmit -p tsconfig.tests.json && tsc --noEmit -p tsconfig.web.json"
@@ -29,7 +28,6 @@
   "devDependencies": {
     "@oioi-bwg/config": "workspace:*",
     "@types/node": "^20",
-    "eslint": "^9",
     "jiti": "2.6.1",
     "typescript": "^5",
     "dependency-cruiser": "18.7.0",
