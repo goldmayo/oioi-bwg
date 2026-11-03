@@ -1,17 +1,9 @@
 "use client";
 import { AdminReauthenticationNotice } from "@/features/auth";
-import { type EditorReturnTarget, LazyLyricsEditor } from "@/features/manage-lyrics";
+import { LazyLyricsEditor } from "@/features/manage-lyrics";
 
 import { useGuideDraftEditor } from "../_model/use-guide-draft-editor";
-export function GuideDraftEditor({
-  id,
-  accountId,
-  returnTo,
-}: {
-  id: string;
-  accountId: string;
-  returnTo: EditorReturnTarget;
-}) {
+export function GuideDraftEditor({ id, accountId }: { id: string; accountId: string }) {
   const editor = useGuideDraftEditor(id);
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -28,10 +20,6 @@ export function GuideDraftEditor({
           disabled={!editor.canManage}
           saveLabel="작업본 저장"
           referenceVideoReadOnly
-          returnTo={{
-            ...returnTo,
-            description: "작업본을 저장해도 현재 공개본은 바뀌지 않습니다.",
-          }}
           waveformImport={
             editor.guide.referenceYoutubeId === editor.guide.song.currentYoutubeId
               ? {

@@ -16,7 +16,7 @@ export function SongInformation({
 }) {
   return (
     <>
-      <header className="mb-8 flex items-center justify-between gap-4">
+      <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">곡 정보</h1>
           <p className="text-muted-foreground mt-2 text-sm">
@@ -32,12 +32,12 @@ export function SongInformation({
           </Button>
         )}
       </header>
-      <div className="grid gap-8 lg:grid-cols-3">
-        <section className="space-y-6 lg:col-span-2" aria-labelledby="song-basics">
-          <h2 id="song-basics" className="border-b pb-3 font-medium">
+      <div className="space-y-8">
+        <section className="space-y-5" aria-labelledby="song-basics">
+          <h2 id="song-basics" className="text-lg font-semibold">
             기본 정보
           </h2>
-          <dl className="grid gap-6 text-sm sm:grid-cols-2">
+          <dl className="space-y-5 text-sm">
             {[
               ["곡 제목", song.title],
               ["앨범", song.album.name],
@@ -47,40 +47,42 @@ export function SongInformation({
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="text-muted-foreground mb-2">{label}</dt>
-                <dd className="break-all">{value}</dd>
+                <dd className="wrap-anywhere">{value}</dd>
               </div>
             ))}
           </dl>
-          <h2 className="border-b pt-4 pb-3 font-medium">가사</h2>
+        </section>
+        <section className="space-y-5" aria-labelledby="song-display">
+          <h2 id="song-display" className="text-lg font-semibold">
+            표시 설정
+          </h2>
+          <dl className="space-y-4 text-sm">
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-muted-foreground">사용자 노출</dt>
+              <dd className="flex items-center gap-2">
+                <VisibilityIcon visible={song.isVisible} />
+                {song.isVisible ? "표시" : "숨김"}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-muted-foreground">타이틀곡</dt>
+              <dd>{song.isTitle ? "예" : "아니요"}</dd>
+            </div>
+          </dl>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            곡의 표시 설정입니다. 앨범 설정과 응원법 공개 상태에 따라 사용자 노출이 달라집니다.
+          </p>
+        </section>
+        <section className="space-y-3" aria-labelledby="song-lyrics">
+          <h2 id="song-lyrics" className="text-lg font-semibold">
+            가사
+          </h2>
           <p className="text-sm">{song.hasLyrics ? "등록됨" : "미등록"}</p>
           <p className="text-muted-foreground text-sm">
             가사 파일 교체는 곡 정보 수정에서 할 수 있습니다.
           </p>
         </section>
-        <aside className="space-y-8">
-          <section className="space-y-4" aria-labelledby="song-display">
-            <h2 id="song-display" className="border-b pb-3 font-medium">
-              표시 설정
-            </h2>
-            <dl className="space-y-4 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">사용자 노출</dt>
-                <dd className="flex items-center gap-2">
-                  <VisibilityIcon visible={song.isVisible} />
-                  {song.isVisible ? "표시" : "숨김"}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">타이틀곡</dt>
-                <dd>{song.isTitle ? "예" : "아니요"}</dd>
-              </div>
-            </dl>
-            <p className="text-muted-foreground text-xs leading-5">
-              곡의 표시 설정입니다. 앨범 설정과 응원법 공개 상태에 따라 사용자 노출이 달라집니다.
-            </p>
-          </section>
-          <SongGuideSummary song={song} canManage={canManage} />
-        </aside>
+        <SongGuideSummary song={song} canManage={canManage} />
       </div>
     </>
   );
@@ -97,18 +99,18 @@ export function SongGuideSummary({
 }) {
   return (
     <section className="space-y-4" aria-labelledby="song-guides">
-      <h2 id="song-guides" className="border-b pb-3 font-medium">
+      <h2 id="song-guides" className="text-lg font-semibold">
         응원법
       </h2>
       {(["CONCERT", "FESTIVAL"] as const).map((mode) => {
         const guide = song.cheerGuides.find((item) => item.mode === mode);
         const publication = guide?.currentPublication;
         return (
-          <div key={mode} className="flex items-center justify-between gap-2 text-sm">
+          <div key={mode} className="flex flex-wrap items-center justify-between gap-3 text-sm">
             <span className="text-muted-foreground">
               {mode === "CONCERT" ? "콘서트" : "페스티벌"}
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {canManage && guide?.draftEditorAvailable && (
                 <Button size="sm" variant="outline" asChild>
                   <a href={adminLinks.guideEdit(guide.id, returnHref ?? adminLinks.song(song.id))}>
