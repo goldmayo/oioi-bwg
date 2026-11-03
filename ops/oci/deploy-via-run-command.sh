@@ -15,7 +15,7 @@ fi
 : "${OCI_COMPUTE_COMPARTMENT_OCID:?OCI_COMPUTE_COMPARTMENT_OCID is required}"
 : "${OCI_COMPUTE_INSTANCE_OCID:?OCI_COMPUTE_INSTANCE_OCID is required}"
 
-for command in oci jq node; do
+for command in oci jq node python3; do
   command -v "${command}" >/dev/null 2>&1 || {
     echo "Required command not found: ${command}" >&2
     exit 2
@@ -50,6 +50,7 @@ execution_file="$(mktemp)"
 error_file="$(mktemp)"
 trap 'rm -f -- "${execution_file}" "${error_file}"' EXIT
 
+create_started_ms=$(date +%s%3N)
 command_id="$(
   oci instance-agent command create \
     --compartment-id "${OCI_COMPUTE_COMPARTMENT_OCID}" \
@@ -65,6 +66,7 @@ if [[ ! "${command_id}" =~ ^ocid1\.instanceagentcommand\.[a-z0-9.-]+$ ]]; then
   echo "Failed to create OCI Run Command" >&2
   exit 1
 fi
+create_elapsed_ms=$(( $(date +%s%3N) - create_started_ms ))
 
 echo "Created OCI Run Command: ${command_id}"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
@@ -73,6 +75,7 @@ fi
 
 overall_deadline=$(($(date +%s) + 900))
 execution_state=""
+wait_started_ms=$(date +%s%3N)
 
 while (( $(date +%s) < overall_deadline )); do
   if oci instance-agent command-execution get \
@@ -104,6 +107,7 @@ while (( $(date +%s) < overall_deadline )); do
 
   sleep 10
 done
+wait_elapsed_ms=$(( $(date +%s%3N) - wait_started_ms ))
 
 case "${execution_state}" in
   SUCCEEDED|FAILED|TIMED_OUT|CANCELED)
@@ -119,10 +123,37 @@ remote_exit_code="$(jq -er '.data.content["exit-code"] | select(type == "number"
   exit 1
 }
 # Agent message/text and OCI error streams may contain either app's runtime secrets.
-# Only the bounded lifecycle/exit code and fixed diagnostics cross into Actions logs.
+# Only bounded lifecycle/exit, fixed diagnostics and allowlisted timing cross into Actions logs.
 echo "Run Command lifecycle: ${execution_state}"
 echo "Remote exit code: ${remote_exit_code}"
 echo "Remote output: <redacted: inspect protected host logs>"
+timing_file="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/deployment-timing.json"
+if python3 -I -B - "${script_root}/paired-release.py" "${execution_file}" "${timing_file}" "${create_elapsed_ms}" "${wait_elapsed_ms}" 2>/dev/null <<'PYTHON'
+import json, os, runpy, sys
+from pathlib import Path
+parse = runpy.run_path(sys.argv[1])['timings_from_output']
+execution = json.loads(Path(sys.argv[2]).read_text())
+host = parse(execution.get('data', {}).get('content', {}).get('text'))
+report = {'commandCreateMs': int(sys.argv[4]), 'waitAndExecutionMs': int(sys.argv[5]), 'host': host}
+Path(sys.argv[3]).write_text(json.dumps(report) + '\n')
+summary = os.environ.get('GITHUB_STEP_SUMMARY')
+if summary:
+    with open(summary, 'a') as output:
+        output.write('\n### Deployment timing (ms)\n\n| Stage | ms |\n| --- | ---: |\n')
+        for stage in ('commandCreateMs', 'waitAndExecutionMs'):
+            output.write(f'| {stage} | {report[stage]} |\n')
+        for stage, elapsed in host.items():
+            output.write(f'| {stage} | {elapsed} |\n')
+        if not host:
+            output.write('\nHost stage timing unavailable; protected host helper may need updating.\n')
+PYTHON
+then
+  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+    printf 'timing_file=%s\n' "${timing_file}" >>"${GITHUB_OUTPUT}"
+  fi
+else
+  echo "Deployment timing unavailable"
+fi
 if [[ "${execution_state}" == "TIMED_OUT" || "${execution_state}" == "CANCELED" ]] ||
   [[ "${execution_state}" != "SUCCEEDED" && "${remote_exit_code}" == "0" ]]; then
   echo "Run Command did not succeed" >&2

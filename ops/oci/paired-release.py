@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Locked paired apply/rollback. Compose reconciles each service independently."""
 import base64
+from contextlib import contextmanager
 import grp
 import hashlib
 import importlib.util
@@ -14,12 +15,46 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 APPS = ('web', 'console')
 SHA = r'[0-9a-f]{40}'
 DIGEST = r'sha256:[0-9a-f]{64}'
 CONFIG_KEYS = ('IMAGE_REPOSITORY', 'CONSOLE_IMAGE_REPOSITORY', 'POSTGRES_NETWORK',
                'APP_BIND_ADDRESS', 'APP_PORT', 'CONSOLE_PORT', 'SMOKE_PATHS', 'CONSOLE_SMOKE_PATHS')
+TIMING_STAGES = ('materialize_web', 'materialize_console', 'pull_web', 'pull_console',
+                 'activate', 'smoke', 'rollback', 'total')
+
+
+@contextmanager
+def timing(stage):
+    require(stage in TIMING_STAGES)
+    started = time.monotonic_ns()
+    try:
+        yield
+    finally:
+        elapsed = (time.monotonic_ns() - started) // 1_000_000
+        try:
+            print(f'OIOI_DEPLOY_TIMING {stage} {elapsed}', flush=True)
+        except (OSError, ValueError):
+            pass  # Measurement must not change apply/rollback exit semantics.
+
+
+def timings_from_output(value):
+    if not isinstance(value, str) or len(value) > 65_536:
+        return {}
+    result = {}
+    for line in value.splitlines():
+        if not line.startswith('OIOI_DEPLOY_TIMING '):
+            continue
+        match = re.fullmatch(r'OIOI_DEPLOY_TIMING ([a-z_]+) ([0-9]{1,7})', line)
+        if not match or match[1] not in TIMING_STAGES or match[1] in result:
+            return {}
+        elapsed = int(match[2])
+        if elapsed > 1_800_000:
+            return {}
+        result[match[1]] = elapsed
+    return result
 
 
 def require(value):
@@ -196,7 +231,8 @@ def deploy(digests, encoded):
             os.environ['REQUIRED_RUNTIME_KEYS'] = web_required if app == 'web' else 'DATABASE_URL CONSOLE_AUTH_SECRET CONSOLE_MFA_ENCRYPTION_KEY'
             public = config_root / ('runtime-public.env' if app == 'web' else 'console-runtime-public.env')
             mapping = config_root / ('runtime-secrets.env' if app == 'web' else 'console-runtime-secrets.env')
-            materializer.materialize(app, public, mapping, snapshot / (app + '.env'))
+            with timing('materialize_' + app):
+                materializer.materialize(app, public, mapping, snapshot / (app + '.env'))
         web = materializer.read_env(snapshot / 'web.env')
         console = materializer.read_env(snapshot / 'console.env')
         require(web['AUTH_SECRET'] not in {console['CONSOLE_AUTH_SECRET'], console['CONSOLE_MFA_ENCRYPTION_KEY']})
@@ -206,7 +242,8 @@ def deploy(digests, encoded):
         for app in APPS:
             image = candidate['images'][app]
             reference = image['repository'] + '@' + image['digest']
-            run(['docker', 'pull', reference])
+            with timing('pull_' + app):
+                run(['docker', 'pull', reference])
             info = json.loads(run(['docker', 'image', 'inspect', reference]))[0]
             require(info['Architecture'] == 'arm64' and info['Config']['Labels']['org.opencontainers.image.revision'] == image['buildSourceSha'])
         compose(file, compose_env(candidate, config, runtime, snapshot), 'config', '--quiet')
@@ -222,8 +259,10 @@ def deploy(digests, encoded):
             if legacy_digest:
                 compose(legacy / 'compose.yml', legacy_env, 'stop', 'app')
             environment = compose_env(candidate, config, runtime)
-            compose(file, environment, 'up', '-d', '--wait', 'web', 'console')
-            smoke(config)
+            with timing('activate'):
+                compose(file, environment, 'up', '-d', '--wait', 'web', 'console')
+            with timing('smoke'):
+                smoke(config)
             (snapshot / 'containers.json').write_text(json.dumps(containers(file, environment, candidate)))
             if legacy_digest:
                 compose(legacy / 'compose.yml', legacy_env, 'rm', '-f', 'app')
@@ -240,30 +279,31 @@ def deploy(digests, encoded):
         except Exception:
             print('paired_candidate_failed', file=sys.stderr)
             try:
-                if old:
-                    for app in APPS:
-                        atomic(runtime / (app + '.env'), (old / (app + '.env')).read_bytes())
-                    atomic(file, (old / 'compose.yml').read_bytes())
-                    if old_config.get('CONSOLE_WAVEFORM_SOCKET_GID'):
-                        atomic(file.with_name('compose.waveform.yml'), (old / 'compose.waveform.yml').read_bytes())
-                    compose(file, old_environment, 'up', '-d', '--wait', 'web', 'console')
-                    smoke(old_config)
-                    require(containers(file, old_environment, old_candidate) == json.loads((old / 'containers.json').read_text()))
-                elif legacy_digest:
-                    compose(file, compose_env(candidate, config, runtime), 'stop', 'web', 'console')
-                    compose(legacy / 'compose.yml', legacy_env, 'up', '-d', '--wait', 'app')
-                    smoke({'APP_PORT': legacy_env['APP_PORT'], 'SMOKE_PATHS': legacy_env['SMOKE_PATHS']}, ('web',))
-                else:
-                    compose(file, compose_env(candidate, config, runtime), 'stop', 'web', 'console')
-                    raise ValueError('No previous release')
-                if old:
-                    if previous_before:
-                        link(previous, previous_before)
+                with timing('rollback'):
+                    if old:
+                        for app in APPS:
+                            atomic(runtime / (app + '.env'), (old / (app + '.env')).read_bytes())
+                        atomic(file, (old / 'compose.yml').read_bytes())
+                        if old_config.get('CONSOLE_WAVEFORM_SOCKET_GID'):
+                            atomic(file.with_name('compose.waveform.yml'), (old / 'compose.waveform.yml').read_bytes())
+                        compose(file, old_environment, 'up', '-d', '--wait', 'web', 'console')
+                        smoke(old_config)
+                        require(containers(file, old_environment, old_candidate) == json.loads((old / 'containers.json').read_text()))
+                    elif legacy_digest:
+                        compose(file, compose_env(candidate, config, runtime), 'stop', 'web', 'console')
+                        compose(legacy / 'compose.yml', legacy_env, 'up', '-d', '--wait', 'app')
+                        smoke({'APP_PORT': legacy_env['APP_PORT'], 'SMOKE_PATHS': legacy_env['SMOKE_PATHS']}, ('web',))
                     else:
-                        previous.unlink(missing_ok=True)
-                pending.unlink()
-                print('paired_rollback_succeeded', file=sys.stderr)
-                return 20
+                        compose(file, compose_env(candidate, config, runtime), 'stop', 'web', 'console')
+                        raise ValueError('No previous release')
+                    if old:
+                        if previous_before:
+                            link(previous, previous_before)
+                        else:
+                            previous.unlink(missing_ok=True)
+                    pending.unlink()
+                    print('paired_rollback_succeeded', file=sys.stderr)
+                    return 20
             except Exception:
                 print('paired_rollback_failed', file=sys.stderr)
                 return 21
@@ -276,8 +316,9 @@ def deploy(digests, encoded):
 
 if __name__ == '__main__':
     try:
-        require(len(sys.argv) == 4)
-        sys.exit(deploy(sys.argv[1:3], sys.argv[3]))
+        with timing('total'):
+            require(len(sys.argv) == 4)
+            sys.exit(deploy(sys.argv[1:3], sys.argv[3]))
     except Exception:
         print('paired_preflight_failed', file=sys.stderr)
         sys.exit(1)

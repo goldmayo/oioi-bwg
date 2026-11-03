@@ -1,12 +1,16 @@
 import base64
 import hashlib
 import json
+import io
+import runpy
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 SECRET = 'fixture-console-private-secret-32-characters'
@@ -313,6 +317,37 @@ elif args[0]=='compose':
         self.assertEqual(self.execute(self.first, MOCK_FAIL_APP='console', MOCK_FAIL_DIGEST=digest('c')).returncode, 21)
         self.assertTrue(all(not item['State']['Running'] for item in self.running().values()))
         self.assertFalse((self.state/'current-pair').exists())
+
+
+class DeploymentTimingTest(unittest.TestCase):
+    def setUp(self):
+        self.module = runpy.run_path(str(ROOT / 'ops/oci/paired-release.py'))
+
+    def test_fixed_stage_and_monotonic_duration_survive_failure(self):
+        output = io.StringIO()
+        with patch.object(self.module['time'], 'monotonic_ns', side_effect=[0, 123_000_000]), redirect_stdout(output):
+            with self.assertRaisesRegex(ValueError, 'fixture failure'):
+                with self.module['timing']('pull_web'):
+                    raise ValueError('fixture failure')
+        self.assertEqual(output.getvalue(), 'OIOI_DEPLOY_TIMING pull_web 123\n')
+        self.assertEqual(self.module['timings_from_output'](output.getvalue()), {'pull_web': 123})
+
+    def test_parser_rejects_unknown_duplicate_oversized_and_non_numeric_fields(self):
+        parse = self.module['timings_from_output']
+        for value in [None, 'x' * 65_537,
+                      'OIOI_DEPLOY_TIMING unknown 1',
+                      'OIOI_DEPLOY_TIMING total 1\nOIOI_DEPLOY_TIMING total 2',
+                      'OIOI_DEPLOY_TIMING total 1800001',
+                      'OIOI_DEPLOY_TIMING total -1',
+                      'OIOI_DEPLOY_TIMING total ' + SECRET]:
+            self.assertEqual(parse(value), {})
+        self.assertEqual(parse(SECRET + '\nOIOI_DEPLOY_TIMING smoke 7\n'), {'smoke': 7})
+
+    def test_timing_output_failure_preserves_original_error(self):
+        with patch('builtins.print', side_effect=OSError('closed output')):
+            with self.assertRaisesRegex(ValueError, 'original failure'):
+                with self.module['timing']('rollback'):
+                    raise ValueError('original failure')
 
 
 if __name__ == '__main__': unittest.main()
