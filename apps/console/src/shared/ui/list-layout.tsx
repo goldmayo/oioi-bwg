@@ -1,21 +1,37 @@
 import type { ReactNode } from "react";
 
+import { cn } from "../lib/utils";
+
 import { Button } from "./button";
 
 export function ListHeader({
   title,
   description,
   action,
+  compactOnMobile = false,
 }: {
   title: string;
   description: string;
   action?: ReactNode;
+  compactOnMobile?: boolean;
 }) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4">
+    <header
+      className={cn(
+        "flex flex-wrap items-start justify-between gap-4",
+        compactOnMobile && "max-md:items-center max-md:gap-3",
+      )}
+    >
       <div>
         <h1 className="text-foreground text-2xl font-semibold tracking-tight">{title}</h1>
-        <p className="text-muted-foreground mt-2 text-sm leading-6">{description}</p>
+        <p
+          className={cn(
+            "text-muted-foreground mt-2 text-sm leading-6",
+            compactOnMobile && "max-md:hidden",
+          )}
+        >
+          {description}
+        </p>
       </div>
       {action}
     </header>
@@ -25,16 +41,23 @@ export function ListHeader({
 export function ListToolbar({
   selection,
   actions,
+  stackActionsOnMobile = false,
   children,
 }: {
   selection?: ReactNode;
   actions?: ReactNode;
+  stackActionsOnMobile?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
       {selection}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div
+        className={cn(
+          "flex flex-wrap items-start justify-between gap-3",
+          stackActionsOnMobile && "max-md:flex-col max-md:items-stretch",
+        )}
+      >
         <div className="min-w-0 flex-1">{children}</div>
         {actions}
       </div>

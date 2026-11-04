@@ -105,19 +105,21 @@ export function SongManagerClient({
     });
   }, [canManage, deleteMutation, deleteTarget, invalidateSongs]);
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       <ListHeader
         title="곡 관리"
+        compactOnMobile
         description="곡을 추가, 수정, 삭제할 수 있습니다. 곡 추가 시 LRC 파일이 필요합니다."
         action={
           canManage && (
-            <Button variant="q" asChild>
+            <Button variant="q" className="h-11 md:h-9" asChild>
               <a href={adminPaths.songCreate}>곡 추가</a>
             </Button>
           )
         }
       />
       <ListToolbar
+        stackActionsOnMobile
         selection={
           <ListSelection
             count={selectedSongs.length}

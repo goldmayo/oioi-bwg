@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import type { Notification } from "@oioi-bwg/contracts/notification";
 import { DataTable } from "@oioi-bwg/ui/data-table";
 import type { OnChangeFn, PaginationState } from "@tanstack/react-table";
@@ -24,6 +24,7 @@ export function NotificationTable({
   pagination,
   onPaginationChange,
   onOpen,
+  mobileAction,
   pending,
   loading,
   ready,
@@ -34,6 +35,7 @@ export function NotificationTable({
   pagination: PaginationState;
   onPaginationChange: OnChangeFn<PaginationState>;
   onOpen: (id: string) => void;
+  mobileAction?: ReactNode;
   pending: boolean;
   loading: boolean;
   ready: boolean;
@@ -46,8 +48,8 @@ export function NotificationTable({
       column.columns([
         column.accessor("readAt", {
           header: "STATUS",
-          size: 112,
-          minSize: 96,
+          size: wide ? 112 : 96,
+          minSize: wide ? 96 : 80,
           meta: { align: "center" },
           cell: ({ row }) => (
             <span
@@ -60,7 +62,7 @@ export function NotificationTable({
         column.accessor("title", {
           header: "알림 내용",
           size: wide ? 560 : 236,
-          minSize: 200,
+          minSize: wide ? 200 : 184,
           cell: ({ row: { original: item } }) => {
             const Icon = item.type === "WAVEFORM_FAILED" ? CircleX : CircleCheckBig;
             return (
@@ -70,7 +72,7 @@ export function NotificationTable({
                 className="focus-visible:outline-ring flex min-h-11 w-full min-w-0 items-center gap-3 rounded-sm text-left underline-offset-4 outline-none hover:underline focus-visible:outline-2 disabled:opacity-60"
               >
                 <Icon
-                  className={`size-4 shrink-0 ${item.type === "WAVEFORM_FAILED" ? "text-destructive" : "text-success"}`}
+                  className={`mt-[7px] size-4 shrink-0 self-start md:mt-0 md:self-auto ${item.type === "WAVEFORM_FAILED" ? "text-destructive" : "text-success"}`}
                   aria-label={item.type === "WAVEFORM_FAILED" ? "실패" : "성공"}
                 />
                 <span className="min-w-0">
@@ -147,10 +149,13 @@ export function NotificationTable({
 
   return (
     <DataTable.Root table={table} components={dataTableComponents}>
-      <div className="min-w-0 space-y-4" aria-busy={loading || pending}>
+      <div className="relative min-w-0" aria-busy={loading || pending}>
+        {mobileAction ? (
+          <div className="absolute top-px right-3 z-20 md:hidden">{mobileAction}</div>
+        ) : null}
         <AppDataTable
           caption="알림 내역 목록"
-          className="[&_tbody_tr[data-row-id]]:cursor-pointer"
+          className="[&_tbody_tr[data-row-id]]:cursor-pointer max-md:[&_th]:h-11"
           onClick={(event) => {
             if (pending) return;
             const row =
@@ -164,7 +169,7 @@ export function NotificationTable({
           <DataTable.Header />
           <DataTable.Body padToPageSize emptyState={emptyState} />
         </AppDataTable>
-        <div className="min-h-9">
+        <div className="mt-4 min-h-9">
           {ready &&
             (totalCount > pagination.pageIndex * pagination.pageSize ||
               pagination.pageIndex === 0) && (
