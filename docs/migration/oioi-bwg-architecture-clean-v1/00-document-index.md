@@ -1,7 +1,7 @@
 ---
 title: "Architecture Document Index"
 document_id: "00"
-version: "1.69"
+version: "1.70"
 status: "active"
 authority: "index"
 updated_at: "2026-11-04"
@@ -63,7 +63,7 @@ migration / implementation plan
 | 09 | Error UX / Observability Architecture | 1.5 | active | query/mutation error UX / logging / Sentry |
 | 10 | Testing Architecture | 1.29 | active | unit / integration / component / E2E strategy, 로컬 영향 범위와 테스트 환경 분리 |
 | 11 | Content / i18n / Assets / Runtime Architecture | 1.14 | active | locale / content / assets / env / runtime |
-| 12 | Deployment / Migration Runbook | 1.33 | active | migration phases / test infra / Docker / OCI / rollback |
+| 12 | Deployment / Migration Runbook | 1.34 | active | migration phases / test infra / Docker / OCI / rollback |
 
 ---
 

@@ -1,8 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
+import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { parse } from "yaml";
 
 import { describe, expect, test, vi } from "vitest";
 
@@ -187,7 +190,7 @@ describe("paired release evidence and conservative image selection", () => {
     expect(
       planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
     ).toEqual({ web: false, console: false });
-    expect(execute.mock.calls.some(([cmd]) => cmd === "pnpm")).toBe(false);
+    expect(execute.mock.calls.some(([cmd]) => cmd === "turbo")).toBe(false);
   });
   test.each([
     ["NEXT_PUBLIC_APP_ENV: production", "NEXT_PUBLIC_APP_ENV: preview"],
@@ -240,12 +243,26 @@ describe("paired release evidence and conservative image selection", () => {
   });
   test("실제 Git 두 커밋의 CI-only 변경은 pnpm 없이 재사용을 판정한다", async () => {
     const directory = await mkdtemp(join(tmpdir(), "image-ci-inputs-"));
+    const tools = await mkdtemp(join(tmpdir(), "image-plan-tools-"));
     const git = (...args: string[]) =>
       execFileSync("git", args, { cwd: directory, encoding: "utf8" }).trim();
     try {
       git("init", "-q");
       git("config", "user.name", "fixture");
       git("config", "user.email", "fixture@example.test");
+      await mkdir(join(directory, "ops/oci"), { recursive: true });
+      for (const file of ["release-baseline.mjs", "promotion.mjs"])
+        await copyFile(
+          new URL(`../../ops/oci/${file}`, import.meta.url),
+          join(directory, "ops/oci", file),
+        );
+      await mkdir(join(tools, "node_modules"));
+      await writeFile(join(tools, "package.json"), "{}");
+      await symlink(
+        dirname(fileURLToPath(import.meta.resolve("yaml/package.json"))),
+        join(tools, "node_modules/yaml"),
+        "dir",
+      );
       await writeFile(join(directory, ".dockerignore"), ".github\n");
       await mkdir(join(directory, ".github/workflows"), { recursive: true });
       const path = join(directory, ".github/workflows/verify.yml");
@@ -274,8 +291,103 @@ describe("paired release evidence and conservative image selection", () => {
         planImages({ baseline, proof: verified, sourceSha: git("rev-parse", "HEAD"), execute })
           .build,
       ).toEqual({ web: false, console: false });
+      const isolated = execFileSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          `
+        const { planImages } = await import('./ops/oci/release-baseline.mjs');
+        console.log(JSON.stringify(planImages(JSON.parse(process.argv[1])).build));
+      `,
+          JSON.stringify({ baseline, proof: verified, sourceSha: git("rev-parse", "HEAD") }),
+        ],
+        {
+          cwd: directory,
+          encoding: "utf8",
+          env: { ...process.env, PROMOTION_TOOLS_MANIFEST: join(tools, "package.json") },
+        },
+      );
+      expect(existsSync(join(directory, "node_modules"))).toBe(false);
+      expect(JSON.parse(isolated)).toEqual({ web: false, console: false });
+    } finally {
+      await Promise.all(
+        [directory, tools].map((path) => rm(path, { recursive: true, force: true })),
+      );
+    }
+  });
+  test("제품 의존성 설치 없이 같은 Turbo workspace 그래프를 계산한다", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-plan-graph-"));
+    const git = (...args: string[]) =>
+      execFileSync("git", args, {
+        cwd: directory,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim();
+    try {
+      execFileSync("git", ["clone", "--shared", "--quiet", process.cwd(), directory]);
+      git("config", "user.name", "fixture");
+      git("config", "user.email", "fixture@example.test");
+      const base = git("rev-parse", "HEAD");
+      const file = join(directory, "apps/console/src/shared/ui/button.tsx");
+      await writeFile(file, (await readFile(file, "utf8")) + "\n// graph fixture\n");
+      git("commit", "-qam", "fixture");
+      const head = git("rev-parse", "HEAD");
+      const tasks = () =>
+        JSON.parse(
+          execFileSync("turbo", ["run", "build", "--affected", "--dry=json"], {
+            cwd: directory,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+            env: { ...process.env, TURBO_SCM_BASE: base, TURBO_SCM_HEAD: head },
+          }),
+        ).tasks.map((task: { taskId: string }) => task.taskId);
+      expect(existsSync(join(directory, "node_modules"))).toBe(false);
+      const isolated = tasks();
+      expect(isolated).toContain("@oioi-bwg/console#build");
+      expect(isolated).not.toContain("@oioi-bwg/web#build");
+      // Turbo can create its configured node_modules/.cache without installing packages.
+      await rm(join(directory, "node_modules"), { recursive: true, force: true });
+      await symlink(join(process.cwd(), "node_modules"), join(directory, "node_modules"), "dir");
+      expect(tasks()).toEqual(isolated);
     } finally {
       await rm(directory, { recursive: true, force: true });
+    }
+  });
+  test("계획 도구 준비는 고정된 두 패키지만 생성하고 범위 버전을 거절한다", async () => {
+    const root = await mkdtemp(join(tmpdir(), "image-plan-bootstrap-"));
+    const steps = parse(workflow).jobs.promotion_plan.steps;
+    const script = steps.find(
+      (step: { name?: string }) => step.name === "Prepare isolated image planning tools",
+    ).run;
+    try {
+      await mkdir(join(root, "bin"));
+      await writeFile(join(root, "bin/npm"), "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+      const manifest = JSON.parse(
+        readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+      );
+      await writeFile(join(root, "package.json"), JSON.stringify(manifest));
+      const env = {
+        ...process.env,
+        PATH: join(root, "bin") + ":" + process.env.PATH,
+        PROMOTION_TOOLS_DIR: join(root, "tools"),
+        GITHUB_PATH: join(root, "path"),
+      };
+      execFileSync("bash", ["-e", "-o", "pipefail", "-c", script], { cwd: root, env });
+      expect(JSON.parse(await readFile(join(root, "tools/package.json"), "utf8"))).toEqual({
+        private: true,
+        dependencies: {
+          yaml: manifest.devDependencies.yaml,
+          turbo: manifest.devDependencies.turbo,
+        },
+      });
+      manifest.devDependencies.yaml = "^2.8.2";
+      await writeFile(join(root, "package.json"), JSON.stringify(manifest));
+      expect(() =>
+        execFileSync("bash", ["-e", "-c", script], { cwd: root, env, stdio: "pipe" }),
+      ).toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
   test.each(["web", "console"])("reuses only the unchanged app when %s changes", (app) => {

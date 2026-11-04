@@ -717,13 +717,27 @@ jobs:
             fi
           done
           [[ "${IMAGE_REPOSITORY}" != "${CONSOLE_IMAGE_REPOSITORY}" ]]
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.15.1
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - run: pnpm install --frozen-lockfile
+      - name: Prepare isolated image planning tools
+        env:
+          PROMOTION_TOOLS_DIR: ${{ runner.temp }}/promotion-plan-tools
+        run: |
+          node --input-type=module <<'JS'
+          import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const { devDependencies } = JSON.parse(readFileSync('package.json', 'utf8'));
+          const dependencies = Object.fromEntries(['yaml', 'turbo'].map((name) => {
+            const version = devDependencies[name];
+            if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`Unpinned planning tool: ${name}`);
+            return [name, version];
+          }));
+          mkdirSync(process.env.PROMOTION_TOOLS_DIR, { recursive: true });
+          writeFileSync(join(process.env.PROMOTION_TOOLS_DIR, 'package.json'), JSON.stringify({ private: true, dependencies }));
+          JS
+          npm install --prefix "${PROMOTION_TOOLS_DIR}" --ignore-scripts --no-audit --no-fund --package-lock=false
+          echo "${PROMOTION_TOOLS_DIR}/node_modules/.bin" >> "${GITHUB_PATH}"
       - name: Find last successful paired deployment evidence
         id: baseline
         uses: actions/github-script@v7
@@ -745,6 +759,7 @@ jobs:
         uses: actions/github-script@v7
         env:
           IMAGE_PLAN_FILE: ${{ runner.temp }}/promotion-image-plan.json
+          PROMOTION_TOOLS_MANIFEST: ${{ runner.temp }}/promotion-plan-tools/package.json
           BASELINE_DIR: ${{ runner.temp }}/paired-baseline
           BASELINE_ARTIFACT_ID: ${{ steps.baseline.outputs.artifact_id }}
           BASELINE_RUN_ID: ${{ steps.baseline.outputs.run_id }}
