@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.32"
+version: "1.33"
 status: "active"
 authority: "runbook"
 updated_at: "2026-11-04"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.32
+# oioi-bwg Deployment / Migration Runbook v1.33
 
 ## 1. 목적
 
@@ -573,6 +573,13 @@ lockfile·앱 Dockerfile·공통 build 설정·build-time 공개 설정 변경, 
 읽어 삭제·추가 양쪽을 판정하며 symlink·실행 mode·불완전한 diff는 예외로 통과시키지 않는다.
 앱 변경은 Turbo의 실제 affected 결과와 함께 확인한다. 변경되지 않은 공용 UI 패키지의 transit
 노드가 결과에 있다는 이유만으로 두 앱을 재빌드하지 않으며 공용 UI source 변경은 계속 두 앱을 빌드한다.
+2026-11-04 CI 입력 보완: `.dockerignore`가 `.github`를 제외하고 negation이 없을 때,
+일반 파일인 `verify.yml`·`publish-build-cache.yml`·`deploy-promotion.yml`만 제외 후보로 삼는다.
+기준/현재 `verify.yml`을 YAML 파서로 읽어 anchor를 해석한 `promotion_images` 전체 job과
+workflow 전역 `env`·`defaults`가 같아야 한다. 빌드 인자·플랫폼·Dockerfile 경로·action·공유 env 변경,
+미분류 workflow/local action·실행 mode·symlink·YAML 오류/경고는 두 이미지를 빌드한다.
+제외 후 앱 입력이 없으면 Turbo 실행 없이 두 digest를 재사용한다. 앱 입력이 남으면 기존 affected
+판정을 유지한다. 이 판정은 이미지 재사용에만 적용하며 Ready 검증 범위를 줄이지 않는다.
 증거 누락/만료/불일치는 재사용을 금지한다. 첫 paired deployment는 두 이미지를 빌드한다.
 기존 source/run은 현재 조합 검증의 출처다. 각 image의 `buildSourceSha`와 `origin`(built/reused)을
 별도로 기록하고 Sentry release·OCI revision은 실제 build source를 유지한다. 재사용한 digest도 현재

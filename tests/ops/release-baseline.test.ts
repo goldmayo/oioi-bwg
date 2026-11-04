@@ -1,4 +1,6 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -44,10 +46,23 @@ const receipt = {
 const rawChange = (path: string, before = "100644", after = "100644", status = "M") =>
   `:${before} ${after} ${"a".repeat(40)} ${"b".repeat(40)} ${status}\0${path}\0`;
 
-function imageCommands(raw: string, tasks: { package: string }[] = [], ignore = "docs\n") {
+const workflow = readFileSync(
+  new URL("../../.github/workflows/verify.yml", import.meta.url),
+  "utf8",
+);
+
+function imageCommands(
+  raw: string,
+  tasks: { package: string }[] = [],
+  ignore = "docs\n",
+  sourceWorkflow = workflow,
+) {
   return vi.fn((cmd: string, args: string[]) => {
     if (cmd !== "git") return JSON.stringify({ tasks });
-    if (args[0] === "show") return ignore;
+    if (args[0] === "show") {
+      if (args[1].endsWith(":.dockerignore")) return ignore;
+      return args[1].startsWith(candidate.sourceSha) ? workflow : sourceWorkflow;
+    }
     if (args[0] === "diff") return raw;
     return "";
   });
@@ -158,6 +173,111 @@ function fixture() {
 }
 
 describe("paired release evidence and conservative image selection", () => {
+  test.each([
+    ".github/workflows/verify.yml",
+    ".github/workflows/publish-build-cache.yml",
+    ".github/workflows/deploy-promotion.yml",
+  ])("동일 빌드 job을 유지한 %s 변경은 검증된 두 이미지를 재사용한다", (file) => {
+    const execute = imageCommands(
+      rawChange(file),
+      [],
+      "docs\n.github\n",
+      workflow.replace("timeout-minutes: 2", "timeout-minutes: 3"),
+    );
+    expect(
+      planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+    ).toEqual({ web: false, console: false });
+    expect(execute.mock.calls.some(([cmd]) => cmd === "pnpm")).toBe(false);
+  });
+  test.each([
+    ["NEXT_PUBLIC_APP_ENV: production", "NEXT_PUBLIC_APP_ENV: preview"],
+    ['SENTRY_SOURCE_MAPS_ENABLED: "true"', 'SENTRY_SOURCE_MAPS_ENABLED: "false"'],
+    ["platforms: linux/arm64", "platforms: linux/amd64"],
+    ["file: apps/${{ matrix.app }}/Dockerfile", "file: alternate/Dockerfile"],
+    ["docker/build-push-action@v6", "docker/build-push-action@v7"],
+    ["target: runner", "target: builder"],
+    ["name: Verify", "name: Verify\nenv:\n  NODE_OPTIONS: --jitless"],
+    ["name: Verify", "name: Verify\ndefaults:\n  run:\n    working-directory: apps/web"],
+  ])("CI 변경이어도 빌드 입력 %s 변경은 두 이미지를 다시 빌드한다", (before, after) => {
+    expect(workflow).toContain(before);
+    const execute = imageCommands(
+      rawChange(".github/workflows/verify.yml"),
+      [],
+      "docs\n.github\n",
+      workflow.replaceAll(before, after),
+    );
+    expect(
+      planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+    ).toEqual({ web: true, console: true });
+  });
+  test.each([
+    [rawChange(".github/workflows/unknown.yml"), "docs\n.github\n", workflow],
+    [rawChange(".github/actions/build/action.yml"), "docs\n.github\n", workflow],
+    [rawChange(".github/workflows/verify.yml", "100755"), "docs\n.github\n", workflow],
+    [rawChange(".github/workflows/verify.yml", "100644", "120000"), "docs\n.github\n", workflow],
+    [rawChange(".github/workflows/verify.yml"), "docs\n", workflow],
+    [rawChange(".github/workflows/verify.yml"), ".github\n!.github/actions", workflow],
+    [rawChange(".github/workflows/verify.yml"), ".github\n", "jobs: ["],
+    [rawChange(".github/workflows/verify.yml"), ".github\n", "jobs: {}"],
+    [rawChange(".github/workflows/verify.yml"), ".github\n", workflow + "\njobs: {}\n"],
+  ])("CI 제외 근거가 불완전하거나 미분류 변경이면 재빌드한다", (raw, ignore, source) => {
+    const execute = imageCommands(raw, [], ignore, source);
+    expect(
+      planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+    ).toEqual({ web: true, console: true });
+  });
+  test("CI·앱 혼합 변경과 앱→CI rename은 앱 변경을 누락하지 않는다", () => {
+    for (const raw of [
+      rawChange("apps/console/a.tsx") + rawChange(".github/workflows/verify.yml"),
+      rawChange("apps/console/a.tsx", "100644", "000000", "D") +
+        rawChange(".github/workflows/deploy-promotion.yml", "000000", "100644", "A"),
+    ]) {
+      const execute = imageCommands(raw, [{ package: "@oioi-bwg/console" }], ".github\n");
+      expect(
+        planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+      ).toEqual({ web: false, console: true });
+    }
+  });
+  test("실제 Git 두 커밋의 CI-only 변경은 pnpm 없이 재사용을 판정한다", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-ci-inputs-"));
+    const git = (...args: string[]) =>
+      execFileSync("git", args, { cwd: directory, encoding: "utf8" }).trim();
+    try {
+      git("init", "-q");
+      git("config", "user.name", "fixture");
+      git("config", "user.email", "fixture@example.test");
+      await writeFile(join(directory, ".dockerignore"), ".github\n");
+      await mkdir(join(directory, ".github/workflows"), { recursive: true });
+      const path = join(directory, ".github/workflows/verify.yml");
+      await writeFile(path, workflow);
+      git("add", ".");
+      git("commit", "-qm", "baseline");
+      const sourceSha = git("rev-parse", "HEAD");
+      const baseline = {
+        ...candidate,
+        sourceSha,
+        images: Object.fromEntries(
+          Object.entries(candidate.images).map(([app, image]) => [
+            app,
+            { ...image, buildSourceSha: sourceSha },
+          ]),
+        ),
+      };
+      const verified = { ...proof, releaseId: releaseId(baseline) };
+      await writeFile(path, workflow.replace("timeout-minutes: 2", "timeout-minutes: 3"));
+      git("commit", "-qam", "verification timeout");
+      const execute = vi.fn((command: string, args: string[]) => {
+        if (command !== "git") throw new Error("CI-only selection must not need pnpm");
+        return execFileSync(command, args, { cwd: directory, encoding: "utf8" });
+      });
+      expect(
+        planImages({ baseline, proof: verified, sourceSha: git("rev-parse", "HEAD"), execute })
+          .build,
+      ).toEqual({ web: false, console: false });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
   test.each(["web", "console"])("reuses only the unchanged app when %s changes", (app) => {
     const execute = vi.fn((cmd: string) =>
       cmd === "git"
