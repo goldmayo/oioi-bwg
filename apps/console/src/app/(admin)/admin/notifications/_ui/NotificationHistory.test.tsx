@@ -21,12 +21,13 @@ const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   enable: vi.fn(),
   disable: vi.fn(),
+  wide: true,
 }));
 vi.mock("@/shared/api/http-client", () => ({ http: mocks }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mocks.push, replace: mocks.replace }),
 }));
-vi.mock("@/shared/model/useMediaQuery", () => ({ useMediaQuery: () => true }));
+vi.mock("@/shared/model/useMediaQuery", () => ({ useMediaQuery: () => mocks.wide }));
 vi.mock("../../_ui/notification-provider", () => ({
   useNotificationContext: () => ({
     accountId,
@@ -44,6 +45,7 @@ const requests = () =>
     .filter(([url]) => url.includes("/history?"))
     .map(([url]) => new URL(url, "http://local").searchParams);
 beforeEach(() => {
+  mocks.wide = true;
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -193,4 +195,21 @@ it("브라우저 알림은 사용자 조작으로만 변경하며 실패를 알�
   fireEvent.click(screen.getByRole("switch", { name: "브라우저 알림" }));
   await screen.findByText(/브라우저 알림 설정을 변경하지 못했습니다/);
   expect(mocks.disable).toHaveBeenCalledOnce();
+});
+
+it("모바일에서는 알림 설정 시트를 열어 텍스트 없이 스위치 상태를 제공한다", async () => {
+  mocks.wide = false;
+  mount();
+  await screen.findByText("1-10 of 25");
+  expect(screen.queryByRole("switch")).toBeNull();
+  expect(screen.getAllByRole("button", { name: "모두 읽음" })).toHaveLength(1);
+  fireEvent.click(screen.getByRole("button", { name: "알림 설정" }));
+  expect(screen.getByRole("dialog", { name: "알림 설정" })).toBeTruthy();
+  const toggle = screen.getByRole("switch", { name: "브라우저 알림" });
+  expect(toggle.getAttribute("aria-checked")).toBe("true");
+  expect(screen.queryByText("ON", { exact: true })).toBeNull();
+  fireEvent.click(toggle);
+  await waitFor(() => expect(mocks.disable).toHaveBeenCalledOnce());
+  fireEvent.click(screen.getByRole("button", { name: "알림 설정 닫기" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });

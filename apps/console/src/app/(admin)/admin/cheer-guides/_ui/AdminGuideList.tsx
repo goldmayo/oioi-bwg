@@ -33,19 +33,21 @@ export function AdminGuideList() {
   );
   const protectedSelection = selected.some((guide) => !guide.deletable);
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       <ListHeader
         title="응원법 관리"
+        compactOnMobile
         description="곡의 공연 모드별 응원법을 확인합니다."
         action={
           canManage && (
-            <Button variant="q" asChild>
+            <Button variant="q" className="h-11 md:h-9" asChild>
               <a href={adminPaths.guideCreate}>응원법 추가</a>
             </Button>
           )
         }
       />
       <ListToolbar
+        stackActionsOnMobile
         selection={
           <ListSelection
             count={selected.length}

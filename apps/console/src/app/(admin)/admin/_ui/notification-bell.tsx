@@ -2,9 +2,12 @@
 import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 import { notificationQueries } from "@/entities/notification";
 
+import { adminPaths } from "@/shared/config/admin-routes";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import {
   Sheet,
@@ -21,6 +24,7 @@ export function NotificationBell() {
   const { accountId } = useNotificationContext();
   const list = useInfiniteQuery(notificationQueries.list(accountId));
   const count = list.data?.pages[0]?.unreadCount ?? 0;
+  const isHistory = usePathname() === adminPaths.notificationList;
   const [open, setOpen] = useState(false);
   return (
     <Sheet
@@ -42,7 +46,10 @@ export function NotificationBell() {
           {count ? (
             <span
               aria-hidden="true"
-              className="bg-primary text-primary-foreground absolute top-0 right-0 flex min-w-4 items-center justify-center rounded-full px-1 text-xs leading-4 font-semibold tabular-nums"
+              className={cn(
+                "bg-primary text-primary-foreground absolute top-0 right-0 flex min-w-4 items-center justify-center rounded-full px-1 text-xs leading-4 font-semibold tabular-nums",
+                isHistory && "max-md:hidden",
+              )}
             >
               {count > 99 ? "99+" : count}
             </span>

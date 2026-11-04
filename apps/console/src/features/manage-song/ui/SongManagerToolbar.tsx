@@ -20,16 +20,19 @@ export function SongManagerToolbar({
 }: Props) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <Input
-          placeholder="곡 제목, slug, 앨범명으로 검색..."
+          placeholder="곡·앨범 검색"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           aria-label="곡 검색"
-          className="sm:max-w-xs"
+          className="h-11 min-w-0 flex-1 md:h-9 md:max-w-xs"
         />
         <Select value={albumFilter} onValueChange={onAlbumChange}>
-          <SelectTrigger aria-label="앨범 필터" className="w-full sm:w-40">
+          <SelectTrigger
+            aria-label="앨범 필터"
+            className="w-32 shrink-0 data-[size=default]:h-11 md:w-40 md:data-[size=default]:h-9"
+          >
             <SelectValue placeholder="전체 앨범" />
           </SelectTrigger>
           <SelectContent>
