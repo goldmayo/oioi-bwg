@@ -25,6 +25,7 @@ vi.mock("node:fs/promises", async (original) => ({
   readFile: vi.fn((await original<typeof import("node:fs/promises")>()).readFile),
 }));
 
+const baseSha = "1".repeat(40);
 const sourceSha = "a".repeat(40);
 const sourceTree = "b".repeat(40);
 const mergedSha = "c".repeat(40);
@@ -36,8 +37,8 @@ const pr = {
   merged: true,
   merged_at: "2026-10-05T10:10:00Z",
   merge_commit_sha: mergedSha,
-  base: { ref: "migration_develop" },
-  head: { ref: "migration_main", sha: sourceSha, repo: { full_name: repository } },
+  base: { ref: "production", sha: baseSha },
+  head: { ref: "main", sha: sourceSha, repo: { full_name: repository } },
 };
 const candidate = {
   prNumber: pr.number,
@@ -67,7 +68,7 @@ const run = {
   run_attempt: 1,
   event: "pull_request",
   head_sha: sourceSha,
-  head_branch: "migration_main",
+  head_branch: "main",
   head_repository: { full_name: repository },
   pull_requests: [{ number: pr.number }],
   created_at: "2026-10-05T10:00:00Z",
@@ -144,9 +145,7 @@ describe("parallel image results", () => {
     ).toThrow();
   });
   test("image jobs record actual source/run and the collector binds both files before smoke", async () => {
-    const f = fixture();
-    f.livePr.state = "open";
-    f.github.rest.repos.getBranch.mockResolvedValue({ data: { commit: { sha: sourceSha } } });
+    const f = openFixture();
     const build = { web: true, console: true };
     const items = results(build);
     for (const [key, value] of Object.entries({
@@ -205,9 +204,15 @@ function fixture() {
   const github = {
     rest: {
       pulls: { get: vi.fn(async () => ({ data: livePr })) },
-      repos: { getBranch: vi.fn(async () => ({ data: { commit: { sha: mergedSha } } })) },
+      repos: {
+        getBranch: vi.fn(async ({ branch }: { branch: string }) => ({
+          data: { commit: { sha: branch === "main" ? sourceSha : mergedSha } },
+        })),
+      },
       git: {
-        getCommit: vi.fn(async () => ({ data: { tree: { sha: sourceTree }, parents: [{}] } })),
+        getCommit: vi.fn(async () => ({
+          data: { tree: { sha: sourceTree }, parents: [{ sha: baseSha }, { sha: sourceSha }] },
+        })),
       },
       actions: {
         listWorkflowRuns: vi.fn(async () => ({ data: { workflow_runs: [run] } })),
@@ -230,14 +235,23 @@ function fixture() {
   const context = {
     repo: { owner: "goldmayo", repo: "oioi-bwg" },
     sha: mergedSha,
-    payload: { pull_request: pr },
+    payload: { pull_request: structuredClone(pr) },
   };
   return { github, core, context, livePr, jobs, artifacts };
 }
 
+function openFixture() {
+  const f = fixture();
+  f.livePr.state = "open";
+  f.github.rest.repos.getBranch.mockImplementation(async ({ branch }) => ({
+    data: { commit: { sha: branch === "main" ? sourceSha : baseSha } },
+  }));
+  return f;
+}
+
 describe("migration promotion identity", () => {
   test.each([
-    { ...pr, base: { ref: "migration_main" } },
+    { ...pr, base: { ref: "main" } },
     { ...pr, head: { ...pr.head, ref: "feature/P01" } },
     { ...pr, head: { ...pr.head, repo: { full_name: "fork/oioi-bwg" } } },
   ])("rejects ordinary feature or fork promotions", (value) => {
@@ -289,10 +303,28 @@ describe("migration promotion identity", () => {
     expect(() => assertCandidate(duplicate, duplicate)).toThrow("distinct");
   });
 
+  test.each(["pr-base", "branch-base", "draft", "retarget", "merge-parents"])(
+    "blocks %s changes before image output",
+    async (change) => {
+      const f = openFixture();
+      if (change === "pr-base") f.livePr.base.sha = mergedSha;
+      if (change === "branch-base")
+        f.github.rest.repos.getBranch.mockImplementation(async ({ branch }) => ({
+          data: { commit: { sha: branch === "main" ? sourceSha : mergedSha } },
+        }));
+      if (change === "draft") Object.assign(f.livePr, { draft: true });
+      if (change === "retarget") f.livePr.base.ref = "main";
+      if (change === "merge-parents")
+        f.github.rest.git.getCommit.mockResolvedValue({
+          data: { tree: { sha: sourceTree }, parents: [{ sha: sourceSha }, { sha: baseSha }] },
+        });
+      await expect(prepare(f)).rejects.toThrow();
+      expect(f.core.setOutput).not.toHaveBeenCalled();
+    },
+  );
+
   test("records and reports both digests under the checked source/run/attempt", async () => {
-    const f = fixture();
-    f.livePr.state = "open";
-    f.github.rest.repos.getBranch.mockResolvedValue({ data: { commit: { sha: sourceSha } } });
+    const f = openFixture();
     for (const [key, value] of Object.entries({
       GITHUB_RUN_ID: "17",
       GITHUB_RUN_ATTEMPT: "1",
@@ -397,10 +429,9 @@ describe("migration promotion identity", () => {
   });
 
   test("prevents publish when the PR or integration head changed", async () => {
-    const f = fixture();
-    f.livePr.state = "open";
+    const f = openFixture();
+    f.github.rest.repos.getBranch.mockResolvedValueOnce({ data: { commit: { sha: mergedSha } } });
     await expect(prepare(f)).rejects.toThrow("head changed");
-    f.github.rest.repos.getBranch.mockResolvedValue({ data: { commit: { sha: sourceSha } } });
     f.livePr.head.sha = "e".repeat(40);
     await expect(prepare(f)).rejects.toThrow("head changed");
     expect(f.core.setOutput).not.toHaveBeenCalled();
@@ -437,7 +468,7 @@ describe("migration promotion identity", () => {
     vi.unstubAllEnvs();
   });
 
-  test("resolves only the verified pre-merge artifact for the current squash result", async () => {
+  test("resolves only the verified pre-merge artifact for the reviewed merge result", async () => {
     const f = fixture();
     await resolvePromotion(f);
     expect(f.core.setOutput).toHaveBeenCalledWith("artifact_id", 99);
@@ -445,6 +476,18 @@ describe("migration promotion identity", () => {
     expect(f.github.rest.actions.listWorkflowRuns).toHaveBeenCalledWith(
       expect.objectContaining({ head_sha: sourceSha }),
     );
+  });
+
+  test("accepts a changed closed-event base only when the actual merge preserves the tested source tree", async () => {
+    const f = fixture();
+    const nextBase = "f".repeat(40);
+    f.context.payload.pull_request.base.sha = nextBase;
+    f.livePr.base.sha = nextBase;
+    f.github.rest.git.getCommit.mockResolvedValue({
+      data: { tree: { sha: sourceTree }, parents: [{ sha: nextBase }, { sha: sourceSha }] },
+    });
+    await resolvePromotion(f);
+    expect(f.core.setOutput).toHaveBeenCalledWith("artifact_id", 99);
   });
 
   test("resolves cleared post-merge associations while retaining exact candidate PR validation", async () => {
@@ -463,7 +506,11 @@ describe("migration promotion identity", () => {
     "unmerged",
     "head",
     "tree",
-    "not-squash",
+    "squash",
+    "wrong-base",
+    "wrong-source",
+    "reversed-parents",
+    "extra-parent",
     "superseded",
     "expired",
     "missing",
@@ -475,12 +522,25 @@ describe("migration promotion identity", () => {
     if (failure === "head") f.livePr.head.sha = "e".repeat(40);
     if (failure === "tree")
       f.github.rest.git.getCommit
-        .mockResolvedValueOnce({ data: { tree: { sha: sourceTree }, parents: [{}] } })
-        .mockResolvedValueOnce({ data: { tree: { sha: "f".repeat(40) }, parents: [{}] } });
-    if (failure === "not-squash")
+        .mockResolvedValueOnce({
+          data: { tree: { sha: sourceTree }, parents: [{ sha: baseSha }, { sha: sourceSha }] },
+        })
+        .mockResolvedValueOnce({
+          data: { tree: { sha: "f".repeat(40) }, parents: [{ sha: baseSha }, { sha: sourceSha }] },
+        });
+    if (
+      ["squash", "wrong-base", "wrong-source", "reversed-parents", "extra-parent"].includes(failure)
+    ) {
+      const parents = [baseSha, sourceSha];
+      if (failure === "squash") parents.pop();
+      if (failure === "wrong-base") parents[0] = "f".repeat(40);
+      if (failure === "wrong-source") parents[1] = "f".repeat(40);
+      if (failure === "reversed-parents") parents.reverse();
+      if (failure === "extra-parent") parents.push("f".repeat(40));
       f.github.rest.git.getCommit.mockResolvedValue({
-        data: { tree: { sha: sourceTree }, parents: [{}, {}] },
+        data: { tree: { sha: sourceTree }, parents: parents.map((sha) => ({ sha })) },
       });
+    }
     if (failure === "superseded")
       f.github.rest.repos.getBranch.mockResolvedValue({
         data: { commit: { sha: "f".repeat(40) } },
@@ -496,10 +556,9 @@ describe("migration promotion identity", () => {
   test("keeps migration pushes out of verification and build out of deployment", async () => {
     const verify = await readFile(".github/workflows/verify.yml", "utf8");
     const deploy = await readFile(".github/workflows/deploy-promotion.yml", "utf8");
-    const push = verify.slice(verify.indexOf("  push:"), verify.indexOf("concurrency:"));
-    expect(push).toContain("- main");
-    expect(push).toContain("- develop");
-    expect(push).not.toContain("migration_");
+    expect(verify).not.toMatch(/^  push:/m);
+    expect(verify).toContain("  schedule:");
+    expect(verify).toContain("  workflow_dispatch:");
     expect(deploy).toContain("types: [closed]");
     expect(deploy).not.toContain("docker/build-push-action");
     expect(deploy).not.toContain("pnpm build");

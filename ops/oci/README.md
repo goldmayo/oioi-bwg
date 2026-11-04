@@ -6,8 +6,8 @@
 ```text
 feature/* → PR → migration_main (verify, 배포 없음)
 migration_main → Promotion PR → migration_develop
-  → full verify → ARM64 candidate publish → 동일 digest pull/container smoke → 검증 artifact
-Promotion squash merge
+  → main source/tree 검증 근거 재사용 → ARM64 candidate publish → 동일 digest pull/container smoke → 검증 artifact
+Promotion merge commit
   → source SHA/tree·merged tree·성공한 run/artifact 대조
   → 새 build/publish 없이 검증한 동일 digest 선택
   → OCI Run Command API → Oracle Cloud Agent / ocarun
@@ -177,16 +177,20 @@ sudo systemctl status oioi-filesystem-metric.timer
 
 secret value, auth token, API signing private key, webhook URL, full `DATABASE_URL`은 evidence에 기록하지 않는다.
 
-## 6. Migration branch 및 GitHub 수동 설정
+## 6. main/production 및 GitHub 설정
+
+2026-11-04부터 활성 브랜치는 main/production이다. 이전 migration_main/migration_develop의
+실제 관측·배포 기록은 원래 이름으로 보존하며 읽기 검증에서 호환한다. 기존 레거시 브랜치와 혼동하지 않는다.
 
 정책 SSOT는 [active 배포 runbook §21](../../docs/migration/oioi-bwg-architecture-clean-v1/12-deployment-migration-runbook.md#21-cicd)이다.
-일반 작업은 최신 `migration_main`에서 분기하여 PR/squash로 통합한다. 배포는 별도 `migration_main → migration_develop`
+일반 작업은 최신 `main`에서 분기하여 PR/squash로 통합한다. 배포는 별도 `main → production`
 Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollback 경계는 변경하지 않는다.
 
-- `migration_main`: PR required, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
-- `migration_develop`: 기존 PR/force-push/verify ruleset에 required `promotion`과 최신 base 포함 검증(strict)·stale approval 재검토를 추가한다.
-- `oci-development-image` Environment: 기존 `migration_develop`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
-  credential을 사용하는 PR job은 동일 저장소 `migration_main → migration_develop`에서만 실행된다.
+- `main`: PR required, required `verify`, 최신 base 포함 검증(strict), direct/force push 금지, stale approval 재검토.
+- `production`: PR required, required `verify`·`promotion`, loose status checks·merge commit only,
+  direct/force push 금지·stale approval 재검토다. repository는 merge와 squash를 허용하고 main은 squash-only로 제한한다.
+- `oci-development-image` Environment: 기존 `production`에 더해 branch pattern `refs/pull/*/merge`를 허용한다.
+  credential을 사용하는 PR job은 동일 저장소 `main → production`에서만 실행된다.
 - 후보 기록은 GitHub Actions artifact `promotion-<source SHA>-<attempt>`의 `candidate.json`이다.
   공통 PR/source SHA/tree/run/attempt는 조합 검증 출처이며 `images.web`·`images.console`에 repository/digest/buildSourceSha/origin을 기록한다.
   보관 90일 안에 merge하며, 단일 이미지 이전 형식·한쪽 누락·다른 registry·삭제/만료/미완료 run/다른 tree는 거절한다.
@@ -204,9 +208,10 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
   paired deploy가 이 helper로 두 env를 만들고 installer/preflight도 helper 파일을 포함한다.
   Console 입력 예시는 `console-runtime-{public,secrets}.env.example`이다. installer는 Console 설정을 생성/덮어쓰지 않는다.
   두 env의 서비스 적용·pair state·복구·최초 전환은 아래 B2 paired host 계약을 따른다. 실제 host 설치는 별도 승인이다.
-- repository의 squash-only 전략을 유지한다. 테스트 merge tree와 실제 squash tree 모두 source tree와 같아야 한다.
-  일치하지 않으면 source를 먼저 갱신하고 PR 검증을 다시 수행한다.
-- base를 바꾼 PR은 새 synchronize/reopen 실행에서 검증한다. 제목·본문 수정만으로 candidate를 다시 build하지 않는다.
+- 일반 feature는 squash, 새 Promotion은 merge commit이다. 검증용 merge와 실제 merge의 두 부모는
+  각 event의 production base·main source이며 순서와 tree를 대조한다. 두 tree 모두 source tree와 같아야 한다.
+  발행 중 source/base가 바뀌면 새 PR event에서 검증한다. 발행 뒤 base 변경도 실제 merge tree와
+  검증한 source tree가 같아야 수용한다. 제목·본문 수정만으로 candidate를 다시 build하지 않는다.
 - `Deploy promotion` run summary에 source/tree·merge SHA·candidate run/attempt·exact digest가 남는다.
   실제 배포 상태는 host current-pair와 성공한 health/readiness/smoke가 기준이다. merge만으로 성공을 간주하지 않는다.
 
@@ -221,6 +226,12 @@ Promotion PR만 사용한다. main/production 정책과 host의 Vault/DB/rollbac
 기존 `migration_develop` ruleset `22798840`에도 strict 검사와 required `promotion`을 적용했다.
 두 ruleset은 PR/필수 검사/force-push 금지와 stale approval 재검토를 적용하며 bypass actor가 없다.
 Environment에는 기존 development branch를 유지하면서 `refs/pull/*/merge` 정책 `62037752`를 추가했다.
+
+2026-11-04 정책 개정은 위의 양쪽 strict·squash-only 배포를 대체한다. 정상 배포에서 별도 이력 연결
+PR을 만들지 않는다. `feature/promotion-without-history` 전환 PR 한 번만 기존 배포 조상을 포함해
+전체 CI 후 main에 merge commit으로 통합하고 main의 squash-only를 복원한다. 이후 develop은
+merge-only·loose, main은 squash-only·strict다. 기존 squash receipt/history 근거의 조회 호환은 유지한다.
+위 값은 목표 설정이며 실제 적용·복원과 필수 check/bypass 보존은 전환 PR의 원격 조회 근거로 확인한다.
 
 ## 7. P06 Metadata 차단
 
@@ -336,6 +347,22 @@ preflight를 통과해야 한다. 예시는 자동 덮어쓰기/Secret 생성이
 이 측정값은 배포 성공 증거가 아니며 측정 실패가 apply/rollback의 exit 0/20/21을 바꾸지 않는다.
 기존 host helper에 계측이 없으면 host 항목은 비어 있고 기존 배포 동작을 유지한다. repo 병합만으로
 보호된 host 파일을 갱신하지 않으며 실제 적용도 위 승인·lock·백업·권한/해시 확인 절차를 따른다.
+
+2026-11-04 Run Command 지연 진단: [배포 #424](https://github.com/goldmayo/oioi-bwg/pull/424)의
+서비스 생성→agent ACK는 약 199.6초, agent 실행은 28.4초였다. 이 VM의
+`/etc/oracle-cloud-agent/plugins/runcommand/config.yml`은 `pollCommandInterval: 4m`이며
+실제 로그도 4분 간격이다. 전체 관측 차이를 CI polling/RPC 비용으로 해석하지 않는다.
+CI adapter는 Python monotonic 시계로 경과 시간과 900초 제한을 측정하고 `poll`에 조회 횟수·
+NotFound 횟수·요청 시간·첫 실행/진행 상태 관측 시간·유효한 서비스 경과 시간을 고정 숫자로만 남긴다.
+서비스 시간은 UTC offset이 있고 0~1시간 범위인 경우만 기록하며 누락/오류가 배포 exit를 바꾸지 않는다.
+
+agent의 `4m → 10s` 변경은 기존 host 변경 승인·백업·복구 기준을 따른다. 검토한 원본 해시·root
+소유권·단일 poll 키와 비실행 상태를 대조하고 한 파일만 원자 교체한다. 현재 active unit은
+`snap.oracle-cloud-agent.oracle-cloud-agent.service`이며 reload를 지원하지 않아 재시작이 필요하다.
+파일 내용·소유권·mode를 복구할 root 보호 백업을 먼저 만들고, 실패하면 원본 복원 후 service를 복구한다.
+앱/DB container·IAM·transport는 이 변경 대상이 아니다. 적용 후 agent 정상 상태·실제 poll 간격·오류와
+기존 두 앱/DB container 불변을 확인하고, 정상 Promotion 1회에서 source/digest·새 구간 시간을 대조한다.
+이 repo 변경만으로 운영 agent 설정이 갱신되거나 실측 단축이 확정된 것으로 처리하지 않는다.
 
 성공 pair는 `deploy/current-pair` → root-only snapshot이며 `previous-pair`에 직전 pair를 보관한다.
 웹/콘솔 runtime env 경로는 `web.env`·`console.env`로 고정한다. pending-pair가 남으면 새 배포를 거절한다.

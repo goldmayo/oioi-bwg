@@ -6,13 +6,11 @@ const digest = /^sha256:[0-9a-f]{64}$/;
 
 export function assertPromotion(pr, repository) {
   if (
-    pr.base.ref !== "migration_develop" ||
-    pr.head.ref !== "migration_main" ||
+    pr.base.ref !== "production" ||
+    pr.head.ref !== "main" ||
     pr.head.repo?.full_name !== repository
   ) {
-    throw new Error(
-      "Only same-repository migration_main → migration_develop promotions are allowed",
-    );
+    throw new Error("Only same-repository main → production promotions are allowed");
   }
 }
 
@@ -117,7 +115,7 @@ export function selectCandidateRun(runs, pr) {
       (item) =>
         item.event === "pull_request" &&
         item.head_sha === pr.head.sha &&
-        item.head_branch === "migration_main" &&
+        item.head_branch === "main" &&
         item.head_repository?.full_name === pr.head.repo.full_name &&
         // GitHub can clear associations after merge; candidate.json still binds the exact PR.
         (item.pull_requests.length === 0 ||
@@ -138,17 +136,29 @@ export async function prepare({ github, context, core }) {
     ...context.repo,
     pull_number: eventPr.number,
   });
+  assertPromotion(pr, context.repo.owner + "/" + context.repo.repo);
   const { data: branch } = await github.rest.repos.getBranch({
     ...context.repo,
-    branch: "migration_main",
+    branch: "main",
   });
   if (
     pr.state !== "open" ||
+    pr.draft ||
     pr.head.sha !== eventPr.head.sha ||
     branch.commit.sha !== pr.head.sha
   ) {
     throw new Error("Promotion head changed; verify and build the new head");
   }
+  const { data: base } = await github.rest.repos.getBranch({
+    ...context.repo,
+    branch: "production",
+  });
+  if (
+    !sha.test(eventPr.base.sha) ||
+    pr.base.sha !== eventPr.base.sha ||
+    base.commit.sha !== eventPr.base.sha
+  )
+    throw new Error("Promotion base changed; start verification for the current base");
   const { data: source } = await github.rest.git.getCommit({
     ...context.repo,
     commit_sha: pr.head.sha,
@@ -157,6 +167,12 @@ export async function prepare({ github, context, core }) {
     ...context.repo,
     commit_sha: context.sha,
   });
+  if (
+    verified.parents.length !== 2 ||
+    verified.parents[0].sha !== eventPr.base.sha ||
+    verified.parents[1].sha !== pr.head.sha
+  )
+    throw new Error("Promotion verification merge parents mismatch");
   assertSameTree(source.tree.sha, verified.tree.sha);
   core.setOutput("source_sha", pr.head.sha);
   core.setOutput("source_tree", source.tree.sha);
@@ -330,7 +346,7 @@ export async function resolve({ github, context, core }) {
   }
   const { data: branch } = await github.rest.repos.getBranch({
     ...context.repo,
-    branch: "migration_develop",
+    branch: "production",
   });
   if (branch.commit.sha !== pr.merge_commit_sha)
     throw new Error("Promotion was superseded by a newer merge");
@@ -342,7 +358,14 @@ export async function resolve({ github, context, core }) {
     ...context.repo,
     commit_sha: pr.merge_commit_sha,
   });
-  if (merged.parents.length !== 1) throw new Error("Promotion must use squash merge");
+  if (
+    !sha.test(eventPr.base.sha) ||
+    pr.base.sha !== eventPr.base.sha ||
+    merged.parents.length !== 2 ||
+    merged.parents[0].sha !== eventPr.base.sha ||
+    merged.parents[1].sha !== pr.head.sha
+  )
+    throw new Error("Promotion must merge the reviewed base and source");
   assertSameTree(source.tree.sha, merged.tree.sha);
   const { data } = await github.rest.actions.listWorkflowRuns({
     ...context.repo,

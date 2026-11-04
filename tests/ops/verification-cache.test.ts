@@ -51,7 +51,7 @@ function fixture() {
   const key = "Linux-verify-amd64-v4-input";
   const context = {
     eventName: "push",
-    ref: "refs/heads/migration_main",
+    ref: "refs/heads/main",
     sha: "merged",
     repo: { owner: "owner", repo: "repo" },
   };
@@ -59,7 +59,7 @@ function fixture() {
     number: 42,
     merged_at: "2026-10-21T06:00:00Z",
     merge_commit_sha: "merged",
-    base: { ref: "migration_main" },
+    base: { ref: "main" },
     head: { sha: "source", repo: { full_name: "owner/repo" } },
   };
   const run = {
@@ -115,10 +115,10 @@ describe("merged PR cache publication", () => {
     );
   });
 
-  it("also publishes Promotion cache under migration_develop", async () => {
+  it("also publishes Promotion cache under develop", async () => {
     const f = fixture();
-    f.context.ref = "refs/heads/migration_develop";
-    f.pr.base.ref = "migration_develop";
+    f.context.ref = "refs/heads/production";
+    f.pr.base.ref = "production";
     await findMergedCache(f);
     expect(f.core.setOutput).toHaveBeenCalledWith("artifact_id", 200);
   });
@@ -147,7 +147,7 @@ describe("merged PR cache publication", () => {
     ["context.ref", "refs/heads/feature/test"],
     ["pr.merged_at", ""],
     ["pr.merge_commit_sha", "other"],
-    ["pr.base.ref", "main"],
+    ["pr.base.ref", "other"],
     ["pr.head.repo.full_name", "fork/repo"],
     ["run.head_sha", "old"],
     ["run.head_commit.tree_id", "old"],

@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { isDeepStrictEqual } from "node:util";
 
 import { assertCandidate, buildConfigHash, releaseId } from "./promotion.mjs";
 
@@ -17,7 +19,7 @@ export async function findBaseline({ github, context, core }) {
     const run = runs
       .filter(
         (r) =>
-          r.head_branch === "migration_main" &&
+          ["main", "migration_main"].includes(r.head_branch) &&
           r.head_repository?.full_name === `${context.repo.owner}/${context.repo.repo}`,
       )
       .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))[0];
@@ -64,7 +66,7 @@ export async function validateBaseline({
   if (
     run.path !== ".github/workflows/deploy-promotion.yml" ||
     run.event !== "pull_request" ||
-    run.head_branch !== "migration_main" ||
+    !["main", "migration_main"].includes(run.head_branch) ||
     run.head_sha !== candidate.sourceSha ||
     run.head_repository?.full_name !== `${context.repo.owner}/${context.repo.repo}` ||
     run.status !== "completed" ||
@@ -104,8 +106,8 @@ export async function validateBaseline({
     !pr.merged ||
     pr.head.sha !== candidate.sourceSha ||
     pr.merge_commit_sha !== receipt.mergedSha ||
-    pr.base.ref !== "migration_develop" ||
-    pr.head.ref !== "migration_main" ||
+    !["production", "migration_develop"].includes(pr.base.ref) ||
+    !["main", "migration_main"].includes(pr.head.ref) ||
     pr.head.repo?.full_name !== `${context.repo.owner}/${context.repo.repo}`
   )
     throw new Error("Deployment PR mismatch");
@@ -117,10 +119,17 @@ export async function validateBaseline({
     ...context.repo,
     commit_sha: receipt.mergedSha,
   });
+  // Existing successful squash receipts remain valid reuse sources after the policy transition.
+  const legacySquash = merged.parents.length === 1;
+  const promotionMerge =
+    merged.parents.length === 2 &&
+    /^[0-9a-f]{40}$/.test(pr.base.sha ?? "") &&
+    merged.parents[0].sha === pr.base.sha &&
+    merged.parents[1].sha === candidate.sourceSha;
   if (
     source.tree.sha !== candidate.sourceTree ||
     merged.tree.sha !== candidate.sourceTree ||
-    merged.parents.length !== 1
+    (!legacySquash && !promotionMerge)
   )
     throw new Error("Deployment tree mismatch");
   const { data: verification } = await github.rest.actions.getWorkflowRun({
@@ -131,7 +140,7 @@ export async function validateBaseline({
     verification.path !== ".github/workflows/verify.yml" ||
     verification.head_sha !== candidate.sourceSha ||
     verification.event !== "pull_request" ||
-    verification.head_branch !== "migration_main" ||
+    !["main", "migration_main"].includes(verification.head_branch) ||
     verification.head_repository?.full_name !== `${context.repo.owner}/${context.repo.repo}` ||
     verification.run_attempt !== candidate.runAttempt ||
     verification.conclusion !== "success"
@@ -176,8 +185,27 @@ export async function validateBaseline({
 /** @type {(file: string, args: string[], options: import('node:child_process').ExecFileSyncOptions) => string | Buffer} */
 const executeImagePlanCommand = execFileSync;
 
+const ciWorkflows = new Set([
+  ".github/workflows/verify.yml",
+  ".github/workflows/publish-build-cache.yml",
+  ".github/workflows/deploy-promotion.yml",
+]);
+
+// Resolve anchors as well: promotion_images.env is owned by promotion_plan today.
+function imageBuildRecipe(text) {
+  const { parseDocument } = createRequire(process.env.PROMOTION_TOOLS_MANIFEST || import.meta.url)(
+    "yaml",
+  );
+  const document = parseDocument(text, { merge: true });
+  if (document.errors.length || document.warnings.length) throw new Error("Invalid workflow");
+  const workflow = document.toJS();
+  const job = workflow?.jobs?.promotion_images;
+  if (!Array.isArray(job?.steps) || !job.steps.length) throw new Error("Missing image build job");
+  return { env: workflow.env, defaults: workflow.defaults, job };
+}
+
 // docs/는 Docker context에서 제외된다. mode 변경·symlink·rename 양쪽은 무시하지 않는다.
-function imageInputFiles(raw, docsExcluded) {
+function imageInputFiles(raw, docsExcluded, ciExcluded = false) {
   if (raw === "") return [];
   const fields = raw.split("\0");
   if (fields.pop() !== "" || fields.length % 2 !== 0) throw new Error("Invalid image diff");
@@ -192,6 +220,7 @@ function imageInputFiles(raw, docsExcluded) {
     const file = fields[i + 1];
     if (!file) throw new Error("Missing image input path");
     if (docsExcluded && file.startsWith("docs/") && !fields[i].includes("100755")) continue;
+    if (ciExcluded && ciWorkflows.has(file) && !fields[i].includes("100755")) continue;
     files.push(file);
   }
   return files;
@@ -232,17 +261,33 @@ export function planImages({
     )
       .split(/\r?\n/)
       .map((line) => line.trim());
-    const files = imageInputFiles(
-      raw,
-      ignore.includes("docs") && !ignore.some((line) => line.startsWith("!")),
-    );
-    // Root configuration, shared packages, lockfile, Dockerfile, workflows, or any
+    const noNegations = !ignore.some((line) => line.startsWith("!"));
+    let ciExcluded = false;
+    if (
+      ignore.includes(".github") &&
+      noNegations &&
+      [...ciWorkflows].some((file) => raw.includes(`\0${file}\0`))
+    ) {
+      const recipe = (sha) =>
+        imageBuildRecipe(
+          String(
+            execute("git", ["show", `${sha}:.github/workflows/verify.yml`], {
+              encoding: "utf8",
+              stdio: ["ignore", "pipe", "pipe"],
+            }),
+          ),
+        );
+      ciExcluded = isDeepStrictEqual(recipe(baseline.sourceSha), recipe(sourceSha));
+    }
+    const files = imageInputFiles(raw, ignore.includes("docs") && noNegations, ciExcluded);
+    // Root configuration, shared packages, lockfile, Dockerfile, unknown workflows, or any
     // unknown path invalidate both. Turbo supplies the existing dependency graph.
     if (files.some((f) => f.endsWith("/Dockerfile") || !/^apps\/(web|console)\//.test(f)))
       return result;
+    if (!files.length) return { baseline: proof, build: { web: false, console: false } };
     const dry = JSON.parse(
       String(
-        execute("pnpm", ["exec", "turbo", "run", "build", "--affected", "--dry=json"], {
+        execute("turbo", ["run", "build", "--affected", "--dry=json"], {
           encoding: "utf8",
           stdio: ["ignore", "pipe", "pipe"],
           env: { ...process.env, TURBO_SCM_BASE: baseline.sourceSha, TURBO_SCM_HEAD: sourceSha },

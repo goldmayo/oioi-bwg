@@ -1,15 +1,17 @@
 import { expect, test, vi } from "vitest";
 import { verifyHistory, verifySource } from "../../ops/oci/source-verification.mjs";
-import { docsOnly, verificationJobNames } from "../../scripts/verification-scope.mjs";
+import { docsOnly, impactOnly, verificationJobNames } from "../../scripts/verification-scope.mjs";
 
 vi.mock("../../ops/oci/promotion.mjs", () => ({ prepare: vi.fn(async () => "tree") }));
 vi.mock("../../scripts/verification-scope.mjs", async (original) => ({
   ...(await original<typeof import("../../scripts/verification-scope.mjs")>()),
   docsOnly: vi.fn(() => false),
+  impactOnly: vi.fn(() => false),
 }));
 
 function fixture() {
   vi.mocked(docsOnly).mockReturnValue(false);
+  vi.mocked(impactOnly).mockReturnValue(false);
   const context = {
     payload: { pull_request: { head: { sha: "merged" } } },
     repo: { owner: "owner", repo: "repo" },
@@ -18,7 +20,7 @@ function fixture() {
     number: 1,
     merged_at: "2026-11-03T01:00:00Z",
     merge_commit_sha: "merged",
-    base: { ref: "migration_main" },
+    base: { ref: "main" },
     head: { sha: "source", repo: { full_name: "owner/repo" } },
   };
   const run = {
@@ -62,7 +64,7 @@ test("main 병합 당시 동일 source/tree의 전체 성공을 재사용한다"
 
 test.each([
   ["pr.merge_commit_sha", "other"],
-  ["pr.base.ref", "migration_develop"],
+  ["pr.base.ref", "production"],
   ["pr.head.repo.full_name", "fork/repo"],
   ["run.head_sha", "other"],
   ["run.head_commit.tree_id", "different"],
@@ -124,14 +126,14 @@ function historyFixture() {
     draft: false,
     merged_at: "2026-11-03T02:00:00Z",
     merge_commit_sha: ids.merged,
-    base: { ref: "migration_main", sha: ids.base },
+    base: { ref: "main", sha: ids.base },
     head: { sha: ids.head, ref: "feature/history", repo: { full_name: "owner/repo" } },
   };
   const promotion = {
     ...pr,
     merge_commit_sha: ids.develop,
-    base: { ref: "migration_develop", sha: "old" },
-    head: { ...pr.head, ref: "migration_main", sha: ids.source },
+    base: { ref: "production", sha: "old" },
+    head: { ...pr.head, ref: "main", sha: ids.source },
   };
   const commits: Record<string, { tree: { sha: string }; parents: { sha: string }[] }> = {
     [ids.head]: { tree: { sha: "tree" }, parents: [{ sha: ids.base }, { sha: ids.develop }] },
@@ -141,8 +143,8 @@ function historyFixture() {
     [ids.merged]: { tree: { sha: "tree" }, parents: [{ sha: ids.base }, { sha: ids.head }] },
   };
   const branches = {
-    migration_main: { commit: { sha: ids.base } },
-    migration_develop: { commit: { sha: ids.develop } },
+    main: { commit: { sha: ids.base } },
+    production: { commit: { sha: ids.develop } },
   };
   const comparison = { status: "ahead" };
   const historyRun = { ...f.run, id: 11, head_sha: ids.head, updated_at: "2026-11-03T01:59:00Z" };
@@ -240,8 +242,8 @@ test.each([
   const f = historyFixture();
   if (fault === "tree") f.commits[f.ids.head].tree.sha = "different";
   if (fault === "parent") f.commits[f.ids.head].parents.pop();
-  if (fault === "stale-main") f.branches.migration_main.commit.sha = "other";
-  if (fault === "stale-develop") f.branches.migration_develop.commit.sha = "other";
+  if (fault === "stale-main") f.branches.main.commit.sha = "other";
+  if (fault === "stale-develop") f.branches.production.commit.sha = "other";
   if (fault === "fork") f.pr.head.repo.full_name = "fork/repo";
   if (fault === "draft") f.pr.draft = true;
   if (fault === "promotion-tree") f.commits[f.ids.source].tree.sha = "changed";
@@ -261,4 +263,27 @@ test("병합 뒤 부모 유실 또는 재사용 job 실패를 Promotion 근거�
       f.historyJobs.find((job) => job.name === "reuse main verification")!.conclusion = "failure";
     await expect(verifySource(f)).rejects.toThrow();
   }
+});
+
+test("Promotion rechecks UI scope and exact successful affected-build evidence", async () => {
+  const f = fixture();
+  vi.mocked(impactOnly).mockReturnValue(true);
+  for (const job of f.jobs)
+    job.conclusion = ["verify", "app build", "build"].includes(job.name) ? "success" : "skipped";
+  f.jobs.push({
+    name: "changed files and affected workspaces",
+    conclusion: "success",
+    completed_at: f.jobs[0].completed_at,
+  });
+  f.jobs.push({
+    name: "reuse main verification",
+    conclusion: "skipped",
+    completed_at: f.jobs[0].completed_at,
+  });
+  await expect(verifySource(f)).resolves.toMatchObject({ sourceSha: "merged" });
+  f.jobs.find((j) => j.name === "build")!.conclusion = "skipped";
+  await expect(verifySource(f)).rejects.toThrow();
+  f.jobs.find((j) => j.name === "build")!.conclusion = "success";
+  vi.mocked(impactOnly).mockReturnValue(false);
+  await expect(verifySource(f)).rejects.toThrow();
 });

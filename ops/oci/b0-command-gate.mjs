@@ -21,7 +21,7 @@ export async function prepareCommand({ github, context, core }) {
     .filter(
       (item) =>
         item.head_sha === pr.head.sha &&
-        item.head_branch === "migration_main" &&
+        item.head_branch === "main" &&
         item.head_repository?.full_name === pr.head.repo.full_name &&
         item.pull_requests.some((pull) => pull.number === pr.number),
     )

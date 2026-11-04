@@ -1,6 +1,11 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { copyFile, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { parse } from "yaml";
 
 import { describe, expect, test, vi } from "vitest";
 
@@ -44,10 +49,23 @@ const receipt = {
 const rawChange = (path: string, before = "100644", after = "100644", status = "M") =>
   `:${before} ${after} ${"a".repeat(40)} ${"b".repeat(40)} ${status}\0${path}\0`;
 
-function imageCommands(raw: string, tasks: { package: string }[] = [], ignore = "docs\n") {
+const workflow = readFileSync(
+  new URL("../../.github/workflows/verify.yml", import.meta.url),
+  "utf8",
+);
+
+function imageCommands(
+  raw: string,
+  tasks: { package: string }[] = [],
+  ignore = "docs\n",
+  sourceWorkflow = workflow,
+) {
   return vi.fn((cmd: string, args: string[]) => {
     if (cmd !== "git") return JSON.stringify({ tasks });
-    if (args[0] === "show") return ignore;
+    if (args[0] === "show") {
+      if (args[1].endsWith(":.dockerignore")) return ignore;
+      return args[1].startsWith(candidate.sourceSha) ? workflow : sourceWorkflow;
+    }
     if (args[0] === "diff") return raw;
     return "";
   });
@@ -72,7 +90,7 @@ function fixture() {
     path: ".github/workflows/deploy-promotion.yml",
     event: "pull_request",
     head_sha: candidate.sourceSha,
-    head_branch: "migration_main",
+    head_branch: "main",
     head_repository: { full_name: "goldmayo/oioi-bwg" },
     status: "completed",
     conclusion: "success",
@@ -86,10 +104,10 @@ function fixture() {
     merge_commit_sha: receipt.mergedSha,
     head: {
       sha: candidate.sourceSha,
-      ref: "migration_main",
+      ref: "main",
       repo: { full_name: "goldmayo/oioi-bwg" },
     },
-    base: { ref: "migration_develop" },
+    base: { ref: "production", sha: "f".repeat(40) },
   };
   const checks = ["verify", "promotion", "promotion candidate"].map((name) => ({
     name,
@@ -103,6 +121,10 @@ function fixture() {
     path: ".github/workflows/verify.yml",
     head_sha: candidate.sourceSha,
   };
+  const merged = {
+    tree: { sha: candidate.sourceTree },
+    parents: [{}] as { sha?: string }[],
+  };
   const github = {
     rest: {
       actions: {
@@ -115,8 +137,11 @@ function fixture() {
       },
       pulls: { get: vi.fn(async () => ({ data: pr })) },
       git: {
-        getCommit: vi.fn(async () => ({
-          data: { tree: { sha: candidate.sourceTree }, parents: [{}] },
+        getCommit: vi.fn(async ({ commit_sha }: { commit_sha: string }) => ({
+          data:
+            commit_sha === receipt.mergedSha
+              ? merged
+              : { tree: { sha: candidate.sourceTree }, parents: [] },
         })),
       },
     },
@@ -142,6 +167,7 @@ function fixture() {
     verifiedArtifacts,
     checks,
     verification,
+    merged,
     receipt: structuredClone(receipt),
     candidate: structuredClone(candidate),
     proof,
@@ -150,6 +176,220 @@ function fixture() {
 }
 
 describe("paired release evidence and conservative image selection", () => {
+  test.each([
+    ".github/workflows/verify.yml",
+    ".github/workflows/publish-build-cache.yml",
+    ".github/workflows/deploy-promotion.yml",
+  ])("동일 빌드 job을 유지한 %s 변경은 검증된 두 이미지를 재사용한다", (file) => {
+    const execute = imageCommands(
+      rawChange(file),
+      [],
+      "docs\n.github\n",
+      workflow.replace("timeout-minutes: 2", "timeout-minutes: 3"),
+    );
+    expect(
+      planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+    ).toEqual({ web: false, console: false });
+    expect(execute.mock.calls.some(([cmd]) => cmd === "turbo")).toBe(false);
+  });
+  test.each([
+    ["NEXT_PUBLIC_APP_ENV: production", "NEXT_PUBLIC_APP_ENV: preview"],
+    ['SENTRY_SOURCE_MAPS_ENABLED: "true"', 'SENTRY_SOURCE_MAPS_ENABLED: "false"'],
+    ["platforms: linux/arm64", "platforms: linux/amd64"],
+    ["file: apps/${{ matrix.app }}/Dockerfile", "file: alternate/Dockerfile"],
+    ["docker/build-push-action@v6", "docker/build-push-action@v7"],
+    ["target: runner", "target: builder"],
+    ["name: Verify", "name: Verify\nenv:\n  NODE_OPTIONS: --jitless"],
+    ["name: Verify", "name: Verify\ndefaults:\n  run:\n    working-directory: apps/web"],
+  ])("CI 변경이어도 빌드 입력 %s 변경은 두 이미지를 다시 빌드한다", (before, after) => {
+    expect(workflow).toContain(before);
+    const execute = imageCommands(
+      rawChange(".github/workflows/verify.yml"),
+      [],
+      "docs\n.github\n",
+      workflow.replaceAll(before, after),
+    );
+    expect(
+      planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+    ).toEqual({ web: true, console: true });
+  });
+  test.each([
+    [rawChange(".github/workflows/unknown.yml"), "docs\n.github\n", workflow],
+    [rawChange(".github/actions/build/action.yml"), "docs\n.github\n", workflow],
+    [rawChange(".github/workflows/verify.yml", "100755"), "docs\n.github\n", workflow],
+    [rawChange(".github/workflows/verify.yml", "100644", "120000"), "docs\n.github\n", workflow],
+    [rawChange(".github/workflows/verify.yml"), "docs\n", workflow],
+    [rawChange(".github/workflows/verify.yml"), ".github\n!.github/actions", workflow],
+    [rawChange(".github/workflows/verify.yml"), ".github\n", "jobs: ["],
+    [rawChange(".github/workflows/verify.yml"), ".github\n", "jobs: {}"],
+    [rawChange(".github/workflows/verify.yml"), ".github\n", workflow + "\njobs: {}\n"],
+  ])("CI 제외 근거가 불완전하거나 미분류 변경이면 재빌드한다", (raw, ignore, source) => {
+    const execute = imageCommands(raw, [], ignore, source);
+    expect(
+      planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+    ).toEqual({ web: true, console: true });
+  });
+  test("CI·앱 혼합 변경과 앱→CI rename은 앱 변경을 누락하지 않는다", () => {
+    for (const raw of [
+      rawChange("apps/console/a.tsx") + rawChange(".github/workflows/verify.yml"),
+      rawChange("apps/console/a.tsx", "100644", "000000", "D") +
+        rawChange(".github/workflows/deploy-promotion.yml", "000000", "100644", "A"),
+    ]) {
+      const execute = imageCommands(raw, [{ package: "@oioi-bwg/console" }], ".github\n");
+      expect(
+        planImages({ baseline: candidate, proof, sourceSha: "f".repeat(40), execute }).build,
+      ).toEqual({ web: false, console: true });
+    }
+  });
+  test("실제 Git 두 커밋의 CI-only 변경은 pnpm 없이 재사용을 판정한다", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-ci-inputs-"));
+    const tools = await mkdtemp(join(tmpdir(), "image-plan-tools-"));
+    const git = (...args: string[]) =>
+      execFileSync("git", args, { cwd: directory, encoding: "utf8" }).trim();
+    try {
+      git("init", "-q");
+      git("config", "user.name", "fixture");
+      git("config", "user.email", "fixture@example.test");
+      await mkdir(join(directory, "ops/oci"), { recursive: true });
+      for (const file of ["release-baseline.mjs", "promotion.mjs"])
+        await copyFile(
+          new URL(`../../ops/oci/${file}`, import.meta.url),
+          join(directory, "ops/oci", file),
+        );
+      await mkdir(join(tools, "node_modules"));
+      await writeFile(join(tools, "package.json"), "{}");
+      await symlink(
+        dirname(fileURLToPath(import.meta.resolve("yaml/package.json"))),
+        join(tools, "node_modules/yaml"),
+        "dir",
+      );
+      await writeFile(join(directory, ".dockerignore"), ".github\n");
+      await mkdir(join(directory, ".github/workflows"), { recursive: true });
+      const path = join(directory, ".github/workflows/verify.yml");
+      await writeFile(path, workflow);
+      git("add", ".");
+      git("commit", "-qm", "baseline");
+      const sourceSha = git("rev-parse", "HEAD");
+      const baseline = {
+        ...candidate,
+        sourceSha,
+        images: Object.fromEntries(
+          Object.entries(candidate.images).map(([app, image]) => [
+            app,
+            { ...image, buildSourceSha: sourceSha },
+          ]),
+        ),
+      };
+      const verified = { ...proof, releaseId: releaseId(baseline) };
+      await writeFile(path, workflow.replace("timeout-minutes: 2", "timeout-minutes: 3"));
+      git("commit", "-qam", "verification timeout");
+      const execute = vi.fn((command: string, args: string[]) => {
+        if (command !== "git") throw new Error("CI-only selection must not need pnpm");
+        return execFileSync(command, args, { cwd: directory, encoding: "utf8" });
+      });
+      expect(
+        planImages({ baseline, proof: verified, sourceSha: git("rev-parse", "HEAD"), execute })
+          .build,
+      ).toEqual({ web: false, console: false });
+      const isolated = execFileSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          `
+        const { planImages } = await import('./ops/oci/release-baseline.mjs');
+        console.log(JSON.stringify(planImages(JSON.parse(process.argv[1])).build));
+      `,
+          JSON.stringify({ baseline, proof: verified, sourceSha: git("rev-parse", "HEAD") }),
+        ],
+        {
+          cwd: directory,
+          encoding: "utf8",
+          env: { ...process.env, PROMOTION_TOOLS_MANIFEST: join(tools, "package.json") },
+        },
+      );
+      expect(existsSync(join(directory, "node_modules"))).toBe(false);
+      expect(JSON.parse(isolated)).toEqual({ web: false, console: false });
+    } finally {
+      await Promise.all(
+        [directory, tools].map((path) => rm(path, { recursive: true, force: true })),
+      );
+    }
+  });
+  test("제품 의존성 설치 없이 같은 Turbo workspace 그래프를 계산한다", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "image-plan-graph-"));
+    const git = (...args: string[]) =>
+      execFileSync("git", args, {
+        cwd: directory,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim();
+    try {
+      execFileSync("git", ["clone", "--shared", "--quiet", process.cwd(), directory]);
+      git("config", "user.name", "fixture");
+      git("config", "user.email", "fixture@example.test");
+      const base = git("rev-parse", "HEAD");
+      const file = join(directory, "apps/console/src/shared/ui/button.tsx");
+      await writeFile(file, (await readFile(file, "utf8")) + "\n// graph fixture\n");
+      git("commit", "-qam", "fixture");
+      const head = git("rev-parse", "HEAD");
+      const tasks = () =>
+        JSON.parse(
+          execFileSync("turbo", ["run", "build", "--affected", "--dry=json"], {
+            cwd: directory,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+            env: { ...process.env, TURBO_SCM_BASE: base, TURBO_SCM_HEAD: head },
+          }),
+        ).tasks.map((task: { taskId: string }) => task.taskId);
+      expect(existsSync(join(directory, "node_modules"))).toBe(false);
+      const isolated = tasks();
+      expect(isolated).toContain("@oioi-bwg/console#build");
+      expect(isolated).not.toContain("@oioi-bwg/web#build");
+      // Turbo can create its configured node_modules/.cache without installing packages.
+      await rm(join(directory, "node_modules"), { recursive: true, force: true });
+      await symlink(join(process.cwd(), "node_modules"), join(directory, "node_modules"), "dir");
+      expect(tasks()).toEqual(isolated);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+  test("계획 도구 준비는 고정된 두 패키지만 생성하고 범위 버전을 거절한다", async () => {
+    const root = await mkdtemp(join(tmpdir(), "image-plan-bootstrap-"));
+    const steps = parse(workflow).jobs.promotion_plan.steps;
+    const script = steps.find(
+      (step: { name?: string }) => step.name === "Prepare isolated image planning tools",
+    ).run;
+    try {
+      await mkdir(join(root, "bin"));
+      await writeFile(join(root, "bin/npm"), "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+      const manifest = JSON.parse(
+        readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+      );
+      await writeFile(join(root, "package.json"), JSON.stringify(manifest));
+      const env = {
+        ...process.env,
+        PATH: join(root, "bin") + ":" + process.env.PATH,
+        PROMOTION_TOOLS_DIR: join(root, "tools"),
+        GITHUB_PATH: join(root, "path"),
+      };
+      execFileSync("bash", ["-e", "-o", "pipefail", "-c", script], { cwd: root, env });
+      expect(JSON.parse(await readFile(join(root, "tools/package.json"), "utf8"))).toEqual({
+        private: true,
+        dependencies: {
+          yaml: manifest.devDependencies.yaml,
+          turbo: manifest.devDependencies.turbo,
+        },
+      });
+      manifest.devDependencies.yaml = "^2.8.2";
+      await writeFile(join(root, "package.json"), JSON.stringify(manifest));
+      expect(() =>
+        execFileSync("bash", ["-e", "-c", script], { cwd: root, env, stdio: "pipe" }),
+      ).toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   test.each(["web", "console"])("reuses only the unchanged app when %s changes", (app) => {
     const execute = vi.fn((cmd: string) =>
       cmd === "git"
@@ -275,6 +515,34 @@ describe("paired release evidence and conservative image selection", () => {
     expect(f.core.setOutput).toHaveBeenCalledWith("artifact_id", 99);
     await expect(validateBaseline(f)).resolves.toEqual(proof);
   });
+  test("keeps successful legacy squash receipts as reuse evidence", async () => {
+    const f = fixture();
+    expect(f.merged.parents).toEqual([{}]);
+    await expect(validateBaseline(f)).resolves.toEqual(proof);
+  });
+  test("accepts a deployed merge with the exact reviewed base and source parents", async () => {
+    const f = fixture();
+    f.merged.parents = [{ sha: f.pr.base.sha }, { sha: candidate.sourceSha }];
+    await expect(validateBaseline(f)).resolves.toEqual(proof);
+  });
+  test.each(["base", "source", "reversed", "extra", "missing", "invalid-base", "tree"])(
+    "rejects a deployed merge with mismatched %s",
+    async (failure) => {
+      const f = fixture();
+      f.merged.parents = [{ sha: f.pr.base.sha }, { sha: candidate.sourceSha }];
+      if (failure === "base") f.merged.parents[0].sha = "0".repeat(40);
+      if (failure === "source") f.merged.parents[1].sha = "0".repeat(40);
+      if (failure === "reversed") f.merged.parents.reverse();
+      if (failure === "extra") f.merged.parents.push({ sha: "0".repeat(40) });
+      if (failure === "missing") f.merged.parents = [];
+      if (failure === "invalid-base") {
+        f.pr.base.sha = "invalid";
+        f.merged.parents[0].sha = "invalid";
+      }
+      if (failure === "tree") f.merged.tree.sha = "0".repeat(40);
+      await expect(validateBaseline(f)).rejects.toThrow("Deployment tree mismatch");
+    },
+  );
   test.each([{ associations: [] }, { associations: [{ number: 159 }] }])(
     "keeps the immutable deployment PR when GitHub changes run associations to $associations",
     async ({ associations }) => {
@@ -366,4 +634,13 @@ describe("paired release evidence and conservative image selection", () => {
       "Deployment evidence unavailable; rebuild both images",
     );
   });
+});
+
+test("old migration branch names remain readable in immutable deployment evidence", async () => {
+  const f = fixture();
+  f.run.head_branch = "migration_main";
+  f.verification.head_branch = "migration_main";
+  f.pr.head.ref = "migration_main";
+  f.pr.base.ref = "migration_develop";
+  await expect(validateBaseline(f)).resolves.toEqual(proof);
 });
