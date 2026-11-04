@@ -36,7 +36,7 @@ export function AppDataTable({ className, ...props }: ComponentProps<typeof Data
       viewportClassName="max-h-[70dvh]"
       {...props}
       className={cn(
-        "bg-card [&_th]:bg-card table-fixed [--data-table-row-height:3.5rem] [&_tbody_tr:not([data-table-padding])]:h-14 [&_td]:h-14 [&_td]:overflow-hidden [&_td]:px-3 [&_td]:py-0 [&_td]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:px-3",
+        "bg-card [&_th]:bg-card [&_tbody]:bg-table-surface table-fixed [--data-table-row-height:3.5rem] [&_tbody_tr:not([data-table-padding])]:h-14 [&_td]:h-14 [&_td]:overflow-hidden [&_td]:px-3 [&_td]:py-0 [&_td]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:px-3",
         className,
       )}
     />

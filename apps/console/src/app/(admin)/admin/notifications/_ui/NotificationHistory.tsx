@@ -28,7 +28,7 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
           description="작업 결과와 놓친 알림을 확인합니다."
           action={
             <Button
-              variant="outline"
+              variant="secondary"
               disabled={!history.unreadCount || actions.all.isPending || query.isPending}
               onClick={() => actions.all.mutate()}
             >
@@ -91,7 +91,7 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
               <div role="alert" className="flex flex-wrap items-center gap-3 text-sm">
                 <p>알림을 불러오지 못했습니다.</p>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => {
                     void query.refetch();
