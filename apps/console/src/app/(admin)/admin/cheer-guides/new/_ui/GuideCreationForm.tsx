@@ -236,7 +236,7 @@ export function GuideCreationForm({
           <footer className="mt-10 flex justify-end gap-2">
             <Button
               type="button"
-              variant="destructive"
+              variant="outline"
               className="h-11"
               disabled={isSubmitting}
               onClick={() => leave.requestLeave(onCancel)}

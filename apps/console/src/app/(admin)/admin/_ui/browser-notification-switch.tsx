@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
+import { cn } from "@/shared/lib/utils";
 import { Switch } from "@/shared/ui/switch";
 
 import { useNotificationContext } from "./notification-provider";
@@ -15,7 +16,7 @@ const messages = {
   disabled: undefined,
   enabled: undefined,
 };
-export function BrowserNotificationSwitch() {
+export function BrowserNotificationSwitch({ inSheet = false }: { inSheet?: boolean }) {
   const { pushState, enable, disable } = useNotificationContext();
   const id = useId();
   const busy = useRef(false);
@@ -41,17 +42,36 @@ export function BrowserNotificationSwitch() {
     }
   };
   return (
-    <div className="ml-auto flex max-w-xs flex-col items-end gap-1">
+    <div
+      className={cn(
+        "flex flex-col gap-1",
+        inSheet ? "items-stretch" : "ml-auto max-w-xs items-end",
+      )}
+    >
       <div
         role="group"
         aria-label="브라우저 알림 설정"
-        className="border-input bg-card inline-flex h-9 shrink-0 items-center gap-3 rounded-md border px-3"
+        className={cn(
+          "border-input bg-card inline-flex shrink-0 items-center gap-3 rounded-md border px-3",
+          inSheet ? "min-h-12" : "h-9",
+        )}
       >
-        <label htmlFor={id} className="cursor-pointer text-sm font-medium whitespace-nowrap">
+        <label
+          htmlFor={id}
+          className={cn(
+            "cursor-pointer text-sm font-medium whitespace-nowrap",
+            inSheet && "mr-auto py-3",
+          )}
+        >
           브라우저 알림
         </label>
         <Switch
           id={id}
+          className={cn(
+            "dark:data-[state=checked]:bg-qwer-q dark:data-[state=unchecked]:border-input dark:data-[state=unchecked]:bg-muted dark:data-[state=unchecked]:[&_[data-slot=switch-thumb]]:bg-input",
+            inSheet &&
+              "data-[size=default]:h-6 data-[size=default]:w-11 [&_[data-slot=switch-thumb]]:size-5! [&_[data-slot=switch-thumb][data-state=checked]]:translate-x-[22px]!",
+          )}
           checked={enabled}
           disabled={blocked}
           aria-busy={changing}
@@ -60,9 +80,11 @@ export function BrowserNotificationSwitch() {
             void change(next);
           }}
         />
-        <span className="w-7 text-center text-xs font-medium" aria-hidden="true">
-          {changing ? <Loader2 className="mx-auto size-3.5 animate-spin" /> : statusLabel}
-        </span>
+        {changing || !inSheet ? (
+          <span className="w-7 text-center text-xs font-medium" aria-hidden="true">
+            {changing ? <Loader2 className="mx-auto size-3.5 animate-spin" /> : statusLabel}
+          </span>
+        ) : null}
       </div>
       {message && (
         <p

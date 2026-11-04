@@ -1,12 +1,22 @@
 "use client";
 
 import type { NotificationType } from "@oioi-bwg/contracts/notification";
-import { CheckCheck } from "lucide-react";
+import { CheckCheck, Settings, X } from "lucide-react";
 import { Tabs } from "radix-ui";
 
+import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Button } from "@/shared/ui/button";
 import { ListHeader } from "@/shared/ui/list-layout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/shared/ui/sheet";
 
 import { BrowserNotificationSwitch } from "../../_ui/browser-notification-switch";
 import { useNotificationContext } from "../../_ui/notification-provider";
@@ -15,46 +25,84 @@ import { useNotificationHistory } from "../_model/use-notification-history";
 import { NotificationTable } from "./NotificationTable";
 
 const tabClass =
-  "text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground focus-visible:outline-ring h-7 shrink-0 rounded px-3 text-sm font-medium whitespace-nowrap outline-none hover:text-foreground focus-visible:outline-2";
+  "text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-foreground focus-visible:outline-ring h-11 shrink-0 rounded px-2.5 md:h-7 md:px-3 text-sm font-medium whitespace-nowrap outline-none hover:text-foreground focus-visible:outline-2";
 export function NotificationHistory({ selectedId }: { selectedId?: string }) {
+  const wide = useMediaQuery("(min-width: 768px)");
   const { accountId } = useNotificationContext();
   const history = useNotificationHistory(accountId, selectedId);
   const { actions, filters, query } = history;
+  const markAllDisabled = !history.unreadCount || actions.all.isPending || query.isPending;
+  const markAllRead = () => actions.all.mutate();
   return (
     <section className="min-w-0 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto w-full max-w-7xl space-y-4">
+      <div className="mx-auto w-full max-w-7xl space-y-3 md:space-y-4">
         <ListHeader
           title="알림 내역"
+          compactOnMobile
           description="작업 결과와 놓친 알림을 확인합니다."
           action={
-            <Button
-              variant="outline"
-              disabled={!history.unreadCount || actions.all.isPending || query.isPending}
-              onClick={() => actions.all.mutate()}
-            >
-              <CheckCheck className="size-4" />
-              모두 읽음
-            </Button>
+            wide ? (
+              <Button variant="secondary" disabled={markAllDisabled} onClick={markAllRead}>
+                <CheckCheck className="size-4" />
+                모두 읽음
+              </Button>
+            ) : (
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-11 md:hidden"
+                    aria-label="알림 설정"
+                  >
+                    <Settings aria-hidden="true" className="size-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="bottom"
+                  showCloseButton={false}
+                  className="bg-popover max-h-dvh overflow-y-auto rounded-t-xl px-4 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+                >
+                  <SheetHeader className="p-0 pr-12 text-left">
+                    <SheetTitle>알림 설정</SheetTitle>
+                    <SheetDescription>
+                      파형 작업이 끝나면 이 브라우저로 알림을 받습니다.
+                    </SheetDescription>
+                  </SheetHeader>
+                  <SheetClose asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 size-11"
+                      aria-label="알림 설정 닫기"
+                    >
+                      <X aria-hidden="true" />
+                    </Button>
+                  </SheetClose>
+                  <BrowserNotificationSwitch inSheet />
+                </SheetContent>
+              </Sheet>
+            )
           }
         />
         <Tabs.Root
           value={filters.view}
           onValueChange={(value) => history.changeView(value as "all" | "unread")}
-          className="space-y-4"
+          className="space-y-3 md:space-y-4"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <div className="flex w-full min-w-0 items-center gap-2 md:w-auto md:flex-wrap md:gap-3">
               <Tabs.List
                 aria-label="알림 모아보기"
-                className="bg-muted inline-flex h-9 shrink-0 items-center gap-1 rounded-md p-1"
+                className="bg-muted inline-flex h-11 shrink-0 items-center gap-1 rounded-md px-1 md:h-9 md:p-1"
               >
                 <Tabs.Trigger value="all" className={tabClass}>
-                  전체 알림
+                  {wide ? "전체 알림" : "전체"}
                 </Tabs.Trigger>
                 <Tabs.Trigger value="unread" className={`${tabClass} flex items-center gap-2`}>
-                  안 읽은 알림
+                  {wide ? "안 읽은 알림" : "안 읽음"}
                   {query.data && (
-                    <span className="text-muted-foreground text-xs tabular-nums">
+                    <span className="bg-card md:text-muted-foreground min-w-5 rounded px-1 text-center text-xs leading-5 tabular-nums md:bg-transparent md:px-0">
                       {history.unreadCount}
                     </span>
                   )}
@@ -64,17 +112,20 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
                 value={filters.result}
                 onValueChange={(value) => history.changeResult(value as NotificationType | "all")}
               >
-                <SelectTrigger aria-label="작업 결과 필터" className="w-40">
+                <SelectTrigger
+                  aria-label="작업 결과 필터"
+                  className="min-w-0 flex-1 data-[size=default]:h-11 md:w-40 md:flex-none md:data-[size=default]:h-9"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">전체 작업 결과</SelectItem>
+                  <SelectItem value="all">{wide ? "전체 작업 결과" : "전체 결과"}</SelectItem>
                   <SelectItem value="WAVEFORM_SUCCEEDED">파형 생성 성공</SelectItem>
                   <SelectItem value="WAVEFORM_FAILED">파형 생성 실패</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <BrowserNotificationSwitch />
+            {wide ? <BrowserNotificationSwitch /> : null}
           </div>
           <Tabs.Content value={filters.view} className="min-w-0 space-y-4 outline-none">
             {(actions.read.isError || actions.all.isError) && (
@@ -91,7 +142,7 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
               <div role="alert" className="flex flex-wrap items-center gap-3 text-sm">
                 <p>알림을 불러오지 못했습니다.</p>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => {
                     void query.refetch();
@@ -108,6 +159,18 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
                 pagination={history.pagination}
                 onPaginationChange={history.changePagination}
                 onOpen={actions.open}
+                mobileAction={
+                  wide ? undefined : (
+                    <Button
+                      variant="ghost"
+                      className="decoration-muted-foreground/60 h-11 px-2 underline underline-offset-4 disabled:no-underline"
+                      disabled={markAllDisabled}
+                      onClick={markAllRead}
+                    >
+                      모두 읽음
+                    </Button>
+                  )
+                }
                 pending={actions.read.isPending || actions.all.isPending}
                 loading={query.isPending}
                 ready={!!query.data}
