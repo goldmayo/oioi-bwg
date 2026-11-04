@@ -143,7 +143,7 @@ export function AlbumManagerClient({
             </DialogHeader>
             <DialogFooter>
               <Button
-                variant="destructive"
+                variant="outline"
                 disabled={deleteMutation.isPending}
                 onClick={() => changeDeleteTarget(null)}
               >

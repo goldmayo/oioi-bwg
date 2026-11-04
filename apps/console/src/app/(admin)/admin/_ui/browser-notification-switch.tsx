@@ -52,6 +52,7 @@ export function BrowserNotificationSwitch() {
         </label>
         <Switch
           id={id}
+          className="dark:data-[state=checked]:bg-qwer-q dark:data-[state=unchecked]:border-input dark:data-[state=unchecked]:bg-muted dark:data-[state=unchecked]:[&_[data-slot=switch-thumb]]:bg-input"
           checked={enabled}
           disabled={blocked}
           aria-busy={changing}

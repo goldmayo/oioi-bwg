@@ -129,7 +129,7 @@ export default function LoginForm({
                 <Button
                   type="button"
                   className="h-11 w-full font-semibold"
-                  variant="destructive"
+                  variant="outline"
                   onClick={() => reset()}
                   disabled={loading}
                 >
