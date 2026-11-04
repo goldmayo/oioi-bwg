@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.34"
+version: "1.35"
 status: "active"
 authority: "runbook"
 updated_at: "2026-11-04"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.34
+# oioi-bwg Deployment / Migration Runbook v1.35
 
 ## 1. 목적
 
@@ -665,6 +665,12 @@ monotonic 밀리초로 기록한다. adapter는 고정 단계 allowlist와 정�
 실행 시간으로 해석하지 않는다. 계측·업로드 실패는 배포/복구 exit와 성공 receipt를 바꾸지 않으며,
 이 artifact는 candidate/receipt·health 증거를 대체하지 않는다. 기존 host helper의 측정값이 없어도
 배포는 호환되며 보호된 helper의 실제 갱신은 §19의 별도 승인·lock·백업·권한 검증을 유지한다.
+
+2026-11-04 계측 보완: CI adapter의 경과 시간과 전체 제한도 monotonic 시계를 사용한다.
+고정 숫자인 조회/NotFound 횟수·요청 시간·첫 실행/진행 관측과 유효한 서비스 경과 시간만 추가한다.
+기존 217초 차이 중 약 199.6초는 서비스 생성→agent ACK 구간으로 확인됐다. 현재 VM의 poll 주기
+`4m` 변경·agent 재시작과 수용 절차는 [운영 안내](../../../ops/oci/README.md#p06-b2-paired-host-준비-계약)를 따른다.
+repo 계측 병합과 운영 agent 설정 적용·실제 단축 실측을 구분한다.
 
 배포 workflow는 image를 다시 build/publish하지 않고 검증된 digest를 기존 OCI Run Command와
 `deploy-release.sh`에 전달한다. health/readiness/smoke 및 직전 정상 digest/env rollback, exit 0/20/21은 유지한다.
