@@ -196,7 +196,7 @@ export function AlbumForm({
           <footer className="flex justify-end gap-2 pt-2">
             <Button
               type="button"
-              variant="destructive"
+              variant="outline"
               className="h-11"
               disabled={isBusy}
               onClick={() => leave.requestLeave(onCancel)}
