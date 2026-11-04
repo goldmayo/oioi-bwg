@@ -1,8 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { isDeepStrictEqual } from "node:util";
-
-import { parseDocument } from "yaml";
 
 import { assertCandidate, buildConfigHash, releaseId } from "./promotion.mjs";
 
@@ -194,6 +193,9 @@ const ciWorkflows = new Set([
 
 // Resolve anchors as well: promotion_images.env is owned by promotion_plan today.
 function imageBuildRecipe(text) {
+  const { parseDocument } = createRequire(process.env.PROMOTION_TOOLS_MANIFEST || import.meta.url)(
+    "yaml",
+  );
   const document = parseDocument(text, { merge: true });
   if (document.errors.length || document.warnings.length) throw new Error("Invalid workflow");
   const workflow = document.toJS();
@@ -285,7 +287,7 @@ export function planImages({
     if (!files.length) return { baseline: proof, build: { web: false, console: false } };
     const dry = JSON.parse(
       String(
-        execute("pnpm", ["exec", "turbo", "run", "build", "--affected", "--dry=json"], {
+        execute("turbo", ["run", "build", "--affected", "--dry=json"], {
           encoding: "utf8",
           stdio: ["ignore", "pipe", "pipe"],
           env: { ...process.env, TURBO_SCM_BASE: baseline.sourceSha, TURBO_SCM_HEAD: sourceSha },

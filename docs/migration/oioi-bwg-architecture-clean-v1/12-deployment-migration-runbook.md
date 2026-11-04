@@ -1,7 +1,7 @@
 ---
 title: "Deployment / Migration Runbook"
 document_id: "12"
-version: "1.33"
+version: "1.34"
 status: "active"
 authority: "runbook"
 updated_at: "2026-11-04"
@@ -26,7 +26,7 @@ tags:
   - "nextjs"
 ---
 
-# oioi-bwg Deployment / Migration Runbook v1.33
+# oioi-bwg Deployment / Migration Runbook v1.34
 
 ## 1. 목적
 
@@ -607,6 +607,11 @@ tag에 Docker 공식 registry cache(`mode=max`, OCI image manifest)를 읽고 �
 candidate 기록 실패는 계속 배포를 차단한다. secret job은 기존 동일 저장소 Ready Promotion 조건을 유지한다.
 Promotion job은 lockfile 설치를 유지하면서 PR별 pnpm store 저장을 생략한다. 브라우저 검증은 기존과
 같은 Chromium headless shell로 수행하고 사용하지 않는 full Chromium 다운로드만 생략한다.
+2026-11-04 계획 단계 설치 보완: `promotion_plan`은 위 전체 workspace 설치를 생략하고 임시
+디렉터리에 YAML·Turbo만 준비한다. 버전은 root manifest의 고정 버전을 읽으며 범위 버전은 거절한다.
+공식 npm의 prefix 설치에서 lifecycle script를 끄고 제품 manifest·lockfile·node_modules를 수정하지 않는다.
+계획 모듈은 명시한 도구 manifest 기준으로 YAML을 로드하고 Turbo CLI로 동일한 affected dry-run을 계산한다.
+도구 준비 실패는 계획 단계를 실패시키며, 기존 배포 증거·이미지 판정·후보 공동 검증은 유지한다.
 2026-11-03 병렬 후보: `promotion plan`이 검증된 baseline과 앱별 선택을 한 번 고정하고,
 필요한 앱만 독립 ARM64 matrix runner에서 최대 두 개까지 동시에 빌드한다. 공개 build 설정은
 같은 env 정의를 소비한다. 같은 run/attempt의 앱별 artifact에 source SHA/tree·공개 설정 hash·
