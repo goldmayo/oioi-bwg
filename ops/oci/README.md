@@ -348,6 +348,22 @@ preflight를 통과해야 한다. 예시는 자동 덮어쓰기/Secret 생성이
 기존 host helper에 계측이 없으면 host 항목은 비어 있고 기존 배포 동작을 유지한다. repo 병합만으로
 보호된 host 파일을 갱신하지 않으며 실제 적용도 위 승인·lock·백업·권한/해시 확인 절차를 따른다.
 
+2026-11-04 Run Command 지연 진단: [배포 #424](https://github.com/goldmayo/oioi-bwg/pull/424)의
+서비스 생성→agent ACK는 약 199.6초, agent 실행은 28.4초였다. 이 VM의
+`/etc/oracle-cloud-agent/plugins/runcommand/config.yml`은 `pollCommandInterval: 4m`이며
+실제 로그도 4분 간격이다. 전체 관측 차이를 CI polling/RPC 비용으로 해석하지 않는다.
+CI adapter는 Python monotonic 시계로 경과 시간과 900초 제한을 측정하고 `poll`에 조회 횟수·
+NotFound 횟수·요청 시간·첫 실행/진행 상태 관측 시간·유효한 서비스 경과 시간을 고정 숫자로만 남긴다.
+서비스 시간은 UTC offset이 있고 0~1시간 범위인 경우만 기록하며 누락/오류가 배포 exit를 바꾸지 않는다.
+
+agent의 `4m → 10s` 변경은 기존 host 변경 승인·백업·복구 기준을 따른다. 검토한 원본 해시·root
+소유권·단일 poll 키와 비실행 상태를 대조하고 한 파일만 원자 교체한다. 현재 active unit은
+`snap.oracle-cloud-agent.oracle-cloud-agent.service`이며 reload를 지원하지 않아 재시작이 필요하다.
+파일 내용·소유권·mode를 복구할 root 보호 백업을 먼저 만들고, 실패하면 원본 복원 후 service를 복구한다.
+앱/DB container·IAM·transport는 이 변경 대상이 아니다. 적용 후 agent 정상 상태·실제 poll 간격·오류와
+기존 두 앱/DB container 불변을 확인하고, 정상 Promotion 1회에서 source/digest·새 구간 시간을 대조한다.
+이 repo 변경만으로 운영 agent 설정이 갱신되거나 실측 단축이 확정된 것으로 처리하지 않는다.
+
 성공 pair는 `deploy/current-pair` → root-only snapshot이며 `previous-pair`에 직전 pair를 보관한다.
 웹/콘솔 runtime env 경로는 `web.env`·`console.env`로 고정한다. pending-pair가 남으면 새 배포를 거절한다.
 중단/복구 실패 시 maintenance를 유지하고 current snapshot의 candidate/env/Compose/config를 검토하여 명시적으로

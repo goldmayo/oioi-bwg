@@ -50,7 +50,11 @@ execution_file="$(mktemp)"
 error_file="$(mktemp)"
 trap 'rm -f -- "${execution_file}" "${error_file}"' EXIT
 
-create_started_ms=$(date +%s%3N)
+monotonic_ms() {
+  python3 -I -B -c 'import time; print(time.monotonic_ns() // 1_000_000)'
+}
+
+create_started_ms=$(monotonic_ms)
 command_id="$(
   oci instance-agent command create \
     --compartment-id "${OCI_COMPUTE_COMPARTMENT_OCID}" \
@@ -66,26 +70,45 @@ if [[ ! "${command_id}" =~ ^ocid1\.instanceagentcommand\.[a-z0-9.-]+$ ]]; then
   echo "Failed to create OCI Run Command" >&2
   exit 1
 fi
-create_elapsed_ms=$(( $(date +%s%3N) - create_started_ms ))
+create_elapsed_ms=$(( $(monotonic_ms) - create_started_ms ))
 
 echo "Created OCI Run Command: ${command_id}"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   printf 'command_id=%s\n' "${command_id}" >>"${GITHUB_OUTPUT}"
 fi
 
-overall_deadline=$(($(date +%s) + 900))
 execution_state=""
-wait_started_ms=$(date +%s%3N)
+wait_started_ms=$(monotonic_ms)
+overall_deadline=$(( wait_started_ms + 900000 ))
+poll_count=0
+not_found_count=0
+poll_request_ms=0
+first_execution_ms=-1
+first_in_progress_ms=-1
 
-while (( $(date +%s) < overall_deadline )); do
+while (( $(monotonic_ms) < overall_deadline )); do
+  poll_started_ms=$(monotonic_ms)
+  poll_count=$(( poll_count + 1 ))
+  request_succeeded=0
   if oci instance-agent command-execution get \
     --command-id "${command_id}" \
     --instance-id "${OCI_COMPUTE_INSTANCE_OCID}" \
     >"${execution_file}" 2>"${error_file}"; then
+    request_succeeded=1
+  fi
+  poll_completed_ms=$(monotonic_ms)
+  poll_request_ms=$(( poll_request_ms + poll_completed_ms - poll_started_ms ))
+  if [[ "${request_succeeded}" == "1" ]]; then
     execution_state="$(jq -r '.data["lifecycle-state"] // empty' "${execution_file}" 2>/dev/null)" || {
       echo "Invalid Run Command execution response" >&2
       exit 1
     }
+    if (( first_execution_ms < 0 )); then
+      first_execution_ms=$(( poll_completed_ms - wait_started_ms ))
+    fi
+    if [[ "${execution_state}" == "IN_PROGRESS" ]] && (( first_in_progress_ms < 0 )); then
+      first_in_progress_ms=$(( poll_completed_ms - wait_started_ms ))
+    fi
     case "${execution_state}" in
       SUCCEEDED|FAILED|TIMED_OUT|CANCELED)
         break
@@ -97,6 +120,7 @@ while (( $(date +%s) < overall_deadline )); do
     # authorization failures as NotAuthorizedOrNotFound, so keep retrying within the
     # command's overall timeout. IAM grants execution-family inspect separately.
     if grep -q 'NotAuthorizedOrNotFound' "${error_file}"; then
+      not_found_count=$(( not_found_count + 1 ))
       sleep 10
       continue
     fi
@@ -107,7 +131,7 @@ while (( $(date +%s) < overall_deadline )); do
 
   sleep 10
 done
-wait_elapsed_ms=$(( $(date +%s%3N) - wait_started_ms ))
+wait_elapsed_ms=$(( $(monotonic_ms) - wait_started_ms ))
 
 case "${execution_state}" in
   SUCCEEDED|FAILED|TIMED_OUT|CANCELED)
@@ -128,13 +152,25 @@ echo "Run Command lifecycle: ${execution_state}"
 echo "Remote exit code: ${remote_exit_code}"
 echo "Remote output: <redacted: inspect protected host logs>"
 timing_file="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/deployment-timing.json"
-if python3 -I -B - "${script_root}/paired-release.py" "${execution_file}" "${timing_file}" "${create_elapsed_ms}" "${wait_elapsed_ms}" 2>/dev/null <<'PYTHON'
+if python3 -I -B - "${script_root}/paired-release.py" "${execution_file}" "${timing_file}" "${create_elapsed_ms}" "${wait_elapsed_ms}" "${poll_count}" "${not_found_count}" "${poll_request_ms}" "${first_execution_ms}" "${first_in_progress_ms}" 2>/dev/null <<'PYTHON'
 import json, os, runpy, sys
+from datetime import datetime
 from pathlib import Path
 parse = runpy.run_path(sys.argv[1])['timings_from_output']
 execution = json.loads(Path(sys.argv[2]).read_text())
 host = parse(execution.get('data', {}).get('content', {}).get('text'))
 report = {'commandCreateMs': int(sys.argv[4]), 'waitAndExecutionMs': int(sys.argv[5]), 'host': host}
+keys = ('attempts', 'notFound', 'requestMs', 'firstExecutionObservedMs', 'firstInProgressObservedMs')
+report['poll'] = {key: int(value) for key, value in zip(keys, sys.argv[6:]) if 0 <= int(value) <= 3_600_000}
+try:
+    data = execution['data']
+    start, end = (datetime.fromisoformat(data[key].replace('Z', '+00:00')) for key in ('time-created', 'time-updated'))
+    if start.utcoffset() is not None and end.utcoffset() is not None:
+        elapsed = int((end - start).total_seconds() * 1000)
+        if 0 <= elapsed <= 3_600_000:
+            report['poll']['serviceElapsedMs'] = elapsed
+except (KeyError, TypeError, ValueError, AttributeError, OverflowError):
+    pass
 Path(sys.argv[3]).write_text(json.dumps(report) + '\n')
 summary = os.environ.get('GITHUB_STEP_SUMMARY')
 if summary:
@@ -142,10 +178,14 @@ if summary:
         output.write('\n### Deployment timing (ms)\n\n| Stage | ms |\n| --- | ---: |\n')
         for stage in ('commandCreateMs', 'waitAndExecutionMs'):
             output.write(f'| {stage} | {report[stage]} |\n')
+        for stage, elapsed in report['poll'].items():
+            if stage.endswith('Ms'):
+                output.write(f'| poll.{stage} | {elapsed} |\n')
         for stage, elapsed in host.items():
             output.write(f'| {stage} | {elapsed} |\n')
         if not host:
             output.write('\nHost stage timing unavailable; protected host helper may need updating.\n')
+        output.write(f"\nPolling attempts: {report['poll']['attempts']}; execution not found: {report['poll']['notFound']}.\n")
 PYTHON
 then
   if [[ -n "${GITHUB_OUTPUT:-}" ]]; then

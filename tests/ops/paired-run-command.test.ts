@@ -52,13 +52,44 @@ else:
     if os.environ.get('MOCK_DELAY') and not (root/'delayed').exists():
         (root/'delayed').touch()
         print('NotAuthorizedOrNotFound ${secret}', file=sys.stderr); sys.exit(1)
-    print(json.dumps({'data':{'lifecycle-state':os.environ.get('MOCK_STATE','SUCCEEDED'),
+    states=json.loads(os.environ.get('MOCK_STATES','null'))
+    index=int((root/'poll-index').read_text()) if (root/'poll-index').exists() else 0
+    (root/'poll-index').write_text(str(index+1))
+    state=states[min(index,len(states)-1)] if states else os.environ.get('MOCK_STATE','SUCCEEDED')
+    print(json.dumps({'data':{'lifecycle-state':state,
+        'time-created':os.environ.get('MOCK_CREATED_AT'), 'time-updated':os.environ.get('MOCK_UPDATED_AT'),
         'content':{'exit-code':json.loads(os.environ.get('MOCK_EXIT','0')),
         'message':'${secret}', 'text':os.environ.get('MOCK_TEXT','CONSOLE_MFA_ENCRYPTION_KEY=${secret}')}}}))
 `,
   );
   await writeFile(join(root, "sleep"), "#!/bin/sh\nexit 0\n");
   await Promise.all(["oci", "sleep"].map((name) => chmod(join(root, name), 0o700)));
+  if (extra.MOCK_WALL_ROLLBACK) {
+    await writeFile(
+      join(root, "date"),
+      `#!/usr/bin/python3
+import pathlib,os
+p=pathlib.Path(os.environ['MOCK_ROOT'])/'wall-clock-calls'
+n=int(p.read_text()) if p.exists() else 0
+p.write_text(str(n+1));print(10000 if n==0 else 9000)
+`,
+      { mode: 0o700 },
+    );
+  }
+  if (extra.MOCK_CLOCK_EXPIRE) {
+    await writeFile(
+      join(root, "python3"),
+      `#!/usr/bin/python3
+import pathlib,os,sys
+if '-c' in sys.argv and 'monotonic_ns' in sys.argv[-1]:
+    p=pathlib.Path(os.environ['MOCK_ROOT'])/'clock-calls'
+    n=int(p.read_text()) if p.exists() else 0
+    p.write_text(str(n+1));print([0,100,200,901000,901100][min(n,4)])
+else:os.execv('/usr/bin/python3',['python3',*sys.argv[1:]])
+`,
+      { mode: 0o700 },
+    );
+  }
   const result = spawnSync("bash", [resolve("ops/oci/deploy-via-run-command.sh"), ...args], {
     encoding: "utf8",
     timeout: 5_000,
@@ -88,7 +119,8 @@ else:
     .catch(() => null);
   const summary = await readFile(join(root, "summary"), "utf8").catch(() => "");
   expect(JSON.stringify(report) + summary).not.toContain(secret);
-  return { result, calls, report, summary };
+  const wallClockCalls = await readFile(join(root, "wall-clock-calls"), "utf8").catch(() => "0");
+  return { result, calls, report, summary, wallClockCalls };
 }
 
 afterEach(async () => {
@@ -96,6 +128,47 @@ afterEach(async () => {
 });
 
 describe("paired OCI Run Command transport", () => {
+  test("벽시계 역행과 무관하게 단조 시계로 시간을 측정한다", async () => {
+    const { result, report, wallClockCalls } = await execute(validArgs, {
+      MOCK_WALL_ROLLBACK: "1",
+    });
+    expect(result.status).toBe(0);
+    expect(wallClockCalls).toBe("0");
+    expect(report.commandCreateMs).toBeGreaterThanOrEqual(0);
+    expect(report.waitAndExecutionMs).toBeGreaterThanOrEqual(0);
+  });
+  test("단조 시계의 전체 제한이 지나면 두 번째 명령 없이 중단한다", async () => {
+    const { result, calls } = await execute(validArgs, { MOCK_CLOCK_EXPIRE: "1" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("did not reach a terminal state");
+    expect(calls).toHaveLength(1);
+  });
+  test("첫 실행 관측·진행 상태·서비스 구간을 고정 숫자로만 기록한다", async () => {
+    const { result, report, summary } = await execute(validArgs, {
+      MOCK_STATES: '["ACCEPTED","IN_PROGRESS","SUCCEEDED"]',
+      MOCK_CREATED_AT: "2026-11-03T10:22:15.948Z",
+      MOCK_UPDATED_AT: "2026-11-03T10:26:13.124Z",
+    });
+    expect(result.status).toBe(0);
+    expect(report.poll).toMatchObject({ attempts: 3, notFound: 0, serviceElapsedMs: 237176 });
+    expect(report.poll.requestMs).toBeGreaterThanOrEqual(0);
+    expect(report.poll.firstInProgressObservedMs).toBeGreaterThanOrEqual(
+      report.poll.firstExecutionObservedMs,
+    );
+    expect(summary).toContain("| poll.serviceElapsedMs | 237176 |");
+  });
+  test.each([
+    [secret, "2026-11-03T10:26:13Z"],
+    ["2026-11-03T10:26:13Z", "2026-11-03T10:22:15Z"],
+    ["2026-11-03T10:00:00", "2026-11-03T10:01:00"],
+  ])("잘못된 서비스 시간은 배포 결과에 영향 없이 생략한다", async (created, updated) => {
+    const { result, report } = await execute(validArgs, {
+      MOCK_CREATED_AT: created,
+      MOCK_UPDATED_AT: updated,
+    });
+    expect(result.status).toBe(0);
+    expect(report.poll.serviceElapsedMs).toBeUndefined();
+  });
   test("exports only allowlisted stage numbers while legacy output remains optional", async () => {
     const { result, report, summary } = await execute(validArgs, {
       MOCK_TEXT: `${secret}\nOIOI_DEPLOY_TIMING materialize_web 125\nOIOI_DEPLOY_TIMING total 250\n`,
@@ -175,10 +248,11 @@ describe("paired OCI Run Command transport", () => {
   );
 
   test("waits for delayed execution without creating a second command", async () => {
-    const { result, calls } = await execute(validArgs, { MOCK_DELAY: "1" });
+    const { result, calls, report } = await execute(validArgs, { MOCK_DELAY: "1" });
     expect(result.status).toBe(0);
     expect(calls.filter((args) => args[1] === "command")).toHaveLength(1);
     expect(calls.filter((args) => args[1] === "command-execution")).toHaveLength(2);
+    expect(report.poll).toMatchObject({ attempts: 2, notFound: 1 });
   });
 
   test.each(["create", "lookup"])("hides OCI %s errors", async (phase) => {
