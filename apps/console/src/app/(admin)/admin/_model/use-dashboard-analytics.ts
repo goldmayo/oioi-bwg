@@ -1,0 +1,71 @@
+"use client";
+
+import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { analyticsRangeSchema } from "@oioi-bwg/contracts/analytics";
+import { useQueries } from "@tanstack/react-query";
+import { parseAsString, useQueryStates } from "nuqs";
+
+import { analyticsQuery } from "@/entities/analytics-report";
+
+import { analyticsDateAgo, type AnalyticsMetric, analyticsPreset } from "../_lib/analytics";
+
+const urlState = {
+  from: parseAsString.withDefault(""),
+  to: parseAsString.withDefault(""),
+};
+
+export function useDashboardAnalytics(accountId: string) {
+  const [urlRange, setRange] = useQueryStates(urlState);
+  const parsed = analyticsRangeSchema.safeParse(urlRange);
+  const valid = parsed.success && urlRange.to <= analyticsDateAgo(1);
+  const range = valid ? parsed.data : analyticsPreset(28);
+  const form = useForm({
+    defaultValues: range,
+    resolver: zodResolver(analyticsRangeSchema),
+    mode: "onChange",
+  });
+  const [from, to] = useWatch({ control: form.control, name: ["from", "to"] });
+  const draft = { from, to };
+  const [custom, setCustom] = useState(false);
+  const [metric, setMetric] = useState<AnalyticsMetric>("users");
+  const [traffic, setTraffic] = useState<"channels" | "sources">("channels");
+  const reports = useQueries({
+    queries: (["summary", "trend", "pages", traffic, "devices", "browsers"] as const).map(
+      (report) => analyticsQuery(accountId, { ...range, report }),
+    ),
+  });
+  const preset = [7, 28, 90].find((days) => {
+    const candidate = analyticsPreset(days);
+    return candidate.from === range.from && candidate.to === range.to;
+  });
+  const draftValid =
+    analyticsRangeSchema.safeParse(draft).success && draft.to <= analyticsDateAgo(1);
+
+  return {
+    range,
+    draft,
+    form,
+    custom: custom || !preset,
+    metric,
+    setMetric,
+    traffic,
+    setTraffic,
+    reports,
+    draftValid,
+    preset: custom ? "custom" : String(preset ?? "custom"),
+    invalidUrl: Boolean(urlRange.from || urlRange.to) && !valid,
+    selectPeriod(value: string) {
+      setCustom(value === "custom");
+      if (value === "custom") form.reset(range);
+      else void setRange(analyticsPreset(Number(value)));
+    },
+    applyRange: form.handleSubmit((values) => {
+      if (values.to <= analyticsDateAgo(1)) void setRange(values);
+    }),
+    refresh() {
+      void Promise.allSettled(reports.map((report) => report.refetch({ cancelRefetch: false })));
+    },
+  };
+}
