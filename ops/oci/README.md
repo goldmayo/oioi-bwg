@@ -527,6 +527,28 @@ iOS/iPadOS는 홈 화면 웹 앱에서 검증한다. Service Worker는 API·HTML
 발송은 60초마다 미처리/lease 만료를 복구한다. FCM 접수와 사용자의 수신·읽음은 다르며, 생성 후 24시간이 지나면 push를 중단한다.
 비활성화는 flag를 false로 바꾸고 기존 Promotion/rollback 절차를 따른다. 알림 내역은 삭제하지 않는다.
 
+### 9.2.3. Console GA4 조회 설정
+
+Console GA4 설정은 선택 사항이다. 운영에서 사용하려면 다음 두 항목을 함께 준비한다.
+
+| 보호 파일 | 입력 |
+| --- | --- |
+| `console-runtime-public.env` | `GA4_PROPERTY_ID`에 숫자 GA4 속성 ID |
+| `console-runtime-secrets.env` | `GA4_SERVICE_ACCOUNT_JSON`에 GA4 전용 Vault Secret OCID |
+
+GA4 속성에서 뷰어 권한을 받은 서비스 계정의 JSON을 한 줄로 만들어 기존 Secret compartment의
+별도 Vault Secret에 저장한다. [OCI Secret 생성 안내](https://docs.oracle.com/en-us/iaas/Content/secret-management/Tasks/create-secret.htm)를
+따른다. 기존 Resource Manager Stack의 `runtime_secret_ocids`를 보존하고 GA4 Secret OCID 한 개를
+추가한다. 승인한 Plan에서 Compute Instance Principal의 해당 Secret에 대한 `read secret-bundles`
+추가만 확인하고 적용한다. JSON 원문은 Vault에 두며 운영에는 파일 경로를 공급하지 않는다.
+
+별도 승인한 host 변경에서 deployment lock을 확보한 뒤, 현행 materializer와 두 Console 설정을
+root 보호 경로에 백업한다. GA4를 지원하는 materializer와 두 입력을 함께 적용하고
+`preflight-host.sh` 및 root 전용 임시 파일을 대상으로 Console materialization을 확인한다.
+값을 출력하지 않고 종료 상태를 확인한 뒤 임시 파일을 정리한다. 실패하면 백업한 helper와 설정을
+복원한다. 실제 적용은 이후 정상 Promotion이 새 Console env를 만들어 수행한다. 배포 후 관리자로
+`/admin`에 접속해 GA4 요약과 기기·브라우저 보고서가 조회되는지 확인한다.
+
 Console 로그인은 TOTP이고 현재 메일 호출 consumer가 없다. 메일 설정을 Console에 복사하지 않는다.
 Web의 가입 POST도 현재 종료된 상태다. 공통 메일 구현의 `dev`는 실제 발송이 아니며, 향후 consumer를
 연결할 때 해당 앱에 `oci` mode·발신자·compartment와 Instance Principal 권한을 별도로 준비한다.

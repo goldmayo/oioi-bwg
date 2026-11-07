@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build one app's temporary raw env; never print Vault values or errors."""
 import base64
+import json
 import os
 import re
 import subprocess
@@ -12,14 +13,14 @@ SECRETS = {
     'web': {'DB_APP_PASSWORD', 'AUTH_SECRET', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'},
     'console': {'DB_APP_PASSWORD', 'CONSOLE_AUTH_SECRET', 'CONSOLE_MFA_ENCRYPTION_KEY',
                 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'FIREBASE_SERVICE_ACCOUNT_JSON',
-                'CONSOLE_WAVEFORM_RUNNER_TOKEN'},
+                'CONSOLE_WAVEFORM_RUNNER_TOKEN', 'GA4_SERVICE_ACCOUNT_JSON'},
 }
 CONSOLE_PUBLIC = {'CONSOLE_ORIGIN', 'CONSOLE_MFA_ENROLLMENT_ENABLED', 'CONSOLE_OPERATOR_ENABLED',
                   'R2_ENDPOINT', 'R2_BUCKET', 'ASSETS_PUBLIC_BASE_URL', 'CONSOLE_PUSH_ENABLED',
                   'FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_APP_ID',
                   'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_VAPID_PUBLIC_KEY',
                   'CONSOLE_WAVEFORM_RUNNER_ENABLED', 'CONSOLE_WAVEFORM_GENERATION_ENABLED',
-                  'CONSOLE_WAVEFORM_ALLOWED_VIDEO_IDS'}
+                  'CONSOLE_WAVEFORM_ALLOWED_VIDEO_IDS', 'GA4_PROPERTY_ID'}
 
 
 def require(condition):
@@ -45,7 +46,7 @@ def materialize(app, public_path, map_path, output):
     require(not (public.keys() & (SECRETS['web'] | SECRETS['console'] | {'DATABASE_URL'})))
     require(mapping.keys() <= SECRETS[app])
     if app == 'web':
-        require(not any(key.startswith('CONSOLE_') for key in public))
+        require(not any(key.startswith(('CONSOLE_', 'GA4_')) for key in public))
         required = {'DB_APP_PASSWORD', 'AUTH_SECRET'}
     else:
         require(public.keys() <= CONSOLE_PUBLIC)
@@ -74,6 +75,11 @@ def materialize(app, public_path, map_path, output):
             require(all(public.get(name, '').strip() for name in (
                 'FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY', 'FIREBASE_APP_ID',
                 'FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_VAPID_PUBLIC_KEY')))
+        if 'GA4_PROPERTY_ID' in public:
+            require(re.fullmatch(r'[0-9]+', public['GA4_PROPERTY_ID']))
+            required.add('GA4_SERVICE_ACCOUNT_JSON')
+        else:
+            require('GA4_SERVICE_ACCOUNT_JSON' not in mapping)
         for flag in ('CONSOLE_WAVEFORM_RUNNER_ENABLED', 'CONSOLE_WAVEFORM_GENERATION_ENABLED'):
             if flag in public:
                 require(public[flag] in {'true', 'false'})
@@ -116,6 +122,11 @@ def materialize(app, public_path, map_path, output):
         token = values.get('CONSOLE_WAVEFORM_RUNNER_TOKEN')
         if token is not None:
             require(re.fullmatch(r'[0-9a-f]{64}', token) and token != values['CONSOLE_AUTH_SECRET'])
+        if 'GA4_SERVICE_ACCOUNT_JSON' in values:
+            account = json.loads(values['GA4_SERVICE_ACCOUNT_JSON'])
+            require(isinstance(account, dict) and account.get('type') == 'service_account'
+                    and all(isinstance(account.get(field), str) and account[field].strip()
+                            for field in ('client_email', 'private_key')))
     password = values.pop('DB_APP_PASSWORD')
     values['DATABASE_URL'] = f'postgresql://{user}:{quote(password, safe="")}@{host}:{port}/{name}'
     required_keys = os.environ.get('REQUIRED_RUNTIME_KEYS', '').split()
