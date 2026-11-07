@@ -531,9 +531,9 @@ iOS/iPadOS는 홈 화면 웹 앱에서 검증한다. Service Worker는 API·HTML
 
 Console GA4 설정은 선택 사항이다. 운영에서 사용하려면 다음 두 항목을 함께 준비한다.
 
-| 보호 파일 | 입력 |
-| --- | --- |
-| `console-runtime-public.env` | `GA4_PROPERTY_ID`에 숫자 GA4 속성 ID |
+| 보호 파일                     | 입력                                                    |
+| ----------------------------- | ------------------------------------------------------- |
+| `console-runtime-public.env`  | `GA4_PROPERTY_ID`에 숫자 GA4 속성 ID                    |
 | `console-runtime-secrets.env` | `GA4_SERVICE_ACCOUNT_JSON`에 GA4 전용 Vault Secret OCID |
 
 GA4 속성에서 뷰어 권한을 받은 서비스 계정의 JSON을 한 줄로 만들어 기존 Secret compartment의
