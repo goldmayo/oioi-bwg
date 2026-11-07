@@ -13,6 +13,15 @@ import { JsonBodyError } from "./bounded-json-body";
 import { assertConsoleOrigin } from "./console-origin";
 
 const appErrorDefinitions = {
+  ANALYTICS_NOT_CONFIGURED: { message: "GA4 연결 설정을 확인해 주세요.", status: 503 },
+  ANALYTICS_UNAVAILABLE: {
+    message: "GA4 통계를 불러오지 못했습니다. 다시 시도해 주세요.",
+    status: 503,
+  },
+  ANALYTICS_RATE_LIMITED: {
+    message: "GA4 조회 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.",
+    status: 429,
+  },
   ENQUEUE_FAILED: { message: "파형 작업을 전달하지 못했습니다. 다시 요청해 주세요.", status: 503 },
   WAVEFORM_JOB_NOT_FOUND: { message: "파형 작업을 찾을 수 없습니다.", status: 404 },
   WAVEFORM_ALREADY_EXISTS: { message: "현재 영상의 파형이 이미 등록되어 있습니다.", status: 409 },

@@ -8,9 +8,11 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 MFA = base64.b64encode(bytes(32)).decode()
+GA4 = json.dumps(dict(type='service_account', client_email='ga4@fixture.iam.gserviceaccount.com',
+                     private_key='fixture-ga4-key\nsecond-line'))
 VALUES = dict(db='fixture-p@ss', web='fixture-web-auth-secret',
               auth='fixture-console-auth-secret-32-characters', mfa=MFA,
-              r2id='fixture-r2-id', r2secret='fixture-r2-secret', runner='a'*64)
+              r2id='fixture-r2-id', r2secret='fixture-r2-secret', runner='a'*64, ga4=GA4)
 
 
 class RuntimeEnvTest(unittest.TestCase):
@@ -42,6 +44,18 @@ class RuntimeEnvTest(unittest.TestCase):
             if variant == 'push-missing': public += 'CONSOLE_PUSH_ENABLED=true\n'
             if variant == 'push-secret-public': public += 'FIREBASE_SERVICE_ACCOUNT_JSON=must-not-be-public\n'
             if variant == 'push-web-secret': mapping += 'FIREBASE_SERVICE_ACCOUNT_JSON=ocid1.vaultsecret.test.auth\n'
+            if variant.startswith('ga4-'):
+                if variant != 'ga4-missing-property':
+                    property_id = 'G-fixture' if variant == 'ga4-invalid-property' else '123456'
+                    public += f'GA4_PROPERTY_ID={property_id}\n'
+                if variant not in {'ga4-missing-secret', 'ga4-web-property'}:
+                    mapping += 'GA4_SERVICE_ACCOUNT_JSON=ocid1.vaultsecret.test.ga4\n'
+                if variant == 'ga4-public-secret':
+                    public += 'GA4_SERVICE_ACCOUNT_JSON=invalid-public-secret\n'
+                if variant == 'ga4-local-file':
+                    public += 'GA4_SERVICE_ACCOUNT_FILE=/local/ga4.json\n'
+                if variant == 'ga4-invalid-json':
+                    secrets['ga4'] = '{"type":"service_account"}'
             if variant == 'foreign-public': public += 'CONSOLE_ORIGIN=http://localhost:3001\n' if app == 'web' else 'EMAIL_DELIVERY_MODE=dev\n'
             if variant == 'public-secret': public += 'AUTH_SECRET=' + VALUES['web'] + '\n'
             if variant == 'foreign-key': mapping += 'CONSOLE_AUTH_SECRET=ocid1.vaultsecret.test.auth\n' if app == 'web' else 'AUTH_SECRET=ocid1.vaultsecret.test.web\n'
@@ -180,6 +194,23 @@ print(base64.b64encode(json.loads((root/'values').read_text())[key].encode()).de
             self.assertEqual(result.returncode, 1)
             self.assertEqual(output, 'previous-env')
             self.assertEqual(calls, [])
+
+    def test_ga4_configuration_is_paired_and_console_only(self):
+        result, output, calls, mode = self.run_case('console', 'ga4-ready')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('GA4_PROPERTY_ID=123456\n', output)
+        self.assertIn('GA4_SERVICE_ACCOUNT_JSON=' + GA4 + '\n', output)
+        self.assertEqual(mode, 0o600)
+        self.assertEqual(sum('ocid1.vaultsecret.test.ga4' in args for args in calls), 1)
+        for app, variant in [('web', 'ga4-web-property'), ('web', 'ga4-missing-property'),
+                             ('console', 'ga4-missing-property'), ('console', 'ga4-missing-secret'),
+                             ('console', 'ga4-invalid-property'), ('console', 'ga4-public-secret'),
+                             ('console', 'ga4-local-file'), ('console', 'ga4-invalid-json')]:
+            with self.subTest(app=app, variant=variant):
+                result, output, calls, _ = self.run_case(app, variant)
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(output, 'previous-env')
+                if variant != 'ga4-invalid-json': self.assertEqual(calls, [])
 
 
 if __name__ == '__main__':
