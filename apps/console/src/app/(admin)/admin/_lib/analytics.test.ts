@@ -26,7 +26,7 @@ it("전체 사용자가 0이면 비율을 구분하고 같은 사용자의 중�
     1,
   );
 });
-it("누락 날짜의 선을 끊고 실제 0과 한 날짜의 값을 보존한다", () => {
+it("차트 데이터에서 누락 날짜와 실제 0을 구분한다", () => {
   const report = {
     from: "2026-11-01",
     to: "2026-11-03",
@@ -35,10 +35,9 @@ it("누락 날짜의 선을 끊고 실제 0과 한 날짜의 값을 보존한다
       { label: "20261103", users: 8 },
     ],
   } as AnalyticsReport;
-  const result = analyticsSeries(report, "users");
-  expect(result.points[0]?.value).toBe(0);
-  expect(result.points[1]).toBeNull();
-  expect(result.path.match(/M/g)).toHaveLength(2);
-  const single = analyticsSeries({ ...report, to: report.from }, "users");
-  expect(single.points[0]?.x).toBe(300);
+  expect(analyticsSeries(report, "users")).toEqual([
+    { date: "2026-11-01", value: 0 },
+    { date: "2026-11-02", value: null },
+    { date: "2026-11-03", value: 8 },
+  ]);
 });

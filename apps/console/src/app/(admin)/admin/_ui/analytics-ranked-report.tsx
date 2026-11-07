@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Bar, BarChart, LabelList, XAxis, YAxis } from "recharts";
 
 import {
   Card,
@@ -10,6 +11,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/ui/card";
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/shared/ui/chart";
 
 import {
   type AnalyticsMetric,
@@ -26,6 +33,12 @@ const deviceLabels: Record<string, string> = {
   tablet: "태블릿",
   "(not set)": "알 수 없음",
 };
+
+const chartConfig = { ratio: { color: "var(--ring)" } } satisfies ChartConfig;
+
+function shortLabel(label: string) {
+  return label.length > 10 ? `${label.slice(0, 9)}…` : label;
+}
 
 export function AnalyticsRankedReport({
   title,
@@ -44,6 +57,16 @@ export function AnalyticsRankedReport({
 }) {
   const report = query.data;
   const total = report?.totals[metric] ?? 0;
+  const rows = (report?.rows ?? []).map((row) => {
+    const count = analyticsNumber.format(row[metric]);
+    const ratio = analyticsShare(row[metric], total);
+    const percent = ratio === null ? "—" : analyticsPercent.format(ratio);
+    return {
+      label: report?.report === "devices" ? (deviceLabels[row.label] ?? row.label) : row.label,
+      ratio: Math.min(ratio ?? 0, 1),
+      display: share ? `${percent} · ${count}명` : count,
+    };
+  });
   return (
     <Card
       role="region"
@@ -67,46 +90,73 @@ export function AnalyticsRankedReport({
         {report && report.rows.length === 0 && (
           <p className="text-muted-foreground text-sm">선택한 기간에 표시할 데이터가 없습니다.</p>
         )}
-        {report && report.rows.length > 0 && (
-          <ol className="border-border border-t">
-            {report.rows.map((row) => {
-              const ratio = analyticsShare(row[metric], total);
-              const label =
-                report.report === "devices" ? (deviceLabels[row.label] ?? row.label) : row.label;
-              return (
-                <li key={row.label} className="space-y-2 pt-3">
-                  <div className="flex items-center justify-between gap-4 text-sm">
-                    <span className="min-w-0 break-words">{label}</span>
-                    <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
-                      {share && (
-                        <span className="text-muted-foreground text-xs">
-                          {analyticsNumber.format(row[metric])}명
-                        </span>
-                      )}
-                      <span className={share ? "text-base font-semibold" : ""}>
-                        {share
-                          ? ratio === null
-                            ? "—"
-                            : analyticsPercent.format(ratio)
-                          : analyticsNumber.format(row[metric])}
-                      </span>
-                    </span>
-                  </div>
-                  {ratio !== null && (
-                    <div
-                      className={`bg-border w-full ${share ? "h-1 rounded-full" : "h-0.5"}`}
-                      aria-hidden="true"
-                    >
-                      <div
-                        className="bg-ring h-full rounded-[inherit]"
-                        style={{ width: `${Math.min(ratio, 1) * 100}%` }}
+        {rows.length > 0 && (
+          <div className="border-border space-y-2 border-t pt-2">
+            {total > 0 && (
+              <ChartContainer
+                config={chartConfig}
+                className="aspect-auto w-full"
+                style={{ height: rows.length * 32 }}
+              >
+                <BarChart
+                  accessibilityLayer
+                  data={rows}
+                  layout="vertical"
+                  margin={{ top: 0, bottom: 0, left: 0, right: share ? 88 : 66 }}
+                  barSize={7}
+                >
+                  <XAxis type="number" domain={[0, 1]} hide />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "var(--muted-foreground)" }}
+                    tickMargin={8}
+                    tickFormatter={shortLabel}
+                    width={100}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent
+                        className="max-w-60 break-words"
+                        formatter={(_, __, item) => item.payload.display}
                       />
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
+                    }
+                  />
+                  <Bar
+                    dataKey="ratio"
+                    fill="var(--color-ratio)"
+                    background={{ fill: "var(--muted)", radius: 3 }}
+                    radius={3}
+                    isAnimationActive={false}
+                  >
+                    <LabelList
+                      dataKey="display"
+                      position="right"
+                      className="fill-foreground tabular-nums"
+                      fontSize={12}
+                      fontWeight={share ? 600 : 400}
+                    />
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
+            )}
+            <details open={total === 0} className="text-muted-foreground text-xs">
+              <summary className="focus-visible:outline-ring cursor-pointer py-2 outline-offset-2 focus-visible:outline-2">
+                항목별 수치 보기
+              </summary>
+              <ol className="space-y-2">
+                {rows.map(({ label, display }) => (
+                  <li key={label} className="flex justify-between gap-3">
+                    <span className="min-w-0 break-words">{label}</span>
+                    <span className="text-foreground shrink-0 tabular-nums">{display}</span>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          </div>
         )}
         {report?.truncated && (
           <p className="text-muted-foreground text-xs">

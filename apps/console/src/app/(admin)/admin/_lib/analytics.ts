@@ -32,36 +32,11 @@ export function analyticsShare(users: number, total: number) {
 
 /** Google에서 생략된 날짜는 누락으로 남겨 선을 끊는다. */
 export function analyticsSeries(report: AnalyticsReport, metric: AnalyticsMetric) {
-  const count = Math.round((Date.parse(report.to) - Date.parse(report.from)) / 86_400_000) + 1;
+  const start = Date.parse(report.from);
+  const count = Math.round((Date.parse(report.to) - start) / 86_400_000) + 1;
   const values = new Map(report.rows.map((row) => [row.label, row[metric]]));
-  const dates = Array.from({ length: count }, (_, index) =>
-    new Date(Date.parse(report.from) + index * 86_400_000).toISOString().slice(0, 10),
-  );
-  const maximum = Math.max(1, ...values.values());
-  const scale = 10 ** Math.floor(Math.log10(maximum));
-  const ceiling = Math.max(3, Math.ceil(maximum / (3 * scale)) * 3 * scale);
-  const points = dates.map((date, index) => {
-    const value = values.get(date.replaceAll("-", ""));
-    return value === undefined
-      ? null
-      : {
-          x: count === 1 ? 300 : (index / (count - 1)) * 600,
-          y: 180 - (value / ceiling) * 180,
-          date,
-          value,
-        };
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(start + index * 86_400_000).toISOString().slice(0, 10);
+    return { date, value: values.get(date.replaceAll("-", "")) ?? null };
   });
-  let connected = false;
-  const path = points
-    .map((point) => {
-      if (!point) {
-        connected = false;
-        return "";
-      }
-      const command = connected ? "L" : "M";
-      connected = true;
-      return `${command}${point.x},${point.y}`;
-    })
-    .join(" ");
-  return { points, path, ceiling, dates };
 }
