@@ -64,11 +64,16 @@ export function AnalyticsTrend({
                 ? { r: 2, strokeWidth: 0, fill: "var(--color-value)" }
                 : false
             }
-            connectNulls={false}
+            connectNulls
             isAnimationActive={false}
           />
         </LineChart>
       </ChartContainer>
+      {series.some(({ value }) => value === null) && (
+        <p className="text-muted-foreground text-xs">
+          집계가 있는 날짜끼리 연결했습니다. 집계가 없는 날짜는 일별 수치에서 —로 표시합니다.
+        </p>
+      )}
       <details className="text-muted-foreground text-xs">
         <summary className="focus-visible:outline-ring cursor-pointer py-2 outline-offset-2 focus-visible:outline-2">
           일별 수치 보기

@@ -30,7 +30,7 @@ export function analyticsShare(users: number, total: number) {
   return total > 0 ? users / total : null;
 }
 
-/** Google에서 생략된 날짜는 누락으로 남겨 선을 끊는다. */
+/** GA4에서 생략된 날짜는 0과 구분할 수 있도록 null로 유지한다. */
 export function analyticsSeries(report: AnalyticsReport, metric: AnalyticsMetric) {
   const start = Date.parse(report.from);
   const count = Math.round((Date.parse(report.to) - start) / 86_400_000) + 1;
