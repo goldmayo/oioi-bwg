@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useId } from "react";
+import { type ReactElement, type ReactNode, useEffect, useId, useState } from "react";
 import {
   type Control,
   type FieldPath,
@@ -11,11 +11,13 @@ import {
   type UseFormReturn,
 } from "react-hook-form";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
+import { Popover } from "radix-ui";
 
 import { useFilterOverlay } from "../model/use-filter-overlay";
+import { useMediaQuery } from "../model/useMediaQuery";
 
 import { Button } from "./button";
-import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "./sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "./sheet";
 
 type FilterFormProps<T extends FieldValues> = {
   values: T;
@@ -32,7 +34,8 @@ function FilterForm<T extends FieldValues>({
   onApply,
   children,
   open,
-}: FilterFormProps<T> & { open: boolean }) {
+  onCancel,
+}: FilterFormProps<T> & { open: boolean; onCancel: () => void }) {
   const form = useForm<T>({ values, resolver, mode: "onChange" });
   const { reset } = form;
   const { isDirty, isSubmitting, isValid } = form.formState;
@@ -43,31 +46,110 @@ function FilterForm<T extends FieldValues>({
 
   return (
     <form onSubmit={form.handleSubmit(onApply)} className="flex min-h-0 flex-1 flex-col">
-      <div className="grid min-h-0 gap-4 overflow-y-auto overscroll-contain px-5 py-4">
+      <div className="grid min-h-0 gap-4 overflow-y-auto overscroll-contain px-5 py-4 md:gap-3 md:px-4 md:py-3">
         {children(form)}
       </div>
-      <div className="border-border flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="border-border flex shrink-0 flex-wrap items-center justify-between gap-2 border-t px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-4 md:py-3">
         <Button
           type="button"
           variant="ghost"
-          className="h-11 px-2"
+          className="h-11 px-2 md:h-9"
           disabled={isSubmitting}
           onClick={() => form.reset(defaults, { keepDefaultValues: true })}
         >
           초기화
         </Button>
         <div className="ml-auto flex items-center gap-2">
-          <SheetClose asChild>
-            <Button type="button" variant="outline" className="h-11" disabled={isSubmitting}>
-              취소
-            </Button>
-          </SheetClose>
-          <Button type="submit" className="h-11" disabled={!isDirty || !isValid || isSubmitting}>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 md:h-9"
+            disabled={isSubmitting}
+            onClick={onCancel}
+          >
+            취소
+          </Button>
+          <Button
+            type="submit"
+            className="h-11 md:h-9"
+            disabled={!isDirty || !isValid || isSubmitting}
+          >
             적용
           </Button>
         </div>
       </div>
     </form>
+  );
+}
+
+function FilterCloseButton({ onClose }: { onClose: () => void }) {
+  return (
+    <Button
+      type="button"
+      size="icon"
+      variant="ghost"
+      aria-label="필터 닫기"
+      className="size-11 md:size-8"
+      onClick={onClose}
+    >
+      <X aria-hidden="true" />
+    </Button>
+  );
+}
+
+type FilterOverlayProps<T extends FieldValues> = FilterFormProps<T> & {
+  title: string;
+  trigger: ReactElement;
+  overlay: ReturnType<typeof useFilterOverlay>;
+  urlBacked: boolean;
+};
+
+function DesktopFilter<T extends FieldValues>({
+  title,
+  trigger,
+  overlay,
+  urlBacked,
+  ...formProps
+}: FilterOverlayProps<T>) {
+  const [open, setOpen] = useState(false);
+  const titleId = useId();
+  const visible = open || overlay.open;
+
+  function close() {
+    if (overlay.open) overlay.close();
+    setOpen(false);
+  }
+
+  return (
+    <Popover.Root open={visible} onOpenChange={(next) => (next ? setOpen(true) : close())}>
+      <Popover.Trigger asChild>{trigger}</Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          aria-labelledby={titleId}
+          align="end"
+          sideOffset={6}
+          collisionPadding={12}
+          className="bg-popover text-popover-foreground border-border z-50 flex max-h-(--radix-popover-content-available-height) w-96 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-lg border shadow-lg outline-none"
+        >
+          <div className="border-border flex shrink-0 items-center justify-between gap-3 border-b py-1.5 pr-2 pl-4">
+            <h2 id={titleId} className="text-sm font-semibold">
+              {title}
+            </h2>
+            <FilterCloseButton onClose={close} />
+          </div>
+          <FilterForm
+            {...formProps}
+            open={visible}
+            onCancel={close}
+            onApply={async (values) => {
+              await formProps.onApply(values);
+              if (overlay.open) overlay.close({ replace: urlBacked });
+              setOpen(false);
+            }}
+          />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
@@ -79,47 +161,52 @@ export function ListFilterSheet<T extends FieldValues>({
   ...formProps
 }: FilterFormProps<T> & { id: string; title: string; activeCount?: number; urlBacked?: boolean }) {
   const overlay = useFilterOverlay(id);
+  const desktop = useMediaQuery("(min-width: 768px)");
+  const trigger = (
+    <Button
+      type="button"
+      variant={activeCount ? "secondary" : "outline"}
+      className="h-11 shrink-0 gap-1.5 md:h-9"
+      aria-label={activeCount ? "필터, 적용된 조건 " + activeCount + "개" : "필터"}
+    >
+      <SlidersHorizontal aria-hidden="true" className="size-4" />
+      필터
+      {activeCount > 0 && (
+        <span aria-hidden="true" className="bg-accent rounded px-1 tabular-nums">
+          {activeCount}
+        </span>
+      )}
+    </Button>
+  );
+  if (desktop) {
+    return (
+      <DesktopFilter
+        {...formProps}
+        title={title}
+        trigger={trigger}
+        overlay={overlay}
+        urlBacked={urlBacked}
+      />
+    );
+  }
+
   return (
     <Sheet open={overlay.open} onOpenChange={(open) => (open ? overlay.show() : overlay.close())}>
-      <SheetTrigger asChild>
-        <Button
-          type="button"
-          variant={activeCount ? "secondary" : "outline"}
-          className="h-11 shrink-0 gap-1.5 md:h-9"
-          aria-label={activeCount ? "필터, 적용된 조건 " + activeCount + "개" : "필터"}
-        >
-          <SlidersHorizontal aria-hidden="true" className="size-4" />
-          필터
-          {activeCount > 0 && (
-            <span aria-hidden="true" className="bg-accent rounded px-1 tabular-nums">
-              {activeCount}
-            </span>
-          )}
-        </Button>
-      </SheetTrigger>
+      <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent
         side="bottom"
         showCloseButton={false}
         aria-describedby={undefined}
         className="bg-popover mx-auto max-h-[min(100dvh,40rem)] max-w-lg gap-0 overflow-hidden rounded-t-xl transition-none data-[state=closed]:duration-150 data-[state=open]:duration-200 motion-reduce:animate-none"
       >
-        <SheetHeader className="border-border flex shrink-0 flex-row items-center justify-between gap-3 border-b py-2 pr-2 pl-5 text-left">
+        <div className="border-border flex shrink-0 items-center justify-between gap-3 border-b py-2 pr-2 pl-5">
           <SheetTitle className="text-base">{title}</SheetTitle>
-          <SheetClose asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              aria-label="필터 닫기"
-              className="size-11"
-            >
-              <X aria-hidden="true" />
-            </Button>
-          </SheetClose>
-        </SheetHeader>
+          <FilterCloseButton onClose={() => overlay.close()} />
+        </div>
         <FilterForm
           {...formProps}
           open={overlay.open}
+          onCancel={() => overlay.close()}
           onApply={async (values) => {
             if (urlBacked) {
               await formProps.onApply(values);
@@ -166,7 +253,7 @@ export function FilterSelect<T extends FieldValues>({
             field.onChange(event);
             onChange?.(event.target.value);
           }}
-          className="border-input bg-background text-foreground focus-visible:ring-ring h-11 w-full min-w-0 appearance-none truncate rounded-md border pr-9 pl-3 text-base outline-none focus-visible:ring-2"
+          className="border-input bg-background text-foreground focus-visible:ring-ring h-11 w-full min-w-0 appearance-none truncate rounded-md border pr-9 pl-3 text-base outline-none focus-visible:ring-2 md:h-9 md:text-sm"
         >
           {children}
         </select>
