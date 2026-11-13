@@ -11,12 +11,16 @@ import { analyticsQuery } from "@/entities/analytics-report";
 
 import { analyticsDateAgo, type AnalyticsMetric, analyticsPreset } from "../_lib/analytics";
 
+import type { WidgetId } from "./dashboard-layout";
+
+const reportWidgets = ["summary", "trend", "pages", "traffic", "devices", "browsers"] as const;
+
 const urlState = {
   from: parseAsString.withDefault(""),
   to: parseAsString.withDefault(""),
 };
 
-export function useDashboardAnalytics(accountId: string) {
+export function useDashboardAnalytics(accountId: string, hidden: readonly WidgetId[]) {
   const [urlRange, setRange] = useQueryStates(urlState);
   const parsed = analyticsRangeSchema.safeParse(urlRange);
   const valid = parsed.success && urlRange.to <= analyticsDateAgo(1);
@@ -32,9 +36,10 @@ export function useDashboardAnalytics(accountId: string) {
   const [metric, setMetric] = useState<AnalyticsMetric>("users");
   const [traffic, setTraffic] = useState<"channels" | "sources">("channels");
   const reports = useQueries({
-    queries: (["summary", "trend", "pages", traffic, "devices", "browsers"] as const).map(
-      (report) => analyticsQuery(accountId, { ...range, report }),
-    ),
+    queries: reportWidgets.map((id) => ({
+      ...analyticsQuery(accountId, { ...range, report: id === "traffic" ? traffic : id }),
+      enabled: !hidden.includes(id),
+    })),
   });
   const preset = [7, 28, 90].find((days) => {
     const candidate = analyticsPreset(days);
@@ -65,7 +70,11 @@ export function useDashboardAnalytics(accountId: string) {
       if (values.to <= analyticsDateAgo(1)) void setRange(values);
     }),
     refresh() {
-      void Promise.allSettled(reports.map((report) => report.refetch({ cancelRefetch: false })));
+      void Promise.allSettled(
+        reports
+          .filter((_, index) => !hidden.includes(reportWidgets[index]))
+          .map((report) => report.refetch({ cancelRefetch: false })),
+      );
     },
   };
 }

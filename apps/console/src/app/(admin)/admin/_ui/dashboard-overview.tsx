@@ -1,4 +1,4 @@
-import { ArrowRight, Bell, Disc3, Music } from "lucide-react";
+import { ArrowRight, Disc3, Music } from "lucide-react";
 import Link from "next/link";
 
 import { adminPaths } from "@/shared/config/admin-routes";
@@ -15,10 +15,7 @@ export function DashboardContent({
   visibleSongCount: number;
 }) {
   return (
-    <section aria-labelledby="content-heading">
-      <h2 id="content-heading" className="mb-4 text-base font-semibold">
-        콘텐츠 관리
-      </h2>
+    <div>
       <div className="bg-card border-border divide-border divide-y overflow-hidden rounded-xl border">
         {[
           {
@@ -62,25 +59,18 @@ export function DashboardContent({
       <p className="text-muted-foreground mt-3 text-sm">
         현재 {visibleSongCount}곡이 표시 상태입니다.
       </p>
-    </section>
+    </div>
   );
 }
 
 export function DashboardJobs() {
   return (
-    <section
-      aria-labelledby="jobs-heading"
-      className="border-border border-t pt-6 lg:border-t-0 lg:pt-0"
-    >
-      <h2 id="jobs-heading" className="mb-4 flex items-center gap-2 text-base font-semibold">
-        <Bell size={18} aria-hidden="true" />
-        작업 알림
-      </h2>
+    <div>
       <p className="text-muted-foreground max-w-prose text-sm leading-7">
         오래 걸리는 작업의 완료·실패 결과는 알림 내역에 남습니다. 놓친 알림도 다시 확인할 수
         있습니다.
       </p>
       <DashboardNotificationsLink />
-    </section>
+    </div>
   );
 }
