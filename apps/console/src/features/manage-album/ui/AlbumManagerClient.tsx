@@ -88,13 +88,14 @@ export function AlbumManagerClient({
   }, [canManage, deleteMutation, deleteTarget, invalidateAlbums, onNameChangeOrDelete]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       <ListHeader
         title="앨범 관리"
+        compactOnMobile
         description="앨범을 추가, 수정, 삭제할 수 있습니다."
         action={
           canManage && (
-            <Button variant="q" asChild>
+            <Button variant="q" className="h-11 md:h-9" asChild>
               <a href={adminPaths.albumCreate}>앨범 추가</a>
             </Button>
           )
@@ -108,7 +109,7 @@ export function AlbumManagerClient({
           placeholder="앨범 이름 또는 slug로 검색..."
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="sm:max-w-xs"
+          className="h-11 md:h-9 md:max-w-xs"
         />
       </ListToolbar>
 

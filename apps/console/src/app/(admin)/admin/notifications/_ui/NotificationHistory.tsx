@@ -6,6 +6,7 @@ import { Tabs } from "radix-ui";
 
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Button } from "@/shared/ui/button";
+import { ListFilterSheet } from "@/shared/ui/list-filter-sheet";
 import { ListHeader } from "@/shared/ui/list-layout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import {
@@ -91,7 +92,7 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
           className="space-y-3 md:space-y-4"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex w-full min-w-0 items-center gap-2 md:w-auto md:flex-wrap md:gap-3">
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 md:w-auto md:justify-start">
               <Tabs.List
                 aria-label="알림 모아보기"
                 className="bg-muted inline-flex h-11 shrink-0 items-center gap-1 rounded-md px-1 md:h-9 md:p-1"
@@ -108,22 +109,33 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
                   )}
                 </Tabs.Trigger>
               </Tabs.List>
-              <Select
-                value={filters.result}
-                onValueChange={(value) => history.changeResult(value as NotificationType | "all")}
+              <ListFilterSheet
+                title="알림 필터"
+                description="파형 생성 결과로 알림 내역을 좁힙니다."
+                activeCount={filters.result === "all" ? 0 : 1}
               >
-                <SelectTrigger
-                  aria-label="작업 결과 필터"
-                  className="min-w-0 flex-1 data-[size=default]:h-11 md:w-40 md:flex-none md:data-[size=default]:h-9"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{wide ? "전체 작업 결과" : "전체 결과"}</SelectItem>
-                  <SelectItem value="WAVEFORM_SUCCEEDED">파형 생성 성공</SelectItem>
-                  <SelectItem value="WAVEFORM_FAILED">파형 생성 실패</SelectItem>
-                </SelectContent>
-              </Select>
+                <div className="grid gap-1.5">
+                  <span className="text-muted-foreground text-xs">작업 결과</span>
+                  <Select
+                    value={filters.result}
+                    onValueChange={(value) =>
+                      history.changeResult(value as NotificationType | "all")
+                    }
+                  >
+                    <SelectTrigger
+                      aria-label="작업 결과 필터"
+                      className="w-full data-[size=default]:h-11"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">전체 결과</SelectItem>
+                      <SelectItem value="WAVEFORM_SUCCEEDED">파형 생성 성공</SelectItem>
+                      <SelectItem value="WAVEFORM_FAILED">파형 생성 실패</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </ListFilterSheet>
             </div>
             {wide ? <BrowserNotificationSwitch /> : null}
           </div>
