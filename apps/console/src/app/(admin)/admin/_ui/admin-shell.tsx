@@ -30,32 +30,32 @@ export function AdminShell({
     <Link
       href={adminPaths.dashboard}
       aria-label="OIOIBWG 대시보드 홈"
-      className="text-foreground flex min-h-11 min-w-11 items-center gap-2 rounded-md group-data-[collapsed=true]/sidebar:justify-center focus-visible:outline-2 focus-visible:outline-offset-4"
+      className="text-foreground flex min-h-11 min-w-11 items-center gap-2 rounded-md group-data-[collapsed=true]/sidebar:justify-center focus-visible:outline-2 focus-visible:outline-offset-4 md:min-h-8"
     >
-      <AppLogo />
+      <AppLogo className="md:text-base" />
     </Link>
   );
   const navigation = (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5">{navContent}</div>
-      <div className="p-3">{sidebarFooter}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3 md:py-2">{navContent}</div>
+      <div className="p-2">{sidebarFooter}</div>
     </>
   );
   return (
-    <div className="bg-background text-foreground flex h-dvh min-w-0 flex-col overflow-hidden md:flex-row">
+    <div className="bg-sidebar text-foreground flex h-dvh min-w-0 flex-col overflow-hidden md:flex-row md:p-2 md:pl-0">
       <aside
         data-collapsed={isMinimized}
         aria-label="관리자 탐색"
-        className={`group/sidebar bg-sidebar border-sidebar-border hidden h-full shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${isMinimized ? "w-20" : "w-60"}`}
+        className={`group/sidebar hidden h-full shrink-0 flex-col transition-[width] duration-200 motion-reduce:transition-none md:flex ${isMinimized ? "w-14" : "w-48"}`}
       >
         <div
-          className={`flex h-20 shrink-0 items-center px-3 ${isMinimized ? "justify-center" : "justify-between"}`}
+          className={`flex h-10 shrink-0 items-center px-3 ${isMinimized ? "justify-center" : "justify-between"}`}
         >
           {isMinimized ? (
             <Button
               variant="ghost"
               size="icon"
-              className="group/brand relative size-11"
+              className="group/brand relative size-8"
               aria-label="사이드바 열기"
               title="사이드바 열기"
               aria-expanded={false}
@@ -68,7 +68,7 @@ export function AdminShell({
                 <AppLogo compact />
               </span>
               <PanelLeftOpen
-                className="absolute size-5 opacity-0 transition-opacity group-hover/brand:opacity-100 group-focus-visible/brand:opacity-100"
+                className="absolute size-4 opacity-0 transition-opacity group-hover/brand:opacity-100 group-focus-visible/brand:opacity-100"
                 aria-hidden="true"
               />
             </Button>
@@ -78,24 +78,32 @@ export function AdminShell({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-11"
+                className="size-8"
                 aria-label="사이드바 접기"
                 title="사이드바 접기"
                 aria-expanded
                 onClick={() => setIsMinimized(true)}
               >
-                <PanelLeft className="size-5" aria-hidden="true" />
+                <PanelLeft className="size-4" aria-hidden="true" />
               </Button>
             </>
           )}
         </div>
         {navigation}
       </aside>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="bg-background border-border flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 md:min-h-20">
-          <div className="md:hidden">{brand}</div>
+      <div className="bg-background border-border flex min-h-0 min-w-0 flex-1 flex-col md:rounded-lg md:border">
+        <header className="border-border flex min-h-13 shrink-0 items-center justify-between gap-2 border-b px-3 md:min-h-10 md:px-4">
+          <div className="md:hidden">
+            <Link
+              href={adminPaths.dashboard}
+              aria-label="OIOIBWG 대시보드 홈"
+              className="flex size-11 items-center justify-center rounded-md focus-visible:outline-2"
+            >
+              <AppLogo compact />
+            </Link>
+          </div>
           {breadcrumbs}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-0.5">
             {headerActions}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>

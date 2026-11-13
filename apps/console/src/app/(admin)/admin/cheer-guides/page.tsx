@@ -28,8 +28,8 @@ export default async function AdminCheerGuidesPage() {
     serializedAbilityResponseSchema.parse({ rules: context.ability.rules }),
   );
   return (
-    <div className="min-w-0 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-w-0 p-4 md:px-5 md:py-4">
+      <div className="w-full">
         <HydrationBoundary state={dehydrate(client)}>
           <Suspense fallback={<p role="status">응원법을 불러오는 중입니다.</p>}>
             <AdminGuideList />

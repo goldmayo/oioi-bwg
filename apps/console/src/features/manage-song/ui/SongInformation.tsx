@@ -15,66 +15,25 @@ export function SongInformation({
   canManage: boolean;
 }) {
   return (
-    <>
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">곡 정보</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            곡의 기본 정보와 응원법을 확인합니다.
-          </p>
-        </div>
-        {canManage && (
-          <Button variant="brand" asChild>
-            <a href={adminLinks.songEdit(song.id)}>
-              <Pencil />
-              편집
-            </a>
-          </Button>
-        )}
-      </header>
-      <div className="space-y-8">
-        <section className="space-y-5" aria-labelledby="song-basics">
-          <h2 id="song-basics" className="text-lg font-semibold">
-            기본 정보
-          </h2>
-          <dl className="space-y-5 text-sm">
-            {[
-              ["곡 제목", song.title],
-              ["앨범", song.album.name],
-              ["YouTube ID", song.youtubeId],
-              ["Slug", song.slug ?? "미지정"],
-              ["정렬 순서", song.order],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <dt className="text-muted-foreground mb-2">{label}</dt>
-                <dd className="wrap-anywhere">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-        <section className="space-y-5" aria-labelledby="song-display">
-          <h2 id="song-display" className="text-lg font-semibold">
-            표시 설정
-          </h2>
-          <dl className="space-y-4 text-sm">
-            <div className="flex items-center justify-between gap-4">
-              <dt className="text-muted-foreground">사용자 노출</dt>
-              <dd className="flex items-center gap-2">
-                <VisibilityIcon visible={song.isVisible} />
-                {song.isVisible ? "표시" : "숨김"}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <dt className="text-muted-foreground">타이틀곡</dt>
-              <dd>{song.isTitle ? "예" : "아니요"}</dd>
-            </div>
-          </dl>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            곡의 표시 설정입니다. 앨범 설정과 응원법 공개 상태에 따라 사용자 노출이 달라집니다.
-          </p>
-        </section>
-        <section className="space-y-3" aria-labelledby="song-lyrics">
-          <h2 id="song-lyrics" className="text-lg font-semibold">
+    <div className="grid min-w-0 flex-1 md:grid-cols-[minmax(0,1fr)_minmax(15rem,27%)]">
+      <div className="min-w-0 space-y-8 px-4 py-6 md:px-8 md:py-8 lg:px-12">
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold tracking-tight">{song.title}</h1>
+            <p className="text-muted-foreground mt-2 text-sm">{song.album.name}</p>
+          </div>
+          {canManage && (
+            <Button variant="ghost" size="sm" asChild>
+              <a href={adminLinks.songEdit(song.id)}>
+                <Pencil />
+                편집
+              </a>
+            </Button>
+          )}
+        </header>
+        <SongGuideSummary song={song} canManage={canManage} />
+        <section className="border-border space-y-2 border-t pt-4" aria-labelledby="song-lyrics">
+          <h2 id="song-lyrics" className="text-sm font-semibold">
             가사
           </h2>
           <p className="text-sm">{song.hasLyrics ? "등록됨" : "미등록"}</p>
@@ -82,9 +41,45 @@ export function SongInformation({
             가사 파일 교체는 곡 정보 수정에서 할 수 있습니다.
           </p>
         </section>
-        <SongGuideSummary song={song} canManage={canManage} />
       </div>
-    </>
+      <aside
+        className="border-border bg-card px-4 py-6 md:border-l md:px-5 md:py-8"
+        aria-labelledby="song-properties"
+      >
+        <h2 id="song-properties" className="mb-3 text-sm font-semibold">
+          속성
+        </h2>
+        <dl className="space-y-3 text-sm">
+          <div className="grid grid-cols-[minmax(4.5rem,42%)_1fr] items-center gap-2">
+            <dt className="text-muted-foreground">사용자 노출</dt>
+            <dd className="flex items-center gap-1.5">
+              <VisibilityIcon visible={song.isVisible} />
+              {song.isVisible ? "표시" : "숨김"}
+            </dd>
+          </div>
+          <div className="grid grid-cols-[minmax(4.5rem,42%)_1fr] items-center gap-2">
+            <dt className="text-muted-foreground">타이틀곡</dt>
+            <dd>{song.isTitle ? "예" : "아니요"}</dd>
+          </div>
+        </dl>
+        <dl className="border-border mt-4 space-y-3 border-t pt-4 text-sm">
+          {[
+            ["앨범", song.album.name],
+            ["YouTube ID", song.youtubeId],
+            ["Slug", song.slug ?? "미지정"],
+            ["정렬 순서", song.order],
+          ].map(([label, value]) => (
+            <div key={label} className="grid grid-cols-[minmax(4.5rem,42%)_1fr] gap-2">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="wrap-anywhere">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="text-muted-foreground mt-5 text-xs leading-relaxed">
+          앨범 설정과 응원법 공개 상태에 따라 사용자 노출이 달라집니다.
+        </p>
+      </aside>
+    </div>
   );
 }
 
@@ -98,8 +93,8 @@ export function SongGuideSummary({
   returnHref?: string;
 }) {
   return (
-    <section className="space-y-4" aria-labelledby="song-guides">
-      <h2 id="song-guides" className="text-lg font-semibold">
+    <section className="border-border space-y-3 border-t pt-4" aria-labelledby="song-guides">
+      <h2 id="song-guides" className="text-sm font-semibold">
         응원법
       </h2>
       {(["CONCERT", "FESTIVAL"] as const).map((mode) => {
@@ -135,7 +130,7 @@ export function SongGuideSummary({
         );
       })}
       {canManage && song.cheerGuides.length < 2 && (
-        <Button variant="q" asChild className="w-full">
+        <Button variant="outline" size="sm" asChild className="w-full md:w-fit">
           <a href={adminLinks.guideCreate(song.id)}>응원법 추가</a>
         </Button>
       )}

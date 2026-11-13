@@ -44,8 +44,16 @@ export async function SongScreenServer({
     serializedAbilityResponseSchema.parse({ rules: context.ability.rules }),
   );
   return (
-    <div className="min-w-0 p-4 sm:p-6 lg:p-8">
-      <div className={mode === "edit" ? "mx-auto w-full max-w-7xl" : "mx-auto w-full max-w-3xl"}>
+    <div className={mode === "view" ? "flex min-h-full min-w-0" : "min-w-0 p-4 sm:p-6 lg:p-8"}>
+      <div
+        className={
+          mode === "view"
+            ? "flex w-full min-w-0 flex-col"
+            : mode === "edit"
+              ? "mx-auto w-full max-w-7xl"
+              : "mx-auto w-full max-w-3xl"
+        }
+      >
         <AdminPageLocation
           title={
             song ? `${song.title} · ${mode === "edit" ? "곡 정보 수정" : "곡 정보"}` : "곡 추가"
