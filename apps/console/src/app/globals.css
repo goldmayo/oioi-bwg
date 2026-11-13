@@ -41,6 +41,9 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-table-surface: var(--table-surface);
+  --color-control-surface: var(--control-surface);
+  --color-scrim: var(--scrim);
+  --shadow-menu: var(--menu-shadow);
 
   /* 초소형 텍스트 토큰 추가 (10px) */
   --font-size-2xs: 0.625rem;
@@ -76,7 +79,11 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #fbfbfb;
+  --background: #fcfcfd;
+  --control-surface: #ffffff;
+  --scrim: rgb(22 22 28 / 29%);
+  --menu-shadow: 0 2px 4px rgb(20 20 25 / 7%), 0 8px 20px rgb(20 20 25 / 12%);
+  --panel-shadow-color: rgb(20 20 25 / 22%);
   --foreground: #202022;
   --card: #fdfdfd;
   --table-surface: var(--background);
@@ -134,11 +141,15 @@
 
 .dark {
   --background: #191a1b;
+  --control-surface: #1e1f20;
+  --scrim: rgb(0 0 0 / 53%);
+  --menu-shadow: 0 2px 4px rgb(0 0 0 / 24%), 0 8px 20px rgb(0 0 0 / 40%);
+  --panel-shadow-color: rgb(0 0 0 / 48%);
   --foreground: #ececee;
   --card: #1e1f20;
   --card-foreground: var(--foreground);
   --table-surface: var(--background);
-  --popover: #232425;
+  --popover: #242527;
   --popover-foreground: var(--foreground);
   --primary: #e7e7e9;
   --primary-foreground: var(--background);
@@ -167,6 +178,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
+}
+
+@utility shadow-panel {
+  box-shadow: var(--panel-shadow-x, 0px) var(--panel-shadow-y, 8px) 28px var(--panel-shadow-color);
 }
 
 @layer base {
