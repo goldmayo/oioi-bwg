@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactElement, type ReactNode, useEffect, useId, useState } from "react";
+import { type ReactNode, useEffect, useId } from "react";
 import {
   type Control,
   type FieldPath,
@@ -11,7 +11,6 @@ import {
   type UseFormReturn,
 } from "react-hook-form";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
-import { Popover } from "radix-ui";
 
 import { useFilterOverlay } from "../model/use-filter-overlay";
 import { useMediaQuery } from "../model/useMediaQuery";
@@ -97,62 +96,6 @@ function FilterCloseButton({ onClose }: { onClose: () => void }) {
   );
 }
 
-type FilterOverlayProps<T extends FieldValues> = FilterFormProps<T> & {
-  title: string;
-  trigger: ReactElement;
-  overlay: ReturnType<typeof useFilterOverlay>;
-  urlBacked: boolean;
-};
-
-function DesktopFilter<T extends FieldValues>({
-  title,
-  trigger,
-  overlay,
-  urlBacked,
-  ...formProps
-}: FilterOverlayProps<T>) {
-  const [open, setOpen] = useState(false);
-  const titleId = useId();
-  const visible = open || overlay.open;
-
-  function close() {
-    if (overlay.open) overlay.close();
-    setOpen(false);
-  }
-
-  return (
-    <Popover.Root open={visible} onOpenChange={(next) => (next ? setOpen(true) : close())}>
-      <Popover.Trigger asChild>{trigger}</Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          aria-labelledby={titleId}
-          align="end"
-          sideOffset={6}
-          collisionPadding={12}
-          className="bg-popover text-popover-foreground border-border z-50 flex max-h-(--radix-popover-content-available-height) w-96 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-lg border shadow-lg outline-none"
-        >
-          <div className="border-border flex shrink-0 items-center justify-between gap-3 border-b py-1.5 pr-2 pl-4">
-            <h2 id={titleId} className="text-sm font-semibold">
-              {title}
-            </h2>
-            <FilterCloseButton onClose={close} />
-          </div>
-          <FilterForm
-            {...formProps}
-            open={visible}
-            onCancel={close}
-            onApply={async (values) => {
-              await formProps.onApply(values);
-              if (overlay.open) overlay.close({ replace: urlBacked });
-              setOpen(false);
-            }}
-          />
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
-  );
-}
-
 export function ListFilterSheet<T extends FieldValues>({
   id,
   title,
@@ -160,13 +103,17 @@ export function ListFilterSheet<T extends FieldValues>({
   urlBacked = false,
   ...formProps
 }: FilterFormProps<T> & { id: string; title: string; activeCount?: number; urlBacked?: boolean }) {
-  const overlay = useFilterOverlay(id);
+  const { open, show, close } = useFilterOverlay(id);
   const desktop = useMediaQuery("(min-width: 768px)");
+  useEffect(() => {
+    if (desktop && open) close();
+  }, [desktop, open, close]);
+
   const trigger = (
     <Button
       type="button"
       variant={activeCount ? "secondary" : "outline"}
-      className="h-11 shrink-0 gap-1.5 md:h-9"
+      className="h-11 shrink-0 gap-1.5 md:hidden"
       aria-label={activeCount ? "필터, 적용된 조건 " + activeCount + "개" : "필터"}
     >
       <SlidersHorizontal aria-hidden="true" className="size-4" />
@@ -178,20 +125,8 @@ export function ListFilterSheet<T extends FieldValues>({
       )}
     </Button>
   );
-  if (desktop) {
-    return (
-      <DesktopFilter
-        {...formProps}
-        title={title}
-        trigger={trigger}
-        overlay={overlay}
-        urlBacked={urlBacked}
-      />
-    );
-  }
-
   return (
-    <Sheet open={overlay.open} onOpenChange={(open) => (open ? overlay.show() : overlay.close())}>
+    <Sheet open={!desktop && open} onOpenChange={(next) => (next ? show() : close())}>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent
         side="bottom"
@@ -201,19 +136,19 @@ export function ListFilterSheet<T extends FieldValues>({
       >
         <div className="border-border flex shrink-0 items-center justify-between gap-3 border-b py-2 pr-2 pl-5">
           <SheetTitle className="text-base">{title}</SheetTitle>
-          <FilterCloseButton onClose={() => overlay.close()} />
+          <FilterCloseButton onClose={() => close()} />
         </div>
         <FilterForm
           {...formProps}
-          open={overlay.open}
-          onCancel={() => overlay.close()}
+          open={open}
+          onCancel={() => close()}
           onApply={async (values) => {
             if (urlBacked) {
               await formProps.onApply(values);
-              overlay.close({ replace: true });
+              close({ replace: true });
               return;
             }
-            overlay.close({
+            close({
               afterClose: () => {
                 void formProps.onApply(values);
               },

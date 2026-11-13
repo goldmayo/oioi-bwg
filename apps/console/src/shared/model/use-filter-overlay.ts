@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 const key = "overlay";
@@ -30,22 +30,22 @@ export function useFilterOverlay(id: string) {
     }
   }
 
-  function close({
-    afterClose,
-    replace = false,
-  }: { afterClose?: () => void; replace?: boolean } = {}) {
-    const url = new URL(location.href);
-    if (closing.current || url.pathname !== pathname || url.searchParams.get(key) !== id) return;
-    closing.current = true;
-    if (!replace && documentToken && history.state?.[marker] === documentToken) {
-      if (afterClose) window.addEventListener("popstate", afterClose, { once: true });
-      history.back();
-      return;
-    }
-    url.searchParams.delete(key);
-    history.replaceState(null, "", url);
-    afterClose?.();
-  }
+  const close = useCallback(
+    ({ afterClose, replace = false }: { afterClose?: () => void; replace?: boolean } = {}) => {
+      const url = new URL(location.href);
+      if (closing.current || url.pathname !== pathname || url.searchParams.get(key) !== id) return;
+      closing.current = true;
+      if (!replace && documentToken && history.state?.[marker] === documentToken) {
+        if (afterClose) window.addEventListener("popstate", afterClose, { once: true });
+        history.back();
+        return;
+      }
+      url.searchParams.delete(key);
+      history.replaceState(null, "", url);
+      afterClose?.();
+    },
+    [id, pathname],
+  );
 
   return { open, show, close };
 }

@@ -1,5 +1,7 @@
+import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Input } from "@/shared/ui/input";
 import { FilterSelect, ListFilterSheet } from "@/shared/ui/list-filter-sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 
 import { type GuideFilters as Filters, initialGuideFilters } from "../_lib/filter-guides";
 
@@ -40,9 +42,10 @@ export function GuideFilters({
   onApply,
 }: {
   filters: Filters;
-  onChange: (key: "search", value: string) => void;
+  onChange: (key: keyof Filters, value: string) => void;
   onApply: (values: Omit<Filters, "search">) => void;
 }) {
+  const desktop = useMediaQuery("(min-width: 768px)");
   const activeCount = choices.filter(({ key }) => filters[key] !== "all").length;
   const { search, ...values } = filters;
   const defaults = {
@@ -50,15 +53,32 @@ export function GuideFilters({
     source: initialGuideFilters.source,
     publication: initialGuideFilters.publication,
   };
+  const fields = choices.map(({ key, label, options }) => (
+    <div key={key} className="grid gap-1.5">
+      <Select value={filters[key]} onValueChange={(value) => onChange(key, value)}>
+        <SelectTrigger aria-label={label} className="w-40 data-[size=default]:h-9">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(([value, text]) => (
+            <SelectItem key={value} value={value}>
+              {text}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  ));
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2 md:flex-wrap">
       <Input
         aria-label="응원법 검색"
-        placeholder="곡·앨범 검색"
+        placeholder={desktop ? "곡 제목, 앨범, Slug 검색" : "곡·앨범 검색"}
         value={search}
         onChange={(event) => onChange("search", event.target.value)}
         className="h-11 min-w-0 flex-1 md:h-9 md:max-w-xs"
       />
+      <div className="hidden flex-wrap gap-2 md:flex">{fields}</div>
       <ListFilterSheet
         id="guide-filters"
         title="응원법 필터"

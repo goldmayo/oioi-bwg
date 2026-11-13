@@ -2,6 +2,7 @@
 
 import { Input } from "@/shared/ui/input";
 import { FilterSelect, ListFilterSheet } from "@/shared/ui/list-filter-sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 
 interface Props {
   search: string;
@@ -27,6 +28,22 @@ export function SongManagerToolbar({
         aria-label="곡 검색"
         className="h-11 min-w-0 flex-1 md:h-9 md:max-w-xs"
       />
+      <Select value={albumFilter} onValueChange={onAlbumChange}>
+        <SelectTrigger
+          aria-label="앨범 필터"
+          className="hidden w-40 shrink-0 data-[size=default]:h-9 md:flex"
+        >
+          <SelectValue placeholder="전체 앨범" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">전체 앨범</SelectItem>
+          {albums.map((album) => (
+            <SelectItem key={album.id} value={String(album.id)}>
+              {album.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <ListFilterSheet
         id="song-filters"
         title="곡 필터"

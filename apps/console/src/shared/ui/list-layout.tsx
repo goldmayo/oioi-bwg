@@ -48,11 +48,11 @@ export function ListToolbar({
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-2">
-      {children}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 empty:hidden">
-        {selection}
-        {actions}
+    <div className="space-y-2 md:flex md:flex-wrap md:items-start md:justify-between md:space-y-0 md:gap-x-3 md:gap-y-2">
+      <div className="min-w-0 md:flex-1">{children}</div>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 has-[>div:empty+div:empty]:hidden md:contents">
+        <div className="empty:hidden md:order-first md:basis-full">{selection}</div>
+        <div className="empty:hidden">{actions}</div>
       </div>
     </div>
   );
