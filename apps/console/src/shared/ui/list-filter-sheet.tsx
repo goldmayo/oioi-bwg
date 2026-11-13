@@ -120,14 +120,18 @@ export function ListFilterSheet<T extends FieldValues>({
         <FilterForm
           {...formProps}
           open={overlay.open}
-          onApply={(values) =>
+          onApply={async (values) => {
+            if (urlBacked) {
+              await formProps.onApply(values);
+              overlay.close({ replace: true });
+              return;
+            }
             overlay.close({
-              replace: urlBacked,
               afterClose: () => {
                 void formProps.onApply(values);
               },
-            })
-          }
+            });
+          }}
         />
       </SheetContent>
     </Sheet>
