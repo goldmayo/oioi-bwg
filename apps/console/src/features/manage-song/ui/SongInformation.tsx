@@ -7,6 +7,8 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { VisibilityIcon } from "@/shared/ui/visibility-icon";
 
+import "./song-title-transition.css";
+
 export function SongInformation({
   song,
   canManage,
@@ -17,8 +19,10 @@ export function SongInformation({
   return (
     <>
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">곡 정보</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight wrap-anywhere">
+            <span className="song-detail-title inline-block">{song.title}</span>
+          </h1>
           <p className="text-muted-foreground mt-2 text-sm">
             곡의 기본 정보와 응원법을 확인합니다.
           </p>

@@ -1,0 +1,27 @@
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  .song-detail-title {
+    view-transition-name: song-title;
+  }
+
+  ::view-transition-old(root) {
+    display: none;
+  }
+
+  ::view-transition-group(root),
+  ::view-transition-new(root),
+  ::view-transition-new(song-title):only-child {
+    animation: none;
+  }
+
+  ::view-transition-old(song-title):only-child {
+    display: none;
+  }
+
+  ::view-transition-group(song-title) {
+    animation-duration: 180ms;
+  }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useRef } from "react";
 import { CalendarDays, RotateCw } from "lucide-react";
 import { Tabs } from "radix-ui";
 
@@ -18,11 +19,26 @@ import { useDashboardAnalytics } from "../_model/use-dashboard-analytics";
 
 import { AnalyticsRankedReport } from "./analytics-ranked-report";
 import { AnalyticsStatus } from "./analytics-status";
-import { AnalyticsTrend } from "./analytics-trend";
+import { AnalyticsTrend, AnalyticsTrendSkeleton } from "./analytics-trend";
 
 export function DashboardAnalytics({ accountId }: { accountId: string }) {
   const state = useDashboardAnalytics(accountId);
   const [summary, trend, pages, traffic, devices, browsers] = state.reports;
+  const hasShownTrend = useRef(false);
+  const revealTrend = useCallback((path: SVGPathElement | null) => {
+    if (!path?.getAttribute("d") || hasShownTrend.current) return;
+    const chart = path.closest("[data-chart]");
+    if (!chart) return;
+
+    hasShownTrend.current = true;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!("registerProperty" in CSS)) return;
+
+    // Recharts can replace the path while it measures the axes. Animate its stable container.
+    chart.animate([{ "--analytics-trend-reveal": "100%" }, { "--analytics-trend-reveal": "0%" }], {
+      duration: 320,
+    });
+  }, []);
   const busy = state.reports.some((query) => query.isFetching);
   const metricTitle = analyticsMetrics.find((item) => item.key === state.metric)!.title;
   return (
@@ -127,7 +143,15 @@ export function DashboardAnalytics({ accountId }: { accountId: string }) {
             <AnalyticsStatus title="방문 요약" query={summary} hideTimestamp={!summary.isError} />
             <Tabs.Content value={state.metric} className="space-y-3" aria-busy={trend.isFetching}>
               <h3 className="text-sm font-medium">{metricTitle} 추세</h3>
-              {trend.data && <AnalyticsTrend report={trend.data} metric={state.metric} />}
+              {trend.data ? (
+                <AnalyticsTrend
+                  report={trend.data}
+                  metric={state.metric}
+                  onCurveReady={revealTrend}
+                />
+              ) : (
+                trend.isPending && <AnalyticsTrendSkeleton />
+              )}
               <AnalyticsStatus title="일별 추세" query={trend} />
             </Tabs.Content>
           </CardContent>

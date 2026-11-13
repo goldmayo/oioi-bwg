@@ -1,7 +1,7 @@
 "use client";
 
 import type { AnalyticsReport } from "@oioi-bwg/contracts/analytics";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Curve, Line, LineChart, XAxis, YAxis } from "recharts";
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/shared/ui/chart";
 
@@ -12,16 +12,28 @@ import {
   analyticsSeries,
 } from "../_lib/analytics";
 
+import styles from "./analytics-trend.module.css";
+
+const plotHeight = "h-48 sm:h-60";
+
+export function AnalyticsTrendSkeleton() {
+  return <div aria-hidden="true" className={`bg-muted rounded-md ${plotHeight}`} />;
+}
+
 export function AnalyticsTrend({
   report,
   metric,
+  onCurveReady,
 }: {
   report: AnalyticsReport;
   metric: AnalyticsMetric;
+  onCurveReady: (path: SVGPathElement | null) => void;
 }) {
   if (report.rows.length === 0)
     return (
-      <p className="text-muted-foreground py-8 text-sm">선택한 기간에 표시할 데이터가 없습니다.</p>
+      <p className={`text-muted-foreground py-8 text-sm ${plotHeight}`}>
+        선택한 기간에 표시할 데이터가 없습니다.
+      </p>
     );
   const series = analyticsSeries(report, metric);
   const title = analyticsMetrics.find(({ key }) => key === metric)?.title;
@@ -29,7 +41,7 @@ export function AnalyticsTrend({
     <figure aria-label="날짜별 이용 추세" className="space-y-3">
       <ChartContainer
         config={{ value: { label: title, color: "var(--ring)" } }}
-        className="aspect-auto h-48 w-full sm:h-60"
+        className={`aspect-auto w-full ${plotHeight}`}
       >
         <LineChart accessibilityLayer data={series} margin={{ top: 8, left: 14, right: 6 }}>
           <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.65} />
@@ -64,6 +76,7 @@ export function AnalyticsTrend({
                 ? { r: 2, strokeWidth: 0, fill: "var(--color-value)" }
                 : false
             }
+            shape={<Curve className={styles.curve} pathRef={onCurveReady} />}
             connectNulls
             isAnimationActive={false}
           />
