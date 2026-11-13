@@ -1,8 +1,7 @@
 import { Input } from "@/shared/ui/input";
-import { ListFilterSheet } from "@/shared/ui/list-filter-sheet";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { FilterSelect, ListFilterSheet } from "@/shared/ui/list-filter-sheet";
 
-import type { GuideFilters as Filters } from "../_lib/filter-guides";
+import { type GuideFilters as Filters, initialGuideFilters } from "../_lib/filter-guides";
 
 const choices = [
   {
@@ -38,43 +37,47 @@ const choices = [
 export function GuideFilters({
   filters,
   onChange,
+  onApply,
 }: {
   filters: Filters;
-  onChange: (key: keyof Filters, value: string) => void;
+  onChange: (key: "search", value: string) => void;
+  onApply: (values: Omit<Filters, "search">) => void;
 }) {
   const activeCount = choices.filter(({ key }) => filters[key] !== "all").length;
-  const fields = choices.map(({ key, label, options }) => (
-    <div key={key} className="grid gap-1.5">
-      <span className="text-muted-foreground text-xs">{label}</span>
-      <Select value={filters[key]} onValueChange={(value) => onChange(key, value)}>
-        <SelectTrigger aria-label={label} className="w-full data-[size=default]:h-11">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map(([value, text]) => (
-            <SelectItem key={value} value={value}>
-              {text}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  ));
+  const { search, ...values } = filters;
+  const defaults = {
+    mode: initialGuideFilters.mode,
+    source: initialGuideFilters.source,
+    publication: initialGuideFilters.publication,
+  };
   return (
     <div className="flex min-w-0 items-center gap-2">
       <Input
         aria-label="응원법 검색"
         placeholder="곡·앨범 검색"
-        value={filters.search}
+        value={search}
         onChange={(event) => onChange("search", event.target.value)}
         className="h-11 min-w-0 flex-1 md:h-9 md:max-w-xs"
       />
       <ListFilterSheet
+        id="guide-filters"
         title="응원법 필터"
-        description="공연 모드, 출처, 공개 조치로 목록을 좁힙니다."
         activeCount={activeCount}
+        values={values}
+        defaults={defaults}
+        onApply={onApply}
       >
-        {fields}
+        {({ register }) =>
+          choices.map(({ key, label, options }) => (
+            <FilterSelect key={key} label={label} {...register(key)}>
+              {options.map(([value, text]) => (
+                <option key={value} value={value}>
+                  {text}
+                </option>
+              ))}
+            </FilterSelect>
+          ))
+        }
       </ListFilterSheet>
     </div>
   );

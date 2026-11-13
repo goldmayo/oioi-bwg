@@ -1,14 +1,12 @@
 "use client";
 
-import type { NotificationType } from "@oioi-bwg/contracts/notification";
 import { CheckCheck, Settings, X } from "lucide-react";
 import { Tabs } from "radix-ui";
 
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Button } from "@/shared/ui/button";
-import { ListFilterSheet } from "@/shared/ui/list-filter-sheet";
+import { FilterSelect, ListFilterSheet } from "@/shared/ui/list-filter-sheet";
 import { ListHeader } from "@/shared/ui/list-layout";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import {
   Sheet,
   SheetClose,
@@ -110,31 +108,21 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
                 </Tabs.Trigger>
               </Tabs.List>
               <ListFilterSheet
+                id="notification-filters"
+                urlBacked
                 title="알림 필터"
-                description="파형 생성 결과로 알림 내역을 좁힙니다."
                 activeCount={filters.result === "all" ? 0 : 1}
+                values={{ result: filters.result }}
+                defaults={{ result: "all" as const }}
+                onApply={({ result }) => history.changeResult(result)}
               >
-                <div className="grid gap-1.5">
-                  <span className="text-muted-foreground text-xs">작업 결과</span>
-                  <Select
-                    value={filters.result}
-                    onValueChange={(value) =>
-                      history.changeResult(value as NotificationType | "all")
-                    }
-                  >
-                    <SelectTrigger
-                      aria-label="작업 결과 필터"
-                      className="w-full data-[size=default]:h-11"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">전체 결과</SelectItem>
-                      <SelectItem value="WAVEFORM_SUCCEEDED">파형 생성 성공</SelectItem>
-                      <SelectItem value="WAVEFORM_FAILED">파형 생성 실패</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {({ register }) => (
+                  <FilterSelect label="작업 결과" {...register("result")}>
+                    <option value="all">전체 결과</option>
+                    <option value="WAVEFORM_SUCCEEDED">파형 생성 성공</option>
+                    <option value="WAVEFORM_FAILED">파형 생성 실패</option>
+                  </FilterSelect>
+                )}
               </ListFilterSheet>
             </div>
             {wide ? <BrowserNotificationSwitch /> : null}

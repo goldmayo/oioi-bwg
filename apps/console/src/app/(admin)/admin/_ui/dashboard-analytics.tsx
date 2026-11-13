@@ -5,19 +5,17 @@ import { Tabs } from "radix-ui";
 
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent } from "@/shared/ui/card";
-import { Input } from "@/shared/ui/input";
-import { ListFilterSheet } from "@/shared/ui/list-filter-sheet";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { FilterSelect, ListFilterSheet } from "@/shared/ui/list-filter-sheet";
 
 import {
   analyticsDateAgo,
   type AnalyticsMetric,
   analyticsMetrics,
   analyticsNumber,
-  analyticsPreset,
 } from "../_lib/analytics";
 import { useDashboardAnalytics } from "../_model/use-dashboard-analytics";
 
+import { AnalyticsPeriodFilter } from "./analytics-period-filter";
 import { AnalyticsRankedReport } from "./analytics-ranked-report";
 import { AnalyticsStatus } from "./analytics-status";
 import { AnalyticsTrend } from "./analytics-trend";
@@ -27,9 +25,6 @@ export function DashboardAnalytics({ accountId }: { accountId: string }) {
   const [summary, trend, pages, traffic, devices, browsers] = state.reports;
   const busy = state.reports.some((query) => query.isFetching);
   const metricTitle = analyticsMetrics.find((item) => item.key === state.metric)!.title;
-  const defaultRange = analyticsPreset(28);
-  const hasPeriodFilter =
-    state.range.from !== defaultRange.from || state.range.to !== defaultRange.to;
   return (
     <section aria-labelledby="analytics-heading" className="border-border space-y-4 border-t pt-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -40,59 +35,7 @@ export function DashboardAnalytics({ accountId }: { accountId: string }) {
           <p className="text-muted-foreground mt-1 text-sm">방문 추세와 유입 경로를 확인합니다.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ListFilterSheet
-            title="이용 분석 필터"
-            description="공개 웹 이용 분석의 집계 기간을 선택합니다."
-            activeCount={hasPeriodFilter ? 1 : 0}
-          >
-            <div className="grid gap-1.5">
-              <span className="text-muted-foreground text-xs">조회 기간</span>
-              <Select value={state.preset} onValueChange={state.selectPeriod}>
-                <SelectTrigger aria-label="조회 기간" className="w-full data-[size=default]:h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent position="popper" align="start">
-                  {[7, 28, 90].map((days) => (
-                    <SelectItem key={days} value={String(days)}>
-                      최근 {days}일
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="custom">직접 선택</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {state.custom && (
-              <form className="grid grid-cols-2 items-end gap-2" onSubmit={state.applyRange}>
-                <label className="min-w-0 space-y-1 text-sm">
-                  <span>시작일</span>
-                  <Input
-                    type="date"
-                    className="min-h-11"
-                    required
-                    {...state.form.register("from")}
-                    max={state.draft.to || analyticsDateAgo(1)}
-                  />
-                </label>
-                <label className="min-w-0 space-y-1 text-sm">
-                  <span>종료일</span>
-                  <Input
-                    type="date"
-                    className="min-h-11"
-                    required
-                    {...state.form.register("to")}
-                    min={state.draft.from}
-                    max={analyticsDateAgo(1)}
-                  />
-                </label>
-                <Button type="submit" className="col-span-2 min-h-11" disabled={!state.draftValid}>
-                  기간 적용
-                </Button>
-                <p className="text-muted-foreground col-span-2 text-xs">
-                  최대 366일, 종료일은 어제까지 선택할 수 있습니다.
-                </p>
-              </form>
-            )}
-          </ListFilterSheet>
+          <AnalyticsPeriodFilter range={state.range} onApply={state.applyRange} />
           <Button
             variant="outline"
             className="min-h-11 sm:min-h-9"
@@ -160,28 +103,19 @@ export function DashboardAnalytics({ accountId }: { accountId: string }) {
           metric="sessions"
           action={
             <ListFilterSheet
+              id="analytics-traffic-filters"
               title="유입 경로 필터"
-              description="유입 경로를 채널 또는 소스와 매체로 나눠 봅니다."
               activeCount={state.traffic === "channels" ? 0 : 1}
+              values={{ traffic: state.traffic }}
+              defaults={{ traffic: "channels" as const }}
+              onApply={({ traffic }) => state.setTraffic(traffic)}
             >
-              <div className="grid gap-1.5">
-                <span className="text-muted-foreground text-xs">유입 경로 구분</span>
-                <Select
-                  value={state.traffic}
-                  onValueChange={(value) => state.setTraffic(value as "channels" | "sources")}
-                >
-                  <SelectTrigger
-                    aria-label="유입 경로 구분"
-                    className="w-full data-[size=default]:h-11"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent position="popper" align="end">
-                    <SelectItem value="channels">채널별</SelectItem>
-                    <SelectItem value="sources">소스/매체별</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {({ register }) => (
+                <FilterSelect label="유입 경로 구분" {...register("traffic")}>
+                  <option value="channels">채널별</option>
+                  <option value="sources">소스/매체별</option>
+                </FilterSelect>
+              )}
             </ListFilterSheet>
           }
         />
