@@ -67,9 +67,9 @@ export function GuideFilters({
         defaults={defaults}
         onApply={onApply}
       >
-        {({ register }) =>
+        {({ control }) =>
           choices.map(({ key, label, options }) => (
-            <FilterSelect key={key} label={label} {...register(key)}>
+            <FilterSelect key={key} label={label} control={control} name={key}>
               {options.map(([value, text]) => (
                 <option key={value} value={value}>
                   {text}

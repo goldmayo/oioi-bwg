@@ -22,14 +22,14 @@ function PeriodFields({ form }: { form: UseFormReturn<AnalyticsRange & { preset:
     <>
       <FilterSelect
         label="조회 기간"
-        {...form.register("preset", {
-          onChange: (event) => {
-            if (event.target.value === "custom") return;
-            const range = analyticsPreset(Number(event.target.value));
-            form.setValue("from", range.from, { shouldDirty: true, shouldValidate: true });
-            form.setValue("to", range.to, { shouldDirty: true, shouldValidate: true });
-          },
-        })}
+        control={form.control}
+        name="preset"
+        onChange={(value) => {
+          if (value === "custom") return;
+          const range = analyticsPreset(Number(value));
+          form.setValue("from", range.from, { shouldDirty: true, shouldValidate: true });
+          form.setValue("to", range.to, { shouldDirty: true, shouldValidate: true });
+        }}
       >
         <option value="7">최근 7일</option>
         <option value="28">최근 28일</option>

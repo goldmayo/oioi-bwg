@@ -35,8 +35,8 @@ export function SongManagerToolbar({
         defaults={{ album: "all" }}
         onApply={({ album }) => onAlbumChange(album)}
       >
-        {({ register }) => (
-          <FilterSelect label="앨범" {...register("album")}>
+        {({ control }) => (
+          <FilterSelect label="앨범" control={control} name={"album"}>
             <option value="all">전체 앨범</option>
             {albums.map(({ id, name }) => (
               <option key={id} value={id}>
