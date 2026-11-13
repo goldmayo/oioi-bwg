@@ -16,6 +16,8 @@ import {
   SheetTrigger,
 } from "@/shared/ui/sheet";
 
+import styles from "./admin-shell.module.css";
+
 export function AdminShell({
   navigation: navContent,
   breadcrumbs,
@@ -116,7 +118,7 @@ export function AdminShell({
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="bg-sidebar flex w-64 flex-col gap-0 p-0"
+                className={`${styles.mobileSidebar} bg-sidebar flex w-64 flex-col gap-0 p-0`}
                 onClick={(event) => {
                   if (event.target instanceof Element && event.target.closest("a"))
                     setMobileOpen(false);
