@@ -116,8 +116,8 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
                 defaults={{ result: "all" as const }}
                 onApply={({ result }) => history.changeResult(result)}
               >
-                {({ register }) => (
-                  <FilterSelect label="작업 결과" {...register("result")}>
+                {({ control }) => (
+                  <FilterSelect label="작업 결과" control={control} name={"result"}>
                     <option value="all">전체 결과</option>
                     <option value="WAVEFORM_SUCCEEDED">파형 생성 성공</option>
                     <option value="WAVEFORM_FAILED">파형 생성 실패</option>

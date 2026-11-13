@@ -1,7 +1,15 @@
 "use client";
 
-import { type ComponentProps, type ReactNode, useEffect, useId } from "react";
-import { type FieldValues, type Resolver, useForm, type UseFormReturn } from "react-hook-form";
+import { type ReactNode, useEffect, useId } from "react";
+import {
+  type Control,
+  type FieldPath,
+  type FieldValues,
+  type Resolver,
+  useController,
+  useForm,
+  type UseFormReturn,
+} from "react-hook-form";
 import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 
 import { useFilterOverlay } from "../model/use-filter-overlay";
@@ -126,11 +134,20 @@ export function ListFilterSheet<T extends FieldValues>({
   );
 }
 
-export function FilterSelect({
+export function FilterSelect<T extends FieldValues>({
   label,
   children,
-  ...props
-}: ComponentProps<"select"> & { label: string }) {
+  control,
+  name,
+  onChange,
+}: {
+  label: string;
+  children: ReactNode;
+  control: Control<T>;
+  name: FieldPath<T>;
+  onChange?: (value: string) => void;
+}) {
+  const { field } = useController({ control, name });
   const id = useId();
   return (
     <div className="grid gap-1.5">
@@ -139,8 +156,12 @@ export function FilterSelect({
       </label>
       <div className="relative">
         <select
-          {...props}
+          {...field}
           id={id}
+          onChange={(event) => {
+            field.onChange(event);
+            onChange?.(event.target.value);
+          }}
           className="border-input bg-background text-foreground focus-visible:ring-ring h-11 w-full min-w-0 appearance-none truncate rounded-md border pr-9 pl-3 text-base outline-none focus-visible:ring-2"
         >
           {children}

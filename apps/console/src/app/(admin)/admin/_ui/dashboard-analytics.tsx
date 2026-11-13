@@ -110,8 +110,8 @@ export function DashboardAnalytics({ accountId }: { accountId: string }) {
               defaults={{ traffic: "channels" as const }}
               onApply={({ traffic }) => state.setTraffic(traffic)}
             >
-              {({ register }) => (
-                <FilterSelect label="유입 경로 구분" {...register("traffic")}>
+              {({ control }) => (
+                <FilterSelect label="유입 경로 구분" control={control} name={"traffic"}>
                   <option value="channels">채널별</option>
                   <option value="sources">소스/매체별</option>
                 </FilterSelect>
