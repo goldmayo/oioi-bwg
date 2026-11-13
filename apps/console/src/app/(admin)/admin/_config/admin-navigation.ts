@@ -15,6 +15,7 @@ export const ADMIN_NAV = menuOrder.map((id) => sections[id]);
 
 const pages: Record<AdminPageId, { section: SectionId; title?: string }> = {
   dashboard: { section: "dashboard" },
+  dashboardSettings: { section: "dashboard", title: "대시보드 관리" },
   albumList: { section: "albums" },
   albumCreate: { section: "albums", title: "앨범 추가" },
   albumEdit: { section: "albums", title: "앨범 정보 수정" },

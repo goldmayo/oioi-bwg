@@ -7,14 +7,7 @@ import Link from "next/link";
 import { adminPaths } from "@/shared/config/admin-routes";
 import { AppLogo } from "@/shared/ui/app-logo";
 import { Button } from "@/shared/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/shared/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/ui/sheet";
 
 export function AdminShell({
   navigation: navContent,
@@ -116,6 +109,7 @@ export function AdminShell({
               </SheetTrigger>
               <SheetContent
                 side="left"
+                aria-describedby={undefined}
                 className="bg-sidebar flex w-64 flex-col gap-0 p-0"
                 onClick={(event) => {
                   if (event.target instanceof Element && event.target.closest("a"))
@@ -125,7 +119,6 @@ export function AdminShell({
                 <SheetHeader className="px-6 py-5">
                   <SheetTitle className="sr-only">OIOIBWG</SheetTitle>
                   {brand}
-                  <SheetDescription>관리자 메뉴</SheetDescription>
                 </SheetHeader>
                 {navigation}
               </SheetContent>
