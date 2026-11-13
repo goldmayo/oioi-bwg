@@ -23,8 +23,16 @@ import { GuideTable } from "./GuideTable";
 export function AdminGuideList() {
   const { data } = useSuspenseQuery(authAbilityQueries.current());
   const ability = useMemo(() => createClientAbility(data.rules), [data.rules]);
-  const { guides, filters, changeFilter, hasFilter, selection, setSelection, selected } =
-    useGuideList();
+  const {
+    guides,
+    filters,
+    changeFilter,
+    applyFilters,
+    hasFilter,
+    selection,
+    setSelection,
+    selected,
+  } = useGuideList();
   const canManage = ability.can("manage", "all");
   const deletion = useGuideDeletion(canManage, (ids) =>
     setSelection((previous) =>
@@ -66,7 +74,7 @@ export function AdminGuideList() {
           )
         }
       >
-        <GuideFilters filters={filters} onChange={changeFilter} />
+        <GuideFilters filters={filters} onChange={changeFilter} onApply={applyFilters} />
       </ListToolbar>
       <AdminReauthenticationNotice recovery={deletion.recovery} />
       {deletion.targets.length === 0 && deletion.message && (

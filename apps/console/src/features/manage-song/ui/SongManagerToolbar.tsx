@@ -1,8 +1,7 @@
 "use client";
 
 import { Input } from "@/shared/ui/input";
-import { ListFilterSheet } from "@/shared/ui/list-filter-sheet";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { FilterSelect, ListFilterSheet } from "@/shared/ui/list-filter-sheet";
 
 interface Props {
   search: string;
@@ -29,26 +28,23 @@ export function SongManagerToolbar({
         className="h-11 min-w-0 flex-1 md:h-9 md:max-w-xs"
       />
       <ListFilterSheet
+        id="song-filters"
         title="곡 필터"
-        description="선택한 앨범의 곡을 표시합니다."
         activeCount={albumFilter === "all" ? 0 : 1}
+        values={{ album: albumFilter }}
+        defaults={{ album: "all" }}
+        onApply={({ album }) => onAlbumChange(album)}
       >
-        <div className="grid gap-1.5">
-          <span className="text-muted-foreground text-xs">앨범</span>
-          <Select value={albumFilter} onValueChange={onAlbumChange}>
-            <SelectTrigger aria-label="앨범 필터" className="w-full data-[size=default]:h-11">
-              <SelectValue placeholder="전체 앨범" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 앨범</SelectItem>
-              {albums.map((album) => (
-                <SelectItem key={album.id} value={String(album.id)}>
-                  {album.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {({ register }) => (
+          <FilterSelect label="앨범" {...register("album")}>
+            <option value="all">전체 앨범</option>
+            {albums.map(({ id, name }) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </FilterSelect>
+        )}
       </ListFilterSheet>
     </div>
   );
