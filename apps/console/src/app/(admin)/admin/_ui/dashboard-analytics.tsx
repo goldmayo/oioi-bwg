@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 import type { Layout } from "react-grid-layout";
 import Link from "next/link";
 
@@ -46,6 +46,21 @@ export function DashboardAnalytics({
     saved === undefined ? defaultDashboardLayout.mobile : layout.hidden,
   );
   const [summary, trend, pages, traffic, devices, browsers] = state.reports;
+  const hasShownTrend = useRef(false);
+  const revealTrend = useCallback((path: SVGPathElement | null) => {
+    if (!path?.getAttribute("d") || hasShownTrend.current) return;
+    const chart = path.closest("[data-chart]");
+    if (!chart) return;
+
+    hasShownTrend.current = true;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!("registerProperty" in CSS)) return;
+
+    // Recharts can replace the path while it measures the axes. Animate its stable container.
+    chart.animate([{ "--analytics-trend-reveal": "100%" }, { "--analytics-trend-reveal": "0%" }], {
+      duration: 320,
+    });
+  }, []);
   const showsAnalytics = layout.mobile.some(
     (id) => id !== "content" && id !== "jobs" && !layout.hidden.includes(id),
   );
@@ -129,7 +144,7 @@ export function DashboardAnalytics({
           </SelectContent>
         </Select>
         {!trend.data && trend.isPending && <DashboardSkeleton variant="chart" />}
-        {trend.data && <AnalyticsTrend report={trend.data} metric={state.metric} />}
+        {trend.data && <AnalyticsTrend report={trend.data} metric={state.metric} onCurveReady={revealTrend} />}
         <AnalyticsStatus title="일별 추세" query={trend} />
       </div>
     ),
