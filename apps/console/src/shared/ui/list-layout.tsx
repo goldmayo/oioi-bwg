@@ -41,24 +41,17 @@ export function ListHeader({
 export function ListToolbar({
   selection,
   actions,
-  stackActionsOnMobile = false,
   children,
 }: {
   selection?: ReactNode;
   actions?: ReactNode;
-  stackActionsOnMobile?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      {selection}
-      <div
-        className={cn(
-          "flex flex-wrap items-start justify-between gap-3",
-          stackActionsOnMobile && "max-md:flex-col max-md:items-stretch",
-        )}
-      >
-        <div className="min-w-0 flex-1">{children}</div>
+      {children}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 empty:hidden">
+        {selection}
         {actions}
       </div>
     </div>

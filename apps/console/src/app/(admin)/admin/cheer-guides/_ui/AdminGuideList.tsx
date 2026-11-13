@@ -47,7 +47,6 @@ export function AdminGuideList() {
         }
       />
       <ListToolbar
-        stackActionsOnMobile
         selection={
           <ListSelection
             count={selected.length}
