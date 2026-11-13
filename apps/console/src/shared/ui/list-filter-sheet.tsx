@@ -69,7 +69,7 @@ export function ListFilterSheet<T extends FieldValues>({
   activeCount = 0,
   urlBacked = false,
   ...formProps
-}: FilterFormProps<T> & { id: string; title: string; activeCount?: number }) {
+}: FilterFormProps<T> & { id: string; title: string; activeCount?: number; urlBacked?: boolean }) {
   const overlay = useFilterOverlay(id);
   return (
     <Sheet open={overlay.open} onOpenChange={(open) => (open ? overlay.show() : overlay.close())}>
