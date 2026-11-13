@@ -1,5 +1,6 @@
 "use client";
 
+import type { NotificationType } from "@oioi-bwg/contracts/notification";
 import { CheckCheck, Settings, X } from "lucide-react";
 import { Tabs } from "radix-ui";
 
@@ -7,6 +8,7 @@ import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Button } from "@/shared/ui/button";
 import { FilterSelect, ListFilterSheet } from "@/shared/ui/list-filter-sheet";
 import { ListHeader } from "@/shared/ui/list-layout";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import {
   Sheet,
   SheetClose,
@@ -90,7 +92,7 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
           className="space-y-3 md:space-y-4"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 md:w-auto md:justify-start">
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 md:w-auto md:justify-start md:gap-3">
               <Tabs.List
                 aria-label="알림 모아보기"
                 className="bg-muted inline-flex h-11 shrink-0 items-center gap-1 rounded-md px-1 md:h-9 md:p-1"
@@ -107,6 +109,22 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
                   )}
                 </Tabs.Trigger>
               </Tabs.List>
+              <Select
+                value={filters.result}
+                onValueChange={(value) => history.changeResult(value as NotificationType | "all")}
+              >
+                <SelectTrigger
+                  aria-label="작업 결과 필터"
+                  className="hidden w-40 data-[size=default]:h-9 md:flex"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 작업 결과</SelectItem>
+                  <SelectItem value="WAVEFORM_SUCCEEDED">파형 생성 성공</SelectItem>
+                  <SelectItem value="WAVEFORM_FAILED">파형 생성 실패</SelectItem>
+                </SelectContent>
+              </Select>
               <ListFilterSheet
                 id="notification-filters"
                 urlBacked
