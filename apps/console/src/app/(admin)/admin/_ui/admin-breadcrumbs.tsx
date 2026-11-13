@@ -1,17 +1,33 @@
-import { ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 
 import type { AdminBreadcrumb } from "../_config/admin-navigation";
 
 export function AdminBreadcrumbs({ items }: { items: AdminBreadcrumb[] }) {
+  const parent = items.length > 2 ? items.at(-2) : undefined;
   return (
-    <nav
-      aria-label="현재 위치"
-      className="order-last w-full min-w-0 md:order-none md:w-auto md:flex-1"
-    >
-      <ol className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-base">
+    <nav aria-label="현재 위치" className="flex min-w-0 flex-1 items-center gap-2">
+      {parent?.href && (
+        <a
+          href={parent.href}
+          aria-label={parent.label + "로 돌아가기"}
+          className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" />
+        </a>
+      )}
+      <ol className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-sm md:text-[13px]">
         {items.map((item, index) => (
-          <li key={item.href ?? "current"} className="flex min-w-0 items-center gap-2">
-            {index > 0 && <ChevronRight aria-hidden="true" className="size-4 shrink-0" />}
+          <li
+            key={item.href ?? "current"}
+            className={
+              item.href
+                ? "hidden shrink-0 items-center gap-1.5 sm:flex"
+                : "flex min-w-0 items-center gap-1.5"
+            }
+          >
+            {index > 0 && (
+              <ChevronRight aria-hidden="true" className="hidden size-3 shrink-0 sm:block" />
+            )}
             {item.href ? (
               <a
                 href={item.href}
@@ -20,7 +36,7 @@ export function AdminBreadcrumbs({ items }: { items: AdminBreadcrumb[] }) {
                 {item.label}
               </a>
             ) : (
-              <span aria-current="page" className="text-foreground font-medium break-words">
+              <span aria-current="page" className="text-foreground truncate font-medium">
                 {item.label}
               </span>
             )}

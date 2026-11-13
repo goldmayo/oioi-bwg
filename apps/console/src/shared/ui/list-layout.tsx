@@ -23,10 +23,12 @@ export function ListHeader({
       )}
     >
       <div>
-        <h1 className="text-foreground text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="text-foreground text-2xl font-semibold tracking-tight md:text-xl">
+          {title}
+        </h1>
         <p
           className={cn(
-            "text-muted-foreground mt-2 text-sm leading-6",
+            "text-muted-foreground mt-2 text-sm leading-6 md:mt-1 md:leading-5",
             compactOnMobile && "max-md:hidden",
           )}
         >

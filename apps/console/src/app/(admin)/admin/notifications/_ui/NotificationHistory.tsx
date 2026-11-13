@@ -34,8 +34,8 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
   const markAllDisabled = !history.unreadCount || actions.all.isPending || query.isPending;
   const markAllRead = () => actions.all.mutate();
   return (
-    <section className="min-w-0 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto w-full max-w-7xl space-y-3 md:space-y-4">
+    <section className="min-w-0 p-4 md:px-5 md:py-4">
+      <div className="w-full space-y-3 md:space-y-4">
         <ListHeader
           title="알림 내역"
           compactOnMobile

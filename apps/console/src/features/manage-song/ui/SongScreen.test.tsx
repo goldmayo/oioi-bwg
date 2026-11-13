@@ -74,7 +74,7 @@ function setup(mode: "view" | "edit") {
 
 it("기본은 조회이며 legacy 공식 flag로 출처를 추론하지 않고 공연 모드별 작업본 진입을 제공한다", () => {
   setup("view");
-  expect(screen.getByRole("heading", { name: "곡 정보" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: song.title })).toBeTruthy();
   expect(screen.queryByRole("textbox")).toBeNull();
   expect(screen.getByText("팬덤")).toBeTruthy();
   expect(screen.queryByText("공식")).toBeNull();

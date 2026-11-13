@@ -38,11 +38,11 @@ export function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative size-11 shrink-0"
+          className="relative size-11 shrink-0 md:size-8"
           title={`알림, 읽지 않은 알림 ${count}개`}
           aria-label={`알림, 읽지 않은 알림 ${count}개`}
         >
-          <Bell size={20} aria-hidden="true" />
+          <Bell className="size-5 md:size-4" aria-hidden="true" />
           {count ? (
             <span
               aria-hidden="true"

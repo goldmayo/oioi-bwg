@@ -28,12 +28,12 @@ export function AdminLogoutAction() {
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          className="text-muted-foreground hover:text-destructive min-h-11 w-full justify-start gap-3 px-3 group-data-[collapsed=true]/sidebar:justify-center"
+          className="text-muted-foreground hover:text-destructive min-h-11 w-full justify-start gap-3 px-3 group-data-[collapsed=true]/sidebar:justify-center md:min-h-8 md:gap-2 md:px-2 md:text-[13px]"
           aria-label="로그아웃"
           aria-busy={logout.pending}
           disabled={logout.pending}
         >
-          <LogOut size={18} aria-hidden="true" />
+          <LogOut className="size-[18px] md:size-4" aria-hidden="true" />
           <span className="group-data-[collapsed=true]/sidebar:hidden">
             {logout.pending ? "로그아웃 중…" : "로그아웃"}
           </span>
