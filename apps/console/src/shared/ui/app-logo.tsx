@@ -5,12 +5,7 @@ export function AppLogo({ compact = false, className }: { compact?: boolean; cla
     <span
       role="img"
       aria-label="어이어이 바위게"
-      className={cn(
-        "inline-flex items-center gap-2 text-lg",
-        !compact &&
-          "relative isolate before:absolute before:-inset-x-1.5 before:-inset-y-0.5 before:-z-10 before:rounded-sm before:bg-[#151617] dark:before:bg-transparent",
-        className,
-      )}
+      className={cn("inline-flex items-center gap-2 bg-transparent text-lg", className)}
     >
       <span className="bg-qwer-rockation size-2 shrink-0 rounded-full" aria-hidden="true" />
       {!compact && (
