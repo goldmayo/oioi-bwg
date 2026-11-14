@@ -35,7 +35,7 @@ export const widgetHeight = (rows: number) =>
   rows * (dashboardGrid.rowHeight + dashboardGrid.margin[1]) - dashboardGrid.margin[1];
 
 const widgetMinimum = {
-  summary: { minW: 6, minH: 4 },
+  summary: { minW: 4, minH: 4 },
   content: { minW: 3, minH: 5 },
   jobs: { minW: 2, minH: 4 },
   trend: { minW: 6, minH: 13 },
@@ -88,9 +88,9 @@ export type DashboardLayout = z.infer<typeof settingsSchema>;
 
 export const defaultDashboardLayout: DashboardLayout = {
   desktop: [
-    { i: "summary", x: 0, y: 0, w: 6, h: 5 },
-    { i: "content", x: 6, y: 0, w: 4, h: 5 },
-    { i: "jobs", x: 10, y: 0, w: 2, h: 5 },
+    { i: "summary", x: 0, y: 0, w: 4, h: 5 },
+    { i: "content", x: 4, y: 0, w: 4, h: 5 },
+    { i: "jobs", x: 8, y: 0, w: 4, h: 5 },
     { i: "trend", x: 0, y: 5, w: 12, h: 13 },
     { i: "traffic", x: 0, y: 18, w: 6, h: 13 },
     { i: "pages", x: 6, y: 18, w: 6, h: 13 },
