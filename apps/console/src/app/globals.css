@@ -102,7 +102,7 @@
   --success: var(--color-emerald-700);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-action: var(--destructive);
-  --border: #e4e4e7;
+  --border: #d4d4da;
   --input: #a0a0a6;
   --ring: #696970;
   --chart-1: #2563eb;
@@ -164,7 +164,7 @@
   --success: var(--color-emerald-400);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-action: #a1424d;
-  --border: #303133;
+  --border: #414245;
   --input: #66666e;
   --ring: #a7a7af;
   --chart-1: #60a5fa;
