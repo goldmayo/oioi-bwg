@@ -121,7 +121,7 @@ export function DashboardAnalytics({
         {!summary.data && summary.isPending ? (
           <DashboardSkeleton variant="summary" />
         ) : (
-          <dl className="divide-border grid grid-cols-3 divide-x">
+          <dl className="divide-muted-foreground/70 grid grid-cols-3 divide-x">
             {analyticsMetrics.map(({ key, title }) => (
               <div
                 key={key}

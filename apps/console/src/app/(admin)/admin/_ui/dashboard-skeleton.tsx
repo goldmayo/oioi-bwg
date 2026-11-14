@@ -6,7 +6,7 @@ export function DashboardSkeleton({
   return (
     <div aria-hidden="true" className="min-w-0 space-y-3 motion-safe:animate-pulse">
       {variant === "summary" && (
-        <div className="divide-border grid grid-cols-3 divide-x">
+        <div className="divide-muted-foreground/70 grid grid-cols-3 divide-x">
           {[0, 1, 2].map((item) => (
             <div key={item} className="min-w-0 space-y-2 px-2 first:ps-0 last:pe-0 lg:px-3">
               <div className="bg-muted h-3 w-3/4 rounded-sm" />
