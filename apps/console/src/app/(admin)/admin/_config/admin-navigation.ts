@@ -37,15 +37,18 @@ export interface AdminBreadcrumb {
 export function getAdminNavigation(pageId: AdminPageId | undefined, pageTitle?: string) {
   const root = { label: "콘솔", href: adminPaths.dashboard };
   if (!pageId) return { section: undefined, breadcrumbs: [root, { label: "관리자 페이지" }] };
+
   const page = pages[pageId];
   const section = sections[page.section];
-  let breadcrumbs: AdminBreadcrumb[] = [root, { label: section.label }];
-  if (pageId === "dashboard") breadcrumbs = [{ label: "콘솔" }];
-  else if (adminPaths[pageId] !== section.href)
-    breadcrumbs = [
-      root,
-      { label: section.label, href: section.href },
-      { label: pageTitle ?? page.title ?? section.label },
-    ];
-  return { section, breadcrumbs };
+  const ancestors: AdminBreadcrumb[] = page.section === "dashboard" ? [] : [root];
+  if (!page.title) {
+    return { section, breadcrumbs: [...ancestors, { label: section.label }] };
+  }
+
+  const backLink = { label: section.label, href: section.href };
+  return {
+    section,
+    backLink,
+    breadcrumbs: [...ancestors, backLink, { label: pageTitle ?? page.title }],
+  };
 }

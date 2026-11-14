@@ -12,11 +12,11 @@ import { NotificationBell } from "./notification-bell";
 import { ThemeToggle } from "./theme-toggle";
 
 function Workspace({ children }: { children: ReactNode }) {
-  const { breadcrumbs, section } = useAdminNavigation();
+  const { backLink, breadcrumbs, section } = useAdminNavigation();
   return (
     <AdminShell
       navigation={<AdminSidebar activeHref={section?.href} />}
-      breadcrumbs={<AdminBreadcrumbs items={breadcrumbs} />}
+      breadcrumbs={<AdminBreadcrumbs items={breadcrumbs} backLink={backLink} />}
       headerActions={
         <>
           <ThemeToggle />
