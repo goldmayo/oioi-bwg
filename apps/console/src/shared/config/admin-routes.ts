@@ -1,6 +1,7 @@
 /** Console 화면 URL의 정의다. API 주소·메뉴·권한 정책은 각 소유 경계에 둔다. */
 export const adminPaths = {
   dashboard: "/admin",
+  dashboardSettings: "/admin/dashboard/settings",
   albumList: "/admin/albums",
   albumCreate: "/admin/albums/new",
   albumEdit: "/admin/albums/[id]/edit",

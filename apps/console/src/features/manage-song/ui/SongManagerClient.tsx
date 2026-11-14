@@ -119,7 +119,6 @@ export function SongManagerClient({
         }
       />
       <ListToolbar
-        stackActionsOnMobile
         selection={
           <ListSelection
             count={selectedSongs.length}

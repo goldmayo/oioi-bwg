@@ -106,7 +106,10 @@ export function GuideTable({
           size: 120,
           minSize: 96,
           cell: ({ row: { original } }) => (
-            <Badge variant={original.mode === "CONCERT" ? "r" : "e"}>
+            <Badge
+              variant={original.mode === "CONCERT" ? "r" : "e"}
+              className="md:border-transparent md:bg-transparent"
+            >
               {original.mode === "CONCERT" ? "단콘" : "페벌"}
             </Badge>
           ),
@@ -123,7 +126,10 @@ export function GuideTable({
             },
           }) =>
             publication ? (
-              <Badge variant={publication.sourceType === "OFFICIAL" ? "q" : "w"}>
+              <Badge
+                variant={publication.sourceType === "OFFICIAL" ? "q" : "w"}
+                className="md:border-transparent md:bg-transparent"
+              >
                 {publication.sourceType === "OFFICIAL" ? "공식" : "팬덤"}
               </Badge>
             ) : (

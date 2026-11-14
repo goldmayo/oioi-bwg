@@ -33,10 +33,10 @@ export function AppDataTable({ className, ...props }: ComponentProps<typeof Data
   return (
     <DataTable.Table
       fillWidth
-      viewportClassName="max-h-[70dvh]"
+      viewportClassName="max-h-[70dvh] md:rounded-none md:border-x-0"
       {...props}
       className={cn(
-        "bg-card [&_th]:bg-card [&_tbody]:bg-table-surface table-fixed [--data-table-row-height:3.5rem] [&_tbody_tr:not([data-table-padding])]:h-14 [&_td]:h-14 [&_td]:overflow-hidden [&_td]:px-3 [&_td]:py-0 [&_td]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:px-3",
+        "bg-card [&_th]:bg-card [&_tbody]:bg-table-surface table-fixed [--data-table-row-height:3.5rem] [&_tbody_tr:not([data-table-padding])]:h-14 [&_td]:h-14 [&_td]:overflow-hidden [&_td]:px-3 [&_td]:py-0 [&_td]:whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:px-3 md:[--data-table-row-height:2.75rem] md:[&_tbody_tr:not([data-table-padding])]:h-11 md:[&_td]:h-11",
         className,
       )}
     />
