@@ -8,7 +8,12 @@ import { adminPaths } from "@/shared/config/admin-routes";
 import { Button } from "@/shared/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 
-import { type AnalyticsMetric, analyticsMetrics, analyticsNumber } from "../_lib/analytics";
+import {
+  type AnalyticsMetric,
+  analyticsMetrics,
+  analyticsNumber,
+  analyticsTime,
+} from "../_lib/analytics";
 import {
   type DashboardLayout,
   defaultDashboardLayout,
@@ -22,7 +27,6 @@ import { AnalyticsRankedReport } from "./analytics-ranked-report";
 import { AnalyticsStatus } from "./analytics-status";
 import { AnalyticsTrend } from "./analytics-trend";
 import { DashboardLayoutControls } from "./dashboard-layout-controls";
-import { DashboardPeriod } from "./dashboard-period";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { DashboardWidgets } from "./dashboard-widgets";
 
@@ -64,10 +68,11 @@ export function DashboardAnalytics({
   const showsAnalytics = layout.mobile.some(
     (id) => id !== "content" && id !== "jobs" && !layout.hidden.includes(id),
   );
+  const latestRefresh = state.visibleReports
+    .flatMap(({ data }) => (data ? [data.fetchedAt] : []))
+    .sort()
+    .at(-1);
   const summaryTotals = layout.hidden.includes("summary") ? undefined : summary.data?.totals;
-  const showsShareReport =
-    (!layout.hidden.includes("devices") && Boolean(devices.data)) ||
-    (!layout.hidden.includes("browsers") && Boolean(browsers.data));
 
   function update(next: DashboardLayout) {
     setDraft(next);
@@ -213,11 +218,31 @@ export function DashboardAnalytics({
           <h1 className="text-2xl font-semibold tracking-tight">
             {editing ? "대시보드 관리" : "대시보드"}
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            {editing
-              ? "위젯 배치는 이 브라우저에 계정별로 저장됩니다."
-              : "콘텐츠를 관리하고 작업 결과를 확인합니다."}
-          </p>
+          {editing && (
+            <p className="text-muted-foreground mt-2 text-sm">
+              위젯 배치는 이 브라우저에 계정별로 저장됩니다.
+            </p>
+          )}
+          {showsAnalytics && (
+            <div
+              aria-live="polite"
+              className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums"
+            >
+              <p>
+                집계 기간 {state.range.from} ~ {state.range.to} · KST
+              </p>
+              <p>
+                최근 갱신{" "}
+                {latestRefresh ? (
+                  <time dateTime={latestRefresh}>
+                    {analyticsTime.format(new Date(latestRefresh))}
+                  </time>
+                ) : (
+                  "—"
+                )}
+              </p>
+            </div>
+          )}
         </div>
         {!editing && (
           <Button variant="outline" className="h-11 md:h-9" asChild>
@@ -236,7 +261,6 @@ export function DashboardAnalytics({
           onSave={save}
         />
       )}
-      {showsAnalytics && <DashboardPeriod state={state} showsShareReport={showsShareReport} />}
       <DashboardWidgets
         layout={layout}
         widgets={widgets}
