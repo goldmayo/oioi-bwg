@@ -15,7 +15,7 @@ export function AdminBreadcrumbs({
         <a
           href={backLink.href}
           aria-label={backLink.label + "로 돌아가기"}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring flex size-8 shrink-0 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
+          className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring flex size-11 shrink-0 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none md:hidden"
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
         </a>
@@ -26,12 +26,12 @@ export function AdminBreadcrumbs({
             key={item.href ?? "current"}
             className={
               item.href
-                ? "hidden shrink-0 items-center gap-1.5 sm:flex"
+                ? "hidden shrink-0 items-center gap-1.5 md:flex"
                 : "flex min-w-0 items-center gap-1.5"
             }
           >
             {index > 0 && (
-              <ChevronRight aria-hidden="true" className="hidden size-3 shrink-0 sm:block" />
+              <ChevronRight aria-hidden="true" className="hidden size-3 shrink-0 md:block" />
             )}
             {item.href ? (
               <a
