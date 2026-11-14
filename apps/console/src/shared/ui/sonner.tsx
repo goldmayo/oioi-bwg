@@ -38,7 +38,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         closeButtonAriaLabel: "알림 닫기",
         classNames: {
-          toast: "!rounded-xl !p-4 !gap-3 shadow-lg",
+          toast: "!rounded-xl !p-4 !gap-3 shadow-menu",
           title: "!text-sm !font-semibold !leading-6",
           description: "!text-muted-foreground !text-sm !leading-6",
           actionButton: "!bg-secondary !text-secondary-foreground !h-9 !px-3 !text-xs !font-medium",

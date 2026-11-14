@@ -23,10 +23,12 @@ export function ListHeader({
       )}
     >
       <div>
-        <h1 className="text-foreground text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="text-foreground text-2xl font-semibold tracking-tight md:text-xl">
+          {title}
+        </h1>
         <p
           className={cn(
-            "text-muted-foreground mt-2 text-sm leading-6",
+            "text-muted-foreground mt-2 text-sm leading-6 md:mt-1 md:leading-5",
             compactOnMobile && "max-md:hidden",
           )}
         >
@@ -41,25 +43,18 @@ export function ListHeader({
 export function ListToolbar({
   selection,
   actions,
-  stackActionsOnMobile = false,
   children,
 }: {
   selection?: ReactNode;
   actions?: ReactNode;
-  stackActionsOnMobile?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-2">
-      {selection}
-      <div
-        className={cn(
-          "flex flex-wrap items-start justify-between gap-3",
-          stackActionsOnMobile && "max-md:flex-col max-md:items-stretch",
-        )}
-      >
-        <div className="min-w-0 flex-1">{children}</div>
-        {actions}
+    <div className="space-y-2 md:flex md:flex-wrap md:items-start md:justify-between md:space-y-0 md:gap-x-3 md:gap-y-2">
+      <div className="min-w-0 md:flex-1">{children}</div>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 has-[>div:empty+div:empty]:hidden md:contents">
+        <div className="empty:hidden md:order-first md:basis-full">{selection}</div>
+        <div className="empty:hidden">{actions}</div>
       </div>
     </div>
   );

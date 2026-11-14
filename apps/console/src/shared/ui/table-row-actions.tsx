@@ -26,7 +26,7 @@ export function TableRowActions({ label, children }: { label: string; children: 
           align="end"
           sideOffset={4}
           aria-label={`${label} 작업`}
-          className="bg-popover text-popover-foreground z-50 flex min-w-28 flex-col gap-1 rounded-md border p-1 shadow-md"
+          className="bg-popover text-popover-foreground shadow-menu z-50 flex min-w-28 flex-col gap-1 rounded-md border p-1"
           onClick={(event) => {
             if (event.target instanceof Element && event.target.closest("button:not(:disabled), a"))
               setOpen(false);

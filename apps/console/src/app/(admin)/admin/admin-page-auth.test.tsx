@@ -63,7 +63,7 @@ const pages = [
       }),
     getAdminCheerGuideEditor,
   ],
-  ["dashboard", () => AdminPage(), listAdminSongs],
+  ["dashboard", () => AdminPage(), listAdminCheerGuides],
   ["albums", () => AdminAlbumsPage(), listAdminAlbums],
   ["songs", () => AdminSongsPage(), listAdminSongs],
   ["cheer-guides", () => AdminCheerGuidesPage(), listAdminCheerGuides],
