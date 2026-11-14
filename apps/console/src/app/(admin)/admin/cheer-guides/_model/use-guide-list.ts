@@ -24,6 +24,8 @@ export function useGuideList() {
       (key) =>
         filters[key as keyof GuideFilters] !== initialGuideFilters[key as keyof GuideFilters],
     ),
+    applyFilters: (values: Omit<GuideFilters, "search">) =>
+      setFilters((previous) => ({ ...previous, ...values })),
     changeFilter: (key: keyof GuideFilters, value: string) =>
       setFilters((previous) => ({ ...previous, [key]: value })),
   };

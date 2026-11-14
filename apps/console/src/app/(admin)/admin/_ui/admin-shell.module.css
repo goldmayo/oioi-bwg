@@ -1,0 +1,38 @@
+@keyframes mobile-sidebar-enter {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes mobile-sidebar-exit {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+.mobileSidebar {
+  transition: none;
+}
+
+.mobileSidebar[data-state="open"] {
+  animation: mobile-sidebar-enter 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mobileSidebar[data-state="closed"] {
+  animation: mobile-sidebar-exit 140ms ease-in both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobileSidebar[data-state="open"],
+  .mobileSidebar[data-state="closed"] {
+    animation: none;
+  }
+}

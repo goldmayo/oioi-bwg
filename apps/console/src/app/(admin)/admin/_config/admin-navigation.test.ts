@@ -5,7 +5,8 @@ import { getAdminPageId } from "@/shared/config/admin-routes";
 import { getAdminNavigation } from "./admin-navigation";
 
 it.each([
-  ["/admin", ["콘솔"]],
+  ["/admin", ["대시보드"]],
+  ["/admin/dashboard/settings", ["대시보드", "대시보드 관리"]],
   ["/admin/albums", ["콘솔", "앨범 관리"]],
   ["/admin/albums/new", ["콘솔", "앨범 관리", "앨범 추가"]],
   ["/admin/albums/123/edit", ["콘솔", "앨범 관리", "앨범 정보 수정"]],

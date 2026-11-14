@@ -26,6 +26,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/shared/api/http-client", () => ({ http: mocks }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mocks.push, replace: mocks.replace }),
+  usePathname: () => "/admin/notifications",
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("@/shared/model/useMediaQuery", () => ({ useMediaQuery: () => mocks.wide }));
 vi.mock("../../_ui/notification-provider", () => ({

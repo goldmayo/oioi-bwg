@@ -1,0 +1,9 @@
+@property --analytics-trend-reveal {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+.curve {
+  clip-path: inset(-2px var(--analytics-trend-reveal, 0%) -2px -2px) stroke-box;
+}

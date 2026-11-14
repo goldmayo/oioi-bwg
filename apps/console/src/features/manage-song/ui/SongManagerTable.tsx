@@ -1,12 +1,12 @@
 "use client";
 
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useEffect, useMemo } from "react";
 import { DataTable } from "@oioi-bwg/ui/data-table";
 import { FileMusic } from "lucide-react";
 
 import type { AdminSongSummary } from "@/entities/song";
 
-import { adminLinks } from "@/shared/config/admin-routes";
+import { adminLinks, adminPaths } from "@/shared/config/admin-routes";
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Badge } from "@/shared/ui/badge";
 import { Checkbox } from "@/shared/ui/checkbox";
@@ -23,6 +23,8 @@ import {
   TableRowActions,
 } from "@/shared/ui/table-row-actions";
 import { VisibilityIcon } from "@/shared/ui/visibility-icon";
+
+import "./song-title-transition.css";
 
 interface Props {
   songs: AdminSongSummary[];
@@ -64,6 +66,29 @@ export function SongManagerTable({
   const showOrder = useMediaQuery("(min-width: 768px)");
   const showAlbum = useMediaQuery("(min-width: 1024px)");
   const showSlug = useMediaQuery("(min-width: 1280px)");
+  useEffect(() => {
+    function captureSongTitle(event: PageSwapEvent) {
+      const transition = event.viewTransition;
+      const destination = event.activation?.entry.url;
+      if (!transition || !destination) return;
+
+      const url = new URL(destination);
+      if (url.search || !url.pathname.startsWith(`${adminPaths.songList}/`)) return;
+      const link = document.querySelector<HTMLAnchorElement>(
+        `[data-song-title-link][href="${CSS.escape(url.pathname)}"]`,
+      );
+      const title = link?.firstElementChild;
+      if (!(title instanceof HTMLElement)) return;
+
+      title.style.viewTransitionName = "song-title";
+      // A history restore can reuse this document and its table.
+      void transition.finished
+        .finally(() => title.style.removeProperty("view-transition-name"))
+        .catch(() => {});
+    }
+    window.addEventListener("pageswap", captureSongTitle);
+    return () => window.removeEventListener("pageswap", captureSongTitle);
+  }, []);
   const columns = useMemo(
     () =>
       column.columns([
@@ -84,10 +109,11 @@ export function SongManagerTable({
           cell: ({ row: { original: song } }) => (
             <a
               href={adminLinks.song(song.id)}
+              data-song-title-link
               title={song.title}
               className="text-foreground block truncate underline-offset-4 hover:underline"
             >
-              {song.title}
+              <span className="inline-block max-w-full truncate align-bottom">{song.title}</span>
             </a>
           ),
         }),

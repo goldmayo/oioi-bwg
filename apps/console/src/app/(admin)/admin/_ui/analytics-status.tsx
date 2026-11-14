@@ -12,15 +12,7 @@ import { analyticsTime } from "../_lib/analytics";
 
 export type AnalyticsResult = UseQueryResult<AnalyticsReport>;
 
-export function AnalyticsStatus({
-  title,
-  query,
-  hideTimestamp = false,
-}: {
-  title: string;
-  query: AnalyticsResult;
-  hideTimestamp?: boolean;
-}) {
+export function AnalyticsStatus({ title, query }: { title: string; query: AnalyticsResult }) {
   const loginRequired = query.error instanceof ApiError && query.error.status === 401;
   return (
     <div className="space-y-2 text-sm" aria-live="polite">
@@ -55,10 +47,9 @@ export function AnalyticsStatus({
           )}
         </div>
       )}
-      {query.data && !hideTimestamp && (
+      {query.data && query.isError && (
         <p className="text-muted-foreground text-xs">
-          {query.isError ? "마지막 성공 결과" : "마지막 갱신"}{" "}
-          {analyticsTime.format(new Date(query.data.fetchedAt))}
+          마지막 성공 결과 {analyticsTime.format(new Date(query.data.fetchedAt))}
         </p>
       )}
       {query.data && (query.data.thresholded || query.data.sampled) && (

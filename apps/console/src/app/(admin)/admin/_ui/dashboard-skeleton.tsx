@@ -1,0 +1,44 @@
+export function DashboardSkeleton({
+  variant,
+}: {
+  variant: "summary" | "chart" | "rows" | "donut";
+}) {
+  return (
+    <div aria-hidden="true" className="min-w-0 space-y-3 motion-safe:animate-pulse">
+      {variant === "summary" && (
+        <div className="divide-border grid grid-cols-3 divide-x">
+          {[0, 1, 2].map((item) => (
+            <div
+              key={item}
+              className="min-w-0 space-y-2 ps-3 pe-2 first:ps-0 last:pe-0 lg:ps-4 lg:pe-3"
+            >
+              <div className="bg-muted h-3 w-3/4 rounded-sm" />
+              <div className="bg-muted h-7 w-1/2 rounded-sm" />
+            </div>
+          ))}
+        </div>
+      )}
+      {variant === "chart" && (
+        <div className="border-border flex h-48 items-end gap-3 border-b border-l px-4">
+          {[28, 44, 38, 62, 53, 73, 60, 82].map((height) => (
+            <div
+              key={height}
+              className="bg-muted flex-1 rounded-t-sm"
+              style={{ height: height + "%" }}
+            />
+          ))}
+        </div>
+      )}
+      {variant === "donut" && (
+        <div className="border-muted mx-auto my-2 size-40 rounded-full border-[32px]" />
+      )}
+      {variant === "rows" &&
+        [76, 59, 68, 47, 34].map((width) => (
+          <div key={width} className="border-border flex h-7 items-center gap-3 border-b">
+            <div className="bg-muted h-3 w-20 shrink-0 rounded-sm" />
+            <div className="bg-muted h-2 rounded-sm" style={{ width: width + "%" }} />
+          </div>
+        ))}
+    </div>
+  );
+}

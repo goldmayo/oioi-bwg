@@ -53,8 +53,6 @@ export function useNotificationHistory(accountId: string, selectedId?: string) {
     changeView: (view: "all" | "unread") => {
       void setFilters({ view, page: 1 });
     },
-    changeResult: (result: typeof filters.result) => {
-      void setFilters({ result, page: 1 });
-    },
+    changeResult: (result: typeof filters.result) => setFilters({ result, page: 1 }),
   };
 }

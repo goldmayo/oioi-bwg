@@ -9,14 +9,20 @@ import { AdminLogoutAction } from "./admin-logout-action";
 import { AdminShell } from "./admin-shell";
 import AdminSidebar from "./admin-sidebar";
 import { NotificationBell } from "./notification-bell";
+import { ThemeToggle } from "./theme-toggle";
 
 function Workspace({ children }: { children: ReactNode }) {
-  const { breadcrumbs, section } = useAdminNavigation();
+  const { backLink, breadcrumbs, section } = useAdminNavigation();
   return (
     <AdminShell
       navigation={<AdminSidebar activeHref={section?.href} />}
-      breadcrumbs={<AdminBreadcrumbs items={breadcrumbs} />}
-      headerActions={<NotificationBell />}
+      breadcrumbs={<AdminBreadcrumbs items={breadcrumbs} backLink={backLink} />}
+      headerActions={
+        <>
+          <ThemeToggle />
+          <NotificationBell />
+        </>
+      }
       sidebarFooter={<AdminLogoutAction />}
     >
       {children}

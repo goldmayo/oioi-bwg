@@ -44,6 +44,26 @@ it("대시보드·목록·상세·편집 모두 같은 루트 헤더와 사이�
     unmount();
   }
 });
+it("대시보드 관리와 대시보드를 오갈 때 같은 주소의 경로 항목을 중복 표시하지 않는다", () => {
+  route.pathname = "/admin/dashboard/settings";
+  const workspace = () => <AdminWorkspace>화면 본문</AdminWorkspace>;
+  const { rerender } = render(workspace());
+  const breadcrumbs = screen.getByRole("navigation", { name: "현재 위치" });
+  const labels = () =>
+    within(breadcrumbs)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+
+  expect(
+    within(breadcrumbs).getByRole("link", { name: "대시보드로 돌아가기" }).getAttribute("href"),
+  ).toBe("/admin");
+  expect(labels()).toEqual(["대시보드", "대시보드 관리"]);
+
+  route.pathname = "/admin";
+  rerender(workspace());
+  expect(labels()).toEqual(["대시보드"]);
+});
+
 it("페이지가 제공한 제목을 표시하며 다른 경로로 넘어가면 이전 제목을 쓰지 않는다", async () => {
   route.pathname = "/admin/songs/123";
   const { rerender } = render(

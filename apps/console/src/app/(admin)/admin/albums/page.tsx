@@ -37,8 +37,8 @@ export default async function AdminAlbumsPage() {
   );
 
   return (
-    <div className="min-w-0 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto w-full max-w-7xl">
+    <div className="min-w-0 p-4 md:px-5 md:py-4">
+      <div className="w-full">
         <HydrationBoundary state={dehydrate(queryClient)}>
           <Suspense fallback={<div className="text-muted-foreground">앨범을 불러오는 중...</div>}>
             <AdminAlbumManager />

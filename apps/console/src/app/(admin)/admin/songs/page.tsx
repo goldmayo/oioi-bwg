@@ -41,8 +41,8 @@ export default async function AdminSongsPage() {
   );
 
   return (
-    <div className="min-w-0 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto w-full max-w-7xl">
+    <div className="min-w-0 p-4 md:px-5 md:py-4">
+      <div className="w-full">
         <HydrationBoundary state={dehydrate(queryClient)}>
           <Suspense
             fallback={

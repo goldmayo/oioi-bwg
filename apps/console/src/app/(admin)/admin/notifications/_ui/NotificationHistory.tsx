@@ -6,6 +6,7 @@ import { Tabs } from "radix-ui";
 
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Button } from "@/shared/ui/button";
+import { FilterSelect, ListFilterSheet } from "@/shared/ui/list-filter-sheet";
 import { ListHeader } from "@/shared/ui/list-layout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import {
@@ -34,8 +35,8 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
   const markAllDisabled = !history.unreadCount || actions.all.isPending || query.isPending;
   const markAllRead = () => actions.all.mutate();
   return (
-    <section className="min-w-0 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto w-full max-w-7xl space-y-3 md:space-y-4">
+    <section className="min-w-0 p-4 md:px-5 md:py-4">
+      <div className="w-full space-y-3 md:space-y-4">
         <ListHeader
           title="알림 내역"
           compactOnMobile
@@ -91,7 +92,7 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
           className="space-y-3 md:space-y-4"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex w-full min-w-0 items-center gap-2 md:w-auto md:flex-wrap md:gap-3">
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2 md:w-auto md:justify-start md:gap-3">
               <Tabs.List
                 aria-label="알림 모아보기"
                 className="bg-muted inline-flex h-11 shrink-0 items-center gap-1 rounded-md px-1 md:h-9 md:p-1"
@@ -114,16 +115,33 @@ export function NotificationHistory({ selectedId }: { selectedId?: string }) {
               >
                 <SelectTrigger
                   aria-label="작업 결과 필터"
-                  className="min-w-0 flex-1 data-[size=default]:h-11 md:w-40 md:flex-none md:data-[size=default]:h-9"
+                  className="hidden w-40 data-[size=default]:h-9 md:flex"
                 >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{wide ? "전체 작업 결과" : "전체 결과"}</SelectItem>
+                  <SelectItem value="all">전체 작업 결과</SelectItem>
                   <SelectItem value="WAVEFORM_SUCCEEDED">파형 생성 성공</SelectItem>
                   <SelectItem value="WAVEFORM_FAILED">파형 생성 실패</SelectItem>
                 </SelectContent>
               </Select>
+              <ListFilterSheet
+                id="notification-filters"
+                urlBacked
+                title="알림 필터"
+                activeCount={filters.result === "all" ? 0 : 1}
+                values={{ result: filters.result }}
+                defaults={{ result: "all" as const }}
+                onApply={({ result }) => history.changeResult(result)}
+              >
+                {({ control }) => (
+                  <FilterSelect label="작업 결과" control={control} name={"result"}>
+                    <option value="all">전체 결과</option>
+                    <option value="WAVEFORM_SUCCEEDED">파형 생성 성공</option>
+                    <option value="WAVEFORM_FAILED">파형 생성 실패</option>
+                  </FilterSelect>
+                )}
+              </ListFilterSheet>
             </div>
             {wide ? <BrowserNotificationSwitch /> : null}
           </div>

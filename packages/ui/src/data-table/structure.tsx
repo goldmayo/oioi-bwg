@@ -171,7 +171,8 @@ export function Header({ children }: { children?: ReactNode }) {
                               aria-valuenow={Math.round(column.getSize())}
                               aria-valuemin={column.columnDef.minSize ?? 20}
                               aria-valuemax={column.columnDef.maxSize}
-                              className="text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:ring-ring absolute top-1/2 right-0 inline-flex h-8 w-6 -translate-y-1/2 cursor-col-resize touch-none items-center justify-center rounded-sm p-0 opacity-0 group-focus-within/column:opacity-100 group-hover/column:opacity-100 focus-visible:ring-2 focus-visible:outline-none [@media(hover:none)]:opacity-100"
+                              data-resizing={column.getIsResizing() ? "" : undefined}
+                              className="text-muted-foreground hover:text-foreground hover:bg-accent focus-visible:ring-ring absolute top-1/2 right-0 inline-flex h-8 w-6 -translate-y-1/2 cursor-col-resize touch-none items-center justify-center rounded-sm p-0 opacity-0 group-hover/column:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none data-resizing:opacity-100"
                               onClick={(event) => event.stopPropagation()}
                               onMouseDown={header.getResizeHandler()}
                               onTouchStart={header.getResizeHandler()}
