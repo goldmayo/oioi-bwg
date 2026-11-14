@@ -64,6 +64,10 @@ export function DashboardAnalytics({
   const showsAnalytics = layout.mobile.some(
     (id) => id !== "content" && id !== "jobs" && !layout.hidden.includes(id),
   );
+  const summaryTotals = layout.hidden.includes("summary") ? undefined : summary.data?.totals;
+  const showsShareReport =
+    (!layout.hidden.includes("devices") && Boolean(devices.data)) ||
+    (!layout.hidden.includes("browsers") && Boolean(browsers.data));
 
   function update(next: DashboardLayout) {
     setDraft(next);
@@ -123,7 +127,7 @@ export function DashboardAnalytics({
             ))}
           </dl>
         )}
-        <AnalyticsStatus title="방문 요약" query={summary} hideTimestamp={!summary.isError} />
+        <AnalyticsStatus title="방문 요약" query={summary} />
       </>
     ),
     trend: (
@@ -156,6 +160,7 @@ export function DashboardAnalytics({
         description="조회수 상위 페이지"
         query={pages}
         metric="views"
+        summaryTotal={summaryTotals?.views}
       />
     ),
     traffic: (
@@ -164,6 +169,7 @@ export function DashboardAnalytics({
         description={state.traffic === "channels" ? "채널별 세션 수" : "소스/매체별 세션 수"}
         query={traffic}
         metric="sessions"
+        summaryTotal={summaryTotals?.sessions}
         action={
           <Select
             value={state.traffic}
@@ -230,7 +236,7 @@ export function DashboardAnalytics({
           onSave={save}
         />
       )}
-      {showsAnalytics && <DashboardPeriod state={state} />}
+      {showsAnalytics && <DashboardPeriod state={state} showsShareReport={showsShareReport} />}
       <DashboardWidgets
         layout={layout}
         widgets={widgets}

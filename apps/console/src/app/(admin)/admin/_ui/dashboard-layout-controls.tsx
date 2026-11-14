@@ -1,9 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp } from "lucide-react";
-import Link from "next/link";
 
-import { adminPaths } from "@/shared/config/admin-routes";
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
@@ -37,9 +35,6 @@ export function DashboardLayoutControls({
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="ghost" onClick={onReset}>
             기본 배치
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href={adminPaths.dashboard}>대시보드로 돌아가기</Link>
           </Button>
           <Button type="button" disabled={!dirty} onClick={onSave}>
             저장

@@ -6,13 +6,23 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 
-import { analyticsDateAgo } from "../_lib/analytics";
+import { analyticsDateAgo, analyticsTime } from "../_lib/analytics";
 import type { useDashboardAnalytics } from "../_model/use-dashboard-analytics";
 
 import { AnalyticsPeriodFilter } from "./analytics-period-filter";
 
-export function DashboardPeriod({ state }: { state: ReturnType<typeof useDashboardAnalytics> }) {
-  const busy = state.reports.some((query) => query.isFetching);
+export function DashboardPeriod({
+  state,
+  showsShareReport,
+}: {
+  state: ReturnType<typeof useDashboardAnalytics>;
+  showsShareReport: boolean;
+}) {
+  const busy = state.visibleReports.some((query) => query.isFetching);
+  const latestRefresh = state.visibleReports
+    .flatMap((query) => (query.isSuccess ? [query.data.fetchedAt] : []))
+    .sort()
+    .at(-1);
   return (
     <section aria-label="GA4 조회 기간" className="space-y-3">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -83,9 +93,20 @@ export function DashboardPeriod({ state }: { state: ReturnType<typeof useDashboa
           </p>
         </form>
       )}
-      <p className="text-muted-foreground text-xs tabular-nums" aria-live="polite">
-        집계 기간 {state.range.from} ~ {state.range.to} · 서울 시간
-      </p>
+      <div
+        className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums"
+        aria-live="polite"
+      >
+        <p>
+          집계 기간 {state.range.from} ~ {state.range.to} · 서울 시간
+        </p>
+        {latestRefresh && <p>최근 갱신 {analyticsTime.format(new Date(latestRefresh))}</p>}
+      </div>
+      {showsShareReport && (
+        <p className="text-muted-foreground text-xs">
+          여러 기기나 브라우저를 사용하면 비율 합계가 100%를 넘을 수 있습니다.
+        </p>
+      )}
       {state.invalidUrl && (
         <p role="status" className="text-muted-foreground text-sm">
           주소의 조회 기간을 확인할 수 없어 최근 28일을 표시합니다.

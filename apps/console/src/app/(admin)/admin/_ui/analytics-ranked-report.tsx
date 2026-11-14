@@ -38,6 +38,7 @@ export function AnalyticsRankedReport({
   description,
   query,
   metric,
+  summaryTotal,
   share = false,
   action,
 }: {
@@ -45,6 +46,7 @@ export function AnalyticsRankedReport({
   description: string;
   query: AnalyticsResult;
   metric: AnalyticsMetric;
+  summaryTotal?: number;
   share?: boolean;
   action?: ReactNode;
 }) {
@@ -67,7 +69,7 @@ export function AnalyticsRankedReport({
         {action}
       </div>
       {!report && query.isPending && <DashboardSkeleton variant="rows" />}
-      {!share && report && (
+      {!share && report && total !== summaryTotal && (
         <p className="text-2xl font-semibold tabular-nums" aria-label="기간 전체 집계">
           {analyticsNumber.format(total)}
         </p>
@@ -142,11 +144,6 @@ export function AnalyticsRankedReport({
             </ol>
           </details>
         </div>
-      )}
-      {share && report && (
-        <p className="text-muted-foreground text-xs">
-          여러 기기나 브라우저를 사용하면 비율 합계가 100%를 넘을 수 있습니다.
-        </p>
       )}
       {report?.truncated && (
         <p className="text-muted-foreground text-xs">

@@ -41,6 +41,7 @@ export function useDashboardAnalytics(accountId: string, hidden: readonly Widget
       enabled: !hidden.includes(id),
     })),
   });
+  const visibleReports = reports.filter((_, index) => !hidden.includes(reportWidgets[index]));
   const preset = [7, 28, 90].find((days) => {
     const candidate = analyticsPreset(days);
     return candidate.from === range.from && candidate.to === range.to;
@@ -58,6 +59,7 @@ export function useDashboardAnalytics(accountId: string, hidden: readonly Widget
     traffic,
     setTraffic,
     reports,
+    visibleReports,
     draftValid,
     preset: custom ? "custom" : String(preset ?? "custom"),
     invalidUrl: Boolean(urlRange.from || urlRange.to) && !valid,
@@ -72,9 +74,7 @@ export function useDashboardAnalytics(accountId: string, hidden: readonly Widget
     }),
     refresh() {
       void Promise.allSettled(
-        reports
-          .filter((_, index) => !hidden.includes(reportWidgets[index]))
-          .map((report) => report.refetch({ cancelRefetch: false })),
+        visibleReports.map((report) => report.refetch({ cancelRefetch: false })),
       );
     },
   };
