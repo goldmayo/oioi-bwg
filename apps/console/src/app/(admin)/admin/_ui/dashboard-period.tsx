@@ -50,7 +50,10 @@ export function DashboardPeriod({ state }: { state: ReturnType<typeof useDashboa
         </div>
       </header>
       {state.custom && (
-        <form className="hidden flex-wrap items-end gap-2 md:flex" onSubmit={state.submitDesktopRange}>
+        <form
+          className="hidden flex-wrap items-end gap-2 md:flex"
+          onSubmit={state.submitDesktopRange}
+        >
           <label className="w-36 max-w-full space-y-1 text-sm">
             <span>시작일</span>
             <Input

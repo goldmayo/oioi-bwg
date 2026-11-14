@@ -144,7 +144,9 @@ export function DashboardAnalytics({
           </SelectContent>
         </Select>
         {!trend.data && trend.isPending && <DashboardSkeleton variant="chart" />}
-        {trend.data && <AnalyticsTrend report={trend.data} metric={state.metric} onCurveReady={revealTrend} />}
+        {trend.data && (
+          <AnalyticsTrend report={trend.data} metric={state.metric} onCurveReady={revealTrend} />
+        )}
         <AnalyticsStatus title="일별 추세" query={trend} />
       </div>
     ),

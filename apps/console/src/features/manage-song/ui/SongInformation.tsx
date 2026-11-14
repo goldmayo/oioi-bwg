@@ -18,7 +18,7 @@ export function SongInformation({
 }) {
   return (
     <div className="grid min-w-0 flex-1 md:grid-cols-[minmax(0,1fr)_minmax(15rem,27%)]">
-      <div className="min-w-0 space-y-8 px-4 py-6 md:px-8 md:py-8 lg:px-12">
+      <div className="min-w-0 space-y-8 px-4 py-6 md:py-8 md:pr-8 md:pl-[6.0625rem] lg:pr-12">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-semibold tracking-tight wrap-anywhere">
