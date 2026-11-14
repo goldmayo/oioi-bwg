@@ -16,7 +16,7 @@ export function DashboardSkeleton({
         </div>
       )}
       {variant === "chart" && (
-        <div className="border-border flex h-48 items-end gap-3 border-b border-l px-4 sm:h-60">
+        <div className="border-border flex h-48 items-end gap-3 border-b border-l px-4">
           {[28, 44, 38, 62, 53, 73, 60, 82].map((height) => (
             <div
               key={height}

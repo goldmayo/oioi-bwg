@@ -207,7 +207,7 @@ export function DashboardAnalytics({
   };
 
   return (
-    <section className="mx-auto w-full max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
+    <section className="min-w-0 space-y-5 p-4 md:px-5 md:py-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">

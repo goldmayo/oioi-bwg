@@ -14,7 +14,7 @@ import {
 
 import styles from "./analytics-trend.module.css";
 
-const plotHeight = "h-48 sm:h-60";
+const plotHeight = "h-48";
 
 export function AnalyticsTrend({
   report,

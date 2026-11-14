@@ -38,7 +38,7 @@ function AnalyticsBars({ rows }: { rows: RankedRow[] }) {
     <ChartContainer
       config={chartConfig}
       className="aspect-auto w-full"
-      style={{ height: Math.max(rows.length * 27, 96) }}
+      style={{ height: Math.max(rows.length * 24, 96) }}
     >
       <BarChart accessibilityLayer data={rows} layout="vertical" margin={{ right: 8 }}>
         <XAxis type="number" hide />
@@ -195,7 +195,7 @@ export function AnalyticsRankedReport({
               차트는 상위 {barRows.length}개 항목을 표시합니다.
             </p>
           )}
-          <details open={total === 0} className="text-muted-foreground text-xs">
+          <details className="text-muted-foreground text-xs">
             <summary className="focus-visible:outline-ring cursor-pointer py-2 outline-offset-2 focus-visible:outline-2">
               항목별 수치 보기
             </summary>

@@ -7,9 +7,8 @@ import { GripHorizontal } from "lucide-react";
 import { useMediaQuery } from "@/shared/model/useMediaQuery";
 
 import {
+  dashboardGrid,
   type DashboardLayout,
-  defaultDashboardLayout,
-  widgetHeight,
   type WidgetId,
   widgetLabels,
 } from "../_model/dashboard-layout";
@@ -31,7 +30,10 @@ export function DashboardWidgets({
 }) {
   const desktop = useMediaQuery("(min-width: 1024px)");
   const visible = layout.desktop.filter(({ i }) => !layout.hidden.includes(i));
-  const compacted = verticalCompactor.compact(visible, 6) as DashboardLayout["desktop"];
+  const compacted = verticalCompactor.compact(
+    visible,
+    dashboardGrid.cols,
+  ) as DashboardLayout["desktop"];
   const visibleById = new Map(visible.map((item) => [item.i, item]));
   const items = desktop
     ? compacted.toSorted((a, b) => a.y - b.y || a.x - b.x)
@@ -40,23 +42,30 @@ export function DashboardWidgets({
         return item ? [item] : [];
       });
 
-  function renderWidget(id: WidgetId) {
+  function renderWidget(id: WidgetId, draggable = false) {
     return (
       <div className="border-border bg-card flex h-full min-w-0 flex-col rounded-xl border">
         <header
-          data-widget-grip={editing && desktop ? "" : undefined}
+          data-widget-grip={draggable ? "" : undefined}
           className={
-            editing && desktop
+            draggable
               ? "border-border flex shrink-0 cursor-grab items-center gap-2 border-b px-4 py-3 active:cursor-grabbing"
               : "flex shrink-0 items-center gap-2 px-4 py-3"
           }
         >
-          {editing && desktop && <GripHorizontal className="size-4 shrink-0" aria-hidden="true" />}
+          {draggable && <GripHorizontal className="size-4 shrink-0" aria-hidden="true" />}
           <h2 id={"dashboard-widget-" + id} className="min-w-0 text-sm font-semibold break-keep">
             {widgetLabels[id]}
           </h2>
         </header>
-        <div className="min-h-0 flex-1 overflow-auto px-4 pt-1 pb-4" tabIndex={0}>
+        <div
+          className={
+            draggable
+              ? "min-h-0 min-w-0 flex-1 overflow-auto px-4 pt-1 pb-4"
+              : "min-w-0 px-4 pt-1 pb-4"
+          }
+          tabIndex={draggable ? 0 : undefined}
+        >
           {widgets[id]}
         </div>
       </div>
@@ -64,19 +73,26 @@ export function DashboardWidgets({
   }
 
   const staticGrid = (
-    <div className="grid min-w-0 gap-3 lg:auto-rows-[32px] lg:grid-cols-6">
+    <div
+      className="grid min-w-0 gap-(--widget-gap) lg:auto-rows-[minmax(var(--widget-row-height),auto)] lg:grid-cols-[repeat(var(--widget-columns),minmax(0,1fr))]"
+      style={
+        {
+          "--widget-gap": dashboardGrid.margin[0] + "px",
+          "--widget-row-height": dashboardGrid.rowHeight + "px",
+          "--widget-columns": dashboardGrid.cols,
+        } as CSSProperties
+      }
+    >
       {items.map(({ i, x, y, w, h }) => (
         <div
           key={i}
           data-widget={i}
           role="region"
           aria-labelledby={"dashboard-widget-" + i}
-          className="h-(--widget-mobile-height) min-h-0 min-w-0 lg:h-auto lg:[grid-area:var(--widget-area)]"
+          className="min-w-0 lg:[grid-area:var(--widget-area)]"
           style={
             {
               "--widget-area": y + 1 + " / " + (x + 1) + " / span " + h + " / span " + w,
-              "--widget-mobile-height":
-                widgetHeight(defaultDashboardLayout.desktop.find((item) => item.i === i)!.h) + "px",
             } as CSSProperties
           }
         >
@@ -92,7 +108,7 @@ export function DashboardWidgets({
         <DashboardGridEditor layout={items} onChange={onDesktopChange}>
           {items.map(({ i }) => (
             <div key={i} data-widget={i} role="region" aria-labelledby={"dashboard-widget-" + i}>
-              {renderWidget(i)}
+              {renderWidget(i, true)}
             </div>
           ))}
         </DashboardGridEditor>

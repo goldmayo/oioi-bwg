@@ -6,7 +6,8 @@ import GridLayout, { type Layout, useContainerWidth } from "react-grid-layout";
 import {
   dashboardGrid,
   type DashboardLayout,
-  minimumWidgetWidth,
+  dashboardMaxWidgetRows,
+  minimumWidgetSize,
   widgetHeight,
 } from "../_model/dashboard-layout";
 
@@ -27,9 +28,8 @@ export function DashboardGridEditor({
   const { width, containerRef, mounted } = useContainerWidth();
   const grid = layout.map((item) => ({
     ...item,
-    minW: minimumWidgetWidth(item.i),
-    minH: 3,
-    maxH: 16,
+    ...minimumWidgetSize(item.i),
+    maxH: dashboardMaxWidgetRows,
   }));
 
   return (
