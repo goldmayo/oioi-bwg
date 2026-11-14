@@ -121,11 +121,14 @@ export function DashboardAnalytics({
         {!summary.data && summary.isPending ? (
           <DashboardSkeleton variant="summary" />
         ) : (
-          <dl className="grid grid-cols-3 gap-3">
+          <dl className="divide-border grid grid-cols-3 divide-x">
             {analyticsMetrics.map(({ key, title }) => (
-              <div key={key} className="min-w-0">
+              <div
+                key={key}
+                className="flex min-w-0 flex-col justify-between px-2 first:ps-0 last:pe-0 lg:px-3"
+              >
                 <dt className="text-muted-foreground text-xs break-keep">{title}</dt>
-                <dd className="mt-1 text-xl font-semibold tabular-nums">
+                <dd className="mt-1 text-xl font-semibold [overflow-wrap:anywhere] tabular-nums">
                   {summary.data ? analyticsNumber.format(summary.data.totals[key]) : "—"}
                 </dd>
               </div>
