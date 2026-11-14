@@ -34,7 +34,7 @@ export function useDashboardAnalytics(accountId: string, hidden: readonly Widget
   const draft = { from, to };
   const [custom, setCustom] = useState(false);
   const [metric, setMetric] = useState<AnalyticsMetric>("users");
-  const [traffic, setTraffic] = useState<"channels" | "sources">("channels");
+  const [traffic, setTraffic] = useState<"channels" | "sources">("sources");
   const reports = useQueries({
     queries: reportWidgets.map((id) => ({
       ...analyticsQuery(accountId, { ...range, report: id === "traffic" ? traffic : id }),

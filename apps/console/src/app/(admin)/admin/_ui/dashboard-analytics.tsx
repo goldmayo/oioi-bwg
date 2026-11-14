@@ -179,8 +179,8 @@ export function DashboardAnalytics({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="channels">채널별</SelectItem>
               <SelectItem value="sources">소스/매체별</SelectItem>
+              <SelectItem value="channels">채널별</SelectItem>
             </SelectContent>
           </Select>
         }
