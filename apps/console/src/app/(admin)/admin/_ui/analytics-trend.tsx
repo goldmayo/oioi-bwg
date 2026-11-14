@@ -36,10 +36,10 @@ export function AnalyticsTrend({
   return (
     <figure aria-label="날짜별 이용 추세" className="space-y-3">
       <ChartContainer
-        config={{ value: { label: title, color: "var(--ring)" } }}
+        config={{ value: { label: title, color: "var(--chart-1)" } }}
         className={`aspect-auto w-full ${plotHeight}`}
       >
-        <LineChart accessibilityLayer data={series} margin={{ top: 8, left: 14, right: 6 }}>
+        <LineChart accessibilityLayer data={series} margin={{ top: 8, left: 12, right: 12 }}>
           <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.65} />
           <XAxis
             dataKey="date"
@@ -61,17 +61,13 @@ export function AnalyticsTrend({
             tickCount={4}
             tickFormatter={(value: number) => analyticsNumber.format(value)}
           />
-          <ChartTooltip content={<ChartTooltipContent />} />
+          <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
           <Line
             dataKey="value"
-            type="linear"
+            type="natural"
             stroke="var(--color-value)"
             strokeWidth={2}
-            dot={
-              report.rows.length <= 14
-                ? { r: 2, strokeWidth: 0, fill: "var(--color-value)" }
-                : false
-            }
+            dot={false}
             shape={<Curve className={styles.curve} pathRef={onCurveReady} />}
             connectNulls
             isAnimationActive={false}

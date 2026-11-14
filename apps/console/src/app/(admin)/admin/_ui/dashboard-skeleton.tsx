@@ -1,4 +1,8 @@
-export function DashboardSkeleton({ variant }: { variant: "summary" | "chart" | "rows" }) {
+export function DashboardSkeleton({
+  variant,
+}: {
+  variant: "summary" | "chart" | "rows" | "donut";
+}) {
   return (
     <div aria-hidden="true" className="min-w-0 space-y-3 motion-safe:animate-pulse">
       {variant === "summary" && (
@@ -21,6 +25,9 @@ export function DashboardSkeleton({ variant }: { variant: "summary" | "chart" | 
             />
           ))}
         </div>
+      )}
+      {variant === "donut" && (
+        <div className="border-muted mx-auto my-2 size-40 rounded-full border-[32px]" />
       )}
       {variant === "rows" &&
         [76, 59, 68, 47, 34].map((width) => (

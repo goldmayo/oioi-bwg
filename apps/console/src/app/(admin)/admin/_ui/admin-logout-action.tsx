@@ -28,7 +28,7 @@ export function AdminLogoutAction() {
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          className="text-muted-foreground hover:text-destructive min-h-11 w-full justify-start gap-3 px-3 group-data-[collapsed=true]/sidebar:justify-center md:min-h-8 md:gap-2 md:px-2 md:text-[13px]"
+          className="text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:bg-sidebar-accent min-h-11 w-full justify-start gap-3 px-3 group-data-[collapsed=true]/sidebar:justify-center md:min-h-8 md:gap-2 md:px-2 md:text-[13px]"
           aria-label="로그아웃"
           aria-busy={logout.pending}
           disabled={logout.pending}

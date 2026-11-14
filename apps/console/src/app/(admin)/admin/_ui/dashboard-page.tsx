@@ -1,5 +1,4 @@
-import { listAdminAlbums } from "@oioi-bwg/server/services/album-service";
-import { listAdminSongs } from "@oioi-bwg/server/services/song-service";
+import { listAdminCheerGuides } from "@oioi-bwg/server/services/cheer-guide-service";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { getAdminPageContext, rethrowAdminPageError } from "@/server/auth/admin-page-context";
@@ -10,21 +9,18 @@ import { DashboardContent, DashboardJobs } from "./dashboard-overview";
 
 export async function DashboardPage({ editing = false }: { editing?: boolean }) {
   const ctx = await getAdminPageContext();
-  const [albums, songs] = await Promise.all([listAdminAlbums(ctx), listAdminSongs(ctx)]).catch(
-    async (error: unknown) => rethrowAdminPageError(error, await getRequestAuthorization()),
+  const guides = await listAdminCheerGuides(ctx).catch(async (error: unknown) =>
+    rethrowAdminPageError(error, await getRequestAuthorization()),
   );
+  const publishedGuideCount = guides.items.filter(
+    ({ currentPublication }) => currentPublication?.action === "PUBLISH",
+  ).length;
   return (
     <NuqsAdapter>
       <DashboardAnalytics
         editing={editing}
         accountId={ctx.user!.id}
-        content={
-          <DashboardContent
-            albumCount={albums.items.length}
-            songCount={songs.items.length}
-            visibleSongCount={songs.items.filter((song) => song.isVisible).length}
-          />
-        }
+        content={<DashboardContent publishedGuideCount={publishedGuideCount} />}
         jobs={<DashboardJobs />}
       />
     </NuqsAdapter>

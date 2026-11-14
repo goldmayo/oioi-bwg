@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { z } from "zod";
 
 export const widgetLabels = {
-  content: "콘텐츠 관리",
+  content: "콘텐츠 공개 현황",
   jobs: "작업 알림",
   summary: "방문 요약",
   trend: "일별 이용 추세",
@@ -65,8 +65,8 @@ export function minimumWidgetWidth(id: WidgetId) {
 
 export const defaultDashboardLayout: DashboardLayout = {
   desktop: [
-    { i: "content", x: 0, y: 0, w: 4, h: 7 },
-    { i: "jobs", x: 4, y: 0, w: 2, h: 7 },
+    { i: "content", x: 0, y: 0, w: 4, h: 5 },
+    { i: "jobs", x: 4, y: 0, w: 2, h: 5 },
     { i: "summary", x: 0, y: 7, w: 6, h: 3 },
     { i: "trend", x: 0, y: 10, w: 6, h: 10 },
     { i: "pages", x: 0, y: 20, w: 3, h: 11 },

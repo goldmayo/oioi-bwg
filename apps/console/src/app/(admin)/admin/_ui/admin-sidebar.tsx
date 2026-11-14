@@ -17,7 +17,7 @@ export default function AdminSidebar({ activeHref }: { activeHref?: string }) {
             aria-current={active ? "page" : undefined}
             aria-label={label}
             title={label}
-            className={`flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors group-data-[collapsed=true]/sidebar:justify-center md:min-h-8 md:gap-2 md:px-2 md:text-[13px] ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"}`}
+            className={`flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors group-data-[collapsed=true]/sidebar:justify-center md:min-h-8 md:gap-2 md:px-2 md:text-[13px] ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"}`}
           >
             <Icon className="size-5 shrink-0 md:size-4" aria-hidden="true" />
             <span className="group-data-[collapsed=true]/sidebar:hidden">{label}</span>

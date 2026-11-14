@@ -104,7 +104,8 @@ export function DashboardPeriod({
       </div>
       {showsShareReport && (
         <p className="text-muted-foreground text-xs">
-          여러 기기나 브라우저를 사용하면 비율 합계가 100%를 넘을 수 있습니다.
+          항목별 수치의 비율은 전체 활성 사용자 기준입니다. 여러 기기나 브라우저를 쓰면 비율 합계가
+          100%를 넘을 수 있습니다.
         </p>
       )}
       {state.invalidUrl && (

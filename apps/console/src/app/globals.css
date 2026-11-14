@@ -16,6 +16,7 @@
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
   --color-sidebar: var(--sidebar);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
@@ -104,19 +105,20 @@
   --border: #e4e4e7;
   --input: #a0a0a6;
   --ring: #696970;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: #f2f2f3;
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: #e4e4e7;
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: #dedee1;
-  --sidebar-ring: oklch(0.708 0 0);
+  --chart-1: #2563eb;
+  --chart-2: #60a5fa;
+  --chart-3: #1e3a8a;
+  --chart-4: #93c5fd;
+  --chart-5: #1d4ed8;
+  --sidebar: #202123;
+  --sidebar-foreground: #ececee;
+  --sidebar-muted-foreground: #b5b7bc;
+  --sidebar-primary: #ececee;
+  --sidebar-primary-foreground: #202123;
+  --sidebar-accent: #34363a;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #393b40;
+  --sidebar-ring: #a1a1aa;
 
   /* QWER 로고 멤버 컬러 */
   --qwer-q: #ffffff;
@@ -165,19 +167,13 @@
   --border: #303133;
   --input: #66666e;
   --ring: #a7a7af;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --chart-1: #60a5fa;
+  --chart-2: #2563eb;
+  --chart-3: #bfdbfe;
+  --chart-4: #1d4ed8;
+  --chart-5: #3b82f6;
   --sidebar: #151617;
-  --sidebar-foreground: #ececee;
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: #242526;
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
+  --sidebar-accent: #292b2f;
 }
 
 @utility shadow-panel {

@@ -30,7 +30,7 @@ export function AdminShell({
     <Link
       href={adminPaths.dashboard}
       aria-label="OIOIBWG 대시보드 홈"
-      className="text-foreground flex min-h-11 min-w-11 items-center gap-2 rounded-md group-data-[collapsed=true]/sidebar:justify-center focus-visible:outline-2 focus-visible:outline-offset-4 md:min-h-8"
+      className="text-sidebar-foreground flex min-h-11 min-w-11 items-center gap-2 rounded-md group-data-[collapsed=true]/sidebar:justify-center focus-visible:outline-2 focus-visible:outline-offset-4 md:min-h-8"
     >
       <AppLogo className="md:text-base" />
     </Link>
@@ -55,7 +55,7 @@ export function AdminShell({
             <Button
               variant="ghost"
               size="icon"
-              className="group/brand relative size-8"
+              className="group/brand text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:bg-sidebar-accent relative size-8"
               aria-label="사이드바 열기"
               title="사이드바 열기"
               aria-expanded={false}
@@ -78,7 +78,7 @@ export function AdminShell({
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8"
+                className="text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:bg-sidebar-accent size-8"
                 aria-label="사이드바 접기"
                 title="사이드바 접기"
                 aria-expanded
@@ -120,7 +120,7 @@ export function AdminShell({
               <SheetContent
                 side="left"
                 aria-describedby={undefined}
-                className={`${styles.mobileSidebar} bg-sidebar flex w-64 flex-col gap-0 p-0`}
+                className={`${styles.mobileSidebar} bg-sidebar text-sidebar-foreground border-sidebar-border [&>button:hover]:bg-sidebar-accent flex w-64 flex-col gap-0 p-0 [&>button]:bg-transparent`}
                 onClick={(event) => {
                   if (event.target instanceof Element && event.target.closest("a"))
                     setMobileOpen(false);

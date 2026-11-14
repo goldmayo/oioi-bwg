@@ -1,65 +1,31 @@
-import { ArrowRight, Disc3, Music } from "lucide-react";
-import Link from "next/link";
-
-import { adminPaths } from "@/shared/config/admin-routes";
+import { analyticsNumber } from "../_lib/analytics";
 
 import { DashboardNotificationsLink } from "./dashboard-notifications-link";
 
-export function DashboardContent({
-  albumCount,
-  songCount,
-  visibleSongCount,
-}: {
-  albumCount: number;
-  songCount: number;
-  visibleSongCount: number;
-}) {
+export function DashboardContent({ publishedGuideCount }: { publishedGuideCount: number }) {
   return (
-    <div>
-      <div className="bg-card border-border divide-border divide-y overflow-hidden rounded-xl border">
-        {[
-          {
-            href: adminPaths.albumList,
-            title: "앨범",
-            description: "앨범 정보와 공개 상태를 관리합니다.",
-            count: albumCount,
-            unit: "개",
-            icon: Disc3,
-          },
-          {
-            href: adminPaths.songList,
-            title: "곡",
-            description: "곡 정보와 가사를 편집합니다.",
-            count: songCount,
-            unit: "곡",
-            icon: Music,
-          },
-        ].map(({ href, title, description, count, unit, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            prefetch={false}
-            className="hover:bg-accent/50 focus-visible:ring-ring flex items-center gap-4 p-5 outline-none focus-visible:ring-2 focus-visible:ring-inset sm:p-6"
-          >
-            <Icon className="text-muted-foreground size-5 shrink-0" aria-hidden="true" />
-            <span className="min-w-0 flex-1">
-              <span className="block font-medium">{title}</span>
-              <span className="text-muted-foreground mt-1 block text-sm leading-6">
-                {description}
-              </span>
-            </span>
-            <span className="shrink-0 text-base font-semibold tabular-nums">
-              {count}
-              <span className="text-muted-foreground ml-1 text-sm font-normal">{unit}</span>
-            </span>
-            <ArrowRight className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
-          </Link>
-        ))}
-      </div>
-      <p className="text-muted-foreground mt-3 text-sm">
-        현재 {visibleSongCount}곡이 표시 상태입니다.
-      </p>
-    </div>
+    <table aria-labelledby="dashboard-widget-content" className="w-full text-sm">
+      <thead className="text-muted-foreground text-xs">
+        <tr className="border-border border-b">
+          <th scope="col" className="py-2 text-left font-medium">
+            항목
+          </th>
+          <th scope="col" className="py-2 text-right font-medium">
+            공개 수
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row" className="py-3 text-left font-medium">
+            응원법
+          </th>
+          <td className="py-3 text-right font-semibold tabular-nums">
+            {analyticsNumber.format(publishedGuideCount)}개
+          </td>
+        </tr>
+      </tbody>
+    </table>
   );
 }
 

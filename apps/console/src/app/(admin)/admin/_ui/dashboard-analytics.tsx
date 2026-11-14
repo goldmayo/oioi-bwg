@@ -189,7 +189,7 @@ export function DashboardAnalytics({
     devices: (
       <AnalyticsRankedReport
         title="기기별 활성 사용자"
-        description="전체 활성 사용자 대비 비율"
+        description="표시된 항목의 활성 사용자 집계"
         query={devices}
         metric="users"
         share
@@ -198,7 +198,7 @@ export function DashboardAnalytics({
     browsers: (
       <AnalyticsRankedReport
         title="브라우저별 활성 사용자"
-        description="전체 활성 사용자 대비 비율"
+        description="표시된 항목의 활성 사용자 집계"
         query={browsers}
         metric="users"
         share
