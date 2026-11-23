@@ -1,10 +1,10 @@
 ---
 title: "Testing Architecture"
 document_id: "10"
-version: "1.29"
+version: "1.30"
 status: "active"
 authority: "architecture"
-updated_at: "2026-11-04"
+updated_at: "2026-11-23"
 depends_on:
   - "01"
   - "02"
@@ -24,7 +24,7 @@ tags:
   - "testing"
 ---
 
-# oioi-bwg Testing Architecture v1.29
+# oioi-bwg Testing Architecture v1.30
 
 ## 1. 목적
 
@@ -72,6 +72,28 @@ component behavior
 critical user flow
 → Playwright
 ```
+
+---
+
+## 3.1. 개별 테스트의 추가·생략 기준
+
+2026-11-23 v1.30: AI가 구현을 그대로 재현하는 테스트를 늘리지 않도록, 기존 boundary·behavior
+우선 원칙을 구체화한다. 참고: [Testing AI-Generated Code](https://www.robinwieruch.de/testing-ai-generated-code/).
+
+- 구조·import 방향처럼 정적으로 판정할 수 있는 규칙은 기존 Oxlint·Steiger·architecture harness가
+  소유한다. 새 규칙은 실제 코드의 위반·예외와 기존 타입/lint 보장을 먼저 조사한 뒤 추가한다.
+- 개별 테스트는 코드가 소유하는 판단과 관찰 가능한 결과를 검증한다. 권한·상태별 분기, 부분 수정의
+  필드 선택, DTO 변환·내부 필드 제외, 오류 재분류, 읽기 실패 후 쓰기 금지, 여러 쓰기의 순서·부분
+  실패·원자성, mutation invalidation 대상이 우선 후보다. 도메인 기대값은 Domain 명세를 따른다.
+- 단순 전달 코드의 개별 테스트는 같은 보장을 실제 적용되는 정적 검사와 공통 helper의 동작 테스트가
+  이미 보호하고, 별도 판단이나 미검증 boundary 연결이 없을 때만 생략할 수 있다. 파일 수·코드 길이나
+  공통 패턴과 닮았다는 이유만으로 생략하지 않는다.
+- 인증 함수의 호출 여부와 실제 권한 거부는 다른 보장이다. 정적 검사만으로 인증·인가·Origin 거부,
+  실패 후 부작용 차단, HTTP/serialization 계약, PostgreSQL 동작 테스트를 대체하지 않는다.
+  대표 Route contract 검증(05 §27)과 Auth/Authz matrix(04 §36)는 유지한다.
+- 기존 테스트를 축소·대체할 때는 각 assertion의 보장과 대체 검사 위치를 PR 본문에 대응시킨다.
+  동등 이상의 보장이 확인되지 않은 assertion은 유지한다. 테스트 수나 coverage 감소 자체를 목표로
+  삼지 않으며 library behavior·private implementation detail 재검증은 피한다.
 
 ---
 
@@ -280,6 +302,16 @@ Mock은 boundary를 격리하기 위한 도구다.
 모든 dependency를 mock해서 실제 integration risk를 숨기지 않는다.
 
 특히 DB behavior와 authz는 실제 integration test의 가치가 높다.
+
+Client API contract 테스트는 실제 HTTP client와 response parser를 유지하고 MSW로 네트워크
+응답만 대체한다. 정상·깨진 성공 payload와 오류 응답의 normalization을 확인하며, 해당 adapter가
+소유하는 URL 인코딩·요청 취소 등은 실제 요청에서 검증한다. 이는 Route Handler·DB 통합 검증을
+대체하지 않는다.
+
+MSW의 미등록 요청은 오류로 처리해 실제 네트워크로 빠져나가지 않게 하고, 테스트 사이 handler를
+초기화하며 종료 시 interceptor를 해제한다. mock resolver의 예기치 않은 실패를 의도한 API 오류
+시나리오로 취급하지 않는다. 반복 setup은 실제 중복이 확인된 범위에서 작은 fixture/helper로
+추출하며, 모든 파일을 위한 범용 harness나 파일명 기반의 숨은 전역 mock을 기본으로 만들지 않는다.
 
 ---
 

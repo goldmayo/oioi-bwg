@@ -1,18 +1,25 @@
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";
 import { act, cleanup, renderHook } from "@testing-library/react";
+import { http as handlers, HttpResponse } from "msw";
+import { beforeEach as beforeHttp } from "vitest";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { cheerGuideQueryKeys } from "@/entities/cheer-guide";
 import { songQueryKeys } from "@/entities/song";
 
+import { http } from "@/shared/api/http-client";
+
+import { createQueryClientFixture } from "../../../../../../../tests/query-client";
+
 import { useGuideCreationScreen } from "./use-guide-creation-screen";
 
-const post = vi.hoisted(() => vi.fn());
+const server = createHttpTestServer(window.location.href);
+const createClient = createQueryClientFixture();
+beforeHttp(() => {
+  vi.spyOn(http, "post");
+});
+
 const handleMutationError = vi.hoisted(() => vi.fn());
-vi.mock("@/shared/api/http-client", () => ({
-  http: { get: async () => ({ items: [], nextCursor: null }), post },
-}));
 vi.mock("@/features/auth", () => ({
   authAbilityQueries: {
     current: () => ({
@@ -38,29 +45,30 @@ const input = {
   description: null,
 } as const;
 function setup() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const { client, wrapper } = createClient({ defaultOptions: { queries: { retry: false } } });
+  server.use(
+    handlers.get("*/api/admin/songs", () => HttpResponse.json({ items: [], nextCursor: null })),
+  );
   client.setQueryData(songQueryKeys.adminList(), { items: [], nextCursor: null });
   const invalidate = vi.spyOn(client, "invalidateQueries").mockResolvedValue(undefined);
   const { result } = renderHook(() => useGuideCreationScreen(id), {
-    wrapper: ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
-    ),
+    wrapper,
   });
   return { result, invalidate };
 }
 it("생성 결과 계약을 검증하고 관련 응원법·곡 정보만 무효화한다", async () => {
-  post.mockResolvedValue({ id });
+  server.use(handlers.post("*/api/admin/cheer-guides", () => HttpResponse.json({ id })));
   const { result, invalidate } = setup();
   await act(async () => {
     await result.current.submit(input);
   });
-  expect(post).toHaveBeenCalledWith("/api/admin/cheer-guides", { json: input });
+  expect(http.post).toHaveBeenCalledWith("/api/admin/cheer-guides", { json: input });
   expect(invalidate).toHaveBeenCalledWith({ queryKey: cheerGuideQueryKeys.adminList() });
   expect(invalidate).toHaveBeenCalledWith({ queryKey: songQueryKeys.adminInformation(id) });
   expect(handleMutationError).not.toHaveBeenCalled();
 });
 it("잘못된 성공 응답도 완료로 처리하지 않고 재인증·오류 처리에 전달한다", async () => {
-  post.mockResolvedValue({ id: "invalid" });
+  server.use(handlers.post("*/api/admin/cheer-guides", () => HttpResponse.json({ id: "invalid" })));
   const { result, invalidate } = setup();
   await act(async () => {
     await expect(result.current.submit(input)).rejects.toThrow();
