@@ -4,26 +4,19 @@ import { apiErrorResponseSchema } from "@oioi-bwg/contracts/error";
 import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const getRequestContext = vi.hoisted(() => vi.fn());
+import { getRequestContext } from "../../../../../../tests/request-context";
 const deleteSong = vi.hoisted(() => vi.fn());
 const editSong = vi.hoisted(() => vi.fn());
 const getAdminSongInformation = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/server/auth/request-context", () => ({
-  getRequestContext,
-  getRequestAuthorization: async () => ({
-    context: await getRequestContext(),
-    decision: "unknown",
-    rejectionLogged: false,
-  }),
-}));
+vi.mock("@/server/auth/request-context", () => import("../../../../../../tests/request-context"));
 vi.mock("@oioi-bwg/server/services/song-service", () => ({
   deleteSong,
   editSong,
   getAdminSongInformation,
 }));
-vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
+vi.mock("@/shared/lib/sentry", () => import("../../../../../../tests/request-context"));
 
 import { DELETE, GET, PATCH } from "./route";
 
