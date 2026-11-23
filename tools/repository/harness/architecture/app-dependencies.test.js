@@ -292,6 +292,7 @@ test("task inputs preserve required invalidation and unrelated cache hashes", (c
     ],
     ["packages/config/vitest/browser.setup.ts", [...appUnit, ...ids(["ui"], ["test"])]],
     ["packages/config/vitest/postgres.js", appTypes],
+    ["packages/config/vitest/http.ts", [...appUnit, ...appTypes]],
     ["packages/config/next.ts", [...appBuilds, ...appTypes]],
     ["packages/config/sentry-build.ts", [...appBuilds, ...appTypes]],
     ["packages/config/steiger.ts", [...appLint, ...appTypes]],
