@@ -1,29 +1,40 @@
+import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";
 import type { Notification } from "@oioi-bwg/contracts/notification";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { http as handlers, HttpResponse } from "msw";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
+import { beforeEach as beforeHttp } from "vitest";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { notificationQueries } from "@/entities/notification";
 
+import { http } from "@/shared/api/http-client";
 import {
   NavigationConfirmationProvider,
   useNavigationBlocker,
 } from "@/shared/model/navigation-confirmation";
 
+import { createQueryClientFixture } from "../../../../../../tests/query-client";
+
 import { NotificationHistory } from "./NotificationHistory";
 
+const server = createHttpTestServer(window.location.href);
+const createClient = createQueryClientFixture();
+let queryFixture: ReturnType<typeof createClient>;
+beforeHttp(() => {
+  vi.spyOn(http, "get");
+  vi.spyOn(http, "patch");
+  vi.spyOn(http, "postVoid");
+});
+
 const mocks = vi.hoisted(() => ({
-  get: vi.fn(),
-  patch: vi.fn(),
-  postVoid: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
   enable: vi.fn(),
   disable: vi.fn(),
   wide: true,
 }));
-vi.mock("@/shared/api/http-client", () => ({ http: mocks }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mocks.push, replace: mocks.replace }),
   usePathname: () => "/admin/notifications",
@@ -43,14 +54,16 @@ const accountId = "019a0170-0000-7000-8000-000000000001";
 let client: QueryClient;
 let items: Notification[];
 const requests = () =>
-  mocks.get.mock.calls
-    .filter(([url]) => url.includes("/history?"))
+  vi
+    .mocked(http.get)
+    .mock.calls.filter(([url]) => url.includes("/history?"))
     .map(([url]) => new URL(url, "http://local").searchParams);
 beforeEach(() => {
   mocks.wide = true;
-  client = new QueryClient({
+  queryFixture = createClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  client = queryFixture.client;
   items = Array.from({ length: 25 }, (_, index) => ({
     id: `019a0170-0000-7000-8000-${String(index + 2).padStart(12, "0")}`,
     resourceId: accountId,
@@ -61,29 +74,34 @@ beforeEach(() => {
     readAt: index < 20 ? "2026-11-03T01:00:00.000Z" : null,
     href: `/admin/waveform-jobs/${accountId}`,
   }));
-  mocks.get.mockImplementation(async (url: string) => {
-    if (!url.includes("/history?")) return items.find((item) => url.endsWith(item.id));
-    const query = new URL(url, "http://local").searchParams;
-    const filtered = items.filter(
-      (item) =>
-        (query.get("status") !== "unread" || !item.readAt) &&
-        (!query.has("type") || item.type === query.get("type")),
-    );
-    const offset = Number(query.get("offset"));
-    return {
-      items: filtered.slice(offset, offset + Number(query.get("limit"))),
-      totalCount: filtered.length,
-      unreadCount: items.filter((item) => !item.readAt).length,
-    };
-  });
-  mocks.patch.mockImplementation(async (url: string) => {
-    const item = items.find((item) => url.includes(item.id))!;
-    item.readAt = item.createdAt;
-    return { ...item };
-  });
-  mocks.postVoid.mockImplementation(async () => {
-    items = items.map((item) => ({ ...item, readAt: item.createdAt }));
-  });
+  server.use(
+    handlers.get("*/api/admin/notifications/history", ({ request }) => {
+      const query = new URL(request.url).searchParams;
+      const filtered = items.filter(
+        (item) =>
+          (query.get("status") !== "unread" || !item.readAt) &&
+          (!query.has("type") || item.type === query.get("type")),
+      );
+      const offset = Number(query.get("offset"));
+      return HttpResponse.json({
+        items: filtered.slice(offset, offset + Number(query.get("limit"))),
+        totalCount: filtered.length,
+        unreadCount: items.filter((item) => !item.readAt).length,
+      });
+    }),
+    handlers.get("*/api/admin/notifications/:id", ({ params }) =>
+      HttpResponse.json(items.find((item) => item.id === params.id)),
+    ),
+    handlers.patch("*/api/admin/notifications/:id/read", ({ params }) => {
+      const item = items.find((item) => item.id === params.id)!;
+      item.readAt = item.createdAt;
+      return HttpResponse.json({ ...item });
+    }),
+    handlers.post("*/api/admin/notifications/read-all", () => {
+      items = items.map((item) => ({ ...item, readAt: item.createdAt }));
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
   mocks.disable.mockResolvedValue(undefined);
 });
 afterEach(() => {
@@ -97,14 +115,14 @@ function mount(searchParams = "", selectedId?: string, blocker?: (proceed: () =>
     return null;
   }
   render(
-    <QueryClientProvider client={client}>
+    <queryFixture.wrapper>
       <NuqsTestingAdapter hasMemory searchParams={searchParams}>
         <NavigationConfirmationProvider>
           <DirtyForm />
           <NotificationHistory selectedId={selectedId} />
         </NavigationConfirmationProvider>
       </NuqsTestingAdapter>
-    </QueryClientProvider>,
+    </queryFixture.wrapper>,
   );
 }
 
@@ -114,9 +132,9 @@ it("기본 10개와 STATUS를 표시하고 목록 진입만으로 읽지 않으�
   expect(screen.getByRole("columnheader", { name: /STATUS/ })).toBeTruthy();
   expect(screen.getAllByText("READ")).toHaveLength(10);
   expect(screen.queryByRole("checkbox")).toBeNull();
-  expect(mocks.patch).not.toHaveBeenCalled();
+  expect(vi.mocked(http.patch)).not.toHaveBeenCalled();
   expect(requests()[0].get("limit")).toBe("10");
-  expect(mocks.get.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+  expect(vi.mocked(http.get).mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
 });
 it("다음 페이지·표시 개수는 서버 페이지를 요청하며 필터 변경은 첫 페이지로 돌아간다", async () => {
   mount();
@@ -150,13 +168,17 @@ it("읽음 처리가 성공한 뒤 미저장 확인을 거쳐 이동하며 중�
   fireEvent.click(title.closest("tr")!.querySelector("td")!);
   fireEvent.click(title);
   await waitFor(() => expect(block).toHaveBeenCalledTimes(1));
-  expect(mocks.patch).toHaveBeenCalledTimes(1);
+  expect(vi.mocked(http.patch)).toHaveBeenCalledTimes(1);
   expect(mocks.push).not.toHaveBeenCalled();
   await act(() => block.mock.calls[0][0]());
   expect(mocks.push).toHaveBeenCalledWith(items[20].href);
 });
 it("읽음 실패 시 이동하지 않고 같은 항목으로 다시 시도할 수 있다", async () => {
-  mocks.patch.mockRejectedValueOnce(new Error("offline"));
+  server.use(
+    handlers.patch("*/api/admin/notifications/:id/read", () => HttpResponse.error(), {
+      once: true,
+    }),
+  );
   mount("?view=unread");
   fireEvent.click(await screen.findByRole("button", { name: /작업 결과 21/ }));
   await screen.findByText(/읽음 처리를 완료하지 못했습니다/);
@@ -173,13 +195,15 @@ it("모두 읽음은 필터 밖까지 처리하고 계정의 벨·내역 캐시�
   await screen.findByText("1-2 of 2");
   fireEvent.click(screen.getByRole("button", { name: "모두 읽음" }));
   await screen.findByText("조건에 맞는 알림이 없습니다.");
-  expect(mocks.postVoid).toHaveBeenCalledWith("/api/admin/notifications/read-all");
+  expect(vi.mocked(http.postVoid)).toHaveBeenCalledWith("/api/admin/notifications/read-all");
   expect(items.every((item) => item.readAt)).toBe(true);
   expect(client.getQueryState(bell)?.isInvalidated).toBe(true);
   expect(client.getQueryState(other)?.isInvalidated).toBe(false);
 });
 it("조회 실패에서 재시도하고 단건 알림 진입은 읽은 뒤 결과로 대체 이동한다", async () => {
-  mocks.get.mockRejectedValueOnce(new Error("offline"));
+  server.use(
+    handlers.get("*/api/admin/notifications/history", () => HttpResponse.error(), { once: true }),
+  );
   mount();
   await screen.findByText("알림을 불러오지 못했습니다.");
   fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
@@ -187,7 +211,7 @@ it("조회 실패에서 재시도하고 단건 알림 진입은 읽은 뒤 결�
   cleanup();
   mount("", items[24].id);
   await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith(items[24].href));
-  expect(mocks.patch).toHaveBeenCalledTimes(1);
+  expect(vi.mocked(http.patch)).toHaveBeenCalledTimes(1);
 });
 it("브라우저 알림은 사용자 조작으로만 변경하며 실패를 알린다", async () => {
   mocks.disable.mockRejectedValueOnce(new Error("offline"));

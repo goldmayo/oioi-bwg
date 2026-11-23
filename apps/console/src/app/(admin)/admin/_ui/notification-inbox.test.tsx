@@ -1,24 +1,33 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";
+import type { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { http as handlers, HttpResponse } from "msw";
+import { beforeEach as beforeHttp } from "vitest";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { http } from "@/shared/api/http-client";
 import {
   NavigationConfirmationProvider,
   useNavigationBlocker,
 } from "@/shared/model/navigation-confirmation";
 
+import { createQueryClientFixture } from "../../../../../tests/query-client";
+
 import { NotificationInbox } from "./notification-inbox";
 import { NotificationProvider } from "./notification-provider";
+
+const server = createHttpTestServer(window.location.href);
+const createClient = createQueryClientFixture();
+let queryFixture: ReturnType<typeof createClient>;
+beforeHttp(() => {
+  vi.spyOn(http, "get");
+  vi.spyOn(http, "patch");
+  vi.spyOn(http, "postVoid");
+});
 const mocks = vi.hoisted(() => ({
-  get: vi.fn(),
-  patch: vi.fn(),
-  postVoid: vi.fn(),
-  put: vi.fn(),
-  delete: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
 }));
-vi.mock("@/shared/api/http-client", () => ({ http: mocks }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mocks.push, replace: mocks.replace }),
 }));
@@ -35,14 +44,23 @@ const item = {
 };
 let client: QueryClient;
 beforeEach(() => {
-  client = new QueryClient({
+  queryFixture = createClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  mocks.get.mockImplementation((url: string) =>
-    Promise.resolve(url.includes("?") ? { items: [item], nextCursor: null, unreadCount: 1 } : item),
+  client = queryFixture.client;
+  server.use(
+    handlers.get("*/api/admin/notifications", () =>
+      HttpResponse.json({ items: [item], nextCursor: null, unreadCount: 1 }),
+    ),
+    handlers.get("*/api/admin/notifications/:id", () => HttpResponse.json(item)),
+    handlers.patch("*/api/admin/notifications/:id/read", () =>
+      HttpResponse.json({ ...item, readAt: item.createdAt }),
+    ),
+    handlers.post(
+      "*/api/admin/notifications/read-all",
+      () => new HttpResponse(null, { status: 204 }),
+    ),
   );
-  mocks.patch.mockResolvedValue({ ...item, readAt: item.createdAt });
-  mocks.postVoid.mockResolvedValue(undefined);
 });
 afterEach(() => {
   cleanup();
@@ -51,21 +69,21 @@ afterEach(() => {
 });
 function mount(selectedId?: string) {
   render(
-    <QueryClientProvider client={client}>
+    <queryFixture.wrapper>
       <NotificationProvider accountId={accountId} config={null}>
         <NotificationInbox selectedId={selectedId} />
       </NotificationProvider>
-    </QueryClientProvider>,
+    </queryFixture.wrapper>,
   );
 }
 it("푸시를 사용할 수 없어도 내역을 표시하며 열기만 해서는 읽지 않는다", async () => {
   mount();
   await screen.findByRole("button", { name: /파형 생성을 완료했습니다/ });
   expect(screen.getByText(/결과는 알림함에서/)).toBeTruthy();
-  expect(mocks.patch).not.toHaveBeenCalled();
+  expect(vi.mocked(http.patch)).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: /파형 생성을 완료했습니다/ }));
   await waitFor(() => expect(mocks.push).toHaveBeenCalledWith(item.href));
-  expect(mocks.patch).toHaveBeenCalledWith(`/api/admin/notifications/${item.id}/read`);
+  expect(vi.mocked(http.patch)).toHaveBeenCalledWith(`/api/admin/notifications/${item.id}/read`);
 });
 it("모두 읽음의 204 응답을 수용하고 내역을 갱신한다", async () => {
   mount();
@@ -74,16 +92,18 @@ it("모두 읽음의 204 응답을 수용하고 내역을 갱신한다", async (
     fireEvent.click(screen.getByRole("button", { name: "모두 읽음" }));
   });
   await waitFor(() =>
-    expect(mocks.postVoid).toHaveBeenCalledWith("/api/admin/notifications/read-all"),
+    expect(vi.mocked(http.postVoid)).toHaveBeenCalledWith("/api/admin/notifications/read-all"),
   );
   await waitFor(() =>
-    expect(mocks.get.mock.calls.filter(([url]) => url.includes("?")).length).toBeGreaterThan(1),
+    expect(
+      vi.mocked(http.get).mock.calls.filter(([url]) => url.includes("?")).length,
+    ).toBeGreaterThan(1),
   );
 });
 it("OS 알림 선택은 검증된 단건을 읽은 뒤 결과로 이동한다", async () => {
   mount(item.id);
   await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith(item.href));
-  expect(mocks.patch).toHaveBeenCalledTimes(1);
+  expect(vi.mocked(http.patch)).toHaveBeenCalledTimes(1);
 });
 it("다른 계정의 조회 캐시를 함께 사용하지 않는다", async () => {
   const { notificationQueryKeys } = await import("@/entities/notification");
@@ -99,18 +119,18 @@ it("알림을 읽은 뒤에도 미저장 폼의 승인이 있어야 결과로 �
     return null;
   }
   render(
-    <QueryClientProvider client={client}>
+    <queryFixture.wrapper>
       <NavigationConfirmationProvider>
         <DirtyForm />
         <NotificationProvider accountId={accountId} config={null}>
           <NotificationInbox />
         </NotificationProvider>
       </NavigationConfirmationProvider>
-    </QueryClientProvider>,
+    </queryFixture.wrapper>,
   );
   fireEvent.click(await screen.findByRole("button", { name: /파형 생성을 완료했습니다/ }));
   await waitFor(() => expect(block).toHaveBeenCalledTimes(1));
-  expect(mocks.patch).toHaveBeenCalledTimes(1);
+  expect(vi.mocked(http.patch)).toHaveBeenCalledTimes(1);
   expect(mocks.push).not.toHaveBeenCalled();
   await act(() => block.mock.calls[0][0]());
   expect(mocks.push).toHaveBeenCalledWith(item.href);
