@@ -1,17 +1,27 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";
+import type { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { http as handlers, HttpResponse } from "msw";
 import Link from "next/link";
+import { beforeEach as beforeHttp } from "vitest";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { albumQueryKeys } from "@/entities/album";
 import { type AdminSongInformation, songQueryKeys } from "@/entities/song";
 
-import { ApiError } from "@/shared/api/http-errors";
+import { http } from "@/shared/api/http-client";
+
+import { createQueryClientFixture } from "../../../../tests/query-client";
 
 import { SongScreen } from "./SongScreen";
 
-const http = vi.hoisted(() => ({ patch: vi.fn(), post: vi.fn() }));
-vi.mock("@/shared/api/http-client", () => ({ http }));
+const server = createHttpTestServer(window.location.href);
+const createClient = createQueryClientFixture();
+beforeHttp(() => {
+  vi.spyOn(http, "patch");
+  vi.spyOn(http, "post");
+});
+
 const id = "019a0170-0000-7000-8000-000000000001";
 const song: AdminSongInformation = {
   id,
@@ -54,9 +64,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 function setup(mode: "view" | "edit") {
-  client = new QueryClient({
+  const fixture = createClient({
     defaultOptions: { queries: { staleTime: Infinity, retry: false }, mutations: { retry: false } },
   });
+  client = fixture.client;
   client.setQueryData(songQueryKeys.adminInformation(id), song);
   client.setQueryData(albumQueryKeys.adminList(), {
     items: [{ id, name: "앨범" }],
@@ -64,10 +75,10 @@ function setup(mode: "view" | "edit") {
   });
   const onMutationError = vi.fn();
   render(
-    <QueryClientProvider client={client}>
+    <fixture.wrapper>
       <Link href="/admin/songs">곡 관리</Link>
       <SongScreen id={id} mode={mode} canManage onMutationError={onMutationError} />
-    </QueryClientProvider>,
+    </fixture.wrapper>,
   );
   return { onMutationError };
 }
@@ -90,8 +101,10 @@ it("기본은 조회이며 legacy 공식 flag로 출처를 추론하지 않고 �
 
 it("재조회·충돌 뒤에도 시작 버전으로 재시도하며 입력을 보존한다", async () => {
   const { onMutationError } = setup("edit");
-  http.patch.mockRejectedValue(
-    new ApiError(409, { code: "CHEER_GUIDE_CONFLICT", message: "충돌" }),
+  server.use(
+    handlers.patch("*/api/admin/songs/:id", () =>
+      HttpResponse.json({ code: "CHEER_GUIDE_CONFLICT", message: "충돌" }, { status: 409 }),
+    ),
   );
   fireEvent.change(screen.getByLabelText("곡 제목"), { target: { value: "수정 중" } });
   await act(() =>
@@ -106,8 +119,8 @@ it("재조회·충돌 뒤에도 시작 버전으로 재시도하며 입력을 �
     await waitFor(() => expect(onMutationError).toHaveBeenCalledTimes(attempt));
   }
   expect((screen.getByLabelText("곡 제목") as HTMLInputElement).value).toBe("수정 중");
-  for (const [, options] of http.patch.mock.calls)
-    expect(options.json).toMatchObject({
+  for (const [, options] of vi.mocked(http.patch).mock.calls)
+    expect(options?.json).toMatchObject({
       title: "수정 중",
       guideWrite: song.guideWrite,
       hasOfficialCheer: true,
