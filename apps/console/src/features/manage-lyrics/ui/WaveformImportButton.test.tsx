@@ -1,15 +1,24 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { http as handlers, HttpResponse } from "msw";
+import { beforeEach as beforeHttp } from "vitest";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { waveformQueryKeys } from "@/entities/waveform";
 
+import { http } from "@/shared/api/http-client";
 import { ApiError } from "@/shared/api/http-errors";
+
+import { createQueryClientFixture } from "../../../../tests/query-client";
 
 import { WaveformImportButton } from "./WaveformImportButton";
 
-const mocks = vi.hoisted(() => ({ put: vi.fn() }));
-vi.mock("@/shared/api/http-client", () => ({ http: { put: mocks.put } }));
+const server = createHttpTestServer(window.location.href);
+const createClient = createQueryClientFixture();
+beforeHttp(() => {
+  vi.spyOn(http, "put");
+});
+
 const id = "019a0170-0000-7000-8000-000000000001";
 const waveform = {
   durationMs: 20,
@@ -38,11 +47,11 @@ const job = {
 afterEach(() => vi.resetAllMocks());
 function setup(props: Partial<Parameters<typeof WaveformImportButton>[0]> = {}) {
   const onError = vi.fn();
-  const client = new QueryClient();
+  const { client, wrapper: Wrapper } = createClient();
   client.setQueryData(waveformQueryKeys.song("admin", id), null);
   client.setQueryData(waveformQueryKeys.song("other", id), null);
   render(
-    <QueryClientProvider client={client}>
+    <Wrapper>
       <WaveformImportButton
         accountId="admin"
         songId={id}
@@ -52,7 +61,7 @@ function setup(props: Partial<Parameters<typeof WaveformImportButton>[0]> = {}) 
         onError={onError}
         {...props}
       />
-    </QueryClientProvider>,
+    </Wrapper>,
   );
   return { client, onError };
 }
@@ -62,20 +71,20 @@ function choose(value = JSON.stringify(waveform)) {
   fireEvent.change(screen.getByLabelText("waveform JSON 파일"), { target: { files: [file] } });
 }
 it("파일 등록 후 계정의 waveform을 다시 조회하며 다른 계정 cache는 보존한다", async () => {
-  let finish!: (value: unknown) => void;
-  mocks.put.mockReturnValue(
-    new Promise((resolve) => {
-      finish = resolve;
-    }),
-  );
+  const response = Promise.withResolvers<Response>();
+  server.use(handlers.put("*/api/admin/songs/:id/waveform", () => response.promise));
   const { client } = setup();
   choose();
-  await waitFor(() => expect(mocks.put).toHaveBeenCalledOnce());
-  expect(mocks.put).toHaveBeenCalledWith(`/api/admin/songs/${id}/waveform`, { json: waveform });
+  await waitFor(() => expect(vi.mocked(http.put)).toHaveBeenCalledOnce());
+  expect(vi.mocked(http.put)).toHaveBeenCalledWith(`/api/admin/songs/${id}/waveform`, {
+    json: waveform,
+  });
   expect(
     (screen.getByRole("button", { name: "waveform JSON 등록 중…" }) as HTMLButtonElement).disabled,
   ).toBe(true);
-  await act(async () => finish(job));
+  await act(async () => {
+    response.resolve(HttpResponse.json(job));
+  });
   expect((await screen.findByRole("link", { name: "등록 결과 확인" })).getAttribute("href")).toBe(
     `/admin/waveform-jobs/${id}`,
   );
@@ -90,7 +99,7 @@ it.each([{ videoChanged: true }, { disabled: true }])(
     expect(
       (screen.getByRole("button", { name: "waveform JSON 등록" }) as HTMLButtonElement).disabled,
     ).toBe(true);
-    expect(mocks.put).not.toHaveBeenCalled();
+    expect(vi.mocked(http.put)).not.toHaveBeenCalled();
   },
 );
 it.each([
@@ -102,17 +111,24 @@ it.each([
   setup();
   choose(raw);
   expect((await screen.findByRole("alert")).textContent).toBeTruthy();
-  expect(mocks.put).not.toHaveBeenCalled();
+  expect(vi.mocked(http.put)).not.toHaveBeenCalled();
 });
 it("인증 오류는 기존 복구로 전달하며 같은 파일을 다시 선택할 수 있다", async () => {
   const error = new ApiError(401, { code: "UNAUTHENTICATED", message: "다시 로그인해 주세요." });
-  mocks.put.mockRejectedValueOnce(error).mockResolvedValueOnce(job);
+  server.use(
+    handlers.put(
+      "*/api/admin/songs/:id/waveform",
+      () => HttpResponse.json({ code: error.code, message: error.message }, { status: 401 }),
+      { once: true },
+    ),
+    handlers.put("*/api/admin/songs/:id/waveform", () => HttpResponse.json(job)),
+  );
   const { onError } = setup();
   choose();
   expect((await screen.findByRole("alert")).textContent).toBe(error.message);
   expect(onError).toHaveBeenCalled();
-  expect(mocks.put).toHaveBeenCalledOnce();
+  expect(vi.mocked(http.put)).toHaveBeenCalledOnce();
   choose();
   expect(await screen.findByRole("link", { name: "등록 결과 확인" })).toBeTruthy();
-  expect(mocks.put).toHaveBeenCalledTimes(2);
+  expect(vi.mocked(http.put)).toHaveBeenCalledTimes(2);
 });

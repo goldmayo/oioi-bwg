@@ -1,17 +1,25 @@
-import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";
 import { act, cleanup, renderHook } from "@testing-library/react";
+import { http as handlers, HttpResponse } from "msw";
+import { beforeEach as beforeHttp } from "vitest";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { type AdminCheerGuideSummary, cheerGuideQueryKeys } from "@/entities/cheer-guide";
 
+import { http } from "@/shared/api/http-client";
 import { ApiError } from "@/shared/api/http-errors";
+
+import { createQueryClientFixture } from "../../../../../../tests/query-client";
 
 import { useGuideDeletion } from "./use-guide-deletion";
 
-const remove = vi.hoisted(() => vi.fn());
+const server = createHttpTestServer(window.location.href);
+const createClient = createQueryClientFixture();
+beforeHttp(() => {
+  vi.spyOn(http, "delete");
+});
+
 const recover = vi.hoisted(() => vi.fn());
-vi.mock("@/shared/api/http-client", () => ({ http: { delete: remove } }));
 vi.mock("@/features/auth", () => ({
   useAdminReauthentication: () => ({
     requiresReauthentication: false,
@@ -36,19 +44,17 @@ const guides = ["CONCERT", "FESTIVAL"].map((mode, index) => ({
 afterEach(cleanup);
 beforeEach(() => {
   vi.clearAllMocks();
-  remove.mockReset();
+  vi.mocked(http.delete).mockReset();
 });
 function setup(canManage = true) {
-  const client = new QueryClient({
+  const { client, wrapper } = createClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
   client.setQueryData(cheerGuideQueryKeys.adminList(), { items: guides, nextCursor: null });
   const deleted = vi.fn();
   const hook = renderHook(({ allowed }) => useGuideDeletion(allowed, deleted), {
     initialProps: { allowed: canManage },
-    wrapper: ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
-    ),
+    wrapper,
   });
   return { ...hook, client, deleted };
 }
@@ -63,25 +69,28 @@ it("권한과 이력을 확인하고 대상을 고정하며 중복 제출·진�
   act(() => result.current.requestDelete(input));
   input.pop();
   expect(result.current.targets).toHaveLength(2);
-  let release!: () => void;
-  remove
-    .mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          release = resolve;
-        }),
-    )
-    .mockResolvedValueOnce(undefined);
+  const started = Promise.withResolvers<void>();
+  const response = Promise.withResolvers<Response>();
+  server.use(
+    handlers.delete(
+      "*/api/admin/cheer-guides/:id",
+      () => {
+        started.resolve();
+        return response.promise;
+      },
+      { once: true },
+    ),
+    handlers.delete("*/api/admin/cheer-guides/:id", () => new HttpResponse(null, { status: 204 })),
+  );
   await act(async () => {
     const pending = result.current.confirm();
-    await Promise.resolve();
-    await Promise.resolve();
+    await started.promise;
     result.current.close();
     void result.current.confirm();
-    release();
+    response.resolve(new HttpResponse(null, { status: 204 }));
     await pending;
   });
-  expect(remove).toHaveBeenCalledTimes(2);
+  expect(http.delete).toHaveBeenCalledTimes(2);
   expect(deleted).toHaveBeenCalledWith(guides.map(({ id }) => id));
   expect(result.current.targets).toEqual([]);
   expect(client.getQueryData(cheerGuideQueryKeys.adminList())).toMatchObject({ items: [] });
@@ -95,12 +104,19 @@ it("일부 성공 뒤 이력 충돌이면 성공한 행만 지우고 실패·미
   });
   const third = { ...guides[0]!, id: "019a0170-0000-7000-8000-000000000004" };
   const targets = [...guides, third];
-  remove.mockResolvedValueOnce(undefined).mockRejectedValueOnce(error);
+  server.use(
+    handlers.delete("*/api/admin/cheer-guides/:id", () => new HttpResponse(null, { status: 204 }), {
+      once: true,
+    }),
+    handlers.delete("*/api/admin/cheer-guides/:id", () =>
+      HttpResponse.json({ code: error.code, message: error.message }, { status: 409 }),
+    ),
+  );
   act(() => result.current.requestDelete(targets));
   await act(async () => {
     await result.current.confirm();
   });
-  expect(remove).toHaveBeenCalledTimes(2);
+  expect(http.delete).toHaveBeenCalledTimes(2);
   expect(deleted).toHaveBeenCalledWith([guides[0]!.id]);
   expect(result.current.targets).toEqual([guides[1], third]);
   expect(result.current.error).toBe(error.message);
@@ -113,7 +129,14 @@ it("일부 성공 뒤 이력 충돌이면 성공한 행만 지우고 실패·미
 it("재인증 오류는 대상을 보존하고 삭제 성공 뒤 조회 실패는 재삭제하지 않는다", async () => {
   const { result, client, deleted } = setup();
   const error = new ApiError(401, { code: "UNAUTHENTICATED", message: "로그인이 필요합니다." });
-  remove.mockRejectedValueOnce(error).mockResolvedValueOnce(undefined);
+  server.use(
+    handlers.delete(
+      "*/api/admin/cheer-guides/:id",
+      () => HttpResponse.json({ code: error.code, message: error.message }, { status: 401 }),
+      { once: true },
+    ),
+    handlers.delete("*/api/admin/cheer-guides/:id", () => new HttpResponse(null, { status: 204 })),
+  );
   act(() => result.current.requestDelete([guides[0]!]));
   await act(async () => {
     await result.current.confirm();
@@ -127,6 +150,6 @@ it("재인증 오류는 대상을 보존하고 삭제 성공 뒤 조회 실패�
   });
   expect(result.current.targets).toEqual([]);
   expect(deleted).toHaveBeenCalledTimes(1);
-  expect(remove).toHaveBeenCalledTimes(2);
+  expect(http.delete).toHaveBeenCalledTimes(2);
   client.clear();
 });
