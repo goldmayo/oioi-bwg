@@ -1,21 +1,28 @@
 import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";
+import type { QueryClient } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { http as handlers, HttpResponse } from "msw";
+import { beforeEach as beforeHttp } from "vitest";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import type { AdminAlbumSummary } from "@/entities/album";
 import { albumQueryKeys } from "@/entities/album";
 import { songQueryKeys } from "@/entities/song";
 
+import { http } from "@/shared/api/http-client";
+
+import { createQueryClientFixture } from "../../../../tests/query-client";
+
 import { AlbumManagerClient } from "./AlbumManagerClient";
 
-const http = vi.hoisted(() => ({
-  delete: vi.fn(),
-  get: vi.fn(),
-  patch: vi.fn(),
-  post: vi.fn(),
-}));
-vi.mock("@/shared/api/http-client", () => ({ http }));
+const server = createHttpTestServer(window.location.href);
+const createClient = createQueryClientFixture();
+beforeHttp(() => {
+  vi.spyOn(http, "delete");
+  vi.spyOn(http, "get");
+});
+
 vi.mock("@/shared/ui/dialog", () => {
   const Part = ({ children }: { children?: ReactNode }) => <>{children}</>;
   return {
@@ -47,9 +54,10 @@ const songCache = {
 let queryClient: QueryClient;
 
 function renderManager() {
-  queryClient = new QueryClient({
+  const fixture = createClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
+  queryClient = fixture.client;
   queryClient.setQueryData(albumQueryKeys.adminList(), { items: [album], nextCursor: null });
   queryClient.setQueryData(songQueryKeys.adminList(), songCache);
   const onNameChangeOrDelete = vi.fn(() => {
@@ -57,9 +65,9 @@ function renderManager() {
   });
 
   render(
-    <QueryClientProvider client={queryClient}>
+    <fixture.wrapper>
       <AlbumManagerClient canManage onNameChangeOrDelete={onNameChangeOrDelete} />
-    </QueryClientProvider>,
+    </fixture.wrapper>,
   );
 
   return onNameChangeOrDelete;
@@ -91,8 +99,12 @@ it("검색 결과에서 사라진 앨범의 선택을 유지하고 명시적으�
 });
 
 it("refetches the active Album list and stales the Song list after delete", async () => {
-  http.delete.mockResolvedValue(undefined);
-  http.get.mockResolvedValue({ items: [], nextCursor: null });
+  server.use(
+    handlers.delete("*/api/admin/albums/:id", () => new HttpResponse(null, { status: 204 })),
+  );
+  server.use(
+    handlers.get("*/api/admin/albums", () => HttpResponse.json({ items: [], nextCursor: null })),
+  );
   const onNameChangeOrDelete = renderManager();
 
   fireEvent.click(screen.getByRole("button", { name: `${album.name} 관리` }));

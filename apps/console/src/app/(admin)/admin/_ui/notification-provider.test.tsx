@@ -1,20 +1,32 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";
+import type { QueryClient } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { http as handlers, HttpResponse } from "msw";
+import { beforeEach as beforeHttp } from "vitest";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { http } from "@/shared/api/http-client";
+
+import { createQueryClientFixture } from "../../../../../tests/query-client";
+
 import { NotificationProvider, useNotificationContext } from "./notification-provider";
+
+const server = createHttpTestServer(window.location.href);
+const createClient = createQueryClientFixture();
+let queryFixture: ReturnType<typeof createClient>;
+beforeHttp(() => {
+  vi.spyOn(http, "put");
+  vi.spyOn(http, "delete");
+});
 const mocks = vi.hoisted(() => ({
   connect: vi.fn(),
   disconnect: vi.fn(),
-  put: vi.fn(),
-  delete: vi.fn(),
   router: { push: vi.fn() },
 }));
 vi.mock("../_lib/push-client", () => ({
   connectPush: mocks.connect,
   disconnectPush: mocks.disconnect,
 }));
-vi.mock("@/shared/api/http-client", () => ({ http: { put: mocks.put, delete: mocks.delete } }));
 vi.mock("next/navigation", () => ({ useRouter: () => mocks.router }));
 const id = "019a0170-0000-7000-8000-000000000001";
 const config = {
@@ -28,11 +40,12 @@ let client: QueryClient;
 const original = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
 beforeEach(() => {
   localStorage.clear();
-  client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  queryFixture = createClient({ defaultOptions: { mutations: { retry: false } } });
+  client = queryFixture.client;
   vi.stubGlobal("Notification", { permission: "granted" });
   vi.stubGlobal("PushManager", class {});
   Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: {} });
-  mocks.put.mockResolvedValue({ id });
+  server.use(handlers.put("*/api/admin/push-installations", () => HttpResponse.json({ id })));
   mocks.disconnect.mockResolvedValue(undefined);
   mocks.connect.mockImplementation(async (_config, handlers) => {
     await handlers.onRegistered("local-fid-1234567890123");
@@ -64,13 +77,21 @@ function Probe() {
   );
 }
 it("해제 중 연결이 끊겨도 등록 ID를 보존하고 재연결에 회수를 재시도한다", async () => {
-  mocks.delete.mockRejectedValueOnce(new Error("offline")).mockResolvedValue(undefined);
+  server.use(
+    handlers.delete("*/api/admin/push-installations/:id", () => HttpResponse.error(), {
+      once: true,
+    }),
+    handlers.delete(
+      "*/api/admin/push-installations/:id",
+      () => new HttpResponse(null, { status: 204 }),
+    ),
+  );
   render(
-    <QueryClientProvider client={client}>
+    <queryFixture.wrapper>
       <NotificationProvider accountId={id} config={config}>
         <Probe />
       </NotificationProvider>
-    </QueryClientProvider>,
+    </queryFixture.wrapper>,
   );
   await screen.findByText("enabled");
   expect(localStorage.getItem("oioi:push-installation:v1")).toBe(id);
@@ -79,6 +100,6 @@ it("해제 중 연결이 끊겨도 등록 ID를 보존하고 재연결에 회수
   expect(localStorage.getItem("oioi:push-installation:v1")).toBe(id);
   fireEvent(window, new Event("online"));
   await waitFor(() => expect(localStorage.getItem("oioi:push-installation:v1")).toBeNull());
-  expect(mocks.delete).toHaveBeenCalledTimes(2);
+  expect(vi.mocked(http.delete)).toHaveBeenCalledTimes(2);
   expect(mocks.connect).toHaveBeenCalledTimes(1);
 });

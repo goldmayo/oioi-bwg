@@ -1,5 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";
+import type { QueryClient } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { http as handlers, HttpResponse } from "msw";
+import { beforeEach as beforeHttp } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { albumQueryKeys } from "@/entities/album";
@@ -7,19 +10,23 @@ import { cheerGuideQueryKeys } from "@/entities/cheer-guide";
 import { songQueryKeys } from "@/entities/song";
 import { waveformQueryKeys } from "@/entities/waveform";
 
-import { ApiError } from "@/shared/api/http-errors";
+import { http } from "@/shared/api/http-client";
+
+import { createQueryClientFixture } from "../../../../../../../tests/query-client";
 
 import { AdminLyricsEditor } from "./AdminLyricsEditor";
 
-const http = vi.hoisted(() => ({
-  get: vi.fn(),
-  patch: vi.fn(),
-}));
+const server = createHttpTestServer(window.location.href);
+const createClient = createQueryClientFixture();
+beforeHttp(() => {
+  vi.spyOn(http, "get");
+  vi.spyOn(http, "patch");
+});
+
 const auth = vi.hoisted(() => ({
   query: vi.fn(() => Promise.resolve({ rules: [{ action: "manage", subject: "all" }] })),
 }));
 
-vi.mock("@/shared/api/http-client", () => ({ http }));
 vi.mock("@/features/auth/api/actions", () => ({ signIn: vi.fn(), signOut: vi.fn() }));
 vi.mock("@/features/auth", async () => ({
   ...(await vi.importActual<typeof import("@/features/auth")>("@/features/auth")),
@@ -77,9 +84,10 @@ const song = {
 let queryClient: QueryClient;
 
 function renderEditor() {
-  queryClient = new QueryClient({
+  const fixture = createClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
+  queryClient = fixture.client;
   queryClient.setQueryData(["auth", "ability"], {
     rules: [{ action: "manage", subject: "all" }],
   });
@@ -97,9 +105,9 @@ function renderEditor() {
   queryClient.setQueryData(waveformQueryKeys.song("other", song.id), null);
 
   render(
-    <QueryClientProvider client={queryClient}>
+    <fixture.wrapper>
       <AdminLyricsEditor song={song} accountId="admin" />
-    </QueryClientProvider>,
+    </fixture.wrapper>,
   );
 }
 
@@ -115,7 +123,9 @@ afterEach(() => {
 
 describe("AdminLyricsEditor cache orchestration", () => {
   it("stales the Song list and current account waveform after save while preserving the local draft", async () => {
-    http.patch.mockResolvedValue({ id: song.id });
+    server.use(
+      handlers.patch("*/api/admin/songs/:id/lyrics", () => HttpResponse.json({ id: song.id })),
+    );
     renderEditor();
 
     const draft = screen.getByRole("textbox", { name: "YouTube ID draft" });
@@ -144,8 +154,10 @@ describe("AdminLyricsEditor cache orchestration", () => {
   });
 
   it("does not stale data lists on failure and keeps the existing 403 ability refresh", async () => {
-    http.patch.mockRejectedValue(
-      new ApiError(403, { code: "FORBIDDEN", message: "접근 권한이 없습니다." }),
+    server.use(
+      handlers.patch("*/api/admin/songs/:id/lyrics", () =>
+        HttpResponse.json({ code: "FORBIDDEN", message: "접근 권한이 없습니다." }, { status: 403 }),
+      ),
     );
     renderEditor();
 
@@ -162,8 +174,13 @@ describe("AdminLyricsEditor cache orchestration", () => {
 });
 
 it("refreshes ability on 401, keeps the draft and requests reauthentication", async () => {
-  http.patch.mockRejectedValue(
-    new ApiError(401, { code: "UNAUTHENTICATED", message: "로그인이 필요합니다." }),
+  server.use(
+    handlers.patch("*/api/admin/songs/:id/lyrics", () =>
+      HttpResponse.json(
+        { code: "UNAUTHENTICATED", message: "로그인이 필요합니다." },
+        { status: 401 },
+      ),
+    ),
   );
   auth.query.mockResolvedValueOnce({ rules: [] });
   renderEditor();
@@ -179,8 +196,14 @@ it("refreshes ability on 401, keeps the draft and requests reauthentication", as
   expect(screen.getByRole("button", { name: "저장" }).closest("fieldset")?.disabled).toBe(true);
   fireEvent.click(screen.getByRole("button", { name: "저장" }));
   expect(http.patch).toHaveBeenCalledOnce();
-  http.get.mockResolvedValue({ rules: [{ action: "manage", subject: "all" }] });
-  http.patch.mockResolvedValue({ id: song.id });
+  server.use(
+    handlers.get("*/api/auth/ability", () =>
+      HttpResponse.json({ rules: [{ action: "manage", subject: "all" }] }),
+    ),
+  );
+  server.use(
+    handlers.patch("*/api/admin/songs/:id/lyrics", () => HttpResponse.json({ id: song.id })),
+  );
   fireEvent.click(screen.getByRole("button", { name: "로그인 상태 확인" }));
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "저장" }).closest("fieldset")?.disabled).toBe(false),
@@ -197,8 +220,10 @@ it("refreshes ability on 401, keeps the draft and requests reauthentication", as
 });
 
 it("keeps access and the draft on a server failure without requesting authentication", async () => {
-  http.patch.mockRejectedValue(
-    new ApiError(500, { code: "INTERNAL_SERVER_ERROR", message: "오류" }),
+  server.use(
+    handlers.patch("*/api/admin/songs/:id/lyrics", () =>
+      HttpResponse.json({ code: "INTERNAL_SERVER_ERROR", message: "오류" }, { status: 500 }),
+    ),
   );
   renderEditor();
   fireEvent.change(screen.getByRole("textbox", { name: "YouTube ID draft" }), {
@@ -214,8 +239,13 @@ it("keeps access and the draft on a server failure without requesting authentica
 });
 
 it("keeps the draft blocked when a login check still lacks admin rights or fails", async () => {
-  http.patch.mockRejectedValue(
-    new ApiError(401, { code: "UNAUTHENTICATED", message: "로그인이 필요합니다." }),
+  server.use(
+    handlers.patch("*/api/admin/songs/:id/lyrics", () =>
+      HttpResponse.json(
+        { code: "UNAUTHENTICATED", message: "로그인이 필요합니다." },
+        { status: 401 },
+      ),
+    ),
   );
   auth.query.mockResolvedValue({ rules: [] });
   renderEditor();
@@ -224,10 +254,10 @@ it("keeps the draft blocked when a login check still lacks admin rights or fails
   });
   fireEvent.click(screen.getByRole("button", { name: "저장" }));
   await screen.findByRole("link", { name: "다시 로그인" });
-  http.get.mockResolvedValue({ rules: [] });
+  server.use(handlers.get("*/api/auth/ability", () => HttpResponse.json({ rules: [] })));
   fireEvent.click(screen.getByRole("button", { name: "로그인 상태 확인" }));
   await screen.findByText("관리자 로그인이 확인되지 않았습니다. 계정 상태와 권한을 확인해주세요.");
-  http.get.mockRejectedValue(new Error("network failure"));
+  server.use(handlers.get("*/api/auth/ability", () => HttpResponse.error()));
   fireEvent.click(screen.getByRole("button", { name: "로그인 상태 확인" }));
   await screen.findByText("로그인 상태를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.");
   expect(screen.getByRole("button", { name: "저장" }).closest("fieldset")?.disabled).toBe(true);
