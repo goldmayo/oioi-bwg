@@ -5,10 +5,9 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 const remove = vi.hoisted(() => vi.fn());
 vi.mock("@oioi-bwg/server/services/cheer-guide-service", () => ({ deleteEmptyCheerGuide: remove }));
-vi.mock("@/server/auth/request-context", () => ({
-  getRequestAuthorization: async () => ({ context: {} }),
-}));
-vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
+import { getRequestContext } from "../../../../../../tests/request-context";
+vi.mock("@/server/auth/request-context", () => import("../../../../../../tests/request-context"));
+vi.mock("@/shared/lib/sentry", () => import("../../../../../../tests/request-context"));
 import { DELETE } from "./route";
 const id = "019a0170-0000-7000-8000-000000000001";
 const request = (origin = "http://127.0.0.1:3001") =>
@@ -17,6 +16,7 @@ const request = (origin = "http://127.0.0.1:3001") =>
     headers: { Origin: origin },
   });
 beforeEach(() => {
+  getRequestContext.mockResolvedValue({});
   vi.clearAllMocks();
   remove.mockResolvedValue(undefined);
 });

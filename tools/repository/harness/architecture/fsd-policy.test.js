@@ -14,6 +14,17 @@ const ruleTester = new RuleTester({ languageOptions: { parserOptions: { lang: "j
 const repositoryRoot = path.resolve(import.meta.dirname, "../../../..");
 let caseNumber = 0;
 
+describe("HTTP test support stays outside application runtime", () => {
+  for (const app of ["web", "console"]) {
+    const source = 'import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";';
+    check(`apps/${app}/src/entities/song/api/api.test.js`, source, []);
+    check(`apps/${app}/src/entities/song/api/api.js`, source, ["toolingConfigPackage"]);
+    check(`apps/${app}/src/entities/song/api/api.test.js`, 'import "@oioi-bwg/config/next";', [
+      "toolingConfigPackage",
+    ]);
+  }
+});
+
 function check(relativeFilename, code, expected) {
   const item = {
     name: relativeFilename + " #" + ++caseNumber,

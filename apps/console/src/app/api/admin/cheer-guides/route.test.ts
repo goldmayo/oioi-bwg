@@ -9,15 +9,15 @@ vi.mock("@oioi-bwg/server/services/cheer-guide-service", () => ({
   listAdminCheerGuides: list,
   createAdminCheerGuide: create,
 }));
-vi.mock("@/server/auth/request-context", () => ({
-  getRequestAuthorization: async () => ({ context: {} }),
-}));
-vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
+import { getRequestContext } from "../../../../../tests/request-context";
+vi.mock("@/server/auth/request-context", () => import("../../../../../tests/request-context"));
+vi.mock("@/shared/lib/sentry", () => import("../../../../../tests/request-context"));
 
 import { GET, POST } from "./route";
 
 const request = () => new Request("http://localhost/api/admin/cheer-guides");
 beforeEach(() => {
+  getRequestContext.mockResolvedValue({});
   vi.clearAllMocks();
   vi.stubEnv("CONSOLE_ORIGIN", "http://localhost");
 });
