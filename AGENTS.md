@@ -4,6 +4,10 @@
 상세한 구조·계약·운영 규칙은 `docs/migration/oioi-bwg-architecture-clean-v1/`의 active 문서가
 SSOT이며, 이 파일은 매 작업에서 반드시 지켜야 할 요약 규칙과 작업 절차를 정의한다.
 
+매 작업 시작 시 [UI·UX 디자인 원칙](docs/DESIGN.md)을 읽어 프로젝트의 디자인 문맥을 불러온다.
+새 대화·작업 인계·문맥 압축 후에도 이 링크에서 원문을 다시 확인하며, 대화 메모리나 요약으로 대체하지 않는다.
+상세 디자인 원칙은 해당 문서 한 곳에서 관리하고 이 파일에는 실행 시점만 둔다.
+
 ## 1. 규칙 우선순위와 SSOT
 
 규칙 충돌 시 다음 순서로 판단한다.
@@ -236,6 +240,10 @@ Base UI → shadcn/ui → Tailwind CSS
 동작을 Playwright로 검증한 뒤 Radix 의존성을 제거한다.
 
 - 화면 문구·말투·출처 표시는 [서비스 철학과 문구·톤 기준](docs/PHILOSOPHY.md)을 따른다.
+- 디자인 생성·수정·검수 전에는 [UI·UX 디자인 원칙](docs/DESIGN.md)의 생성 절차와 검수표를 적용한다.
+  브리프·기존 화면·토큰을 확인하고, 과제 적합성·시각적 완성도·사용성을 각각 판단한다.
+  검수는 실제 화면·조작 근거에 연결하며, 확인하지 못한 항목은 미확인으로 남긴다.
+  디자인과 무관한 작업에 화면 검수를 추가하거나 기존 UI 전체를 일괄 재설계하라는 뜻은 아니다.
 - TanStack Query의 `useQuery`/`useMutation`/`queryOptions` vocabulary를 숨기는 범용 wrapper를 만들지 않는다.
 - Server state는 Query가 소유하고 mutation 성공 후 명시적으로 query invalidation한다.
 - server-seeded data와 client query는 동일 acquisition path가 아니라 동일 `queryKey`로 연결한다.
