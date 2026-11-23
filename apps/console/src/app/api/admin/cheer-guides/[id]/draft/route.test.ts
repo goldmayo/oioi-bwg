@@ -8,10 +8,12 @@ vi.mock("@oioi-bwg/server/services/cheer-guide-draft-service", () => ({
   getAdminCheerGuideEditor: read,
   saveAdminCheerGuideDraft: save,
 }));
-vi.mock("@/server/auth/request-context", () => ({
-  getRequestAuthorization: async () => ({ context: {} }),
-}));
-vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
+import { getRequestContext } from "../../../../../../../tests/request-context";
+vi.mock(
+  "@/server/auth/request-context",
+  () => import("../../../../../../../tests/request-context"),
+);
+vi.mock("@/shared/lib/sentry", () => import("../../../../../../../tests/request-context"));
 import { GET, PATCH } from "./route";
 const id = "019a0170-0000-7000-8000-000000000001";
 const context = { params: Promise.resolve({ id }) };
@@ -22,6 +24,7 @@ const request = (input: unknown, origin = "http://127.0.0.1:3001") =>
     body: JSON.stringify(input),
   });
 beforeEach(() => {
+  getRequestContext.mockResolvedValue({});
   vi.clearAllMocks();
   vi.stubEnv("CONSOLE_ORIGIN", "http://127.0.0.1:3001");
 });

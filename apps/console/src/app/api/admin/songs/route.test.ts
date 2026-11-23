@@ -5,21 +5,14 @@ import { adminSongListSchema } from "@oioi-bwg/contracts/song";
 import { AppError } from "@oioi-bwg/server/errors/app-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const getRequestContext = vi.hoisted(() => vi.fn());
+import { getRequestContext } from "../../../../../tests/request-context";
 const createSong = vi.hoisted(() => vi.fn());
 const listAdminSongs = vi.hoisted(() => vi.fn());
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/server/auth/request-context", () => ({
-  getRequestContext,
-  getRequestAuthorization: async () => ({
-    context: await getRequestContext(),
-    decision: "unknown",
-    rejectionLogged: false,
-  }),
-}));
+vi.mock("@/server/auth/request-context", () => import("../../../../../tests/request-context"));
 vi.mock("@oioi-bwg/server/services/song-service", () => ({ createSong, listAdminSongs }));
-vi.mock("@/shared/lib/sentry", () => ({ logger: { error: vi.fn() } }));
+vi.mock("@/shared/lib/sentry", () => import("../../../../../tests/request-context"));
 
 import { GET, POST } from "./route";
 
