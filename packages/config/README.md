@@ -10,6 +10,7 @@
 | `eslint/*`, `steiger`                      | 공통 규칙·FSD 검사. 실행 root는 consumer가 전달                             |
 | `vitest/browser`, `vitest/postgres`        | 공통 테스트 설정. 앱 alias/include·DB 실행 root는 consumer가 소유           |
 | `vitest/client-only`, `vitest/server-only` | Vitest 전용 marker mock의 파일 경로                                         |
+| `vitest/http` | 테스트에서 명시적으로 호출하는 MSW lifecycle·상대 URL 설정. 앱 runtime import 금지 |
 | `dependencies`                             | source·config·test의 workspace 경계 정책. root runner가 각 TS 설정으로 해석 |
 | `typescript/*.json`                        | 공통 TS preset. include·프로그램 소속은 consumer가 소유                     |
 

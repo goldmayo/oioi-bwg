@@ -8,6 +8,7 @@
     "./sentry-build": "./sentry-build.ts",
     "./steiger": "./steiger.ts",
     "./vitest/browser": "./vitest/browser.js",
+    "./vitest/http": "./vitest/http.ts",
     "./vitest/postgres": "./vitest/postgres.js",
     "./vitest/client-only": "./vitest/client-only.ts",
     "./vitest/server-only": "./vitest/server-only.ts",
@@ -45,6 +46,7 @@
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^16.4.0",
+    "msw": "2.12.10",
     "oxlint": "1.90.0",
     "steiger": "0.6.0",
     "vitest": "^4.1.2"

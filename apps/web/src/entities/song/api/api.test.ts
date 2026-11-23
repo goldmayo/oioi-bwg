@@ -1,7 +1,7 @@
+import { createHttpTestServer } from "@oioi-bwg/config/vitest/http";
 import type { SongDetail } from "@oioi-bwg/contracts/song";
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, expect, test, vi } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { ApiError, ClientContractError, ClientTransportError } from "@/shared/api/http-errors";
 
@@ -10,7 +10,7 @@ import { songQueryKeys } from "../index";
 import { getSongDetail } from "./api";
 import { songQueries } from "./index";
 
-const server = setupServer();
+const server = createHttpTestServer(window.location.href);
 const endpoint = `${window.location.origin}/api/songs/:slug`;
 const song: SongDetail = {
   id: "019a0170-0000-7000-8000-000000000068",
@@ -33,24 +33,6 @@ const song: SongDetail = {
     songs: [],
   },
 };
-
-beforeAll(() => {
-  // jsdom의 Node Request에는 브라우저의 상대 URL 해석만 보충한다. Ky·fetch는 그대로 사용한다.
-  vi.stubGlobal(
-    "Request",
-    class extends Request {
-      constructor(input: RequestInfo | URL, init?: RequestInit) {
-        super(typeof input === "string" ? new URL(input, window.location.href) : input, init);
-      }
-    },
-  );
-  server.listen({ onUnhandledRequest: "error" });
-});
-afterEach(() => server.resetHandlers());
-afterAll(() => {
-  server.close();
-  vi.unstubAllGlobals();
-});
 
 test("정상 곡 응답을 실제 HTTP client와 parser로 읽고 slug를 인코딩한다", async () => {
   const respond = vi.fn((_info: { request: Request }) => HttpResponse.json(song));

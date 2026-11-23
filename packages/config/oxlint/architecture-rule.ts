@@ -88,6 +88,8 @@ export const architectureRule: Rule.RuleModule = {
       if (typeof source !== "string") return;
 
       if (/^@oioi-bwg\/config(?:\/|$)/.test(source)) {
+        if (/\.(?:test|spec)\.[jt]sx?$/.test(fileName) && source === "@oioi-bwg/config/vitest/http")
+          return;
         context.report({ node: sourceNode, messageId: "toolingConfigPackage" });
         return;
       }

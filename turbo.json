@@ -111,6 +111,7 @@
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/vitest/browser.js",
         "$TURBO_ROOT$/packages/config/vitest/postgres.js",
+        "$TURBO_ROOT$/packages/config/vitest/http.ts",
         "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
       "outputs": ["*.tsbuildinfo"]
@@ -143,7 +144,8 @@
         "$TURBO_ROOT$/packages/config/vitest/browser.js",
         "$TURBO_ROOT$/packages/config/vitest/browser.setup.ts",
         "$TURBO_ROOT$/packages/config/vitest/server-only.ts",
-        "$TURBO_ROOT$/packages/config/vitest/client-only.ts"
+        "$TURBO_ROOT$/packages/config/vitest/client-only.ts",
+        "$TURBO_ROOT$/packages/config/vitest/http.ts"
       ],
       "outputs": []
     },
@@ -164,6 +166,7 @@
         "$TURBO_ROOT$/packages/config/steiger.ts",
         "$TURBO_ROOT$/packages/config/vitest/browser.js",
         "$TURBO_ROOT$/packages/config/vitest/postgres.js",
+        "$TURBO_ROOT$/packages/config/vitest/http.ts",
         "$TURBO_ROOT$/packages/config/oxlint/**"
       ],
       "outputs": ["*.tsbuildinfo"]
@@ -196,7 +199,8 @@
         "$TURBO_ROOT$/packages/config/vitest/browser.js",
         "$TURBO_ROOT$/packages/config/vitest/browser.setup.ts",
         "$TURBO_ROOT$/packages/config/vitest/server-only.ts",
-        "$TURBO_ROOT$/packages/config/vitest/client-only.ts"
+        "$TURBO_ROOT$/packages/config/vitest/client-only.ts",
+        "$TURBO_ROOT$/packages/config/vitest/http.ts"
       ],
       "outputs": []
     },
