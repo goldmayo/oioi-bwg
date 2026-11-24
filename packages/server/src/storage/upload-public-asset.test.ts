@@ -16,7 +16,7 @@ vi.mock("@aws-sdk/client-s3", () => ({
   },
 }));
 
-import { uploadPublicAsset } from "./upload-public-asset";
+import { getPublicAssetBaseUrl, uploadPublicAsset } from "./upload-public-asset";
 
 beforeEach(() => {
   vi.stubEnv("R2_ENDPOINT", "https://account.r2.cloudflarestorage.com");
@@ -33,6 +33,13 @@ afterEach(() => {
 });
 
 describe("uploadPublicAsset", () => {
+  it("reads canonical base without upload credentials or storage IO", () => {
+    vi.stubEnv("R2_ACCESS_KEY_ID", "");
+    vi.stubEnv("R2_SECRET_ACCESS_KEY", "");
+    expect(getPublicAssetBaseUrl()).toBe("https://assets.oioibawige.com");
+    expect(clientOptions).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
   it("uploads through R2 and returns the custom-domain canonical URL", async () => {
     send.mockResolvedValue({});
 

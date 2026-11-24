@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 export const appErrorCodeSchema = z.enum([
+  "HOME_CAROUSEL_CONFLICT",
+  "HOME_CAROUSEL_ITEM_INVALID",
+  "HOME_CAROUSEL_IMAGE_INVALID",
   "ANALYTICS_NOT_CONFIGURED",
   "ANALYTICS_UNAVAILABLE",
   "ANALYTICS_RATE_LIMITED",

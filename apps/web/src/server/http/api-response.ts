@@ -8,6 +8,12 @@ import type { ServerErrorContext } from "@/server/observability/safe-server-even
 import { reportServerError } from "@/server/observability/server-error-reporter";
 
 const appErrorDefinitions = {
+  HOME_CAROUSEL_CONFLICT: {
+    message: "홈 이미지가 변경되었습니다. 최신 내용을 확인해 주세요.",
+    status: 409,
+  },
+  HOME_CAROUSEL_ITEM_INVALID: { message: "홈 이미지 항목을 확인해 주세요.", status: 400 },
+  HOME_CAROUSEL_IMAGE_INVALID: { message: "업로드한 홈 이미지를 선택해 주세요.", status: 400 },
   ANALYTICS_NOT_CONFIGURED: { message: "GA4 연결 설정을 확인해 주세요.", status: 503 },
   ANALYTICS_UNAVAILABLE: {
     message: "GA4 통계를 불러오지 못했습니다. 다시 시도해 주세요.",

@@ -37,7 +37,7 @@ P09 QA 확정안도 [구현 #372](https://github.com/goldmayo/oioi-bwg/pull/372)
 
 | 작업 | 상태 | 다음 행동 | 완료 조건 | 근거 |
 | --- | --- | --- | --- | --- |
-| 사용자 웹 홈 이미지 캐러셀 CMS | 2026-11-24 계약·DB 구현·로컬 검증 완료, API·화면 미구현 | [검증 준비 #458](https://github.com/goldmayo/oioi-bwg/pull/458) → [계약·DB #459](https://github.com/goldmayo/oioi-bwg/pull/459) 검토 후 조회·초안 저장 service 구현 | Console 이미지·순서 관리와 초안/공개 분리, 권한·충돌·웹 통합 검증 | [계획 #457](https://github.com/goldmayo/oioi-bwg/pull/457), [Domain §36](migration/DOMAIN_SPECIFICATION.md#36-홈-이미지-캐러셀-2026-11-24). 로컬 0015 적용·DB 회귀 통과. 운영 반영은 미완료 |
+| 사용자 웹 홈 이미지 캐러셀 CMS | 2026-11-25 조회·초안 저장 service·DB 경합 검증 완료, API·화면 미구현 | 공개·전체 숨김 service 구현. 선행 [검증 #458](https://github.com/goldmayo/oioi-bwg/pull/458) → [계약·DB #459](https://github.com/goldmayo/oioi-bwg/pull/459) 검토 순서 유지 | Console 이미지·순서 관리와 초안/공개 분리, 권한·충돌·웹 통합 검증 | [계획 #457](https://github.com/goldmayo/oioi-bwg/pull/457), [Domain §36](migration/DOMAIN_SPECIFICATION.md#36-홈-이미지-캐러셀-2026-11-24), [조회·초안 저장 구현](../packages/server/src/services/home-carousel-service.ts). 로컬 0015 적용·DB 회귀 통과. 운영 반영은 미완료 |
 
 UUIDv7 전환은 2026-10-26 사용자 요청으로 착수했다. 아래 항목은 운영 READ ONLY 재실측과
 `migration_main@e447c87b12008f3c94df63b70d30ef969df6a6fb`를 기준으로 하며 위의 과거 기준을 대체하지 않는다.
