@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./services/home-carousel-service": "./src/services/home-carousel-service.ts",
     "./services/cheer-guide-service": "./src/services/cheer-guide-service.ts",
     "./services/notification-delivery-service": "./src/services/notification-delivery-service.ts",
     "./services/push-installation-service": "./src/services/push-installation-service.ts",

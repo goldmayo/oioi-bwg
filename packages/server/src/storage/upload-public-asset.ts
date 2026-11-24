@@ -27,6 +27,11 @@ function requiredHttpsUrl(name: string) {
   throw new Error(`${name} must be an HTTPS URL without credentials, query or fragment`);
 }
 
+/** URL 정책 검증은 업로드 credential 없이도 같은 canonical base를 사용한다. */
+export function getPublicAssetBaseUrl() {
+  return requiredHttpsUrl("ASSETS_PUBLIC_BASE_URL").replace(/\/+$/, "");
+}
+
 /** readiness와 업로드가 같은 입력을 검사하며 외부 요청이나 SDK client를 만들지 않는다. */
 export function getPublicAssetConfig() {
   return {
@@ -34,7 +39,7 @@ export function getPublicAssetConfig() {
     bucket: requiredEnvironment("R2_BUCKET"),
     accessKeyId: requiredEnvironment("R2_ACCESS_KEY_ID"),
     secretAccessKey: requiredEnvironment("R2_SECRET_ACCESS_KEY"),
-    publicBaseUrl: requiredHttpsUrl("ASSETS_PUBLIC_BASE_URL").replace(/\/+$/, ""),
+    publicBaseUrl: getPublicAssetBaseUrl(),
   };
 }
 
