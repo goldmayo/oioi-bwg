@@ -35,6 +35,10 @@ P09 QA 확정안도 [구현 #372](https://github.com/goldmayo/oioi-bwg/pull/372)
 
 ## 진행할 작업과 보류
 
+| 작업 | 상태 | 다음 행동 | 완료 조건 | 근거 |
+| --- | --- | --- | --- | --- |
+| 사용자 웹 홈 이미지 캐러셀 CMS | 2026-11-24 계획 제안·미구현 | 홈 노출 위치·대표 이미지 조건 확인 후 Domain·DTO·persistence부터 순차 구현 | Console 초안 저장·공개 반영·순서/이미지 관리, 공개본만 웹 노출, 충돌·권한·브라우저 통합 검증 | [공유 구현 계획](migration/implementation/HOME-CAROUSEL-CMS-PLAN.md). 예약·다국어·통계·orphan 자동 정리는 후속 |
+
 UUIDv7 전환은 2026-10-26 사용자 요청으로 착수했다. 아래 항목은 운영 READ ONLY 재실측과
 `migration_main@e447c87b12008f3c94df63b70d30ef969df6a6fb`를 기준으로 하며 위의 과거 기준을 대체하지 않는다.
 
