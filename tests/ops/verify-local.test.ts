@@ -184,6 +184,47 @@ test("소유자가 없는 변경을 무거운 검사로 바꾸거나 조용히 �
   ).toThrow("소유 범위");
 });
 
+test.each([
+  "drizzle/0015_home_carousel.sql",
+  "drizzle/meta/0015_snapshot.json",
+  "drizzle/meta/_journal.json",
+])("DB migration %s는 server와 그 consumer의 증분 검사를 선택한다", (file) => {
+  const affected = [...packages, { name: "@oioi-bwg/server", path: "packages/server" }];
+  expect(workspaceFilters([file], affected)).toEqual(["--filter=...@oioi-bwg/server"]);
+  const plan = localVerificationPlan({ files: [file], base, packages: affected });
+  expect(plan[0]).toContain("--filter=...@oioi-bwg/server");
+  expect(plan[0]).toContain("--affected");
+  expect(plan[1]).toContain(`--changed=${base}`);
+  expect(plan.flat()).not.toContain("type-check:repo");
+  expect(plan.flat()).not.toContain("build");
+});
+
+test("migration과 Console 혼합 변경은 두 소유 workspace를 모두 선택한다", () => {
+  const affected = [...packages, { name: "@oioi-bwg/server", path: "packages/server" }];
+  const files = ["drizzle/meta/_journal.json", "apps/console/src/page.tsx"];
+  expect(workspaceFilters(files, affected)).toEqual([
+    "--filter=...@oioi-bwg/console",
+    "--filter=...@oioi-bwg/server",
+  ]);
+});
+
+test("migration 소유 workspace 누락과 미등록 drizzle 파일은 중단한다", () => {
+  expect(() =>
+    localVerificationPlan({
+      files: ["drizzle/0015_home_carousel.sql"],
+      base,
+      packages,
+    }),
+  ).toThrow("Turbo 영향 범위");
+  expect(() =>
+    localVerificationPlan({
+      files: ["drizzle/unowned.ts"],
+      base,
+      packages,
+    }),
+  ).toThrow("소유 범위");
+});
+
 test("Root 운영 테스트 수정은 Tool 테스트 타입 프로그램까지 반복하지 않는다", () => {
   const plan = localVerificationPlan({ files: ["tests/ops/verify-local.test.ts"], base, packages });
   expect(plan).toContainEqual(["exec", "tsc", "--noEmit", "-p", "tests/tsconfig.json"]);
