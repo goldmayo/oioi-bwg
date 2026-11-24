@@ -11,6 +11,7 @@ P07 운영 DB 적용과 최신 앱 배포를 완료했으며 P08~P10은 미착�
 - 정리 근거: [P07 전 문서 부채 정리 결과](migration/implementation/DOCUMENTATION-CLEANUP-RESULT.md)
 - 결정·과정: [ADR](adr/README.md), [시간순 devlog](devlog/README.md), [완료 작업 근거 지도](migration/implementation/COMPLETED-DESIGN-INDEX.md)
 - 다음 기능의 제안: [Console 이후 설계](migration/implementation/console-guide-editor/DESIGN.md), [기능별 범위와 의존성](migration/implementation/console-guide-editor/ROADMAP.md)
+- 사용자 웹 캐러셀: [Console CMS 구현 계획](migration/implementation/HOME-CAROUSEL-CMS-PLAN.md). 홈 한 곳의 초안·공개본과 이미지 관리 제안이며 미구현이다.
 - 과거 관찰: [문서 감사](migration/implementation/DOCUMENTATION-GOVERNANCE-AUDIT.md), [역공학 대표 snapshot과 source 한계](reverse-engineering/README.md). 역사적 snapshot은 현재 구현 기준이 아니다.
 
 Domain은 도메인 정책의 기준이며 전체 기능의 구현 완료를 뜻하지 않는다. 미착수 기능과 현행 계약의
