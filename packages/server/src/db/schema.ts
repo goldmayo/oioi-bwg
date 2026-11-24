@@ -1,3 +1,4 @@
+import type { HomeCarouselDraftSlide, HomeCarouselSlide } from "@oioi-bwg/contracts/home-carousel";
 import type { WaveformData } from "@oioi-bwg/contracts/waveform";
 import { v7 } from "uuid";
 
@@ -572,6 +573,38 @@ export const cheerGuidePublicationRelations = relations(cheerGuidePublication, (
     references: [cheerGuideSnapshot.cheerGuideId, cheerGuideSnapshot.id],
   }),
 }));
+
+/** 홈 이미지 구성 전체의 초안·공개본과 충돌 버전. 초기 콘텐츠는 주입하지 않는다. */
+export const homeCarousel = pgTable(
+  "home_carousel",
+  {
+    id: uuid().primaryKey().$defaultFn(v7),
+    placement: text().$type<"home">().notNull().unique("home_carousel_placement_key"),
+    draftSlides: jsonb("draft_slides").$type<HomeCarouselDraftSlide[]>().notNull().default([]),
+    publishedSlides: jsonb("published_slides").$type<HomeCarouselSlide[]>().notNull().default([]),
+    lockVersion: integer("lock_version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    publishedAt: timestamp("published_at", { withTimezone: true, mode: "string" }),
+  },
+  (t) => [
+    check("home_carousel_placement_check", sql`${t.placement} = 'home'`),
+    check("home_carousel_lock_version_check", sql`${t.lockVersion} > 0`),
+    ...([t.draftSlides, t.publishedSlides] as const).map((column) =>
+      check(
+        `home_carousel_${column.name}_check`,
+        sql`case when jsonb_typeof(${column}) = 'array' then
+          jsonb_array_length(${column}) <= 10
+          and not jsonb_path_exists(${column}, 'strict $[*] ? (@.type() != "object")')
+        else false end`,
+      ),
+    ),
+  ],
+);
 
 /** 공지·업데이트 게시 내용. 현재 공개 조회 전환만 제공한다. */
 export const servicePublication = pgTable(

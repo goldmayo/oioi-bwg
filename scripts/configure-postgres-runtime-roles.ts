@@ -9,6 +9,7 @@ const APPLICATION_TABLES = [
   "song",
   "service_publication",
   "service_policy",
+  "home_carousel",
   "notification",
   "push_installation",
   "notification_delivery",
