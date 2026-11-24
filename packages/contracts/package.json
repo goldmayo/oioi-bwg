@@ -8,6 +8,7 @@
     "./cheer-guide": "./src/cheer-guide.ts",
     "./notification": "./src/notification.ts",
     "./entity-id": "./src/entity-id.ts",
+    "./home-carousel": "./src/home-carousel.ts",
     "./album": "./src/album.ts",
     "./authorization": "./src/authorization.ts",
     "./console-mfa": "./src/console-mfa.ts",
