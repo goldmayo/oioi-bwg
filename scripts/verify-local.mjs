@@ -21,10 +21,19 @@ function isRootLintConfig(file) {
   return /^(?:oxlint\.config\.[^/]+|\.oxlintrc\.jsonc?)$/.test(file);
 }
 
+function isDatabaseMigration(file) {
+  return /^drizzle\/(?:\d{4}_[a-z0-9_]+\.sql|meta\/(?:\d{4}_snapshot|_journal)\.json)$/.test(file);
+}
+
 export function workspaceFilters(files, packages) {
   if (files.some(isGlobalProductInput)) return [];
   return packages
-    .filter(({ path }) => files.some((file) => file.startsWith(`${path}/`)))
+    .filter(({ name, path }) =>
+      files.some(
+        (file) =>
+          file.startsWith(`${path}/`) || (isDatabaseMigration(file) && name === "@oioi-bwg/server"),
+      ),
+    )
     .map(({ name }) => `--filter=...${name}`);
 }
 
@@ -32,6 +41,9 @@ export function workspaceFilters(files, packages) {
 export function localVerificationPlan({ files, existingFiles = files, base, packages }) {
   const changes = files.filter((file) => !isLocalDocumentation(file));
   if (!changes.length) return [];
+  const migration = changes.some(isDatabaseMigration);
+  if (migration && !packages.some(({ name }) => name === "@oioi-bwg/server"))
+    throw new Error("DB migration의 server workspace가 Turbo 영향 범위에 없습니다.");
   const repo = changes.some(
     (file) =>
       isGlobalProductInput(file) ||
@@ -41,6 +53,7 @@ export function localVerificationPlan({ files, existingFiles = files, base, pack
   const rootFiles = changes.filter((file) => !/^(?:apps|packages|tools)\//.test(file));
   const unknown = rootFiles.filter(
     (file) =>
+      !isDatabaseMigration(file) &&
       !/^(?:(?:ops|scripts|tests|infra|\.github|\.husky|\.vscode)\/.*|[^/]+\.(?:jsonc?|ya?ml|[cm]?[jt]s)|\.(?:nvmrc|npmrc|gitignore|gitattributes|dockerignore|prettierignore|prettierrc)|LICENSE|\.env\.example)$/.test(
         file,
       ),
@@ -63,7 +76,9 @@ export function localVerificationPlan({ files, existingFiles = files, base, pack
       "변경 workspace가 Turbo 영향 범위에 없습니다. 기준과 workspace 등록을 확인해주세요.",
     );
   const product =
-    changes.some(isGlobalProductInput) || changes.some((file) => /^(?:apps|packages)\//.test(file));
+    migration ||
+    changes.some(isGlobalProductInput) ||
+    changes.some((file) => /^(?:apps|packages)\//.test(file));
   if (product) {
     commands.push([
       "exec",
